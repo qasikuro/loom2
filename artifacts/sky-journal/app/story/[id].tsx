@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Dimensions,
   Image,
@@ -41,7 +42,7 @@ export default function StoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
-  const { stories, discoverPosts, toggleSavePost } = useApp();
+  const { stories, discoverPosts, toggleSavePost, deleteStory } = useApp();
   const [witnessed, setWitnessed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -52,6 +53,7 @@ export default function StoryScreen() {
   const story = stories.find(s => s.id === id)
     ?? (discoverPosts.find(p => p.id === id) ? stories.find(s => s.id === id) : null);
   const post = discoverPosts.find(p => p.id === id) ?? null;
+  const isOwnStory = !!story;
 
   const entry = story ?? null;
 
@@ -88,6 +90,25 @@ export default function StoryScreen() {
     }
   }
 
+  function handleDelete() {
+    Alert.alert(
+      'Delete Story',
+      'This chapter will be permanently removed from your journal.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            deleteStory(id!);
+            router.back();
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <View style={[styles.container, { backgroundColor: colors.night }]}>
       <ScrollView
@@ -114,9 +135,11 @@ export default function StoryScreen() {
           <TouchableOpacity style={[styles.backBtn, { top: topPad + 12 }]} onPress={() => router.back()}>
             <Feather name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.moreBtn, { top: topPad + 12 }]}>
-            <Feather name="more-horizontal" size={20} color="#fff" />
-          </TouchableOpacity>
+          {isOwnStory && (
+            <TouchableOpacity style={[styles.moreBtn, { top: topPad + 12 }]} onPress={handleDelete}>
+              <Feather name="trash-2" size={18} color="rgba(255,120,100,0.9)" />
+            </TouchableOpacity>
+          )}
 
           {/* Hero info */}
           <View style={styles.heroOverlay}>
