@@ -1,0 +1,14 @@
+import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+
+export const characterTable = pgTable("character", {
+  id:        integer("id").primaryKey().default(1),
+  name:      text("name").notNull().default("Sky Child"),
+  bio:       text("bio").notNull().default(""),
+  mood:      text("mood").notNull().default("Hopeful"),
+  traits:    jsonb("traits").$type<string[]>().notNull().default([]),
+  isPublic:  boolean("is_public").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Character      = typeof characterTable.$inferSelect;
+export type CharacterInput = typeof characterTable.$inferInsert;

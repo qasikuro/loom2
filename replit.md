@@ -6,8 +6,39 @@ A dreamy, minimalist mobile app inspired by Sky: Children of the Light. Three fo
 
 **Monorepo** managed by pnpm workspaces:
 - `artifacts/sky-journal` — Expo React Native mobile app (iOS + Android)
-- `artifacts/api-server` — Express API server
+- `artifacts/api-server` — Express API server (REST, routes: `/api/character`, `/api/journal-entries`, `/api/stories`, `/api/outfits`)
 - `artifacts/mockup-sandbox` — Canvas/design preview server
+- `lib/db` — Drizzle ORM + PostgreSQL (schema: character, journal_entries, stories, outfits)
+- `lib/api-spec` — OpenAPI 3.1 contract (`openapi.yaml`); run `pnpm --filter @workspace/api-spec run codegen` to regenerate
+- `lib/api-client-react` — Generated React Query hooks from OpenAPI
+- `lib/api-zod` — Generated Zod schemas from OpenAPI
+
+## Backend (`artifacts/api-server`)
+
+### REST API routes
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/character` | Get character profile (auto-created if missing) |
+| PUT    | `/api/character` | Update character profile |
+| GET    | `/api/journal-entries` | List all journal entries, newest first |
+| POST   | `/api/journal-entries` | Create journal entry (accepts client UUID) |
+| DELETE | `/api/journal-entries/:id` | Delete journal entry |
+| GET    | `/api/stories` | List all stories, newest first |
+| POST   | `/api/stories` | Create story with panels (accepts client UUID) |
+| GET    | `/api/stories/:id` | Get single story |
+| DELETE | `/api/stories/:id` | Delete story |
+| POST   | `/api/stories/:id/witness` | Increment witnessed count |
+| GET    | `/api/outfits` | List all outfits, newest first |
+| POST   | `/api/outfits` | Create outfit (accepts client UUID) |
+| DELETE | `/api/outfits/:id` | Delete outfit |
+
+### Database schema (Drizzle ORM, PostgreSQL)
+- `character` — id (int PK=1), name, bio, mood, traits (jsonb), is_public, updated_at
+- `journal_entries` — id (uuid), type (diary|friend|moment), text, mood, image_uri, friend_name, date, created_at
+- `stories` — id (uuid), chapter_title, mood, location, is_public, witnessed_count, saved_count, panels (jsonb), date, created_at
+- `outfits` — id (uuid), name, description, image_uri, tags (jsonb), is_public, date, created_at
+
+To push schema changes: `cd lib/db && pnpm run push`
 
 ## Sky Journal App (`artifacts/sky-journal`)
 
@@ -60,7 +91,7 @@ app/
 
 ### Data Model (`context/AppContext.tsx`)
 ```typescript
-JournalEntry { id, date, text, mood, imageUri? }            // always private
+JournalEntry { id, date, type, text, mood, imageUri?, friendName? } // always private
 Story        { id, date, chapterTitle, panels[], mood,
                location, isPublic, witnessedCount, savedCount }
 StoryPanel   { id, imageUri?, text }
@@ -70,7 +101,12 @@ Character    { name, bio, mood, traits[], isPublic }
 DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
 ```
 
-AsyncStorage keys: `character_v2`, `stories_v1`, `journal_v1`, `outfits_v1`
+### Data Persistence Strategy
+- **Primary**: REST API → PostgreSQL (via `artifacts/api-server`)
+- **Fallback**: AsyncStorage (offline cache, auto-populated after each successful API fetch)
+- **API URL**: Resolved at Expo bundle time from `REPLIT_DEV_DOMAIN` via `app.config.ts` → `Constants.expoConfig.extra.apiUrl`
+- AsyncStorage cache keys: `character_v2`, `stories_v1`, `journal_v2`, `outfits_v1`
+- All mutations: optimistic local update → fire-and-forget API sync in background
 
 ### Key Components
 - `components/MangaPanelEditor.tsx` — Per-panel editor (image + narration)

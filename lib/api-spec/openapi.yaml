@@ -2,21 +2,29 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 0.2.0
+  description: Sky Journal API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: character
+    description: Character profile
+  - name: journal
+    description: Journal entries
+  - name: stories
+    description: Manga-style stories
+  - name: outfits
+    description: Outfit logs
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,216 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /character:
+    get:
+      operationId: getCharacter
+      tags: [character]
+      summary: Get the user character profile
+      responses:
+        "200":
+          description: Character profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+    put:
+      operationId: updateCharacter
+      tags: [character]
+      summary: Update the user character profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CharacterInput"
+      responses:
+        "200":
+          description: Updated character profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Character"
+
+  /journal-entries:
+    get:
+      operationId: listJournalEntries
+      tags: [journal]
+      summary: List all journal entries newest first
+      responses:
+        "200":
+          description: List of journal entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JournalEntry"
+    post:
+      operationId: createJournalEntry
+      tags: [journal]
+      summary: Create a new journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JournalEntryInput"
+      responses:
+        "201":
+          description: Created journal entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalEntry"
+
+  /journal-entries/{id}:
+    delete:
+      operationId: deleteJournalEntry
+      tags: [journal]
+      summary: Delete a journal entry
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /stories:
+    get:
+      operationId: listStories
+      tags: [stories]
+      summary: List all stories newest first
+      responses:
+        "200":
+          description: List of stories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Story"
+    post:
+      operationId: createStory
+      tags: [stories]
+      summary: Create a new story
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StoryInput"
+      responses:
+        "201":
+          description: Created story
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Story"
+
+  /stories/{id}:
+    get:
+      operationId: getStory
+      tags: [stories]
+      summary: Get a story by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Story
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Story"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteStory
+      tags: [stories]
+      summary: Delete a story
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /stories/{id}/witness:
+    post:
+      operationId: witnessStory
+      tags: [stories]
+      summary: Increment the witnessed count of a story
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated story
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Story"
+
+  /outfits:
+    get:
+      operationId: listOutfits
+      tags: [outfits]
+      summary: List all outfit logs newest first
+      responses:
+        "200":
+          description: List of outfits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Outfit"
+    post:
+      operationId: createOutfit
+      tags: [outfits]
+      summary: Create an outfit log
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OutfitInput"
+      responses:
+        "201":
+          description: Created outfit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Outfit"
+
+  /outfits/{id}:
+    delete:
+      operationId: deleteOutfit
+      tags: [outfits]
+      summary: Delete an outfit log
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +249,207 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    Character:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        bio:
+          type: string
+        mood:
+          type: string
+        traits:
+          type: array
+          items:
+            type: string
+        isPublic:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, name, bio, mood, traits, isPublic, updatedAt]
+
+    CharacterInput:
+      type: object
+      properties:
+        name:
+          type: string
+        bio:
+          type: string
+        mood:
+          type: string
+        traits:
+          type: array
+          items:
+            type: string
+        isPublic:
+          type: boolean
+      required: [name, bio, mood, traits, isPublic]
+
+    StoryPanel:
+      type: object
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+        imageUri:
+          type: string
+          nullable: true
+      required: [id, text]
+
+    Story:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date-time
+        chapterTitle:
+          type: string
+        panels:
+          type: array
+          items:
+            $ref: "#/components/schemas/StoryPanel"
+        mood:
+          type: string
+        location:
+          type: string
+        isPublic:
+          type: boolean
+        witnessedCount:
+          type: integer
+        savedCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, date, chapterTitle, panels, mood, location, isPublic, witnessedCount, savedCount, createdAt]
+
+    StoryInput:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+        chapterTitle:
+          type: string
+        panels:
+          type: array
+          items:
+            $ref: "#/components/schemas/StoryPanel"
+        mood:
+          type: string
+        location:
+          type: string
+        isPublic:
+          type: boolean
+      required: [date, chapterTitle, panels, mood, location, isPublic]
+
+    JournalEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum: [diary, friend, moment]
+        text:
+          type: string
+        mood:
+          type: string
+        imageUri:
+          type: string
+          nullable: true
+        friendName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, date, type, text, mood, createdAt]
+
+    JournalEntryInput:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum: [diary, friend, moment]
+        text:
+          type: string
+        mood:
+          type: string
+        imageUri:
+          type: string
+          nullable: true
+        friendName:
+          type: string
+          nullable: true
+      required: [date, type, text, mood]
+
+    Outfit:
+      type: object
+      properties:
+        id:
+          type: string
+        date:
+          type: string
+          format: date-time
+        name:
+          type: string
+        description:
+          type: string
+        imageUri:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        isPublic:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, date, name, description, tags, isPublic, createdAt]
+
+    OutfitInput:
+      type: object
+      properties:
+        id:
+          type: string
+          nullable: true
+        date:
+          type: string
+          format: date-time
+        name:
+          type: string
+        description:
+          type: string
+        imageUri:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        isPublic:
+          type: boolean
+      required: [date, name, description, tags, isPublic]

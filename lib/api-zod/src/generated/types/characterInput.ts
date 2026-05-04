@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface CharacterInput {
+  name: string;
+  bio: string;
+  mood: string;
+  traits: string[];
+  isPublic: boolean;
 }
