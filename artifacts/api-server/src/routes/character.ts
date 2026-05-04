@@ -1,5 +1,5 @@
 import { db, characterTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -12,6 +12,7 @@ const CharacterInputSchema = z.object({
   mood:     z.string().max(100).default("Hopeful"),
   traits:   z.array(z.string()).default([]),
   isPublic: z.boolean().default(true),
+  username: z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {
@@ -54,8 +55,33 @@ router.put("/character", requireAuth, async (req, res) => {
       })
       .returning();
     return res.json(updated);
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.code === "23505" && String(err?.constraint ?? "").includes("username")) {
+      return res.status(409).json({ error: "Username already taken" });
+    }
     req.log.error({ err }, "Failed to update character");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/users/check-username", requireAuth, async (req, res) => {
+  const userId   = getUserId(req);
+  const username = String(req.query.username ?? "").trim().toLowerCase();
+
+  if (!username || !/^[a-z0-9_]{3,20}$/.test(username)) {
+    return res.json({ available: false, reason: "invalid_format" });
+  }
+
+  try {
+    const rows = await db
+      .select({ userId: characterTable.userId })
+      .from(characterTable)
+      .where(and(eq(characterTable.username, username), ne(characterTable.userId, userId)))
+      .limit(1);
+
+    return res.json({ available: rows.length === 0 });
+  } catch (err) {
+    req.log.error({ err }, "Failed to check username");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

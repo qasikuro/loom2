@@ -1,11 +1,11 @@
 import { Feather } from '@expo/vector-icons';
 import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Platform,
   ScrollView,
@@ -18,7 +18,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Images } from '@/assets/images';
-import { useApp } from '@/context/AppContext';
+import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 
@@ -27,6 +27,8 @@ function fmtDate(iso: string) {
   const d = new Date(iso);
   return `${MONTHS[d.getMonth()]} ${d.getDate()}`;
 }
+
+const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 const ATTRIBUTE_SUGGESTIONS = [
   'Dreamer', 'Curious', 'Kind', 'Loner', 'Brave', 'Gentle',
@@ -40,7 +42,7 @@ export default function CharacterScreen() {
   const { character, setCharacter, outfits, deleteOutfit, stories, activeOutfitId, setActiveOutfitId } = useApp();
   const { signOut } = useAuth();
   const { user } = useUser();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
 
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
@@ -59,13 +61,17 @@ export default function CharacterScreen() {
   }
 
   const [confirmingOutfitId, setConfirmingOutfitId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState(false);
-  const [editingBio, setEditingBio] = useState(false);
-  const [nameVal, setNameVal] = useState(character.name);
-  const [bioVal, setBioVal] = useState(character.bio);
-  const [addingTrait, setAddingTrait] = useState(false);
-  const [newTrait, setNewTrait] = useState('');
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [editingName, setEditingName]               = useState(false);
+  const [editingBio, setEditingBio]                 = useState(false);
+  const [editingUsername, setEditingUsername]       = useState(false);
+  const [nameVal, setNameVal]                       = useState(character.name);
+  const [bioVal, setBioVal]                         = useState(character.bio);
+  const [usernameVal, setUsernameVal]               = useState(character.username ?? '');
+  const [usernameError, setUsernameError]           = useState<string | null>(null);
+  const [usernameChecking, setUsernameChecking]     = useState(false);
+  const [addingTrait, setAddingTrait]               = useState(false);
+  const [newTrait, setNewTrait]                     = useState('');
+  const [showSuggestions, setShowSuggestions]       = useState(false);
 
   function saveName() {
     if (nameVal.trim()) setCharacter({ ...character, name: nameVal.trim() });
@@ -75,6 +81,42 @@ export default function CharacterScreen() {
     setCharacter({ ...character, bio: bioVal.trim() });
     setEditingBio(false);
   }
+
+  async function saveUsername() {
+    const val = usernameVal.trim().toLowerCase();
+    setUsernameError(null);
+
+    if (!val) {
+      setCharacter({ ...character, username: undefined });
+      setEditingUsername(false);
+      return;
+    }
+    if (!USERNAME_REGEX.test(val)) {
+      setUsernameError('3–20 chars, lowercase letters, numbers and _ only');
+      return;
+    }
+    if (val === character.username) {
+      setEditingUsername(false);
+      return;
+    }
+
+    setUsernameChecking(true);
+    try {
+      const result = await apiFetch<{ available: boolean; reason?: string }>(
+        `/users/check-username?username=${encodeURIComponent(val)}`,
+      );
+      if (!result.available) {
+        setUsernameError('That handle is already taken');
+        return;
+      }
+    } catch { /* ignore network error, let server handle it */ } finally {
+      setUsernameChecking(false);
+    }
+
+    setCharacter({ ...character, username: val });
+    setEditingUsername(false);
+  }
+
   function addTrait(t: string) {
     const trimmed = t.trim();
     if (!trimmed || character.traits.includes(trimmed)) return;
@@ -162,7 +204,7 @@ export default function CharacterScreen() {
             </View>
           </View>
 
-          {/* Name + Bio */}
+          {/* Name + Username + Bio */}
           <View style={styles.nameSection}>
             {editingName ? (
               <View style={[styles.nameEditWrap, { borderBottomColor: colors.primary }]}>
@@ -184,6 +226,45 @@ export default function CharacterScreen() {
                 </View>
               </TouchableOpacity>
             )}
+
+            {/* Username row */}
+            {editingUsername ? (
+              <View style={[styles.usernameEditWrap, { borderColor: usernameError ? '#E04455' : colors.primary, backgroundColor: colors.muted }]}>
+                <Text style={[styles.usernameAt, { color: usernameError ? '#E04455' : colors.primary }]}>@</Text>
+                <TextInput
+                  style={[styles.usernameEditInput, { color: colors.foreground }]}
+                  value={usernameVal}
+                  onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
+                  autoFocus
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                  onSubmitEditing={saveUsername}
+                  onBlur={saveUsername}
+                  placeholder="your_handle"
+                  placeholderTextColor={colors.mutedForeground}
+                  maxLength={20}
+                />
+                {usernameChecking ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : null}
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.usernameRow}
+                onPress={() => { setUsernameVal(character.username ?? ''); setEditingUsername(true); setUsernameError(null); }}
+              >
+                {character.username ? (
+                  <Text style={[styles.usernameText, { color: colors.primary }]}>@{character.username}</Text>
+                ) : (
+                  <Text style={[styles.usernamePlaceholder, { color: `${colors.mutedForeground}70` }]}>+ Set a username</Text>
+                )}
+                <Feather name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginTop: 1 }} />
+              </TouchableOpacity>
+            )}
+            {usernameError ? (
+              <Text style={styles.usernameError}>{usernameError}</Text>
+            ) : null}
 
             {editingBio ? (
               <TextInput
@@ -349,7 +430,6 @@ export default function CharacterScreen() {
                         </View>
                       )}
 
-                      {/* Active badge over thumb */}
                       {isActive && (
                         <View style={styles.activeThumbBadge}>
                           <Feather name="home" size={9} color="#fff" />
@@ -377,7 +457,6 @@ export default function CharacterScreen() {
                           </View>
                         </View>
 
-                        {/* Set as display row */}
                         <TouchableOpacity
                           style={[
                             styles.setDisplayBtn,
@@ -480,12 +559,19 @@ const styles = StyleSheet.create({
   avatarRing: { width: 104, height: 104, borderRadius: 52, borderWidth: 4, overflow: 'hidden' },
   avatarImg: { width: '100%', height: '100%' },
   avatarEditBadge: { position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  nameSection: { gap: 7, marginBottom: 18 },
+  nameSection: { gap: 6, marginBottom: 18 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
   name: { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
   editHint: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   nameEditWrap: { borderBottomWidth: 2, paddingBottom: 3 },
   nameEditInput: { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
+  usernameRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  usernameText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  usernamePlaceholder: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
+  usernameAt: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  usernameEditInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  usernameError: { fontSize: 11, fontFamily: 'Inter_400Regular', color: '#E04455', fontStyle: 'italic' },
   bioRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   bio: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22 },
   bioInput: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22, borderWidth: 1, borderRadius: 12, padding: 12 },
@@ -501,7 +587,6 @@ const styles = StyleSheet.create({
   sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
   addBtnText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  // Traits
   traitsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   traitChip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 12, paddingRight: 6, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   traitText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
@@ -515,7 +600,6 @@ const styles = StyleSheet.create({
   suggChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   suggChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 14, borderWidth: 1 },
   suggText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  // Outfits
   outfitEmpty: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 16, padding: 16 },
   outfitEmptyIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   outfitEmptyTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
@@ -525,15 +609,9 @@ const styles = StyleSheet.create({
   outfitThumb: { width: 76, height: 108, flexShrink: 0 },
   outfitThumbPlaceholder: { width: 76, height: 108, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   activeThumbBadge: {
-    position: 'absolute',
-    top: 6,
-    left: 6,
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    backgroundColor: '#6B5B95',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', top: 6, left: 6,
+    width: 20, height: 20, borderRadius: 6,
+    backgroundColor: '#6B5B95', alignItems: 'center', justifyContent: 'center',
   },
   outfitInfo: { flex: 1, gap: 5, paddingHorizontal: 12, paddingVertical: 10 },
   outfitTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -544,24 +622,10 @@ const styles = StyleSheet.create({
   outfitTagText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
   visChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
   visChipText: { fontSize: 9, fontFamily: 'Inter_500Medium' },
-  outfitDeleteConfirmText: {
-    color: '#fff',
-    fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
-  },
+  outfitDeleteConfirmText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_600SemiBold' },
   outfitDeleteBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10, flexShrink: 0 },
-  setDisplayBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    alignSelf: 'flex-start',
-  },
+  setDisplayBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 10, borderWidth: 1, paddingHorizontal: 9, paddingVertical: 5, alignSelf: 'flex-start' },
   setDisplayText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
-  // Account section
   accountSection: { paddingHorizontal: 20, paddingBottom: 12, borderTopWidth: 1, borderTopColor: '#E2D9EE', paddingTop: 22, marginBottom: 8 },
   accountSectionLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 },
   accountCard: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },

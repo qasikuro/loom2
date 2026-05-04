@@ -23,7 +23,7 @@ export function setAuthTokenGetter(fn: TokenGetter) {
   _getToken = fn;
 }
 
-async function apiFetch<T>(
+export async function apiFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
@@ -49,17 +49,18 @@ async function apiFetch<T>(
 // ── Models ────────────────────────────────────────────────────────────────────
 
 export interface Character {
-  name:     string;
-  bio:      string;
-  mood:     string;
-  traits:   string[];
-  isPublic: boolean;
+  name:      string;
+  bio:       string;
+  mood:      string;
+  traits:    string[];
+  isPublic:  boolean;
+  username?: string;
 }
 
 export interface StoryPanel {
-  id:       string;
+  id:        string;
   imageUri?: string;
-  text:     string;
+  text:      string;
 }
 
 export interface Story {
@@ -98,6 +99,7 @@ export interface Outfit {
 
 export interface DiscoverPost {
   id:             string;
+  authorUserId:   string;
   authorName:     string;
   authorHandle:   string;
   chapterTitle:   string;
@@ -110,6 +112,7 @@ export interface DiscoverPost {
   chapterNumber:  number;
   vibe:           string;
   saved:          boolean;
+  isFollowing:    boolean;
   panels?:        { text: string; imageUri?: string }[];
 }
 
@@ -139,14 +142,18 @@ interface AppContextValue {
   addJournalEntry:    (e: JournalEntry) => void;
   deleteJournalEntry: (id: string) => void;
 
-  outfits:          Outfit[];
-  addOutfit:        (o: Outfit) => void;
-  deleteOutfit:     (id: string) => void;
-  activeOutfitId:   string | null;
-  setActiveOutfitId:(id: string | null) => void;
+  outfits:           Outfit[];
+  addOutfit:         (o: Outfit) => void;
+  deleteOutfit:      (id: string) => void;
+  activeOutfitId:    string | null;
+  setActiveOutfitId: (id: string | null) => void;
 
   discoverPosts:  DiscoverPost[];
   toggleSavePost: (id: string) => void;
+
+  followingIds:  string[];
+  followUser:    (targetUserId: string) => void;
+  unfollowUser:  (targetUserId: string) => void;
 
   rewards:       Reward[];
   dismissReward: (id: string) => void;
@@ -185,6 +192,7 @@ function toAppCharacter(raw: any): Character {
     mood:     raw.mood     ?? DEFAULT_CHARACTER.mood,
     traits:   Array.isArray(raw.traits) ? raw.traits : [],
     isPublic: raw.isPublic ?? raw.is_public ?? true,
+    username: raw.username ?? undefined,
   };
 }
 
@@ -226,6 +234,29 @@ function toAppOutfit(raw: any): Outfit {
   };
 }
 
+type RawDiscoverItem = Omit<DiscoverPost, 'saved' | 'isFollowing'>;
+
+function toRawDiscoverPost(raw: any): RawDiscoverItem {
+  return {
+    id:             raw.id,
+    authorUserId:   raw.authorUserId ?? '',
+    authorName:     raw.authorName ?? 'Sky Child',
+    authorHandle:   raw.authorUsername
+      ? `@${raw.authorUsername}`
+      : `@${(raw.authorName ?? 'sky').toLowerCase().replace(/\s+/g, '')}`,
+    chapterTitle:   raw.chapterTitle ?? '',
+    storySnippet:   raw.storySnippet ?? '',
+    imageUri:       raw.imageUri ?? undefined,
+    mood:           raw.mood ?? 'Hopeful',
+    witnessedCount: raw.witnessedCount ?? 0,
+    savedCount:     raw.savedCount ?? 0,
+    timeAgo:        relativeTimeDiscover(raw.date ?? raw.createdAt ?? new Date().toISOString()),
+    chapterNumber:  raw.chapterNumber ?? 1,
+    vibe:           raw.mood ?? 'Hopeful',
+    panels:         Array.isArray(raw.panels) ? raw.panels : [],
+  };
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -242,24 +273,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rewards, setRewards]               = useState<Reward[]>([]);
   const [activeOutfitId, setActiveOutfitIdState] = useState<string | null>(null);
 
+  const [discoverFeedRaw, setDiscoverFeedRaw] = useState<RawDiscoverItem[]>([]);
+  const [followingIds, setFollowingIds]       = useState<string[]>([]);
+
   const discoverPosts = useMemo((): DiscoverPost[] =>
-    stories.map(s => ({
-      id:             s.id,
-      authorName:     character.name,
-      authorHandle:   `@${character.name.toLowerCase().replace(/\s+/g, '')}`,
-      chapterTitle:   s.chapterTitle,
-      storySnippet:   s.panels[0]?.text ?? '',
-      imageUri:       s.panels[0]?.imageUri,
-      mood:           s.mood,
-      witnessedCount: s.witnessedCount,
-      savedCount:     s.savedCount,
-      timeAgo:        relativeTimeDiscover(s.date),
-      chapterNumber:  1,
-      vibe:           s.mood,
-      saved:          savedStoryIds.has(s.id),
-      panels:         s.panels.map(p => ({ text: p.text, imageUri: p.imageUri })),
+    discoverFeedRaw.map(p => ({
+      ...p,
+      saved:       savedStoryIds.has(p.id),
+      isFollowing: followingIds.includes(p.authorUserId),
     })),
-  [stories, character, savedStoryIds]);
+  [discoverFeedRaw, savedStoryIds, followingIds]);
 
   const stateRef = useRef({ journalEntries, stories, outfits, character });
   useEffect(() => { stateRef.current = { journalEntries, stories, outfits, character }; });
@@ -279,16 +302,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadFromCache() {
     try {
-      const [c, j, s, o] = await Promise.all([
+      const [c, j, s, o, d, f] = await Promise.all([
         AsyncStorage.getItem('character_v2'),
         AsyncStorage.getItem('journal_v2'),
         AsyncStorage.getItem('stories_v1'),
         AsyncStorage.getItem('outfits_v1'),
+        AsyncStorage.getItem('discover_v1'),
+        AsyncStorage.getItem('following_v1'),
       ]);
       if (c) setCharacterState(JSON.parse(c));
       if (j) setJournalEntries(JSON.parse(j));
       if (s) setStories(JSON.parse(s));
       if (o) setOutfits(JSON.parse(o));
+      if (d) setDiscoverFeedRaw(JSON.parse(d));
+      if (f) setFollowingIds(JSON.parse(f));
     } catch { /* use defaults */ } finally {
       setIsLoading(false);
     }
@@ -323,11 +350,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('stories_v1',    JSON.stringify(stors)),
         AsyncStorage.setItem('outfits_v1',    JSON.stringify(outs)),
       ]);
+
+      // Load social data in the background
+      loadSocialData();
     } catch {
       setApiOnline(false);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function loadSocialData() {
+    try {
+      const [discoverRaw, followingRaw] = await Promise.all([
+        apiFetch<any[]>('/discover').catch(() => []),
+        apiFetch<string[]>('/follows/following').catch(() => []),
+      ]);
+
+      const feed    = (discoverRaw  ?? []).map(toRawDiscoverPost);
+      const follows = followingRaw ?? [];
+
+      setDiscoverFeedRaw(feed);
+      setFollowingIds(follows);
+
+      await Promise.allSettled([
+        AsyncStorage.setItem('discover_v1',  JSON.stringify(feed)),
+        AsyncStorage.setItem('following_v1', JSON.stringify(follows)),
+      ]);
+    } catch { /* silently skip */ }
   }
 
   // ── Character ──────────────────────────────────────────────────────────────
@@ -337,7 +387,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem('character_v2', JSON.stringify(c));
     apiFetch('/character', {
       method: 'PUT',
-      body:   JSON.stringify(c),
+      body:   JSON.stringify({
+        name:     c.name,
+        bio:      c.bio,
+        mood:     c.mood,
+        traits:   c.traits,
+        isPublic: c.isPublic,
+        username: c.username ?? null,
+      }),
     }).catch(() => null);
   }, []);
 
@@ -450,7 +507,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ── Discover / Rewards ─────────────────────────────────────────────────────
+  // ── Discover / Save ────────────────────────────────────────────────────────
 
   const toggleSavePost = useCallback((id: string) => {
     setSavedStoryIds(prev => {
@@ -459,6 +516,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+
+  // ── Social: follow / unfollow ──────────────────────────────────────────────
+
+  const followUser = useCallback((targetUserId: string) => {
+    setFollowingIds(prev =>
+      prev.includes(targetUserId) ? prev : [...prev, targetUserId],
+    );
+    apiFetch(`/follows/${targetUserId}`, { method: 'POST' }).catch(() => {
+      setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+    });
+  }, []);
+
+  const unfollowUser = useCallback((targetUserId: string) => {
+    setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+    apiFetch(`/follows/${targetUserId}`, { method: 'DELETE' }).catch(() => {
+      setFollowingIds(prev =>
+        prev.includes(targetUserId) ? prev : [...prev, targetUserId],
+      );
+    });
+  }, []);
+
+  // ── Rewards ────────────────────────────────────────────────────────────────
 
   const dismissReward = useCallback((id: string) => {
     setRewards(prev => prev.filter(r => r.id !== id));
@@ -476,6 +555,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       journalEntries, addJournalEntry, deleteJournalEntry,
       outfits, addOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       discoverPosts, toggleSavePost,
+      followingIds, followUser, unfollowUser,
       rewards, dismissReward,
       reloadData,
     }}>

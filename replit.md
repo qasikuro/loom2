@@ -27,7 +27,9 @@ All routes require a valid Clerk JWT.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET    | `/api/character` | Get character profile (auto-created if missing for user) |
-| PUT    | `/api/character` | Update character profile |
+| PUT    | `/api/character` | Update character profile (includes optional `username`) |
+| GET    | `/api/users/check-username?username=` | Check if a username is available |
+| GET    | `/api/users/search?q=` | Search public profiles by username or name |
 | GET    | `/api/journal-entries` | List user's journal entries, newest first |
 | POST   | `/api/journal-entries` | Create journal entry (accepts client UUID) |
 | DELETE | `/api/journal-entries/:id` | Delete journal entry (own entries only) |
@@ -40,9 +42,19 @@ All routes require a valid Clerk JWT.
 | POST   | `/api/outfits` | Create outfit (accepts client UUID) |
 | DELETE | `/api/outfits/:id` | Delete outfit (own outfits only) |
 | POST   | `/api/upload` | Upload image (base64 → file, requires auth) |
+| POST   | `/api/follows/:targetUserId` | Follow a user |
+| DELETE | `/api/follows/:targetUserId` | Unfollow a user |
+| GET    | `/api/follows/following` | Get list of user IDs I follow |
+| GET    | `/api/discover` | Ranked discovery feed (public stories from other users) |
+
+#### Discovery Algorithm (`/api/discover`)
+Score per story = `(isFollowing × 4) + (moodMatch × 2) + min(2, engagement/25) + max(0, 1 − days_old/30)`
+- Returns top 50 scored stories from the last 200 public stories (excluding own)
+- Joined with character table for author name/username
 
 ### Database schema (Drizzle ORM, PostgreSQL)
-- `character` — user_id (text PK), name, bio, mood, traits (jsonb), is_public, updated_at
+- `character` — user_id (text PK), **username** (text UNIQUE nullable), name, bio, mood, traits (jsonb), is_public, updated_at
+- `follows` — follower_id (text), following_id (text), created_at — composite PK (follower_id, following_id)
 - `journal_entries` — id (uuid PK), user_id (text, indexed), type (diary|friend|moment), text, mood, image_uri, friend_name, date, created_at
 - `stories` — id (uuid PK), user_id (text, indexed), chapter_title, mood, location, is_public, witnessed_count, saved_count, panels (jsonb), date, created_at
 - `outfits` — id (uuid PK), user_id (text, indexed), name, description, image_uri, tags (jsonb), is_public, date, created_at
@@ -110,9 +122,18 @@ app/
 
 #### 3. Character (`profile.tsx` + `create-outfit.tsx`)
 - Editable name + bio (inline tap-to-edit)
+- Editable **@username** handle (inline, validated: `^[a-z0-9_]{3,20}$`, checks availability via API before saving)
 - Attribute trait chips (add/remove, autocomplete suggestions)
 - Profile visibility toggle: public or private
 - Outfit Log: grid of dated outfit cards, each with photo, name, vibe tags, visibility
+
+#### 4. Discover (`discover.tsx`)
+- **For You** tab: ranked API feed from `/api/discover` (followed authors, mood match, engagement, recency)
+- **New** tab: same feed sorted by date
+- **Vibes** tab: filter by mood category (Soft, Lonely, Romantic, Chaotic, Peaceful, Adventurous, Dreamy, Hopeful)
+- **People** tab: debounced search for other users (`/api/users/search`), with Follow/Following toggle button per result
+- Follow/unfollow is optimistic (local state updates immediately, API synced in background)
+- Discover feed live counts from real public stories; vibes show actual post counts
 
 ### Data Model (`context/AppContext.tsx`)
 ```typescript
@@ -122,15 +143,16 @@ Story        { id, date, chapterTitle, panels[], mood,
 StoryPanel   { id, imageUri?, text }
 Outfit       { id, date, name, description, imageUri?,
                tags[], isPublic }
-Character    { name, bio, mood, traits[], isPublic }
-DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
+Character    { name, bio, mood, traits[], isPublic, username? }
+DiscoverPost { authorUserId, authorName, authorHandle, chapterTitle,
+               panels[], vibe, isFollowing, saved, ... }
 ```
 
 ### Data Persistence Strategy
 - **Primary**: REST API → PostgreSQL (via `artifacts/api-server`)
 - **Fallback**: AsyncStorage (offline cache, auto-populated after each successful API fetch)
 - **API URL**: Resolved at Expo bundle time from `REPLIT_DEV_DOMAIN` via `app.config.ts` → `Constants.expoConfig.extra.apiUrl`
-- AsyncStorage cache keys: `character_v2`, `stories_v1`, `journal_v2`, `outfits_v1`
+- AsyncStorage cache keys: `character_v2`, `stories_v1`, `journal_v2`, `outfits_v1`, `discover_v1`, `following_v1`
 - Load order: AsyncStorage cache first (instant, no auth needed) → then API reload once Clerk token is ready
 - All mutations: optimistic local update → fire-and-forget API sync in background
 
