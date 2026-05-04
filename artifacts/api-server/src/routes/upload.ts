@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
+import { requireAuth } from "../middleware/auth";
 
 const UPLOAD_DIR = join(process.cwd(), "uploads");
 
@@ -12,7 +13,7 @@ const UploadSchema = z.object({
 
 const router: IRouter = Router();
 
-router.post("/upload", async (req, res) => {
+router.post("/upload", requireAuth, async (req, res) => {
   const parsed = UploadSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });

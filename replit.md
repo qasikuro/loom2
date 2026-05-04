@@ -15,30 +15,42 @@ A dreamy, minimalist mobile app inspired by Sky: Children of the Light. Three fo
 
 ## Backend (`artifacts/api-server`)
 
+### Authentication
+All routes (except `/api/images/*` static files and `/api/health`) are protected by Clerk JWT middleware (`@clerk/express`). Clients must send `Authorization: Bearer <token>` on every request. The token is obtained from Clerk via `useAuth().getToken()` in the Expo app.
+
+### Per-user Data Isolation
+Every table has a `user_id text NOT NULL` column. All queries filter by the authenticated user's Clerk `userId`. Each user sees only their own data — journal entries, stories, outfits, and character profile are completely isolated.
+
 ### REST API routes
+All routes require a valid Clerk JWT.
+
 | Method | Path | Description |
 |--------|------|-------------|
-| GET    | `/api/character` | Get character profile (auto-created if missing) |
+| GET    | `/api/character` | Get character profile (auto-created if missing for user) |
 | PUT    | `/api/character` | Update character profile |
-| GET    | `/api/journal-entries` | List all journal entries, newest first |
+| GET    | `/api/journal-entries` | List user's journal entries, newest first |
 | POST   | `/api/journal-entries` | Create journal entry (accepts client UUID) |
-| DELETE | `/api/journal-entries/:id` | Delete journal entry |
-| GET    | `/api/stories` | List all stories, newest first |
+| DELETE | `/api/journal-entries/:id` | Delete journal entry (own entries only) |
+| GET    | `/api/stories` | List user's stories, newest first |
 | POST   | `/api/stories` | Create story with panels (accepts client UUID) |
-| GET    | `/api/stories/:id` | Get single story |
-| DELETE | `/api/stories/:id` | Delete story |
+| GET    | `/api/stories/:id` | Get single story (own stories only) |
+| DELETE | `/api/stories/:id` | Delete story (own stories only) |
 | POST   | `/api/stories/:id/witness` | Increment witnessed count |
-| GET    | `/api/outfits` | List all outfits, newest first |
+| GET    | `/api/outfits` | List user's outfits, newest first |
 | POST   | `/api/outfits` | Create outfit (accepts client UUID) |
-| DELETE | `/api/outfits/:id` | Delete outfit |
+| DELETE | `/api/outfits/:id` | Delete outfit (own outfits only) |
+| POST   | `/api/upload` | Upload image (base64 → file, requires auth) |
 
 ### Database schema (Drizzle ORM, PostgreSQL)
-- `character` — id (int PK=1), name, bio, mood, traits (jsonb), is_public, updated_at
-- `journal_entries` — id (uuid), type (diary|friend|moment), text, mood, image_uri, friend_name, date, created_at
-- `stories` — id (uuid), chapter_title, mood, location, is_public, witnessed_count, saved_count, panels (jsonb), date, created_at
-- `outfits` — id (uuid), name, description, image_uri, tags (jsonb), is_public, date, created_at
+- `character` — user_id (text PK), name, bio, mood, traits (jsonb), is_public, updated_at
+- `journal_entries` — id (uuid PK), user_id (text, indexed), type (diary|friend|moment), text, mood, image_uri, friend_name, date, created_at
+- `stories` — id (uuid PK), user_id (text, indexed), chapter_title, mood, location, is_public, witnessed_count, saved_count, panels (jsonb), date, created_at
+- `outfits` — id (uuid PK), user_id (text, indexed), name, description, image_uri, tags (jsonb), is_public, date, created_at
 
 To push schema changes: `cd lib/db && pnpm run push`
+
+### Middleware
+- `artifacts/api-server/src/middleware/auth.ts` — `clerkAuth` (applied globally in app.ts), `requireAuth` (per-route guard), `getUserId` (extract userId from verified token)
 
 ## Sky Journal App (`artifacts/sky-journal`)
 
@@ -56,7 +68,7 @@ To push schema changes: `cd lib/db && pnpm run push`
 ### Navigation Structure
 ```
 app/
-  _layout.tsx                — Root stack (ClerkProvider, fonts, providers, modal routes)
+  _layout.tsx                — Root stack (ClerkProvider, fonts, providers, AuthTokenBridge, modal routes)
   (auth)/
     _layout.tsx              — Auth stack (unauthenticated routes)
     sign-in.tsx              — Sign-in screen (email + password, Sky Journal themed)
@@ -73,6 +85,14 @@ app/
   create-journal-entry.tsx   — Modal: private journal entry form
   create-outfit.tsx          — Modal: outfit log form with image picker
 ```
+
+### Auth Token Flow
+- `app/_layout.tsx` contains `AuthTokenBridge` component (inside `AppProvider`)
+- `AuthTokenBridge` watches Clerk's `isLoaded` + `isSignedIn` state
+- Once Clerk is loaded and user is signed in, it calls `setAuthTokenGetter(fn)` (module-level in `AppContext`) to register the token getter
+- It then calls `reloadData()` to fetch fresh user-specific data from the API with a valid JWT
+- All API calls in `AppContext.apiFetch` automatically include `Authorization: Bearer <token>`
+- On sign-out, the token getter is reset to return null
 
 ### Three Core Areas
 
@@ -111,6 +131,7 @@ DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
 - **Fallback**: AsyncStorage (offline cache, auto-populated after each successful API fetch)
 - **API URL**: Resolved at Expo bundle time from `REPLIT_DEV_DOMAIN` via `app.config.ts` → `Constants.expoConfig.extra.apiUrl`
 - AsyncStorage cache keys: `character_v2`, `stories_v1`, `journal_v2`, `outfits_v1`
+- Load order: AsyncStorage cache first (instant, no auth needed) → then API reload once Clerk token is ready
 - All mutations: optimistic local update → fire-and-forget API sync in background
 
 ### Key Components
@@ -129,6 +150,13 @@ DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
 - Night sky: deep navy `#1A1630`
 - Time-aware sky gradient: dawn / day / dusk / night
 
+### Tab Bar (Native UI)
+- Uses `ClassicTabLayout` with Feather icons for cross-platform compatibility (iOS + Android + Web)
+- Floating pill style (borderRadius 30, marginHorizontal 14) with shadow elevation
+- BlurView background on iOS, solid `#FDFAF7` on Android
+- Custom `createBtn` (purple circle, 50×50) for the center Create tab
+- `isLiquidGlassAvailable` removed — using consistent Feather icons everywhere for Expo Go compatibility
+
 ### Social Philosophy
 - No likes — replaced with "Witnessed" and "Saved"
 - No follower counts — soft ambient feedback only
@@ -139,3 +167,11 @@ DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
 - `assets/images/splash.png` — Splash screen (floating island scene)
 - `assets/images/character_default.png` — Default character avatar
 - `assets/images/story_bg1/2/3.png` — Sample story panel backgrounds
+
+## Important Notes
+- `Alert.alert` does NOT work in Expo Web iframe — use inline two-tap confirm pattern everywhere
+- Image upload: pick → base64 → POST /api/upload (50mb limit) → returns `{ path: '/api/images/filename' }`
+- Pre-existing TS errors in `utils/persistImage.ts` (expo-file-system types) — not from our changes, safe to ignore
+- Deprecation warnings (`shadow*`, `textShadow*`, `pointerEvents`) are React Native Web warnings, not errors
+- `topPad`: `Platform.OS === 'web' ? 48 : insets.top`
+- Tab bar `pillBottom = Math.max(insets.bottom + 4, 12)`

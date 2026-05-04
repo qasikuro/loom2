@@ -1,7 +1,8 @@
 import { db, outfitsTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
+import { requireAuth, getUserId } from "../middleware/auth";
 
 const router: IRouter = Router();
 
@@ -15,11 +16,13 @@ const OutfitInputSchema = z.object({
   isPublic:    z.boolean().default(false),
 });
 
-router.get("/outfits", async (req, res) => {
+router.get("/outfits", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
   try {
     const rows = await db
       .select()
       .from(outfitsTable)
+      .where(eq(outfitsTable.userId, userId))
       .orderBy(desc(outfitsTable.date));
     return res.json(rows.map(serializeOutfit));
   } catch (err) {
@@ -28,7 +31,8 @@ router.get("/outfits", async (req, res) => {
   }
 });
 
-router.post("/outfits", async (req, res) => {
+router.post("/outfits", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
   const parsed = OutfitInputSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
@@ -39,6 +43,7 @@ router.post("/outfits", async (req, res) => {
 
     const insertValues = {
       ...(id ? { id } : {}),
+      userId,
       date: new Date(date),
       ...rest,
     };
@@ -48,7 +53,7 @@ router.post("/outfits", async (req, res) => {
       .values(insertValues)
       .onConflictDoUpdate({
         target: outfitsTable.id,
-        set: { date: new Date(date), ...rest },
+        set: { userId, date: new Date(date), ...rest },
       })
       .returning();
 
@@ -59,9 +64,13 @@ router.post("/outfits", async (req, res) => {
   }
 });
 
-router.delete("/outfits/:id", async (req, res) => {
+router.delete("/outfits/:id", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const outfitId = String(req.params.id);
   try {
-    await db.delete(outfitsTable).where(eq(outfitsTable.id, req.params.id));
+    await db
+      .delete(outfitsTable)
+      .where(and(eq(outfitsTable.id, outfitId), eq(outfitsTable.userId, userId)));
     return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete outfit");

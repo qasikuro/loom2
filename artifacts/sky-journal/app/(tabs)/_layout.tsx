@@ -1,8 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Redirect, Tabs } from 'expo-router';
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
-import { SymbolView } from 'expo-symbols';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@clerk/expo';
 import React from 'react';
@@ -17,30 +14,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/hooks/useColors';
 
-function NativeTabLayout() {
+function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="log">
-        <Icon sf={{ default: 'book', selected: 'book.fill' }} />
-        <Label>Journal</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="create">
-        <Icon sf={{ default: 'plus.circle', selected: 'plus.circle.fill' }} />
-        <Label>Create</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="discover">
-        <Icon sf={{ default: 'safari', selected: 'safari.fill' }} />
-        <Label>Discover</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: 'person', selected: 'person.fill' }} />
-        <Label>Character</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <View style={[styles.tabIconWrap, focused && styles.tabIconWrapActive]}>
+      <Feather name={name} size={20} color={color} />
+    </View>
   );
 }
 
@@ -63,25 +41,25 @@ function ClassicTabLayout() {
         headerShown: false,
 
         tabBarStyle: {
-          position:        'absolute',
-          backgroundColor: isIOS ? 'transparent' : colors.tabBar,
-          borderTopWidth:  0,
-          borderRadius:    isWeb ? 0 : 30,
+          position:         'absolute',
+          backgroundColor:  isIOS ? 'transparent' : colors.tabBar,
+          borderTopWidth:   0,
+          borderRadius:     isWeb ? 0 : 30,
           marginHorizontal: isWeb ? 0 : 14,
-          marginBottom:    pillBottom,
-          height:          barHeight,
-          paddingBottom:   isWeb ? 34 : 0,
-          elevation:       24,
-          shadowColor:     '#1E1830',
-          shadowOffset:    { width: 0, height: 8 },
-          shadowOpacity:   0.18,
-          shadowRadius:    24,
-          overflow:        'hidden',
+          marginBottom:     pillBottom,
+          height:           barHeight,
+          paddingBottom:    isWeb ? 34 : 0,
+          elevation:        24,
+          shadowColor:      '#1E1830',
+          shadowOffset:     { width: 0, height: 8 },
+          shadowOpacity:    0.18,
+          shadowRadius:     24,
+          overflow:         'hidden',
         },
 
         tabBarLabelStyle: {
-          fontSize:    10,
-          fontFamily:  'Inter_600SemiBold',
+          fontSize:     10,
+          fontFamily:   'Inter_600SemiBold',
           marginBottom: isWeb ? 0 : 7,
           letterSpacing: 0.1,
         },
@@ -104,24 +82,18 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView name="house" tintColor={color} size={22} />
-            ) : (
-              <TabIcon name={focused ? 'home' : 'home'} color={color} focused={focused} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="home" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="log"
         options={{
           title: 'Journal',
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView name="book" tintColor={color} size={22} />
-            ) : (
-              <TabIcon name="book-open" color={color} focused={focused} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="book-open" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -130,7 +102,7 @@ function ClassicTabLayout() {
           title: '',
           tabBarIcon: () => (
             <View style={styles.createBtn}>
-              <Feather name="plus" size={22} color="#fff" />
+              <Feather name="plus" size={24} color="#fff" />
             </View>
           ),
         }}
@@ -139,35 +111,21 @@ function ClassicTabLayout() {
         name="discover"
         options={{
           title: 'Discover',
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView name="safari" tintColor={color} size={22} />
-            ) : (
-              <TabIcon name="compass" color={color} focused={focused} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="compass" color={color} focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Character',
-          tabBarIcon: ({ color, focused }) =>
-            isIOS ? (
-              <SymbolView name="person" tintColor={color} size={22} />
-            ) : (
-              <TabIcon name="user" color={color} focused={focused} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="user" color={color} focused={focused} />
+          ),
         }}
       />
     </Tabs>
-  );
-}
-
-function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
-  return (
-    <View style={[styles.tabIconWrap, focused && styles.tabIconWrapActive]}>
-      <Feather name={name} size={20} color={color} />
-    </View>
   );
 }
 
@@ -184,7 +142,6 @@ export default function TabLayout() {
 
   if (!isSignedIn) return <Redirect href={'/(auth)/sign-in' as any} />;
 
-  if (isLiquidGlassAvailable()) return <NativeTabLayout />;
   return <ClassicTabLayout />;
 }
 
@@ -197,12 +154,12 @@ const styles = StyleSheet.create({
   },
   createBtn: {
     backgroundColor: '#6B5B95',
-    borderRadius: 22,
-    width: 46,
-    height: 46,
+    borderRadius: 24,
+    width: 50,
+    height: 50,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
     shadowColor: '#6B5B95',
     shadowOpacity: 0.55,
     shadowRadius: 10,
@@ -210,13 +167,13 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   tabIconWrap: {
-    width: 38,
-    height: 30,
+    width: 40,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
+    borderRadius: 16,
   },
   tabIconWrapActive: {
-    backgroundColor: 'rgba(107,91,149,0.12)',
+    backgroundColor: 'rgba(107,91,149,0.13)',
   },
 });

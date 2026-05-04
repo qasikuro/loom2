@@ -8,19 +8,34 @@ function resolveApiBase(): string {
   const extra  = (Constants.expoConfig as any)?.extra;
   const envUrl = extra?.apiUrl;
   if (envUrl) return envUrl as string;
-  // Fallback: relative URL works when the app is served as a web bundle
-  // from the same origin as the proxy (e.g. Expo Web preview in Replit).
   return '/api';
 }
 
 const API_BASE = resolveApiBase();
 
+// ── Auth token getter (injected from Clerk context in _layout) ────────────────
+
+type TokenGetter = () => Promise<string | null>;
+
+let _getToken: TokenGetter = async () => null;
+
+export function setAuthTokenGetter(fn: TokenGetter) {
+  _getToken = fn;
+}
+
 async function apiFetch<T>(
   path: string,
   options?: RequestInit,
 ): Promise<T> {
+  const token = await _getToken();
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeader,
+      ...(options?.headers ?? {}),
+    },
     ...options,
   });
   if (!res.ok) {
@@ -135,15 +150,17 @@ interface AppContextValue {
 
   rewards:       Reward[];
   dismissReward: (id: string) => void;
+
+  reloadData: () => Promise<void>;
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
 
 const DEFAULT_CHARACTER: Character = {
-  name:     'Aster',
+  name:     'Sky Child',
   bio:      'A wandering light, chasing memories across the sky.',
   mood:     'Hopeful',
-  traits:   ['Dreamer', 'Curious', 'Kind', 'Loner'],
+  traits:   ['Dreamer', 'Curious', 'Kind'],
   isPublic: true,
 };
 
@@ -244,7 +261,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })),
   [stories, character, savedStoryIds]);
 
-  // Keep a ref so mutation callbacks always have the latest values without stale closures
   const stateRef = useRef({ journalEntries, stories, outfits, character });
   useEffect(() => { stateRef.current = { journalEntries, stories, outfits, character }; });
 
@@ -258,12 +274,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Load data ──────────────────────────────────────────────────────────────
 
-  useEffect(() => { loadData(); }, []);
+  // On mount: restore from cache immediately so the UI isn't blank
+  useEffect(() => { loadFromCache(); }, []);
 
+  async function loadFromCache() {
+    try {
+      const [c, j, s, o] = await Promise.all([
+        AsyncStorage.getItem('character_v2'),
+        AsyncStorage.getItem('journal_v2'),
+        AsyncStorage.getItem('stories_v1'),
+        AsyncStorage.getItem('outfits_v1'),
+      ]);
+      if (c) setCharacterState(JSON.parse(c));
+      if (j) setJournalEntries(JSON.parse(j));
+      if (s) setStories(JSON.parse(s));
+      if (o) setOutfits(JSON.parse(o));
+    } catch { /* use defaults */ } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Called by AuthTokenBridge once a valid Clerk token is available
   async function loadData() {
     setIsLoading(true);
 
-    // Try API first
     try {
       const [charRaw, entriesRaw, storiesRaw, outfitsRaw] = await Promise.all([
         apiFetch<any>('/character'),
@@ -283,7 +317,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOutfits(outs);
       setApiOnline(true);
 
-      // Update local cache for offline use
       await Promise.allSettled([
         AsyncStorage.setItem('character_v2',  JSON.stringify(char)),
         AsyncStorage.setItem('journal_v2',    JSON.stringify(entries)),
@@ -291,20 +324,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('outfits_v1',    JSON.stringify(outs)),
       ]);
     } catch {
-      // API unreachable — fall back to AsyncStorage cache
       setApiOnline(false);
-      try {
-        const [c, s, j, o] = await Promise.all([
-          AsyncStorage.getItem('character_v2'),
-          AsyncStorage.getItem('stories_v1'),
-          AsyncStorage.getItem('journal_v2'),
-          AsyncStorage.getItem('outfits_v1'),
-        ]);
-        if (c) setCharacterState(JSON.parse(c));
-        if (s) setStories(JSON.parse(s));
-        if (j) setJournalEntries(JSON.parse(j));
-        if (o) setOutfits(JSON.parse(o));
-      } catch { /* use defaults */ }
     } finally {
       setIsLoading(false);
     }
@@ -315,7 +335,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setCharacter = useCallback((c: Character) => {
     setCharacterState(c);
     AsyncStorage.setItem('character_v2', JSON.stringify(c));
-    // Fire-and-forget API sync
     apiFetch('/character', {
       method: 'PUT',
       body:   JSON.stringify(c),
@@ -412,7 +431,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));
       return updated;
     });
-    // Clear active outfit if it's the one being deleted
     setActiveOutfitIdState(prev => {
       if (prev === id) {
         AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
@@ -446,6 +464,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRewards(prev => prev.filter(r => r.id !== id));
   }, []);
 
+  const reloadData = useCallback(async () => {
+    await loadData();
+  }, []);
+
   return (
     <AppContext.Provider value={{
       isLoading, apiOnline,
@@ -455,6 +477,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       outfits, addOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       discoverPosts, toggleSavePost,
       rewards, dismissReward,
+      reloadData,
     }}>
       {children}
     </AppContext.Provider>

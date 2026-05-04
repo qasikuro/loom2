@@ -4,6 +4,7 @@ export type StoryPanel = { id: string; text: string; imageUri?: string };
 
 export const storiesTable = pgTable("stories", {
   id:             uuid("id").primaryKey().defaultRandom(),
+  userId:         text("user_id").notNull().default("legacy"),
   chapterTitle:   text("chapter_title").notNull(),
   mood:           text("mood").notNull(),
   location:       text("location").notNull().default(""),

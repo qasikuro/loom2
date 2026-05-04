@@ -2,6 +2,7 @@ import { boolean, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-c
 
 export const outfitsTable = pgTable("outfits", {
   id:          uuid("id").primaryKey().defaultRandom(),
+  userId:      text("user_id").notNull().default("legacy"),
   name:        text("name").notNull(),
   description: text("description").notNull().default(""),
   imageUri:    text("image_uri"),

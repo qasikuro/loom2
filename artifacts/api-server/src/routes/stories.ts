@@ -1,7 +1,8 @@
 import { db, storiesTable } from "@workspace/db";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
+import { requireAuth, getUserId } from "../middleware/auth";
 
 const router: IRouter = Router();
 
@@ -21,11 +22,13 @@ const StoryInputSchema = z.object({
   isPublic:     z.boolean().default(false),
 });
 
-router.get("/stories", async (req, res) => {
+router.get("/stories", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
   try {
     const rows = await db
       .select()
       .from(storiesTable)
+      .where(eq(storiesTable.userId, userId))
       .orderBy(desc(storiesTable.date));
     return res.json(rows.map(serializeStory));
   } catch (err) {
@@ -34,7 +37,8 @@ router.get("/stories", async (req, res) => {
   }
 });
 
-router.post("/stories", async (req, res) => {
+router.post("/stories", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
   const parsed = StoryInputSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
@@ -50,6 +54,7 @@ router.post("/stories", async (req, res) => {
 
     const insertValues = {
       ...(id ? { id } : {}),
+      userId,
       date:   new Date(date),
       panels: sanitizedPanels,
       ...rest,
@@ -60,7 +65,7 @@ router.post("/stories", async (req, res) => {
       .values(insertValues)
       .onConflictDoUpdate({
         target: storiesTable.id,
-        set: { date: new Date(date), panels: sanitizedPanels, ...rest },
+        set: { userId, date: new Date(date), panels: sanitizedPanels, ...rest },
       })
       .returning();
 
@@ -71,12 +76,14 @@ router.post("/stories", async (req, res) => {
   }
 });
 
-router.get("/stories/:id", async (req, res) => {
+router.get("/stories/:id", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const storyId = String(req.params.id);
   try {
     const rows = await db
       .select()
       .from(storiesTable)
-      .where(eq(storiesTable.id, req.params.id))
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
       .limit(1);
 
     if (rows.length === 0) return res.status(404).json({ error: "Not found" });
@@ -87,9 +94,13 @@ router.get("/stories/:id", async (req, res) => {
   }
 });
 
-router.delete("/stories/:id", async (req, res) => {
+router.delete("/stories/:id", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const storyId = String(req.params.id);
   try {
-    await db.delete(storiesTable).where(eq(storiesTable.id, req.params.id));
+    await db
+      .delete(storiesTable)
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)));
     return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete story");
@@ -97,12 +108,14 @@ router.delete("/stories/:id", async (req, res) => {
   }
 });
 
-router.post("/stories/:id/witness", async (req, res) => {
+router.post("/stories/:id/witness", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const storyId = String(req.params.id);
   try {
     const [updated] = await db
       .update(storiesTable)
       .set({ witnessedCount: sql`${storiesTable.witnessedCount} + 1` })
-      .where(eq(storiesTable.id, req.params.id))
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });

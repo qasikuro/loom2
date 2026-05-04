@@ -1,7 +1,8 @@
 import { db, journalEntriesTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
+import { requireAuth, getUserId } from "../middleware/auth";
 
 const router: IRouter = Router();
 
@@ -15,11 +16,13 @@ const JournalEntryInputSchema = z.object({
   friendName: z.string().nullable().optional(),
 });
 
-router.get("/journal-entries", async (req, res) => {
+router.get("/journal-entries", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
   try {
     const rows = await db
       .select()
       .from(journalEntriesTable)
+      .where(eq(journalEntriesTable.userId, userId))
       .orderBy(desc(journalEntriesTable.date));
     return res.json(rows.map(serializeEntry));
   } catch (err) {
@@ -28,7 +31,8 @@ router.get("/journal-entries", async (req, res) => {
   }
 });
 
-router.post("/journal-entries", async (req, res) => {
+router.post("/journal-entries", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
   const parsed = JournalEntryInputSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
@@ -41,12 +45,13 @@ router.post("/journal-entries", async (req, res) => {
       .insert(journalEntriesTable)
       .values({
         ...(id ? { id } : {}),
+        userId,
         date: new Date(date),
         ...rest,
       })
       .onConflictDoUpdate({
         target: journalEntriesTable.id,
-        set: { date: new Date(date), ...rest },
+        set: { userId, date: new Date(date), ...rest },
       })
       .returning();
 
@@ -57,9 +62,18 @@ router.post("/journal-entries", async (req, res) => {
   }
 });
 
-router.delete("/journal-entries/:id", async (req, res) => {
+router.delete("/journal-entries/:id", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const entryId = String(req.params.id);
   try {
-    await db.delete(journalEntriesTable).where(eq(journalEntriesTable.id, req.params.id));
+    await db
+      .delete(journalEntriesTable)
+      .where(
+        and(
+          eq(journalEntriesTable.id, entryId),
+          eq(journalEntriesTable.userId, userId),
+        ),
+      );
     return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete journal entry");

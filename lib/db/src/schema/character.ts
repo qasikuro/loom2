@@ -1,7 +1,7 @@
-import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const characterTable = pgTable("character", {
-  id:        integer("id").primaryKey().default(1),
+  userId:    text("user_id").primaryKey(),
   name:      text("name").notNull().default("Sky Child"),
   bio:       text("bio").notNull().default(""),
   mood:      text("mood").notNull().default("Hopeful"),
