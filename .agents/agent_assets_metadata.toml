@@ -1,0 +1,38 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "SkjYUmr0MWd2pGj_gEroZ"
+uri = "file://artifacts/sky-journal/assets/images/icon.png"
+type = "image"
+title = "sky-journal-icon"
+
+[[generated]]
+id = "WDjMCg-g8VSLPzImxdXzX"
+uri = "file://artifacts/sky-journal/assets/images/splash.png"
+type = "image"
+title = "sky-journal-splash"
+
+[[generated]]
+id = "gcZyW_JkPPv6mZVtZOMDT"
+uri = "file://artifacts/sky-journal/assets/images/character_default.png"
+type = "image"
+title = "sky-kid-character"
+
+[[generated]]
+id = "DpVIbuYAJj_lq_8aS2f6z"
+uri = "file://artifacts/sky-journal/assets/images/story_bg1.png"
+type = "image"
+title = "story-bg-moonlit-valley"
+
+[[generated]]
+id = "E2Dhi4luWhoyg6hBCfSsc"
+uri = "file://artifacts/sky-journal/assets/images/story_bg2.png"
+type = "image"
+title = "story-bg-golden-hour"
+
+[[generated]]
+id = "y7ipGBr1YG4SGBCf7nPQZ"
+uri = "file://artifacts/sky-journal/assets/images/story_bg3.png"
+type = "image"
+title = "story-bg-bridge-meeting"

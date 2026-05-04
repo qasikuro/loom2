@@ -1,0 +1,115 @@
+Design a minimalist, dreamy mobile app inspired by Sky: Children of the Light. The app is focused on character expression, storytelling, and soft social discovery.
+
+CORE CONCEPT:
+This is not a typical social media app. It is a personal character journal where users create a “Sky Kid” character, document their daily logs, and write manga-style stories. Discovery is calm, aesthetic, and non-competitive.
+
+STYLE & MOOD:
+
+- Soft, pastel color palette (lavender, sky blue, warm gold)
+- Calm, emotional, atmospheric
+- Lots of white space
+- Subtle glow effects and gradients
+- Rounded UI elements
+- Elegant serif font for story text, clean sans-serif for UI
+- Smooth, slow transitions (no harsh animations)
+
+MAIN FEATURES:
+
+1. CHARACTER HOME SCREEN
+
+- Large centered character (full body)
+- Character name, mood, and traits (tags like “gentle”, “lonely”, “dreamer”)
+- Button: “New Log”
+- Minimal stats (stories count, outfits count)
+- Background changes softly (day/night sky theme)
+
+2. DAILY LOG (JOURNAL)
+
+- Timeline of entries
+- Each entry includes:
+  - Date
+  - Image or short video
+  - Short story text (manga-style narration)
+  - Mood + location tags
+- Clean card layout
+- Floating “+” button to add new log
+
+3. CREATE LOG SCREEN
+
+- Upload image/video
+- Input: Chapter title
+- Input: Story text
+- Select mood (icons)
+- Select location (Sky realms style)
+- Toggle: Private / Public
+- Minimal and clean composition UI
+
+4. DISCOVER SCREEN (IMPORTANT)
+
+- Soft scrolling feed of user-created logs
+- Focus on visuals + story snippet
+- No loud usernames or follower counts
+- Tabs:
+  - “For You”
+  - “Vibes”
+  - “Stories”
+- Vibes filter (Soft, Lonely, Romantic, Chaotic, Peaceful)
+
+5. STORY VIEW
+
+- Manga-style reading experience
+- Large images with text overlay or below
+- Swipe or scroll to continue story
+- Immersive, distraction-free
+
+6. PROFILE / CHARACTER PAGE
+
+- Big character display at top
+- Story timeline below
+- Outfit showcase section
+- Follow button (subtle, not dominant)
+
+7. SOCIAL INTERACTION (SOFT)
+
+- Replace likes with:
+  - “Witnessed”
+  - “Saved”
+- Show subtle feedback like:
+  - “18 people experienced your story today”
+- No aggressive like counters
+
+8. REWARD SYSTEM UI
+
+- Small cards showing:
+  - “You were discovered in ‘Soft’ vibe”
+  - “Your story was saved”
+- Occasional highlight:
+  - “Rising Star”
+
+NAVIGATION:
+Bottom navigation bar:
+
+- Home (Character)
+- Log (Journal)
+- Create (+)
+- Discover
+- Profile
+
+IMPORTANT RULES:
+
+- Do NOT design like Instagram or TikTok
+- Avoid clutter and excessive features
+- Focus on emotional storytelling and calm interaction
+- Make the UI feel like a peaceful, magical space
+
+OUTPUT:
+Generate multiple mobile app screens showing:
+
+- Home
+- Log
+- Create
+- Discover
+- Story View
+- Profile
+
+Ensure consistency in color, typography, and spacing across all screens.
