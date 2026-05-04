@@ -44,30 +44,18 @@ export default function RootLayout() {
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
                 <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" />
                   <Stack.Screen
                     name="story/[id]"
-                    options={{ headerShown: false, presentation: 'card', animation: 'slide_from_bottom' }}
+                    options={{ presentation: 'card', animation: 'slide_from_bottom' }}
                   />
                   <Stack.Screen
-                    name="create-memory"
-                    options={{ headerShown: false, animation: 'slide_from_right' }}
+                    name="create-journal-entry"
+                    options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
                   />
                   <Stack.Screen
-                    name="create-friend-log"
-                    options={{ headerShown: false, animation: 'slide_from_right' }}
-                  />
-                  <Stack.Screen
-                    name="create-moment-log"
-                    options={{ headerShown: false, animation: 'slide_from_right' }}
-                  />
-                  <Stack.Screen
-                    name="search"
-                    options={{ headerShown: false, animation: 'fade' }}
-                  />
-                  <Stack.Screen
-                    name="friends"
-                    options={{ headerShown: false, animation: 'slide_from_right' }}
+                    name="create-outfit"
+                    options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
                   />
                 </Stack>
               </KeyboardProvider>

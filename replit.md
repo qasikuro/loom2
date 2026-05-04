@@ -1,6 +1,6 @@
 # Sky Journal
 
-A dreamy, minimalist mobile app inspired by Sky: Children of the Light. A personal character journal where users create a "Sky Kid" character, build multi-panel manga stories, and discover others' stories in a calm, non-competitive feed.
+A dreamy, minimalist mobile app inspired by Sky: Children of the Light. Three focused areas: a private journal, a public manga story creator, and a character customisation page with outfit log.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ A dreamy, minimalist mobile app inspired by Sky: Children of the Light. A person
 - React Native 0.81
 - `@expo-google-fonts/inter` for typography
 - `expo-linear-gradient` for sky gradients
-- `expo-image-picker` for panel image selection
+- `expo-image-picker` for panel/outfit/journal image selection
 - `@react-native-async-storage/async-storage` for persistence
 - `@tanstack/react-query` for data management
 - `react-native-keyboard-controller` for keyboard handling
@@ -24,54 +24,73 @@ A dreamy, minimalist mobile app inspired by Sky: Children of the Light. A person
 ### Navigation Structure
 ```
 app/
-  _layout.tsx          — Root stack (fonts, providers)
+  _layout.tsx                — Root stack (fonts, providers, modal routes)
   (tabs)/
-    _layout.tsx        — Tab bar (Home, Log, Create, Discover, Profile)
-    index.tsx          — Character Home Screen
-    log.tsx            — Daily Journal (log entries list)
-    create.tsx         — Manga Chapter Builder (multi-panel)
-    discover.tsx       — Discover Feed (For You / Vibes / Stories)
-    profile.tsx        — Profile / Character Page
+    _layout.tsx              — Tab bar: Home | Journal | + | Discover | Character
+    index.tsx                — Home: sky hero, quick actions, recent entries
+    log.tsx                  — Journal: private diary entries (always private)
+    create.tsx               — Create: direct manga panel builder (public stories)
+    discover.tsx             — Discover: soft social feed
+    profile.tsx              — Character: name/bio/traits + outfit log
   story/
-    [id].tsx           — Immersive Manga Story Reader
+    [id].tsx                 — Immersive manga story reader
+  create-journal-entry.tsx   — Modal: private journal entry form
+  create-outfit.tsx          — Modal: outfit log form with image picker
 ```
 
-### Key Components
-- `components/MangaPanelEditor.tsx` — Per-panel editor (image + narration)
-- `components/LogCard.tsx` — Journal entry card with panel thumbnails
-- `components/DiscoverCard.tsx` — Discover feed card
-- `components/MoodBadge.tsx` — Mood indicator with icon
-- `components/TraitTag.tsx` — Character trait pill
-- `components/RewardBanner.tsx` — Reward notification card
-- `components/GradientSky.tsx` — Time-aware sky gradient
+### Three Core Areas
+
+#### 1. Journal (`log.tsx` + `create-journal-entry.tsx`)
+- Always private — no visibility toggle
+- Simple entries: text + mood + optional photo
+- Daily writing prompt rotates each day
+- Clean JournalCard component (italic text + mood badge + optional thumbnail)
+
+#### 2. Stories (`create.tsx` + `story/[id].tsx`)
+- Public by default — can be toggled private
+- Manga-style multi-panel chapters (up to 12 panels)
+- Each panel: full-bleed image + narration text overlay
+- Story reader: immersive full-screen manga viewer with "Witness" instead of like
+
+#### 3. Character (`profile.tsx` + `create-outfit.tsx`)
+- Editable name + bio (inline tap-to-edit)
+- Attribute trait chips (add/remove, autocomplete suggestions)
+- Profile visibility toggle: public or private
+- Outfit Log: grid of dated outfit cards, each with photo, name, vibe tags, visibility
 
 ### Data Model (`context/AppContext.tsx`)
 ```typescript
-StoryPanel { id, imageUri?, text }
-LogEntry   { id, date, chapterTitle, panels[], mood, location, isPublic, witnessedCount, savedCount }
-Character  { name, bio, mood, traits[], stats... }
+JournalEntry { id, date, text, mood, imageUri? }            // always private
+Story        { id, date, chapterTitle, panels[], mood,
+               location, isPublic, witnessedCount, savedCount }
+StoryPanel   { id, imageUri?, text }
+Outfit       { id, date, name, description, imageUri?,
+               tags[], isPublic }
+Character    { name, bio, mood, traits[], isPublic }
 DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
 ```
 
+AsyncStorage keys: `character_v2`, `stories_v1`, `journal_v1`, `outfits_v1`
+
+### Key Components
+- `components/MangaPanelEditor.tsx` — Per-panel editor (image + narration)
+- `components/JournalCard.tsx` — Private diary entry card
+- `components/DiscoverCard.tsx` — Discover feed card
+- `components/MoodBadge.tsx` — Mood indicator with icon + color
+- `components/TraitTag.tsx` — Character trait pill
+- `components/RewardBanner.tsx` — Reward notification ("Witnessed", "Saved")
+- `components/GradientSky.tsx` — Time-aware sky gradient
+
 ### Design System (`constants/colors.ts`)
-- Palette: lavender `#C8B8E8`, sky blue `#B8D4F0`, warm gold `#F0D080`
+- Palette: lavender `#C8B8E8`, sky blue `#B8D4F0`, warm gold `#C8A84B`
 - Background: soft cream `#F8F4EE`
 - Primary: muted purple `#6B5B95`
 - Night sky: deep navy `#1A1630`
 - Time-aware sky gradient: dawn / day / dusk / night
 
-### Core Features
-1. **Character Home** — Sky Kid avatar with glow rings, traits, stats, time-aware sky background
-2. **Manga Creator** — Build multi-panel stories (up to 12 panels), each with an image + narration
-3. **Story Reader** — Full-screen immersive manga reading, panel-by-panel with text overlays
-4. **Journal Log** — Personal timeline of all created chapters
-5. **Discover** — Soft social feed with Vibes grid (Soft/Lonely/Romantic/Chaotic/Peaceful/Adventurous)
-6. **Profile** — Character page with Stories/Outfits/Saved tabs
-7. **Rewards** — "Witnessed", "Saved" instead of likes
-
 ### Social Philosophy
 - No likes — replaced with "Witnessed" and "Saved"
-- No follower counts — soft "Witnessed by X today" feedback
+- No follower counts — soft ambient feedback only
 - No algorithmic pressure — calm aesthetic discovery
 
 ## Generated Assets

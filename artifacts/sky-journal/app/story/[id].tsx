@@ -27,7 +27,7 @@ export default function StoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
-  const { logs, discoverPosts, toggleSavePost } = useApp();
+  const { stories, discoverPosts, toggleSavePost } = useApp();
   const [witnessed, setWitnessed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -35,7 +35,7 @@ export default function StoryScreen() {
 
   const isDiscover = source === 'discover';
   const post = isDiscover ? discoverPosts.find(p => p.id === id) : null;
-  const logEntry = !isDiscover ? logs.find(l => l.id === id) : null;
+  const logEntry = !isDiscover ? stories.find(s => s.id === id) : null;
 
   const title = post?.chapterTitle ?? logEntry?.chapterTitle ?? 'Untitled Chapter';
   const mood = post?.mood ?? logEntry?.mood ?? 'Peaceful';

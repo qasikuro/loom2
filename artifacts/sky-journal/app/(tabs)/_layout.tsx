@@ -18,7 +18,7 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="log">
         <Icon sf={{ default: 'book', selected: 'book.fill' }} />
-        <Label>Log</Label>
+        <Label>Journal</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="create">
         <Icon sf={{ default: 'plus.circle', selected: 'plus.circle.fill' }} />
@@ -30,7 +30,7 @@ function NativeTabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: 'person', selected: 'person.fill' }} />
-        <Label>Profile</Label>
+        <Label>Character</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -88,7 +88,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="log"
         options={{
-          title: 'Log',
+          title: 'Journal',
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="book" tintColor={color} size={22} />
@@ -138,7 +138,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: 'Character',
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person" tintColor={color} size={22} />

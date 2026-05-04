@@ -2,9 +2,8 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useRef } from 'react';
+import React from 'react';
 import {
-  Animated,
   Image,
   Platform,
   ScrollView,
@@ -17,170 +16,194 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Images } from '@/assets/images';
 import { RewardBanner } from '@/components/RewardBanner';
-import { TraitTag } from '@/components/TraitTag';
+import { MoodBadge } from '@/components/MoodBadge';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { getTimeVariant } from '@/components/GradientSky';
 
-const GRADIENT_CONFIGS = {
-  dawn: ['#F8E0D8', '#EDD0F0', '#C8B8E8', '#B8C8E8'] as const,
-  day: ['#F0EAF8', '#E4DCED', '#D8E8F4', '#EDE8F8'] as const,
-  dusk: ['#F0D8C8', '#D8B8D8', '#B0A0CC', '#9080B8'] as const,
-  night: ['#1A1630', '#2A1E50', '#1E2E4A', '#0C0A20'] as const,
-  card: ['rgba(255,255,255,0.95)', 'rgba(245,240,252,0.95)'] as const,
-  overlay: ['rgba(42,32,64,0.0)', 'rgba(42,32,64,0.7)'] as const,
-};
+const HOURS = new Date().getHours();
+const TIME_GREETING =
+  HOURS < 5 ? 'Still up?' :
+  HOURS < 12 ? 'Good morning' :
+  HOURS < 17 ? 'Good afternoon' :
+  HOURS < 21 ? 'Good evening' : 'Good night';
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { character, rewards, dismissReward } = useApp();
-  const variant = getTimeVariant();
-  const isNight = variant === 'night' || variant === 'dusk';
-  const gradColors = GRADIENT_CONFIGS[variant];
-  const textColor = isNight ? '#F0EAF8' : colors.foreground;
-  const mutedColor = isNight ? 'rgba(240,234,248,0.65)' : colors.mutedForeground;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  function handleNewLog() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 0.96, duration: 80, useNativeDriver: true }),
-      Animated.timing(scaleAnim, { toValue: 1, duration: 120, useNativeDriver: true }),
-    ]).start(() => router.push('/(tabs)/create'));
-  }
-
+  const { character, journalEntries, stories, rewards, dismissReward } = useApp();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+
+  const latestEntry = journalEntries[0];
+  const latestStory = stories[0];
+
+  const skyColors: [string, string, string] =
+    HOURS >= 5 && HOURS < 8   ? ['#F4A460', '#FFB6C1', '#C8B8E8'] :
+    HOURS >= 8 && HOURS < 17  ? ['#B0C8E8', '#C8D8F0', '#E8E8F8'] :
+    HOURS >= 17 && HOURS < 20 ? ['#C8684A', '#D4806A', '#C8A0D8'] :
+                                 ['#1A1630', '#2A1E50', '#3A2870'];
+
+  const isNight = HOURS >= 20 || HOURS < 5;
 
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={gradColors as unknown as [string, string, ...string[]]}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
+    <View style={[styles.container, { backgroundColor: isNight ? colors.night : colors.background }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
 
-      {/* Decorative light orbs */}
-      <View style={[styles.orb, styles.orb1, { backgroundColor: `${colors.lavender}40` }]} />
-      <View style={[styles.orb, styles.orb2, { backgroundColor: `${colors.gold}30` }]} />
-      <View style={[styles.orb, styles.orb3, { backgroundColor: `${colors.skyBlue}35` }]} />
+        {/* Sky hero */}
+        <View style={[styles.hero, { height: topPad + 270 }]}>
+          <LinearGradient colors={skyColors} style={StyleSheet.absoluteFill} />
+          {isNight && [
+            { t: 40, l: 60, s: 3 }, { t: 70, r: 80, s: 2 }, { t: 30, r: 140, s: 4 },
+            { t: 90, l: 130, s: 2 }, { t: 55, r: 40, s: 3 },
+          ].map((star, i) => (
+            <View key={i} style={[styles.star, {
+              top: star.t + topPad,
+              left: (star as any).l ?? undefined,
+              right: (star as any).r ?? undefined,
+              width: star.s, height: star.s,
+              backgroundColor: `rgba(240,208,128,${0.45 + i * 0.08})`,
+            }]} />
+          ))}
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 8 }]}
-      >
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: `${colors.primary}18` }]}>
-            <Feather name="menu" size={20} color={isNight ? '#F0EAF8' : colors.primary} />
-          </TouchableOpacity>
-          <Text style={[styles.topLabel, { color: mutedColor }]}>My Sky Kid</Text>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: `${colors.primary}18` }]}>
-            <Feather name="bell" size={20} color={isNight ? '#F0EAF8' : colors.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Character section */}
-        <View style={styles.characterSection}>
-          <View style={styles.glowRing}>
-            <View style={[styles.glowOuter, { backgroundColor: `${colors.primary}20` }]} />
-            <View style={[styles.glowMid, { backgroundColor: `${colors.primary}15` }]} />
-            <View style={styles.avatarContainer}>
-              <Image
-                source={Images.character_default}
-                style={styles.characterImg}
-                resizeMode="cover"
-              />
-            </View>
-          </View>
-          <TouchableOpacity style={[styles.editBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Feather name="edit-2" size={11} color={colors.primary} />
-            <Text style={[styles.editText, { color: colors.primary }]}>Edit</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Character info */}
-        <View style={styles.infoSection}>
-          <View style={styles.nameRow}>
-            <Text style={[styles.charName, { color: textColor }]}>{character.name}</Text>
-            <Feather name="star" size={16} color={colors.gold} style={{ marginLeft: 6 }} />
-          </View>
-          <Text style={[styles.bio, { color: mutedColor }]}>{character.bio}</Text>
-
-          {/* Mood */}
-          <View style={styles.moodRow}>
-            <View style={[styles.moodChip, { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}35` }]}>
-              <Feather name="sun" size={11} color={colors.accent} />
-              <Text style={[styles.moodText, { color: colors.accent }]}>{character.mood}</Text>
-            </View>
-          </View>
-
-          {/* Traits */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.traitsRow}
-          >
-            {character.traits.map(trait => (
-              <TraitTag key={trait} label={trait} />
-            ))}
-          </ScrollView>
-
-          {/* Stats */}
-          <View style={[styles.statsRow, { borderColor: `${colors.primary}20`, backgroundColor: `${colors.primary}08` }]}>
-            <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: textColor }]}>{character.storiesCount}</Text>
-              <Text style={[styles.statLabel, { color: mutedColor }]}>Stories</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: `${colors.primary}25` }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: textColor }]}>{character.outfitsCount}</Text>
-              <Text style={[styles.statLabel, { color: mutedColor }]}>Outfits</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: `${colors.primary}25` }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: textColor }]}>{character.memoriesCount}</Text>
-              <Text style={[styles.statLabel, { color: mutedColor }]}>Memories</Text>
-            </View>
-          </View>
-
-          {/* New Log Button */}
-          <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
-            <TouchableOpacity onPress={handleNewLog} activeOpacity={0.85}>
-              <LinearGradient
-                colors={['#7B6BA8', '#6B5B95', '#5A4A80']}
-                style={styles.newLogBtn}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-              >
-                <Feather name="plus" size={18} color="#fff" />
-                <Text style={styles.newLogText}>New Log</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-
-        {/* Rewards section */}
-        {rewards.length > 0 && (
-          <View style={styles.rewardsSection}>
-            <View style={styles.rewardsHeader}>
-              <Text style={[styles.rewardsSectionTitle, { color: mutedColor }]}>Your Journey</Text>
-              <Text style={[styles.rewardsSubtitle, { color: mutedColor }]}>Keep creating, your story matters</Text>
-            </View>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.rewardsList}
+          {/* Top bar */}
+          <View style={[styles.topBar, { paddingTop: topPad + 12 }]}>
+            <Text style={[styles.appName, { color: isNight ? 'rgba(240,234,248,0.6)' : 'rgba(80,60,120,0.6)' }]}>
+              SKY JOURNAL
+            </Text>
+            <TouchableOpacity
+              style={[styles.notifBtn, { backgroundColor: isNight ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.55)' }]}
             >
-              {rewards.map(reward => (
-                <RewardBanner key={reward.id} reward={reward} onDismiss={() => dismissReward(reward.id)} />
-              ))}
-            </ScrollView>
+              <Feather name="bell" size={17} color={isNight ? 'rgba(240,234,248,0.8)' : 'rgba(80,60,120,0.65)'} />
+            </TouchableOpacity>
           </View>
-        )}
 
-        <View style={{ height: Platform.OS === 'web' ? 100 : 20 }} />
+          {/* Character */}
+          <View style={styles.charArea}>
+            <View style={[styles.charGlow, { backgroundColor: isNight ? 'rgba(200,184,232,0.16)' : 'rgba(255,255,255,0.28)' }]} />
+            <View style={[styles.charAvatar, { borderColor: isNight ? 'rgba(200,184,232,0.35)' : 'rgba(255,255,255,0.75)' }]}>
+              <Image source={Images.character_default} style={styles.charImg} resizeMode="cover" />
+            </View>
+            <Text style={[styles.greeting, { color: isNight ? 'rgba(240,234,248,0.92)' : 'rgba(50,30,90,0.85)' }]}>
+              {TIME_GREETING}, {character.name}
+            </Text>
+            <MoodBadge mood={character.mood} size="sm" />
+          </View>
+        </View>
+
+        {/* Content */}
+        <View style={styles.content}>
+          {rewards.slice(0, 1).map(r => (
+            <RewardBanner key={r.id} reward={r} onDismiss={() => dismissReward(r.id)} />
+          ))}
+
+          {/* Quick actions */}
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/create-journal-entry'); }}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: `${colors.primary}14` }]}>
+                <Feather name="feather" size={22} color={colors.primary} />
+              </View>
+              <Text style={[styles.actionLabel, { color: colors.foreground }]}>Write in Journal</Text>
+              <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Private · just for you</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/create'); }}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.actionIcon, { backgroundColor: `${colors.primary}14` }]}>
+                <Feather name="book-open" size={22} color={colors.primary} />
+              </View>
+              <Text style={[styles.actionLabel, { color: colors.foreground }]}>Create Story</Text>
+              <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Manga · public panels</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Latest journal entry */}
+          {latestEntry && (
+            <View style={styles.recentBlock}>
+              <View style={styles.recentBlockHeader}>
+                <View style={styles.recentBlockLeft}>
+                  <Feather name="lock" size={13} color={colors.primary} />
+                  <Text style={[styles.recentBlockTitle, { color: colors.foreground }]}>Last journal entry</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/log')}>
+                  <Text style={[styles.seeAll, { color: colors.primary }]}>All entries</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={[styles.entryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push('/(tabs)/log')}
+                activeOpacity={0.85}
+              >
+                <View style={styles.entryCardRow}>
+                  <Text style={[styles.entryText, { color: colors.foreground }]} numberOfLines={3}>
+                    {latestEntry.text}
+                  </Text>
+                  {latestEntry.imageUri && (
+                    <Image source={{ uri: latestEntry.imageUri }} style={styles.entryThumb} resizeMode="cover" />
+                  )}
+                </View>
+                <MoodBadge mood={latestEntry.mood} size="sm" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Latest story */}
+          {latestStory && (
+            <View style={styles.recentBlock}>
+              <View style={styles.recentBlockHeader}>
+                <View style={styles.recentBlockLeft}>
+                  <Feather name="layers" size={13} color={colors.primary} />
+                  <Text style={[styles.recentBlockTitle, { color: colors.foreground }]}>Latest story</Text>
+                </View>
+                <TouchableOpacity onPress={() => router.push({ pathname: '/story/[id]', params: { id: latestStory.id, source: 'mine' } })}>
+                  <Text style={[styles.seeAll, { color: colors.primary }]}>Read</Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={[styles.storyCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => router.push({ pathname: '/story/[id]', params: { id: latestStory.id, source: 'mine' } })}
+                activeOpacity={0.85}
+              >
+                {latestStory.panels[0]?.imageUri && (
+                  <Image source={{ uri: latestStory.panels[0].imageUri }} style={styles.storyBanner} resizeMode="cover" />
+                )}
+                <View style={[styles.storyCardBody, !latestStory.panels[0]?.imageUri && { paddingTop: 16 }]}>
+                  <Text style={[styles.storyCardTitle, { color: colors.foreground }]}>{latestStory.chapterTitle}</Text>
+                  <View style={styles.storyMeta}>
+                    <MoodBadge mood={latestStory.mood} size="sm" />
+                    <Text style={[styles.storyPanels, { color: colors.mutedForeground }]}>
+                      {latestStory.panels.length} panels
+                    </Text>
+                    <View style={[styles.visBadge, {
+                      backgroundColor: latestStory.isPublic ? 'rgba(96,168,120,0.12)' : `${colors.primary}10`,
+                    }]}>
+                      <Feather name={latestStory.isPublic ? 'globe' : 'lock'} size={10} color={latestStory.isPublic ? '#60A878' : colors.primary} />
+                      <Text style={[styles.visBadgeText, { color: latestStory.isPublic ? '#60A878' : colors.primary }]}>
+                        {latestStory.isPublic ? 'Public' : 'Private'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Empty state */}
+          {!latestEntry && !latestStory && (
+            <View style={[styles.emptyPrompt, { borderColor: `${colors.primary}18`, backgroundColor: `${colors.primary}07` }]}>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Begin your sky journey</Text>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                Write privately in your journal, or create a manga story to share with the world.
+              </Text>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -188,175 +211,40 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: 20 },
-  orb: { position: 'absolute', borderRadius: 999 },
-  orb1: { width: 200, height: 200, top: -60, right: -60 },
-  orb2: { width: 150, height: 150, top: 300, left: -50 },
-  orb3: { width: 120, height: 120, bottom: 200, right: -20 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  topLabel: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-    letterSpacing: 0.5,
-  },
-  characterSection: {
-    alignItems: 'center',
-    marginBottom: 8,
-    position: 'relative',
-  },
-  glowRing: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glowOuter: {
-    position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-  },
-  glowMid: {
-    position: 'absolute',
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-  },
-  avatarContainer: {
-    width: 160,
-    height: 200,
-    borderRadius: 80,
-    overflow: 'hidden',
-  },
-  characterImg: {
-    width: '100%',
-    height: '100%',
-  },
-  editBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-    marginTop: 10,
-  },
-  editText: {
-    fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-  },
-  infoSection: {
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 4,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  charName: {
-    fontSize: 28,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.5,
-  },
-  bio: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    fontStyle: 'italic',
-    textAlign: 'center',
-    paddingHorizontal: 20,
-    lineHeight: 22,
-  },
-  moodRow: { flexDirection: 'row' },
-  moodChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  moodText: {
-    fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-  },
-  traitsRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 4,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    width: '100%',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  statNum: {
-    fontSize: 20,
-    fontFamily: 'Inter_700Bold',
-  },
-  statLabel: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-  },
-  statDivider: {
-    width: 1,
-    alignSelf: 'stretch',
-  },
-  newLogBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    width: '100%',
-    shadowColor: '#6B5B95',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  newLogText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
-    letterSpacing: 0.3,
-  },
-  rewardsSection: {
-    marginTop: 16,
-    gap: 10,
-    width: '100%',
-  },
-  rewardsHeader: { gap: 2 },
-  rewardsSectionTitle: {
-    fontSize: 15,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  rewardsSubtitle: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-  },
-  rewardsList: {
-    paddingVertical: 4,
-  },
+  hero: { position: 'relative', overflow: 'hidden' },
+  star: { position: 'absolute', borderRadius: 99 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
+  appName: { fontSize: 12, fontFamily: 'Inter_600SemiBold', letterSpacing: 2 },
+  notifBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  charArea: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative' },
+  charGlow: { position: 'absolute', width: 140, height: 140, borderRadius: 70 },
+  charAvatar: { width: 108, height: 108, borderRadius: 54, borderWidth: 3, overflow: 'hidden' },
+  charImg: { width: '100%', height: '100%' },
+  greeting: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  content: { paddingHorizontal: 18, paddingTop: 18, gap: 20 },
+  actionsRow: { flexDirection: 'row', gap: 12 },
+  actionCard: { flex: 1, borderRadius: 18, borderWidth: 1, padding: 16, gap: 8 },
+  actionIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  actionLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  actionSub: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  recentBlock: { gap: 10 },
+  recentBlockHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  recentBlockLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  recentBlockTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  seeAll: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  entryCard: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 10 },
+  entryCardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+  entryText: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22, fontStyle: 'italic' },
+  entryThumb: { width: 60, height: 74, borderRadius: 10, flexShrink: 0 },
+  storyCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  storyBanner: { width: '100%', height: 138 },
+  storyCardBody: { padding: 14, gap: 8 },
+  storyCardTitle: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  storyMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  storyPanels: { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  visBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  visBadgeText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  emptyPrompt: { borderWidth: 1, borderRadius: 16, padding: 22, gap: 8 },
+  emptyTitle: { fontSize: 17, fontFamily: 'Inter_600SemiBold' },
+  emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22, fontStyle: 'italic' },
 });
