@@ -28,15 +28,15 @@ async function apiFetch<T>(
   options?: RequestInit,
 ): Promise<T> {
   const token = await _getToken();
-  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
   const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
     headers: {
       'Content-Type': 'application/json',
       ...authHeader,
-      ...(options?.headers ?? {}),
+      ...(options?.headers as Record<string, string> ?? {}),
     },
-    ...options,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');

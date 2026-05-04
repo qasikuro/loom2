@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { Redirect, Tabs } from 'expo-router';
+import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@clerk/expo';
 import React from 'react';
@@ -132,15 +132,14 @@ function ClassicTabLayout() {
 export default function TabLayout() {
   const { isSignedIn, isLoaded } = useAuth();
 
-  if (!isLoaded) {
+  // Show loading while Clerk initialises — AuthNavigator handles the redirect
+  if (!isLoaded || !isSignedIn) {
     return (
       <View style={styles.loader}>
         <ActivityIndicator color="#C8A84B" size="large" />
       </View>
     );
   }
-
-  if (!isSignedIn) return <Redirect href={'/(auth)/sign-in' as any} />;
 
   return <ClassicTabLayout />;
 }

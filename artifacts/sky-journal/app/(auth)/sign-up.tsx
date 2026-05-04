@@ -1,7 +1,7 @@
 import { Feather } from '@expo/vector-icons';
-import { useSignUp } from '@clerk/expo';
+import { useSignUp } from '@clerk/expo/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -28,7 +28,6 @@ const SPARKLES = [
 
 export default function SignUpScreen() {
   const { signUp, setActive, isLoaded } = useSignUp();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const [email, setEmail]               = useState('');
@@ -66,7 +65,7 @@ export default function SignUpScreen() {
       const result = await signUp.attemptEmailAddressVerification({ code });
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)' as any);
+        // AuthNavigator in _layout.tsx detects isSignedIn=true and redirects to /(tabs)
       } else {
         setError('Verification could not be completed. Please try again.');
       }

@@ -8,9 +8,10 @@ import {
 import { ClerkProvider, ClerkLoaded, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect, useRef } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -24,6 +25,7 @@ const queryClient = new QueryClient();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
+/** Bridges the Clerk token into AppContext so every apiFetch is authenticated. */
 function AuthTokenBridge() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const { reloadData } = useApp();
@@ -34,25 +36,41 @@ function AuthTokenBridge() {
 
     setAuthTokenGetter(async () => {
       if (!isSignedIn) return null;
-      try {
-        return await getToken();
-      } catch {
-        return null;
-      }
+      try { return await getToken(); } catch { return null; }
     });
 
-    // Reload from API whenever the user signs in (including first load after Clerk resolves)
-    if (isSignedIn && prevSignedIn.current !== true) {
-      reloadData();
-    }
-
-    // Clear data when user signs out
-    if (!isSignedIn && prevSignedIn.current === true) {
-      setAuthTokenGetter(async () => null);
-    }
+    if (isSignedIn && prevSignedIn.current !== true) reloadData();
+    if (!isSignedIn && prevSignedIn.current === true) setAuthTokenGetter(async () => null);
 
     prevSignedIn.current = isSignedIn ?? false;
   }, [isLoaded, isSignedIn, getToken]);
+
+  return null;
+}
+
+/**
+ * Central auth navigator — the only place that issues programmatic redirects.
+ * Fires once isLoaded is true whenever the segment or signed-in state changes.
+ * This avoids the race condition where router.replace runs before React
+ * re-renders with the new isSignedIn value.
+ */
+function AuthNavigator() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const segments = useSegments();
+
+  const inAuthGroup = segments[0] === '(auth)';
+  const inTabsGroup = segments[0] === '(tabs)';
+
+  if (!isLoaded) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#1A1630', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color="#C8A84B" size="large" />
+      </View>
+    );
+  }
+
+  if (isSignedIn && inAuthGroup) return <Redirect href="/(tabs)" />;
+  if (!isSignedIn && !inAuthGroup && inTabsGroup) return <Redirect href="/(auth)/sign-in" />;
 
   return null;
 }
@@ -79,6 +97,7 @@ export default function RootLayout() {
             <QueryClientProvider client={queryClient}>
               <AppProvider>
                 <AuthTokenBridge />
+                <AuthNavigator />
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <KeyboardProvider>
                     <Stack screenOptions={{ headerShown: false }}>
