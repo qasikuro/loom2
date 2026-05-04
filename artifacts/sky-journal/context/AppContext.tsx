@@ -124,9 +124,11 @@ interface AppContextValue {
   addJournalEntry:    (e: JournalEntry) => void;
   deleteJournalEntry: (id: string) => void;
 
-  outfits:     Outfit[];
-  addOutfit:   (o: Outfit) => void;
-  deleteOutfit:(id: string) => void;
+  outfits:          Outfit[];
+  addOutfit:        (o: Outfit) => void;
+  deleteOutfit:     (id: string) => void;
+  activeOutfitId:   string | null;
+  setActiveOutfitId:(id: string | null) => void;
 
   discoverPosts:  DiscoverPost[];
   toggleSavePost: (id: string) => void;
@@ -221,6 +223,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [outfits, setOutfits]               = useState<Outfit[]>([]);
   const [savedStoryIds, setSavedStoryIds]   = useState<Set<string>>(new Set());
   const [rewards, setRewards]               = useState<Reward[]>([]);
+  const [activeOutfitId, setActiveOutfitIdState] = useState<string | null>(null);
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
     stories.map(s => ({
@@ -244,6 +247,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Keep a ref so mutation callbacks always have the latest values without stale closures
   const stateRef = useRef({ journalEntries, stories, outfits, character });
   useEffect(() => { stateRef.current = { journalEntries, stories, outfits, character }; });
+
+  // ── Load active outfit id from AsyncStorage ────────────────────────────────
+
+  useEffect(() => {
+    AsyncStorage.getItem('active_outfit_v1').then(v => {
+      if (v) setActiveOutfitIdState(v);
+    }).catch(() => null);
+  }, []);
 
   // ── Load data ──────────────────────────────────────────────────────────────
 
@@ -401,7 +412,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));
       return updated;
     });
+    // Clear active outfit if it's the one being deleted
+    setActiveOutfitIdState(prev => {
+      if (prev === id) {
+        AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
+        return null;
+      }
+      return prev;
+    });
     apiFetch(`/outfits/${id}`, { method: 'DELETE' }).catch(() => null);
+  }, []);
+
+  const setActiveOutfitId = useCallback((id: string | null) => {
+    setActiveOutfitIdState(id);
+    if (id) {
+      AsyncStorage.setItem('active_outfit_v1', id).catch(() => null);
+    } else {
+      AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
+    }
   }, []);
 
   // ── Discover / Rewards ─────────────────────────────────────────────────────
@@ -424,7 +452,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       character, setCharacter,
       stories, addStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,
-      outfits, addOutfit, deleteOutfit,
+      outfits, addOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       discoverPosts, toggleSavePost,
       rewards, dismissReward,
     }}>

@@ -66,24 +66,40 @@ const CATEGORIES = [
   },
 ] as const;
 
+// ── Sparkle dots ──────────────────────────────────────────────────────────────
+const SPARKLES = [
+  { t: 18, l: 22, s: 5, o: 0.55 },
+  { t: 44, l: 56, s: 3, o: 0.35 },
+  { t: 12, l: 120, s: 4, o: 0.45 },
+  { t: 60, r: 28, s: 6, o: 0.5  },
+  { t: 30, r: 70, s: 3, o: 0.3  },
+  { t: 76, l: 88, s: 3, o: 0.28 },
+  { t: 22, r: 140, s: 4, o: 0.38},
+] as const;
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const { width: W } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const { character, journalEntries, stories, rewards, dismissReward } = useApp();
+  const {
+    character, journalEntries, stories, rewards, dismissReward,
+    outfits, activeOutfitId, setActiveOutfitId,
+  } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 28 : insets.bottom;
-  const heroH     = Math.min(Math.round(W * 0.54), 220);
 
-  const [showNotifs, setShowNotifs] = useState(false);
+  const [showNotifs, setShowNotifs]         = useState(false);
+  const [showOutfitPicker, setShowOutfitPicker] = useState(false);
   const hasNotifs = rewards.length > 0;
 
   const latestEntry = journalEntries[0];
   const lastSeen    = latestEntry
     ? new Date(latestEntry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     : null;
+
+  const activeOutfit = outfits.find(o => o.id === activeOutfitId) ?? null;
 
   return (
     <View style={styles.root}>
@@ -108,9 +124,13 @@ export default function HomeScreen() {
 
         {/* Top row: avatar + name/subtitle + icons */}
         <View style={styles.topRow}>
-          <View style={styles.avatarRing}>
-            <Image source={Images.character_default} style={styles.avatar} resizeMode="cover" />
-          </View>
+          <TouchableOpacity style={styles.avatarRing} onPress={() => router.push('/(tabs)/profile')}>
+            {activeOutfit?.imageUri ? (
+              <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatar} resizeMode="cover" />
+            ) : (
+              <Image source={Images.character_default} style={styles.avatar} resizeMode="cover" />
+            )}
+          </TouchableOpacity>
 
           <View style={styles.nameBlock}>
             <Text style={styles.charName} numberOfLines={1}>
@@ -155,15 +175,89 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Hero landscape */}
-        <View style={[styles.heroWrap, { height: heroH }]}>
-          <Image source={Images.story_bg1} style={styles.heroImg} resizeMode="cover" />
+        {/* ── Character / Outfit Hero ─────────────────────────────── */}
+        <View style={styles.charHero}>
+          {/* Sky gradient background */}
           <LinearGradient
-            colors={['rgba(18,16,42,0.55)', 'transparent', 'rgba(18,16,42,0.72)']}
+            colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}
             style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          />
+
+          {/* Sparkle decorations */}
+          {SPARKLES.map((sp, i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                top: sp.t,
+                left:  'l' in sp ? (sp as any).l : undefined,
+                right: 'r' in sp ? (sp as any).r : undefined,
+                width: sp.s,
+                height: sp.s,
+                borderRadius: sp.s,
+                backgroundColor: '#C8A84B',
+                opacity: sp.o,
+              }}
+            />
+          ))}
+
+          {/* Section label */}
+          <View style={styles.charHeroLabel}>
+            <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
+          </View>
+
+          {/* Character art */}
+          {activeOutfit?.imageUri ? (
+            <Image
+              source={{ uri: activeOutfit.imageUri }}
+              style={styles.charHeroImg}
+              resizeMode="contain"
+            />
+          ) : (
+            <Image
+              source={Images.character_default}
+              style={styles.charHeroImg}
+              resizeMode="contain"
+            />
+          )}
+
+          {/* Bottom gradient overlay */}
+          <LinearGradient
+            colors={['transparent', 'rgba(18,16,42,0.62)']}
+            style={styles.charHeroOverlay}
             pointerEvents="none"
           />
-          <Text style={styles.heroCaption}>✦  The sky is always waiting for you</Text>
+
+          {/* Edit button */}
+          <TouchableOpacity
+            style={styles.editBtn}
+            onPress={() => router.push('/(tabs)/profile')}
+          >
+            <Feather name="edit-2" size={11} color="rgba(50,36,90,0.85)" />
+            <Text style={styles.editBtnText}>Edit</Text>
+          </TouchableOpacity>
+
+          {/* Active outfit name chip */}
+          {activeOutfit && (
+            <View style={styles.activeOutfitChip}>
+              <Text style={styles.activeOutfitStar}>✦</Text>
+              <Text style={styles.activeOutfitName} numberOfLines={1}>{activeOutfit.name}</Text>
+            </View>
+          )}
+
+          {/* Change outfit button */}
+          {outfits.length > 0 && (
+            <TouchableOpacity
+              style={styles.changeOutfitBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowOutfitPicker(true);
+              }}
+            >
+              <Feather name="refresh-cw" size={12} color="rgba(200,184,232,0.9)" />
+            </TouchableOpacity>
+          )}
         </View>
       </LinearGradient>
 
@@ -185,7 +279,6 @@ export default function HomeScreen() {
             }}
             activeOpacity={0.88}
           >
-            {/* Left: icon + title + desc */}
             <View style={styles.catLeft}>
               <View style={[styles.catIconCircle, { backgroundColor: cat.iconBg }]}>
                 <Feather name={cat.icon} size={20} color={cat.iconColor} />
@@ -195,8 +288,6 @@ export default function HomeScreen() {
                 <Text style={styles.catDesc}>{cat.desc}</Text>
               </View>
             </View>
-
-            {/* Right: artwork image */}
             <View style={styles.catImageWrap}>
               <Image source={cat.image} style={styles.catImage} resizeMode="cover" />
               <LinearGradient
@@ -205,11 +296,88 @@ export default function HomeScreen() {
                 start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
               />
             </View>
-
             <Feather name="chevron-right" size={16} color="#C0B4D8" style={styles.catChevron} />
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* ── Outfit picker modal ───────────────────────────────────── */}
+      <Modal
+        visible={showOutfitPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowOutfitPicker(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowOutfitPicker(false)}>
+          <Pressable
+            style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 20 }]}
+            onPress={e => e.stopPropagation()}
+          >
+            <View style={styles.sheetHandle} />
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Choose Display Outfit</Text>
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowOutfitPicker(false)}>
+                <Feather name="x" size={16} color="#9A8EB4" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.pickerSub}>Selected outfit shows on your home & profile</Text>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerRow}>
+              {/* None option */}
+              <TouchableOpacity
+                style={[
+                  styles.pickerCard,
+                  !activeOutfitId && styles.pickerCardActive,
+                ]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setActiveOutfitId(null);
+                  setShowOutfitPicker(false);
+                }}
+              >
+                <View style={[styles.pickerCardImg, styles.pickerCardNone]}>
+                  <Feather name="slash" size={22} color="#9A8EB4" />
+                </View>
+                <Text style={styles.pickerCardName}>None</Text>
+                {!activeOutfitId && (
+                  <View style={styles.pickerActiveDot}>
+                    <Feather name="check" size={10} color="#fff" />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {outfits.map(outfit => (
+                <TouchableOpacity
+                  key={outfit.id}
+                  style={[
+                    styles.pickerCard,
+                    activeOutfitId === outfit.id && styles.pickerCardActive,
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setActiveOutfitId(outfit.id);
+                    setShowOutfitPicker(false);
+                  }}
+                >
+                  {outfit.imageUri ? (
+                    <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}>
+                      <Feather name="star" size={22} color="rgba(107,91,149,0.4)" />
+                    </View>
+                  )}
+                  <Text style={styles.pickerCardName} numberOfLines={1}>{outfit.name}</Text>
+                  {activeOutfitId === outfit.id && (
+                    <View style={styles.pickerActiveDot}>
+                      <Feather name="check" size={10} color="#fff" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Notifications modal ───────────────────────────────────── */}
       <Modal
@@ -246,7 +414,7 @@ export default function HomeScreen() {
                 <Text style={styles.notifsEmptyText}>You're all caught up ✦</Text>
               </View>
             ) : (
-              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap:10, paddingBottom:8 }}>
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
                 {rewards.map(r => (
                   <View key={r.id} style={[styles.notifItem, {
                     backgroundColor: r.isRising ? '#1A1630' : '#F8F5FF',
@@ -255,19 +423,19 @@ export default function HomeScreen() {
                     <View style={[styles.notifIconWrap, { backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(107,91,149,0.1)' }]}>
                       <Feather name={r.isRising ? 'trending-up' : (r.icon as any)} size={16} color={r.isRising ? '#C8A84B' : '#6B5B95'} />
                     </View>
-                    <View style={{ flex:1, gap:2 }}>
+                    <View style={{ flex: 1, gap: 2 }}>
                       {r.count !== undefined && (
-                        <Text style={{ fontSize:20, fontFamily:'Inter_700Bold', letterSpacing:-0.5, color: r.isRising ? '#C8A84B' : '#1E1830' }}>{r.count}</Text>
+                        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, color: r.isRising ? '#C8A84B' : '#1E1830' }}>{r.count}</Text>
                       )}
-                      <Text style={{ fontSize:13, fontFamily:'Inter_400Regular', lineHeight:18, color: r.isRising ? 'rgba(240,234,248,0.85)' : '#6B6090' }}>{r.message}</Text>
+                      <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18, color: r.isRising ? 'rgba(240,234,248,0.85)' : '#6B6090' }}>{r.message}</Text>
                       {r.subMessage && (
-                        <Text style={{ fontSize:11, fontFamily:'Inter_400Regular', color: r.isRising ? 'rgba(200,168,75,0.7)' : '#9A8EB4' }}>{r.subMessage}</Text>
+                        <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: r.isRising ? 'rgba(200,168,75,0.7)' : '#9A8EB4' }}>{r.subMessage}</Text>
                       )}
                     </View>
                     <TouchableOpacity
                       style={[styles.dismissBtn, { backgroundColor: r.isRising ? 'rgba(255,255,255,0.07)' : 'rgba(107,91,149,0.08)' }]}
                       onPress={() => dismissReward(r.id)}
-                      hitSlop={{ top:8, right:8, bottom:8, left:8 }}
+                      hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                     >
                       <Feather name="x" size={12} color={r.isRising ? 'rgba(200,184,232,0.5)' : '#9A8EB4'} />
                     </TouchableOpacity>
@@ -354,18 +522,87 @@ const styles = StyleSheet.create({
   statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)' },
   statDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
 
-  // Hero
-  heroWrap: { position: 'relative', width: '100%', overflow: 'hidden' },
-  heroImg: { width: '100%', height: '100%' },
-  heroCaption: {
+  // Character hero
+  charHero: {
+    position: 'relative',
+    width: '100%',
+    height: 260,
+    overflow: 'hidden',
+  },
+  charHeroLabel: {
+    position: 'absolute',
+    top: 14,
+    left: 16,
+    zIndex: 10,
+  },
+  charHeroLabelText: {
+    fontSize: 10,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: 2.2,
+    color: 'rgba(60,44,100,0.55)',
+  },
+  charHeroImg: {
+    position: 'absolute',
+    bottom: 0,
+    alignSelf: 'center',
+    width: 160,
+    height: 240,
+  },
+  charHeroOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 90,
+  },
+  editBtn: {
+    position: 'absolute',
+    bottom: 14,
+    left: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.72)',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(107,91,149,0.18)',
+  },
+  editBtnText: {
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(50,36,90,0.85)',
+  },
+  activeOutfitChip: {
+    position: 'absolute',
+    bottom: 14,
+    right: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(26,22,48,0.55)',
+    borderRadius: 14,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(200,168,75,0.25)',
+    maxWidth: 130,
+  },
+  activeOutfitStar: { fontSize: 10, color: '#C8A84B' },
+  activeOutfitName: { fontSize: 11, fontFamily: 'Inter_500Medium', color: 'rgba(235,228,255,0.9)' },
+  changeOutfitBtn: {
     position: 'absolute',
     bottom: 12,
-    left: 18,
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-    fontStyle: 'italic',
-    color: 'rgba(235,228,255,0.75)',
-    letterSpacing: 0.3,
+    right: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(26,22,48,0.45)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,184,232,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Cards section
@@ -426,18 +663,76 @@ const styles = StyleSheet.create({
     bottom: 14,
   },
 
+  // Modals shared
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(10,8,28,0.5)', justifyContent: 'flex-end' },
+  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DDD5EE', alignSelf: 'center', marginBottom: 16 },
+  closeBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F0EAF8', alignItems: 'center', justifyContent: 'center' },
+
+  // Outfit picker sheet
+  pickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+  },
+  pickerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 10 },
+  pickerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#2A1E50', flex: 1 },
+  pickerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: '#9A8EB4', marginBottom: 18 },
+  pickerRow: { gap: 12, paddingBottom: 8, paddingHorizontal: 2 },
+  pickerCard: {
+    width: 100,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#EDE8F4',
+    overflow: 'hidden',
+    backgroundColor: '#FAFAF8',
+    position: 'relative',
+  },
+  pickerCardActive: {
+    borderColor: '#6B5B95',
+    backgroundColor: 'rgba(107,91,149,0.04)',
+  },
+  pickerCardImg: { width: '100%', height: 120 },
+  pickerCardNone: {
+    backgroundColor: '#F0EAF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerCardNoImg: {
+    backgroundColor: 'rgba(107,91,149,0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerCardName: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#3A2E60',
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    lineHeight: 15,
+  },
+  pickerActiveDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#6B5B95',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   // Notifications modal
-  modalOverlay: { flex:1, backgroundColor:'rgba(10,8,28,0.5)', justifyContent:'flex-end' },
-  notifsSheet: { backgroundColor:'#FFFFFF', borderTopLeftRadius:28, borderTopRightRadius:28, paddingHorizontal:20, paddingTop:14, maxHeight:'80%' },
-  sheetHandle: { width:40, height:4, borderRadius:2, backgroundColor:'#DDD5EE', alignSelf:'center', marginBottom:16 },
-  notifsHeader: { flexDirection:'row', alignItems:'center', marginBottom:16, gap:10 },
-  notifsTitle: { fontSize:18, fontFamily:'Inter_700Bold', color:'#2A1E50', flex:1 },
-  countBadge: { backgroundColor:'#E04455', borderRadius:10, paddingHorizontal:7, paddingVertical:2, minWidth:22, alignItems:'center' },
-  countText: { fontSize:11, fontFamily:'Inter_700Bold', color:'#fff' },
-  closeBtn: { width:32, height:32, borderRadius:10, backgroundColor:'#F0EAF8', alignItems:'center', justifyContent:'center' },
-  notifItem: { flexDirection:'row', alignItems:'center', gap:12, borderRadius:16, borderWidth:1, padding:14 },
-  notifIconWrap: { width:40, height:40, borderRadius:12, alignItems:'center', justifyContent:'center', flexShrink:0 },
-  dismissBtn: { width:28, height:28, borderRadius:8, alignItems:'center', justifyContent:'center', flexShrink:0 },
-  notifsEmpty: { alignItems:'center', paddingVertical:40, gap:12 },
-  notifsEmptyText: { fontSize:14, fontFamily:'Inter_400Regular', fontStyle:'italic', color:'#9A8EB4' },
+  notifsSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 14, maxHeight: '80%' },
+  notifsHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 10 },
+  notifsTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#2A1E50', flex: 1 },
+  countBadge: { backgroundColor: '#E04455', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2, minWidth: 22, alignItems: 'center' },
+  countText: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#fff' },
+  notifItem: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
+  notifIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  dismissBtn: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  notifsEmpty: { alignItems: 'center', paddingVertical: 40, gap: 12 },
+  notifsEmptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: '#9A8EB4' },
 });

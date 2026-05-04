@@ -37,7 +37,7 @@ const ATTRIBUTE_SUGGESTIONS = [
 export default function CharacterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { character, setCharacter, outfits, deleteOutfit, stories } = useApp();
+  const { character, setCharacter, outfits, deleteOutfit, stories, activeOutfitId, setActiveOutfitId } = useApp();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
 
@@ -125,7 +125,15 @@ export default function CharacterScreen() {
           <View style={styles.avatarArea}>
             <View style={[styles.avatarGlow, { backgroundColor: `${colors.primary}18` }]} />
             <View style={[styles.avatarRing, { borderColor: colors.background }]}>
-              <Image source={Images.character_default} style={styles.avatarImg} resizeMode="cover" />
+              {activeOutfitId && outfits.find(o => o.id === activeOutfitId)?.imageUri ? (
+                <Image
+                  source={{ uri: outfits.find(o => o.id === activeOutfitId)!.imageUri }}
+                  style={styles.avatarImg}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Image source={Images.character_default} style={styles.avatarImg} resizeMode="cover" />
+              )}
             </View>
             <View style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
               <Feather name="camera" size={11} color={colors.mutedForeground} />
@@ -299,48 +307,89 @@ export default function CharacterScreen() {
               </TouchableOpacity>
             ) : (
               <View style={styles.outfitList}>
-                {outfits.map(outfit => (
-                  <View
-                    key={outfit.id}
-                    style={[styles.outfitCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
-                  >
-                    {outfit.imageUri ? (
-                      <Image source={{ uri: outfit.imageUri }} style={styles.outfitThumb} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.outfitThumbPlaceholder, { backgroundColor: `${colors.primary}10` }]}>
-                        <Feather name="star" size={20} color={`${colors.primary}55`} />
-                      </View>
-                    )}
-                    <View style={styles.outfitInfo}>
-                      <View style={styles.outfitTop}>
-                        <Text style={[styles.outfitName, { color: colors.foreground }]} numberOfLines={1}>{outfit.name}</Text>
-                        <Text style={[styles.outfitDate, { color: colors.mutedForeground }]}>{fmtDate(outfit.date)}</Text>
-                      </View>
-                      <View style={styles.outfitMeta}>
-                        {outfit.tags.slice(0, 2).map(tag => (
-                          <View key={tag} style={[styles.outfitTag, { backgroundColor: `${colors.primary}0F` }]}>
-                            <Text style={[styles.outfitTagText, { color: colors.primary }]}>{tag}</Text>
-                          </View>
-                        ))}
-                        <View style={[styles.visChip, {
-                          backgroundColor: outfit.isPublic ? 'rgba(96,168,120,0.1)' : `${colors.primary}0F`,
-                        }]}>
-                          <Feather name={outfit.isPublic ? 'globe' : 'lock'} size={9} color={outfit.isPublic ? '#60A878' : colors.primary} />
-                          <Text style={[styles.visChipText, { color: outfit.isPublic ? '#60A878' : colors.primary }]}>
-                            {outfit.isPublic ? 'Public' : 'Private'}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      style={[styles.outfitDeleteBtn, { backgroundColor: colors.muted }]}
-                      onPress={() => handleDeleteOutfit(outfit.id)}
-                      hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                {outfits.map(outfit => {
+                  const isActive = activeOutfitId === outfit.id;
+                  return (
+                    <View
+                      key={outfit.id}
+                      style={[
+                        styles.outfitCard,
+                        { backgroundColor: colors.card, borderColor: isActive ? colors.primary : colors.border },
+                        isActive && { borderWidth: 1.5 },
+                        SHADOW.xs,
+                      ]}
                     >
-                      <Feather name="trash-2" size={12} color={colors.mutedForeground} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                      {outfit.imageUri ? (
+                        <Image source={{ uri: outfit.imageUri }} style={styles.outfitThumb} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.outfitThumbPlaceholder, { backgroundColor: `${colors.primary}10` }]}>
+                          <Feather name="star" size={20} color={`${colors.primary}55`} />
+                        </View>
+                      )}
+
+                      {/* Active badge over thumb */}
+                      {isActive && (
+                        <View style={styles.activeThumbBadge}>
+                          <Feather name="home" size={9} color="#fff" />
+                        </View>
+                      )}
+
+                      <View style={styles.outfitInfo}>
+                        <View style={styles.outfitTop}>
+                          <Text style={[styles.outfitName, { color: colors.foreground }]} numberOfLines={1}>{outfit.name}</Text>
+                          <Text style={[styles.outfitDate, { color: colors.mutedForeground }]}>{fmtDate(outfit.date)}</Text>
+                        </View>
+                        <View style={styles.outfitMeta}>
+                          {outfit.tags.slice(0, 2).map(tag => (
+                            <View key={tag} style={[styles.outfitTag, { backgroundColor: `${colors.primary}0F` }]}>
+                              <Text style={[styles.outfitTagText, { color: colors.primary }]}>{tag}</Text>
+                            </View>
+                          ))}
+                          <View style={[styles.visChip, {
+                            backgroundColor: outfit.isPublic ? 'rgba(96,168,120,0.1)' : `${colors.primary}0F`,
+                          }]}>
+                            <Feather name={outfit.isPublic ? 'globe' : 'lock'} size={9} color={outfit.isPublic ? '#60A878' : colors.primary} />
+                            <Text style={[styles.visChipText, { color: outfit.isPublic ? '#60A878' : colors.primary }]}>
+                              {outfit.isPublic ? 'Public' : 'Private'}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {/* Set as display row */}
+                        <TouchableOpacity
+                          style={[
+                            styles.setDisplayBtn,
+                            {
+                              backgroundColor: isActive ? `${colors.primary}14` : colors.muted,
+                              borderColor: isActive ? `${colors.primary}35` : colors.border,
+                            },
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            setActiveOutfitId(isActive ? null : outfit.id);
+                          }}
+                        >
+                          <Feather
+                            name={isActive ? 'check-circle' : 'home'}
+                            size={11}
+                            color={isActive ? colors.primary : colors.mutedForeground}
+                          />
+                          <Text style={[styles.setDisplayText, { color: isActive ? colors.primary : colors.mutedForeground }]}>
+                            {isActive ? 'Shown on home' : 'Set as display'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[styles.outfitDeleteBtn, { backgroundColor: colors.muted }]}
+                        onPress={() => handleDeleteOutfit(outfit.id)}
+                        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                      >
+                        <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </View>
@@ -407,9 +456,20 @@ const styles = StyleSheet.create({
   outfitEmptyText: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 1 },
   outfitList: { gap: 10 },
   outfitCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  outfitThumb: { width: 76, height: 96, flexShrink: 0 },
-  outfitThumbPlaceholder: { width: 76, height: 96, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  outfitInfo: { flex: 1, gap: 6, paddingHorizontal: 12, paddingVertical: 10 },
+  outfitThumb: { width: 76, height: 108, flexShrink: 0 },
+  outfitThumbPlaceholder: { width: 76, height: 108, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  activeThumbBadge: {
+    position: 'absolute',
+    top: 6,
+    left: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    backgroundColor: '#6B5B95',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outfitInfo: { flex: 1, gap: 5, paddingHorizontal: 12, paddingVertical: 10 },
   outfitTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   outfitName: { fontSize: 14, fontFamily: 'Inter_600SemiBold', flex: 1 },
   outfitDate: { fontSize: 10, fontFamily: 'Inter_400Regular', flexShrink: 0 },
@@ -419,4 +479,15 @@ const styles = StyleSheet.create({
   visChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
   visChipText: { fontSize: 9, fontFamily: 'Inter_500Medium' },
   outfitDeleteBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10, flexShrink: 0 },
+  setDisplayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  setDisplayText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
 });
