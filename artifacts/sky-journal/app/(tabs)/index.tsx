@@ -207,24 +207,31 @@ export default function HomeScreen() {
             <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
           </View>
 
-          {/* Character art */}
+          {/* Character art — full bleed */}
           {activeOutfit?.imageUri ? (
             <Image
               source={{ uri: activeOutfit.imageUri }}
-              style={styles.charHeroImg}
-              resizeMode="contain"
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
             />
           ) : (
             <Image
               source={Images.character_default}
-              style={styles.charHeroImg}
-              resizeMode="contain"
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
             />
           )}
 
+          {/* Top gradient so label stays readable */}
+          <LinearGradient
+            colors={['rgba(18,16,42,0.55)', 'transparent']}
+            style={styles.charHeroTopOverlay}
+            pointerEvents="none"
+          />
+
           {/* Bottom gradient overlay */}
           <LinearGradient
-            colors={['transparent', 'rgba(18,16,42,0.62)']}
+            colors={['transparent', 'rgba(18,16,42,0.78)']}
             style={styles.charHeroOverlay}
             pointerEvents="none"
           />
@@ -237,14 +244,6 @@ export default function HomeScreen() {
             <Feather name="edit-2" size={11} color="rgba(50,36,90,0.85)" />
             <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
-
-          {/* Active outfit name chip */}
-          {activeOutfit && (
-            <View style={styles.activeOutfitChip}>
-              <Text style={styles.activeOutfitStar}>✦</Text>
-              <Text style={styles.activeOutfitName} numberOfLines={1}>{activeOutfit.name}</Text>
-            </View>
-          )}
 
           {/* Change outfit button */}
           {outfits.length > 0 && (
@@ -267,6 +266,33 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 82 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Character info card */}
+        <TouchableOpacity
+          style={styles.charInfoCard}
+          onPress={() => router.push('/(tabs)/profile')}
+          activeOpacity={0.88}
+        >
+          <View style={styles.charInfoLeft}>
+            <View style={styles.charNameRow}>
+              <Text style={styles.charInfoName}>{character.name || 'Sky Child'}</Text>
+              <Text style={styles.charInfoStar}>✦</Text>
+            </View>
+            {character.bio ? (
+              <Text style={styles.charInfoBio} numberOfLines={2}>{character.bio}</Text>
+            ) : null}
+            {character.traits.length > 0 && (
+              <View style={styles.charInfoTraits}>
+                {character.traits.slice(0, 4).map(t => (
+                  <View key={t} style={styles.charInfoTrait}>
+                    <Text style={styles.charInfoTraitText}>{t}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+          <Feather name="chevron-right" size={16} color="#C0B4D8" />
+        </TouchableOpacity>
+
         <Text style={styles.sectionLabel}>Where would you like to go?</Text>
 
         {CATEGORIES.map(cat => (
@@ -526,7 +552,7 @@ const styles = StyleSheet.create({
   charHero: {
     position: 'relative',
     width: '100%',
-    height: 260,
+    height: 300,
     overflow: 'hidden',
   },
   charHeroLabel: {
@@ -536,74 +562,92 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   charHeroLabelText: {
-    fontSize: 10,
+    fontSize: 18,
     fontFamily: 'Inter_700Bold',
-    letterSpacing: 2.2,
-    color: 'rgba(60,44,100,0.55)',
+    letterSpacing: -0.3,
+    color: 'rgba(235,228,255,0.95)',
+    textShadowColor: 'rgba(18,16,42,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  charHeroImg: {
+  charHeroTopOverlay: {
     position: 'absolute',
-    bottom: 0,
-    alignSelf: 'center',
-    width: 160,
-    height: 240,
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    zIndex: 2,
   },
   charHeroOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 90,
+    height: 110,
+    zIndex: 2,
   },
   editBtn: {
     position: 'absolute',
     bottom: 14,
     left: 16,
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.72)',
+    backgroundColor: 'rgba(255,255,255,0.80)',
     borderRadius: 20,
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderWidth: 1,
-    borderColor: 'rgba(107,91,149,0.18)',
+    borderColor: 'rgba(107,91,149,0.22)',
   },
   editBtnText: {
     fontSize: 12,
     fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(50,36,90,0.85)',
+    color: 'rgba(50,36,90,0.9)',
   },
-  activeOutfitChip: {
-    position: 'absolute',
-    bottom: 14,
-    right: 46,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(26,22,48,0.55)',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(200,168,75,0.25)',
-    maxWidth: 130,
-  },
-  activeOutfitStar: { fontSize: 10, color: '#C8A84B' },
-  activeOutfitName: { fontSize: 11, fontFamily: 'Inter_500Medium', color: 'rgba(235,228,255,0.9)' },
   changeOutfitBtn: {
     position: 'absolute',
     bottom: 12,
     right: 14,
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    backgroundColor: 'rgba(26,22,48,0.45)',
+    zIndex: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: 'rgba(26,22,48,0.55)',
     borderWidth: 1,
-    borderColor: 'rgba(200,184,232,0.2)',
+    borderColor: 'rgba(200,184,232,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // Character info card
+  charInfoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#EDE8F4',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  charInfoLeft: { flex: 1, gap: 5 },
+  charNameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  charInfoName: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.4 },
+  charInfoStar: { fontSize: 14, color: '#C8A84B' },
+  charInfoBio: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: '#7A6E9A', lineHeight: 19 },
+  charInfoTraits: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  charInfoTrait: {
+    backgroundColor: 'rgba(107,91,149,0.09)',
+    borderRadius: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(107,91,149,0.16)',
+  },
+  charInfoTraitText: { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#6B5B95' },
 
   // Cards section
   cardsArea: { flex: 1 },
