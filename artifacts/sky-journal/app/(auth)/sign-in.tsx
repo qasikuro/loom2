@@ -41,37 +41,49 @@ export default function SignInScreen() {
     setIsLoading(true);
     setError('');
     try {
-      const result = await signIn.create({
-        identifier: email,
-        password,
-      });
+      // Step 1: submit identifier only — avoids triggering bot-protection
+      // that can fire when identifier + password are sent together.
+      const created = await signIn.create({ identifier: email });
 
-      if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId });
-        // AuthNavigator in _layout.tsx detects isSignedIn=true and redirects to /(tabs)
-        return;
-      }
+      let finalStatus = created.status;
+      let finalSessionId = created.createdSessionId;
 
-      // Clerk may return needs_first_factor when the identifier is accepted
-      // but the password factor still needs to be submitted separately.
-      if (result.status === 'needs_first_factor') {
+      // Step 2: if Clerk needs the password factor, attempt it separately.
+      if (created.status === 'needs_first_factor') {
         const attempt = await signIn.attemptFirstFactor({
           strategy: 'password',
           password,
         });
-        if (attempt.status === 'complete') {
-          await setActive({ session: attempt.createdSessionId });
-          return;
-        }
+        finalStatus = attempt.status;
+        finalSessionId = attempt.createdSessionId;
+      }
+
+      if (finalStatus === 'complete' && finalSessionId) {
+        await setActive({ session: finalSessionId });
+        // AuthNavigator in _layout.tsx handles the redirect to /(tabs)
+        return;
       }
 
       setError('Sign-in could not be completed. Please try again.');
     } catch (err: any) {
-      const msg =
+      const code: string = err?.errors?.[0]?.code ?? '';
+      const rawMsg: string =
         err?.errors?.[0]?.longMessage ||
         err?.errors?.[0]?.message ||
-        'Incorrect email or password.';
-      setError(msg);
+        '';
+
+      // Clerk rate-limit / bot-protection gives a "try again later" message.
+      // Surface something actionable instead of the raw Clerk copy.
+      const isRateLimit =
+        code === 'too_many_requests' ||
+        rawMsg.toLowerCase().includes('try again later') ||
+        rawMsg.toLowerCase().includes('too many requests');
+
+      setError(
+        isRateLimit
+          ? 'Too many attempts — please wait a minute and try again.'
+          : rawMsg || 'Incorrect email or password.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -167,6 +179,9 @@ export default function SignInScreen() {
                 </>
               )}
             </TouchableOpacity>
+
+            {/* Clerk mounts its invisible bot-protection widget here */}
+            <View nativeID="clerk-captcha" />
           </View>
 
           <View style={styles.divider}>
