@@ -45,12 +45,27 @@ export default function SignInScreen() {
         identifier: email,
         password,
       });
+
       if (result.status === 'complete') {
         await setActive({ session: result.createdSessionId });
         // AuthNavigator in _layout.tsx detects isSignedIn=true and redirects to /(tabs)
-      } else {
-        setError('Sign-in could not be completed. Please try again.');
+        return;
       }
+
+      // Clerk may return needs_first_factor when the identifier is accepted
+      // but the password factor still needs to be submitted separately.
+      if (result.status === 'needs_first_factor') {
+        const attempt = await signIn.attemptFirstFactor({
+          strategy: 'password',
+          password,
+        });
+        if (attempt.status === 'complete') {
+          await setActive({ session: attempt.createdSessionId });
+          return;
+        }
+      }
+
+      setError('Sign-in could not be completed. Please try again.');
     } catch (err: any) {
       const msg =
         err?.errors?.[0]?.longMessage ||
