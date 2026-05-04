@@ -30,60 +30,62 @@ export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading]   = useState(false);
-  const [error, setError]           = useState('');
+  const [isLoading, setIsLoading]       = useState(false);
+  const [error, setError]               = useState('');
 
   async function handleSignIn() {
     if (!isLoaded || !signIn) return;
     setIsLoading(true);
     setError('');
+
     try {
-      // Step 1: submit identifier only — avoids triggering bot-protection
-      // that can fire when identifier + password are sent together.
-      const created = await signIn.create({ identifier: email });
+      // Send identifier + password together in one call.
+      // Clerk v3 handles bot-protection internally for this flow.
+      const attempt = await signIn.create({
+        identifier: email,
+        password,
+      });
 
-      let finalStatus = created.status;
-      let finalSessionId = created.createdSessionId;
-
-      // Step 2: if Clerk needs the password factor, attempt it separately.
-      if (created.status === 'needs_first_factor') {
-        const attempt = await signIn.attemptFirstFactor({
-          strategy: 'password',
-          password,
-        });
-        finalStatus = attempt.status;
-        finalSessionId = attempt.createdSessionId;
+      if (attempt.status === 'complete') {
+        // createdSessionId can live on the return value or on the signIn object
+        const sessionId = attempt.createdSessionId ?? signIn.createdSessionId;
+        if (sessionId) {
+          await setActive({ session: sessionId });
+          // AuthNavigator in _layout.tsx handles the redirect to /(tabs)
+          return;
+        }
       }
 
-      if (finalStatus === 'complete' && finalSessionId) {
-        await setActive({ session: finalSessionId });
-        // AuthNavigator in _layout.tsx handles the redirect to /(tabs)
-        return;
-      }
-
-      setError('Sign-in could not be completed. Please try again.');
+      // status is something unexpected (needs_second_factor, etc.)
+      // fall through to a readable error
+      const statusMsg = attempt.status
+        ? `Unexpected sign-in status: ${attempt.status}`
+        : 'Sign-in could not be completed. Please try again.';
+      setError(statusMsg);
     } catch (err: any) {
-      const code: string = err?.errors?.[0]?.code ?? '';
+      const clerkError = err?.errors?.[0];
+      const code: string  = clerkError?.code ?? '';
       const rawMsg: string =
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
+        clerkError?.longMessage ||
+        clerkError?.message ||
         '';
 
-      // Clerk rate-limit / bot-protection gives a "try again later" message.
-      // Surface something actionable instead of the raw Clerk copy.
-      const isRateLimit =
+      if (
         code === 'too_many_requests' ||
         rawMsg.toLowerCase().includes('try again later') ||
-        rawMsg.toLowerCase().includes('too many requests');
-
-      setError(
-        isRateLimit
-          ? 'Too many attempts — please wait a minute and try again.'
-          : rawMsg || 'Incorrect email or password.',
-      );
+        rawMsg.toLowerCase().includes('too many requests')
+      ) {
+        setError('Too many attempts — please wait a minute and try again.');
+      } else if (code === 'form_password_incorrect') {
+        setError('Incorrect password. Please try again.');
+      } else if (code === 'form_identifier_not_found') {
+        setError('No account found with that email address.');
+      } else {
+        setError(rawMsg || 'Sign-in failed. Please check your details and try again.');
+      }
     } finally {
       setIsLoading(false);
     }
