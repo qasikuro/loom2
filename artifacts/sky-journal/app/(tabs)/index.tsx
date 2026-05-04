@@ -2,10 +2,13 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Dimensions,
   Image,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,271 +18,583 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Images } from '@/assets/images';
-import { RewardBanner } from '@/components/RewardBanner';
-import { MoodBadge } from '@/components/MoodBadge';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 
-const HOURS = new Date().getHours();
-const TIME_GREETING =
-  HOURS < 5  ? 'Still up?' :
-  HOURS < 12 ? 'Good morning' :
-  HOURS < 17 ? 'Good afternoon' :
-  HOURS < 21 ? 'Good evening' : 'Good night';
-
-const SKY_COLORS: [string, string, string] =
-  HOURS >= 5 && HOURS < 8   ? ['#E8956A', '#F4B89C', '#D4BCED'] :
-  HOURS >= 8 && HOURS < 17  ? ['#9AB8D8', '#BDD0EC', '#DDE4F4'] :
-  HOURS >= 17 && HOURS < 20 ? ['#C05848', '#D07870', '#C890D0'] :
-                               ['#181428', '#22184A', '#321E62'];
-
-const IS_NIGHT = HOURS >= 20 || HOURS < 5;
+const { height: SCREEN_H } = Dimensions.get('window');
+const HERO_IMG_H = Math.round(SCREEN_H * 0.52);
 
 export default function HomeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { character, journalEntries, stories, rewards, dismissReward } = useApp();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const { character, journalEntries, stories, outfits, rewards, dismissReward } = useApp();
+  const topPad = Platform.OS === 'web' ? 48 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom;
 
-  const latestEntry = journalEntries[0];
-  const latestStory  = stories[0];
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  const nightText  = (alpha: number) => `rgba(230,224,248,${alpha})`;
-  const lightText  = (alpha: number) => `rgba(50,36,90,${alpha})`;
-  const heroText   = IS_NIGHT ? nightText : lightText;
+  const hasNotifs = rewards.length > 0;
+
+  function handleNewLog() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push('/create-journal-entry');
+  }
+
+  function handleEdit() {
+    router.push('/(tabs)/profile');
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: IS_NIGHT ? '#12102A' : colors.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
+    <View style={[styles.root, { backgroundColor: '#F4EEE6' }]}>
 
-        {/* ── Sky hero ────────────────────────────────────────────── */}
-        <View style={[styles.hero, { height: topPad + 280 }]}>
-          <LinearGradient colors={SKY_COLORS} style={StyleSheet.absoluteFill} />
+      {/* ── Ambient gradient layer ────────────────────────────────── */}
+      <LinearGradient
+        colors={['#EDE7DC', '#F4EEE6', '#F4EEE6']}
+        style={StyleSheet.absoluteFill}
+      />
 
-          {IS_NIGHT && [
-            { t: 42, l: 55, s: 3 }, { t: 72, r: 78, s: 2 }, { t: 28, r: 136, s: 4 },
-            { t: 96, l: 128, s: 2 }, { t: 58, r: 38, s: 3 }, { t: 110, l: 80, s: 2 },
-            { t: 35, l: 200, s: 2 },
-          ].map((star, i) => (
-            <View key={i} style={[styles.star, {
-              top: star.t + topPad,
-              left: (star as any).l,
-              right: (star as any).r,
-              width: star.s, height: star.s,
-              backgroundColor: `rgba(240,208,128,${0.35 + i * 0.07})`,
-            }]} />
-          ))}
+      {/* ── Top bar ───────────────────────────────────────────────── */}
+      <View style={[styles.topBar, { paddingTop: topPad + 10 }]}>
+        <TouchableOpacity
+          style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.72)', borderColor: 'rgba(107,91,149,0.1)' }]}
+          onPress={() => setMenuOpen(v => !v)}
+          activeOpacity={0.8}
+        >
+          <Feather name="menu" size={18} color="#3A2860" />
+        </TouchableOpacity>
 
-          {/* Top bar */}
-          <View style={[styles.topBar, { paddingTop: topPad + 14 }]}>
-            <Text style={[styles.appName, { color: heroText(0.55) }]}>SKY JOURNAL</Text>
-            <TouchableOpacity style={[styles.iconBtn, {
-              backgroundColor: IS_NIGHT ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.48)',
-            }]}>
-              <Feather name="bell" size={16} color={heroText(0.75)} />
-            </TouchableOpacity>
-          </View>
+        <TouchableOpacity
+          style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.72)', borderColor: 'rgba(107,91,149,0.1)' }]}
+          onPress={() => { setShowNotifs(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+          activeOpacity={0.8}
+        >
+          <Feather name="bell" size={18} color="#3A2860" />
+          {hasNotifs && <View style={styles.notifDot} />}
+        </TouchableOpacity>
+      </View>
 
-          {/* Character hero */}
-          <View style={styles.charArea}>
-            <View style={[styles.charGlow, {
-              backgroundColor: IS_NIGHT ? 'rgba(200,184,232,0.14)' : 'rgba(255,255,255,0.26)',
-            }]} />
-            <View style={[styles.charRing, {
-              borderColor: IS_NIGHT ? 'rgba(200,184,232,0.28)' : 'rgba(255,255,255,0.70)',
-            }]}>
-              <Image source={Images.character_default} style={styles.charImg} resizeMode="cover" />
-            </View>
-            <Text style={[styles.greeting, { color: heroText(0.93) }]}>
-              {TIME_GREETING}, {character.name}
-            </Text>
-            <MoodBadge mood={character.mood} size="sm" />
-          </View>
+      {/* ── Page title ───────────────────────────────────────────── */}
+      <View style={[styles.titleRow, { paddingTop: topPad + 60 }]}>
+        <Text style={styles.pageTitle}>My Sky Kid</Text>
+      </View>
+
+      {/* ── Character hero image ─────────────────────────────────── */}
+      <View style={[styles.heroWrap, { height: HERO_IMG_H }]}>
+        <Image
+          source={Images.character_default}
+          style={styles.heroImg}
+          resizeMode="contain"
+        />
+        {/* Soft ground gradient */}
+        <LinearGradient
+          colors={['transparent', 'rgba(244,238,230,0.92)']}
+          style={styles.heroFade}
+          pointerEvents="none"
+        />
+        {/* Edit button */}
+        <TouchableOpacity
+          style={[styles.editBtn, { backgroundColor: 'rgba(255,255,255,0.88)' }, SHADOW.xs]}
+          onPress={handleEdit}
+          activeOpacity={0.85}
+        >
+          <Feather name="edit-2" size={13} color="#3A2860" />
+          <Text style={styles.editBtnText}>Edit</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Info card ────────────────────────────────────────────── */}
+      <View style={[styles.infoCard, SHADOW.md]}>
+        {/* Name + sparkle */}
+        <View style={styles.nameRow}>
+          <Text style={styles.charName}>{character.name}</Text>
+          <Text style={styles.sparkle}>✦</Text>
         </View>
 
-        {/* ── Content ──────────────────────────────────────────────── */}
-        <View style={styles.content}>
+        {/* Bio */}
+        {!!character.bio && (
+          <Text style={styles.bio} numberOfLines={2}>{character.bio}</Text>
+        )}
 
-          {/* Reward banners */}
-          {rewards.slice(0, 1).map(r => (
-            <RewardBanner key={r.id} reward={r} onDismiss={() => dismissReward(r.id)} />
-          ))}
+        {/* Trait pills */}
+        {character.traits.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.traitsRow}
+          >
+            {character.traits.map(t => (
+              <View key={t} style={styles.traitPill}>
+                <Text style={styles.traitText}>{t}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
-          {/* Quick actions */}
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/create-journal-entry'); }}
-              activeOpacity={0.88}
-            >
-              <View style={[styles.actionIconWrap, { backgroundColor: `${colors.primary}12` }]}>
-                <Feather name="feather" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.actionTexts}>
-                <Text style={[styles.actionLabel, { color: colors.foreground }]}>Write in Journal</Text>
-                <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Private · just for you</Text>
-              </View>
-              <Feather name="chevron-right" size={15} color={`${colors.mutedForeground}70`} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/create'); }}
-              activeOpacity={0.88}
-            >
-              <View style={[styles.actionIconWrap, { backgroundColor: `${colors.primary}12` }]}>
-                <Feather name="book-open" size={22} color={colors.primary} />
-              </View>
-              <View style={styles.actionTexts}>
-                <Text style={[styles.actionLabel, { color: colors.foreground }]}>Create Story</Text>
-                <Text style={[styles.actionSub, { color: colors.mutedForeground }]}>Manga · public panels</Text>
-              </View>
-              <Feather name="chevron-right" size={15} color={`${colors.mutedForeground}70`} />
-            </TouchableOpacity>
+        {/* Stats */}
+        <View style={styles.statsRow}>
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>{stories.length}</Text>
+            <Text style={styles.statLabel}>Stories</Text>
           </View>
+          <View style={[styles.statDivider]} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>{outfits.length}</Text>
+            <Text style={styles.statLabel}>Outfits</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statNum}>{journalEntries.length}</Text>
+            <Text style={styles.statLabel}>Memories</Text>
+          </View>
+        </View>
+      </View>
 
-          {/* Latest journal entry */}
-          {latestEntry && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionLeft}>
-                  <View style={[styles.sectionDot, { backgroundColor: colors.primary }]} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Recent journal entry</Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push('/(tabs)/log')}>
-                  <Text style={[styles.sectionLink, { color: colors.primary }]}>See all</Text>
-                </TouchableOpacity>
-              </View>
+      {/* ── New Log button ───────────────────────────────────────── */}
+      <TouchableOpacity
+        style={[styles.newLogBtn, { paddingBottom: bottomPad + 18 }]}
+        onPress={handleNewLog}
+        activeOpacity={0.88}
+      >
+        <LinearGradient
+          colors={['#6055A8', '#4A3C8C', '#372D72']}
+          style={styles.newLogGrad}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+        >
+          <Feather name="plus" size={18} color="rgba(255,255,255,0.9)" />
+          <Text style={styles.newLogText}>New Log</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* ── Menu drawer (simple dropdown) ────────────────────────── */}
+      {menuOpen && (
+        <Pressable style={styles.menuOverlay} onPress={() => setMenuOpen(false)}>
+          <View style={[styles.menuSheet, { top: topPad + 56, backgroundColor: 'rgba(255,255,255,0.97)' }, SHADOW.md]}>
+            {[
+              { icon: 'book-open' as const, label: 'Journal', route: '/(tabs)/log' },
+              { icon: 'layers' as const, label: 'Stories', route: '/(tabs)/create' },
+              { icon: 'compass' as const, label: 'Discover', route: '/(tabs)/discover' },
+              { icon: 'user' as const, label: 'Character', route: '/(tabs)/profile' },
+            ].map(item => (
               <TouchableOpacity
-                style={[styles.entryCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: colors.primary }, SHADOW.xs]}
-                onPress={() => router.push('/(tabs)/log')}
-                activeOpacity={0.88}
+                key={item.label}
+                style={styles.menuItem}
+                onPress={() => { setMenuOpen(false); router.push(item.route as any); }}
               >
-                <View style={styles.entryTop}>
-                  <Text style={[styles.entryDate, { color: colors.mutedForeground }]}>
-                    {new Date(latestEntry.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-                  </Text>
-                  <MoodBadge mood={latestEntry.mood} size="sm" />
+                <Feather name={item.icon} size={16} color="#6B5B95" />
+                <Text style={styles.menuItemText}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </Pressable>
+      )}
+
+      {/* ── Notifications modal ───────────────────────────────────── */}
+      <Modal
+        visible={showNotifs}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowNotifs(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowNotifs(false)}>
+          <Pressable style={[styles.notifsSheet, { paddingBottom: bottomPad + 20 }]} onPress={e => e.stopPropagation()}>
+            {/* Handle */}
+            <View style={styles.sheetHandle} />
+
+            <View style={styles.notifsHeader}>
+              <Text style={styles.notifsTitle}>Notifications</Text>
+              {hasNotifs && (
+                <View style={styles.notifCountBadge}>
+                  <Text style={styles.notifCountText}>{rewards.length}</Text>
                 </View>
-                <View style={styles.entryRow}>
-                  <Text style={[styles.entryText, { color: colors.foreground }]} numberOfLines={3}>{latestEntry.text}</Text>
-                  {latestEntry.imageUri && (
-                    <Image source={{ uri: latestEntry.imageUri }} style={styles.entryThumb} resizeMode="cover" />
-                  )}
-                </View>
+              )}
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setShowNotifs(false)}
+              >
+                <Feather name="x" size={16} color="#9A8EB4" />
               </TouchableOpacity>
             </View>
-          )}
 
-          {/* Latest story */}
-          {latestStory && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionLeft}>
-                  <View style={[styles.sectionDot, { backgroundColor: colors.accent }]} />
-                  <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Latest story</Text>
-                </View>
-                <TouchableOpacity onPress={() => router.push({ pathname: '/story/[id]', params: { id: latestStory.id, source: 'mine' } })}>
-                  <Text style={[styles.sectionLink, { color: colors.primary }]}>Read</Text>
-                </TouchableOpacity>
+            {rewards.length === 0 ? (
+              <View style={styles.notifsEmpty}>
+                <Feather name="bell-off" size={32} color="#C8B8E8" />
+                <Text style={styles.notifsEmptyText}>You're all caught up</Text>
               </View>
-              <TouchableOpacity
-                style={[styles.storyCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}
-                onPress={() => router.push({ pathname: '/story/[id]', params: { id: latestStory.id, source: 'mine' } })}
-                activeOpacity={0.88}
-              >
-                {latestStory.panels[0]?.imageUri && (
-                  <Image source={{ uri: latestStory.panels[0].imageUri }} style={styles.storyBanner} resizeMode="cover" />
-                )}
-                <View style={[styles.storyBody, !latestStory.panels[0]?.imageUri && { paddingTop: 16 }]}>
-                  <Text style={[styles.storyTitle, { color: colors.foreground }]}>{latestStory.chapterTitle}</Text>
-                  <View style={styles.storyMeta}>
-                    <MoodBadge mood={latestStory.mood} size="sm" />
-                    <Text style={[styles.storyPanels, { color: colors.mutedForeground }]}>
-                      {latestStory.panels.length} panels
-                    </Text>
-                    <View style={[styles.visBadge, { backgroundColor: latestStory.isPublic ? 'rgba(96,168,120,0.1)' : `${colors.primary}0F` }]}>
-                      <Feather name={latestStory.isPublic ? 'globe' : 'lock'} size={10} color={latestStory.isPublic ? '#60A878' : colors.primary} />
-                      <Text style={[styles.visBadgeText, { color: latestStory.isPublic ? '#60A878' : colors.primary }]}>
-                        {latestStory.isPublic ? 'Public' : 'Private'}
-                      </Text>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.notifsList}>
+                {rewards.map(r => (
+                  <View
+                    key={r.id}
+                    style={[
+                      styles.notifItem,
+                      r.isRising
+                        ? { backgroundColor: '#1A1630', borderColor: 'rgba(200,168,75,0.22)' }
+                        : { backgroundColor: '#F8F5FF', borderColor: 'rgba(107,91,149,0.12)' },
+                    ]}
+                  >
+                    <View style={[
+                      styles.notifIconWrap,
+                      { backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(107,91,149,0.1)' },
+                    ]}>
+                      <Feather
+                        name={r.isRising ? 'trending-up' : r.icon as any}
+                        size={16}
+                        color={r.isRising ? '#C8A84B' : '#6B5B95'}
+                      />
                     </View>
+                    <View style={styles.notifBody}>
+                      {r.count !== undefined && (
+                        <Text style={[styles.notifCount, { color: r.isRising ? '#C8A84B' : '#1E1830' }]}>{r.count}</Text>
+                      )}
+                      <Text style={[styles.notifMsg, { color: r.isRising ? 'rgba(240,234,248,0.85)' : '#6B6090' }]}>
+                        {r.message}
+                      </Text>
+                      {r.subMessage && (
+                        <Text style={[styles.notifSub, { color: r.isRising ? 'rgba(200,168,75,0.7)' : '#9A8EB4' }]}>
+                          {r.subMessage}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.notifDismiss, { backgroundColor: r.isRising ? 'rgba(255,255,255,0.07)' : 'rgba(107,91,149,0.08)' }]}
+                      onPress={() => dismissReward(r.id)}
+                      hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                    >
+                      <Feather name="x" size={12} color={r.isRising ? 'rgba(200,184,232,0.45)' : '#9A8EB4'} />
+                    </TouchableOpacity>
                   </View>
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Empty state */}
-          {!latestEntry && !latestStory && (
-            <View style={[styles.emptyCard, { borderColor: `${colors.primary}15`, backgroundColor: `${colors.primary}06` }, SHADOW.xs]}>
-              <View style={[styles.emptyIconWrap, { backgroundColor: `${colors.primary}10` }]}>
-                <Feather name="wind" size={26} color={`${colors.primary}80`} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Begin your sky journey</Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                Write privately in your journal, or create a manga story to share with the world.
-              </Text>
-            </View>
-          )}
-
-        </View>
-      </ScrollView>
+                ))}
+              </ScrollView>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  hero: { position: 'relative', overflow: 'hidden' },
-  star: { position: 'absolute', borderRadius: 99 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22 },
-  appName: { fontSize: 11, fontFamily: 'Inter_700Bold', letterSpacing: 2.5 },
-  iconBtn: { width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  charArea: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, position: 'relative' },
-  charGlow: { position: 'absolute', width: 150, height: 150, borderRadius: 75 },
-  charRing: { width: 110, height: 110, borderRadius: 55, borderWidth: 2.5, overflow: 'hidden' },
-  charImg: { width: '100%', height: '100%' },
-  greeting: { fontSize: 17, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.2 },
-  content: { paddingHorizontal: 18, paddingTop: 20, gap: 22 },
-  // Action cards — full-width stacked
-  actionsRow: { gap: 10 },
-  actionCard: { flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 16, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 14 },
-  actionIconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  actionTexts: { flex: 1 },
-  actionLabel: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  actionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
-  // Section
-  section: { gap: 10 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  sectionLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  sectionDot: { width: 6, height: 6, borderRadius: 3 },
-  sectionTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  sectionLink: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  // Entry card
-  entryCard: {
-    borderRadius: 16, borderWidth: 1, borderLeftWidth: 3,
-    padding: 14, gap: 8,
+  root: { flex: 1 },
+
+  // Top bar
+  topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
   },
-  entryTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  entryDate: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  entryRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  entryText: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22, fontStyle: 'italic' },
-  entryThumb: { width: 62, height: 76, borderRadius: 10, flexShrink: 0 },
-  // Story card
-  storyCard: { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
-  storyBanner: { width: '100%', height: 130 },
-  storyBody: { padding: 14, gap: 8 },
-  storyTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', letterSpacing: -0.2 },
-  storyMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  storyPanels: { fontSize: 12, fontFamily: 'Inter_400Regular' },
-  visBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  visBadgeText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
-  // Empty
-  emptyCard: { borderWidth: 1, borderRadius: 18, padding: 24, gap: 10, alignItems: 'center' },
-  emptyIconWrap: { width: 60, height: 60, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  emptyTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
-  emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22, fontStyle: 'italic', textAlign: 'center' },
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E04455',
+    borderWidth: 1.5,
+    borderColor: '#F4EEE6',
+  },
+
+  // Title
+  titleRow: {
+    paddingHorizontal: 22,
+    paddingBottom: 8,
+  },
+  pageTitle: {
+    fontSize: 26,
+    fontFamily: 'Inter_700Bold',
+    color: '#2A1E50',
+    letterSpacing: -0.5,
+  },
+
+  // Hero
+  heroWrap: {
+    width: '100%',
+    position: 'relative',
+  },
+  heroImg: {
+    width: '100%',
+    height: '100%',
+  },
+  heroFade: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+  },
+  editBtn: {
+    position: 'absolute',
+    bottom: 16,
+    left: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(107,91,149,0.18)',
+  },
+  editBtnText: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+    color: '#3A2860',
+  },
+
+  // Info card
+  infoCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    marginTop: -26,
+    paddingHorizontal: 22,
+    paddingTop: 22,
+    paddingBottom: 10,
+    gap: 10,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  charName: {
+    fontSize: 26,
+    fontFamily: 'Inter_700Bold',
+    color: '#2A1E50',
+    letterSpacing: -0.5,
+  },
+  sparkle: {
+    fontSize: 18,
+    color: '#C8A84B',
+  },
+  bio: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    fontStyle: 'italic',
+    color: '#9A8EB4',
+    lineHeight: 20,
+    marginTop: -2,
+  },
+  traitsRow: {
+    flexDirection: 'row',
+    gap: 7,
+    paddingVertical: 2,
+  },
+  traitPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#EDE8F4',
+    borderWidth: 1,
+    borderColor: '#DDD4EE',
+  },
+  traitText: {
+    fontSize: 12,
+    fontFamily: 'Inter_500Medium',
+    color: '#6B5B95',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 4,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  statNum: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    color: '#2A1E50',
+    letterSpacing: -0.5,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+    color: '#9A8EB4',
+  },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#E8E0F0',
+  },
+
+  // New Log button
+  newLogBtn: {
+    overflow: 'hidden',
+  },
+  newLogGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 18,
+  },
+  newLogText: {
+    fontSize: 17,
+    fontFamily: 'Inter_700Bold',
+    color: 'rgba(255,255,255,0.95)',
+    letterSpacing: -0.2,
+  },
+
+  // Menu
+  menuOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+  },
+  menuSheet: {
+    position: 'absolute',
+    left: 14,
+    width: 210,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(107,91,149,0.12)',
+    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  menuItemText: {
+    fontSize: 15,
+    fontFamily: 'Inter_500Medium',
+    color: '#2A1E50',
+  },
+
+  // Notification modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(26,22,48,0.38)',
+    justifyContent: 'flex-end',
+  },
+  notifsSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    maxHeight: '80%',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#DDD5EE',
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  notifsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  notifsTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    color: '#2A1E50',
+    flex: 1,
+  },
+  notifCountBadge: {
+    backgroundColor: '#E04455',
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    minWidth: 22,
+    alignItems: 'center',
+  },
+  notifCountText: {
+    fontSize: 11,
+    fontFamily: 'Inter_700Bold',
+    color: '#fff',
+  },
+  closeBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#F0EAF8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notifsList: {
+    gap: 10,
+    paddingBottom: 8,
+  },
+  notifItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+  },
+  notifIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  notifBody: {
+    flex: 1,
+    gap: 2,
+  },
+  notifCount: {
+    fontSize: 20,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.5,
+  },
+  notifMsg: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 18,
+  },
+  notifSub: {
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+  },
+  notifDismiss: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  notifsEmpty: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 12,
+  },
+  notifsEmptyText: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    fontStyle: 'italic',
+    color: '#9A8EB4',
+  },
 });
