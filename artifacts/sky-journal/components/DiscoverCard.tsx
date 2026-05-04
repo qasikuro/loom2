@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
@@ -27,12 +27,25 @@ interface DiscoverCardProps {
   post: DiscoverPost;
   onPress?: () => void;
   onSave?: () => void;
+  onDelete?: () => void;
 }
 
-export function DiscoverCard({ post, onPress, onSave }: DiscoverCardProps) {
+export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardProps) {
   const colors   = useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleDeletePress() {
+    if (confirmingDelete) {
+      if (deleteTimer.current) clearTimeout(deleteTimer.current);
+      onDelete?.();
+    } else {
+      setConfirmingDelete(true);
+      deleteTimer.current = setTimeout(() => setConfirmingDelete(false), 3000);
+    }
+  }
 
   return (
     <TouchableOpacity
@@ -108,6 +121,27 @@ export function DiscoverCard({ post, onPress, onSave }: DiscoverCardProps) {
 
           <View style={styles.actions}>
             <MoodBadge mood={post.vibe} size="sm" />
+            {onDelete && (
+              <TouchableOpacity
+                onPress={handleDeletePress}
+                style={[
+                  styles.saveBtn,
+                  {
+                    backgroundColor: confirmingDelete ? '#E04455' : colors.muted,
+                    borderColor:     confirmingDelete ? '#E04455' : colors.border,
+                    width: confirmingDelete ? 'auto' : 32,
+                    paddingHorizontal: confirmingDelete ? 8 : 0,
+                  },
+                ]}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                activeOpacity={0.75}
+              >
+                {confirmingDelete
+                  ? <Text style={styles.deleteConfirmText}>Delete?</Text>
+                  : <Feather name="trash-2" size={14} color={colors.mutedForeground} />
+                }
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={onSave}
               style={[styles.saveBtn, {
@@ -165,5 +199,6 @@ const styles = StyleSheet.create({
   statDot:    { width: 3, height: 3, borderRadius: 1.5 },
   statText:   { fontSize: 11, fontFamily: 'Inter_400Regular' },
   actions:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  saveBtn:    { width: 32, height: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  saveBtn:    { height: 32, minWidth: 32, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  deleteConfirmText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_600SemiBold' },
 });

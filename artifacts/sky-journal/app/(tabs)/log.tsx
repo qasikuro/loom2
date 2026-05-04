@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Image,
   Platform,
@@ -84,6 +83,19 @@ const AVATAR_CFG = {
 function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () => void }) {
   const colors = useColors();
   const cfg    = AVATAR_CFG[entry.type];
+  const [confirming, setConfirming] = React.useState(false);
+  const confirmTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function handleTrash() {
+    if (confirming) {
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onDelete();
+    } else {
+      setConfirming(true);
+      confirmTimer.current = setTimeout(() => setConfirming(false), 3000);
+    }
+  }
 
   const displayName =
     entry.type === 'friend' ? (entry.friendName ?? 'Someone') : cfg.label;
@@ -155,11 +167,15 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
           </View>
         )}
         <TouchableOpacity
-          style={[tc.deleteBtn, { backgroundColor: colors.muted, marginLeft: 'auto' }]}
-          onPress={onDelete}
+          style={[tc.deleteBtn, { marginLeft: 'auto', backgroundColor: confirming ? '#E04455' : colors.muted, minWidth: confirming ? 68 : 28 }]}
+          onPress={handleTrash}
           hitSlop={{ top:8, right:8, bottom:8, left:8 }}
+          activeOpacity={0.75}
         >
-          <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+          {confirming
+            ? <Text style={tc.deleteBtnText}>Delete?</Text>
+            : <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+          }
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
@@ -183,7 +199,8 @@ const tc = StyleSheet.create({
   footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap' },
   typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:4, borderRadius:10, borderWidth:1 },
   typePillText: { fontSize:10, fontFamily:'Inter_500Medium' },
-  deleteBtn: { width:28, height:28, borderRadius:8, alignItems:'center', justifyContent:'center' },
+  deleteBtn: { height:28, paddingHorizontal:6, borderRadius:8, alignItems:'center', justifyContent:'center' },
+  deleteBtnText: { color:'#fff', fontSize:11, fontFamily:'Inter_600SemiBold' },
 });
 
 // ── Mini calendar ─────────────────────────────────────────────────────────────
@@ -415,21 +432,7 @@ export default function JournalScreen() {
   }
 
   function handleDelete(id: string) {
-    Alert.alert(
-      'Delete Entry',
-      'This entry will be permanently removed from your journal.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            deleteJournalEntry(id);
-          },
-        },
-      ],
-    );
+    deleteJournalEntry(id);
   }
 
   return (

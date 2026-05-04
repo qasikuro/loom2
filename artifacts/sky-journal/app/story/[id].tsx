@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   Dimensions,
   Image,
@@ -44,6 +43,7 @@ export default function StoryScreen() {
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
   const { stories, discoverPosts, toggleSavePost, deleteStory } = useApp();
   const [witnessed, setWitnessed] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
@@ -91,22 +91,14 @@ export default function StoryScreen() {
   }
 
   function handleDelete() {
-    Alert.alert(
-      'Delete Story',
-      'This chapter will be permanently removed from your journal.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            deleteStory(id!);
-            router.back();
-          },
-        },
-      ],
-    );
+    if (confirmingDelete) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      deleteStory(id!);
+      router.back();
+    } else {
+      setConfirmingDelete(true);
+      setTimeout(() => setConfirmingDelete(false), 3000);
+    }
   }
 
   return (
@@ -136,8 +128,19 @@ export default function StoryScreen() {
             <Feather name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
           {isOwnStory && (
-            <TouchableOpacity style={[styles.moreBtn, { top: topPad + 12 }]} onPress={handleDelete}>
-              <Feather name="trash-2" size={18} color="rgba(255,120,100,0.9)" />
+            <TouchableOpacity
+              style={[
+                styles.moreBtn,
+                { top: topPad + 12 },
+                confirmingDelete && { backgroundColor: '#E04455', width: 'auto', paddingHorizontal: 12 },
+              ]}
+              onPress={handleDelete}
+              activeOpacity={0.78}
+            >
+              {confirmingDelete
+                ? <Text style={styles.deleteConfirmText}>Delete?</Text>
+                : <Feather name="trash-2" size={18} color="rgba(255,120,100,0.9)" />
+              }
             </TouchableOpacity>
           )}
 
@@ -300,12 +303,17 @@ const styles = StyleSheet.create({
   moreBtn: {
     position: 'absolute',
     right: 16,
-    width: 40,
     height: 40,
+    minWidth: 40,
     borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  deleteConfirmText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: 'Inter_700Bold',
   },
   heroOverlay: {
     position: 'absolute',

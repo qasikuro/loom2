@@ -59,6 +59,7 @@ export default function CharacterScreen() {
     ]);
   }
 
+  const [confirmingOutfitId, setConfirmingOutfitId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
   const [nameVal, setNameVal] = useState(character.name);
@@ -91,10 +92,14 @@ export default function CharacterScreen() {
     setCharacter({ ...character, isPublic: !character.isPublic });
   }
   function handleDeleteOutfit(id: string) {
-    Alert.alert('Remove Outfit', 'Remove this outfit from your log?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => deleteOutfit(id) },
-    ]);
+    if (confirmingOutfitId === id) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setConfirmingOutfitId(null);
+      deleteOutfit(id);
+    } else {
+      setConfirmingOutfitId(id);
+      setTimeout(() => setConfirmingOutfitId(prev => prev === id ? null : prev), 3000);
+    }
   }
 
   const suggestions = ATTRIBUTE_SUGGESTIONS.filter(
@@ -399,11 +404,20 @@ export default function CharacterScreen() {
                       </View>
 
                       <TouchableOpacity
-                        style={[styles.outfitDeleteBtn, { backgroundColor: colors.muted }]}
+                        style={[
+                          styles.outfitDeleteBtn,
+                          confirmingOutfitId === outfit.id
+                            ? { backgroundColor: '#E04455', paddingHorizontal: 10 }
+                            : { backgroundColor: colors.muted },
+                        ]}
                         onPress={() => handleDeleteOutfit(outfit.id)}
                         hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                        activeOpacity={0.75}
                       >
-                        <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+                        {confirmingOutfitId === outfit.id
+                          ? <Text style={styles.outfitDeleteConfirmText}>Delete?</Text>
+                          : <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+                        }
                       </TouchableOpacity>
                     </View>
                   );
@@ -529,6 +543,11 @@ const styles = StyleSheet.create({
   outfitTagText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
   visChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
   visChipText: { fontSize: 9, fontFamily: 'Inter_500Medium' },
+  outfitDeleteConfirmText: {
+    color: '#fff',
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+  },
   outfitDeleteBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10, flexShrink: 0 },
   setDisplayBtn: {
     flexDirection: 'row',

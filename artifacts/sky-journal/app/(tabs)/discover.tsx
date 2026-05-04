@@ -34,7 +34,7 @@ const VIBES = [
 export default function DiscoverScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { discoverPosts, toggleSavePost } = useApp();
+  const { discoverPosts, toggleSavePost, deleteStory } = useApp();
   const [activeTab, setActiveTab] = useState<TabType>('For You');
   const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -111,6 +111,7 @@ export default function DiscoverScreen() {
                   post={post}
                   onPress={() => router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'discover' } })}
                   onSave={() => toggleSavePost(post.id)}
+                  onDelete={() => deleteStory(post.id)}
                 />
               ))}
             </>
@@ -147,6 +148,7 @@ export default function DiscoverScreen() {
               post={item}
               onPress={() => router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
+              onDelete={() => deleteStory(item.id)}
             />
           )}
           contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
