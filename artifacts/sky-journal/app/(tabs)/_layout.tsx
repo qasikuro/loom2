@@ -1,4 +1,3 @@
-import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@clerk/expo';
@@ -8,17 +7,15 @@ import {
   Platform,
   StyleSheet,
   View,
-  useColorScheme,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const PURPLE      = '#6B5B95';
-const TAB_BAR_BG  = '#FDFAF7';
-const INACTIVE    = '#A09AB5';
-const BAR_HEIGHT  = 60;
-const BTN_SIZE    = 52;
+const PURPLE     = '#6B5B95';
+const TAB_BAR_BG = '#FDFAF7';
+const INACTIVE   = '#A09AB5';
+const BAR_HEIGHT = 60;
+const BTN_SIZE   = 52;
 
-// ─── Regular tab icon ────────────────────────────────────────────────────────
 function TabIcon({
   name,
   color,
@@ -30,36 +27,27 @@ function TabIcon({
 }) {
   return (
     <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-      <Feather name={name} size={22} color={color} />
+      <Feather name={name} size={20} color={color} />
     </View>
   );
 }
 
-// ─── Floating centre button ───────────────────────────────────────────────────
 function CreateIcon() {
   return (
     <View style={styles.createBtn}>
-      <Feather name="plus" size={26} color="#fff" />
+      <Feather name="plus" size={24} color="#fff" />
     </View>
   );
 }
 
-// ─── Main tab layout ──────────────────────────────────────────────────────────
 function ClassicTabLayout() {
-  const scheme  = useColorScheme();
-  const insets  = useSafeAreaInsets();
-  const isDark  = scheme === 'dark';
-  const isIOS   = Platform.OS === 'ios';
-  const isWeb   = Platform.OS === 'web';
+  const insets = useSafeAreaInsets();
+  const isWeb  = Platform.OS === 'web';
 
-  // Bottom safe-area gap (home bar on iPhone X+)
-  const bottomGap = isWeb ? 0 : Math.max(insets.bottom, 8);
-  // Pill sits 8 px above the home bar
-  const pillBottom = isWeb ? 0 : bottomGap + 8;
-  // Total bar height includes the pill itself
-  const barHeight = isWeb ? 64 : BAR_HEIGHT;
-  // Horizontal margin gives the pill its floating look
-  const pillH = isWeb ? 0 : 16;
+  // Safe-area-aware bottom margin for the pill bar.
+  // On phones with a home indicator (iOS ≥ X, Android gesture nav) insets.bottom > 0.
+  // We always keep at least 8 px of breathing room.
+  const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 8);
 
   return (
     <Tabs
@@ -68,37 +56,31 @@ function ClassicTabLayout() {
         tabBarActiveTintColor:   PURPLE,
         tabBarInactiveTintColor: INACTIVE,
 
+        // ── Floating pill: no position:absolute so it never overlaps content ──
         tabBarStyle: {
-          position:         'absolute',
-          left:             pillH,
-          right:            pillH,
-          bottom:           pillBottom,
-          height:           barHeight,
-          borderRadius:     isWeb ? 0 : 28,
-          backgroundColor:  isIOS ? 'transparent' : TAB_BAR_BG,
-          borderTopWidth:   0,
-          // NO overflow:hidden — lets the centre button float above the bar
-          elevation:        20,
-          shadowColor:      '#1E1830',
-          shadowOffset:     { width: 0, height: 6 },
-          shadowOpacity:    0.14,
-          shadowRadius:     20,
+          // Horizontal inset creates the floating pill shape
+          marginHorizontal: isWeb ? 0 : 12,
+          // Sits above the home indicator / gesture bar
+          marginBottom: barMarginBottom,
+          height: isWeb ? 64 : BAR_HEIGHT,
+          borderRadius: isWeb ? 0 : 28,
+          backgroundColor: TAB_BAR_BG,
+          borderTopWidth: 0,
+          // Clip children to the rounded corners
+          overflow: 'hidden',
+          // Shadow
+          elevation: 16,
+          shadowColor: '#1E1830',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.12,
+          shadowRadius: 16,
         },
-
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView
-              intensity={88}
-              tint={isDark ? 'dark' : 'extraLight'}
-              style={[StyleSheet.absoluteFill, { borderRadius: 28, overflow: 'hidden' }]}
-            />
-          ) : null,
 
         tabBarLabelStyle: {
           fontSize:      10,
           fontFamily:    'Inter_600SemiBold',
           letterSpacing: 0.2,
-          marginBottom:  Platform.OS === 'ios' ? 6 : 4,
+          marginBottom:  4,
         },
 
         tabBarIconStyle: {
@@ -130,7 +112,6 @@ function ClassicTabLayout() {
           title: '',
           tabBarLabel: () => null,
           tabBarIcon: () => <CreateIcon />,
-          // Give the centre item enough tap area without extra padding
           tabBarItemStyle: { flex: 1 },
         }}
       />
@@ -156,7 +137,6 @@ function ClassicTabLayout() {
   );
 }
 
-// ─── Guard ────────────────────────────────────────────────────────────────────
 export default function TabLayout() {
   const { isSignedIn, isLoaded } = useAuth();
 
@@ -180,11 +160,11 @@ const styles = StyleSheet.create({
   },
 
   iconWrap: {
-    width: 40,
-    height: 34,
+    width: 38,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 14,
+    borderRadius: 12,
   },
   iconWrapActive: {
     backgroundColor: 'rgba(107,91,149,0.12)',
@@ -197,12 +177,10 @@ const styles = StyleSheet.create({
     backgroundColor: PURPLE,
     alignItems: 'center',
     justifyContent: 'center',
-    // Float it above the bar
-    marginBottom: 18,
-    // Shadow
+    marginBottom: 16,
     shadowColor: PURPLE,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 10,
   },
