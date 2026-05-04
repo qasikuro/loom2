@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Dimensions,
   Image,
   Modal,
   Platform,
@@ -435,8 +436,8 @@ const styles = StyleSheet.create({
   statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)' },
   statDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
 
-  // Hero
-  charHero: { position: 'relative', width: '100%', height: 300, overflow: 'hidden' },
+  // Hero — scale with screen so it doesn't swallow small phones
+  charHero: { position: 'relative', width: '100%', height: Math.round(Dimensions.get('window').width * 0.75), overflow: 'hidden' },
   charHeroLabel: { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
   charHeroLabelText: {
     fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3,
