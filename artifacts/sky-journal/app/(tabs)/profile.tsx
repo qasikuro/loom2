@@ -168,7 +168,7 @@ export default function CharacterScreen() {
               }]}
               onPress={toggleVisibility}
             >
-              <Feather
+              <Icon
                 name={character.isPublic ? 'globe' : 'lock'}
                 size={12}
                 color={character.isPublic ? colors.primary : 'rgba(200,184,232,0.85)'}
@@ -470,7 +470,7 @@ export default function CharacterScreen() {
                             setActiveOutfitId(isActive ? null : outfit.id);
                           }}
                         >
-                          <Feather
+                          <Icon
                             name={isActive ? 'check-circle' : 'home'}
                             size={11}
                             color={isActive ? colors.primary : colors.mutedForeground}

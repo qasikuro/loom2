@@ -480,7 +480,7 @@ export default function JournalScreen() {
                 style={[styles.filterTab, isActive && styles.filterTabActive]}
                 onPress={() => { setActiveFilter(f.key); Haptics.selectionAsync(); }}
               >
-                <Feather
+                <Icon
                   name={ic.name}
                   size={12}
                   color={isActive ? ic.color : 'rgba(200,184,232,0.6)'}
@@ -552,7 +552,7 @@ export default function JournalScreen() {
         {sections.length === 0 ? (
           <View style={styles.empty}>
             <View style={[styles.emptyIcon, { backgroundColor:`${colors.primary}10` }]}>
-              <Feather
+              <Icon
                 name={FILTER_ICONS[activeFilter].name}
                 size={32}
                 color={FILTER_ICONS[activeFilter].color}

@@ -172,12 +172,24 @@ export default function HomeScreen() {
 
         {/* ── Character Hero ──────────────────────────────────────── */}
         <View style={styles.charHero}>
+          {/* 1. Base gradient background */}
           <LinearGradient
             colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
 
+          {/* 2. Outfit / default character image */}
+          {activeOutfit?.imageUri
+            ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          }
+
+          {/* 3. Top + bottom gradient overlays */}
+          <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
+          <LinearGradient colors={['transparent', 'rgba(18,16,42,0.88)']} style={styles.charHeroOverlay} pointerEvents="none" />
+
+          {/* 4. Gold sparkle dots */}
           {SPARKLES.map((sp, i) => (
             <View
               key={i}
@@ -193,6 +205,7 @@ export default function HomeScreen() {
             />
           ))}
 
+          {/* 5. Label — on top of everything */}
           <View style={styles.charHeroLabel}>
             <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
             {activeOutfit && (
@@ -203,14 +216,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {activeOutfit?.imageUri
-            ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-            : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          }
-
-          <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={[styles.charHeroTopOverlay, { pointerEvents: 'none' }]} />
-          <LinearGradient colors={['transparent', 'rgba(18,16,42,0.82)']} style={[styles.charHeroOverlay, { pointerEvents: 'none' }]} />
-
+          {/* 6. Change-outfit button */}
           {outfits.length > 0 && (
             <TouchableOpacity
               style={styles.changeOutfitBtn}

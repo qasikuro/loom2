@@ -73,11 +73,12 @@ function ClassicTabLayout() {
           fontSize:      10,
           fontFamily:    'Inter_600SemiBold',
           letterSpacing: 0.2,
+          marginTop:     2,
           marginBottom:  4,
         },
 
         tabBarIconStyle: {
-          marginTop: 6,
+          marginTop: 4,
         },
       }}
     >

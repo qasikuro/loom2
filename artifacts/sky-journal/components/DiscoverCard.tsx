@@ -150,7 +150,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
               }]}
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
             >
-              <Feather
+              <Icon
                 name="bookmark"
                 size={15}
                 color={post.saved ? colors.primary : colors.mutedForeground}
