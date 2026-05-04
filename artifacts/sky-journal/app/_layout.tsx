@@ -20,22 +20,6 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function RootLayoutNav() {
-  return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="story/[id]"
-        options={{
-          headerShown: false,
-          presentation: 'card',
-          animation: 'slide_from_bottom',
-        }}
-      />
-    </Stack>
-  );
-}
-
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -59,7 +43,33 @@ export default function RootLayout() {
           <AppProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
-                <RootLayoutNav />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen
+                    name="story/[id]"
+                    options={{ headerShown: false, presentation: 'card', animation: 'slide_from_bottom' }}
+                  />
+                  <Stack.Screen
+                    name="create-memory"
+                    options={{ headerShown: false, animation: 'slide_from_right' }}
+                  />
+                  <Stack.Screen
+                    name="create-friend-log"
+                    options={{ headerShown: false, animation: 'slide_from_right' }}
+                  />
+                  <Stack.Screen
+                    name="create-moment-log"
+                    options={{ headerShown: false, animation: 'slide_from_right' }}
+                  />
+                  <Stack.Screen
+                    name="search"
+                    options={{ headerShown: false, animation: 'fade' }}
+                  />
+                  <Stack.Screen
+                    name="friends"
+                    options={{ headerShown: false, animation: 'slide_from_right' }}
+                  />
+                </Stack>
               </KeyboardProvider>
             </GestureHandlerRootView>
           </AppProvider>

@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
+export type LogType = 'memory' | 'friend' | 'moment';
+
 export interface Character {
   id: string;
   name: string;
@@ -32,6 +34,16 @@ export interface LogEntry {
   witnessedCount: number;
   savedCount: number;
   vibeTag?: string;
+  logType: LogType;
+  friendTags?: string[];
+}
+
+export interface Friend {
+  id: string;
+  name: string;
+  timesMet: number;
+  lastSeen: string;
+  notes: string[];
 }
 
 export interface DiscoverPost {
@@ -70,6 +82,10 @@ interface AppContextValue {
   toggleSavePost: (id: string) => void;
   rewards: Reward[];
   dismissReward: (id: string) => void;
+  friends: Friend[];
+  addOrUpdateFriend: (name: string, note?: string) => void;
+  searchLogs: (query: string) => LogEntry[];
+  searchFriends: (query: string) => Friend[];
 }
 
 const DEFAULT_CHARACTER: Character = {
@@ -85,6 +101,30 @@ const DEFAULT_CHARACTER: Character = {
   followingCount: 28,
   joinedDate: 'May 2024',
 };
+
+const SAMPLE_FRIENDS: Friend[] = [
+  {
+    id: 'f1',
+    name: 'Lumière',
+    timesMet: 3,
+    lastSeen: '2025-03-10T00:00:00Z',
+    notes: ['Met at Dawn Prairie', 'Played music together near the temple', 'Shared candles at Eden'],
+  },
+  {
+    id: 'f2',
+    name: 'Yoru',
+    timesMet: 1,
+    lastSeen: '2025-02-18T00:00:00Z',
+    notes: ['Brief encounter in Hidden Forest — they were quiet but kind'],
+  },
+  {
+    id: 'f3',
+    name: 'Noctis',
+    timesMet: 2,
+    lastSeen: '2025-04-01T00:00:00Z',
+    notes: ['Found them wandering in the rain at Valley', 'Flew together — no words needed'],
+  },
+];
 
 const SAMPLE_POSTS: DiscoverPost[] = [
   {
@@ -190,7 +230,7 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     authorName: 'Kael',
     authorHandle: '@kael.storm',
     chapterTitle: 'The forgotten path',
-    storySnippet: "I kept walking toward a place I belong.",
+    storySnippet: 'I kept walking toward a place I belong.',
     imageKey: 'story_bg3',
     mood: 'Chaotic',
     witnessedCount: 254,
@@ -207,9 +247,9 @@ const SAMPLE_POSTS: DiscoverPost[] = [
 ];
 
 const INITIAL_REWARDS: Reward[] = [
-  { id: 'r1', message: 'People experienced\nyour story today', count: 18, icon: 'eye', isRising: false },
-  { id: 'r2', message: 'Your story was saved\nby someone', count: 6, icon: 'bookmark', isRising: false },
-  { id: 'r3', message: "You were discovered\nin 'Soft' vibe", icon: 'feather', isRising: false },
+  { id: 'r1', message: 'People experienced\nyour story today', count: 18, icon: 'eye' },
+  { id: 'r2', message: 'Your story was saved\nby someone', count: 6, icon: 'bookmark' },
+  { id: 'r3', message: "You were discovered\nin 'Soft' vibe", icon: 'feather' },
   { id: 'r4', message: 'Rising Star', subMessage: 'Your story is inspiring\nmore travelers!', icon: 'star', isRising: true },
 ];
 
@@ -220,17 +260,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [discoverPosts, setDiscoverPosts] = useState<DiscoverPost[]>(SAMPLE_POSTS);
   const [rewards, setRewards] = useState<Reward[]>(INITIAL_REWARDS);
+  const [friends, setFriends] = useState<Friend[]>(SAMPLE_FRIENDS);
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     try {
-      const [savedChar, savedLogs] = await Promise.all([
+      const [savedChar, savedLogs, savedFriends] = await Promise.all([
         AsyncStorage.getItem('character'),
         AsyncStorage.getItem('logs_v2'),
+        AsyncStorage.getItem('friends_v1'),
       ]);
       if (savedChar) setCharacterState(JSON.parse(savedChar));
       if (savedLogs) setLogs(JSON.parse(savedLogs));
+      if (savedFriends) setFriends(JSON.parse(savedFriends));
     } catch {}
   }
 
@@ -240,7 +283,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   function addLog(log: LogEntry) {
-    const updated = [log, ...logs];
+    const entry: LogEntry = { ...log, logType: log.logType ?? 'memory' };
+    const updated = [entry, ...logs];
     setLogs(updated);
     AsyncStorage.setItem('logs_v2', JSON.stringify(updated));
     setCharacterState(prev => ({ ...prev, storiesCount: prev.storiesCount + 1, memoriesCount: prev.memoriesCount + 1 }));
@@ -262,8 +306,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRewards(prev => prev.filter(r => r.id !== id));
   }
 
+  function addOrUpdateFriend(name: string, note?: string) {
+    setFriends(prev => {
+      const existing = prev.find(f => f.name.toLowerCase() === name.toLowerCase());
+      let updated: Friend[];
+      if (existing) {
+        updated = prev.map(f =>
+          f.id === existing.id
+            ? {
+                ...f,
+                timesMet: f.timesMet + 1,
+                lastSeen: new Date().toISOString(),
+                notes: note ? [...f.notes, note] : f.notes,
+              }
+            : f
+        );
+      } else {
+        const newFriend: Friend = {
+          id: Date.now().toString(),
+          name,
+          timesMet: 1,
+          lastSeen: new Date().toISOString(),
+          notes: note ? [note] : [],
+        };
+        updated = [newFriend, ...prev];
+      }
+      AsyncStorage.setItem('friends_v1', JSON.stringify(updated));
+      return updated;
+    });
+  }
+
+  function searchLogs(query: string): LogEntry[] {
+    if (!query.trim()) return logs;
+    const q = query.toLowerCase();
+    return logs.filter(l => {
+      const titleMatch = l.chapterTitle.toLowerCase().includes(q);
+      const textMatch = l.panels.some(p => p.text.toLowerCase().includes(q));
+      const moodMatch = l.mood.toLowerCase().includes(q);
+      const locationMatch = l.location.toLowerCase().includes(q);
+      const friendMatch = l.friendTags?.some(f => f.toLowerCase().includes(q));
+      return titleMatch || textMatch || moodMatch || locationMatch || friendMatch;
+    });
+  }
+
+  function searchFriends(query: string): Friend[] {
+    if (!query.trim()) return friends;
+    const q = query.toLowerCase();
+    return friends.filter(f => f.name.toLowerCase().includes(q));
+  }
+
   return (
-    <AppContext.Provider value={{ character, setCharacter, logs, addLog, deleteLog, discoverPosts, toggleSavePost, rewards, dismissReward }}>
+    <AppContext.Provider value={{
+      character, setCharacter,
+      logs, addLog, deleteLog,
+      discoverPosts, toggleSavePost,
+      rewards, dismissReward,
+      friends, addOrUpdateFriend,
+      searchLogs, searchFriends,
+    }}>
       {children}
     </AppContext.Provider>
   );

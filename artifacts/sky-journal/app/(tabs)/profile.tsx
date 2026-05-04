@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  FlatList,
   Image,
   Platform,
   ScrollView,
@@ -34,35 +33,26 @@ const OUTFIT_CARDS = [
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { character, logs, discoverPosts } = useApp();
+  const { character, logs, discoverPosts, friends } = useApp();
   const [activeTab, setActiveTab] = useState<ProfileTabType>('Stories');
   const [following, setFollowing] = useState(false);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
-
   const savedPosts = discoverPosts.filter(p => p.saved);
 
-  function handleFollow() {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setFollowing(!following);
-  }
+  // Memory log type counts
+  const memoryCnt = logs.filter(l => (l.logType ?? 'memory') === 'memory').length;
+  const friendCnt = logs.filter(l => l.logType === 'friend').length;
+  const momentCnt = logs.filter(l => l.logType === 'moment').length;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
         {/* Banner */}
         <View style={{ height: topPad + 200 }}>
-          <LinearGradient
-            colors={['#C8B8E8', '#B8D4F0', '#EDE0F8']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-          {/* Decorative orbs */}
-          <View style={[styles.orb, { backgroundColor: 'rgba(255,255,255,0.25)', top: -40, right: -40 }]} />
-          <View style={[styles.orb2, { backgroundColor: 'rgba(200,168,75,0.2)', bottom: 0, left: -20 }]} />
-
-          {/* Top actions */}
+          <LinearGradient colors={['#C8B8E8', '#B8D4F0', '#EDE0F8']} style={StyleSheet.absoluteFill} />
+          <View style={[styles.orb, { backgroundColor: 'rgba(255,255,255,0.2)', top: -40, right: -40 }]} />
+          <View style={[styles.orb2, { backgroundColor: 'rgba(200,168,75,0.18)', bottom: 0, left: -20 }]} />
           <View style={[styles.topActions, { paddingTop: topPad + 8 }]}>
             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.7)' }]}>
               <Feather name="settings" size={18} color={colors.foreground} />
@@ -73,16 +63,14 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Avatar + Info */}
+        {/* Info section */}
         <View style={[styles.infoSection, { backgroundColor: colors.background }]}>
-          {/* Avatar */}
           <View style={styles.avatarWrap}>
             <View style={[styles.avatarGlow, { backgroundColor: `${colors.primary}20` }]} />
             <View style={[styles.avatar, { borderColor: colors.background }]}>
               <Image source={Images.character_default} style={styles.avatarImg} resizeMode="cover" />
             </View>
           </View>
-
           <View style={styles.nameSection}>
             <View style={styles.nameRow}>
               <Text style={[styles.name, { color: colors.foreground }]}>{character.name}</Text>
@@ -92,9 +80,7 @@ export default function ProfileScreen() {
             <Text style={[styles.bio, { color: colors.mutedForeground }]}>{character.bio}</Text>
             <View style={styles.moodRow}>
               <MoodBadge mood={character.mood} size="sm" />
-              {character.traits.slice(0, 2).map(t => (
-                <TraitTag key={t} label={t} />
-              ))}
+              {character.traits.slice(0, 2).map(t => <TraitTag key={t} label={t} />)}
             </View>
           </View>
 
@@ -121,28 +107,47 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {/* Log type mini stats */}
+          <View style={styles.logTypeRow}>
+            <TouchableOpacity style={[styles.logTypeStat, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}20` }]}
+              onPress={() => router.push('/(tabs)/log')}>
+              <Text style={styles.logTypeEmoji}>📸</Text>
+              <Text style={[styles.logTypeNum, { color: colors.primary }]}>{memoryCnt}</Text>
+              <Text style={[styles.logTypeLabel, { color: colors.mutedForeground }]}>Memories</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.logTypeStat, { backgroundColor: 'rgba(72,120,168,0.1)', borderColor: 'rgba(72,120,168,0.2)' }]}
+              onPress={() => router.push('/friends')}>
+              <Text style={styles.logTypeEmoji}>🤝</Text>
+              <Text style={[styles.logTypeNum, { color: '#4878A8' }]}>{friends.length}</Text>
+              <Text style={[styles.logTypeLabel, { color: colors.mutedForeground }]}>Friends</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.logTypeStat, { backgroundColor: 'rgba(104,88,168,0.1)', borderColor: 'rgba(104,88,168,0.2)' }]}
+              onPress={() => router.push('/(tabs)/log')}>
+              <Text style={styles.logTypeEmoji}>🌙</Text>
+              <Text style={[styles.logTypeNum, { color: '#6858A8' }]}>{momentCnt}</Text>
+              <Text style={[styles.logTypeLabel, { color: colors.mutedForeground }]}>Moments</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Action buttons */}
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={[
-                styles.followBtn,
-                {
-                  backgroundColor: following ? colors.muted : colors.primary,
-                  borderColor: following ? colors.border : 'transparent',
-                  borderWidth: following ? 1 : 0,
-                },
-              ]}
-              onPress={handleFollow}
+              style={[styles.followBtn, { backgroundColor: following ? colors.muted : colors.primary, borderColor: following ? colors.border : 'transparent', borderWidth: following ? 1 : 0 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setFollowing(!following); }}
               activeOpacity={0.85}
             >
               <Text style={[styles.followText, { color: following ? colors.foreground : '#fff' }]}>
                 {following ? 'Witnessed' : 'Follow'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.messageBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            >
+            <TouchableOpacity style={[styles.iconActionBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}>
               <Feather name="message-circle" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.iconActionBtn, { backgroundColor: 'rgba(72,120,168,0.12)', borderColor: 'rgba(72,120,168,0.25)' }]}
+              onPress={() => router.push('/friends')}
+            >
+              <Text style={{ fontSize: 16 }}>🤝</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -150,25 +155,10 @@ export default function ProfileScreen() {
         {/* Profile Tabs */}
         <View style={[styles.tabsRow, { borderBottomColor: colors.border }]}>
           {PROFILE_TABS.map(tab => (
-            <TouchableOpacity
-              key={tab}
-              style={[
-                styles.profileTab,
-                activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 },
-              ]}
-              onPress={() => {
-                setActiveTab(tab);
-                Haptics.selectionAsync();
-              }}
-            >
-              <Text
-                style={[
-                  styles.profileTabText,
-                  { color: activeTab === tab ? colors.primary : colors.mutedForeground },
-                ]}
-              >
-                {tab}
-              </Text>
+            <TouchableOpacity key={tab}
+              style={[styles.profileTab, activeTab === tab && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+              onPress={() => { setActiveTab(tab); Haptics.selectionAsync(); }}>
+              <Text style={[styles.profileTabText, { color: activeTab === tab ? colors.primary : colors.mutedForeground }]}>{tab}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -179,37 +169,38 @@ export default function ProfileScreen() {
             {logs.length === 0 ? (
               <View style={styles.emptyState}>
                 <Feather name="book-open" size={28} color={colors.mutedForeground} />
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  No stories written yet
-                </Text>
-                <TouchableOpacity
-                  style={[styles.writeBtn, { backgroundColor: `${colors.primary}15` }]}
-                  onPress={() => router.push('/(tabs)/create')}
-                >
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No stories yet</Text>
+                <TouchableOpacity style={[styles.writeBtn, { backgroundColor: `${colors.primary}15` }]}
+                  onPress={() => router.push('/(tabs)/create')}>
                   <Text style={[styles.writeBtnText, { color: colors.primary }]}>Write your first story</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.storyGrid}>
                 {logs.map(log => (
-                  <TouchableOpacity
-                    key={log.id}
+                  <TouchableOpacity key={log.id}
                     style={[styles.storyCard, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                    onPress={() => router.push({ pathname: '/story/[id]', params: { id: log.id, source: 'log' } })}
-                    activeOpacity={0.85}
-                  >
-                    {log.imageUri ? (
-                      <Image source={{ uri: log.imageUri }} style={styles.storyThumb} resizeMode="cover" />
+                    onPress={() => router.push({ pathname: '/story/[id]', params: { id: log.id, source: 'log' } })}>
+                    {log.logType === 'friend' ? (
+                      <View style={[styles.storyThumbPlaceholder, { backgroundColor: 'rgba(72,120,168,0.15)' }]}>
+                        <Text style={{ fontSize: 24 }}>🤝</Text>
+                      </View>
+                    ) : log.logType === 'moment' ? (
+                      <View style={[styles.storyThumbPlaceholder, { backgroundColor: '#1A1630' }]}>
+                        <Text style={{ fontSize: 24 }}>🌙</Text>
+                      </View>
+                    ) : log.panels[0]?.imageUri ? (
+                      <Image source={{ uri: log.panels[0].imageUri }} style={styles.storyThumb} resizeMode="cover" />
                     ) : (
                       <View style={[styles.storyThumbPlaceholder, { backgroundColor: `${colors.primary}12` }]}>
-                        <Feather name="book-open" size={20} color={colors.primary} />
+                        <Text style={{ fontSize: 24 }}>📸</Text>
                       </View>
                     )}
                     <View style={styles.storyCardBody}>
                       <Text style={[styles.storyCardTitle, { color: colors.foreground }]} numberOfLines={1}>
                         {log.chapterTitle}
                       </Text>
-                      <View style={styles.storyCardStats}>
+                      <View style={styles.storyCardMeta}>
                         <Feather name="eye" size={11} color={colors.mutedForeground} />
                         <Text style={[styles.storyCardStat, { color: colors.mutedForeground }]}>{log.witnessedCount}</Text>
                       </View>
@@ -225,10 +216,7 @@ export default function ProfileScreen() {
           <View style={styles.tabContent}>
             <View style={styles.storyGrid}>
               {OUTFIT_CARDS.map(outfit => (
-                <View
-                  key={outfit.id}
-                  style={[styles.outfitCard, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                >
+                <View key={outfit.id} style={[styles.outfitCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
                   <View style={[styles.outfitIcon, { backgroundColor: `${colors.primary}15` }]}>
                     <Feather name="star" size={22} color={colors.primary} />
                   </View>
@@ -245,27 +233,17 @@ export default function ProfileScreen() {
             {savedPosts.length === 0 ? (
               <View style={styles.emptyState}>
                 <Feather name="bookmark" size={28} color={colors.mutedForeground} />
-                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                  No saved stories yet
-                </Text>
+                <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No saved stories</Text>
               </View>
             ) : (
               <View style={styles.storyGrid}>
                 {savedPosts.map(post => (
-                  <TouchableOpacity
-                    key={post.id}
+                  <TouchableOpacity key={post.id}
                     style={[styles.storyCard, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                    onPress={() => router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'discover' } })}
-                  >
-                    <Image
-                      source={Images[post.imageKey as keyof typeof Images] ?? Images.story_bg1}
-                      style={styles.storyThumb}
-                      resizeMode="cover"
-                    />
+                    onPress={() => router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'discover' } })}>
+                    <Image source={Images[post.imageKey as keyof typeof Images] ?? Images.story_bg1} style={styles.storyThumb} resizeMode="cover" />
                     <View style={styles.storyCardBody}>
-                      <Text style={[styles.storyCardTitle, { color: colors.foreground }]} numberOfLines={1}>
-                        {post.chapterTitle}
-                      </Text>
+                      <Text style={[styles.storyCardTitle, { color: colors.foreground }]} numberOfLines={1}>{post.chapterTitle}</Text>
                       <Text style={[styles.storyCardStat, { color: colors.mutedForeground }]}>{post.authorName}</Text>
                     </View>
                   </TouchableOpacity>
@@ -283,172 +261,51 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   orb: { position: 'absolute', width: 180, height: 180, borderRadius: 90 },
   orb2: { position: 'absolute', width: 120, height: 120, borderRadius: 60 },
-  topActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    gap: 10,
-  },
-  actionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  infoSection: {
-    paddingHorizontal: 20,
-    paddingTop: 0,
-    paddingBottom: 16,
-    gap: 14,
-  },
-  avatarWrap: {
-    marginTop: -60,
-    alignSelf: 'flex-start',
-    position: 'relative',
-  },
-  avatarGlow: {
-    position: 'absolute',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    top: -8,
-    left: -8,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
-    overflow: 'hidden',
-  },
+  topActions: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, gap: 10 },
+  actionBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  infoSection: { paddingHorizontal: 20, paddingBottom: 16, gap: 14 },
+  avatarWrap: { marginTop: -60, alignSelf: 'flex-start', position: 'relative' },
+  avatarGlow: { position: 'absolute', width: 120, height: 120, borderRadius: 60, top: -8, left: -8 },
+  avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 4, overflow: 'hidden' },
   avatarImg: { width: '100%', height: '100%' },
   nameSection: { gap: 4 },
   nameRow: { flexDirection: 'row', alignItems: 'center' },
-  name: {
-    fontSize: 24,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.5,
-  },
-  handle: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-  },
-  bio: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    fontStyle: 'italic',
-    lineHeight: 20,
-    marginTop: 4,
-  },
-  moodRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 6,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
-  },
+  name: { fontSize: 24, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  handle: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  bio: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 20, marginTop: 4 },
+  moodRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 6 },
+  statsRow: { flexDirection: 'row', borderWidth: 1, borderRadius: 16, paddingVertical: 14 },
   statItem: { flex: 1, alignItems: 'center', gap: 2 },
-  statNum: { fontSize: 14, fontFamily: 'Inter_700Bold' },
+  statNum: { fontSize: 13, fontFamily: 'Inter_700Bold' },
   statLabel: { fontSize: 10, fontFamily: 'Inter_400Regular' },
   divider: { width: 1, alignSelf: 'stretch' },
+  logTypeRow: { flexDirection: 'row', gap: 8 },
+  logTypeStat: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 12, borderRadius: 14, borderWidth: 1 },
+  logTypeEmoji: { fontSize: 20 },
+  logTypeNum: { fontSize: 18, fontFamily: 'Inter_700Bold' },
+  logTypeLabel: { fontSize: 10, fontFamily: 'Inter_400Regular' },
   actionRow: { flexDirection: 'row', gap: 10 },
-  followBtn: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  followBtn: { flex: 1, paddingVertical: 13, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   followText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  messageBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tabsRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    marginHorizontal: 0,
-  },
-  profileTab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  profileTabText: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-  },
+  iconActionBtn: { width: 48, height: 48, borderRadius: 24, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  tabsRow: { flexDirection: 'row', borderBottomWidth: 1 },
+  profileTab: { flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
+  profileTabText: { fontSize: 14, fontFamily: 'Inter_500Medium' },
   tabContent: { padding: 16 },
-  storyGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  storyCard: {
-    width: '48%',
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
+  storyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  storyCard: { width: '48%', borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
   storyThumb: { width: '100%', height: 110 },
-  storyThumbPlaceholder: {
-    width: '100%',
-    height: 110,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  storyThumbPlaceholder: { width: '100%', height: 110, alignItems: 'center', justifyContent: 'center' },
   storyCardBody: { padding: 10, gap: 4 },
   storyCardTitle: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
-  storyCardStats: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  storyCardMeta: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   storyCardStat: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  outfitCard: {
-    width: '48%',
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 14,
-    gap: 8,
-    alignItems: 'center',
-  },
-  outfitIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  outfitCard: { width: '48%', borderRadius: 12, borderWidth: 1, padding: 14, gap: 8, alignItems: 'center' },
+  outfitIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   outfitName: { fontSize: 13, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
   outfitRarity: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  emptyState: {
-    alignItems: 'center',
-    paddingTop: 40,
-    gap: 10,
-  },
-  emptyText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-    fontStyle: 'italic',
-  },
-  writeBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginTop: 4,
-  },
-  writeBtnText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-  },
+  emptyState: { alignItems: 'center', paddingTop: 40, gap: 10 },
+  emptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  writeBtn: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, marginTop: 4 },
+  writeBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
 });
