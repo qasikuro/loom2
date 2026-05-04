@@ -155,27 +155,25 @@ export default function CharacterScreen() {
 
         {/* ── Banner ──────────────────────────────────────────────── */}
         <View style={[styles.banner, { height: topPad + 200 }]}>
-          <LinearGradient colors={['#B8A8D8', '#A4B8D8', '#D4C8F0']} style={StyleSheet.absoluteFill} />
-          <View style={[styles.orbA, { backgroundColor: 'rgba(255,255,255,0.18)' }]} />
-          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.12)' }]} />
+          <LinearGradient colors={['#2E2260', '#3A2E78', '#4A3888']} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+          <View style={[styles.orbA, { backgroundColor: 'rgba(200,168,232,0.14)' }]} />
+          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.1)' }]} />
 
           <View style={[styles.bannerTop, { paddingTop: topPad + 12 }]}>
             <Text style={styles.bannerLabel}>CHARACTER</Text>
             <TouchableOpacity
               style={[styles.visToggle, {
-                backgroundColor: character.isPublic ? 'rgba(255,255,255,0.72)' : 'rgba(26,22,48,0.38)',
-                borderColor: character.isPublic ? 'rgba(107,91,149,0.25)' : 'rgba(200,184,232,0.2)',
+                backgroundColor: character.isPublic ? 'rgba(255,255,255,0.18)' : 'rgba(26,22,48,0.38)',
+                borderColor: character.isPublic ? 'rgba(200,184,232,0.35)' : 'rgba(200,184,232,0.15)',
               }]}
               onPress={toggleVisibility}
             >
               <Icon
                 name={character.isPublic ? 'globe' : 'lock'}
                 size={12}
-                color={character.isPublic ? colors.primary : 'rgba(200,184,232,0.85)'}
+                color="rgba(220,210,255,0.85)"
               />
-              <Text style={[styles.visToggleText, {
-                color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.85)',
-              }]}>
+              <Text style={[styles.visToggleText, { color: 'rgba(220,210,255,0.85)' }]}>
                 {character.isPublic ? 'Public profile' : 'Private profile'}
               </Text>
             </TouchableOpacity>
@@ -550,9 +548,9 @@ const styles = StyleSheet.create({
   orbA: { position: 'absolute', width: 180, height: 180, borderRadius: 90, top: -40, right: -40 },
   orbB: { position: 'absolute', width: 120, height: 120, borderRadius: 60, bottom: 0, left: -30 },
   bannerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  bannerLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 2.2, color: 'rgba(60,44,100,0.5)' },
+  bannerLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 2.2, color: 'rgba(220,210,255,0.55)' },
   visToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  visToggleText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  visToggleText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   body: { paddingHorizontal: 20 },
   avatarArea: { marginTop: -56, alignSelf: 'flex-start', position: 'relative', marginBottom: 12 },
   avatarGlow: { position: 'absolute', width: 116, height: 116, borderRadius: 58, top: -6, left: -6 },
@@ -575,16 +573,16 @@ const styles = StyleSheet.create({
   bioRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   bio: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22 },
   bioInput: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22, borderWidth: 1, borderRadius: 12, padding: 12 },
-  statsCard: { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 16, marginBottom: 24 },
-  statItem: { flex: 1, alignItems: 'center', gap: 3 },
-  statNum: { fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  statLabel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  statsCard: { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 18, marginBottom: 26 },
+  statItem: { flex: 1, alignItems: 'center', gap: 4 },
+  statNum: { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  statLabel: { fontSize: 11, fontFamily: 'Inter_500Medium', letterSpacing: 0.2, textTransform: 'uppercase' },
   statDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4 },
   section: { borderTopWidth: 1, borderTopColor: '#E2D9EE', paddingTop: 22, marginBottom: 26 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
   sectionTitleRow: { gap: 3 },
-  sectionTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
-  sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  sectionTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
+  sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#9A8EB4', fontStyle: 'italic' },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
   addBtnText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   traitsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

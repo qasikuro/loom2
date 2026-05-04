@@ -103,7 +103,7 @@ export default function DiscoverScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={['#14112E', '#1E1A48', '#22204C']} style={[styles.headerGrad, { height: topPad + 110 }]} />
+      <LinearGradient colors={['#14112E', '#1A1640', '#1E1A48']} style={[styles.headerGrad, { height: topPad + 138 }]} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
@@ -341,16 +341,16 @@ export default function DiscoverScreen() {
 const styles = StyleSheet.create({
   container:    { flex: 1 },
   headerGrad:   { position: 'absolute', top: 0, left: 0, right: 0 },
-  header:       { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 14 },
-  headerTitle:  { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
-  headerSub:    { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
-  iconBtn:      { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  tabsScroll:   { maxHeight: 50 },
-  tabsRow:      { flexDirection: 'row', gap: 8, paddingVertical: 7 },
-  tab:          { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 22, borderWidth: 1 },
-  tabText:      { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  divider:      { height: 1 },
-  list:         { paddingHorizontal: 16, paddingTop: 14 },
+  header:       { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
+  headerTitle:  { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
+  headerSub:    { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 3, letterSpacing: 0.1 },
+  iconBtn:      { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 2 },
+  tabsScroll:   { maxHeight: 52 },
+  tabsRow:      { flexDirection: 'row', gap: 8, paddingVertical: 8 },
+  tab:          { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 22, borderWidth: 1 },
+  tabText:      { fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1 },
+  divider:      { height: 1, marginTop: 1 },
+  list:         { paddingHorizontal: 16, paddingTop: 16 },
 
   // Search (People tab)
   searchWrap:   { flexDirection: 'row', alignItems: 'center', gap: 10, margin: 14, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },

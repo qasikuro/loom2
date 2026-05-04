@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
 
   topRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10, gap: 12,
+    paddingHorizontal: 18, paddingTop: 16, paddingBottom: 10, gap: 12,
   },
   avatarRing: {
     width: 48, height: 48, borderRadius: 24,
@@ -416,8 +416,8 @@ const styles = StyleSheet.create({
   },
   avatar: { width: '100%', height: '100%' },
   nameBlock: { flex: 1 },
-  charName: { fontSize: 16, fontFamily: 'Inter_700Bold', color: 'rgba(235,228,255,0.96)', letterSpacing: -0.2 },
-  subtitle:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)', marginTop: 1 },
+  charName: { fontSize: 16, fontFamily: 'Inter_700Bold', color: 'rgba(235,228,255,0.97)', letterSpacing: -0.3 },
+  subtitle:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', marginTop: 2, letterSpacing: 0.1 },
 
   headerIcons: { flexDirection: 'row', gap: 6 },
   headerIconBtn: {
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   charInfoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: '#fff', borderRadius: 18, padding: 16,
-    marginBottom: 20, borderWidth: 1, borderColor: '#EDE4F8',
+    marginBottom: 20, borderWidth: 1, borderColor: '#E8E0F2',
   },
   charInfoLeft: { flex: 1 },
   charNameRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
@@ -493,8 +493,8 @@ const styles = StyleSheet.create({
 
   // Section label
   sectionLabel: {
-    fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#9A8EB4',
-    letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12,
+    fontSize: 11, fontFamily: 'Inter_700Bold', color: '#9A8EB4',
+    letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 14,
   },
 
   // Horizontal slim cards
@@ -503,15 +503,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#fff',
     borderRadius: 20, overflow: 'hidden',
-    height: 88,
-    borderWidth: 1, borderColor: '#EDE8F5',
+    height: 90,
+    borderWidth: 1, borderColor: '#E8E0F2',
   },
   hCardLeft: {
-    flex: 1, paddingHorizontal: 18, paddingVertical: 14, gap: 5,
+    flex: 1, paddingHorizontal: 18, paddingVertical: 14, gap: 4,
   },
-  hCardTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.2 },
+  hCardTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.3 },
   hCardDesc:  { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#9A8EB4', lineHeight: 17 },
-  hCardImage: { width: 108, height: 88, flexShrink: 0 },
+  hCardImage: { width: 110, height: 90, flexShrink: 0 },
 
   // Modals
   modalOverlay:  { flex: 1, backgroundColor: 'rgba(18,16,42,0.6)', justifyContent: 'flex-end' },

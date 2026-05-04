@@ -165,7 +165,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 18,
+    borderRadius: 20,
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: 14,
@@ -174,7 +174,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingTop: 13,
+    paddingBottom: 11,
     gap: 10,
   },
   avatar: {
@@ -190,9 +191,9 @@ const styles = StyleSheet.create({
   imageWrap:    { position: 'relative' },
   image:        { width: '100%', aspectRatio: 16 / 9 },
   placeholderInner: { flex: 1, position: 'relative' },
-  body:    { padding: 14, paddingTop: 12, gap: 6 },
-  title:   { fontSize: 16, fontFamily: 'Inter_700Bold', letterSpacing: -0.2 },
-  snippet: { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 20, fontStyle: 'italic' },
+  body:    { padding: 14, paddingTop: 12, gap: 7 },
+  title:   { fontSize: 16, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
+  snippet: { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 20, fontStyle: 'italic', opacity: 0.85 },
   footer:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 },
   statsGroup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statItem:   { flexDirection: 'row', alignItems: 'center', gap: 4 },

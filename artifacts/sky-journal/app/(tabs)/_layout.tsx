@@ -14,8 +14,8 @@ import { Icon, type IconName } from '@/components/Icon';
 const PURPLE     = '#6B5B95';
 const TAB_BAR_BG = '#FDFAF7';
 const INACTIVE   = '#A09AB5';
-const BAR_HEIGHT = 60;
-const BTN_SIZE   = 52;
+const BAR_HEIGHT = 64;
+const BTN_SIZE   = 54;
 
 function TabIcon({
   name,
@@ -72,13 +72,13 @@ function ClassicTabLayout() {
         tabBarLabelStyle: {
           fontSize:      10,
           fontFamily:    'Inter_600SemiBold',
-          letterSpacing: 0.2,
-          marginTop:     2,
-          marginBottom:  4,
+          letterSpacing: 0.3,
+          marginBottom:  5,
+          marginTop:     1,
         },
 
         tabBarIconStyle: {
-          marginTop: 4,
+          marginTop: 6,
         },
       }}
     >
@@ -171,11 +171,11 @@ const styles = StyleSheet.create({
     backgroundColor: PURPLE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
     shadowColor: PURPLE,
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 10,
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 14,
   },
 });
