@@ -75,10 +75,10 @@ export default function RootLayout() {
       Inter_500Medium,
       Inter_600SemiBold,
       Inter_700Bold,
-      // Explicit require so Metro bundles the TTF and the font name
-      // is registered as 'Feather' — the exact name @expo/vector-icons expects.
+      // Load from a local copy in assets/fonts/ — avoids pnpm symlink issues
+      // where Metro can't follow symlinks into the pnpm store at build time.
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      Feather: require('../node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf'),
+      Feather: require('../assets/fonts/Feather.ttf'),
     })
       .catch(() => { /* if loading fails, still show the app — icons fall back to ☐ */ })
       .finally(() => {

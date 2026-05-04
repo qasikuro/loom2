@@ -35,9 +35,7 @@
         }
       ],
       ["expo-font", {
-        "fonts": [
-          "./node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"
-        ]
+        "fonts": ["./assets/fonts/Feather.ttf"]
       }],
       "expo-web-browser",
       [
