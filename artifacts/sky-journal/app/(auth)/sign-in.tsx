@@ -26,6 +26,20 @@ const SPARKLES = [
   { t: 350, r: 50,  s: 4, o: 0.45 },
 ];
 
+// Second-factor strategies Clerk may require, in preference order
+const MFA_STRATEGIES = ['totp', 'phone_code', 'email_code', 'backup_code'] as const;
+type MfaStrategy = typeof MFA_STRATEGIES[number];
+
+function mfaLabel(strategy: MfaStrategy): string {
+  switch (strategy) {
+    case 'totp':        return 'Enter the code from your authenticator app';
+    case 'phone_code':  return 'Enter the code sent to your phone';
+    case 'email_code':  return 'Enter the code sent to your email';
+    case 'backup_code': return 'Enter a backup recovery code';
+    default:            return 'Enter the verification code';
+  }
+}
+
 export default function SignInScreen() {
   const { signIn, setActive, isLoaded } = useSignIn();
   const insets = useSafeAreaInsets();
@@ -36,60 +50,163 @@ export default function SignInScreen() {
   const [isLoading, setIsLoading]       = useState(false);
   const [error, setError]               = useState('');
 
+  // MFA state — set when Clerk returns needs_second_factor
+  const [mfaRequired, setMfaRequired]   = useState(false);
+  const [mfaStrategy, setMfaStrategy]   = useState<MfaStrategy>('totp');
+  const [mfaCode, setMfaCode]           = useState('');
+
+  // ── helpers ───────────────────────────────────────────────────────────────
+
+  async function activateSession(sessionId: string | null | undefined) {
+    const sid = sessionId ?? signIn?.createdSessionId;
+    if (sid && setActive) await setActive({ session: sid });
+  }
+
+  function pickStrategy(supported: Array<{ strategy: string }> | undefined): MfaStrategy {
+    if (!supported?.length) return 'totp';
+    for (const preferred of MFA_STRATEGIES) {
+      if (supported.some(f => f.strategy === preferred)) return preferred;
+    }
+    return (supported[0].strategy as MfaStrategy) ?? 'totp';
+  }
+
+  function handleClerkError(err: any) {
+    const clerkError = err?.errors?.[0];
+    const code: string   = clerkError?.code ?? '';
+    const rawMsg: string = clerkError?.longMessage || clerkError?.message || '';
+
+    if (code === 'too_many_requests' || rawMsg.toLowerCase().includes('try again later')) {
+      setError('Too many attempts — please wait a minute and try again.');
+    } else if (code === 'form_password_incorrect') {
+      setError('Incorrect password. Please try again.');
+    } else if (code === 'form_identifier_not_found') {
+      setError('No account found with that email address.');
+    } else if (code === 'form_code_incorrect') {
+      setError('Incorrect code. Please try again.');
+    } else {
+      setError(rawMsg || 'Something went wrong. Please try again.');
+    }
+  }
+
+  // ── Step 1: password ──────────────────────────────────────────────────────
+
   async function handleSignIn() {
     if (!isLoaded || !signIn) return;
     setIsLoading(true);
     setError('');
 
     try {
-      // Send identifier + password together in one call.
-      // Clerk v3 handles bot-protection internally for this flow.
-      const attempt = await signIn.create({
-        identifier: email,
-        password,
-      });
+      const attempt = await signIn.create({ identifier: email, password });
 
       if (attempt.status === 'complete') {
-        // createdSessionId can live on the return value or on the signIn object
-        const sessionId = attempt.createdSessionId ?? signIn.createdSessionId;
-        if (sessionId) {
-          await setActive({ session: sessionId });
-          // AuthNavigator in _layout.tsx handles the redirect to /(tabs)
-          return;
+        await activateSession(attempt.createdSessionId);
+        return;
+      }
+
+      if (attempt.status === 'needs_second_factor') {
+        // Pick the best available MFA strategy and switch to the MFA screen
+        const strategy = pickStrategy(attempt.supportedSecondFactors as any);
+        setMfaStrategy(strategy);
+
+        // For phone_code, Clerk needs us to prepare the factor first (sends the SMS)
+        if (strategy === 'phone_code' || strategy === 'email_code') {
+          await signIn.prepareSecondFactor({ strategy });
         }
+
+        setMfaRequired(true);
+        return;
       }
 
-      // status is something unexpected (needs_second_factor, etc.)
-      // fall through to a readable error
-      const statusMsg = attempt.status
-        ? `Unexpected sign-in status: ${attempt.status}`
-        : 'Sign-in could not be completed. Please try again.';
-      setError(statusMsg);
-    } catch (err: any) {
-      const clerkError = err?.errors?.[0];
-      const code: string  = clerkError?.code ?? '';
-      const rawMsg: string =
-        clerkError?.longMessage ||
-        clerkError?.message ||
-        '';
-
-      if (
-        code === 'too_many_requests' ||
-        rawMsg.toLowerCase().includes('try again later') ||
-        rawMsg.toLowerCase().includes('too many requests')
-      ) {
-        setError('Too many attempts — please wait a minute and try again.');
-      } else if (code === 'form_password_incorrect') {
-        setError('Incorrect password. Please try again.');
-      } else if (code === 'form_identifier_not_found') {
-        setError('No account found with that email address.');
-      } else {
-        setError(rawMsg || 'Sign-in failed. Please check your details and try again.');
-      }
+      setError(`Unexpected sign-in status: ${attempt.status ?? 'unknown'}`);
+    } catch (err) {
+      handleClerkError(err);
     } finally {
       setIsLoading(false);
     }
   }
+
+  // ── Step 2: MFA code ──────────────────────────────────────────────────────
+
+  async function handleMfa() {
+    if (!isLoaded || !signIn) return;
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const attempt = await signIn.attemptSecondFactor({
+        strategy: mfaStrategy,
+        code: mfaCode.trim(),
+      });
+
+      if (attempt.status === 'complete') {
+        await activateSession(attempt.createdSessionId);
+        return;
+      }
+
+      setError(`Unexpected MFA status: ${attempt.status ?? 'unknown'}`);
+    } catch (err) {
+      handleClerkError(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ── MFA screen ─────────────────────────────────────────────────────────────
+
+  if (mfaRequired) {
+    return (
+      <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
+        <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
+          <View style={styles.iconWrap}>
+            <LinearGradient colors={['#C8A84B', '#E8C870']} style={styles.iconCircle}>
+              <Feather name="shield" size={26} color="#1A1630" />
+            </LinearGradient>
+          </View>
+
+          <Text style={styles.title}>Verification required</Text>
+          <Text style={styles.subtitle}>{mfaLabel(mfaStrategy)}</Text>
+
+          <View style={[styles.field, { marginTop: 8 }]}>
+            <View style={styles.inputWrap}>
+              <Feather name="key" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={mfaCode}
+                onChangeText={t => { setMfaCode(t); setError(''); }}
+                keyboardType="number-pad"
+                placeholder={mfaStrategy === 'backup_code' ? 'xxxxxxxx-xxxx' : '000000'}
+                placeholderTextColor="rgba(200,184,232,0.4)"
+                autoFocus
+                autoComplete="one-time-code"
+              />
+            </View>
+          </View>
+
+          {!!error && <Text style={[styles.error, { marginTop: 12 }]}>{error}</Text>}
+
+          <TouchableOpacity
+            style={[styles.btn, { marginTop: 24 }, (!mfaCode.trim() || isLoading) && styles.btnDisabled]}
+            onPress={handleMfa}
+            disabled={!mfaCode.trim() || isLoading}
+          >
+            {isLoading
+              ? <ActivityIndicator color="#fff" />
+              : <><Text style={styles.btnText}>Verify</Text><Text style={styles.btnStar}>✦</Text></>
+            }
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.textBtn}
+            onPress={() => { setMfaRequired(false); setMfaCode(''); setError(''); }}
+          >
+            <Text style={styles.textBtnText}>← Back to sign in</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  // ── Password screen ────────────────────────────────────────────────────────
 
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
@@ -172,14 +289,10 @@ export default function SignInScreen() {
               onPress={handleSignIn}
               disabled={!email || !password || isLoading}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Text style={styles.btnText}>Continue</Text>
-                  <Text style={styles.btnStar}>✦</Text>
-                </>
-              )}
+              {isLoading
+                ? <ActivityIndicator color="#fff" />
+                : <><Text style={styles.btnText}>Continue</Text><Text style={styles.btnStar}>✦</Text></>
+              }
             </TouchableOpacity>
 
             {/* Clerk mounts its invisible bot-protection widget here */}
@@ -280,5 +393,10 @@ const styles = StyleSheet.create({
   outlineBtnText: {
     fontSize: 15, fontFamily: 'Inter_600SemiBold',
     color: 'rgba(200,184,232,0.9)',
+  },
+  textBtn: { alignItems: 'center', marginTop: 20 },
+  textBtnText: {
+    fontSize: 14, fontFamily: 'Inter_500Medium',
+    color: 'rgba(200,184,232,0.6)',
   },
 });
