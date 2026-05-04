@@ -12,7 +12,6 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -79,7 +78,6 @@ const SPARKLES = [
 ] as const;
 
 export default function HomeScreen() {
-  const { width: W } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const {
     character, journalEntries, stories, rewards, dismissReward,
@@ -99,11 +97,6 @@ export default function HomeScreen() {
     : null;
 
   const activeOutfit = outfits.find(o => o.id === activeOutfitId) ?? null;
-
-  const cardGap  = 10;
-  const hPad     = 16;
-  const cardW    = (W - hPad * 2 - cardGap) / 2;
-  const cardH    = Math.round(cardW * 0.88);
 
   return (
     <View style={styles.root}>
@@ -217,11 +210,6 @@ export default function HomeScreen() {
           <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
           <LinearGradient colors={['transparent', 'rgba(18,16,42,0.82)']} style={styles.charHeroOverlay} pointerEvents="none" />
 
-          <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/(tabs)/profile')}>
-            <Feather name="edit-2" size={11} color="rgba(50,36,90,0.85)" />
-            <Text style={styles.editBtnText}>Edit</Text>
-          </TouchableOpacity>
-
           {outfits.length > 0 && (
             <TouchableOpacity
               style={styles.changeOutfitBtn}
@@ -270,35 +258,23 @@ export default function HomeScreen() {
         {/* Section label */}
         <Text style={styles.sectionLabel}>Where would you like to go?</Text>
 
-        {/* ── 2-column image-backed grid ──────────────────────────── */}
-        <View style={[styles.grid, { gap: cardGap }]}>
+        {/* ── Horizontal slim cards ────────────────────────────────── */}
+        <View style={styles.hList}>
           {CATEGORIES.map(cat => (
             <TouchableOpacity
               key={cat.key}
-              style={[styles.gridCard, { width: cardW, height: cardH }, SHADOW.md]}
+              style={[styles.hCard, SHADOW.sm]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push(cat.route); }}
               activeOpacity={0.88}
             >
-              {/* Background image */}
-              <Image source={cat.image} style={StyleSheet.absoluteFill} resizeMode="cover" />
-
-              {/* Dark gradient overlay */}
-              <LinearGradient
-                colors={['rgba(20,16,48,0.18)', 'rgba(18,14,40,0.82)']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
-              />
-
-              {/* Icon badge */}
-              <View style={[styles.gridIcon, { backgroundColor: cat.iconBg }]}>
-                <Feather name={cat.icon} size={18} color={cat.iconColor} />
+              {/* Text */}
+              <View style={styles.hCardLeft}>
+                <Text style={styles.hCardTitle}>{cat.title}</Text>
+                <Text style={styles.hCardDesc}>{cat.desc}</Text>
               </View>
 
-              {/* Bottom text */}
-              <View style={styles.gridBottom}>
-                <Text style={styles.gridTitle} numberOfLines={2}>{cat.title}</Text>
-                <Text style={styles.gridDesc} numberOfLines={2}>{cat.desc}</Text>
-              </View>
+              {/* Image */}
+              <Image source={cat.image} style={styles.hCardImage} resizeMode="cover" />
             </TouchableOpacity>
           ))}
         </View>
@@ -480,13 +456,6 @@ const styles = StyleSheet.create({
   charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 80, zIndex: 2 },
   charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, zIndex: 2 },
 
-  editBtn: {
-    position: 'absolute', bottom: 14, left: 16, zIndex: 10,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
-  },
-  editBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: 'rgba(50,36,90,0.85)' },
   changeOutfitBtn: {
     position: 'absolute', bottom: 14, right: 16, zIndex: 10,
     width: 36, height: 36, borderRadius: 18,
@@ -521,23 +490,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12,
   },
 
-  // Grid cards
-  grid: { flexDirection: 'row', flexWrap: 'wrap' },
-  gridCard: {
-    borderRadius: 22, overflow: 'hidden',
-    position: 'relative',
+  // Horizontal slim cards
+  hList: { gap: 10 },
+  hCard: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 20, overflow: 'hidden',
+    height: 88,
+    borderWidth: 1, borderColor: '#EDE8F5',
   },
-  gridIcon: {
-    position: 'absolute', top: 14, left: 14, zIndex: 5,
-    width: 40, height: 40, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
+  hCardLeft: {
+    flex: 1, paddingHorizontal: 18, paddingVertical: 14, gap: 5,
   },
-  gridBottom: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    padding: 14, zIndex: 5,
-  },
-  gridTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#fff', letterSpacing: -0.2, marginBottom: 3 },
-  gridDesc:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(220,210,255,0.72)', lineHeight: 16 },
+  hCardTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.2 },
+  hCardDesc:  { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#9A8EB4', lineHeight: 17 },
+  hCardImage: { width: 108, height: 88, flexShrink: 0 },
 
   // Modals
   modalOverlay:  { flex: 1, backgroundColor: 'rgba(18,16,42,0.6)', justifyContent: 'flex-end' },
