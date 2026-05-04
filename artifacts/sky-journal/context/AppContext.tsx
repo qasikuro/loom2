@@ -30,13 +30,19 @@ export interface Story {
   savedCount: number;
 }
 
-/** Private journal entry — always private */
+/** Journal entry type — all private */
+export type JournalEntryType = 'diary' | 'friend' | 'moment';
+
 export interface JournalEntry {
   id: string;
   date: string;
+  /** 'diary' = personal entry, 'friend' = encounter log, 'moment' = quick reflection */
+  type: JournalEntryType;
   text: string;
   mood: string;
   imageUri?: string;
+  /** Only for type === 'friend' */
+  friendName?: string;
 }
 
 /** Daily outfit log item */
@@ -202,7 +208,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const [c, s, j, o] = await Promise.all([
         AsyncStorage.getItem('character_v2'),
         AsyncStorage.getItem('stories_v1'),
-        AsyncStorage.getItem('journal_v1'),
+        AsyncStorage.getItem('journal_v2'),
         AsyncStorage.getItem('outfits_v1'),
       ]);
       if (c) setCharacterState(JSON.parse(c));
@@ -232,13 +238,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   function addJournalEntry(entry: JournalEntry) {
     const updated = [entry, ...journalEntries];
     setJournalEntries(updated);
-    AsyncStorage.setItem('journal_v1', JSON.stringify(updated));
+    AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
   }
 
   function deleteJournalEntry(id: string) {
     const updated = journalEntries.filter(e => e.id !== id);
     setJournalEntries(updated);
-    AsyncStorage.setItem('journal_v1', JSON.stringify(updated));
+    AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
   }
 
   function addOutfit(outfit: Outfit) {

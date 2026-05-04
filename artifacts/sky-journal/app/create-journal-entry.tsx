@@ -76,6 +76,7 @@ export default function CreateJournalEntryScreen() {
     addJournalEntry({
       id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
       date: new Date().toISOString(),
+      type: 'diary',
       text: text.trim(),
       mood,
       imageUri,

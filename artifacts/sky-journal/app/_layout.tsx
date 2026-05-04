@@ -29,9 +29,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
@@ -51,11 +49,19 @@ export default function RootLayout() {
                   />
                   <Stack.Screen
                     name="create-journal-entry"
-                    options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                  />
+                  <Stack.Screen
+                    name="create-friend-log"
+                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                  />
+                  <Stack.Screen
+                    name="create-moment-log"
+                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
                   />
                   <Stack.Screen
                     name="create-outfit"
-                    options={{ animation: 'slide_from_bottom', presentation: 'modal' }}
+                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
                   />
                 </Stack>
               </KeyboardProvider>
