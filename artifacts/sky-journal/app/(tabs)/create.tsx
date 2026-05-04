@@ -38,7 +38,7 @@ const MOODS = [
 
 function makePanel(): StoryPanel {
   return {
-    id: Date.now().toString() + Math.random().toString(36).slice(2, 7),
+    id: crypto.randomUUID(),
     imageUri: undefined,
     text: '',
   };
@@ -84,7 +84,7 @@ export default function CreateScreen() {
     setPosting(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addStory({
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
+      id: crypto.randomUUID(),
       date: new Date().toISOString(),
       chapterTitle: chapterTitle.trim(),
       panels: filled,

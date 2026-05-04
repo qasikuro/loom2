@@ -58,7 +58,7 @@ export default function CreateFriendLogScreen() {
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addJournalEntry({
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
+      id: crypto.randomUUID(),
       date: new Date().toISOString(),
       type: 'friend',
       text: note.trim() || `An encounter with ${friendName.trim()}.`,

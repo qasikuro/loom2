@@ -65,7 +65,7 @@ export default function CreateOutfitScreen() {
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addOutfit({
-      id: Date.now().toString() + Math.random().toString(36).slice(2, 9),
+      id: crypto.randomUUID(),
       date: new Date().toISOString(),
       name: name.trim(),
       description: description.trim(),

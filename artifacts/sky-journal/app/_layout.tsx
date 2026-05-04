@@ -5,6 +5,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
+import { ClerkProvider, ClerkLoaded } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -19,6 +21,8 @@ import { AppProvider } from '@/context/AppContext';
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
+
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -35,40 +39,45 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <AppProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen
-                    name="story/[id]"
-                    options={{ presentation: 'card', animation: 'slide_from_bottom' }}
-                  />
-                  <Stack.Screen
-                    name="create-journal-entry"
-                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                  />
-                  <Stack.Screen
-                    name="create-friend-log"
-                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                  />
-                  <Stack.Screen
-                    name="create-moment-log"
-                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                  />
-                  <Stack.Screen
-                    name="create-outfit"
-                    options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                  />
-                </Stack>
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </AppProvider>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+      <ClerkLoaded>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <AppProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <KeyboardProvider>
+                    <Stack screenOptions={{ headerShown: false }}>
+                      <Stack.Screen name="(auth)" />
+                      <Stack.Screen name="(tabs)" />
+                      <Stack.Screen
+                        name="story/[id]"
+                        options={{ presentation: 'card', animation: 'slide_from_bottom' }}
+                      />
+                      <Stack.Screen
+                        name="create-journal-entry"
+                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                      />
+                      <Stack.Screen
+                        name="create-friend-log"
+                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                      />
+                      <Stack.Screen
+                        name="create-moment-log"
+                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                      />
+                      <Stack.Screen
+                        name="create-outfit"
+                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                      />
+                    </Stack>
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </AppProvider>
+            </QueryClientProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }

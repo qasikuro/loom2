@@ -45,6 +45,7 @@ To push schema changes: `cd lib/db && pnpm run push`
 ### Tech Stack
 - Expo SDK 54 + Expo Router (file-based navigation)
 - React Native 0.81
+- `@clerk/expo` for authentication (Replit-managed Clerk, email/password)
 - `@expo-google-fonts/inter` for typography
 - `expo-linear-gradient` for sky gradients
 - `expo-image-picker` for panel/outfit/journal image selection
@@ -55,9 +56,13 @@ To push schema changes: `cd lib/db && pnpm run push`
 ### Navigation Structure
 ```
 app/
-  _layout.tsx                — Root stack (fonts, providers, modal routes)
+  _layout.tsx                — Root stack (ClerkProvider, fonts, providers, modal routes)
+  (auth)/
+    _layout.tsx              — Auth stack (unauthenticated routes)
+    sign-in.tsx              — Sign-in screen (email + password, Sky Journal themed)
+    sign-up.tsx              — Sign-up screen (email + password + email verification)
   (tabs)/
-    _layout.tsx              — Tab bar: Home | Journal | + | Discover | Character
+    _layout.tsx              — Tab bar: guards auth, redirects to sign-in if not logged in
     index.tsx                — Home: sky hero, quick actions, recent entries
     log.tsx                  — Journal: private diary entries (always private)
     create.tsx               — Create: direct manga panel builder (public stories)
