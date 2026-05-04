@@ -4,9 +4,8 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  Alert,
   Image,
   Platform,
   ScrollView,
@@ -44,19 +43,19 @@ export default function CharacterScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
 
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const signOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   async function handleSignOut() {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          await signOut();
-          router.replace('/(auth)/sign-in' as any);
-        },
-      },
-    ]);
+    if (confirmingSignOut) {
+      if (signOutTimer.current) clearTimeout(signOutTimer.current);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await signOut();
+      router.replace('/(auth)/sign-in' as any);
+    } else {
+      setConfirmingSignOut(true);
+      signOutTimer.current = setTimeout(() => setConfirmingSignOut(false), 3000);
+    }
   }
 
   const [confirmingOutfitId, setConfirmingOutfitId] = useState<string | null>(null);
@@ -446,15 +445,17 @@ export default function CharacterScreen() {
             <View style={[styles.accountDivider, { backgroundColor: colors.border }]} />
 
             <TouchableOpacity
-              style={styles.signOutRow}
+              style={[styles.signOutRow, confirmingSignOut && { backgroundColor: '#E04455' }]}
               onPress={handleSignOut}
               activeOpacity={0.75}
             >
-              <View style={[styles.accountIconWrap, { backgroundColor: 'rgba(224,68,85,0.1)' }]}>
-                <Feather name="log-out" size={14} color="#E04455" />
+              <View style={[styles.accountIconWrap, { backgroundColor: confirmingSignOut ? 'rgba(255,255,255,0.2)' : 'rgba(224,68,85,0.1)' }]}>
+                <Feather name="log-out" size={14} color={confirmingSignOut ? '#fff' : '#E04455'} />
               </View>
-              <Text style={styles.signOutText}>Sign Out</Text>
-              <Feather name="chevron-right" size={14} color="rgba(224,68,85,0.5)" style={{ marginLeft: 'auto' }} />
+              <Text style={[styles.signOutText, confirmingSignOut && { color: '#fff' }]}>
+                {confirmingSignOut ? 'Tap again to confirm' : 'Sign Out'}
+              </Text>
+              <Feather name="chevron-right" size={14} color={confirmingSignOut ? 'rgba(255,255,255,0.6)' : 'rgba(224,68,85,0.5)'} style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
           </View>
         </View>
