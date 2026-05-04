@@ -288,11 +288,11 @@ export default function DiscoverScreen() {
                   return (
                     <TouchableOpacity
                       key={vibe.label}
-                      style={[styles.vibeCard, { backgroundColor: `${vibe.color}12`, borderColor: `${vibe.color}22` }, SHADOW.xs]}
+                      style={[styles.vibeCard, { backgroundColor: `${vibe.color}20`, borderColor: `${vibe.color}40` }, SHADOW.xs]}
                       onPress={() => setSelectedVibe(vibe.label)}
                       activeOpacity={0.88}
                     >
-                      <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}18` }]}>
+                      <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}28` }]}>
                         <Icon name={vibe.icon} size={20} color={vibe.color} />
                       </View>
                       <Text style={[styles.vibeLabel, { color: vibe.color }]}>{vibe.label}</Text>

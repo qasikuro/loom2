@@ -155,15 +155,15 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
       <View style={tc.footer}>
         <MoodBadge mood={entry.mood} size="sm" />
         {entry.type === 'friend' && !!entry.friendName && (
-          <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.1)', borderColor:'rgba(74,104,152,0.22)' }]}>
-            <Icon name="users" size={10} color="#4A6898" />
-            <Text style={[tc.typePillText, { color:'#4A6898' }]}>With {entry.friendName}</Text>
+          <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.22)', borderColor:'rgba(74,104,152,0.38)' }]}>
+            <Icon name="users" size={10} color="#7AAAE0" />
+            <Text style={[tc.typePillText, { color:'#7AAAE0' }]}>With {entry.friendName}</Text>
           </View>
         )}
         {entry.type === 'moment' && (
-          <View style={[tc.typePill, { backgroundColor:'rgba(88,72,168,0.1)', borderColor:'rgba(88,72,168,0.22)' }]}>
-            <Icon name="moon" size={10} color="#5848A8" />
-            <Text style={[tc.typePillText, { color:'#5848A8' }]}>Moment</Text>
+          <View style={[tc.typePill, { backgroundColor:'rgba(88,72,168,0.22)', borderColor:'rgba(88,72,168,0.38)' }]}>
+            <Icon name="moon" size={10} color="#B0A0E0" />
+            <Text style={[tc.typePillText, { color:'#B0A0E0' }]}>Moment</Text>
           </View>
         )}
         <TouchableOpacity

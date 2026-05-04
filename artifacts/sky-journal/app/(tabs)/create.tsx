@@ -103,7 +103,7 @@ export default function CreateScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={['#EDE8F8', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
+      <LinearGradient colors={['#1A1640', '#1E1A48', '#22204C']} style={[styles.headerGrad, { height: topPad + 72 }]} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>

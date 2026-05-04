@@ -11,9 +11,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/Icon';
 
-const PURPLE     = '#6B5B95';
-const TAB_BAR_BG = '#FDFAF7';
-const INACTIVE   = '#A09AB5';
+const PURPLE     = '#8B7AB5';
+const TAB_BAR_BG = '#1A1738';
+const INACTIVE   = 'rgba(200,184,232,0.42)';
 const BAR_HEIGHT = 64;
 const BTN_SIZE   = 54;
 
@@ -61,12 +61,14 @@ function ClassicTabLayout() {
           borderRadius: isWeb ? 0 : 28,
           backgroundColor: TAB_BAR_BG,
           borderTopWidth: 0,
+          borderWidth: 1,
+          borderColor: 'rgba(200,184,232,0.1)',
           overflow: 'hidden',
-          elevation: 16,
-          shadowColor: '#1E1830',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
+          elevation: 20,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.55,
+          shadowRadius: 20,
         },
 
         tabBarLabelStyle: {
@@ -161,7 +163,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   iconWrapActive: {
-    backgroundColor: 'rgba(107,91,149,0.12)',
+    backgroundColor: 'rgba(139,122,181,0.22)',
   },
 
   createBtn: {

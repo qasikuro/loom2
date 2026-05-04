@@ -27,9 +27,8 @@ const CATEGORIES = [
     title: 'Moments & Friends',
     desc: 'Log encounters with sky friends',
     icon: 'users'   as const,
-    iconColor: '#4A80B8',
-    iconBg:    'rgba(74,128,184,0.22)',
-    grad: ['#1A2E50', '#263D6A'],
+    iconColor: '#7AB8F0',
+    iconBg:    'rgba(74,128,184,0.32)',
     image: Images.story_bg2,
     route: '/(tabs)/log' as const,
   },
@@ -38,9 +37,8 @@ const CATEGORIES = [
     title: 'Manga Stories',
     desc: 'Tell your sky adventures in panels',
     icon: 'layers'  as const,
-    iconColor: '#9B8AC4',
-    iconBg:    'rgba(107,91,149,0.22)',
-    grad: ['#2A1E50', '#3D2D70'],
+    iconColor: '#C0A8F0',
+    iconBg:    'rgba(107,91,149,0.32)',
     image: Images.story_bg1,
     route: '/(tabs)/create' as const,
   },
@@ -49,9 +47,8 @@ const CATEGORIES = [
     title: 'Discover',
     desc: 'Browse memories from the sky world',
     icon: 'compass' as const,
-    iconColor: '#4A9878',
-    iconBg:    'rgba(58,144,96,0.22)',
-    grad: ['#162A22', '#1E3A2E'],
+    iconColor: '#70D0A8',
+    iconBg:    'rgba(58,144,96,0.32)',
     image: Images.story_bg3,
     route: '/(tabs)/discover' as const,
   },
@@ -60,9 +57,8 @@ const CATEGORIES = [
     title: 'Outfit Log',
     desc: 'Record and display your sky looks',
     icon: 'star'    as const,
-    iconColor: '#C8A84B',
-    iconBg:    'rgba(200,168,75,0.22)',
-    grad: ['#2A2010', '#3A2E18'],
+    iconColor: '#F0D070',
+    iconBg:    'rgba(200,168,75,0.32)',
     image: Images.character_default,
     route: '/(tabs)/profile' as const,
   },
@@ -88,7 +84,7 @@ export default function HomeScreen() {
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 28 : insets.bottom;
 
-  const [showNotifs,      setShowNotifs]      = useState(false);
+  const [showNotifs,       setShowNotifs]       = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
   const hasNotifs = rewards.length > 0;
 
@@ -187,7 +183,7 @@ export default function HomeScreen() {
 
           {/* 3. Top + bottom gradient overlays */}
           <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
-          <LinearGradient colors={['transparent', 'rgba(18,16,42,0.88)']} style={styles.charHeroOverlay} pointerEvents="none" />
+          <LinearGradient colors={['transparent', 'rgba(15,13,30,0.95)']} style={styles.charHeroOverlay} pointerEvents="none" />
 
           {/* 4. Gold sparkle dots */}
           {SPARKLES.map((sp, i) => (
@@ -234,7 +230,7 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Character info */}
+        {/* Character info card */}
         <TouchableOpacity
           style={[styles.charInfoCard, SHADOW.sm]}
           onPress={() => router.push('/(tabs)/profile')}
@@ -259,13 +255,13 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-          <Icon name="chevron-right" size={16} color="#C0B4D8" />
+          <Icon name="chevron-right" size={16} color="rgba(200,184,232,0.45)" />
         </TouchableOpacity>
 
         {/* Section label */}
         <Text style={styles.sectionLabel}>Where would you like to go?</Text>
 
-        {/* ── Horizontal slim cards ────────────────────────────────── */}
+        {/* ── Illustration navigation cards ──────────────────────── */}
         <View style={styles.hList}>
           {CATEGORIES.map(cat => (
             <TouchableOpacity
@@ -274,14 +270,30 @@ export default function HomeScreen() {
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push(cat.route); }}
               activeOpacity={0.88}
             >
+              {/* Full-bleed background illustration */}
+              <Image source={cat.image} style={StyleSheet.absoluteFill} resizeMode="cover" />
+
+              {/* Dark gradient overlay — opaque left, transparent right */}
+              <LinearGradient
+                colors={['rgba(12,10,26,0.93)', 'rgba(12,10,26,0.68)', 'rgba(12,10,26,0.12)']}
+                locations={[0, 0.52, 1]}
+                start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+
+              {/* Icon badge */}
+              <View style={[styles.hCardIcon, { backgroundColor: cat.iconBg }]}>
+                <Icon name={cat.icon} size={15} color={cat.iconColor} />
+              </View>
+
               {/* Text */}
               <View style={styles.hCardLeft}>
                 <Text style={styles.hCardTitle}>{cat.title}</Text>
                 <Text style={styles.hCardDesc}>{cat.desc}</Text>
               </View>
 
-              {/* Image */}
-              <Image source={cat.image} style={styles.hCardImage} resizeMode="cover" />
+              <Icon name="chevron-right" size={15} color="rgba(255,255,255,0.38)" />
             </TouchableOpacity>
           ))}
         </View>
@@ -298,7 +310,7 @@ export default function HomeScreen() {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Choose Display Outfit</Text>
               <TouchableOpacity style={styles.closeBtn} onPress={() => setShowOutfitPicker(false)}>
-                <Icon name="x" size={16} color="#9A8EB4" />
+                <Icon name="x" size={16} color="rgba(200,184,232,0.6)" />
               </TouchableOpacity>
             </View>
             <Text style={styles.pickerSub}>Selected outfit shows on your home & profile</Text>
@@ -309,7 +321,7 @@ export default function HomeScreen() {
                 onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(null); setShowOutfitPicker(false); }}
               >
                 <View style={[styles.pickerCardImg, styles.pickerCardNone]}>
-                  <Icon name="slash" size={22} color="#9A8EB4" />
+                  <Icon name="slash" size={22} color="rgba(200,184,232,0.45)" />
                 </View>
                 <Text style={styles.pickerCardName}>None</Text>
                 {!activeOutfitId && (
@@ -325,7 +337,7 @@ export default function HomeScreen() {
                 >
                   {outfit.imageUri
                     ? <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} resizeMode="cover" />
-                    : <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}><Icon name="star" size={22} color="rgba(107,91,149,0.4)" /></View>
+                    : <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}><Icon name="star" size={22} color="rgba(139,122,181,0.45)" /></View>
                   }
                   <Text style={styles.pickerCardName} numberOfLines={1}>{outfit.name}</Text>
                   {activeOutfitId === outfit.id && (
@@ -352,40 +364,40 @@ export default function HomeScreen() {
                 <View style={styles.countBadge}><Text style={styles.countText}>{rewards.length}</Text></View>
               )}
               <TouchableOpacity style={styles.closeBtn} onPress={() => setShowNotifs(false)}>
-                <Icon name="x" size={16} color="#9A8EB4" />
+                <Icon name="x" size={16} color="rgba(200,184,232,0.6)" />
               </TouchableOpacity>
             </View>
 
             {rewards.length === 0 ? (
               <View style={styles.notifsEmpty}>
-                <Icon name="bell-off" size={34} color="#C8B8E8" />
+                <Icon name="bell-off" size={34} color="rgba(200,184,232,0.4)" />
                 <Text style={styles.notifsEmptyText}>You're all caught up ✦</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
                 {rewards.map(r => (
                   <View key={r.id} style={[styles.notifItem, {
-                    backgroundColor: r.isRising ? '#1A1630' : '#F8F5FF',
-                    borderColor: r.isRising ? 'rgba(200,168,75,0.22)' : 'rgba(107,91,149,0.12)',
+                    backgroundColor: r.isRising ? 'rgba(200,168,75,0.08)' : 'rgba(255,255,255,0.04)',
+                    borderColor: r.isRising ? 'rgba(200,168,75,0.25)' : 'rgba(200,184,232,0.1)',
                   }]}>
-                    <View style={[styles.notifIconWrap, { backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(107,91,149,0.1)' }]}>
-                      <Icon name={r.isRising ? 'trending-up' : (r.icon as any)} size={16} color={r.isRising ? '#C8A84B' : '#6B5B95'} />
+                    <View style={[styles.notifIconWrap, { backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(139,122,181,0.18)' }]}>
+                      <Icon name={r.isRising ? 'trending-up' : (r.icon as any)} size={16} color={r.isRising ? '#C8A84B' : '#8B7AB5'} />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       {r.count !== undefined && (
-                        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, color: r.isRising ? '#C8A84B' : '#1E1830' }}>{r.count}</Text>
+                        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, color: r.isRising ? '#C8A84B' : '#EDE8FF' }}>{r.count}</Text>
                       )}
-                      <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18, color: r.isRising ? 'rgba(240,234,248,0.85)' : '#6B6090' }}>{r.message}</Text>
+                      <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18, color: r.isRising ? 'rgba(240,234,248,0.9)' : 'rgba(200,184,232,0.82)' }}>{r.message}</Text>
                       {r.subMessage && (
-                        <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: r.isRising ? 'rgba(200,168,75,0.7)' : '#9A8EB4' }}>{r.subMessage}</Text>
+                        <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: r.isRising ? 'rgba(200,168,75,0.72)' : 'rgba(200,184,232,0.45)' }}>{r.subMessage}</Text>
                       )}
                     </View>
                     <TouchableOpacity
-                      style={[styles.dismissBtn, { backgroundColor: r.isRising ? 'rgba(255,255,255,0.07)' : 'rgba(107,91,149,0.08)' }]}
+                      style={[styles.dismissBtn, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
                       onPress={() => dismissReward(r.id)}
                       hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                     >
-                      <Icon name="x" size={12} color={r.isRising ? 'rgba(200,184,232,0.5)' : '#9A8EB4'} />
+                      <Icon name="x" size={12} color="rgba(200,184,232,0.5)" />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -399,7 +411,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#F5F2EC' },
+  root: { flex: 1, backgroundColor: '#0F0D1E' },
 
   // Header
   headerGrad: { position: 'relative', overflow: 'hidden' },
@@ -442,7 +454,7 @@ const styles = StyleSheet.create({
   statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)' },
   statDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
 
-  // Hero — scale with screen so it doesn't swallow small phones
+  // Hero
   charHero: { position: 'relative', width: '100%', height: Math.round(Dimensions.get('window').width * 0.75), overflow: 'hidden' },
   charHeroLabel: { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
   charHeroLabelText: {
@@ -461,7 +473,7 @@ const styles = StyleSheet.create({
   },
   outfitNameText: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
   charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 80, zIndex: 2 },
-  charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, zIndex: 2 },
+  charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, zIndex: 2 },
 
   changeOutfitBtn: {
     position: 'absolute', bottom: 14, right: 16, zIndex: 10,
@@ -473,88 +485,96 @@ const styles = StyleSheet.create({
 
   // Scrollable content
   cardsArea: { flex: 1 },
-  cardsList:  { paddingTop: 16, paddingHorizontal: 16 },
+  cardsList:  { paddingTop: 18, paddingHorizontal: 16 },
 
   // Character info card
   charInfoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#fff', borderRadius: 18, padding: 16,
-    marginBottom: 20, borderWidth: 1, borderColor: '#E8E0F2',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 18, padding: 16,
+    marginBottom: 20,
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.12)',
   },
   charInfoLeft: { flex: 1 },
   charNameRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  charInfoName: { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.3 },
+  charInfoName: { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#EDE8FF', letterSpacing: -0.3 },
   charInfoStar: { fontSize: 12, color: '#C8A84B' },
-  charInfoBio:  { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#6B6090', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
-  charInfoBioEmpty: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#C0B4D8', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
+  charInfoBio:  { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.72)', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
+  charInfoBioEmpty: { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.38)', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
   charInfoTraits: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  charInfoTrait:  { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(107,91,149,0.1)', borderWidth: 1, borderColor: 'rgba(107,91,149,0.18)' },
-  charInfoTraitText: { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#6B5B95' },
+  charInfoTrait:  { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(139,122,181,0.18)', borderWidth: 1, borderColor: 'rgba(139,122,181,0.32)' },
+  charInfoTraitText: { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#C8B8EE' },
 
   // Section label
   sectionLabel: {
-    fontSize: 11, fontFamily: 'Inter_700Bold', color: '#9A8EB4',
+    fontSize: 11, fontFamily: 'Inter_700Bold', color: 'rgba(200,184,232,0.45)',
     letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 14,
   },
 
-  // Horizontal slim cards
+  // Illustration navigation cards
   hList: { gap: 10 },
   hCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 20, overflow: 'hidden',
-    height: 90,
-    borderWidth: 1, borderColor: '#E8E0F2',
+    height: 90, gap: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
   },
-  hCardLeft: {
-    flex: 1, paddingHorizontal: 18, paddingVertical: 14, gap: 4,
+  hCardIcon: {
+    width: 38, height: 38, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  hCardTitle: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.3 },
-  hCardDesc:  { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#9A8EB4', lineHeight: 17 },
-  hCardImage: { width: 110, height: 90, flexShrink: 0 },
+  hCardLeft: { flex: 1, gap: 4 },
+  hCardTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#EDE8FF', letterSpacing: -0.2 },
+  hCardDesc:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(220,210,255,0.7)', lineHeight: 16 },
 
   // Modals
-  modalOverlay:  { flex: 1, backgroundColor: 'rgba(18,16,42,0.6)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(10,8,28,0.72)', justifyContent: 'flex-end' },
+
   pickerSheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    backgroundColor: '#1C1840',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingTop: 12, paddingHorizontal: 20,
-    shadowColor: '#1E1830', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
   },
   sheetHandle: {
-    width: 40, height: 4, borderRadius: 2, backgroundColor: '#DDD8EE',
+    width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.22)',
     alignSelf: 'center', marginBottom: 16,
   },
   pickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  pickerTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#1E1830' },
-  pickerSub:    { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#9A8EB4', marginBottom: 16, fontStyle: 'italic' },
+  pickerTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#EDE8FF' },
+  pickerSub:    { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', marginBottom: 16, fontStyle: 'italic' },
   pickerRow:    { flexDirection: 'row', gap: 12, paddingBottom: 4 },
   pickerCard: {
     width: 90, alignItems: 'center', gap: 8,
     padding: 4, borderRadius: 18, borderWidth: 2, borderColor: 'transparent',
     position: 'relative',
   },
-  pickerCardActive: { borderColor: '#6B5B95' },
+  pickerCardActive: { borderColor: '#8B7AB5' },
   pickerCardImg:    { width: 82, height: 110, borderRadius: 14, overflow: 'hidden' },
-  pickerCardNone:   { backgroundColor: '#EDE8F5', alignItems: 'center', justifyContent: 'center' },
-  pickerCardNoImg:  { backgroundColor: '#EDE8F5', alignItems: 'center', justifyContent: 'center' },
-  pickerCardName:   { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#1E1830', textAlign: 'center' },
+  pickerCardNone:   { backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  pickerCardNoImg:  { backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  pickerCardName:   { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#EDE8FF', textAlign: 'center' },
   pickerActiveDot:  {
     position: 'absolute', top: 8, right: 8, width: 22, height: 22,
-    borderRadius: 11, backgroundColor: '#6B5B95', alignItems: 'center', justifyContent: 'center',
+    borderRadius: 11, backgroundColor: '#8B7AB5', alignItems: 'center', justifyContent: 'center',
   },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F0EBF8', alignItems: 'center', justifyContent: 'center' },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
 
   notifsSheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    backgroundColor: '#1C1840',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingTop: 12, paddingHorizontal: 20, maxHeight: 480,
-    shadowColor: '#1E1830', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
   },
   notifsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  notifsTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#1E1830', flex: 1 },
-  countBadge:   { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: '#6B5B95' },
+  notifsTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#EDE8FF', flex: 1 },
+  countBadge:   { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: '#8B7AB5' },
   countText:    { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
   notifsEmpty:  { alignItems: 'center', paddingVertical: 36, gap: 12 },
-  notifsEmptyText: { fontSize: 15, fontFamily: 'Inter_500Medium', color: '#9A8EB4' },
+  notifsEmptyText: { fontSize: 15, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.55)' },
 
   notifItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
   notifIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
