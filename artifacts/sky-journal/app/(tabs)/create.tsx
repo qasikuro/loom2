@@ -1,12 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,7 +16,9 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MangaPanelEditor } from '@/components/MangaPanelEditor';
 import { useApp } from '@/context/AppContext';
+import type { StoryPanel } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
 const LOCATIONS = [
@@ -43,42 +43,53 @@ const MOODS = [
   { label: 'Adventurous', icon: 'wind' as const, color: '#60A878' },
 ];
 
+function makePanel(): StoryPanel {
+  return { id: Date.now().toString() + Math.random().toString(36).substr(2, 5), imageUri: undefined, text: '' };
+}
+
 export default function CreateScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { addLog } = useApp();
 
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [chapterTitle, setChapterTitle] = useState('');
-  const [storyText, setStoryText] = useState('');
   const [selectedMood, setSelectedMood] = useState('Hopeful');
   const [selectedLocation, setSelectedLocation] = useState('Daylight Prairie');
   const [isPublic, setIsPublic] = useState(true);
   const [showLocations, setShowLocations] = useState(false);
+  const [showMoods, setShowMoods] = useState(false);
+  const [panels, setPanels] = useState<StoryPanel[]>([makePanel()]);
   const [posting, setPosting] = useState(false);
 
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
 
-  async function pickImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.8,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+  function updatePanel(index: number, updated: StoryPanel) {
+    setPanels(prev => prev.map((p, i) => (i === index ? updated : p)));
+  }
+
+  function addPanel() {
+    if (panels.length >= 12) {
+      Alert.alert('Max panels reached', 'A chapter can have up to 12 panels.');
+      return;
     }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPanels(prev => [...prev, makePanel()]);
+  }
+
+  function removePanel(index: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setPanels(prev => prev.filter((_, i) => i !== index));
   }
 
   function handlePost() {
     if (!chapterTitle.trim()) {
-      Alert.alert('Missing title', 'Please give your chapter a title.');
+      Alert.alert('Missing title', 'Give your chapter a title before posting.');
       return;
     }
-    if (!storyText.trim()) {
-      Alert.alert('Missing story', 'Please write something in your log.');
+    const filledPanels = panels.filter(p => p.text.trim() || p.imageUri);
+    if (filledPanels.length === 0) {
+      Alert.alert('Empty story', 'Add at least one image or narration to a panel.');
       return;
     }
     setPosting(true);
@@ -89,10 +100,9 @@ export default function CreateScreen() {
       id,
       date: new Date().toISOString(),
       chapterTitle: chapterTitle.trim(),
-      storyText: storyText.trim(),
+      panels: filledPanels,
       mood: selectedMood,
       location: selectedLocation,
-      imageUri: imageUri ?? undefined,
       isPublic,
       witnessedCount: 0,
       savedCount: 0,
@@ -101,14 +111,13 @@ export default function CreateScreen() {
 
     setPosting(false);
     setChapterTitle('');
-    setStoryText('');
-    setImageUri(null);
+    setPanels([makePanel()]);
     setSelectedMood('Hopeful');
     setIsPublic(true);
     router.push('/(tabs)/log');
   }
 
-  const currentMoodColor = MOODS.find(m => m.label === selectedMood)?.color ?? colors.primary;
+  const currentMood = MOODS.find(m => m.label === selectedMood);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -117,6 +126,7 @@ export default function CreateScreen() {
         style={[styles.headerGrad, { height: topPad + 70 }]}
       />
 
+      {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <TouchableOpacity
           style={[styles.iconBtn, { backgroundColor: colors.muted }]}
@@ -124,13 +134,20 @@ export default function CreateScreen() {
         >
           <Feather name="x" size={18} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>New Log</Text>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>New Chapter</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+            {panels.length} panel{panels.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
         <TouchableOpacity
-          style={[styles.checkBtn, { backgroundColor: posting ? colors.muted : colors.primary }]}
+          style={[styles.postHeaderBtn, { backgroundColor: posting ? colors.muted : colors.primary }]}
           onPress={handlePost}
           disabled={posting}
         >
-          <Feather name="check" size={18} color="#fff" />
+          <Text style={[styles.postHeaderText, { color: posting ? colors.mutedForeground : '#fff' }]}>
+            {posting ? '...' : 'Post'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -140,194 +157,109 @@ export default function CreateScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
       >
-        {/* Image Upload */}
-        <TouchableOpacity
-          style={[
-            styles.imageUpload,
-            {
-              backgroundColor: colors.muted,
-              borderColor: colors.border,
-              borderStyle: imageUri ? 'solid' : 'dashed',
-            },
-          ]}
-          onPress={pickImage}
-          activeOpacity={0.8}
-        >
-          {imageUri ? (
-            <>
-              <Image source={{ uri: imageUri }} style={styles.uploadedImage} resizeMode="cover" />
-              <View style={styles.imageOverlay}>
-                <View style={[styles.changeImgBtn, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-                  <Feather name="camera" size={14} color={colors.foreground} />
-                  <Text style={[styles.changeImgText, { color: colors.foreground }]}>Edit Image</Text>
-                </View>
-              </View>
-            </>
-          ) : (
-            <View style={styles.uploadPlaceholder}>
-              <View style={[styles.uploadIcon, { backgroundColor: `${colors.primary}15` }]}>
-                <Feather name="camera" size={28} color={colors.primary} />
-              </View>
-              <Text style={[styles.uploadText, { color: colors.mutedForeground }]}>Tap to add image</Text>
-              <Text style={[styles.uploadSub, { color: `${colors.mutedForeground}80` }]}>Optional</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        {/* Chapter Title */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Chapter Title</Text>
+        {/* Chapter meta */}
+        <View style={[styles.metaCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* Chapter title */}
           <TextInput
-            style={[
-              styles.input,
-              { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card },
-            ]}
-            placeholder="The day I found a new hope"
+            style={[styles.titleInput, { color: colors.foreground, borderBottomColor: colors.border }]}
+            placeholder="Chapter title..."
             placeholderTextColor={colors.mutedForeground}
             value={chapterTitle}
             onChangeText={setChapterTitle}
-            returnKeyType="next"
+            returnKeyType="done"
           />
-        </View>
 
-        {/* Location & Mood Row */}
-        <View style={styles.twoCol}>
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Location</Text>
+          {/* Location & Mood row */}
+          <View style={styles.metaRow}>
+            {/* Location */}
             <TouchableOpacity
-              style={[styles.select, { borderColor: colors.border, backgroundColor: colors.card }]}
-              onPress={() => setShowLocations(!showLocations)}
+              style={[styles.metaChip, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              onPress={() => { setShowLocations(!showLocations); setShowMoods(false); }}
             >
               <Feather name="map-pin" size={13} color={colors.primary} />
-              <Text style={[styles.selectText, { color: colors.foreground }]} numberOfLines={1}>
+              <Text style={[styles.metaChipText, { color: colors.foreground }]} numberOfLines={1}>
                 {selectedLocation}
               </Text>
-              <Feather name={showLocations ? 'chevron-up' : 'chevron-down'} size={13} color={colors.mutedForeground} />
+              <Feather name="chevron-down" size={12} color={colors.mutedForeground} />
+            </TouchableOpacity>
+
+            {/* Mood */}
+            <TouchableOpacity
+              style={[
+                styles.metaChip,
+                { backgroundColor: `${currentMood?.color ?? colors.primary}15`, borderColor: `${currentMood?.color ?? colors.primary}30` },
+              ]}
+              onPress={() => { setShowMoods(!showMoods); setShowLocations(false); }}
+            >
+              <Feather name={currentMood?.icon ?? 'sun'} size={13} color={currentMood?.color ?? colors.primary} />
+              <Text style={[styles.metaChipText, { color: currentMood?.color ?? colors.primary }]}>
+                {selectedMood}
+              </Text>
+              <Feather name="chevron-down" size={12} color={currentMood?.color ?? colors.primary} />
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.field, { flex: 1 }]}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Mood</Text>
-            <View style={[styles.moodDisplay, { borderColor: `${currentMoodColor}40`, backgroundColor: `${currentMoodColor}12` }]}>
-              <Feather
-                name={MOODS.find(m => m.label === selectedMood)?.icon ?? 'sun'}
-                size={13}
-                color={currentMoodColor}
-              />
-              <Text style={[styles.selectText, { color: currentMoodColor }]}>{selectedMood}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Location Dropdown */}
-        {showLocations && (
-          <View style={[styles.dropdown, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {LOCATIONS.map(loc => (
-              <TouchableOpacity
-                key={loc}
-                style={[
-                  styles.dropdownItem,
-                  selectedLocation === loc && { backgroundColor: `${colors.primary}12` },
-                ]}
-                onPress={() => { setSelectedLocation(loc); setShowLocations(false); }}
-              >
-                <Feather
-                  name="map-pin"
-                  size={12}
-                  color={selectedLocation === loc ? colors.primary : colors.mutedForeground}
-                />
-                <Text
+          {/* Dropdowns */}
+          {showLocations && (
+            <View style={[styles.dropdown, { borderColor: colors.border, backgroundColor: colors.background }]}>
+              {LOCATIONS.map(loc => (
+                <TouchableOpacity
+                  key={loc}
                   style={[
-                    styles.dropdownText,
-                    { color: selectedLocation === loc ? colors.primary : colors.foreground },
+                    styles.dropItem,
+                    selectedLocation === loc && { backgroundColor: `${colors.primary}10` },
                   ]}
+                  onPress={() => { setSelectedLocation(loc); setShowLocations(false); }}
                 >
-                  {loc}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+                  <Feather name="map-pin" size={12} color={selectedLocation === loc ? colors.primary : colors.mutedForeground} />
+                  <Text style={[styles.dropItemText, { color: selectedLocation === loc ? colors.primary : colors.foreground }]}>
+                    {loc}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          {showMoods && (
+            <View style={[styles.moodGrid, { paddingTop: 8 }]}>
+              {MOODS.map(m => (
+                <TouchableOpacity
+                  key={m.label}
+                  style={[
+                    styles.moodChip,
+                    {
+                      backgroundColor: selectedMood === m.label ? `${m.color}25` : `${m.color}10`,
+                      borderColor: selectedMood === m.label ? `${m.color}60` : `${m.color}25`,
+                      borderWidth: selectedMood === m.label ? 1.5 : 1,
+                    },
+                  ]}
+                  onPress={() => { setSelectedMood(m.label); setShowMoods(false); Haptics.selectionAsync(); }}
+                >
+                  <Feather name={m.icon} size={14} color={m.color} />
+                  <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
 
-        {/* Mood Selector */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Select Mood</Text>
-          <View style={styles.moodGrid}>
-            {MOODS.map(mood => (
-              <TouchableOpacity
-                key={mood.label}
-                style={[
-                  styles.moodOption,
-                  {
-                    backgroundColor:
-                      selectedMood === mood.label ? `${mood.color}25` : `${mood.color}10`,
-                    borderColor:
-                      selectedMood === mood.label ? `${mood.color}60` : `${mood.color}25`,
-                    borderWidth: selectedMood === mood.label ? 1.5 : 1,
-                  },
-                ]}
-                onPress={() => {
-                  setSelectedMood(mood.label);
-                  Haptics.selectionAsync();
-                }}
-              >
-                <Feather name={mood.icon} size={16} color={mood.color} />
-                <Text style={[styles.moodOptionText, { color: mood.color }]}>{mood.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Story Text */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Write your story...</Text>
-          <TextInput
-            style={[
-              styles.textArea,
-              { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card },
-            ]}
-            placeholder="Today, I followed a little bird of light. It led me to a place I had never seen before..."
-            placeholderTextColor={colors.mutedForeground}
-            value={storyText}
-            onChangeText={setStoryText}
-            multiline
-            textAlignVertical="top"
-            returnKeyType="default"
-          />
-        </View>
-
-        {/* Post To */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Post to</Text>
-          <View style={styles.toggleRow}>
+          {/* Privacy toggle */}
+          <View style={styles.privacyRow}>
             <TouchableOpacity
               style={[
-                styles.toggleOption,
+                styles.privacyBtn,
                 {
-                  backgroundColor: !isPublic ? colors.muted : `${colors.primary}18`,
-                  borderColor: !isPublic ? colors.border : `${colors.primary}40`,
-                  borderWidth: !isPublic ? 1 : 1.5,
+                  backgroundColor: !isPublic ? `${colors.primary}18` : colors.muted,
+                  borderColor: !isPublic ? `${colors.primary}40` : colors.border,
+                  borderWidth: !isPublic ? 1.5 : 1,
                 },
               ]}
               onPress={() => setIsPublic(false)}
             >
-              <Feather
-                name="lock"
-                size={14}
-                color={!isPublic ? colors.mutedForeground : colors.primary}
-              />
-              <Text
-                style={[
-                  styles.toggleText,
-                  { color: !isPublic ? colors.mutedForeground : colors.primary },
-                ]}
-              >
-                Private
-              </Text>
+              <Feather name="lock" size={13} color={!isPublic ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.privacyText, { color: !isPublic ? colors.primary : colors.mutedForeground }]}>Private</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
-                styles.toggleOption,
+                styles.privacyBtn,
                 {
                   backgroundColor: isPublic ? `${colors.primary}18` : colors.muted,
                   borderColor: isPublic ? `${colors.primary}40` : colors.border,
@@ -336,26 +268,55 @@ export default function CreateScreen() {
               ]}
               onPress={() => setIsPublic(true)}
             >
-              <Feather
-                name="globe"
-                size={14}
-                color={isPublic ? colors.primary : colors.mutedForeground}
-              />
-              <Text
-                style={[
-                  styles.toggleText,
-                  { color: isPublic ? colors.primary : colors.mutedForeground },
-                ]}
-              >
-                Public
-              </Text>
+              <Feather name="globe" size={13} color={isPublic ? colors.primary : colors.mutedForeground} />
+              <Text style={[styles.privacyText, { color: isPublic ? colors.primary : colors.mutedForeground }]}>Public</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Post Button */}
+        {/* Manga panels label */}
+        <View style={styles.panelsHeaderRow}>
+          <View style={styles.panelsHeaderLeft}>
+            <Feather name="layers" size={16} color={colors.primary} />
+            <Text style={[styles.panelsHeaderText, { color: colors.foreground }]}>Story Panels</Text>
+          </View>
+          <Text style={[styles.panelsHint, { color: colors.mutedForeground }]}>
+            Each panel = one manga page
+          </Text>
+        </View>
+
+        {/* Panel editors */}
+        {panels.map((panel, index) => (
+          <MangaPanelEditor
+            key={panel.id}
+            panel={panel}
+            index={index}
+            total={panels.length}
+            onChange={updated => updatePanel(index, updated)}
+            onDelete={() => removePanel(index)}
+          />
+        ))}
+
+        {/* Add panel button */}
         <TouchableOpacity
-          style={[styles.postBtn, { backgroundColor: colors.primary, opacity: posting ? 0.7 : 1 }]}
+          style={[styles.addPanelBtn, { borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}08` }]}
+          onPress={addPanel}
+          activeOpacity={0.75}
+        >
+          <View style={[styles.addPanelIcon, { backgroundColor: `${colors.primary}18` }]}>
+            <Feather name="plus" size={20} color={colors.primary} />
+          </View>
+          <View>
+            <Text style={[styles.addPanelText, { color: colors.primary }]}>Add Next Panel</Text>
+            <Text style={[styles.addPanelSub, { color: colors.mutedForeground }]}>
+              {panels.length}/12 panels
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Post button */}
+        <TouchableOpacity
+          style={[styles.postBtn, { opacity: posting ? 0.7 : 1 }]}
           onPress={handlePost}
           disabled={posting}
           activeOpacity={0.85}
@@ -367,7 +328,7 @@ export default function CreateScreen() {
             end={{ x: 1, y: 0 }}
           >
             <Feather name="send" size={16} color="#fff" />
-            <Text style={styles.postBtnText}>{posting ? 'Posting...' : 'Post Log'}</Text>
+            <Text style={styles.postBtnText}>{posting ? 'Posting...' : 'Publish Chapter'}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </KeyboardAwareScrollView>
@@ -382,12 +343,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontFamily: 'Inter_600SemiBold',
   },
   iconBtn: {
     width: 38,
@@ -396,172 +353,113 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scroll: { paddingHorizontal: 20, paddingTop: 4, gap: 0 },
-  imageUpload: {
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  uploadedImage: { width: '100%', height: '100%' },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: 12,
-  },
-  changeImgBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+  headerCenter: { alignItems: 'center', gap: 1 },
+  headerTitle: { fontSize: 17, fontFamily: 'Inter_600SemiBold' },
+  headerSub: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  postHeaderBtn: {
+    paddingHorizontal: 18,
+    paddingVertical: 9,
     borderRadius: 20,
   },
-  changeImgText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-  },
-  uploadPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  uploadIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  uploadText: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
-  },
-  uploadSub: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
-  },
-  field: { marginBottom: 14, gap: 6 },
-  fieldLabel: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-    marginBottom: 2,
-  },
-  input: {
+  postHeaderText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  scroll: { paddingHorizontal: 16, paddingTop: 4, gap: 0 },
+  metaCard: {
+    borderRadius: 16,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
+    padding: 14,
+    gap: 12,
+    marginBottom: 20,
   },
-  twoCol: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
+  titleInput: {
+    fontSize: 20,
+    fontFamily: 'Inter_600SemiBold',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
   },
-  select: {
+  metaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  metaChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    borderWidth: 1,
-    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    flexShrink: 1,
+    maxWidth: '60%',
   },
-  selectText: {
-    flex: 1,
+  metaChipText: {
     fontSize: 13,
     fontFamily: 'Inter_400Regular',
-  },
-  moodDisplay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
+    flexShrink: 1,
   },
   dropdown: {
-    borderWidth: 1,
     borderRadius: 12,
+    borderWidth: 1,
     overflow: 'hidden',
-    marginTop: -8,
-    marginBottom: 14,
   },
-  dropdownItem: {
+  dropItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 11,
   },
-  dropdownText: {
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-  },
+  dropItemText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
   moodGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  moodOption: {
+  moodChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 20,
   },
-  moodOptionText: {
-    fontSize: 12,
-    fontFamily: 'Inter_500Medium',
-  },
-  textArea: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-    fontFamily: 'Inter_400Regular',
-    minHeight: 140,
-    lineHeight: 24,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  toggleOption: {
+  moodChipText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  privacyRow: { flexDirection: 'row', gap: 8 },
+  privacyBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 12,
   },
-  toggleText: {
-    fontSize: 14,
-    fontFamily: 'Inter_500Medium',
+  privacyText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  panelsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  postBtn: {
-    borderRadius: 30,
-    overflow: 'hidden',
-    marginTop: 4,
-    marginBottom: 8,
+  panelsHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  panelsHeaderText: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  panelsHint: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  addPanelBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 16,
   },
+  addPanelIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addPanelText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  addPanelSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  postBtn: { borderRadius: 30, overflow: 'hidden', marginBottom: 8 },
   postBtnGrad: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -569,9 +467,5 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
   },
-  postBtnText: {
-    fontSize: 16,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#fff',
-  },
+  postBtnText: { fontSize: 16, fontFamily: 'Inter_600SemiBold', color: '#fff' },
 });

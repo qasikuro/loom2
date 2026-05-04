@@ -15,14 +15,19 @@ export interface Character {
   joinedDate: string;
 }
 
+export interface StoryPanel {
+  id: string;
+  imageUri?: string;
+  text: string;
+}
+
 export interface LogEntry {
   id: string;
   date: string;
   chapterTitle: string;
-  storyText: string;
+  panels: StoryPanel[];
   mood: string;
   location: string;
-  imageUri?: string;
   isPublic: boolean;
   witnessedCount: number;
   savedCount: number;
@@ -43,6 +48,7 @@ export interface DiscoverPost {
   chapterNumber: number;
   vibe: string;
   saved: boolean;
+  panels?: { text: string; imageKey: string }[];
 }
 
 export interface Reward {
@@ -86,7 +92,7 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     authorName: 'Lumière',
     authorHandle: '@lumiere.sky',
     chapterTitle: 'A silent wish',
-    storySnippet: 'I sat under the stars and made a wish... I wonder if it reached you.',
+    storySnippet: 'I sat under the stars and made a wish...',
     imageKey: 'story_bg1',
     mood: 'Lonely',
     witnessedCount: 215,
@@ -95,6 +101,11 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     chapterNumber: 3,
     vibe: 'Lonely',
     saved: false,
+    panels: [
+      { text: 'I sat under the stars and made a wish...', imageKey: 'story_bg1' },
+      { text: 'The light that carried it was soft and small,\nlike a firefly on a summer night.', imageKey: 'story_bg3' },
+      { text: 'I wonder if it reached you.', imageKey: 'story_bg1' },
+    ],
   },
   {
     id: 'p2',
@@ -110,13 +121,17 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     chapterNumber: 1,
     vibe: 'Soft',
     saved: false,
+    panels: [
+      { text: 'Every adventure starts with a single step forward.', imageKey: 'story_bg2' },
+      { text: 'I did not know where the path led.\nBut the sky was open,\nand my heart was lighter than air.', imageKey: 'story_bg2' },
+    ],
   },
   {
     id: 'p3',
     authorName: 'Noctis',
     authorHandle: '@noctis.echo',
     chapterTitle: 'Whispers in the Wind',
-    storySnippet: 'The wind carries memories of the ones who came before. I listen to them when the world gets too quiet.',
+    storySnippet: 'The wind carries memories of the ones who came before.',
     imageKey: 'story_bg3',
     mood: 'Peaceful',
     witnessedCount: 412,
@@ -125,13 +140,18 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     chapterNumber: 2,
     vibe: 'Romantic',
     saved: false,
+    panels: [
+      { text: 'The wind carries memories\nof the ones who came before.', imageKey: 'story_bg3' },
+      { text: 'I listen to them\nwhen the world gets too quiet.', imageKey: 'story_bg1' },
+      { text: 'And I keep walking,\ntoward a place I belong.', imageKey: 'story_bg2' },
+    ],
   },
   {
     id: 'p4',
     authorName: 'Sol',
     authorHandle: '@sol.bright',
     chapterTitle: 'Golden Hour',
-    storySnippet: 'When the sky turns gold, I think of you and the promise we made beneath the lanterns.',
+    storySnippet: 'When the sky turns gold, I think of you.',
     imageKey: 'story_bg2',
     mood: 'Romantic',
     witnessedCount: 89,
@@ -140,13 +160,17 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     chapterNumber: 4,
     vibe: 'Romantic',
     saved: false,
+    panels: [
+      { text: 'When the sky turns gold,\nI think of you.', imageKey: 'story_bg2' },
+      { text: 'And the promise we made\nbeneath the lanterns.', imageKey: 'story_bg3' },
+    ],
   },
   {
     id: 'p5',
     authorName: 'Mira',
     authorHandle: '@mira.bloom',
     chapterTitle: 'Lost in the meadow',
-    storySnippet: 'Some places exist only in memories. I return there in dreams, chasing butterflies of light.',
+    storySnippet: 'Some places exist only in memories.',
     imageKey: 'story_bg1',
     mood: 'Soft',
     witnessedCount: 334,
@@ -155,13 +179,18 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     chapterNumber: 1,
     vibe: 'Soft',
     saved: false,
+    panels: [
+      { text: 'Some places exist only in memories.', imageKey: 'story_bg1' },
+      { text: 'I return there in dreams,\nchasing butterflies of light.', imageKey: 'story_bg2' },
+      { text: 'Maybe that is enough.', imageKey: 'story_bg3' },
+    ],
   },
   {
     id: 'p6',
     authorName: 'Kael',
     authorHandle: '@kael.storm',
     chapterTitle: 'The forgotten path',
-    storySnippet: 'I kept walking toward a place I belong. Even if it no longer exists.',
+    storySnippet: "I kept walking toward a place I belong.",
     imageKey: 'story_bg3',
     mood: 'Chaotic',
     witnessedCount: 254,
@@ -170,37 +199,18 @@ const SAMPLE_POSTS: DiscoverPost[] = [
     chapterNumber: 1,
     vibe: 'Chaotic',
     saved: false,
+    panels: [
+      { text: 'I kept walking\ntoward a place I belong.', imageKey: 'story_bg3' },
+      { text: 'Even if it no longer exists.', imageKey: 'story_bg1' },
+    ],
   },
 ];
 
 const INITIAL_REWARDS: Reward[] = [
-  {
-    id: 'r1',
-    message: 'People experienced\nyour story today',
-    count: 18,
-    icon: 'eye',
-    isRising: false,
-  },
-  {
-    id: 'r2',
-    message: 'Your story was saved\nby someone',
-    count: 6,
-    icon: 'bookmark',
-    isRising: false,
-  },
-  {
-    id: 'r3',
-    message: "You were discovered\nin 'Soft' vibe",
-    icon: 'feather',
-    isRising: false,
-  },
-  {
-    id: 'r4',
-    message: 'Rising Star',
-    subMessage: 'Your story is inspiring\nmore travelers!',
-    icon: 'star',
-    isRising: true,
-  },
+  { id: 'r1', message: 'People experienced\nyour story today', count: 18, icon: 'eye', isRising: false },
+  { id: 'r2', message: 'Your story was saved\nby someone', count: 6, icon: 'bookmark', isRising: false },
+  { id: 'r3', message: "You were discovered\nin 'Soft' vibe", icon: 'feather', isRising: false },
+  { id: 'r4', message: 'Rising Star', subMessage: 'Your story is inspiring\nmore travelers!', icon: 'star', isRising: true },
 ];
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -211,15 +221,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [discoverPosts, setDiscoverPosts] = useState<DiscoverPost[]>(SAMPLE_POSTS);
   const [rewards, setRewards] = useState<Reward[]>(INITIAL_REWARDS);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     try {
       const [savedChar, savedLogs] = await Promise.all([
         AsyncStorage.getItem('character'),
-        AsyncStorage.getItem('logs'),
+        AsyncStorage.getItem('logs_v2'),
       ]);
       if (savedChar) setCharacterState(JSON.parse(savedChar));
       if (savedLogs) setLogs(JSON.parse(savedLogs));
@@ -234,27 +242,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   function addLog(log: LogEntry) {
     const updated = [log, ...logs];
     setLogs(updated);
-    AsyncStorage.setItem('logs', JSON.stringify(updated));
-    setCharacterState(prev => ({
-      ...prev,
-      storiesCount: prev.storiesCount + 1,
-      memoriesCount: prev.memoriesCount + 1,
-    }));
+    AsyncStorage.setItem('logs_v2', JSON.stringify(updated));
+    setCharacterState(prev => ({ ...prev, storiesCount: prev.storiesCount + 1, memoriesCount: prev.memoriesCount + 1 }));
   }
 
   function deleteLog(id: string) {
     const updated = logs.filter(l => l.id !== id);
     setLogs(updated);
-    AsyncStorage.setItem('logs', JSON.stringify(updated));
+    AsyncStorage.setItem('logs_v2', JSON.stringify(updated));
   }
 
   function toggleSavePost(id: string) {
     setDiscoverPosts(prev =>
-      prev.map(p =>
-        p.id === id
-          ? { ...p, saved: !p.saved, savedCount: p.saved ? p.savedCount - 1 : p.savedCount + 1 }
-          : p,
-      ),
+      prev.map(p => p.id === id ? { ...p, saved: !p.saved, savedCount: p.saved ? p.savedCount - 1 : p.savedCount + 1 } : p)
     );
   }
 
@@ -263,19 +263,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AppContext.Provider
-      value={{
-        character,
-        setCharacter,
-        logs,
-        addLog,
-        deleteLog,
-        discoverPosts,
-        toggleSavePost,
-        rewards,
-        dismissReward,
-      }}
-    >
+    <AppContext.Provider value={{ character, setCharacter, logs, addLog, deleteLog, discoverPosts, toggleSavePost, rewards, dismissReward }}>
       {children}
     </AppContext.Provider>
   );

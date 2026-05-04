@@ -2,8 +2,10 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
+  Animated,
+  Dimensions,
   Image,
   Platform,
   ScrollView,
@@ -19,22 +21,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
-const STORY_PANELS_BY_POST: Record<string, { text: string; imageKey: string }[]> = {
-  p1: [
-    { text: 'I sat under the stars and made a wish...', imageKey: 'story_bg1' },
-    { text: 'The light that carried it was soft and small,\nlike a firefly on a summer night.', imageKey: 'story_bg1' },
-    { text: 'I wonder if it reached you.', imageKey: 'story_bg3' },
-  ],
-  p2: [
-    { text: 'Every adventure starts with a single step forward.', imageKey: 'story_bg2' },
-    { text: 'I did not know where the path led.\nBut the sky was open,\nand my heart was lighter than air.', imageKey: 'story_bg2' },
-  ],
-  p3: [
-    { text: 'The wind carries memories\nof the ones who came before.', imageKey: 'story_bg3' },
-    { text: 'I listen to them\nwhen the world gets too quiet.', imageKey: 'story_bg1' },
-    { text: 'And I keep walking,\ntoward a place I belong.', imageKey: 'story_bg2' },
-  ],
-};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function StoryScreen() {
   const colors = useColors();
@@ -42,6 +29,7 @@ export default function StoryScreen() {
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
   const { logs, discoverPosts, toggleSavePost } = useApp();
   const [witnessed, setWitnessed] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
@@ -53,27 +41,28 @@ export default function StoryScreen() {
   const mood = post?.mood ?? logEntry?.mood ?? 'Peaceful';
   const authorName = post?.authorName ?? 'You';
   const chapterNum = post?.chapterNumber ?? 1;
-  const witnessedCount = post
-    ? post.witnessedCount + (witnessed ? 1 : 0)
-    : (logEntry?.witnessedCount ?? 0) + (witnessed ? 1 : 0);
   const isSaved = post?.saved ?? false;
 
-  const panels: { text: string; imageKey: string }[] = isDiscover && post
-    ? STORY_PANELS_BY_POST[id] ?? [
-        { text: post.storySnippet, imageKey: post.imageKey },
-        { text: 'The journey continues...', imageKey: post.imageKey },
-      ]
+  const witnessedCount =
+    (post?.witnessedCount ?? logEntry?.witnessedCount ?? 0) + (witnessed ? 1 : 0);
+  const savedCount =
+    (post?.savedCount ?? logEntry?.savedCount ?? 0) + (isSaved ? 0 : 0);
+
+  // Build panels from source
+  const panels: { imageUri?: string; imageKey?: string; text: string }[] = isDiscover && post
+    ? (post.panels ?? [{ text: post.storySnippet, imageKey: post.imageKey }]).map(p => ({
+        imageKey: p.imageKey,
+        text: p.text,
+      }))
     : logEntry
-      ? [
-          {
-            text: logEntry.storyText,
-            imageKey: 'story_bg1',
-          },
-        ]
+      ? logEntry.panels.map(p => ({ imageUri: p.imageUri, text: p.text }))
       : [{ text: 'Story not found.', imageKey: 'story_bg1' }];
 
-  const heroImageKey = post?.imageKey ?? 'story_bg1';
-  const heroImage = Images[heroImageKey as keyof typeof Images] ?? Images.story_bg1;
+  const heroImage = post
+    ? (Images[post.imageKey as keyof typeof Images] ?? Images.story_bg1)
+    : logEntry?.panels[0]?.imageUri
+      ? { uri: logEntry.panels[0].imageUri }
+      : Images.story_bg1;
 
   function handleWitness() {
     if (!witnessed) {
@@ -92,32 +81,28 @@ export default function StoryScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.night }]}>
       <ScrollView
+        ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad + 80 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad + 90 }]}
       >
-        {/* Hero image */}
+        {/* Hero banner */}
         <View style={styles.heroWrap}>
           <Image source={heroImage} style={styles.heroImage} resizeMode="cover" />
           <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(26,22,48,0.85)']}
+            colors={['rgba(0,0,0,0)', 'rgba(26,22,48,0.92)']}
             style={StyleSheet.absoluteFill}
           />
-          {/* Back button */}
-          <TouchableOpacity
-            style={[styles.backBtn, { top: topPad + 12 }]}
-            onPress={() => router.back()}
-          >
+          {/* Buttons */}
+          <TouchableOpacity style={[styles.backBtn, { top: topPad + 12 }]} onPress={() => router.back()}>
             <Feather name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
-          {/* More */}
-          <TouchableOpacity
-            style={[styles.moreBtn, { top: topPad + 12 }]}
-          >
+          <TouchableOpacity style={[styles.moreBtn, { top: topPad + 12 }]}>
             <Feather name="more-horizontal" size={20} color="#fff" />
           </TouchableOpacity>
-          {/* Hero overlay text */}
+
+          {/* Hero info */}
           <View style={styles.heroOverlay}>
-            <View style={styles.heroAuthorRow}>
+            <View style={styles.heroMeta}>
               <View style={[styles.heroAvatar, { backgroundColor: `${colors.primary}50` }]}>
                 <Text style={styles.heroAvatarText}>{authorName.charAt(0)}</Text>
               </View>
@@ -127,69 +112,123 @@ export default function StoryScreen() {
               </View>
             </View>
             <Text style={styles.heroTitle}>{title}</Text>
-            <MoodBadge mood={mood} size="sm" />
+            <View style={styles.heroMoodRow}>
+              <MoodBadge mood={mood} size="sm" />
+              <View style={[styles.panelCountBadge, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.25)' }]}>
+                <Feather name="layers" size={11} color="rgba(255,255,255,0.8)" />
+                <Text style={styles.panelCountText}>{panels.length} panels</Text>
+              </View>
+            </View>
           </View>
         </View>
 
+        {/* Divider hint */}
+        <View style={[styles.readingHint, { backgroundColor: `${colors.primary}22` }]}>
+          <Feather name="arrow-down" size={13} color={`${colors.lavender}`} />
+          <Text style={[styles.readingHintText, { color: colors.lavender }]}>Scroll to read the story</Text>
+        </View>
+
         {/* Manga panels */}
-        <View style={[styles.panelsContainer, { backgroundColor: colors.night }]}>
-          {panels.map((panel, idx) => {
-            const panelImage = Images[panel.imageKey as keyof typeof Images] ?? Images.story_bg1;
-            return (
-              <View key={idx} style={styles.panel}>
-                <Image source={panelImage} style={styles.panelImage} resizeMode="cover" />
-                <LinearGradient
-                  colors={['rgba(26,22,48,0.0)', 'rgba(26,22,48,0.92)']}
-                  style={StyleSheet.absoluteFill}
-                />
-                <View style={[styles.panelTextBox, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)' }]}>
+        {panels.map((panel, idx) => {
+          const imgSource = panel.imageUri
+            ? { uri: panel.imageUri }
+            : Images[(panel.imageKey ?? 'story_bg1') as keyof typeof Images] ?? Images.story_bg1;
+
+          const isLast = idx === panels.length - 1;
+
+          return (
+            <View key={idx} style={[styles.panel, isLast && styles.panelLast]}>
+              {/* Image */}
+              <Image source={imgSource} style={styles.panelImage} resizeMode="cover" />
+
+              {/* Dark gradient over bottom of image */}
+              <LinearGradient
+                colors={['rgba(26,22,48,0)', 'rgba(26,22,48,0.88)']}
+                style={styles.panelGradient}
+              />
+
+              {/* Panel number badge */}
+              <View style={[styles.panelNumBadge, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)' }]}>
+                <Text style={styles.panelNumText}>{idx + 1} / {panels.length}</Text>
+              </View>
+
+              {/* Narration text box */}
+              {panel.text.trim().length > 0 && (
+                <View style={[styles.textBox, { backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.18)' }]}>
                   <Text style={styles.panelText}>{panel.text}</Text>
                 </View>
-              </View>
-            );
-          })}
+              )}
+            </View>
+          );
+        })}
+
+        {/* End card */}
+        <View style={[styles.endCard, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
+          <Feather name="star" size={22} color={colors.gold} />
+          <Text style={[styles.endTitle, { color: '#F0EAF8' }]}>End of Chapter {chapterNum}</Text>
+          <Text style={[styles.endSub, { color: 'rgba(200,184,232,0.7)' }]}>
+            {isDiscover ? `by ${authorName}` : 'Your story'}
+          </Text>
+          <View style={styles.endStats}>
+            <Feather name="eye" size={14} color="rgba(200,184,232,0.6)" />
+            <Text style={[styles.endStatText, { color: 'rgba(200,184,232,0.6)' }]}>{witnessedCount} witnessed</Text>
+            <Feather name="bookmark" size={14} color="rgba(200,184,232,0.6)" style={{ marginLeft: 12 }} />
+            <Text style={[styles.endStatText, { color: 'rgba(200,184,232,0.6)' }]}>{savedCount} saved</Text>
+          </View>
         </View>
       </ScrollView>
 
-      {/* Bottom bar */}
-      <View style={[styles.bottomBar, { backgroundColor: `${colors.night}EE`, paddingBottom: bottomPad + 8, borderTopColor: 'rgba(255,255,255,0.1)' }]}>
+      {/* Sticky bottom bar */}
+      <View
+        style={[
+          styles.bottomBar,
+          {
+            backgroundColor: `${colors.night}F0`,
+            paddingBottom: bottomPad + 8,
+            borderTopColor: 'rgba(255,255,255,0.08)',
+          },
+        ]}
+      >
         <View style={styles.witnessedRow}>
-          <Feather name="eye" size={15} color="rgba(240,234,248,0.7)" />
-          <Text style={styles.witnessedCount}>{witnessedCount}</Text>
-          <Feather name="star" size={15} color={colors.gold} style={{ marginLeft: 12 }} />
-          <Text style={styles.witnessedCount}>{(post?.savedCount ?? logEntry?.savedCount ?? 0) + (isSaved ? 1 : 0)}</Text>
+          <Feather name="eye" size={15} color="rgba(240,234,248,0.6)" />
+          <Text style={styles.witnessedNum}>{witnessedCount}</Text>
+          <View style={styles.dotDivider} />
+          <Feather name="bookmark" size={14} color="rgba(240,234,248,0.6)" />
+          <Text style={styles.witnessedNum}>{savedCount}</Text>
         </View>
-        <View style={styles.bottomActions}>
+
+        <View style={styles.actionRow}>
           {isDiscover && (
             <TouchableOpacity
               style={[
-                styles.saveBtn,
+                styles.actionBtn,
                 {
-                  backgroundColor: isSaved ? `${colors.primary}35` : 'rgba(255,255,255,0.1)',
-                  borderColor: isSaved ? colors.primary : 'rgba(255,255,255,0.25)',
+                  backgroundColor: isSaved ? `${colors.primary}30` : 'rgba(255,255,255,0.08)',
+                  borderColor: isSaved ? colors.primary : 'rgba(255,255,255,0.18)',
                 },
               ]}
               onPress={handleSave}
             >
-              <Feather name="bookmark" size={15} color={isSaved ? colors.primary : 'rgba(240,234,248,0.8)'} />
-              <Text style={[styles.saveBtnText, { color: isSaved ? colors.primary : 'rgba(240,234,248,0.8)' }]}>
+              <Feather name="bookmark" size={15} color={isSaved ? colors.primary : 'rgba(240,234,248,0.75)'} />
+              <Text style={[styles.actionBtnText, { color: isSaved ? colors.primary : 'rgba(240,234,248,0.75)' }]}>
                 {isSaved ? 'Saved' : 'Save'}
               </Text>
             </TouchableOpacity>
           )}
+
           <TouchableOpacity
             style={[
               styles.witnessBtn,
               {
-                backgroundColor: witnessed ? `${colors.gold}25` : 'rgba(255,255,255,0.12)',
-                borderColor: witnessed ? `${colors.gold}60` : 'rgba(255,255,255,0.25)',
+                backgroundColor: witnessed ? `${colors.gold}22` : `${colors.primary}30`,
+                borderColor: witnessed ? `${colors.gold}55` : `${colors.primary}55`,
               },
             ]}
             onPress={handleWitness}
           >
-            <Feather name="eye" size={15} color={witnessed ? colors.gold : 'rgba(240,234,248,0.8)'} />
-            <Text style={[styles.witnessBtnText, { color: witnessed ? colors.gold : 'rgba(240,234,248,0.8)' }]}>
-              {witnessed ? 'Witnessed' : 'Witness'}
+            <Feather name="eye" size={15} color={witnessed ? colors.gold : colors.lavender} />
+            <Text style={[styles.actionBtnText, { color: witnessed ? colors.gold : colors.lavender }]}>
+              {witnessed ? 'Witnessed ✦' : 'Witness'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -201,15 +240,8 @@ export default function StoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: {},
-  heroWrap: {
-    width: '100%',
-    height: 400,
-    position: 'relative',
-  },
-  heroImage: {
-    width: '100%',
-    height: '100%',
-  },
+  heroWrap: { width: '100%', height: 420, position: 'relative' },
+  heroImage: { width: '100%', height: '100%' },
   backBtn: {
     position: 'absolute',
     left: 16,
@@ -235,71 +267,98 @@ const styles = StyleSheet.create({
     bottom: 20,
     left: 20,
     right: 20,
-    gap: 8,
-  },
-  heroAuthorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
   },
+  heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroAvatarText: {
-    color: '#fff',
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  heroAuthor: {
-    color: 'rgba(255,255,255,0.9)',
-    fontSize: 13,
-    fontFamily: 'Inter_600SemiBold',
-  },
-  heroChapter: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-  },
-  heroTitle: {
-    color: '#fff',
-    fontSize: 22,
-    fontFamily: 'Inter_700Bold',
-    lineHeight: 30,
-  },
-  panelsContainer: {
-    gap: 3,
-  },
-  panel: {
-    width: '100%',
-    height: 320,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  panelImage: {
-    width: '100%',
-    height: '100%',
-  },
-  panelTextBox: {
-    position: 'absolute',
-    bottom: 24,
-    left: 20,
-    right: 20,
-    padding: 16,
+  heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  heroAuthor: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  heroChapter: { color: 'rgba(255,255,255,0.55)', fontSize: 11, fontFamily: 'Inter_400Regular' },
+  heroTitle: { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold', lineHeight: 32 },
+  heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  panelCountBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 12,
     borderWidth: 1,
   },
+  panelCountText: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Inter_400Regular' },
+  readingHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  readingHintText: { fontSize: 12, fontFamily: 'Inter_400Regular', letterSpacing: 0.3 },
+  panel: {
+    width: '100%',
+    aspectRatio: 3 / 4,
+    position: 'relative',
+    overflow: 'hidden',
+    marginBottom: 3,
+  },
+  panelLast: { marginBottom: 0 },
+  panelImage: { width: '100%', height: '100%' },
+  panelGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '55%',
+  },
+  panelNumBadge: {
+    position: 'absolute',
+    top: 14,
+    right: 14,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  panelNumText: {
+    color: 'rgba(255,255,255,0.75)',
+    fontSize: 11,
+    fontFamily: 'Inter_400Regular',
+  },
+  textBox: {
+    position: 'absolute',
+    bottom: 20,
+    left: 18,
+    right: 18,
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
   panelText: {
-    color: 'rgba(255,255,255,0.92)',
-    fontSize: 15,
+    color: 'rgba(255,255,255,0.93)',
+    fontSize: 16,
     fontFamily: 'Inter_400Regular',
     fontStyle: 'italic',
-    lineHeight: 24,
+    lineHeight: 26,
     textAlign: 'center',
   },
+  endCard: {
+    margin: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 32,
+    alignItems: 'center',
+    gap: 8,
+  },
+  endTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 8 },
+  endSub: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  endStats: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
+  endStatText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
@@ -312,21 +371,17 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     borderTopWidth: 1,
   },
-  witnessedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+  witnessedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  witnessedNum: { color: 'rgba(240,234,248,0.6)', fontSize: 14, fontFamily: 'Inter_400Regular' },
+  dotDivider: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(240,234,248,0.3)',
+    marginHorizontal: 4,
   },
-  witnessedCount: {
-    color: 'rgba(240,234,248,0.7)',
-    fontSize: 14,
-    fontFamily: 'Inter_400Regular',
-  },
-  bottomActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  saveBtn: {
+  actionRow: { flexDirection: 'row', gap: 8 },
+  actionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -334,10 +389,6 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: 20,
     borderWidth: 1,
-  },
-  saveBtnText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
   },
   witnessBtn: {
     flexDirection: 'row',
@@ -348,8 +399,5 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
   },
-  witnessBtnText: {
-    fontSize: 13,
-    fontFamily: 'Inter_500Medium',
-  },
+  actionBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
 });
