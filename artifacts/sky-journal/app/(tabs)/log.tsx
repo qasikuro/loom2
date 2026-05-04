@@ -345,7 +345,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
   const rotation = anim.interpolate({ inputRange: [0,1], outputRange: ['0deg','45deg'] });
 
   return (
-    <View style={[fab.wrap, { bottom: bottomPad + 16 }]} pointerEvents="box-none">
+    <View style={[fab.wrap, { bottom: bottomPad + 16 }, { pointerEvents: 'box-none' }]}>
       {/* Mini action sheet */}
       {COMPOSE_TYPES.map((item, idx) => {
         const translateY = anim.interpolate({ inputRange: [0,1], outputRange: [0, -(70 + idx * 58)] });

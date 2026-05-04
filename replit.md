@@ -152,10 +152,12 @@ DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
 
 ### Tab Bar (Native UI)
 - Uses `ClassicTabLayout` with Feather icons for cross-platform compatibility (iOS + Android + Web)
-- Floating pill style (borderRadius 30, marginHorizontal 14) with shadow elevation
-- BlurView background on iOS, solid `#FDFAF7` on Android
-- Custom `createBtn` (purple circle, 50×50) for the center Create tab
-- `isLiquidGlassAvailable` removed — using consistent Feather icons everywhere for Expo Go compatibility
+- Floating pill style (borderRadius 28, left/right: 16) — positioned with `position: 'absolute'` + `left/right` rather than `marginHorizontal` for reliability
+- BlurView background on iOS (borderRadius 28, overflow: hidden scoped to BlurView), solid `#FDFAF7` on Android
+- **NO `overflow: hidden` on the tab bar itself** — allows centre button to visually float above the bar
+- Centre Create button: purple circle, 52×52, `marginBottom: 18` to float it above the bar, with `tabBarLabel: () => null`
+- Tab labels: Home, Journal, (none), Discover, Profile — "Profile" used instead of "Character" to prevent truncation on narrow screens
+- **Feather icon font is explicitly pre-loaded** via `...Feather.font` in `useFonts()` in `_layout.tsx` — required to prevent blank-box icons in Expo Go
 
 ### Social Philosophy
 - No likes — replaced with "Witnessed" and "Saved"
@@ -172,6 +174,7 @@ DiscoverPost { authorName, chapterTitle, panels[], vibe, ... }
 - `Alert.alert` does NOT work in Expo Web iframe — use inline two-tap confirm pattern everywhere
 - Image upload: pick → base64 → POST /api/upload (50mb limit) → returns `{ path: '/api/images/filename' }`
 - Pre-existing TS errors in `utils/persistImage.ts` (expo-file-system types) — not from our changes, safe to ignore
-- Deprecation warnings (`shadow*`, `textShadow*`, `pointerEvents`) are React Native Web warnings, not errors
+- Deprecation warnings (`shadow*`, `textShadow*`) are React Native Web warnings from third-party packages — not errors, cannot be fixed
+- The remaining `props.pointerEvents is deprecated` warning in browser console comes from expo-linear-gradient internals — all our own code now uses `style={{ pointerEvents: 'none' }}`
 - `topPad`: `Platform.OS === 'web' ? 48 : insets.top`
-- Tab bar `pillBottom = Math.max(insets.bottom + 4, 12)`
+- Tab bar `pillBottom = Math.max(insets.bottom, 8) + 8` (sits 8 px above the home bar on iPhone X+)

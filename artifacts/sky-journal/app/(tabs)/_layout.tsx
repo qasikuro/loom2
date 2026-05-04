@@ -12,70 +12,98 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useColors } from '@/hooks/useColors';
+const PURPLE      = '#6B5B95';
+const TAB_BAR_BG  = '#FDFAF7';
+const INACTIVE    = '#A09AB5';
+const BAR_HEIGHT  = 60;
+const BTN_SIZE    = 52;
 
-function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
+// ─── Regular tab icon ────────────────────────────────────────────────────────
+function TabIcon({
+  name,
+  color,
+  focused,
+}: {
+  name: React.ComponentProps<typeof Feather>['name'];
+  color: string;
+  focused: boolean;
+}) {
   return (
-    <View style={[styles.tabIconWrap, focused && styles.tabIconWrapActive]}>
-      <Feather name={name} size={20} color={color} />
+    <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+      <Feather name={name} size={22} color={color} />
     </View>
   );
 }
 
-function ClassicTabLayout() {
-  const colors   = useColors();
-  const scheme   = useColorScheme();
-  const insets   = useSafeAreaInsets();
-  const isDark   = scheme === 'dark';
-  const isIOS    = Platform.OS === 'ios';
-  const isWeb    = Platform.OS === 'web';
+// ─── Floating centre button ───────────────────────────────────────────────────
+function CreateIcon() {
+  return (
+    <View style={styles.createBtn}>
+      <Feather name="plus" size={26} color="#fff" />
+    </View>
+  );
+}
 
-  const pillBottom = isWeb ? 0 : Math.max(insets.bottom + 4, 12);
-  const barHeight  = isWeb ? 84 : 66;
+// ─── Main tab layout ──────────────────────────────────────────────────────────
+function ClassicTabLayout() {
+  const scheme  = useColorScheme();
+  const insets  = useSafeAreaInsets();
+  const isDark  = scheme === 'dark';
+  const isIOS   = Platform.OS === 'ios';
+  const isWeb   = Platform.OS === 'web';
+
+  // Bottom safe-area gap (home bar on iPhone X+)
+  const bottomGap = isWeb ? 0 : Math.max(insets.bottom, 8);
+  // Pill sits 8 px above the home bar
+  const pillBottom = isWeb ? 0 : bottomGap + 8;
+  // Total bar height includes the pill itself
+  const barHeight = isWeb ? 64 : BAR_HEIGHT;
+  // Horizontal margin gives the pill its floating look
+  const pillH = isWeb ? 0 : 16;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor:   colors.primary,
-        tabBarInactiveTintColor: `${colors.mutedForeground}99`,
         headerShown: false,
+        tabBarActiveTintColor:   PURPLE,
+        tabBarInactiveTintColor: INACTIVE,
 
         tabBarStyle: {
           position:         'absolute',
-          backgroundColor:  isIOS ? 'transparent' : colors.tabBar,
-          borderTopWidth:   0,
-          borderRadius:     isWeb ? 0 : 30,
-          marginHorizontal: isWeb ? 0 : 14,
-          marginBottom:     pillBottom,
+          left:             pillH,
+          right:            pillH,
+          bottom:           pillBottom,
           height:           barHeight,
-          paddingBottom:    isWeb ? 34 : 0,
-          elevation:        24,
+          borderRadius:     isWeb ? 0 : 28,
+          backgroundColor:  isIOS ? 'transparent' : TAB_BAR_BG,
+          borderTopWidth:   0,
+          // NO overflow:hidden — lets the centre button float above the bar
+          elevation:        20,
           shadowColor:      '#1E1830',
-          shadowOffset:     { width: 0, height: 8 },
-          shadowOpacity:    0.18,
-          shadowRadius:     24,
-          overflow:         'hidden',
-        },
-
-        tabBarLabelStyle: {
-          fontSize:     10,
-          fontFamily:   'Inter_600SemiBold',
-          marginBottom: isWeb ? 0 : 7,
-          letterSpacing: 0.1,
-        },
-
-        tabBarIconStyle: {
-          marginTop: isWeb ? 0 : 6,
+          shadowOffset:     { width: 0, height: 6 },
+          shadowOpacity:    0.14,
+          shadowRadius:     20,
         },
 
         tabBarBackground: () =>
           isIOS ? (
             <BlurView
-              intensity={92}
+              intensity={88}
               tint={isDark ? 'dark' : 'extraLight'}
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, { borderRadius: 28, overflow: 'hidden' }]}
             />
           ) : null,
+
+        tabBarLabelStyle: {
+          fontSize:      10,
+          fontFamily:    'Inter_600SemiBold',
+          letterSpacing: 0.2,
+          marginBottom:  Platform.OS === 'ios' ? 6 : 4,
+        },
+
+        tabBarIconStyle: {
+          marginTop: 6,
+        },
       }}
     >
       <Tabs.Screen
@@ -100,11 +128,10 @@ function ClassicTabLayout() {
         name="create"
         options={{
           title: '',
-          tabBarIcon: () => (
-            <View style={styles.createBtn}>
-              <Feather name="plus" size={24} color="#fff" />
-            </View>
-          ),
+          tabBarLabel: () => null,
+          tabBarIcon: () => <CreateIcon />,
+          // Give the centre item enough tap area without extra padding
+          tabBarItemStyle: { flex: 1 },
         }}
       />
       <Tabs.Screen
@@ -119,7 +146,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Character',
+          title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="user" color={color} focused={focused} />
           ),
@@ -129,10 +156,10 @@ function ClassicTabLayout() {
   );
 }
 
+// ─── Guard ────────────────────────────────────────────────────────────────────
 export default function TabLayout() {
   const { isSignedIn, isLoaded } = useAuth();
 
-  // Show loading while Clerk initialises — AuthNavigator handles the redirect
   if (!isLoaded || !isSignedIn) {
     return (
       <View style={styles.loader}>
@@ -151,28 +178,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  createBtn: {
-    backgroundColor: '#6B5B95',
-    borderRadius: 24,
-    width: 50,
-    height: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 6,
-    shadowColor: '#6B5B95',
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 8,
-  },
-  tabIconWrap: {
+
+  iconWrap: {
     width: 40,
-    height: 32,
+    height: 34,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 14,
   },
-  tabIconWrapActive: {
-    backgroundColor: 'rgba(107,91,149,0.13)',
+  iconWrapActive: {
+    backgroundColor: 'rgba(107,91,149,0.12)',
+  },
+
+  createBtn: {
+    width: BTN_SIZE,
+    height: BTN_SIZE,
+    borderRadius: BTN_SIZE / 2,
+    backgroundColor: PURPLE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    // Float it above the bar
+    marginBottom: 18,
+    // Shadow
+    shadowColor: PURPLE,
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 10,
   },
 });

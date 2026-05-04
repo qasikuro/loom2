@@ -207,8 +207,8 @@ export default function HomeScreen() {
             : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
           }
 
-          <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
-          <LinearGradient colors={['transparent', 'rgba(18,16,42,0.82)']} style={styles.charHeroOverlay} pointerEvents="none" />
+          <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={[styles.charHeroTopOverlay, { pointerEvents: 'none' }]} />
+          <LinearGradient colors={['transparent', 'rgba(18,16,42,0.82)']} style={[styles.charHeroOverlay, { pointerEvents: 'none' }]} />
 
           {outfits.length > 0 && (
             <TouchableOpacity
