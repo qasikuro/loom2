@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "cover",
-      "backgroundColor": "#F0EAF8"
+      "backgroundColor": "#1A1630"
     },
     "ios": {
       "supportsTablet": false,
@@ -21,7 +21,7 @@
       "package": "com.replit.skyjournal",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#F0EAF8"
+        "backgroundColor": "#1A1630"
       }
     },
     "web": {
@@ -34,9 +34,6 @@
           "origin": "https://replit.com/"
         }
       ],
-      ["expo-font", {
-        "fonts": ["./assets/fonts/Feather.ttf"]
-      }],
       "expo-web-browser",
       [
         "expo-image-picker",
@@ -46,8 +43,7 @@
       ]
     ],
     "assetBundlePatterns": [
-      "**/*",
-      "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/*.ttf"
+      "**/*"
     ],
     "experiments": {
       "typedRoutes": true,

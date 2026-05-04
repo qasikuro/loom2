@@ -12,15 +12,17 @@ import * as Font from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
 
+// Keep the native splash visible until we're ready to show our custom one
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
@@ -52,13 +54,7 @@ function AuthNavigator() {
   const inAuthGroup = segments[0] === '(auth)';
   const inTabsGroup = segments[0] === '(tabs)';
 
-  if (!isLoaded) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#1A1630', alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color="#C8A84B" size="large" />
-      </View>
-    );
-  }
+  if (!isLoaded) return null;
 
   if (isSignedIn && inAuthGroup) return <Redirect href="/(tabs)" />;
   if (!isSignedIn && !inAuthGroup && inTabsGroup) return <Redirect href="/(auth)/sign-in" />;
@@ -67,7 +63,8 @@ function AuthNavigator() {
 }
 
 export default function RootLayout() {
-  const [fontsReady, setFontsReady] = useState(false);
+  const [fontsReady,  setFontsReady]  = useState(false);
+  const [splashDone,  setSplashDone]  = useState(false);
 
   useEffect(() => {
     Font.loadAsync({
@@ -76,57 +73,70 @@ export default function RootLayout() {
       Inter_600SemiBold,
       Inter_700Bold,
     })
-      .catch(() => { /* if loading fails, still show the app — icons fall back to ☐ */ })
+      .catch(() => { /* fonts optional — app still usable */ })
       .finally(() => {
         setFontsReady(true);
+        // Hide the native splash immediately — our custom one takes over
         SplashScreen.hideAsync();
       });
   }, []);
 
-  if (!fontsReady) return null;
+  const handleSplashReady = useCallback(() => {
+    setSplashDone(true);
+  }, []);
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-      <ClerkLoaded>
-        <SafeAreaProvider>
-          <ErrorBoundary>
-            <QueryClientProvider client={queryClient}>
-              <AppProvider>
-                <AuthTokenBridge />
-                <AuthNavigator />
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <KeyboardProvider>
-                    <Stack screenOptions={{ headerShown: false }}>
-                      <Stack.Screen name="(auth)" />
-                      <Stack.Screen name="(tabs)" />
-                      <Stack.Screen
-                        name="story/[id]"
-                        options={{ presentation: 'card', animation: 'slide_from_bottom' }}
-                      />
-                      <Stack.Screen
-                        name="create-journal-entry"
-                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                      />
-                      <Stack.Screen
-                        name="create-friend-log"
-                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                      />
-                      <Stack.Screen
-                        name="create-moment-log"
-                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                      />
-                      <Stack.Screen
-                        name="create-outfit"
-                        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                      />
-                    </Stack>
-                  </KeyboardProvider>
-                </GestureHandlerRootView>
-              </AppProvider>
-            </QueryClientProvider>
-          </ErrorBoundary>
-        </SafeAreaProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <View style={{ flex: 1, backgroundColor: '#1A1630' }}>
+      {/* App content — rendered immediately so Clerk/Router load in background */}
+      {fontsReady && (
+        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <ClerkLoaded>
+            <SafeAreaProvider>
+              <ErrorBoundary>
+                <QueryClientProvider client={queryClient}>
+                  <AppProvider>
+                    <AuthTokenBridge />
+                    <AuthNavigator />
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                      <KeyboardProvider>
+                        <Stack screenOptions={{ headerShown: false }}>
+                          <Stack.Screen name="(auth)" />
+                          <Stack.Screen name="(tabs)" />
+                          <Stack.Screen
+                            name="story/[id]"
+                            options={{ presentation: 'card', animation: 'slide_from_bottom' }}
+                          />
+                          <Stack.Screen
+                            name="create-journal-entry"
+                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                          />
+                          <Stack.Screen
+                            name="create-friend-log"
+                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                          />
+                          <Stack.Screen
+                            name="create-moment-log"
+                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                          />
+                          <Stack.Screen
+                            name="create-outfit"
+                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                          />
+                        </Stack>
+                      </KeyboardProvider>
+                    </GestureHandlerRootView>
+                  </AppProvider>
+                </QueryClientProvider>
+              </ErrorBoundary>
+            </SafeAreaProvider>
+          </ClerkLoaded>
+        </ClerkProvider>
+      )}
+
+      {/* Custom splash — overlays everything, fades out when ready */}
+      {!splashDone && (
+        <AppSplashScreen onReady={handleSplashReady} />
+      )}
+    </View>
   );
 }
