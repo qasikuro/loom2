@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { persistImageUri } from '@/utils/persistImage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -78,7 +79,8 @@ export default function CreateJournalEntryScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      setImageUri(result.assets[0].uri);
+      const persisted = await persistImageUri(result.assets[0].uri);
+      setImageUri(persisted);
     }
   }
 

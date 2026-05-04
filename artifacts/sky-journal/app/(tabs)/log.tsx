@@ -283,11 +283,18 @@ const cal = StyleSheet.create({
 
 // ── Filter tabs ───────────────────────────────────────────────────────────────
 
-const FILTERS: { key: FilterKey; label: string; emoji: string | null }[] = [
-  { key:'all',    label:'All',     emoji:null },
-  { key:'diary',  label:'Diary',   emoji:'📓' },
-  { key:'friend', label:'Friends', emoji:'🤝' },
-  { key:'moment', label:'Moments', emoji:'🌙' },
+const FILTER_ICONS: Record<FilterKey, { name: 'book-open' | 'feather' | 'users' | 'moon'; color: string }> = {
+  all:    { name: 'book-open', color: '#9A8EB4' },
+  diary:  { name: 'feather',   color: '#6B5B95' },
+  friend: { name: 'users',     color: '#4A6898' },
+  moment: { name: 'moon',      color: '#5848A8' },
+};
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key:'all',    label:'All'     },
+  { key:'diary',  label:'Diary'   },
+  { key:'friend', label:'Friends' },
+  { key:'moment', label:'Moments' },
 ];
 
 // ── Compose FAB ───────────────────────────────────────────────────────────────
@@ -450,12 +457,17 @@ export default function JournalScreen() {
           {FILTERS.map(f => {
             const isActive = activeFilter === f.key;
             const count    = counts[f.key];
+            const ic       = FILTER_ICONS[f.key];
             return (
               <TouchableOpacity key={f.key}
                 style={[styles.filterTab, isActive && styles.filterTabActive]}
                 onPress={() => { setActiveFilter(f.key); Haptics.selectionAsync(); }}
               >
-                {f.emoji && <Text style={styles.filterEmoji}>{f.emoji}</Text>}
+                <Feather
+                  name={ic.name}
+                  size={12}
+                  color={isActive ? ic.color : 'rgba(200,184,232,0.6)'}
+                />
                 <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
                   {f.label}
                 </Text>
@@ -523,9 +535,11 @@ export default function JournalScreen() {
         {sections.length === 0 ? (
           <View style={styles.empty}>
             <View style={[styles.emptyIcon, { backgroundColor:`${colors.primary}10` }]}>
-              <Text style={{ fontSize:34 }}>
-                {activeFilter==='friend' ? '🤝' : activeFilter==='moment' ? '🌙' : '📓'}
-              </Text>
+              <Feather
+                name={FILTER_ICONS[activeFilter].name}
+                size={32}
+                color={FILTER_ICONS[activeFilter].color}
+              />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
               {searchQuery.trim() ? `No results for "${searchQuery}"` : 'Nothing here yet'}
@@ -602,7 +616,6 @@ const styles = StyleSheet.create({
     backgroundColor:'rgba(255,255,255,0.1)',
   },
   filterTabActive: { backgroundColor:'rgba(255,255,255,0.96)' },
-  filterEmoji: { fontSize:12 },
   filterLabel: { fontSize:13, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.75)' },
   filterLabelActive: { color:'#2A1E50' },
   filterCount: { paddingHorizontal:5, paddingVertical:1, borderRadius:10, backgroundColor:'rgba(255,255,255,0.15)', minWidth:18, alignItems:'center' },

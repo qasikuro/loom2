@@ -1,6 +1,7 @@
 import { Feather } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
+import { persistImageUri } from '@/utils/persistImage';
 import {
   Image,
   StyleSheet,
@@ -33,7 +34,8 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
       quality: 0.85,
     });
     if (!result.canceled && result.assets[0]) {
-      onChange({ ...panel, imageUri: result.assets[0].uri });
+      const persisted = await persistImageUri(result.assets[0].uri);
+      onChange({ ...panel, imageUri: persisted });
     }
   }
 

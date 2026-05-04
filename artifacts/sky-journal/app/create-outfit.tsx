@@ -2,6 +2,7 @@ import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
+import { persistImageUri } from '@/utils/persistImage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -52,7 +53,10 @@ export default function CreateOutfitScreen() {
       aspect: [3, 4],
       quality: 0.85,
     });
-    if (!result.canceled && result.assets[0]) setImageUri(result.assets[0].uri);
+    if (!result.canceled && result.assets[0]) {
+      const persisted = await persistImageUri(result.assets[0].uri);
+      setImageUri(persisted);
+    }
   }
 
   function toggleTag(tag: string) {
