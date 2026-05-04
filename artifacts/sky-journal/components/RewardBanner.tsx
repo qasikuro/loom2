@@ -3,6 +3,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { useColors } from '@/hooks/useColors';
+import { SHADOW } from '@/constants/colors';
 import type { Reward } from '@/context/AppContext';
 
 interface RewardBannerProps {
@@ -15,19 +16,24 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
 
   if (reward.isRising) {
     return (
-      <View style={[styles.risingCard, { backgroundColor: colors.night }]}>
-        <View style={[styles.starIcon, { backgroundColor: `${colors.gold}25` }]}>
-          <Feather name="star" size={20} color={colors.gold} />
+      <View style={[styles.risingCard, { backgroundColor: colors.night, borderColor: 'rgba(200,168,75,0.22)' }, SHADOW.md]}>
+        <View style={[styles.risingIconWrap, { backgroundColor: 'rgba(200,168,75,0.18)' }]}>
+          <Feather name="trending-up" size={18} color={colors.gold} />
         </View>
-        <View style={styles.risingText}>
-          <Text style={[styles.risingTitle, { color: colors.gold }]}>{reward.message}</Text>
-          {reward.subMessage ? (
-            <Text style={[styles.risingSubtitle, { color: `${colors.gold}99` }]}>{reward.subMessage}</Text>
-          ) : null}
+        <View style={styles.risingBody}>
+          <Text style={[styles.risingLabel, { color: 'rgba(200,168,75,0.65)' }]}>RISING</Text>
+          <Text style={[styles.risingTitle, { color: 'rgba(240,234,248,0.92)' }]}>{reward.message}</Text>
+          {reward.subMessage && (
+            <Text style={[styles.risingSubtitle, { color: 'rgba(200,184,232,0.5)' }]}>{reward.subMessage}</Text>
+          )}
         </View>
         {onDismiss && (
-          <TouchableOpacity onPress={onDismiss} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <Feather name="x" size={14} color={`${colors.gold}80`} />
+          <TouchableOpacity
+            onPress={onDismiss}
+            style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Feather name="x" size={13} color="rgba(200,184,232,0.45)" />
           </TouchableOpacity>
         )}
       </View>
@@ -35,20 +41,22 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      <View style={[styles.iconWrap, { backgroundColor: `${colors.primary}15` }]}>
-        <Feather name={reward.icon as keyof typeof Feather.glyphMap} size={16} color={colors.primary} />
+    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}>
+      <View style={[styles.iconWrap, { backgroundColor: `${colors.primary}12` }]}>
+        <Feather name={reward.icon as keyof typeof Feather.glyphMap} size={18} color={colors.primary} />
       </View>
-      <View style={styles.textContent}>
-        {reward.count !== undefined ? (
-          <Text style={[styles.countText, { color: colors.foreground }]}>{reward.count}</Text>
-        ) : null}
-        <Text style={[styles.message, { color: colors.mutedForeground }]}>{reward.message}</Text>
+      <View style={styles.body}>
+        <View style={styles.bodyTop}>
+          {reward.count !== undefined && (
+            <Text style={[styles.countText, { color: colors.foreground }]}>{reward.count}</Text>
+          )}
+          <Text style={[styles.message, { color: colors.mutedForeground }]}>{reward.message}</Text>
+        </View>
       </View>
       {onDismiss && (
         <TouchableOpacity
           onPress={onDismiss}
-          style={styles.close}
+          style={[styles.closeBtn, { backgroundColor: colors.muted }]}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
         >
           <Feather name="x" size={12} color={colors.mutedForeground} />
@@ -60,66 +68,74 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
 
 const styles = StyleSheet.create({
   card: {
-    width: 140,
-    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 12,
-    marginRight: 10,
-    gap: 8,
-    position: 'relative',
+    padding: 14,
+    marginBottom: 0,
   },
   iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textContent: {
-    gap: 2,
-  },
-  countText: {
-    fontSize: 22,
-    fontFamily: 'Inter_700Bold',
-  },
-  message: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-    lineHeight: 16,
-  },
-  close: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-  },
-  risingCard: {
-    width: 160,
-    borderRadius: 14,
-    padding: 12,
-    marginRight: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  starIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  risingText: {
+  body: { flex: 1 },
+  bodyTop: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
+  countText: {
+    fontSize: 22,
+    fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.5,
+  },
+  message: {
+    fontSize: 13,
+    fontFamily: 'Inter_400Regular',
+    lineHeight: 18,
     flex: 1,
-    gap: 2,
+  },
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  // Rising
+  risingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+  },
+  risingIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  risingBody: { flex: 1, gap: 1 },
+  risingLabel: {
+    fontSize: 9,
+    fontFamily: 'Inter_600SemiBold',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   risingTitle: {
-    fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    lineHeight: 20,
   },
   risingSubtitle: {
     fontSize: 11,
     fontFamily: 'Inter_400Regular',
-    lineHeight: 16,
   },
 });

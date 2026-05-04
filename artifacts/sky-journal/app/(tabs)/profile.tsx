@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Images } from '@/assets/images';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { SHADOW } from '@/constants/colors';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(iso: string) {
@@ -30,6 +31,7 @@ function fmtDate(iso: string) {
 const ATTRIBUTE_SUGGESTIONS = [
   'Dreamer', 'Curious', 'Kind', 'Loner', 'Brave', 'Gentle',
   'Wanderer', 'Silent', 'Joyful', 'Nostalgic', 'Hopeful', 'Mystic',
+  'Observer', 'Poet', 'Seeker', 'Free Spirit',
 ];
 
 export default function CharacterScreen() {
@@ -51,32 +53,25 @@ export default function CharacterScreen() {
     if (nameVal.trim()) setCharacter({ ...character, name: nameVal.trim() });
     setEditingName(false);
   }
-
   function saveBio() {
     setCharacter({ ...character, bio: bioVal.trim() });
     setEditingBio(false);
   }
-
   function addTrait(t: string) {
     const trimmed = t.trim();
     if (!trimmed || character.traits.includes(trimmed)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCharacter({ ...character, traits: [...character.traits, trimmed] });
-    setNewTrait('');
-    setAddingTrait(false);
-    setShowSuggestions(false);
+    setNewTrait(''); setAddingTrait(false); setShowSuggestions(false);
   }
-
   function removeTrait(t: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setCharacter({ ...character, traits: character.traits.filter(tr => tr !== t) });
   }
-
   function toggleVisibility() {
     Haptics.selectionAsync();
     setCharacter({ ...character, isPublic: !character.isPublic });
   }
-
   function handleDeleteOutfit(id: string) {
     Alert.alert('Remove Outfit', 'Remove this outfit from your log?', [
       { text: 'Cancel', style: 'cancel' },
@@ -88,46 +83,61 @@ export default function CharacterScreen() {
     s => !character.traits.includes(s) && s.toLowerCase().includes(newTrait.toLowerCase())
   );
 
+  const totalWitnessed = stories.reduce((sum, s) => sum + s.witnessedCount, 0);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
 
-        {/* Banner */}
-        <View style={[styles.banner, { height: topPad + 180 }]}>
-          <LinearGradient colors={['#C8B8E8', '#B0C8E8', '#E0D8F4']} style={StyleSheet.absoluteFill} />
-          <View style={[styles.orb, { top: -30, right: -30 }]} />
-          <View style={[styles.orb2, { bottom: 10, left: -20 }]} />
+        {/* ── Banner ──────────────────────────────────────────────── */}
+        <View style={[styles.banner, { height: topPad + 200 }]}>
+          <LinearGradient colors={['#B8A8D8', '#A4B8D8', '#D4C8F0']} style={StyleSheet.absoluteFill} />
+          <View style={[styles.orbA, { backgroundColor: 'rgba(255,255,255,0.18)' }]} />
+          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.12)' }]} />
 
-          {/* Visibility toggle */}
-          <View style={[styles.bannerTop, { paddingTop: topPad + 10 }]}>
-            <View style={{ flex: 1 }} />
+          <View style={[styles.bannerTop, { paddingTop: topPad + 12 }]}>
+            <Text style={styles.bannerLabel}>CHARACTER</Text>
             <TouchableOpacity
-              style={[styles.visToggle, { backgroundColor: character.isPublic ? 'rgba(255,255,255,0.75)' : 'rgba(26,22,48,0.35)' }]}
+              style={[styles.visToggle, {
+                backgroundColor: character.isPublic ? 'rgba(255,255,255,0.72)' : 'rgba(26,22,48,0.38)',
+                borderColor: character.isPublic ? 'rgba(107,91,149,0.25)' : 'rgba(200,184,232,0.2)',
+              }]}
               onPress={toggleVisibility}
             >
-              <Feather name={character.isPublic ? 'globe' : 'lock'} size={13} color={character.isPublic ? colors.primary : 'rgba(200,184,232,0.85)'} />
-              <Text style={[styles.visToggleText, { color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.85)' }]}>
+              <Feather
+                name={character.isPublic ? 'globe' : 'lock'}
+                size={12}
+                color={character.isPublic ? colors.primary : 'rgba(200,184,232,0.85)'}
+              />
+              <Text style={[styles.visToggleText, {
+                color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.85)',
+              }]}>
                 {character.isPublic ? 'Public profile' : 'Private profile'}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* ── Profile body ────────────────────────────────────────── */}
         <View style={[styles.body, { backgroundColor: colors.background }]}>
+
           {/* Avatar */}
-          <View style={styles.avatarRow}>
-            <View style={[styles.avatarGlow, { backgroundColor: `${colors.primary}20` }]} />
-            <View style={[styles.avatarWrap, { borderColor: colors.background }]}>
+          <View style={styles.avatarArea}>
+            <View style={[styles.avatarGlow, { backgroundColor: `${colors.primary}18` }]} />
+            <View style={[styles.avatarRing, { borderColor: colors.background }]}>
               <Image source={Images.character_default} style={styles.avatarImg} resizeMode="cover" />
+            </View>
+            <View style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+              <Feather name="camera" size={11} color={colors.mutedForeground} />
             </View>
           </View>
 
-          {/* Name */}
+          {/* Name + Bio */}
           <View style={styles.nameSection}>
             {editingName ? (
-              <View style={styles.inlineEdit}>
+              <View style={[styles.nameEditWrap, { borderBottomColor: colors.primary }]}>
                 <TextInput
-                  style={[styles.nameEditInput, { color: colors.foreground, borderBottomColor: colors.primary }]}
+                  style={[styles.nameEditInput, { color: colors.foreground }]}
                   value={nameVal}
                   onChangeText={setNameVal}
                   autoFocus
@@ -139,7 +149,9 @@ export default function CharacterScreen() {
             ) : (
               <TouchableOpacity style={styles.nameRow} onPress={() => setEditingName(true)}>
                 <Text style={[styles.name, { color: colors.foreground }]}>{character.name}</Text>
-                <Feather name="edit-2" size={14} color={colors.mutedForeground} />
+                <View style={[styles.editHint, { backgroundColor: colors.muted }]}>
+                  <Feather name="edit-2" size={11} color={colors.mutedForeground} />
+                </View>
               </TouchableOpacity>
             )}
 
@@ -154,17 +166,17 @@ export default function CharacterScreen() {
                 onBlur={saveBio}
               />
             ) : (
-              <TouchableOpacity onPress={() => setEditingBio(true)} style={styles.bioRow}>
-                <Text style={[styles.bio, { color: colors.mutedForeground }]}>
+              <TouchableOpacity style={styles.bioRow} onPress={() => setEditingBio(true)}>
+                <Text style={[styles.bio, { color: character.bio ? colors.mutedForeground : `${colors.mutedForeground}70` }]}>
                   {character.bio || 'Tap to add a bio...'}
                 </Text>
-                <Feather name="edit-2" size={12} color={`${colors.mutedForeground}70`} />
+                <Feather name="edit-2" size={11} color={`${colors.mutedForeground}55`} style={{ marginTop: 2 }} />
               </TouchableOpacity>
             )}
           </View>
 
           {/* Stats row */}
-          <View style={[styles.statsRow, { borderColor: colors.border }]}>
+          <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
             <View style={styles.statItem}>
               <Text style={[styles.statNum, { color: colors.foreground }]}>{stories.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
@@ -176,34 +188,39 @@ export default function CharacterScreen() {
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: colors.foreground }]}>{character.traits.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Traits</Text>
+              <Text style={[styles.statNum, { color: colors.foreground }]}>{totalWitnessed}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Witnessed</Text>
             </View>
           </View>
 
-          {/* ── Attributes ─────────────────────────────────────────── */}
-          <View style={[styles.section, { borderColor: colors.border }]}>
+          {/* ── Attributes ───────────────────────────────────────── */}
+          <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Attributes</Text>
-              <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>What defines your character?</Text>
+              <View style={styles.sectionTitleRow}>
+                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Attributes</Text>
+                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>Define your character</Text>
+              </View>
             </View>
+
             <View style={styles.traitsWrap}>
               {character.traits.map(t => (
-                <TouchableOpacity
+                <View
                   key={t}
-                  style={[styles.traitChip, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}30` }]}
-                  onLongPress={() => removeTrait(t)}
+                  style={[styles.traitChip, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}28` }]}
                 >
                   <Text style={[styles.traitText, { color: colors.primary }]}>{t}</Text>
-                  <TouchableOpacity onPress={() => removeTrait(t)} hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}>
-                    <Feather name="x" size={11} color={`${colors.primary}80`} />
+                  <TouchableOpacity
+                    onPress={() => removeTrait(t)}
+                    hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+                    style={[styles.traitRemove, { backgroundColor: `${colors.primary}18` }]}
+                  >
+                    <Feather name="x" size={9} color={colors.primary} />
                   </TouchableOpacity>
-                </TouchableOpacity>
+                </View>
               ))}
 
-              {/* Add trait */}
               {addingTrait ? (
-                <View style={[styles.traitAddWrap, { borderColor: colors.primary, backgroundColor: `${colors.primary}08` }]}>
+                <View style={[styles.traitAddWrap, { borderColor: colors.primary, backgroundColor: `${colors.primary}06` }]}>
                   <TextInput
                     style={[styles.traitInput, { color: colors.foreground }]}
                     value={newTrait}
@@ -216,51 +233,52 @@ export default function CharacterScreen() {
                     onBlur={() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }}
                   />
                   <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
-                    <Feather name="x" size={14} color={colors.mutedForeground} />
+                    <Feather name="x" size={13} color={colors.mutedForeground} />
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={[styles.traitAddBtn, { borderColor: `${colors.primary}30`, backgroundColor: `${colors.primary}08` }]}
+                  style={[styles.traitAddBtn, { borderColor: `${colors.primary}28`, backgroundColor: `${colors.primary}06` }]}
                   onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}
                 >
-                  <Feather name="plus" size={13} color={colors.primary} />
-                  <Text style={[styles.traitAddText, { color: colors.primary }]}>Add</Text>
+                  <Feather name="plus" size={12} color={colors.primary} />
+                  <Text style={[styles.traitAddText, { color: colors.primary }]}>Add trait</Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Suggestions */}
             {showSuggestions && suggestions.length > 0 && (
               <View style={styles.suggRow}>
-                {suggestions.slice(0, 6).map(s => (
-                  <TouchableOpacity
-                    key={s}
-                    style={[styles.suggChip, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                    onPress={() => addTrait(s)}
-                  >
-                    <Text style={[styles.suggText, { color: colors.mutedForeground }]}>{s}</Text>
-                  </TouchableOpacity>
-                ))}
+                <Text style={[styles.suggLabel, { color: colors.mutedForeground }]}>SUGGESTIONS</Text>
+                <View style={styles.suggChips}>
+                  {suggestions.slice(0, 8).map(s => (
+                    <TouchableOpacity
+                      key={s}
+                      style={[styles.suggChip, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                      onPress={() => addTrait(s)}
+                    >
+                      <Feather name="plus" size={10} color={colors.mutedForeground} />
+                      <Text style={[styles.suggText, { color: colors.mutedForeground }]}>{s}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
             )}
           </View>
 
-          {/* ── Outfit Log ─────────────────────────────────────────── */}
-          <View style={[styles.section, { borderColor: colors.border }]}>
+          {/* ── Outfit Log ──────────────────────────────────────── */}
+          <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <View>
+              <View style={styles.sectionTitleRow}>
                 <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Outfit Log</Text>
-                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
-                  Daily style — public or private
-                </Text>
+                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>Daily style · public or private</Text>
               </View>
               <TouchableOpacity
-                style={[styles.sectionBtn, { backgroundColor: colors.primary }]}
+                style={[styles.addBtn, { backgroundColor: colors.primary }, SHADOW.sm]}
                 onPress={() => router.push('/create-outfit')}
               >
-                <Feather name="plus" size={14} color="#fff" />
-                <Text style={styles.sectionBtnText}>Log Outfit</Text>
+                <Feather name="plus" size={13} color="#fff" />
+                <Text style={styles.addBtnText}>Log Outfit</Text>
               </TouchableOpacity>
             </View>
 
@@ -268,47 +286,58 @@ export default function CharacterScreen() {
               <TouchableOpacity
                 style={[styles.outfitEmpty, { borderColor: colors.border, backgroundColor: colors.muted }]}
                 onPress={() => router.push('/create-outfit')}
+                activeOpacity={0.8}
               >
-                <Feather name="star" size={20} color={colors.mutedForeground} />
-                <Text style={[styles.outfitEmptyText, { color: colors.mutedForeground }]}>
-                  Log your first outfit
-                </Text>
+                <View style={[styles.outfitEmptyIcon, { backgroundColor: `${colors.primary}10` }]}>
+                  <Feather name="star" size={22} color={`${colors.primary}70`} />
+                </View>
+                <View>
+                  <Text style={[styles.outfitEmptyTitle, { color: colors.foreground }]}>Log your first outfit</Text>
+                  <Text style={[styles.outfitEmptyText, { color: colors.mutedForeground }]}>Track your daily sky look</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             ) : (
-              <View style={styles.outfitGrid}>
+              <View style={styles.outfitList}>
                 {outfits.map(outfit => (
-                  <View key={outfit.id} style={[styles.outfitCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View
+                    key={outfit.id}
+                    style={[styles.outfitCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                  >
                     {outfit.imageUri ? (
                       <Image source={{ uri: outfit.imageUri }} style={styles.outfitThumb} resizeMode="cover" />
                     ) : (
-                      <View style={[styles.outfitThumbPlaceholder, { backgroundColor: `${colors.primary}12` }]}>
-                        <Feather name="star" size={22} color={`${colors.primary}60`} />
+                      <View style={[styles.outfitThumbPlaceholder, { backgroundColor: `${colors.primary}10` }]}>
+                        <Feather name="star" size={20} color={`${colors.primary}55`} />
                       </View>
                     )}
                     <View style={styles.outfitInfo}>
-                      <Text style={[styles.outfitName, { color: colors.foreground }]} numberOfLines={1}>
-                        {outfit.name}
-                      </Text>
-                      <Text style={[styles.outfitDate, { color: colors.mutedForeground }]}>
-                        {fmtDate(outfit.date)}
-                      </Text>
+                      <View style={styles.outfitTop}>
+                        <Text style={[styles.outfitName, { color: colors.foreground }]} numberOfLines={1}>{outfit.name}</Text>
+                        <Text style={[styles.outfitDate, { color: colors.mutedForeground }]}>{fmtDate(outfit.date)}</Text>
+                      </View>
                       <View style={styles.outfitMeta}>
                         {outfit.tags.slice(0, 2).map(tag => (
-                          <View key={tag} style={[styles.outfitTag, { backgroundColor: `${colors.primary}10` }]}>
+                          <View key={tag} style={[styles.outfitTag, { backgroundColor: `${colors.primary}0F` }]}>
                             <Text style={[styles.outfitTagText, { color: colors.primary }]}>{tag}</Text>
                           </View>
                         ))}
-                        <View style={[styles.outfitVisibility, { backgroundColor: outfit.isPublic ? 'rgba(96,168,120,0.12)' : `${colors.primary}10` }]}>
+                        <View style={[styles.visChip, {
+                          backgroundColor: outfit.isPublic ? 'rgba(96,168,120,0.1)' : `${colors.primary}0F`,
+                        }]}>
                           <Feather name={outfit.isPublic ? 'globe' : 'lock'} size={9} color={outfit.isPublic ? '#60A878' : colors.primary} />
+                          <Text style={[styles.visChipText, { color: outfit.isPublic ? '#60A878' : colors.primary }]}>
+                            {outfit.isPublic ? 'Public' : 'Private'}
+                          </Text>
                         </View>
                       </View>
                     </View>
                     <TouchableOpacity
-                      style={styles.outfitDelete}
+                      style={[styles.outfitDeleteBtn, { backgroundColor: colors.muted }]}
                       onPress={() => handleDeleteOutfit(outfit.id)}
                       hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                     >
-                      <Feather name="trash-2" size={13} color={`${colors.mutedForeground}70`} />
+                      <Feather name="trash-2" size={12} color={colors.mutedForeground} />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -324,58 +353,70 @@ export default function CharacterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   banner: { position: 'relative', overflow: 'hidden' },
-  orb: { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.22)' },
-  orb2: { position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(200,168,75,0.15)' },
-  bannerTop: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 10 },
-  visToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
-  visToggleText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  orbA: { position: 'absolute', width: 180, height: 180, borderRadius: 90, top: -40, right: -40 },
+  orbB: { position: 'absolute', width: 120, height: 120, borderRadius: 60, bottom: 0, left: -30 },
+  bannerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
+  bannerLabel: { fontSize: 10, fontFamily: 'Inter_700Bold', letterSpacing: 2.2, color: 'rgba(60,44,100,0.5)' },
+  visToggle: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  visToggleText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   body: { paddingHorizontal: 20 },
-  avatarRow: { marginTop: -52, alignSelf: 'flex-start', position: 'relative', marginBottom: 10 },
-  avatarGlow: { position: 'absolute', width: 108, height: 108, borderRadius: 54, top: -6, left: -6 },
-  avatarWrap: { width: 96, height: 96, borderRadius: 48, borderWidth: 4, overflow: 'hidden' },
+  avatarArea: { marginTop: -56, alignSelf: 'flex-start', position: 'relative', marginBottom: 12 },
+  avatarGlow: { position: 'absolute', width: 116, height: 116, borderRadius: 58, top: -6, left: -6 },
+  avatarRing: { width: 104, height: 104, borderRadius: 52, borderWidth: 4, overflow: 'hidden' },
   avatarImg: { width: '100%', height: '100%' },
-  nameSection: { gap: 6, marginBottom: 16 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  inlineEdit: { paddingVertical: 2 },
-  nameEditInput: { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, borderBottomWidth: 2, paddingBottom: 2 },
+  avatarEditBadge: { position: 'absolute', bottom: 2, right: 2, width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  nameSection: { gap: 7, marginBottom: 18 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 9 },
+  name: { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
+  editHint: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  nameEditWrap: { borderBottomWidth: 2, paddingBottom: 3 },
+  nameEditInput: { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
   bioRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  bio: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 21 },
-  bioInput: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 21, borderWidth: 1, borderRadius: 10, padding: 10 },
-  statsRow: { flexDirection: 'row', borderWidth: 1, borderRadius: 16, paddingVertical: 14, marginBottom: 20 },
-  statItem: { flex: 1, alignItems: 'center', gap: 2 },
-  statNum: { fontSize: 18, fontFamily: 'Inter_700Bold' },
+  bio: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22 },
+  bioInput: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22, borderWidth: 1, borderRadius: 12, padding: 12 },
+  statsCard: { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 16, marginBottom: 24 },
+  statItem: { flex: 1, alignItems: 'center', gap: 3 },
+  statNum: { fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
   statLabel: { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  statDivider: { width: 1, alignSelf: 'stretch' },
-  section: { borderTopWidth: 1, paddingTop: 20, marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
-  sectionTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold' },
-  sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginTop: 2 },
-  sectionBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  sectionBtnText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  statDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4 },
+  section: { borderTopWidth: 1, borderTopColor: '#E2D9EE', paddingTop: 22, marginBottom: 26 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 },
+  sectionTitleRow: { gap: 3 },
+  sectionTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
+  sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
+  addBtnText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  // Traits
   traitsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  traitChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  traitChip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 12, paddingRight: 6, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   traitText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  traitAddWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
+  traitRemove: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  traitAddWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5 },
   traitInput: { fontSize: 13, fontFamily: 'Inter_400Regular', minWidth: 80, maxWidth: 120 },
-  traitAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed' },
+  traitAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed' },
   traitAddText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  suggRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
-  suggChip: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 14, borderWidth: 1 },
+  suggRow: { marginTop: 14, gap: 8 },
+  suggLabel: { fontSize: 9, fontFamily: 'Inter_600SemiBold', letterSpacing: 1, textTransform: 'uppercase' },
+  suggChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  suggChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 14, borderWidth: 1 },
   suggText: { fontSize: 12, fontFamily: 'Inter_400Regular' },
   // Outfits
-  outfitEmpty: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 14, padding: 20 },
-  outfitEmptyText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
-  outfitGrid: { gap: 10 },
-  outfitCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  outfitThumb: { width: 72, height: 90, flexShrink: 0 },
-  outfitThumbPlaceholder: { width: 72, height: 90, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  outfitInfo: { flex: 1, gap: 5, paddingVertical: 10 },
-  outfitName: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  outfitDate: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  outfitEmpty: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 16, padding: 16 },
+  outfitEmptyIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  outfitEmptyTitle: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  outfitEmptyText: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 1 },
+  outfitList: { gap: 10 },
+  outfitCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  outfitThumb: { width: 76, height: 96, flexShrink: 0 },
+  outfitThumbPlaceholder: { width: 76, height: 96, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  outfitInfo: { flex: 1, gap: 6, paddingHorizontal: 12, paddingVertical: 10 },
+  outfitTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  outfitName: { fontSize: 14, fontFamily: 'Inter_600SemiBold', flex: 1 },
+  outfitDate: { fontSize: 10, fontFamily: 'Inter_400Regular', flexShrink: 0 },
   outfitMeta: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
   outfitTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
   outfitTagText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
-  outfitVisibility: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  outfitDelete: { padding: 14 },
+  visChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
+  visChipText: { fontSize: 9, fontFamily: 'Inter_500Medium' },
+  outfitDeleteBtn: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10, flexShrink: 0 },
 });
