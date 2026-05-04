@@ -19,9 +19,26 @@ import { useApp, type JournalEntry, type JournalEntryType } from '@/context/AppC
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 
-// ── Date utils ────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 type FilterKey = 'all' | JournalEntryType;
+
+function relativeTime(dateStr: string): string {
+  const d    = new Date(dateStr);
+  const now  = new Date();
+  const diff = now.getTime() - d.getTime();
+  const mins  = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days  = Math.floor(diff / 86_400_000);
+  const weeks = Math.floor(days / 7);
+  if (mins  < 1)  return 'just now';
+  if (mins  < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days  === 1) return 'yesterday';
+  if (days  < 7)  return `${days} days ago`;
+  if (weeks === 1) return '1 week ago';
+  return `${weeks} weeks ago`;
+}
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -31,12 +48,12 @@ function toDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function formatHeader(dateKey: string) {
+function formatHeader(dk: string) {
   const today = toDateKey(new Date());
   const yest  = (() => { const d = new Date(); d.setDate(d.getDate()-1); return toDateKey(d); })();
-  if (dateKey === today) return 'Today';
-  if (dateKey === yest)  return 'Yesterday';
-  const [y, m, d] = dateKey.split('-').map(Number);
+  if (dk === today) return 'Today';
+  if (dk === yest)  return 'Yesterday';
+  const [y,m,d] = dk.split('-').map(Number);
   return `${MONTH_SHORT[m-1]} ${d}, ${y}`;
 }
 
@@ -51,96 +68,118 @@ function groupByDate(entries: JournalEntry[]) {
     .map(([date, data]) => ({ date, label: formatHeader(date), data }));
 }
 
-// ── Timeline entry card ───────────────────────────────────────────────────────
+// ── Avatar config per entry type ───────────────────────────────────────────────
 
-const CARD_PH = {
-  diary:  { stops: ['#C4B0E8','#9480C8'] as [string,string], icon: 'feather'  as const, ic: '#fff' },
-  friend: { stops: ['#7AAED8','#4A80B8'] as [string,string], icon: 'users'    as const, ic: '#fff' },
-  moment: { stops: ['#3A2E68','#1E1A40'] as [string,string], icon: 'moon'     as const, ic: 'rgba(200,184,232,0.8)' },
+const AVATAR_CFG = {
+  diary:  { bg: '#6B5B95', icon: 'feather' as const,   label: 'Diary Entry'   },
+  friend: { bg: '#4A6898', icon: 'users'   as const,   label: 'Friend'        },
+  moment: { bg: '#3A2E68', icon: 'moon'    as const,   label: 'Quick Moment'  },
 };
+
+// ── Timeline entry card ───────────────────────────────────────────────────────
 
 function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () => void }) {
   const colors = useColors();
-  const ph = CARD_PH[entry.type];
+  const cfg    = AVATAR_CFG[entry.type];
 
-  const title =
-    entry.type === 'friend'
-      ? `Encountered ${entry.friendName ?? 'someone'}`
-      : entry.text.split(/\n/)[0].trim().slice(0, 72) || entry.text.slice(0, 72);
+  const displayName =
+    entry.type === 'friend' ? (entry.friendName ?? 'Someone') : cfg.label;
 
-  const excerpt =
+  const initial =
     entry.type === 'friend'
-      ? entry.text !== `An encounter with ${entry.friendName}.` ? entry.text : ''
-      : entry.text.slice(title.length).replace(/^\s+/, '').trim();
+      ? (entry.friendName?.[0] ?? '?').toUpperCase()
+      : null;
+
+  // First line of text as the snippet
+  const snippet = entry.text.split('\n')[0].trim().slice(0, 120) || entry.text.slice(0, 120);
 
   return (
-    <View style={[tc.card, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {/* Image / gradient placeholder */}
-      <View style={tc.imageWrap}>
-        {entry.imageUri ? (
-          <Image source={{ uri: entry.imageUri }} style={tc.image} resizeMode="cover" />
-        ) : (
-          <LinearGradient colors={ph.stops} style={tc.placeholder} start={{ x:0,y:0 }} end={{ x:1,y:1 }}>
-            <Feather name={ph.icon} size={28} color={ph.ic} />
-          </LinearGradient>
-        )}
-        <View style={tc.bookmarkBubble}>
-          <Feather name="bookmark" size={13} color="rgba(255,255,255,0.9)" />
+    <TouchableOpacity
+      style={[tc.card, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}
+      activeOpacity={0.92}
+    >
+      {/* ─ Top row: avatar + name + time + star ─ */}
+      <View style={tc.topRow}>
+        {/* Avatar */}
+        <View style={[tc.avatar, { backgroundColor: cfg.bg }]}>
+          {initial
+            ? <Text style={tc.avatarInitial}>{initial}</Text>
+            : <Feather name={cfg.icon} size={17} color="rgba(255,255,255,0.88)" />
+          }
         </View>
+
+        {/* Name + time */}
+        <View style={tc.nameCol}>
+          <Text style={[tc.nameText, { color: colors.foreground }]} numberOfLines={1}>
+            {displayName}
+          </Text>
+          <Text style={[tc.timeText, { color: colors.mutedForeground }]}>
+            {relativeTime(entry.date)}
+          </Text>
+        </View>
+
+        {/* Star bookmark */}
+        <Feather name="star" size={16} color="#C8A84B" />
       </View>
 
-      {/* Body */}
-      <View style={tc.body}>
-        <Text style={[tc.title, { color: colors.foreground }]} numberOfLines={2}>{title}</Text>
-        {!!excerpt && (
-          <Text style={[tc.excerpt, { color: colors.mutedForeground }]} numberOfLines={2}>{excerpt}</Text>
+      {/* ─ Content: snippet + optional thumbnail ─ */}
+      <View style={tc.contentRow}>
+        <Text style={[tc.snippet, { color: colors.mutedForeground }]} numberOfLines={3}>
+          {snippet}
+        </Text>
+        {entry.imageUri && (
+          <Image
+            source={{ uri: entry.imageUri }}
+            style={tc.thumbnail}
+            resizeMode="cover"
+          />
         )}
-        <View style={tc.footer}>
-          <MoodBadge mood={entry.mood} size="sm" />
-
-          {entry.type === 'friend' && !!entry.friendName && (
-            <View style={[tc.pill, { backgroundColor:'rgba(58,120,184,0.1)', borderColor:'rgba(58,120,184,0.22)' }]}>
-              <Feather name="users" size={10} color="#3A78B8" />
-              <Text style={[tc.pillText, { color:'#3A78B8' }]}>{entry.friendName}</Text>
-            </View>
-          )}
-          {entry.type === 'moment' && (
-            <View style={[tc.pill, { backgroundColor:'rgba(88,72,168,0.1)', borderColor:'rgba(88,72,168,0.22)' }]}>
-              <Feather name="moon" size={10} color="#5848A8" />
-              <Text style={[tc.pillText, { color:'#5848A8' }]}>Moment</Text>
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[tc.deleteBtn, { backgroundColor: colors.muted, marginLeft: 'auto' }]}
-            onPress={onDelete}
-            hitSlop={{ top:8, right:8, bottom:8, left:8 }}
-          >
-            <Feather name="trash-2" size={12} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
       </View>
-    </View>
+
+      {/* ─ Footer: mood + delete ─ */}
+      <View style={tc.footer}>
+        <MoodBadge mood={entry.mood} size="sm" />
+        {entry.type === 'friend' && !!entry.friendName && (
+          <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.1)', borderColor:'rgba(74,104,152,0.22)' }]}>
+            <Feather name="users" size={10} color="#4A6898" />
+            <Text style={[tc.typePillText, { color:'#4A6898' }]}>With {entry.friendName}</Text>
+          </View>
+        )}
+        {entry.type === 'moment' && (
+          <View style={[tc.typePill, { backgroundColor:'rgba(88,72,168,0.1)', borderColor:'rgba(88,72,168,0.22)' }]}>
+            <Feather name="moon" size={10} color="#5848A8" />
+            <Text style={[tc.typePillText, { color:'#5848A8' }]}>Moment</Text>
+          </View>
+        )}
+        <TouchableOpacity
+          style={[tc.deleteBtn, { backgroundColor: colors.muted, marginLeft: 'auto' }]}
+          onPress={onDelete}
+          hitSlop={{ top:8, right:8, bottom:8, left:8 }}
+        >
+          <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 const tc = StyleSheet.create({
-  card: { borderRadius:16, borderWidth:1, overflow:'hidden', marginBottom:10 },
-  imageWrap: { position:'relative' },
-  image: { width:'100%', height:180 },
-  placeholder: { width:'100%', height:150, alignItems:'center', justifyContent:'center' },
-  bookmarkBubble: {
-    position:'absolute', top:10, right:12,
-    width:30, height:30, borderRadius:8,
-    backgroundColor:'rgba(0,0,0,0.28)',
-    alignItems:'center', justifyContent:'center',
+  card: { borderRadius:16, borderWidth:1, padding:14, gap:10, marginBottom:10 },
+  topRow: { flexDirection:'row', alignItems:'center', gap:11 },
+  avatar: {
+    width:46, height:46, borderRadius:23,
+    alignItems:'center', justifyContent:'center', flexShrink:0,
   },
-  body: { padding:14, gap:7 },
-  title: { fontSize:16, fontFamily:'Inter_700Bold', letterSpacing:-0.2 },
-  excerpt: { fontSize:13, fontFamily:'Inter_400Regular', lineHeight:20, fontStyle:'italic' },
-  footer: { flexDirection:'row', alignItems:'center', gap:7, flexWrap:'wrap', marginTop:2 },
-  pill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:4, borderRadius:10, borderWidth:1 },
-  pillText: { fontSize:10, fontFamily:'Inter_500Medium' },
+  avatarInitial: { fontSize:17, fontFamily:'Inter_700Bold', color:'#fff' },
+  nameCol: { flex:1 },
+  nameText: { fontSize:15, fontFamily:'Inter_600SemiBold', letterSpacing:-0.1 },
+  timeText: { fontSize:11, fontFamily:'Inter_400Regular', marginTop:1 },
+  contentRow: { flexDirection:'row', gap:12, alignItems:'flex-start' },
+  snippet: { flex:1, fontSize:13, fontFamily:'Inter_400Regular', lineHeight:20, fontStyle:'italic' },
+  thumbnail: { width:64, height:64, borderRadius:10, flexShrink:0 },
+  footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap' },
+  typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:4, borderRadius:10, borderWidth:1 },
+  typePillText: { fontSize:10, fontFamily:'Inter_500Medium' },
   deleteBtn: { width:28, height:28, borderRadius:8, alignItems:'center', justifyContent:'center' },
 });
 
@@ -167,15 +206,14 @@ function MiniCalendar({
   function prevMonth() { month===0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1); }
   function nextMonth() { month===11? (setYear(y=>y+1), setMonth(0))  : setMonth(m=>m+1); }
 
-  const firstDOW  = new Date(year, month, 1).getDay();
-  const daysInMo  = new Date(year, month+1, 0).getDate();
+  const firstDOW = new Date(year, month, 1).getDay();
+  const daysInMo = new Date(year, month+1, 0).getDate();
   const cells: (number|null)[] = Array(firstDOW).fill(null);
   for (let d=1; d<=daysInMo; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
   return (
     <View style={[cal.wrap, SHADOW.xs, { backgroundColor: colors.card, borderColor: colors.border }]}>
-      {/* Month nav */}
       <View style={cal.monthRow}>
         <TouchableOpacity style={[cal.navBtn, { backgroundColor: colors.muted }]} onPress={prevMonth}>
           <Feather name="chevron-left" size={15} color={colors.primary} />
@@ -188,21 +226,19 @@ function MiniCalendar({
         </TouchableOpacity>
       </View>
 
-      {/* Day headers */}
       <View style={cal.weekRow}>
         {WEEK_DAYS.map((d,i) => (
           <Text key={i} style={[cal.weekDay, { color: colors.mutedForeground }]}>{d}</Text>
         ))}
       </View>
 
-      {/* Grid */}
       <View style={cal.grid}>
         {cells.map((cell, i) => {
           if (cell === null) return <View key={`e${i}`} style={cal.cell} />;
-          const dk = `${year}-${String(month+1).padStart(2,'0')}-${String(cell).padStart(2,'0')}`;
-          const has  = entryDates.has(dk);
-          const sel  = dk === selectedDate;
-          const now  = cell===today.getDate() && month===today.getMonth() && year===today.getFullYear();
+          const dk  = `${year}-${String(month+1).padStart(2,'0')}-${String(cell).padStart(2,'0')}`;
+          const has = entryDates.has(dk);
+          const sel = dk === selectedDate;
+          const now = cell===today.getDate() && month===today.getMonth() && year===today.getFullYear();
           return (
             <TouchableOpacity
               key={`d${cell}`}
@@ -221,9 +257,7 @@ function MiniCalendar({
               ]}>
                 {cell}
               </Text>
-              {has && !sel && (
-                <View style={[cal.dot, { backgroundColor: colors.primary }]} />
-              )}
+              {has && !sel && <View style={[cal.dot, { backgroundColor: colors.primary }]} />}
             </TouchableOpacity>
           );
         })}
@@ -245,7 +279,7 @@ const cal = StyleSheet.create({
   dot: { position:'absolute', bottom:2, width:4, height:4, borderRadius:2 },
 });
 
-// ── Main screen ───────────────────────────────────────────────────────────────
+// ── Filter tabs ───────────────────────────────────────────────────────────────
 
 const FILTERS: { key: FilterKey; label: string; emoji: string | null }[] = [
   { key:'all',    label:'All',     emoji:null },
@@ -253,6 +287,8 @@ const FILTERS: { key: FilterKey; label: string; emoji: string | null }[] = [
   { key:'friend', label:'Friends', emoji:'🤝' },
   { key:'moment', label:'Moments', emoji:'🌙' },
 ];
+
+// ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function JournalScreen() {
   const colors  = useColors();
@@ -305,34 +341,66 @@ export default function JournalScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={['#EDE0F8','#F4EFF8','#F8F4EE']} style={[styles.headerGrad, { height: topPad+120 }]} />
-
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad+10 }]}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.title, { color: colors.foreground }]}>My Journal</Text>
-          <View style={[styles.badge, { backgroundColor:`${colors.primary}12`, borderColor:`${colors.primary}22` }]}>
-            <Feather name="lock" size={10} color={colors.primary} />
-            <Text style={[styles.badgeText, { color: colors.primary }]}>Private</Text>
+      {/* ── Dark gradient header ─────────────────────────────────── */}
+      <LinearGradient
+        colors={['#1A1640', '#252070', '#2A2478']}
+        style={[styles.headerGrad, { paddingTop: topPad }]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      >
+        {/* Top row */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>My Journal</Text>
+            <View style={styles.privateBadge}>
+              <Feather name="lock" size={10} color="rgba(200,184,232,0.7)" />
+              <Text style={styles.privateBadgeText}>Private</Text>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={[styles.hdrBtn, showCalendar && styles.hdrBtnActive]}
+              onPress={() => setShowCalendar(v => !v)}
+            >
+              <Feather name="calendar" size={16} color={showCalendar ? '#fff' : 'rgba(200,184,232,0.7)'} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.hdrBtn, showSearch && styles.hdrBtnActive]}
+              onPress={() => { setShowSearch(v => !v); if (showSearch) setSearchQuery(''); }}
+            >
+              <Feather name={showSearch ? 'x' : 'search'} size={16} color={showSearch ? '#fff' : 'rgba(200,184,232,0.7)'} />
+            </TouchableOpacity>
           </View>
         </View>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: showCalendar ? `${colors.primary}18` : colors.muted }]}
-            onPress={() => setShowCalendar(v => !v)}
-          >
-            <Feather name="calendar" size={17} color={showCalendar ? colors.primary : colors.mutedForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.iconBtn, { backgroundColor: showSearch ? `${colors.primary}18` : colors.muted }]}
-            onPress={() => { setShowSearch(v => !v); if (showSearch) setSearchQuery(''); }}
-          >
-            <Feather name={showSearch ? 'x' : 'search'} size={17} color={showSearch ? colors.primary : colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      {/* Search bar */}
+        {/* Filter tabs — white pill style inside dark header */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}
+          style={styles.filtersScroll} contentContainerStyle={styles.filtersRow}>
+          {FILTERS.map(f => {
+            const isActive = activeFilter === f.key;
+            const count    = counts[f.key];
+            return (
+              <TouchableOpacity key={f.key}
+                style={[styles.filterTab, isActive && styles.filterTabActive]}
+                onPress={() => { setActiveFilter(f.key); Haptics.selectionAsync(); }}
+              >
+                {f.emoji && <Text style={styles.filterEmoji}>{f.emoji}</Text>}
+                <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
+                  {f.label}
+                </Text>
+                {count > 0 && (
+                  <View style={[styles.filterCount, isActive && styles.filterCountActive]}>
+                    <Text style={[styles.filterCountText, isActive && styles.filterCountTextActive]}>
+                      {count}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </LinearGradient>
+
+      {/* ── Search bar ─────────────────────────────────────────────── */}
       {showSearch && (
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Feather name="search" size={15} color={colors.mutedForeground} />
@@ -353,43 +421,18 @@ export default function JournalScreen() {
         </View>
       )}
 
-      {/* Filter chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}
-        style={styles.filtersScroll} contentContainerStyle={styles.filtersRow}>
-        {FILTERS.map(f => {
-          const isActive = activeFilter === f.key;
-          const count    = counts[f.key];
-          return (
-            <TouchableOpacity key={f.key}
-              style={[styles.chip,
-                isActive
-                  ? { backgroundColor:`${colors.primary}15`, borderColor:`${colors.primary}40`, borderWidth:1.5 }
-                  : { backgroundColor: colors.muted, borderColor:'transparent', borderWidth:1 },
-              ]}
-              onPress={() => { setActiveFilter(f.key); Haptics.selectionAsync(); }}
-            >
-              {f.emoji && <Text style={styles.chipEmoji}>{f.emoji}</Text>}
-              <Text style={[styles.chipLabel, { color: isActive ? colors.primary : colors.mutedForeground }]}>{f.label}</Text>
-              {count > 0 && (
-                <View style={[styles.chipBadge, { backgroundColor: isActive ? `${colors.primary}22` : `${colors.primary}0C` }]}>
-                  <Text style={[styles.chipBadgeText, { color: isActive ? colors.primary : colors.mutedForeground }]}>{count}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      {/* Calendar */}
+      {/* ── Calendar ───────────────────────────────────────────────── */}
       {showCalendar && (
-        <MiniCalendar
-          entries={journalEntries}
-          selectedDate={selectedDate}
-          onSelectDate={handleCalDate}
-        />
+        <View style={{ paddingTop: 14 }}>
+          <MiniCalendar
+            entries={journalEntries}
+            selectedDate={selectedDate}
+            onSelectDate={handleCalDate}
+          />
+        </View>
       )}
 
-      {/* Search result hint */}
+      {/* ── Search hint ────────────────────────────────────────────── */}
       {!!searchQuery.trim() && (
         <Text style={[styles.searchHint, { color: colors.mutedForeground }]}>
           {filtered.length === 0
@@ -398,7 +441,7 @@ export default function JournalScreen() {
         </Text>
       )}
 
-      {/* Timeline scroll */}
+      {/* ── Timeline list ──────────────────────────────────────────── */}
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
@@ -418,7 +461,7 @@ export default function JournalScreen() {
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               {searchQuery.trim()
                 ? 'Try a different word or mood.'
-                : 'Start writing — this is your private space.'}
+                : 'This is your private space. Start writing ✦'}
             </Text>
           </View>
         ) : (
@@ -427,20 +470,19 @@ export default function JournalScreen() {
               key={section.date}
               onLayout={e => { sectionY.current[section.date] = e.nativeEvent.layout.y; }}
             >
-              {/* Timeline row: dot column + content column */}
               <View style={styles.timelineRow}>
-                {/* Left: dot + connector line */}
+                {/* Left dot + line */}
                 <View style={styles.timelineLeft}>
-                  <View style={[styles.timelineDot, {
+                  <View style={[styles.dot, {
                     backgroundColor: section.date === selectedDate ? colors.primary : colors.background,
                     borderColor:      section.date === selectedDate ? colors.primary : colors.border,
                   }]} />
                   {si < sections.length - 1 && (
-                    <View style={[styles.timelineLine, { backgroundColor: colors.border }]} />
+                    <View style={[styles.line, { backgroundColor: colors.border }]} />
                   )}
                 </View>
 
-                {/* Right: date + cards */}
+                {/* Right content */}
                 <View style={styles.timelineRight}>
                   <Text style={[styles.dateLabel, { color: colors.mutedForeground }]}>
                     {section.label}
@@ -464,33 +506,50 @@ export default function JournalScreen() {
 
 const styles = StyleSheet.create({
   container: { flex:1 },
-  headerGrad: { position:'absolute', top:0, left:0, right:0 },
-  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingBottom:10 },
+
+  // Header (dark)
+  headerGrad: { paddingBottom: 0 },
+  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:14, paddingBottom:10 },
   headerLeft: { flexDirection:'row', alignItems:'center', gap:10 },
-  title: { fontSize:26, fontFamily:'Inter_700Bold', letterSpacing:-0.5 },
-  badge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, borderWidth:1 },
-  badgeText: { fontSize:10, fontFamily:'Inter_500Medium' },
-  headerRight: { flexDirection:'row', alignItems:'center', gap:8 },
-  iconBtn: { width:38, height:38, borderRadius:12, alignItems:'center', justifyContent:'center' },
-  searchBar: { flexDirection:'row', alignItems:'center', gap:9, borderWidth:1, borderRadius:14, paddingHorizontal:13, paddingVertical:11, marginHorizontal:16, marginBottom:8 },
+  title: { fontSize:24, fontFamily:'Inter_700Bold', letterSpacing:-0.5, color:'rgba(235,228,255,0.97)' },
+  privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.08)', borderWidth:1, borderColor:'rgba(200,184,232,0.18)' },
+  privateBadgeText: { fontSize:10, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.7)' },
+  headerRight: { flexDirection:'row', gap:8 },
+  hdrBtn: { width:36, height:36, borderRadius:11, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.08)' },
+  hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.5)' },
+
+  // Filter tabs inside dark header
+  filtersScroll: { maxHeight:50 },
+  filtersRow: { flexDirection:'row', gap:8, paddingHorizontal:16, paddingVertical:8 },
+  filterTab: {
+    flexDirection:'row', alignItems:'center', gap:5,
+    paddingHorizontal:13, paddingVertical:7, borderRadius:20,
+    backgroundColor:'rgba(255,255,255,0.1)',
+  },
+  filterTabActive: { backgroundColor:'rgba(255,255,255,0.96)' },
+  filterEmoji: { fontSize:12 },
+  filterLabel: { fontSize:13, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.75)' },
+  filterLabelActive: { color:'#2A1E50' },
+  filterCount: { paddingHorizontal:5, paddingVertical:1, borderRadius:10, backgroundColor:'rgba(255,255,255,0.15)', minWidth:18, alignItems:'center' },
+  filterCountActive: { backgroundColor:'rgba(107,91,149,0.15)' },
+  filterCountText: { fontSize:10, fontFamily:'Inter_600SemiBold', color:'rgba(200,184,232,0.75)' },
+  filterCountTextActive: { color:'#6B5B95' },
+
+  // Search
+  searchBar: { flexDirection:'row', alignItems:'center', gap:9, borderWidth:1, borderRadius:14, paddingHorizontal:13, paddingVertical:11, marginHorizontal:16, marginTop:10 },
   searchInput: { flex:1, fontSize:15, fontFamily:'Inter_400Regular' },
-  filtersScroll: { maxHeight:48 },
-  filtersRow: { flexDirection:'row', gap:8, paddingHorizontal:16, paddingVertical:6 },
-  chip: { flexDirection:'row', alignItems:'center', gap:5, paddingHorizontal:12, paddingVertical:7, borderRadius:20 },
-  chipEmoji: { fontSize:13 },
-  chipLabel: { fontSize:13, fontFamily:'Inter_500Medium' },
-  chipBadge: { paddingHorizontal:6, paddingVertical:1, borderRadius:10, minWidth:18, alignItems:'center' },
-  chipBadgeText: { fontSize:10, fontFamily:'Inter_600SemiBold' },
-  searchHint: { fontSize:12, fontFamily:'Inter_400Regular', fontStyle:'italic', paddingHorizontal:18, paddingBottom:6 },
-  // Timeline layout
-  timelineContent: { paddingHorizontal:16, paddingTop:10 },
+  searchHint: { fontSize:12, fontFamily:'Inter_400Regular', fontStyle:'italic', paddingHorizontal:18, paddingTop:8, paddingBottom:4 },
+
+  // Timeline
+  timelineContent: { paddingHorizontal:16, paddingTop:16 },
   timelineRow: { flexDirection:'row', gap:12 },
   timelineLeft: { width:20, alignItems:'center', paddingTop:3 },
-  timelineDot: { width:12, height:12, borderRadius:6, borderWidth:2, zIndex:1 },
-  timelineLine: { flex:1, width:1.5, marginTop:5, marginBottom:-5 },
+  dot: { width:12, height:12, borderRadius:6, borderWidth:2, zIndex:1 },
+  line: { flex:1, width:1.5, marginTop:5, marginBottom:-5 },
   timelineRight: { flex:1, paddingBottom:20 },
   dateLabel: { fontSize:12, fontFamily:'Inter_500Medium', marginBottom:10, marginTop:1, letterSpacing:0.2 },
-  // Empty state
+
+  // Empty
   empty: { flex:1, alignItems:'center', justifyContent:'center', paddingTop:80, paddingHorizontal:36, gap:14 },
   emptyIcon: { width:76, height:76, borderRadius:38, alignItems:'center', justifyContent:'center', marginBottom:4 },
   emptyTitle: { fontSize:19, fontFamily:'Inter_600SemiBold', textAlign:'center' },
