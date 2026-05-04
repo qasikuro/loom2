@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 // ── API base URL (baked in at build time via app.config.ts) ───────────────────
 
@@ -87,7 +87,7 @@ export interface DiscoverPost {
   authorHandle:   string;
   chapterTitle:   string;
   storySnippet:   string;
-  imageKey:       string;
+  imageUri?:      string;
   mood:           string;
   witnessedCount: number;
   savedCount:     number;
@@ -95,7 +95,7 @@ export interface DiscoverPost {
   chapterNumber:  number;
   vibe:           string;
   saved:          boolean;
-  panels?:        { text: string; imageKey: string }[];
+  panels?:        { text: string; imageUri?: string }[];
 }
 
 export interface Reward {
@@ -145,76 +145,17 @@ const DEFAULT_CHARACTER: Character = {
   isPublic: true,
 };
 
-const SAMPLE_POSTS: DiscoverPost[] = [
-  {
-    id: 'p1', authorName: 'Lumière', authorHandle: '@lumiere.sky',
-    chapterTitle: 'A silent wish', storySnippet: 'I sat under the stars and made a wish...',
-    imageKey: 'story_bg1', mood: 'Lonely', witnessedCount: 215, savedCount: 45,
-    timeAgo: '2h ago', chapterNumber: 3, vibe: 'Lonely', saved: false,
-    panels: [
-      { text: 'I sat under the stars and made a wish...', imageKey: 'story_bg1' },
-      { text: 'The light that carried it was soft and small,\nlike a firefly on a summer night.', imageKey: 'story_bg3' },
-      { text: 'I wonder if it reached you.', imageKey: 'story_bg1' },
-    ],
-  },
-  {
-    id: 'p2', authorName: 'Yoru', authorHandle: '@yoru.wanderer',
-    chapterTitle: 'New journey begins', storySnippet: 'Every adventure starts with a single step forward.',
-    imageKey: 'story_bg2', mood: 'Hopeful', witnessedCount: 178, savedCount: 32,
-    timeAgo: '5h ago', chapterNumber: 1, vibe: 'Soft', saved: false,
-    panels: [
-      { text: 'Every adventure starts with a single step forward.', imageKey: 'story_bg2' },
-      { text: 'I did not know where the path led.\nBut the sky was open.', imageKey: 'story_bg2' },
-    ],
-  },
-  {
-    id: 'p3', authorName: 'Noctis', authorHandle: '@noctis.echo',
-    chapterTitle: 'Whispers in the Wind', storySnippet: 'The wind carries memories of the ones who came before.',
-    imageKey: 'story_bg3', mood: 'Peaceful', witnessedCount: 412, savedCount: 78,
-    timeAgo: '1d ago', chapterNumber: 2, vibe: 'Romantic', saved: false,
-    panels: [
-      { text: 'The wind carries memories\nof the ones who came before.', imageKey: 'story_bg3' },
-      { text: 'I listen to them\nwhen the world gets too quiet.', imageKey: 'story_bg1' },
-      { text: 'And I keep walking.', imageKey: 'story_bg2' },
-    ],
-  },
-  {
-    id: 'p4', authorName: 'Sol', authorHandle: '@sol.bright',
-    chapterTitle: 'Golden Hour', storySnippet: 'When the sky turns gold, I think of you.',
-    imageKey: 'story_bg2', mood: 'Romantic', witnessedCount: 89, savedCount: 21,
-    timeAgo: '2d ago', chapterNumber: 4, vibe: 'Romantic', saved: false,
-    panels: [
-      { text: 'When the sky turns gold,\nI think of you.', imageKey: 'story_bg2' },
-      { text: 'And the promise we made\nbeneath the lanterns.', imageKey: 'story_bg3' },
-    ],
-  },
-  {
-    id: 'p5', authorName: 'Mira', authorHandle: '@mira.bloom',
-    chapterTitle: 'Lost in the meadow', storySnippet: 'Some places exist only in memories.',
-    imageKey: 'story_bg1', mood: 'Soft', witnessedCount: 334, savedCount: 67,
-    timeAgo: '3d ago', chapterNumber: 1, vibe: 'Soft', saved: false,
-    panels: [
-      { text: 'Some places exist only in memories.', imageKey: 'story_bg1' },
-      { text: 'I return there in dreams.', imageKey: 'story_bg3' },
-    ],
-  },
-  {
-    id: 'p6', authorName: 'Kael', authorHandle: '@kael.storm',
-    chapterTitle: 'The forgotten path', storySnippet: 'I kept walking toward a place I belong.',
-    imageKey: 'story_bg3', mood: 'Chaotic', witnessedCount: 254, savedCount: 44,
-    timeAgo: '4d ago', chapterNumber: 1, vibe: 'Chaotic', saved: false,
-    panels: [
-      { text: 'I kept walking\ntoward a place I belong.', imageKey: 'story_bg3' },
-      { text: 'Even if it no longer exists.', imageKey: 'story_bg1' },
-    ],
-  },
-];
-
-const INITIAL_REWARDS: Reward[] = [
-  { id: 'r1', message: 'People experienced\nyour story today', count: 18, icon: 'eye' },
-  { id: 'r2', message: 'Your story was saved\nby someone', count: 6, icon: 'bookmark' },
-  { id: 'r3', message: "You were discovered\nin 'Soft' vibe", icon: 'feather', isRising: true },
-];
+function relativeTimeDiscover(dateStr: string): string {
+  const diff  = Date.now() - new Date(dateStr).getTime();
+  const mins  = Math.floor(diff / 60_000);
+  const hours = Math.floor(diff / 3_600_000);
+  const days  = Math.floor(diff / 86_400_000);
+  if (mins  < 1)   return 'just now';
+  if (mins  < 60)  return `${mins}m ago`;
+  if (hours < 24)  return `${hours}h ago`;
+  if (days  === 1) return 'yesterday';
+  return `${days}d ago`;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -274,12 +215,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [apiOnline, setApiOnline] = useState(false);
 
-  const [character, setCharacterState]    = useState<Character>(DEFAULT_CHARACTER);
-  const [stories, setStories]             = useState<Story[]>([]);
+  const [character, setCharacterState]      = useState<Character>(DEFAULT_CHARACTER);
+  const [stories, setStories]               = useState<Story[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
-  const [outfits, setOutfits]             = useState<Outfit[]>([]);
-  const [discoverPosts, setDiscoverPosts] = useState<DiscoverPost[]>(SAMPLE_POSTS);
-  const [rewards, setRewards]             = useState<Reward[]>(INITIAL_REWARDS);
+  const [outfits, setOutfits]               = useState<Outfit[]>([]);
+  const [savedStoryIds, setSavedStoryIds]   = useState<Set<string>>(new Set());
+  const [rewards, setRewards]               = useState<Reward[]>([]);
+
+  const discoverPosts = useMemo((): DiscoverPost[] =>
+    stories.map(s => ({
+      id:             s.id,
+      authorName:     character.name,
+      authorHandle:   `@${character.name.toLowerCase().replace(/\s+/g, '')}`,
+      chapterTitle:   s.chapterTitle,
+      storySnippet:   s.panels[0]?.text ?? '',
+      imageUri:       s.panels[0]?.imageUri,
+      mood:           s.mood,
+      witnessedCount: s.witnessedCount,
+      savedCount:     s.savedCount,
+      timeAgo:        relativeTimeDiscover(s.date),
+      chapterNumber:  1,
+      vibe:           s.mood,
+      saved:          savedStoryIds.has(s.id),
+      panels:         s.panels.map(p => ({ text: p.text, imageUri: p.imageUri })),
+    })),
+  [stories, character, savedStoryIds]);
 
   // Keep a ref so mutation callbacks always have the latest values without stale closures
   const stateRef = useRef({ journalEntries, stories, outfits, character });
@@ -447,11 +407,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Discover / Rewards ─────────────────────────────────────────────────────
 
   const toggleSavePost = useCallback((id: string) => {
-    setDiscoverPosts(prev =>
-      prev.map(p => p.id === id
-        ? { ...p, saved: !p.saved, savedCount: p.saved ? p.savedCount - 1 : p.savedCount + 1 }
-        : p)
-    );
+    setSavedStoryIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
   }, []);
 
   const dismissReward = useCallback((id: string) => {

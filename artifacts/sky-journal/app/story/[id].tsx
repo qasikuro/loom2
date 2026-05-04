@@ -16,12 +16,26 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Images } from '@/assets/images';
 import { MoodBadge } from '@/components/MoodBadge';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const MOOD_GRADIENTS: Record<string, [string, string, string]> = {
+  Hopeful:     ['#2A2060', '#3A3080', '#2E285A'],
+  Peaceful:    ['#1A2840', '#243860', '#1E304E'],
+  Lonely:      ['#1A1E38', '#24284E', '#1E2244'],
+  Romantic:    ['#2A1830', '#3E2448', '#301A3C'],
+  Chaotic:     ['#2A1A14', '#3E2418', '#301C16'],
+  Dreamy:      ['#221840', '#342860', '#2A1E50'],
+  Soft:        ['#201828', '#302240', '#281C34'],
+  Adventurous: ['#142214', '#1E3420', '#182818'],
+};
+
+function getGradient(mood: string): [string, string, string] {
+  return MOOD_GRADIENTS[mood] ?? ['#1A1630', '#252070', '#1E1A4A'];
+}
 
 export default function StoryScreen() {
   const colors = useColors();
@@ -33,36 +47,32 @@ export default function StoryScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
-  const isDiscover = source === 'discover';
-  const post = isDiscover ? discoverPosts.find(p => p.id === id) : null;
-  const logEntry = !isDiscover ? stories.find(s => s.id === id) : null;
+  // Both own stories and discover stories use the same `stories` array now
+  // since discoverPosts is derived from stories
+  const story = stories.find(s => s.id === id)
+    ?? (discoverPosts.find(p => p.id === id) ? stories.find(s => s.id === id) : null);
+  const post = discoverPosts.find(p => p.id === id) ?? null;
 
-  const title = post?.chapterTitle ?? logEntry?.chapterTitle ?? 'Untitled Chapter';
-  const mood = post?.mood ?? logEntry?.mood ?? 'Peaceful';
-  const authorName = post?.authorName ?? 'You';
-  const chapterNum = post?.chapterNumber ?? 1;
-  const isSaved = post?.saved ?? false;
+  const entry = story ?? null;
 
-  const witnessedCount =
-    (post?.witnessedCount ?? logEntry?.witnessedCount ?? 0) + (witnessed ? 1 : 0);
-  const savedCount =
-    (post?.savedCount ?? logEntry?.savedCount ?? 0) + (isSaved ? 0 : 0);
+  const title       = entry?.chapterTitle ?? post?.chapterTitle ?? 'Untitled Chapter';
+  const mood        = entry?.mood         ?? post?.mood         ?? 'Peaceful';
+  const authorName  = post?.authorName    ?? 'You';
+  const chapterNum  = post?.chapterNumber ?? 1;
+  const isSaved     = post?.saved         ?? false;
 
-  // Build panels from source
-  const panels: { imageUri?: string; imageKey?: string; text: string }[] = isDiscover && post
-    ? (post.panels ?? [{ text: post.storySnippet, imageKey: post.imageKey }]).map(p => ({
-        imageKey: p.imageKey,
-        text: p.text,
-      }))
-    : logEntry
-      ? logEntry.panels.map(p => ({ imageUri: p.imageUri, text: p.text }))
-      : [{ text: 'Story not found.', imageKey: 'story_bg1' }];
+  const witnessedCount = (entry?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0);
+  const savedCount     = entry?.savedCount      ?? post?.savedCount      ?? 0;
 
-  const heroImage = post
-    ? (Images[post.imageKey as keyof typeof Images] ?? Images.story_bg1)
-    : logEntry?.panels[0]?.imageUri
-      ? { uri: logEntry.panels[0].imageUri }
-      : Images.story_bg1;
+  const panels: { imageUri?: string; text: string }[] =
+    entry
+      ? entry.panels.map(p => ({ imageUri: p.imageUri, text: p.text }))
+      : post
+        ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text }))
+        : [{ text: 'Story not found.' }];
+
+  const heroImageUri = panels[0]?.imageUri;
+  const gradient     = getGradient(mood);
 
   function handleWitness() {
     if (!witnessed) {
@@ -72,7 +82,7 @@ export default function StoryScreen() {
   }
 
   function handleSave() {
-    if (isDiscover && post) {
+    if (post) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       toggleSavePost(post.id);
     }
@@ -87,7 +97,15 @@ export default function StoryScreen() {
       >
         {/* Hero banner */}
         <View style={styles.heroWrap}>
-          <Image source={heroImage} style={styles.heroImage} resizeMode="cover" />
+          {heroImageUri ? (
+            <Image source={{ uri: heroImageUri }} style={styles.heroImage} resizeMode="cover" />
+          ) : (
+            <LinearGradient colors={gradient} style={styles.heroImage} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Feather name="star" size={14} color="rgba(200,184,232,0.2)" style={{ position:'absolute', top:40, left:36 }} />
+              <Feather name="star" size={9}  color="rgba(200,184,232,0.14)" style={{ position:'absolute', top:70, right:64 }} />
+              <Feather name="moon" size={40} color="rgba(200,184,232,0.08)" style={{ position:'absolute', top:30, right:30 }} />
+            </LinearGradient>
+          )}
           <LinearGradient
             colors={['rgba(0,0,0,0)', 'rgba(26,22,48,0.92)']}
             style={StyleSheet.absoluteFill}
@@ -130,16 +148,20 @@ export default function StoryScreen() {
 
         {/* Manga panels */}
         {panels.map((panel, idx) => {
-          const imgSource = panel.imageUri
-            ? { uri: panel.imageUri }
-            : Images[(panel.imageKey ?? 'story_bg1') as keyof typeof Images] ?? Images.story_bg1;
-
           const isLast = idx === panels.length - 1;
 
           return (
             <View key={idx} style={[styles.panel, isLast && styles.panelLast]}>
-              {/* Image */}
-              <Image source={imgSource} style={styles.panelImage} resizeMode="cover" />
+              {/* Image or gradient placeholder */}
+              {panel.imageUri ? (
+                <Image source={{ uri: panel.imageUri }} style={styles.panelImage} resizeMode="cover" />
+              ) : (
+                <LinearGradient colors={gradient} style={styles.panelImage} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }}>
+                  <Feather name="star" size={10} color="rgba(200,184,232,0.18)" style={{ position:'absolute', top:20, left:24 }} />
+                  <Feather name="star" size={7}  color="rgba(200,184,232,0.12)" style={{ position:'absolute', top:50, right:44 }} />
+                  <Feather name="moon" size={30} color="rgba(200,184,232,0.07)" style={{ position:'absolute', bottom:40, right:24 }} />
+                </LinearGradient>
+              )}
 
               {/* Dark gradient over bottom of image */}
               <LinearGradient
@@ -167,7 +189,7 @@ export default function StoryScreen() {
           <Feather name="star" size={22} color={colors.gold} />
           <Text style={[styles.endTitle, { color: '#F0EAF8' }]}>End of Chapter {chapterNum}</Text>
           <Text style={[styles.endSub, { color: 'rgba(200,184,232,0.7)' }]}>
-            {isDiscover ? `by ${authorName}` : 'Your story'}
+            {post ? `by ${authorName}` : 'Your story'}
           </Text>
           <View style={styles.endStats}>
             <Feather name="eye" size={14} color="rgba(200,184,232,0.6)" />
@@ -198,7 +220,7 @@ export default function StoryScreen() {
         </View>
 
         <View style={styles.actionRow}>
-          {isDiscover && (
+          {!!post && (
             <TouchableOpacity
               style={[
                 styles.actionBtn,

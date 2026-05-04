@@ -1,8 +1,10 @@
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   Image,
   Platform,
   ScrollView,
@@ -288,6 +290,76 @@ const FILTERS: { key: FilterKey; label: string; emoji: string | null }[] = [
   { key:'moment', label:'Moments', emoji:'🌙' },
 ];
 
+// ── Compose FAB ───────────────────────────────────────────────────────────────
+
+const COMPOSE_TYPES = [
+  { type: 'moment',  label: 'Moment',   icon: 'moon'    as const, color: '#5848A8', bg: 'rgba(88,72,168,0.14)'  },
+  { type: 'friend',  label: 'Friend',   icon: 'users'   as const, color: '#4A6898', bg: 'rgba(74,104,152,0.14)' },
+  { type: 'diary',   label: 'Diary',    icon: 'feather' as const, color: '#6B5B95', bg: 'rgba(107,91,149,0.14)' },
+] as const;
+
+function ComposeFAB({ bottomPad }: { bottomPad: number }) {
+  const colors   = useColors();
+  const [open, setOpen] = useState(false);
+  const anim    = useRef(new Animated.Value(0)).current;
+
+  function toggle() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const toValue = open ? 0 : 1;
+    setOpen(!open);
+    Animated.spring(anim, { toValue, useNativeDriver: true, tension: 60, friction: 8 }).start();
+  }
+
+  function handlePick(type: 'diary' | 'friend' | 'moment') {
+    setOpen(false);
+    anim.setValue(0);
+    Haptics.selectionAsync();
+    router.push({ pathname: '/create-journal-entry', params: { type } });
+  }
+
+  const rotation = anim.interpolate({ inputRange: [0,1], outputRange: ['0deg','45deg'] });
+
+  return (
+    <View style={[fab.wrap, { bottom: bottomPad + 16 }]} pointerEvents="box-none">
+      {/* Mini action sheet */}
+      {COMPOSE_TYPES.map((item, idx) => {
+        const translateY = anim.interpolate({ inputRange: [0,1], outputRange: [0, -(70 + idx * 58)] });
+        const opacity    = anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
+        return (
+          <Animated.View key={item.type} style={[fab.actionRow, { opacity, transform: [{ translateY }] }]}>
+            <View style={[fab.actionLabel, { backgroundColor: 'rgba(26,22,48,0.88)' }]}>
+              <Text style={fab.actionLabelText}>{item.label}</Text>
+            </View>
+            <TouchableOpacity
+              style={[fab.actionBtn, { backgroundColor: item.bg, borderColor: `${item.color}40` }]}
+              onPress={() => handlePick(item.type)}
+              activeOpacity={0.82}
+            >
+              <Feather name={item.icon} size={19} color={item.color} />
+            </TouchableOpacity>
+          </Animated.View>
+        );
+      })}
+
+      {/* Main FAB */}
+      <TouchableOpacity style={[fab.main, SHADOW.md, { backgroundColor: colors.primary }]} onPress={toggle} activeOpacity={0.88}>
+        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+          <Feather name="edit-2" size={20} color="#fff" />
+        </Animated.View>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const fab = StyleSheet.create({
+  wrap:       { position:'absolute', right:20, alignItems:'flex-end' },
+  main:       { width:56, height:56, borderRadius:28, alignItems:'center', justifyContent:'center' },
+  actionRow:  { position:'absolute', right:0, flexDirection:'row', alignItems:'center', gap:10 },
+  actionBtn:  { width:48, height:48, borderRadius:24, borderWidth:1, alignItems:'center', justifyContent:'center' },
+  actionLabel:{ paddingHorizontal:10, paddingVertical:5, borderRadius:10 },
+  actionLabelText: { color:'#fff', fontSize:13, fontFamily:'Inter_500Medium' },
+});
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function JournalScreen() {
@@ -446,7 +518,7 @@ export default function JournalScreen() {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.timelineContent, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[styles.timelineContent, { paddingBottom: bottomPad + 80 }]}
       >
         {sections.length === 0 ? (
           <View style={styles.empty}>
@@ -500,6 +572,9 @@ export default function JournalScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* ── Compose FAB ───────────────────────────────────────────── */}
+      <ComposeFAB bottomPad={Platform.OS === 'web' ? 100 : insets.bottom + 80} />
     </View>
   );
 }
