@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -117,7 +117,7 @@ export default function CreateScreen() {
           style={[styles.postBtn, { backgroundColor: posting ? colors.muted : colors.primary }]}
           onPress={handlePost} disabled={posting}
         >
-          <Feather name="send" size={14} color={posting ? colors.mutedForeground : '#fff'} />
+          <Icon name="send" size={14} color={posting ? colors.mutedForeground : '#fff'} />
           <Text style={[styles.postBtnText, { color: posting ? colors.mutedForeground : '#fff' }]}>
             {posting ? '...' : 'Publish'}
           </Text>
@@ -147,18 +147,18 @@ export default function CreateScreen() {
               style={[styles.chip, { backgroundColor: colors.muted, borderColor: colors.border }]}
               onPress={() => { setShowLocations(v => !v); setShowMoods(false); }}
             >
-              <Feather name="map-pin" size={12} color={colors.primary} />
+              <Icon name="map-pin" size={12} color={colors.primary} />
               <Text style={[styles.chipText, { color: colors.foreground }]} numberOfLines={1}>{location}</Text>
-              <Feather name="chevron-down" size={11} color={colors.mutedForeground} />
+              <Icon name="chevron-down" size={11} color={colors.mutedForeground} />
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[styles.chip, { backgroundColor: `${currentMood?.color}15`, borderColor: `${currentMood?.color}35` }]}
               onPress={() => { setShowMoods(v => !v); setShowLocations(false); }}
             >
-              <Feather name={currentMood?.icon ?? 'sun'} size={12} color={currentMood?.color} />
+              <Icon name={currentMood?.icon ?? 'sun'} size={12} color={currentMood?.color} />
               <Text style={[styles.chipText, { color: currentMood?.color }]}>{mood}</Text>
-              <Feather name="chevron-down" size={11} color={currentMood?.color} />
+              <Icon name="chevron-down" size={11} color={currentMood?.color} />
             </TouchableOpacity>
           </View>
 
@@ -186,7 +186,7 @@ export default function CreateScreen() {
                   }]}
                   onPress={() => { setMood(m.label); setShowMoods(false); Haptics.selectionAsync(); }}
                 >
-                  <Feather name={m.icon} size={13} color={m.color} />
+                  <Icon name={m.icon} size={13} color={m.color} />
                   <Text style={[styles.moodPillText, { color: m.color }]}>{m.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -206,7 +206,7 @@ export default function CreateScreen() {
                   }]}
                   onPress={() => setIsPublic(opt === 'Public')}
                 >
-                  <Feather name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
+                  <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
                   <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
                 </TouchableOpacity>
               );
@@ -216,7 +216,7 @@ export default function CreateScreen() {
 
         {/* Panels label */}
         <View style={styles.panelsLabel}>
-          <Feather name="layers" size={14} color={colors.primary} />
+          <Icon name="layers" size={14} color={colors.primary} />
           <Text style={[styles.panelsLabelText, { color: colors.foreground }]}>Story Panels</Text>
           <Text style={[styles.panelsLabelHint, { color: colors.mutedForeground }]}>Each panel = one manga page</Text>
         </View>
@@ -232,7 +232,7 @@ export default function CreateScreen() {
           onPress={addPanel}
         >
           <View style={[styles.addBtnIcon, { backgroundColor: `${colors.primary}18` }]}>
-            <Feather name="plus" size={20} color={colors.primary} />
+            <Icon name="plus" size={20} color={colors.primary} />
           </View>
           <View>
             <Text style={[styles.addBtnText, { color: colors.primary }]}>Add Next Panel</Text>
@@ -243,7 +243,7 @@ export default function CreateScreen() {
         {/* Inline validation error */}
         {error && (
           <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Icon name="alert-circle" size={14} color="#DC2626" />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -251,7 +251,7 @@ export default function CreateScreen() {
         {/* Publish button */}
         <TouchableOpacity style={styles.publishBtn} onPress={handlePost} disabled={posting} activeOpacity={0.85}>
           <LinearGradient colors={['#7B6BA8', '#6B5B95', '#5A4A80']} style={styles.publishGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            <Feather name="send" size={15} color="#fff" />
+            <Icon name="send" size={15} color="#fff" />
             <Text style={styles.publishText}>{posting ? 'Publishing...' : 'Publish Story'}</Text>
           </LinearGradient>
         </TouchableOpacity>

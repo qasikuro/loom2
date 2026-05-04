@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -136,13 +136,13 @@ export default function HomeScreen() {
 
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.push('/(tabs)/profile')}>
-              <Feather name="settings" size={17} color="rgba(200,184,232,0.75)" />
+              <Icon name="settings" size={17} color="rgba(200,184,232,0.75)" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconBtn}
               onPress={() => { setShowNotifs(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
-              <Feather name="bell" size={17} color="rgba(200,184,232,0.75)" />
+              <Icon name="bell" size={17} color="rgba(200,184,232,0.75)" />
               {hasNotifs && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
@@ -151,19 +151,19 @@ export default function HomeScreen() {
         {/* Stats strip */}
         <View style={styles.statsStrip}>
           <View style={styles.statPill}>
-            <Feather name="book-open" size={12} color="rgba(200,184,232,0.6)" />
+            <Icon name="book-open" size={12} color="rgba(200,184,232,0.6)" />
             <Text style={styles.statPillText}>{journalEntries.length} entries</Text>
           </View>
           <View style={styles.statDot} />
           <View style={styles.statPill}>
-            <Feather name="layers" size={12} color="rgba(200,184,232,0.6)" />
+            <Icon name="layers" size={12} color="rgba(200,184,232,0.6)" />
             <Text style={styles.statPillText}>{stories.length} stories</Text>
           </View>
           {lastSeen && (
             <>
               <View style={styles.statDot} />
               <View style={styles.statPill}>
-                <Feather name="clock" size={12} color="rgba(200,184,232,0.6)" />
+                <Icon name="clock" size={12} color="rgba(200,184,232,0.6)" />
                 <Text style={styles.statPillText}>Last: {lastSeen}</Text>
               </View>
             </>
@@ -197,7 +197,7 @@ export default function HomeScreen() {
             <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
             {activeOutfit && (
               <View style={styles.outfitNamePill}>
-                <Feather name="star" size={9} color="rgba(200,168,75,0.9)" />
+                <Icon name="star" size={9} color="rgba(200,168,75,0.9)" />
                 <Text style={styles.outfitNameText} numberOfLines={1}>{activeOutfit.name}</Text>
               </View>
             )}
@@ -216,7 +216,7 @@ export default function HomeScreen() {
               style={styles.changeOutfitBtn}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfitPicker(true); }}
             >
-              <Feather name="refresh-cw" size={13} color="rgba(200,184,232,0.9)" />
+              <Icon name="refresh-cw" size={13} color="rgba(200,184,232,0.9)" />
             </TouchableOpacity>
           )}
         </View>
@@ -253,7 +253,7 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-          <Feather name="chevron-right" size={16} color="#C0B4D8" />
+          <Icon name="chevron-right" size={16} color="#C0B4D8" />
         </TouchableOpacity>
 
         {/* Section label */}
@@ -292,7 +292,7 @@ export default function HomeScreen() {
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Choose Display Outfit</Text>
               <TouchableOpacity style={styles.closeBtn} onPress={() => setShowOutfitPicker(false)}>
-                <Feather name="x" size={16} color="#9A8EB4" />
+                <Icon name="x" size={16} color="#9A8EB4" />
               </TouchableOpacity>
             </View>
             <Text style={styles.pickerSub}>Selected outfit shows on your home & profile</Text>
@@ -303,11 +303,11 @@ export default function HomeScreen() {
                 onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(null); setShowOutfitPicker(false); }}
               >
                 <View style={[styles.pickerCardImg, styles.pickerCardNone]}>
-                  <Feather name="slash" size={22} color="#9A8EB4" />
+                  <Icon name="slash" size={22} color="#9A8EB4" />
                 </View>
                 <Text style={styles.pickerCardName}>None</Text>
                 {!activeOutfitId && (
-                  <View style={styles.pickerActiveDot}><Feather name="check" size={10} color="#fff" /></View>
+                  <View style={styles.pickerActiveDot}><Icon name="check" size={10} color="#fff" /></View>
                 )}
               </TouchableOpacity>
 
@@ -319,11 +319,11 @@ export default function HomeScreen() {
                 >
                   {outfit.imageUri
                     ? <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} resizeMode="cover" />
-                    : <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}><Feather name="star" size={22} color="rgba(107,91,149,0.4)" /></View>
+                    : <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}><Icon name="star" size={22} color="rgba(107,91,149,0.4)" /></View>
                   }
                   <Text style={styles.pickerCardName} numberOfLines={1}>{outfit.name}</Text>
                   {activeOutfitId === outfit.id && (
-                    <View style={styles.pickerActiveDot}><Feather name="check" size={10} color="#fff" /></View>
+                    <View style={styles.pickerActiveDot}><Icon name="check" size={10} color="#fff" /></View>
                   )}
                 </TouchableOpacity>
               ))}
@@ -346,13 +346,13 @@ export default function HomeScreen() {
                 <View style={styles.countBadge}><Text style={styles.countText}>{rewards.length}</Text></View>
               )}
               <TouchableOpacity style={styles.closeBtn} onPress={() => setShowNotifs(false)}>
-                <Feather name="x" size={16} color="#9A8EB4" />
+                <Icon name="x" size={16} color="#9A8EB4" />
               </TouchableOpacity>
             </View>
 
             {rewards.length === 0 ? (
               <View style={styles.notifsEmpty}>
-                <Feather name="bell-off" size={34} color="#C8B8E8" />
+                <Icon name="bell-off" size={34} color="#C8B8E8" />
                 <Text style={styles.notifsEmptyText}>You're all caught up ✦</Text>
               </View>
             ) : (
@@ -363,7 +363,7 @@ export default function HomeScreen() {
                     borderColor: r.isRising ? 'rgba(200,168,75,0.22)' : 'rgba(107,91,149,0.12)',
                   }]}>
                     <View style={[styles.notifIconWrap, { backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(107,91,149,0.1)' }]}>
-                      <Feather name={r.isRising ? 'trending-up' : (r.icon as any)} size={16} color={r.isRising ? '#C8A84B' : '#6B5B95'} />
+                      <Icon name={r.isRising ? 'trending-up' : (r.icon as any)} size={16} color={r.isRising ? '#C8A84B' : '#6B5B95'} />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       {r.count !== undefined && (
@@ -379,7 +379,7 @@ export default function HomeScreen() {
                       onPress={() => dismissReward(r.id)}
                       hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                     >
-                      <Feather name="x" size={12} color={r.isRising ? 'rgba(200,184,232,0.5)' : '#9A8EB4'} />
+                      <Icon name="x" size={12} color={r.isRising ? 'rgba(200,184,232,0.5)' : '#9A8EB4'} />
                     </TouchableOpacity>
                   </View>
                 ))}

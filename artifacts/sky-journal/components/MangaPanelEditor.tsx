@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import { persistImageUri } from '@/utils/persistImage';
@@ -55,7 +55,7 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
             style={[styles.deleteBtn, { backgroundColor: `${colors.destructive}0F` }]}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
-            <Feather name="trash-2" size={13} color={colors.destructive} />
+            <Icon name="trash-2" size={13} color={colors.destructive} />
           </TouchableOpacity>
         )}
       </View>
@@ -78,7 +78,7 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
             <Image source={{ uri: panel.imageUri }} style={styles.panelImage} resizeMode="cover" />
             <View style={styles.imageEditOverlay}>
               <View style={[styles.editChip, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
-                <Feather name="camera" size={12} color="#1E1830" />
+                <Icon name="camera" size={12} color="#1E1830" />
                 <Text style={[styles.editChipText, { color: '#1E1830' }]}>Change photo</Text>
               </View>
             </View>
@@ -86,7 +86,7 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
         ) : (
           <View style={styles.imagePlaceholder}>
             <View style={[styles.cameraIconBg, { backgroundColor: `${colors.primary}12` }]}>
-              <Feather name="image" size={28} color={`${colors.primary}90`} />
+              <Icon name="image" size={28} color={`${colors.primary}90`} />
             </View>
             <Text style={[styles.placeholderTitle, { color: colors.mutedForeground }]}>Add panel image</Text>
             <Text style={[styles.placeholderSub, { color: `${colors.mutedForeground}80` }]}>Tap to choose from gallery</Text>

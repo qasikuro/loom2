@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -119,7 +119,7 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
         <View style={[tc.avatar, { backgroundColor: cfg.bg }]}>
           {initial
             ? <Text style={tc.avatarInitial}>{initial}</Text>
-            : <Feather name={cfg.icon} size={17} color="rgba(255,255,255,0.88)" />
+            : <Icon name={cfg.icon} size={17} color="rgba(255,255,255,0.88)" />
           }
         </View>
 
@@ -134,7 +134,7 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
         </View>
 
         {/* Star bookmark */}
-        <Feather name="star" size={16} color="#C8A84B" />
+        <Icon name="star" size={16} color="#C8A84B" />
       </View>
 
       {/* ─ Content: snippet + optional thumbnail ─ */}
@@ -156,13 +156,13 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
         <MoodBadge mood={entry.mood} size="sm" />
         {entry.type === 'friend' && !!entry.friendName && (
           <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.1)', borderColor:'rgba(74,104,152,0.22)' }]}>
-            <Feather name="users" size={10} color="#4A6898" />
+            <Icon name="users" size={10} color="#4A6898" />
             <Text style={[tc.typePillText, { color:'#4A6898' }]}>With {entry.friendName}</Text>
           </View>
         )}
         {entry.type === 'moment' && (
           <View style={[tc.typePill, { backgroundColor:'rgba(88,72,168,0.1)', borderColor:'rgba(88,72,168,0.22)' }]}>
-            <Feather name="moon" size={10} color="#5848A8" />
+            <Icon name="moon" size={10} color="#5848A8" />
             <Text style={[tc.typePillText, { color:'#5848A8' }]}>Moment</Text>
           </View>
         )}
@@ -174,7 +174,7 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
         >
           {confirming
             ? <Text style={tc.deleteBtnText}>Delete?</Text>
-            : <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+            : <Icon name="trash-2" size={12} color={colors.mutedForeground} />
           }
         </TouchableOpacity>
       </View>
@@ -236,13 +236,13 @@ function MiniCalendar({
     <View style={[cal.wrap, SHADOW.xs, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <View style={cal.monthRow}>
         <TouchableOpacity style={[cal.navBtn, { backgroundColor: colors.muted }]} onPress={prevMonth}>
-          <Feather name="chevron-left" size={15} color={colors.primary} />
+          <Icon name="chevron-left" size={15} color={colors.primary} />
         </TouchableOpacity>
         <Text style={[cal.monthText, { color: colors.foreground }]}>
           {MONTH_FULL[month]} {year}
         </Text>
         <TouchableOpacity style={[cal.navBtn, { backgroundColor: colors.muted }]} onPress={nextMonth}>
-          <Feather name="chevron-right" size={15} color={colors.primary} />
+          <Icon name="chevron-right" size={15} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -360,7 +360,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
               onPress={() => handlePick(item.type)}
               activeOpacity={0.82}
             >
-              <Feather name={item.icon} size={19} color={item.color} />
+              <Icon name={item.icon} size={19} color={item.color} />
             </TouchableOpacity>
           </Animated.View>
         );
@@ -369,7 +369,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
       {/* Main FAB */}
       <TouchableOpacity style={[fab.main, SHADOW.md, { backgroundColor: colors.primary }]} onPress={toggle} activeOpacity={0.88}>
         <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-          <Feather name="edit-2" size={20} color="#fff" />
+          <Icon name="edit-2" size={20} color="#fff" />
         </Animated.View>
       </TouchableOpacity>
     </View>
@@ -448,7 +448,7 @@ export default function JournalScreen() {
           <View style={styles.headerLeft}>
             <Text style={styles.title}>My Journal</Text>
             <View style={styles.privateBadge}>
-              <Feather name="lock" size={10} color="rgba(200,184,232,0.7)" />
+              <Icon name="lock" size={10} color="rgba(200,184,232,0.7)" />
               <Text style={styles.privateBadgeText}>Private</Text>
             </View>
           </View>
@@ -457,13 +457,13 @@ export default function JournalScreen() {
               style={[styles.hdrBtn, showCalendar && styles.hdrBtnActive]}
               onPress={() => setShowCalendar(v => !v)}
             >
-              <Feather name="calendar" size={16} color={showCalendar ? '#fff' : 'rgba(200,184,232,0.7)'} />
+              <Icon name="calendar" size={16} color={showCalendar ? '#fff' : 'rgba(200,184,232,0.7)'} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.hdrBtn, showSearch && styles.hdrBtnActive]}
               onPress={() => { setShowSearch(v => !v); if (showSearch) setSearchQuery(''); }}
             >
-              <Feather name={showSearch ? 'x' : 'search'} size={16} color={showSearch ? '#fff' : 'rgba(200,184,232,0.7)'} />
+              <Icon name={showSearch ? 'x' : 'search'} size={16} color={showSearch ? '#fff' : 'rgba(200,184,232,0.7)'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -504,7 +504,7 @@ export default function JournalScreen() {
       {/* ── Search bar ─────────────────────────────────────────────── */}
       {showSearch && (
         <View style={[styles.searchBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Feather name="search" size={15} color={colors.mutedForeground} />
+          <Icon name="search" size={15} color={colors.mutedForeground} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
             placeholder="Search entries, friends, moods..."
@@ -516,7 +516,7 @@ export default function JournalScreen() {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Feather name="x" size={13} color={colors.mutedForeground} />
+              <Icon name="x" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>

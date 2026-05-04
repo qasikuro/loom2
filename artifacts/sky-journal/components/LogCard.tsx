@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -34,11 +34,11 @@ function DiaryCard({ entry, onPress, onDelete }: LogCardProps) {
       )}
       <View style={styles.body}>
         <View style={styles.metaRow}>
-          <Feather name="book" size={10} color={colors.mutedForeground} />
+          <Icon name="book" size={10} color={colors.mutedForeground} />
           <Text style={[styles.metaText, { color: colors.mutedForeground }]}>Diary · {formatDate(entry.date)}</Text>
           {onDelete && (
             <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-              <Feather name="trash-2" size={13} color={colors.mutedForeground} />
+              <Icon name="trash-2" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -66,11 +66,11 @@ function FriendCard({ entry, onPress, onDelete }: LogCardProps) {
         <View style={styles.metaRow}>
           <Text style={{ fontSize: 14 }}>🤝</Text>
           <Text style={[styles.friendLogLabel, { color: '#4878A8' }]}>Friend Log</Text>
-          <Feather name="calendar" size={10} color={colors.mutedForeground} style={{ marginLeft: 8 }} />
+          <Icon name="calendar" size={10} color={colors.mutedForeground} style={{ marginLeft: 8 }} />
           <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{formatDate(entry.date)}</Text>
           {onDelete && (
             <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-              <Feather name="trash-2" size={13} color={colors.mutedForeground} />
+              <Icon name="trash-2" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -107,7 +107,7 @@ function MomentCard({ entry, onPress, onDelete }: LogCardProps) {
         <Text style={[styles.momentLabel, { color: 'rgba(200,184,232,0.7)' }]}>Moment · {formatDate(entry.date)}</Text>
         {onDelete && (
           <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-            <Feather name="trash-2" size={13} color="rgba(200,184,232,0.4)" />
+            <Icon name="trash-2" size={13} color="rgba(200,184,232,0.4)" />
           </TouchableOpacity>
         )}
       </View>

@@ -1,7 +1,7 @@
-import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import type { Reward } from '@/context/AppContext';
@@ -18,7 +18,7 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
     return (
       <View style={[styles.risingCard, { backgroundColor: colors.night, borderColor: 'rgba(200,168,75,0.22)' }, SHADOW.md]}>
         <View style={[styles.risingIconWrap, { backgroundColor: 'rgba(200,168,75,0.18)' }]}>
-          <Feather name="trending-up" size={18} color={colors.gold} />
+          <Icon name="trending-up" size={18} color={colors.gold} />
         </View>
         <View style={styles.risingBody}>
           <Text style={[styles.risingLabel, { color: 'rgba(200,168,75,0.65)' }]}>RISING</Text>
@@ -33,7 +33,7 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
             style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
-            <Feather name="x" size={13} color="rgba(200,184,232,0.45)" />
+            <Icon name="x" size={13} color="rgba(200,184,232,0.45)" />
           </TouchableOpacity>
         )}
       </View>
@@ -43,7 +43,7 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}>
       <View style={[styles.iconWrap, { backgroundColor: `${colors.primary}12` }]}>
-        <Feather name={reward.icon as keyof typeof Feather.glyphMap} size={18} color={colors.primary} />
+        <Icon name={reward.icon} size={18} color={colors.primary} />
       </View>
       <View style={styles.body}>
         <View style={styles.bodyTop}>
@@ -59,7 +59,7 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
           style={[styles.closeBtn, { backgroundColor: colors.muted }]}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
         >
-          <Feather name="x" size={12} color={colors.mutedForeground} />
+          <Icon name="x" size={12} color={colors.mutedForeground} />
         </TouchableOpacity>
       )}
     </View>
@@ -105,7 +105,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexShrink: 0,
   },
-  // Rising
   risingCard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -120,16 +120,16 @@ export default function CreateJournalEntryScreen() {
           style={[styles.iconBtn, { backgroundColor: colors.muted }]}
           onPress={() => router.back()}
         >
-          <Feather name="x" size={18} color={colors.foreground} />
+          <Icon name="x" size={18} color={colors.foreground} />
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
           <View style={styles.headerTitleRow}>
-            <Feather name={cfg.icon} size={14} color={cfg.accent} />
+            <Icon name={cfg.icon} size={14} color={cfg.accent} />
             <Text style={[styles.headerTitle, { color: colors.foreground }]}>{cfg.title}</Text>
           </View>
           <View style={[styles.privatePill, { backgroundColor: `${colors.primary}12` }]}>
-            <Feather name="lock" size={10} color={colors.primary} />
+            <Icon name="lock" size={10} color={colors.primary} />
             <Text style={[styles.privatePillText, { color: colors.primary }]}>Private</Text>
           </View>
         </View>
@@ -157,7 +157,7 @@ export default function CreateJournalEntryScreen() {
         {/* Friend name input (friend type only) */}
         {entryType === 'friend' && (
           <View style={[styles.friendRow, { borderColor: colors.border, backgroundColor: colors.card }]}>
-            <Feather name="users" size={15} color="#4A6898" />
+            <Icon name="users" size={15} color="#4A6898" />
             <TextInput
               style={[styles.friendInput, { color: colors.foreground }]}
               placeholder="Who were you with?"
@@ -175,7 +175,7 @@ export default function CreateJournalEntryScreen() {
           style={[styles.promptCard, { backgroundColor: `${cfg.accent}08`, borderColor: `${cfg.accent}18` }]}
           onPress={() => inputRef.current?.focus()}
         >
-          <Feather name="feather" size={13} color={`${cfg.accent}80`} />
+          <Icon name="feather" size={13} color={`${cfg.accent}80`} />
           <Text style={[styles.promptText, { color: colors.mutedForeground }]}>
             {entryType === 'friend'  ? 'What moment do you want to remember with them?' :
              entryType === 'moment'  ? 'Capture this feeling before it fades...' :
@@ -211,7 +211,7 @@ export default function CreateJournalEntryScreen() {
               style={[styles.removeImg, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
               onPress={() => setImageUri(undefined)}
             >
-              <Feather name="x" size={14} color="#fff" />
+              <Icon name="x" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
         ) : (
@@ -219,7 +219,7 @@ export default function CreateJournalEntryScreen() {
             style={[styles.addImageBtn, { borderColor: colors.border, backgroundColor: colors.muted }]}
             onPress={pickImage}
           >
-            <Feather name="image" size={16} color={colors.mutedForeground} />
+            <Icon name="image" size={16} color={colors.mutedForeground} />
             <Text style={[styles.addImageText, { color: colors.mutedForeground }]}>
               Add a photo (optional)
             </Text>
@@ -239,7 +239,7 @@ export default function CreateJournalEntryScreen() {
               }]}
               onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
             >
-              <Feather name={m.icon} size={14} color={m.color} />
+              <Icon name={m.icon} size={14} color={m.color} />
               <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
             </TouchableOpacity>
           ))}
@@ -248,14 +248,14 @@ export default function CreateJournalEntryScreen() {
         {/* Inline validation error */}
         {error && (
           <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Icon name="alert-circle" size={14} color="#DC2626" />
             <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
           </View>
         )}
 
         {/* Private note */}
         <View style={[styles.privateNote, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}15` }]}>
-          <Feather name="lock" size={12} color={`${colors.primary}70`} />
+          <Icon name="lock" size={12} color={`${colors.primary}70`} />
           <Text style={[styles.privateNoteText, { color: colors.mutedForeground }]}>
             Journal entries are always private — only visible to you.
           </Text>

@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -83,10 +83,10 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
           <LinearGradient colors={gradient} style={styles.image} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
             {/* Star particles for atmosphere */}
             <View style={styles.placeholderInner}>
-              <Feather name="star" size={11} color="rgba(200,184,232,0.25)" style={{ position:'absolute', top:18, left:28 }} />
-              <Feather name="star" size={7}  color="rgba(200,184,232,0.18)" style={{ position:'absolute', top:30, right:44 }} />
-              <Feather name="star" size={9}  color="rgba(200,184,232,0.20)" style={{ position:'absolute', bottom:24, left:60 }} />
-              <Feather name="moon" size={28} color="rgba(200,184,232,0.10)" style={{ position:'absolute', top:14, right:20 }} />
+              <Icon name="star" size={11} color="rgba(200,184,232,0.25)" style={{ position:'absolute', top:18, left:28 }} />
+              <Icon name="star" size={7}  color="rgba(200,184,232,0.18)" style={{ position:'absolute', top:30, right:44 }} />
+              <Icon name="star" size={9}  color="rgba(200,184,232,0.20)" style={{ position:'absolute', bottom:24, left:60 }} />
+              <Icon name="moon" size={28} color="rgba(200,184,232,0.10)" style={{ position:'absolute', top:14, right:20 }} />
             </View>
           </LinearGradient>
         )}
@@ -105,7 +105,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
         <View style={styles.footer}>
           <View style={styles.statsGroup}>
             <View style={styles.statItem}>
-              <Feather name="eye" size={12} color={colors.mutedForeground} />
+              <Icon name="eye" size={12} color={colors.mutedForeground} />
               <Text style={[styles.statText, { color: colors.mutedForeground }]}>
                 {post.witnessedCount >= 1000
                   ? `${(post.witnessedCount / 1000).toFixed(1)}k`
@@ -114,7 +114,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
             </View>
             <View style={[styles.statDot, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Feather name="bookmark" size={12} color={colors.mutedForeground} />
+              <Icon name="bookmark" size={12} color={colors.mutedForeground} />
               <Text style={[styles.statText, { color: colors.mutedForeground }]}>{post.savedCount}</Text>
             </View>
           </View>
@@ -138,7 +138,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
               >
                 {confirmingDelete
                   ? <Text style={styles.deleteConfirmText}>Delete?</Text>
-                  : <Feather name="trash-2" size={14} color={colors.mutedForeground} />
+                  : <Icon name="trash-2" size={14} color={colors.mutedForeground} />
                 }
               </TouchableOpacity>
             )}

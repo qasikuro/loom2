@@ -1,5 +1,4 @@
 import { Tabs } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 import { useAuth } from '@clerk/expo';
 import React from 'react';
 import {
@@ -9,6 +8,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Icon, type IconName } from '@/components/Icon';
 
 const PURPLE     = '#6B5B95';
 const TAB_BAR_BG = '#FDFAF7';
@@ -21,13 +22,13 @@ function TabIcon({
   color,
   focused,
 }: {
-  name: React.ComponentProps<typeof Feather>['name'];
+  name: IconName;
   color: string;
   focused: boolean;
 }) {
   return (
     <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
-      <Feather name={name} size={20} color={color} />
+      <Icon name={name} size={20} color={color} />
     </View>
   );
 }
@@ -35,7 +36,7 @@ function TabIcon({
 function CreateIcon() {
   return (
     <View style={styles.createBtn}>
-      <Feather name="plus" size={24} color="#fff" />
+      <Icon name="plus" size={24} color="#fff" />
     </View>
   );
 }
@@ -44,9 +45,6 @@ function ClassicTabLayout() {
   const insets = useSafeAreaInsets();
   const isWeb  = Platform.OS === 'web';
 
-  // Safe-area-aware bottom margin for the pill bar.
-  // On phones with a home indicator (iOS ≥ X, Android gesture nav) insets.bottom > 0.
-  // We always keep at least 8 px of breathing room.
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 8);
 
   return (
@@ -56,19 +54,14 @@ function ClassicTabLayout() {
         tabBarActiveTintColor:   PURPLE,
         tabBarInactiveTintColor: INACTIVE,
 
-        // ── Floating pill: no position:absolute so it never overlaps content ──
         tabBarStyle: {
-          // Horizontal inset creates the floating pill shape
           marginHorizontal: isWeb ? 0 : 12,
-          // Sits above the home indicator / gesture bar
           marginBottom: barMarginBottom,
           height: isWeb ? 64 : BAR_HEIGHT,
           borderRadius: isWeb ? 0 : 28,
           backgroundColor: TAB_BAR_BG,
           borderTopWidth: 0,
-          // Clip children to the rounded corners
           overflow: 'hidden',
-          // Shadow
           elevation: 16,
           shadowColor: '#1E1830',
           shadowOffset: { width: 0, height: 4 },

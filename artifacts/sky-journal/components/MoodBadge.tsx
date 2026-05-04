@@ -1,7 +1,7 @@
-import { Feather } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 
 interface MoodBadgeProps {
@@ -9,21 +9,21 @@ interface MoodBadgeProps {
   size?: 'sm' | 'md';
 }
 
-const MOOD_ICONS: Record<string, { icon: keyof typeof Feather.glyphMap; color: string }> = {
-  Hopeful: { icon: 'sun', color: '#C8A84B' },
-  Lonely: { icon: 'moon', color: '#7090C0' },
-  Peaceful: { icon: 'cloud', color: '#78A8C8' },
-  Romantic: { icon: 'heart', color: '#C870A0' },
-  Chaotic: { icon: 'zap', color: '#D0784A' },
-  Dreamy: { icon: 'star', color: '#8B6BA8' },
-  Soft: { icon: 'feather', color: '#9888C0' },
-  Adventurous: { icon: 'wind', color: '#60A878' },
-  Sad: { icon: 'droplet', color: '#7890B8' },
-  Joyful: { icon: 'smile', color: '#C8B040' },
+const MOOD_ICONS: Record<string, { icon: string; color: string }> = {
+  Hopeful:     { icon: 'sun',     color: '#C8A84B' },
+  Lonely:      { icon: 'moon',    color: '#7090C0' },
+  Peaceful:    { icon: 'cloud',   color: '#78A8C8' },
+  Romantic:    { icon: 'heart',   color: '#C870A0' },
+  Chaotic:     { icon: 'zap',     color: '#D0784A' },
+  Dreamy:      { icon: 'star',    color: '#8B6BA8' },
+  Soft:        { icon: 'feather', color: '#9888C0' },
+  Adventurous: { icon: 'wind',    color: '#60A878' },
+  Sad:         { icon: 'droplet', color: '#7890B8' },
+  Joyful:      { icon: 'smile',   color: '#C8B040' },
 };
 
 function getMoodConfig(mood: string) {
-  return MOOD_ICONS[mood] ?? { icon: 'circle' as keyof typeof Feather.glyphMap, color: '#9888C0' };
+  return MOOD_ICONS[mood] ?? { icon: 'circle', color: '#9888C0' };
 }
 
 export function MoodBadge({ mood, size = 'md' }: MoodBadgeProps) {
@@ -44,7 +44,7 @@ export function MoodBadge({ mood, size = 'md' }: MoodBadgeProps) {
         },
       ]}
     >
-      <Feather name={config.icon} size={isSmall ? 10 : 12} color={config.color} />
+      <Icon name={config.icon} size={isSmall ? 10 : 12} color={config.color} />
       <Text
         style={[
           styles.label,

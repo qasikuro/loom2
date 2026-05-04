@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -114,9 +114,9 @@ export default function StoryScreen() {
             <Image source={{ uri: heroImageUri }} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <LinearGradient colors={gradient} style={styles.heroImage} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Feather name="star" size={14} color="rgba(200,184,232,0.2)" style={{ position:'absolute', top:40, left:36 }} />
-              <Feather name="star" size={9}  color="rgba(200,184,232,0.14)" style={{ position:'absolute', top:70, right:64 }} />
-              <Feather name="moon" size={40} color="rgba(200,184,232,0.08)" style={{ position:'absolute', top:30, right:30 }} />
+              <Icon name="star" size={14} color="rgba(200,184,232,0.2)" style={{ position:'absolute', top:40, left:36 }} />
+              <Icon name="star" size={9}  color="rgba(200,184,232,0.14)" style={{ position:'absolute', top:70, right:64 }} />
+              <Icon name="moon" size={40} color="rgba(200,184,232,0.08)" style={{ position:'absolute', top:30, right:30 }} />
             </LinearGradient>
           )}
           <LinearGradient
@@ -125,7 +125,7 @@ export default function StoryScreen() {
           />
           {/* Buttons */}
           <TouchableOpacity style={[styles.backBtn, { top: topPad + 12 }]} onPress={() => router.back()}>
-            <Feather name="arrow-left" size={20} color="#fff" />
+            <Icon name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
           {isOwnStory && (
             <TouchableOpacity
@@ -139,7 +139,7 @@ export default function StoryScreen() {
             >
               {confirmingDelete
                 ? <Text style={styles.deleteConfirmText}>Delete?</Text>
-                : <Feather name="trash-2" size={18} color="rgba(255,120,100,0.9)" />
+                : <Icon name="trash-2" size={18} color="rgba(255,120,100,0.9)" />
               }
             </TouchableOpacity>
           )}
@@ -159,7 +159,7 @@ export default function StoryScreen() {
             <View style={styles.heroMoodRow}>
               <MoodBadge mood={mood} size="sm" />
               <View style={[styles.panelCountBadge, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.25)' }]}>
-                <Feather name="layers" size={11} color="rgba(255,255,255,0.8)" />
+                <Icon name="layers" size={11} color="rgba(255,255,255,0.8)" />
                 <Text style={styles.panelCountText}>{panels.length} panels</Text>
               </View>
             </View>
@@ -168,7 +168,7 @@ export default function StoryScreen() {
 
         {/* Divider hint */}
         <View style={[styles.readingHint, { backgroundColor: `${colors.primary}22` }]}>
-          <Feather name="arrow-down" size={13} color={`${colors.lavender}`} />
+          <Icon name="arrow-down" size={13} color={`${colors.lavender}`} />
           <Text style={[styles.readingHintText, { color: colors.lavender }]}>Scroll to read the story</Text>
         </View>
 
@@ -183,9 +183,9 @@ export default function StoryScreen() {
                 <Image source={{ uri: panel.imageUri }} style={styles.panelImage} resizeMode="cover" />
               ) : (
                 <LinearGradient colors={gradient} style={styles.panelImage} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }}>
-                  <Feather name="star" size={10} color="rgba(200,184,232,0.18)" style={{ position:'absolute', top:20, left:24 }} />
-                  <Feather name="star" size={7}  color="rgba(200,184,232,0.12)" style={{ position:'absolute', top:50, right:44 }} />
-                  <Feather name="moon" size={30} color="rgba(200,184,232,0.07)" style={{ position:'absolute', bottom:40, right:24 }} />
+                  <Icon name="star" size={10} color="rgba(200,184,232,0.18)" style={{ position:'absolute', top:20, left:24 }} />
+                  <Icon name="star" size={7}  color="rgba(200,184,232,0.12)" style={{ position:'absolute', top:50, right:44 }} />
+                  <Icon name="moon" size={30} color="rgba(200,184,232,0.07)" style={{ position:'absolute', bottom:40, right:24 }} />
                 </LinearGradient>
               )}
 
@@ -212,15 +212,15 @@ export default function StoryScreen() {
 
         {/* End card */}
         <View style={[styles.endCard, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
-          <Feather name="star" size={22} color={colors.gold} />
+          <Icon name="star" size={22} color={colors.gold} />
           <Text style={[styles.endTitle, { color: '#F0EAF8' }]}>End of Chapter {chapterNum}</Text>
           <Text style={[styles.endSub, { color: 'rgba(200,184,232,0.7)' }]}>
             {post ? `by ${authorName}` : 'Your story'}
           </Text>
           <View style={styles.endStats}>
-            <Feather name="eye" size={14} color="rgba(200,184,232,0.6)" />
+            <Icon name="eye" size={14} color="rgba(200,184,232,0.6)" />
             <Text style={[styles.endStatText, { color: 'rgba(200,184,232,0.6)' }]}>{witnessedCount} witnessed</Text>
-            <Feather name="bookmark" size={14} color="rgba(200,184,232,0.6)" style={{ marginLeft: 12 }} />
+            <Icon name="bookmark" size={14} color="rgba(200,184,232,0.6)" style={{ marginLeft: 12 }} />
             <Text style={[styles.endStatText, { color: 'rgba(200,184,232,0.6)' }]}>{savedCount} saved</Text>
           </View>
         </View>
@@ -238,10 +238,10 @@ export default function StoryScreen() {
         ]}
       >
         <View style={styles.witnessedRow}>
-          <Feather name="eye" size={15} color="rgba(240,234,248,0.6)" />
+          <Icon name="eye" size={15} color="rgba(240,234,248,0.6)" />
           <Text style={styles.witnessedNum}>{witnessedCount}</Text>
           <View style={styles.dotDivider} />
-          <Feather name="bookmark" size={14} color="rgba(240,234,248,0.6)" />
+          <Icon name="bookmark" size={14} color="rgba(240,234,248,0.6)" />
           <Text style={styles.witnessedNum}>{savedCount}</Text>
         </View>
 
@@ -257,7 +257,7 @@ export default function StoryScreen() {
               ]}
               onPress={handleSave}
             >
-              <Feather name="bookmark" size={15} color={isSaved ? colors.primary : 'rgba(240,234,248,0.75)'} />
+              <Icon name="bookmark" size={15} color={isSaved ? colors.primary : 'rgba(240,234,248,0.75)'} />
               <Text style={[styles.actionBtnText, { color: isSaved ? colors.primary : 'rgba(240,234,248,0.75)' }]}>
                 {isSaved ? 'Saved' : 'Save'}
               </Text>
@@ -274,7 +274,7 @@ export default function StoryScreen() {
             ]}
             onPress={handleWitness}
           >
-            <Feather name="eye" size={15} color={witnessed ? colors.gold : colors.lavender} />
+            <Icon name="eye" size={15} color={witnessed ? colors.gold : colors.lavender} />
             <Text style={[styles.actionBtnText, { color: witnessed ? colors.gold : colors.lavender }]}>
               {witnessed ? 'Witnessed ✦' : 'Witness'}
             </Text>

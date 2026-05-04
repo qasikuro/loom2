@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -84,13 +84,13 @@ export default function CreateMomentLogScreen() {
 
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
         <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.09)' }]} onPress={() => router.back()}>
-          <Feather name="x" size={18} color="rgba(240,234,248,0.75)" />
+          <Icon name="x" size={18} color="rgba(240,234,248,0.75)" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🌙</Text>
           <Text style={styles.headerTitle}>Quick Moment</Text>
           <View style={styles.privatePill}>
-            <Feather name="lock" size={10} color="rgba(200,184,232,0.7)" />
+            <Icon name="lock" size={10} color="rgba(200,184,232,0.7)" />
             <Text style={styles.privatePillText}>Private</Text>
           </View>
         </View>
@@ -114,7 +114,7 @@ export default function CreateMomentLogScreen() {
           style={[styles.promptCard, { borderColor: 'rgba(200,184,232,0.18)', backgroundColor: 'rgba(200,184,232,0.06)' }]}
           onPress={() => inputRef.current?.focus()}
         >
-          <Feather name="feather" size={13} color="rgba(200,184,232,0.5)" />
+          <Icon name="feather" size={13} color="rgba(200,184,232,0.5)" />
           <Text style={styles.promptText}>{prompt}</Text>
         </TouchableOpacity>
 
@@ -144,7 +144,7 @@ export default function CreateMomentLogScreen() {
               }]}
               onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
             >
-              <Feather name={m.icon} size={14} color={m.color} />
+              <Icon name={m.icon} size={14} color={m.color} />
               <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
             </TouchableOpacity>
           ))}
@@ -153,13 +153,13 @@ export default function CreateMomentLogScreen() {
         {/* Inline validation error */}
         {error && (
           <View style={styles.errorBanner}>
-            <Feather name="alert-circle" size={14} color="#F87171" />
+            <Icon name="alert-circle" size={14} color="#F87171" />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
         <View style={styles.privateNote}>
-          <Feather name="lock" size={12} color="rgba(200,184,232,0.4)" />
+          <Icon name="lock" size={12} color="rgba(200,184,232,0.4)" />
           <Text style={styles.privateNoteText}>
             Moments are always private — only visible to you.
           </Text>

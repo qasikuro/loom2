@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -200,7 +200,7 @@ export default function CharacterScreen() {
               )}
             </View>
             <View style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
-              <Feather name="camera" size={11} color={colors.mutedForeground} />
+              <Icon name="camera" size={11} color={colors.mutedForeground} />
             </View>
           </View>
 
@@ -222,7 +222,7 @@ export default function CharacterScreen() {
               <TouchableOpacity style={styles.nameRow} onPress={() => setEditingName(true)}>
                 <Text style={[styles.name, { color: colors.foreground }]}>{character.name}</Text>
                 <View style={[styles.editHint, { backgroundColor: colors.muted }]}>
-                  <Feather name="edit-2" size={11} color={colors.mutedForeground} />
+                  <Icon name="edit-2" size={11} color={colors.mutedForeground} />
                 </View>
               </TouchableOpacity>
             )}
@@ -259,7 +259,7 @@ export default function CharacterScreen() {
                 ) : (
                   <Text style={[styles.usernamePlaceholder, { color: `${colors.mutedForeground}70` }]}>+ Set a username</Text>
                 )}
-                <Feather name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginTop: 1 }} />
+                <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginTop: 1 }} />
               </TouchableOpacity>
             )}
             {usernameError ? (
@@ -281,7 +281,7 @@ export default function CharacterScreen() {
                 <Text style={[styles.bio, { color: character.bio ? colors.mutedForeground : `${colors.mutedForeground}70` }]}>
                   {character.bio || 'Tap to add a bio...'}
                 </Text>
-                <Feather name="edit-2" size={11} color={`${colors.mutedForeground}55`} style={{ marginTop: 2 }} />
+                <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} style={{ marginTop: 2 }} />
               </TouchableOpacity>
             )}
           </View>
@@ -325,7 +325,7 @@ export default function CharacterScreen() {
                     hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
                     style={[styles.traitRemove, { backgroundColor: `${colors.primary}18` }]}
                   >
-                    <Feather name="x" size={9} color={colors.primary} />
+                    <Icon name="x" size={9} color={colors.primary} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -344,7 +344,7 @@ export default function CharacterScreen() {
                     onBlur={() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }}
                   />
                   <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
-                    <Feather name="x" size={13} color={colors.mutedForeground} />
+                    <Icon name="x" size={13} color={colors.mutedForeground} />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -352,7 +352,7 @@ export default function CharacterScreen() {
                   style={[styles.traitAddBtn, { borderColor: `${colors.primary}28`, backgroundColor: `${colors.primary}06` }]}
                   onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}
                 >
-                  <Feather name="plus" size={12} color={colors.primary} />
+                  <Icon name="plus" size={12} color={colors.primary} />
                   <Text style={[styles.traitAddText, { color: colors.primary }]}>Add trait</Text>
                 </TouchableOpacity>
               )}
@@ -368,7 +368,7 @@ export default function CharacterScreen() {
                       style={[styles.suggChip, { backgroundColor: colors.muted, borderColor: colors.border }]}
                       onPress={() => addTrait(s)}
                     >
-                      <Feather name="plus" size={10} color={colors.mutedForeground} />
+                      <Icon name="plus" size={10} color={colors.mutedForeground} />
                       <Text style={[styles.suggText, { color: colors.mutedForeground }]}>{s}</Text>
                     </TouchableOpacity>
                   ))}
@@ -388,7 +388,7 @@ export default function CharacterScreen() {
                 style={[styles.addBtn, { backgroundColor: colors.primary }, SHADOW.sm]}
                 onPress={() => router.push('/create-outfit')}
               >
-                <Feather name="plus" size={13} color="#fff" />
+                <Icon name="plus" size={13} color="#fff" />
                 <Text style={styles.addBtnText}>Log Outfit</Text>
               </TouchableOpacity>
             </View>
@@ -400,13 +400,13 @@ export default function CharacterScreen() {
                 activeOpacity={0.8}
               >
                 <View style={[styles.outfitEmptyIcon, { backgroundColor: `${colors.primary}10` }]}>
-                  <Feather name="star" size={22} color={`${colors.primary}70`} />
+                  <Icon name="star" size={22} color={`${colors.primary}70`} />
                 </View>
                 <View>
                   <Text style={[styles.outfitEmptyTitle, { color: colors.foreground }]}>Log your first outfit</Text>
                   <Text style={[styles.outfitEmptyText, { color: colors.mutedForeground }]}>Track your daily sky look</Text>
                 </View>
-                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             ) : (
               <View style={styles.outfitList}>
@@ -426,13 +426,13 @@ export default function CharacterScreen() {
                         <Image source={{ uri: outfit.imageUri }} style={styles.outfitThumb} resizeMode="cover" />
                       ) : (
                         <View style={[styles.outfitThumbPlaceholder, { backgroundColor: `${colors.primary}10` }]}>
-                          <Feather name="star" size={20} color={`${colors.primary}55`} />
+                          <Icon name="star" size={20} color={`${colors.primary}55`} />
                         </View>
                       )}
 
                       {isActive && (
                         <View style={styles.activeThumbBadge}>
-                          <Feather name="home" size={9} color="#fff" />
+                          <Icon name="home" size={9} color="#fff" />
                         </View>
                       )}
 
@@ -450,7 +450,7 @@ export default function CharacterScreen() {
                           <View style={[styles.visChip, {
                             backgroundColor: outfit.isPublic ? 'rgba(96,168,120,0.1)' : `${colors.primary}0F`,
                           }]}>
-                            <Feather name={outfit.isPublic ? 'globe' : 'lock'} size={9} color={outfit.isPublic ? '#60A878' : colors.primary} />
+                            <Icon name={outfit.isPublic ? 'globe' : 'lock'} size={9} color={outfit.isPublic ? '#60A878' : colors.primary} />
                             <Text style={[styles.visChipText, { color: outfit.isPublic ? '#60A878' : colors.primary }]}>
                               {outfit.isPublic ? 'Public' : 'Private'}
                             </Text>
@@ -494,7 +494,7 @@ export default function CharacterScreen() {
                       >
                         {confirmingOutfitId === outfit.id
                           ? <Text style={styles.outfitDeleteConfirmText}>Delete?</Text>
-                          : <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+                          : <Icon name="trash-2" size={12} color={colors.mutedForeground} />
                         }
                       </TouchableOpacity>
                     </View>
@@ -511,7 +511,7 @@ export default function CharacterScreen() {
           <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
             <View style={styles.accountRow}>
               <View style={[styles.accountIconWrap, { backgroundColor: `${colors.primary}10` }]}>
-                <Feather name="mail" size={14} color={colors.primary} />
+                <Icon name="mail" size={14} color={colors.primary} />
               </View>
               <View style={styles.accountInfo}>
                 <Text style={[styles.accountInfoLabel, { color: colors.mutedForeground }]}>Signed in as</Text>
@@ -529,12 +529,12 @@ export default function CharacterScreen() {
               activeOpacity={0.75}
             >
               <View style={[styles.accountIconWrap, { backgroundColor: confirmingSignOut ? 'rgba(255,255,255,0.2)' : 'rgba(224,68,85,0.1)' }]}>
-                <Feather name="log-out" size={14} color={confirmingSignOut ? '#fff' : '#E04455'} />
+                <Icon name="log-out" size={14} color={confirmingSignOut ? '#fff' : '#E04455'} />
               </View>
               <Text style={[styles.signOutText, confirmingSignOut && { color: '#fff' }]}>
                 {confirmingSignOut ? 'Tap again to confirm' : 'Sign Out'}
               </Text>
-              <Feather name="chevron-right" size={14} color={confirmingSignOut ? 'rgba(255,255,255,0.6)' : 'rgba(224,68,85,0.5)'} style={{ marginLeft: 'auto' }} />
+              <Icon name="chevron-right" size={14} color={confirmingSignOut ? 'rgba(255,255,255,0.6)' : 'rgba(224,68,85,0.5)'} style={{ marginLeft: 'auto' }} />
             </TouchableOpacity>
           </View>
         </View>

@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -115,7 +115,7 @@ export default function DiscoverScreen() {
           style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(200,184,232,0.18)' }]}
           onPress={() => { setActiveTab('People'); Haptics.selectionAsync(); }}
         >
-          <Feather name="users" size={17} color="rgba(200,184,232,0.75)" />
+          <Icon name="users" size={17} color="rgba(200,184,232,0.75)" />
         </TouchableOpacity>
       </View>
 
@@ -153,7 +153,7 @@ export default function DiscoverScreen() {
       {activeTab === 'People' ? (
         <View style={{ flex: 1 }}>
           <View style={[styles.searchWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-            <Feather name="search" size={15} color={colors.mutedForeground} />
+            <Icon name="search" size={15} color={colors.mutedForeground} />
             <TextInput
               style={[styles.searchInput, { color: colors.foreground }]}
               value={peopleQuery}
@@ -167,7 +167,7 @@ export default function DiscoverScreen() {
             {peopleLoading && <ActivityIndicator size="small" color={colors.primary} />}
             {!peopleLoading && peopleQuery.length > 0 && (
               <TouchableOpacity onPress={() => { setPeopleQuery(''); setPeopleResults([]); }}>
-                <Feather name="x" size={14} color={colors.mutedForeground} />
+                <Icon name="x" size={14} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
           </View>
@@ -175,7 +175,7 @@ export default function DiscoverScreen() {
           {peopleQuery.length < 2 ? (
             <View style={styles.searchHint}>
               <View style={[styles.searchHintIcon, { backgroundColor: `${colors.primary}0E` }]}>
-                <Feather name="users" size={24} color={`${colors.primary}60`} />
+                <Icon name="users" size={24} color={`${colors.primary}60`} />
               </View>
               <Text style={[styles.searchHintTitle, { color: colors.foreground }]}>Find Sky Friends</Text>
               <Text style={[styles.searchHintSub, { color: colors.mutedForeground }]}>
@@ -185,7 +185,7 @@ export default function DiscoverScreen() {
           ) : peopleResults.length === 0 && !peopleLoading ? (
             <View style={styles.searchHint}>
               <View style={[styles.searchHintIcon, { backgroundColor: `${colors.primary}0E` }]}>
-                <Feather name="search" size={24} color={`${colors.primary}60`} />
+                <Icon name="search" size={24} color={`${colors.primary}60`} />
               </View>
               <Text style={[styles.searchHintTitle, { color: colors.foreground }]}>No wanderers found</Text>
               <Text style={[styles.searchHintSub, { color: colors.mutedForeground }]}>
@@ -256,13 +256,13 @@ export default function DiscoverScreen() {
                 onPress={() => setSelectedVibe(null)}
                 style={[styles.backBtn, { backgroundColor: colors.muted }]}
               >
-                <Feather name="arrow-left" size={15} color={colors.foreground} />
+                <Icon name="arrow-left" size={15} color={colors.foreground} />
                 <Text style={[styles.backText, { color: colors.foreground }]}>{selectedVibe}</Text>
               </TouchableOpacity>
               {vibePosts.length === 0 ? (
                 <View style={styles.empty}>
                   <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}0F` }]}>
-                    <Feather name="compass" size={26} color={`${colors.primary}70`} />
+                    <Icon name="compass" size={26} color={`${colors.primary}70`} />
                   </View>
                   <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                     No public {selectedVibe} stories yet.
@@ -293,7 +293,7 @@ export default function DiscoverScreen() {
                       activeOpacity={0.88}
                     >
                       <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}18` }]}>
-                        <Feather name={vibe.icon} size={20} color={vibe.color} />
+                        <Icon name={vibe.icon} size={20} color={vibe.color} />
                       </View>
                       <Text style={[styles.vibeLabel, { color: vibe.color }]}>{vibe.label}</Text>
                       <Text style={[styles.vibeCount, { color: `${vibe.color}80` }]}>{count} stories</Text>
@@ -322,7 +322,7 @@ export default function DiscoverScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}0F` }]}>
-                <Feather name="compass" size={26} color={`${colors.primary}70`} />
+                <Icon name="compass" size={26} color={`${colors.primary}70`} />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>The sky is quiet</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>

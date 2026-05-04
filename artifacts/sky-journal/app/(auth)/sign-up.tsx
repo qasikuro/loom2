@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import { useSignUp } from '@clerk/expo/legacy';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
@@ -105,7 +105,7 @@ export default function SignUpScreen() {
           <View style={[styles.field, { marginTop: 8 }]}>
             <Text style={styles.label}>Verification Code</Text>
             <View style={styles.inputWrap}>
-              <Feather name="shield" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+              <Icon name="shield" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={code}
@@ -187,7 +187,7 @@ export default function SignUpScreen() {
             <View style={styles.field}>
               <Text style={styles.label}>Email address</Text>
               <View style={styles.inputWrap}>
-                <Feather name="mail" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+                <Icon name="mail" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={email}
@@ -204,7 +204,7 @@ export default function SignUpScreen() {
             <View style={styles.field}>
               <Text style={styles.label}>Password</Text>
               <View style={styles.inputWrap}>
-                <Feather name="lock" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+                <Icon name="lock" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
@@ -215,7 +215,7 @@ export default function SignUpScreen() {
                   autoComplete="new-password"
                 />
                 <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(p => !p)}>
-                  <Feather name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
+                  <Icon name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
                 </TouchableOpacity>
               </View>
             </View>

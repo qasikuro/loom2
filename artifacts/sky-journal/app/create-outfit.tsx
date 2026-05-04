@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -88,7 +88,7 @@ export default function CreateOutfitScreen() {
 
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
         <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
-          <Feather name="x" size={18} color={colors.foreground} />
+          <Icon name="x" size={18} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Log Outfit</Text>
         <TouchableOpacity
@@ -118,7 +118,7 @@ export default function CreateOutfitScreen() {
               <Image source={{ uri: imageUri }} style={styles.outfitImage} resizeMode="cover" />
               <View style={styles.changeOverlay}>
                 <View style={[styles.changeChip, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-                  <Feather name="camera" size={13} color={colors.foreground} />
+                  <Icon name="camera" size={13} color={colors.foreground} />
                   <Text style={[styles.changeChipText, { color: colors.foreground }]}>Change photo</Text>
                 </View>
               </View>
@@ -126,7 +126,7 @@ export default function CreateOutfitScreen() {
           ) : (
             <View style={styles.imagePlaceholder}>
               <View style={[styles.cameraCircle, { backgroundColor: `${colors.primary}15` }]}>
-                <Feather name="camera" size={28} color={`${colors.primary}80`} />
+                <Icon name="camera" size={28} color={`${colors.primary}80`} />
               </View>
               <Text style={[styles.imagePlaceholderTitle, { color: colors.mutedForeground }]}>Add outfit photo</Text>
               <Text style={[styles.imagePlaceholderSub, { color: `${colors.mutedForeground}70` }]}>Optional · Portrait works best</Text>
@@ -186,7 +186,7 @@ export default function CreateOutfitScreen() {
         {/* Inline validation error */}
         {error && (
           <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Icon name="alert-circle" size={14} color="#DC2626" />
             <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
           </View>
         )}
@@ -206,7 +206,7 @@ export default function CreateOutfitScreen() {
                   }]}
                   onPress={() => setIsPublic(opt === 'Public')}
                 >
-                  <Feather name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
+                  <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
                   <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
                 </TouchableOpacity>
               );

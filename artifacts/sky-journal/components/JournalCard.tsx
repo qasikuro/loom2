@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -33,7 +33,7 @@ function DiaryCard({ entry, onDelete }: JournalCardProps) {
       <View style={styles.topRow}>
         <View style={styles.metaLeft}>
           <View style={[styles.typeIcon, { backgroundColor: `${colors.primary}12` }]}>
-            <Feather name="book-open" size={12} color={colors.primary} />
+            <Icon name="book-open" size={12} color={colors.primary} />
           </View>
           <View>
             <Text style={[styles.dateText, { color: colors.foreground }]}>{formatDate(entry.date)}</Text>
@@ -46,7 +46,7 @@ function DiaryCard({ entry, onDelete }: JournalCardProps) {
             onPress={onDelete}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 6 }}
           >
-            <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+            <Icon name="trash-2" size={12} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
       </View>
@@ -78,7 +78,7 @@ function FriendCard({ entry, onDelete }: JournalCardProps) {
       <View style={styles.topRow}>
         <View style={styles.metaLeft}>
           <View style={[styles.typeIcon, { backgroundColor: 'rgba(58,120,184,0.1)' }]}>
-            <Feather name="users" size={12} color={friendColor} />
+            <Icon name="users" size={12} color={friendColor} />
           </View>
           <View>
             <Text style={[styles.dateText, { color: colors.foreground }]}>{formatDate(entry.date)}</Text>
@@ -91,7 +91,7 @@ function FriendCard({ entry, onDelete }: JournalCardProps) {
             onPress={onDelete}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 6 }}
           >
-            <Feather name="trash-2" size={12} color={colors.mutedForeground} />
+            <Icon name="trash-2" size={12} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
       </View>
@@ -128,7 +128,7 @@ function MomentCard({ entry, onDelete }: JournalCardProps) {
       <View style={styles.topRow}>
         <View style={styles.metaLeft}>
           <View style={[styles.typeIcon, { backgroundColor: 'rgba(200,184,232,0.12)' }]}>
-            <Feather name="moon" size={12} color="rgba(200,184,232,0.75)" />
+            <Icon name="moon" size={12} color="rgba(200,184,232,0.75)" />
           </View>
           <View>
             <Text style={styles.momentDate}>{formatDate(entry.date)}</Text>
@@ -141,7 +141,7 @@ function MomentCard({ entry, onDelete }: JournalCardProps) {
             onPress={onDelete}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 6 }}
           >
-            <Feather name="trash-2" size={12} color="rgba(200,184,232,0.4)" />
+            <Icon name="trash-2" size={12} color="rgba(200,184,232,0.4)" />
           </TouchableOpacity>
         )}
       </View>

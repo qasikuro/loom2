@@ -1,4 +1,4 @@
-import { Feather } from '@expo/vector-icons';
+import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -78,13 +78,13 @@ export default function CreateFriendLogScreen() {
 
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
         <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
-          <Feather name="x" size={18} color={colors.foreground} />
+          <Icon name="x" size={18} color={colors.foreground} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🤝</Text>
           <Text style={[styles.headerTitle, { color: '#3A78B8' }]}>Friend Encounter</Text>
           <View style={[styles.privatePill, { backgroundColor: 'rgba(58,120,184,0.1)' }]}>
-            <Feather name="lock" size={10} color="#3A78B8" />
+            <Icon name="lock" size={10} color="#3A78B8" />
             <Text style={[styles.privatePillText, { color: '#3A78B8' }]}>Private</Text>
           </View>
         </View>
@@ -123,7 +123,7 @@ export default function CreateFriendLogScreen() {
           />
           {friendName.length > 0 && (
             <TouchableOpacity onPress={() => setFriendName('')}>
-              <Feather name="x" size={14} color={colors.mutedForeground} />
+              <Icon name="x" size={14} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -183,7 +183,7 @@ export default function CreateFriendLogScreen() {
               }]}
               onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
             >
-              <Feather name={m.icon} size={14} color={m.color} />
+              <Icon name={m.icon} size={14} color={m.color} />
               <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
             </TouchableOpacity>
           ))}
@@ -192,13 +192,13 @@ export default function CreateFriendLogScreen() {
         {/* Inline validation error */}
         {error && (
           <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Icon name="alert-circle" size={14} color="#DC2626" />
             <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
           </View>
         )}
 
         <View style={[styles.privateNote, { backgroundColor: 'rgba(58,120,184,0.07)', borderColor: 'rgba(58,120,184,0.15)' }]}>
-          <Feather name="lock" size={12} color="rgba(58,120,184,0.6)" />
+          <Icon name="lock" size={12} color="rgba(58,120,184,0.6)" />
           <Text style={[styles.privateNoteText, { color: colors.mutedForeground }]}>
             Friend encounters are always private — only you can see them.
           </Text>
