@@ -183,23 +183,23 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
 }
 
 const tc = StyleSheet.create({
-  card: { borderRadius:16, borderWidth:1, padding:14, gap:10, marginBottom:10 },
-  topRow: { flexDirection:'row', alignItems:'center', gap:11 },
+  card: { borderRadius:20, borderWidth:1, padding:16, gap:11, marginBottom:10 },
+  topRow: { flexDirection:'row', alignItems:'center', gap:12 },
   avatar: {
-    width:46, height:46, borderRadius:23,
+    width:48, height:48, borderRadius:16,
     alignItems:'center', justifyContent:'center', flexShrink:0,
   },
-  avatarInitial: { fontSize:17, fontFamily:'Inter_700Bold', color:'#fff' },
+  avatarInitial: { fontSize:18, fontFamily:'Inter_700Bold', color:'#fff' },
   nameCol: { flex:1 },
   nameText: { fontSize:15, fontFamily:'Inter_600SemiBold', letterSpacing:-0.1 },
-  timeText: { fontSize:11, fontFamily:'Inter_400Regular', marginTop:1 },
+  timeText: { fontSize:11, fontFamily:'Inter_400Regular', marginTop:2, opacity:0.7 },
   contentRow: { flexDirection:'row', gap:12, alignItems:'flex-start' },
-  snippet: { flex:1, fontSize:13, fontFamily:'Inter_400Regular', lineHeight:20, fontStyle:'italic' },
-  thumbnail: { width:64, height:64, borderRadius:10, flexShrink:0 },
+  snippet: { flex:1, fontSize:14, fontFamily:'Inter_400Regular', lineHeight:21, fontStyle:'italic' },
+  thumbnail: { width:68, height:68, borderRadius:14, flexShrink:0 },
   footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap' },
-  typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:4, borderRadius:10, borderWidth:1 },
+  typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:9, paddingVertical:4, borderRadius:12, borderWidth:1 },
   typePillText: { fontSize:10, fontFamily:'Inter_500Medium' },
-  deleteBtn: { height:28, paddingHorizontal:6, borderRadius:8, alignItems:'center', justifyContent:'center' },
+  deleteBtn: { height:30, paddingHorizontal:8, borderRadius:10, alignItems:'center', justifyContent:'center' },
   deleteBtnText: { color:'#fff', fontSize:11, fontFamily:'Inter_600SemiBold' },
 });
 
@@ -577,11 +577,11 @@ export default function JournalScreen() {
                 {/* Left dot + line */}
                 <View style={styles.timelineLeft}>
                   <View style={[styles.dot, {
-                    backgroundColor: section.date === selectedDate ? colors.primary : colors.background,
-                    borderColor:      section.date === selectedDate ? colors.primary : colors.border,
+                    backgroundColor: section.date === selectedDate ? colors.primary : '#fff',
+                    borderColor:     section.date === selectedDate ? colors.primary : `${colors.primary}40`,
                   }]} />
                   {si < sections.length - 1 && (
-                    <View style={[styles.line, { backgroundColor: colors.border }]} />
+                    <View style={[styles.line, { backgroundColor: `${colors.primary}18` }]} />
                   )}
                 </View>
 
@@ -646,13 +646,13 @@ const styles = StyleSheet.create({
   searchHint: { fontSize:12, fontFamily:'Inter_400Regular', fontStyle:'italic', paddingHorizontal:18, paddingTop:8, paddingBottom:4 },
 
   // Timeline
-  timelineContent: { paddingHorizontal:16, paddingTop:16 },
-  timelineRow: { flexDirection:'row', gap:12 },
-  timelineLeft: { width:20, alignItems:'center', paddingTop:3 },
-  dot: { width:12, height:12, borderRadius:6, borderWidth:2, zIndex:1 },
-  line: { flex:1, width:1.5, marginTop:5, marginBottom:-5 },
-  timelineRight: { flex:1, paddingBottom:20 },
-  dateLabel: { fontSize:12, fontFamily:'Inter_500Medium', marginBottom:10, marginTop:1, letterSpacing:0.2 },
+  timelineContent: { paddingHorizontal:16, paddingTop:18 },
+  timelineRow: { flexDirection:'row', gap:14 },
+  timelineLeft: { width:22, alignItems:'center', paddingTop:4 },
+  dot: { width:12, height:12, borderRadius:6, borderWidth:2.5, zIndex:1 },
+  line: { flex:1, width:2, marginTop:6, marginBottom:-6, borderRadius:1 },
+  timelineRight: { flex:1, paddingBottom:24 },
+  dateLabel: { fontSize:11, fontFamily:'Inter_700Bold', marginBottom:12, marginTop:2, letterSpacing:0.8, textTransform:'uppercase', opacity:0.7 },
 
   // Empty
   empty: { flex:1, alignItems:'center', justifyContent:'center', paddingTop:80, paddingHorizontal:36, gap:14 },

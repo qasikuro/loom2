@@ -51,16 +51,16 @@ export default function DiscoverScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={['#E8E2F8', '#EEE8F8', '#F7F3ED']} style={[styles.headerGrad, { height: topPad + 110 }]} />
+      <LinearGradient colors={['#14112E', '#1E1A48', '#22204C']} style={[styles.headerGrad, { height: topPad + 110 }]} />
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
         <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Discover</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Stories from the sky</Text>
+          <Text style={[styles.headerTitle, { color: 'rgba(235,228,255,0.97)' }]}>Discover</Text>
+          <Text style={[styles.headerSub, { color: 'rgba(200,184,232,0.6)' }]}>Stories from the sky</Text>
         </View>
-        <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted, borderColor: colors.border }, SHADOW.xs]}>
-          <Feather name="search" size={17} color={colors.mutedForeground} />
+        <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(200,184,232,0.18)' }]}>
+          <Feather name="search" size={17} color="rgba(200,184,232,0.75)" />
         </TouchableOpacity>
       </View>
 
@@ -179,11 +179,11 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
   headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
   iconBtn: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  tabsScroll: { maxHeight: 48 },
-  tabsRow: { flexDirection: 'row', gap: 7, paddingVertical: 6 },
+  tabsScroll: { maxHeight: 50 },
+  tabsRow: { flexDirection: 'row', gap: 8, paddingVertical: 7 },
   tab: {
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 18, paddingVertical: 9,
+    borderRadius: 22, borderWidth: 1,
   },
   tabText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   divider: { height: 1 },
@@ -193,14 +193,14 @@ const styles = StyleSheet.create({
   vibesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   vibeCard: {
     width: '48%',
-    borderRadius: 18,
+    borderRadius: 22,
     borderWidth: 1,
     padding: 18,
-    gap: 8,
-    minHeight: 120,
+    gap: 10,
+    minHeight: 128,
     justifyContent: 'center',
   },
-  vibeIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
+  vibeIconWrap: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
   vibeLabel: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.2 },
   vibeCount: { fontSize: 11, fontFamily: 'Inter_400Regular' },
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },

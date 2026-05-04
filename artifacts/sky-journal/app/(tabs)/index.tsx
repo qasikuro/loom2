@@ -21,63 +21,62 @@ import { Images } from '@/assets/images';
 import { useApp } from '@/context/AppContext';
 import { SHADOW } from '@/constants/colors';
 
-// ── Category nav cards ─────────────────────────────────────────────────────────
-
 const CATEGORIES = [
   {
     key: 'moments',
     title: 'Moments & Friends',
-    desc: 'Log special moments with friends',
-    icon: 'users'     as const,
+    desc: 'Log encounters with sky friends',
+    icon: 'users'   as const,
     iconColor: '#4A80B8',
-    iconBg:    'rgba(74,128,184,0.16)',
+    iconBg:    'rgba(74,128,184,0.22)',
+    grad: ['#1A2E50', '#263D6A'],
     image: Images.story_bg2,
     route: '/(tabs)/log' as const,
   },
   {
     key: 'stories',
     title: 'Manga Stories',
-    desc: 'Create and share your sky adventures',
-    icon: 'layers'    as const,
-    iconColor: '#6B5B95',
-    iconBg:    'rgba(107,91,149,0.16)',
+    desc: 'Tell your sky adventures in panels',
+    icon: 'layers'  as const,
+    iconColor: '#9B8AC4',
+    iconBg:    'rgba(107,91,149,0.22)',
+    grad: ['#2A1E50', '#3D2D70'],
     image: Images.story_bg1,
     route: '/(tabs)/create' as const,
   },
   {
     key: 'discover',
-    title: 'Collections',
-    desc: 'View memories and stories from others',
-    icon: 'compass'   as const,
-    iconColor: '#3A9060',
-    iconBg:    'rgba(58,144,96,0.16)',
+    title: 'Discover',
+    desc: 'Browse memories from the sky world',
+    icon: 'compass' as const,
+    iconColor: '#4A9878',
+    iconBg:    'rgba(58,144,96,0.22)',
+    grad: ['#162A22', '#1E3A2E'],
     image: Images.story_bg3,
     route: '/(tabs)/discover' as const,
   },
   {
     key: 'outfit',
     title: 'Outfit Log',
-    desc: 'Record and style your sky looks',
-    icon: 'user'      as const,
+    desc: 'Record and display your sky looks',
+    icon: 'star'    as const,
     iconColor: '#C8A84B',
-    iconBg:    'rgba(200,168,75,0.16)',
+    iconBg:    'rgba(200,168,75,0.22)',
+    grad: ['#2A2010', '#3A2E18'],
     image: Images.character_default,
     route: '/(tabs)/profile' as const,
   },
 ] as const;
 
-// ── Sparkle dots ──────────────────────────────────────────────────────────────
 const SPARKLES = [
-  { t: 18, l: 22, s: 5, o: 0.55 },
-  { t: 44, l: 56, s: 3, o: 0.35 },
+  { t: 18, l: 22,  s: 5, o: 0.55 },
+  { t: 44, l: 56,  s: 3, o: 0.35 },
   { t: 12, l: 120, s: 4, o: 0.45 },
-  { t: 60, r: 28, s: 6, o: 0.5  },
-  { t: 30, r: 70, s: 3, o: 0.3  },
-  { t: 76, l: 88, s: 3, o: 0.28 },
-  { t: 22, r: 140, s: 4, o: 0.38},
+  { t: 60, r: 28,  s: 6, o: 0.5  },
+  { t: 30, r: 70,  s: 3, o: 0.3  },
+  { t: 76, l: 88,  s: 3, o: 0.28 },
+  { t: 22, r: 140, s: 4, o: 0.38 },
 ] as const;
-
-// ── Main component ─────────────────────────────────────────────────────────────
 
 export default function HomeScreen() {
   const { width: W } = useWindowDimensions();
@@ -90,7 +89,7 @@ export default function HomeScreen() {
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 28 : insets.bottom;
 
-  const [showNotifs, setShowNotifs]         = useState(false);
+  const [showNotifs,      setShowNotifs]      = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
   const hasNotifs = rewards.length > 0;
 
@@ -101,16 +100,21 @@ export default function HomeScreen() {
 
   const activeOutfit = outfits.find(o => o.id === activeOutfitId) ?? null;
 
+  const cardGap  = 10;
+  const hPad     = 16;
+  const cardW    = (W - hPad * 2 - cardGap) / 2;
+  const cardH    = Math.round(cardW * 0.88);
+
   return (
     <View style={styles.root}>
 
-      {/* ── Dark navy header (NOT scrollable) ────────────────────── */}
+      {/* ── Dark navy header ──────────────────────────────────────── */}
       <LinearGradient
         colors={['#12102A', '#1E1A48', '#221E52']}
         style={[styles.headerGrad, { paddingTop: topPad }]}
         start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
       >
-        {/* Stars decoration */}
+        {/* Stars */}
         {([
           { t:14, l:30, s:2 }, { t:28, r:50, s:3 }, { t:8, l:160, s:2 },
           { t:36, r:140, s:2 }, { t:22, l:220, s:3 }, { t:42, r:220, s:2 },
@@ -122,28 +126,22 @@ export default function HomeScreen() {
           }]} />
         ))}
 
-        {/* Top row: avatar + name/subtitle + icons */}
+        {/* Top row */}
         <View style={styles.topRow}>
           <TouchableOpacity style={styles.avatarRing} onPress={() => router.push('/(tabs)/profile')}>
-            {activeOutfit?.imageUri ? (
-              <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatar} resizeMode="cover" />
-            ) : (
-              <Image source={Images.character_default} style={styles.avatar} resizeMode="cover" />
-            )}
+            {activeOutfit?.imageUri
+              ? <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatar} resizeMode="cover" />
+              : <Image source={Images.character_default} style={styles.avatar} resizeMode="cover" />
+            }
           </TouchableOpacity>
 
           <View style={styles.nameBlock}>
-            <Text style={styles.charName} numberOfLines={1}>
-              {character.name || 'Sky Child'}
-            </Text>
+            <Text style={styles.charName} numberOfLines={1}>{character.name || 'Sky Child'}</Text>
             <Text style={styles.subtitle}>Your journey, your memories.</Text>
           </View>
 
           <View style={styles.headerIcons}>
-            <TouchableOpacity
-              style={styles.headerIconBtn}
-              onPress={() => router.push('/(tabs)/profile')}
-            >
+            <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.push('/(tabs)/profile')}>
               <Feather name="settings" size={17} color="rgba(200,184,232,0.75)" />
             </TouchableOpacity>
             <TouchableOpacity
@@ -156,7 +154,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Quick stats strip */}
+        {/* Stats strip */}
         <View style={styles.statsStrip}>
           <View style={styles.statPill}>
             <Feather name="book-open" size={12} color="rgba(200,184,232,0.6)" />
@@ -178,16 +176,14 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* ── Character / Outfit Hero ─────────────────────────────── */}
+        {/* ── Character Hero ──────────────────────────────────────── */}
         <View style={styles.charHero}>
-          {/* Sky gradient background */}
           <LinearGradient
             colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
 
-          {/* Sparkle decorations */}
           {SPARKLES.map((sp, i) => (
             <View
               key={i}
@@ -196,90 +192,56 @@ export default function HomeScreen() {
                 top: sp.t,
                 left:  'l' in sp ? (sp as any).l : undefined,
                 right: 'r' in sp ? (sp as any).r : undefined,
-                width: sp.s,
-                height: sp.s,
-                borderRadius: sp.s,
+                width: sp.s, height: sp.s, borderRadius: sp.s,
                 backgroundColor: '#C8A84B',
                 opacity: sp.o,
               }}
             />
           ))}
 
-          {/* Section label */}
           <View style={styles.charHeroLabel}>
             <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
             {activeOutfit && (
               <View style={styles.outfitNamePill}>
                 <Feather name="star" size={9} color="rgba(200,168,75,0.9)" />
-                <Text style={styles.outfitNameText} numberOfLines={1}>
-                  {activeOutfit.name}
-                </Text>
+                <Text style={styles.outfitNameText} numberOfLines={1}>{activeOutfit.name}</Text>
               </View>
             )}
           </View>
 
-          {/* Character art — full bleed */}
-          {activeOutfit?.imageUri ? (
-            <Image
-              source={{ uri: activeOutfit.imageUri }}
-              style={StyleSheet.absoluteFill}
-              resizeMode="cover"
-            />
-          ) : (
-            <Image
-              source={Images.character_default}
-              style={StyleSheet.absoluteFill}
-              resizeMode="cover"
-            />
-          )}
+          {activeOutfit?.imageUri
+            ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          }
 
-          {/* Top gradient so label stays readable */}
-          <LinearGradient
-            colors={['rgba(18,16,42,0.55)', 'transparent']}
-            style={styles.charHeroTopOverlay}
-            pointerEvents="none"
-          />
+          <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
+          <LinearGradient colors={['transparent', 'rgba(18,16,42,0.82)']} style={styles.charHeroOverlay} pointerEvents="none" />
 
-          {/* Bottom gradient overlay */}
-          <LinearGradient
-            colors={['transparent', 'rgba(18,16,42,0.78)']}
-            style={styles.charHeroOverlay}
-            pointerEvents="none"
-          />
-
-          {/* Edit button */}
-          <TouchableOpacity
-            style={styles.editBtn}
-            onPress={() => router.push('/(tabs)/profile')}
-          >
+          <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/(tabs)/profile')}>
             <Feather name="edit-2" size={11} color="rgba(50,36,90,0.85)" />
             <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
 
-          {/* Change outfit button */}
           {outfits.length > 0 && (
             <TouchableOpacity
               style={styles.changeOutfitBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setShowOutfitPicker(true);
-              }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfitPicker(true); }}
             >
-              <Feather name="refresh-cw" size={12} color="rgba(200,184,232,0.9)" />
+              <Feather name="refresh-cw" size={13} color="rgba(200,184,232,0.9)" />
             </TouchableOpacity>
           )}
         </View>
       </LinearGradient>
 
-      {/* ── Category cards (scrollable) ──────────────────────────── */}
+      {/* ── Scrollable content ─────────────────────────────────────── */}
       <ScrollView
         style={styles.cardsArea}
-        contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 82 }]}
+        contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Character info card */}
+        {/* Character info */}
         <TouchableOpacity
-          style={styles.charInfoCard}
+          style={[styles.charInfoCard, SHADOW.sm]}
           onPress={() => router.push('/(tabs)/profile')}
           activeOpacity={0.88}
         >
@@ -288,9 +250,10 @@ export default function HomeScreen() {
               <Text style={styles.charInfoName}>{character.name || 'Sky Child'}</Text>
               <Text style={styles.charInfoStar}>✦</Text>
             </View>
-            {character.bio ? (
-              <Text style={styles.charInfoBio} numberOfLines={2}>{character.bio}</Text>
-            ) : null}
+            {character.bio
+              ? <Text style={styles.charInfoBio} numberOfLines={2}>{character.bio}</Text>
+              : <Text style={styles.charInfoBioEmpty}>Tap to set your character bio...</Text>
+            }
             {character.traits.length > 0 && (
               <View style={styles.charInfoTraits}>
                 {character.traits.slice(0, 4).map(t => (
@@ -304,47 +267,45 @@ export default function HomeScreen() {
           <Feather name="chevron-right" size={16} color="#C0B4D8" />
         </TouchableOpacity>
 
+        {/* Section label */}
         <Text style={styles.sectionLabel}>Where would you like to go?</Text>
 
-        {CATEGORIES.map(cat => (
-          <TouchableOpacity
-            key={cat.key}
-            style={[styles.catCard, SHADOW.sm]}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push(cat.route);
-            }}
-            activeOpacity={0.88}
-          >
-            <View style={styles.catLeft}>
-              <View style={[styles.catIconCircle, { backgroundColor: cat.iconBg }]}>
-                <Feather name={cat.icon} size={20} color={cat.iconColor} />
-              </View>
-              <View style={styles.catTexts}>
-                <Text style={styles.catTitle}>{cat.title}</Text>
-                <Text style={styles.catDesc}>{cat.desc}</Text>
-              </View>
-            </View>
-            <View style={styles.catImageWrap}>
-              <Image source={cat.image} style={styles.catImage} resizeMode="cover" />
+        {/* ── 2-column image-backed grid ──────────────────────────── */}
+        <View style={[styles.grid, { gap: cardGap }]}>
+          {CATEGORIES.map(cat => (
+            <TouchableOpacity
+              key={cat.key}
+              style={[styles.gridCard, { width: cardW, height: cardH }, SHADOW.md]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push(cat.route); }}
+              activeOpacity={0.88}
+            >
+              {/* Background image */}
+              <Image source={cat.image} style={StyleSheet.absoluteFill} resizeMode="cover" />
+
+              {/* Dark gradient overlay */}
               <LinearGradient
-                colors={['rgba(255,255,255,0.55)', 'transparent']}
-                style={styles.catImageFade}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                colors={['rgba(20,16,48,0.18)', 'rgba(18,14,40,0.82)']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
               />
-            </View>
-            <Feather name="chevron-right" size={16} color="#C0B4D8" style={styles.catChevron} />
-          </TouchableOpacity>
-        ))}
+
+              {/* Icon badge */}
+              <View style={[styles.gridIcon, { backgroundColor: cat.iconBg }]}>
+                <Feather name={cat.icon} size={18} color={cat.iconColor} />
+              </View>
+
+              {/* Bottom text */}
+              <View style={styles.gridBottom}>
+                <Text style={styles.gridTitle} numberOfLines={2}>{cat.title}</Text>
+                <Text style={styles.gridDesc} numberOfLines={2}>{cat.desc}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
       </ScrollView>
 
-      {/* ── Outfit picker modal ───────────────────────────────────── */}
-      <Modal
-        visible={showOutfitPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowOutfitPicker(false)}
-      >
+      {/* ── Outfit picker modal ──────────────────────────────────── */}
+      <Modal visible={showOutfitPicker} transparent animationType="slide" onRequestClose={() => setShowOutfitPicker(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowOutfitPicker(false)}>
           <Pressable
             style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 20 }]}
@@ -360,54 +321,32 @@ export default function HomeScreen() {
             <Text style={styles.pickerSub}>Selected outfit shows on your home & profile</Text>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerRow}>
-              {/* None option */}
               <TouchableOpacity
-                style={[
-                  styles.pickerCard,
-                  !activeOutfitId && styles.pickerCardActive,
-                ]}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setActiveOutfitId(null);
-                  setShowOutfitPicker(false);
-                }}
+                style={[styles.pickerCard, !activeOutfitId && styles.pickerCardActive]}
+                onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(null); setShowOutfitPicker(false); }}
               >
                 <View style={[styles.pickerCardImg, styles.pickerCardNone]}>
                   <Feather name="slash" size={22} color="#9A8EB4" />
                 </View>
                 <Text style={styles.pickerCardName}>None</Text>
                 {!activeOutfitId && (
-                  <View style={styles.pickerActiveDot}>
-                    <Feather name="check" size={10} color="#fff" />
-                  </View>
+                  <View style={styles.pickerActiveDot}><Feather name="check" size={10} color="#fff" /></View>
                 )}
               </TouchableOpacity>
 
               {outfits.map(outfit => (
                 <TouchableOpacity
                   key={outfit.id}
-                  style={[
-                    styles.pickerCard,
-                    activeOutfitId === outfit.id && styles.pickerCardActive,
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setActiveOutfitId(outfit.id);
-                    setShowOutfitPicker(false);
-                  }}
+                  style={[styles.pickerCard, activeOutfitId === outfit.id && styles.pickerCardActive]}
+                  onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(outfit.id); setShowOutfitPicker(false); }}
                 >
-                  {outfit.imageUri ? (
-                    <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}>
-                      <Feather name="star" size={22} color="rgba(107,91,149,0.4)" />
-                    </View>
-                  )}
+                  {outfit.imageUri
+                    ? <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} resizeMode="cover" />
+                    : <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}><Feather name="star" size={22} color="rgba(107,91,149,0.4)" /></View>
+                  }
                   <Text style={styles.pickerCardName} numberOfLines={1}>{outfit.name}</Text>
                   {activeOutfitId === outfit.id && (
-                    <View style={styles.pickerActiveDot}>
-                      <Feather name="check" size={10} color="#fff" />
-                    </View>
+                    <View style={styles.pickerActiveDot}><Feather name="check" size={10} color="#fff" /></View>
                   )}
                 </TouchableOpacity>
               ))}
@@ -416,31 +355,20 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Notifications modal ───────────────────────────────────── */}
-      <Modal
-        visible={showNotifs}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowNotifs(false)}
-      >
+      {/* ── Notifications modal ──────────────────────────────────── */}
+      <Modal visible={showNotifs} transparent animationType="slide" onRequestClose={() => setShowNotifs(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotifs(false)}>
           <Pressable
             style={[styles.notifsSheet, { paddingBottom: bottomPad + 20 }]}
             onPress={e => e.stopPropagation()}
           >
             <View style={styles.sheetHandle} />
-
             <View style={styles.notifsHeader}>
               <Text style={styles.notifsTitle}>Notifications</Text>
               {hasNotifs && (
-                <View style={styles.countBadge}>
-                  <Text style={styles.countText}>{rewards.length}</Text>
-                </View>
+                <View style={styles.countBadge}><Text style={styles.countText}>{rewards.length}</Text></View>
               )}
-              <TouchableOpacity
-                style={styles.closeBtn}
-                onPress={() => setShowNotifs(false)}
-              >
+              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowNotifs(false)}>
                 <Feather name="x" size={16} color="#9A8EB4" />
               </TouchableOpacity>
             </View>
@@ -495,320 +423,166 @@ const styles = StyleSheet.create({
   star: { position: 'absolute', borderRadius: 99, backgroundColor: 'rgba(220,210,255,1)' },
 
   topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingTop: 14,
-    paddingBottom: 10,
-    gap: 12,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 18, paddingTop: 14, paddingBottom: 10, gap: 12,
   },
   avatarRing: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    borderWidth: 2,
-    borderColor: 'rgba(200,184,232,0.4)',
-    overflow: 'hidden',
-    flexShrink: 0,
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 2, borderColor: 'rgba(200,184,232,0.45)',
+    overflow: 'hidden', flexShrink: 0,
   },
   avatar: { width: '100%', height: '100%' },
   nameBlock: { flex: 1 },
-  charName: {
-    fontSize: 16,
-    fontFamily: 'Inter_700Bold',
-    color: 'rgba(235,228,255,0.96)',
-    letterSpacing: -0.2,
-  },
-  subtitle: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-    color: 'rgba(200,184,232,0.6)',
-    marginTop: 1,
-  },
-  headerIcons: { flexDirection: 'row', gap: 4 },
+  charName: { fontSize: 16, fontFamily: 'Inter_700Bold', color: 'rgba(235,228,255,0.96)', letterSpacing: -0.2 },
+  subtitle:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)', marginTop: 1 },
+
+  headerIcons: { flexDirection: 'row', gap: 6 },
   headerIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 42, height: 42, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1,
-    borderColor: 'rgba(200,184,232,0.14)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.14)',
     position: 'relative',
   },
   notifDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    position: 'absolute', top: 9, right: 9,
+    width: 7, height: 7, borderRadius: 4,
     backgroundColor: '#E04455',
-    borderWidth: 1.5,
-    borderColor: '#1E1A48',
+    borderWidth: 1.5, borderColor: '#1E1A48',
   },
 
-  // Stats strip
   statsStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 20, paddingBottom: 14, gap: 8,
   },
   statPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)' },
   statDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
 
-  // Character hero
-  charHero: {
-    position: 'relative',
-    width: '100%',
-    height: 300,
-    overflow: 'hidden',
-  },
-  charHeroLabel: {
-    position: 'absolute',
-    top: 14,
-    left: 16,
-    zIndex: 10,
-    gap: 6,
-  },
+  // Hero
+  charHero: { position: 'relative', width: '100%', height: 300, overflow: 'hidden' },
+  charHeroLabel: { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
   charHeroLabelText: {
-    fontSize: 18,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.3,
+    fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3,
     color: 'rgba(235,228,255,0.95)',
     textShadowColor: 'rgba(18,16,42,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
   outfitNamePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(18,16,42,0.52)',
-    borderRadius: 10,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(200,168,75,0.25)',
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(18,16,42,0.52)', borderRadius: 10,
+    paddingHorizontal: 9, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(200,168,75,0.25)',
     alignSelf: 'flex-start',
   },
-  outfitNameText: {
-    fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(240,228,200,0.92)',
-    letterSpacing: 0.2,
-  },
-  charHeroTopOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    zIndex: 2,
-  },
-  charHeroOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 110,
-    zIndex: 2,
-  },
+  outfitNameText: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
+  charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 80, zIndex: 2 },
+  charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 120, zIndex: 2 },
+
   editBtn: {
-    position: 'absolute',
-    bottom: 14,
-    left: 16,
-    zIndex: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: 'rgba(255,255,255,0.80)',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: 'rgba(107,91,149,0.22)',
+    position: 'absolute', bottom: 14, left: 16, zIndex: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
   },
-  editBtnText: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    color: 'rgba(50,36,90,0.9)',
-  },
+  editBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold', color: 'rgba(50,36,90,0.85)' },
   changeOutfitBtn: {
-    position: 'absolute',
-    bottom: 12,
-    right: 14,
-    zIndex: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 12,
-    backgroundColor: 'rgba(26,22,48,0.55)',
-    borderWidth: 1,
-    borderColor: 'rgba(200,184,232,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', bottom: 14, right: 16, zIndex: 10,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.2)',
+    alignItems: 'center', justifyContent: 'center',
   },
+
+  // Scrollable content
+  cardsArea: { flex: 1 },
+  cardsList:  { paddingTop: 16, paddingHorizontal: 16 },
 
   // Character info card
   charInfoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#EDE8F4',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-    gap: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#fff', borderRadius: 18, padding: 16,
+    marginBottom: 20, borderWidth: 1, borderColor: '#EDE4F8',
   },
-  charInfoLeft: { flex: 1, gap: 5 },
-  charNameRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  charInfoName: { fontSize: 20, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.4 },
-  charInfoStar: { fontSize: 14, color: '#C8A84B' },
-  charInfoBio: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: '#7A6E9A', lineHeight: 19 },
-  charInfoTraits: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-  charInfoTrait: {
-    backgroundColor: 'rgba(107,91,149,0.09)',
-    borderRadius: 20,
-    paddingHorizontal: 11,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(107,91,149,0.16)',
-  },
+  charInfoLeft: { flex: 1 },
+  charNameRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  charInfoName: { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.3 },
+  charInfoStar: { fontSize: 12, color: '#C8A84B' },
+  charInfoBio:  { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#6B6090', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
+  charInfoBioEmpty: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#C0B4D8', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
+  charInfoTraits: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  charInfoTrait:  { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(107,91,149,0.1)', borderWidth: 1, borderColor: 'rgba(107,91,149,0.18)' },
   charInfoTraitText: { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#6B5B95' },
 
-  // Cards section
-  cardsArea: { flex: 1 },
-  cardsList: { paddingHorizontal: 16, paddingTop: 18, gap: 12 },
+  // Section label
   sectionLabel: {
-    fontSize: 12,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#9A8EB4',
-    letterSpacing: 0.6,
-    textTransform: 'uppercase',
-    marginBottom: 4,
+    fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#9A8EB4',
+    letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 12,
   },
 
-  catCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#EDE8F4',
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 110,
-    overflow: 'hidden',
-  },
-  catLeft: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 10,
-  },
-  catIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  catTexts: { gap: 3 },
-  catTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#1E1830', letterSpacing: -0.2 },
-  catDesc:  { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#9A8EB4', lineHeight: 17 },
-  catImageWrap: {
-    width: 130,
-    height: '100%',
+  // Grid cards
+  grid: { flexDirection: 'row', flexWrap: 'wrap' },
+  gridCard: {
+    borderRadius: 22, overflow: 'hidden',
     position: 'relative',
-    flexShrink: 0,
   },
-  catImage: { width: '100%', height: '100%' },
-  catImageFade: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: 40,
+  gridIcon: {
+    position: 'absolute', top: 14, left: 14, zIndex: 5,
+    width: 40, height: 40, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
   },
-  catChevron: {
-    position: 'absolute',
-    right: 12,
-    bottom: 14,
+  gridBottom: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    padding: 14, zIndex: 5,
   },
+  gridTitle: { fontSize: 14, fontFamily: 'Inter_700Bold', color: '#fff', letterSpacing: -0.2, marginBottom: 3 },
+  gridDesc:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(220,210,255,0.72)', lineHeight: 16 },
 
-  // Modals shared
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(10,8,28,0.5)', justifyContent: 'flex-end' },
-  sheetHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DDD5EE', alignSelf: 'center', marginBottom: 16 },
-  closeBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F0EAF8', alignItems: 'center', justifyContent: 'center' },
-
-  // Outfit picker sheet
+  // Modals
+  modalOverlay:  { flex: 1, backgroundColor: 'rgba(18,16,42,0.6)', justifyContent: 'flex-end' },
   pickerSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: 20,
-    paddingTop: 14,
+    backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingTop: 12, paddingHorizontal: 20,
+    shadowColor: '#1E1830', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
   },
-  pickerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 10 },
-  pickerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#2A1E50', flex: 1 },
-  pickerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: '#9A8EB4', marginBottom: 18 },
-  pickerRow: { gap: 12, paddingBottom: 8, paddingHorizontal: 2 },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: '#DDD8EE',
+    alignSelf: 'center', marginBottom: 16,
+  },
+  pickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  pickerTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#1E1830' },
+  pickerSub:    { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#9A8EB4', marginBottom: 16, fontStyle: 'italic' },
+  pickerRow:    { flexDirection: 'row', gap: 12, paddingBottom: 4 },
   pickerCard: {
-    width: 100,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#EDE8F4',
-    overflow: 'hidden',
-    backgroundColor: '#FAFAF8',
+    width: 90, alignItems: 'center', gap: 8,
+    padding: 4, borderRadius: 18, borderWidth: 2, borderColor: 'transparent',
     position: 'relative',
   },
-  pickerCardActive: {
-    borderColor: '#6B5B95',
-    backgroundColor: 'rgba(107,91,149,0.04)',
+  pickerCardActive: { borderColor: '#6B5B95' },
+  pickerCardImg:    { width: 82, height: 110, borderRadius: 14, overflow: 'hidden' },
+  pickerCardNone:   { backgroundColor: '#EDE8F5', alignItems: 'center', justifyContent: 'center' },
+  pickerCardNoImg:  { backgroundColor: '#EDE8F5', alignItems: 'center', justifyContent: 'center' },
+  pickerCardName:   { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#1E1830', textAlign: 'center' },
+  pickerActiveDot:  {
+    position: 'absolute', top: 8, right: 8, width: 22, height: 22,
+    borderRadius: 11, backgroundColor: '#6B5B95', alignItems: 'center', justifyContent: 'center',
   },
-  pickerCardImg: { width: '100%', height: 120 },
-  pickerCardNone: {
-    backgroundColor: '#F0EAF8',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pickerCardNoImg: {
-    backgroundColor: 'rgba(107,91,149,0.06)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pickerCardName: {
-    fontSize: 11,
-    fontFamily: 'Inter_600SemiBold',
-    color: '#3A2E60',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    lineHeight: 15,
-  },
-  pickerActiveDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#6B5B95',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F0EBF8', alignItems: 'center', justifyContent: 'center' },
 
-  // Notifications modal
-  notifsSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 14, maxHeight: '80%' },
-  notifsHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 10 },
-  notifsTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#2A1E50', flex: 1 },
-  countBadge: { backgroundColor: '#E04455', borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2, minWidth: 22, alignItems: 'center' },
-  countText: { fontSize: 11, fontFamily: 'Inter_700Bold', color: '#fff' },
-  notifItem: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, padding: 14 },
+  notifsSheet: {
+    backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    paddingTop: 12, paddingHorizontal: 20, maxHeight: 480,
+    shadowColor: '#1E1830', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 20,
+  },
+  notifsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  notifsTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#1E1830', flex: 1 },
+  countBadge:   { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: '#6B5B95' },
+  countText:    { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
+  notifsEmpty:  { alignItems: 'center', paddingVertical: 36, gap: 12 },
+  notifsEmptyText: { fontSize: 15, fontFamily: 'Inter_500Medium', color: '#9A8EB4' },
+
+  notifItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
   notifIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  dismissBtn: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  notifsEmpty: { alignItems: 'center', paddingVertical: 40, gap: 12 },
-  notifsEmptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: '#9A8EB4' },
+  dismissBtn:    { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

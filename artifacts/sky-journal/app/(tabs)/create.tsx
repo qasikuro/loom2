@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   postBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 22 },
   postBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   scroll: { paddingHorizontal: 16, paddingTop: 4 },
-  metaCard: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 12, marginBottom: 20 },
+  metaCard: { borderRadius: 22, borderWidth: 1, padding: 18, gap: 14, marginBottom: 22 },
   titleInput: { fontSize: 20, fontFamily: 'Inter_600SemiBold', paddingBottom: 12, borderBottomWidth: 1 },
   metaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
