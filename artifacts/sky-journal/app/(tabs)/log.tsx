@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Image,
   Platform,
@@ -414,8 +415,21 @@ export default function JournalScreen() {
   }
 
   function handleDelete(id: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    deleteJournalEntry(id);
+    Alert.alert(
+      'Delete Entry',
+      'This entry will be permanently removed from your journal.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            deleteJournalEntry(id);
+          },
+        },
+      ],
+    );
   }
 
   return (

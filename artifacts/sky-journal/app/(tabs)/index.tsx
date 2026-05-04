@@ -208,6 +208,14 @@ export default function HomeScreen() {
           {/* Section label */}
           <View style={styles.charHeroLabel}>
             <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
+            {activeOutfit && (
+              <View style={styles.outfitNamePill}>
+                <Feather name="star" size={9} color="rgba(200,168,75,0.9)" />
+                <Text style={styles.outfitNameText} numberOfLines={1}>
+                  {activeOutfit.name}
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Character art — full bleed */}
@@ -565,6 +573,7 @@ const styles = StyleSheet.create({
     top: 14,
     left: 16,
     zIndex: 10,
+    gap: 6,
   },
   charHeroLabelText: {
     fontSize: 18,
@@ -574,6 +583,24 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(18,16,42,0.6)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
+  },
+  outfitNamePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: 'rgba(18,16,42,0.52)',
+    borderRadius: 10,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(200,168,75,0.25)',
+    alignSelf: 'flex-start',
+  },
+  outfitNameText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(240,228,200,0.92)',
+    letterSpacing: 0.2,
   },
   charHeroTopOverlay: {
     position: 'absolute',
