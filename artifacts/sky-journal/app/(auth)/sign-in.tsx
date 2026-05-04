@@ -27,76 +27,40 @@ const SPARKLES = [
 ];
 
 export default function SignInScreen() {
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]           = useState('');
+  const [password, setPassword]     = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [verifyCode, setVerifyCode] = useState('');
-
-  const isLoading = fetchStatus === 'fetching';
+  const [isLoading, setIsLoading]   = useState(false);
+  const [error, setError]           = useState('');
 
   async function handleSignIn() {
-    const { error } = await signIn.password({ emailAddress: email, password });
-    if (error) return;
-
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: () => {
-          router.replace('/(tabs)' as any);
-        },
+    if (!isLoaded || !signIn) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      const result = await signIn.create({
+        identifier: email,
+        password,
       });
-    } else if (signIn.status === 'needs_client_trust') {
-      await signIn.mfa.sendEmailCode();
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        router.replace('/(tabs)' as any);
+      } else {
+        setError('Sign-in could not be completed. Please try again.');
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        'Incorrect email or password.';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
     }
-  }
-
-  async function handleVerify() {
-    await signIn.mfa.verifyEmailCode({ code: verifyCode });
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: () => {
-          router.replace('/(tabs)' as any);
-        },
-      });
-    }
-  }
-
-  if (signIn.status === 'needs_client_trust') {
-    return (
-      <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
-        <View style={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20 }]}>
-          <View style={styles.iconWrap}>
-            <Text style={styles.iconStar}>✦</Text>
-          </View>
-          <Text style={styles.title}>Verify your account</Text>
-          <Text style={styles.subtitle}>Enter the code sent to your email</Text>
-          <View style={styles.field}>
-            <Text style={styles.label}>Verification Code</Text>
-            <TextInput
-              style={styles.input}
-              value={verifyCode}
-              onChangeText={setVerifyCode}
-              keyboardType="number-pad"
-              placeholder="Enter 6-digit code"
-              placeholderTextColor="rgba(200,184,232,0.4)"
-            />
-            {errors.fields?.code && <Text style={styles.error}>{errors.fields.code.message}</Text>}
-          </View>
-          <TouchableOpacity style={[styles.btn, isLoading && styles.btnDisabled]} onPress={handleVerify} disabled={isLoading}>
-            {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Verify</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => signIn.mfa.sendEmailCode()}>
-            <Text style={styles.textBtnText}>Resend code</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => signIn.reset()}>
-            <Text style={styles.textBtnText}>Start over</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    );
   }
 
   return (
@@ -144,7 +108,7 @@ export default function SignInScreen() {
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={setEmail}
+                  onChangeText={t => { setEmail(t); setError(''); }}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   placeholder="your@email.com"
@@ -152,9 +116,6 @@ export default function SignInScreen() {
                   autoComplete="email"
                 />
               </View>
-              {errors.fields?.identifier && (
-                <Text style={styles.error}>{errors.fields.identifier.message}</Text>
-              )}
             </View>
 
             <View style={styles.field}>
@@ -164,7 +125,7 @@ export default function SignInScreen() {
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={t => { setPassword(t); setError(''); }}
                   secureTextEntry={!showPassword}
                   placeholder="Enter your password"
                   placeholderTextColor="rgba(200,184,232,0.4)"
@@ -174,10 +135,9 @@ export default function SignInScreen() {
                   <Feather name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
                 </TouchableOpacity>
               </View>
-              {errors.fields?.password && (
-                <Text style={styles.error}>{errors.fields.password.message}</Text>
-              )}
             </View>
+
+            {!!error && <Text style={styles.error}>{error}</Text>}
 
             <TouchableOpacity
               style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
@@ -258,8 +218,10 @@ const styles = StyleSheet.create({
   },
   eyeBtn: { position: 'absolute', right: 14, padding: 4 },
   error: {
-    fontSize: 12, fontFamily: 'Inter_400Regular',
-    color: '#E06C75', marginTop: 2,
+    fontSize: 13, fontFamily: 'Inter_400Regular',
+    color: '#E06C75', textAlign: 'center',
+    backgroundColor: 'rgba(224,108,117,0.12)',
+    borderRadius: 10, padding: 10,
   },
   btn: {
     height: 54, borderRadius: 16, marginTop: 4,
@@ -288,6 +250,4 @@ const styles = StyleSheet.create({
     fontSize: 15, fontFamily: 'Inter_600SemiBold',
     color: 'rgba(200,184,232,0.9)',
   },
-  textBtn: { alignItems: 'center', marginTop: 12 },
-  textBtnText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.6)' },
 });
