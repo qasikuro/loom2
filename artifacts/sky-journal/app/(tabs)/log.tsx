@@ -590,8 +590,8 @@ const styles = StyleSheet.create({
   privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.08)', borderWidth:1, borderColor:'rgba(200,184,232,0.18)' },
   privateBadgeText: { fontSize:10, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.7)' },
   headerRight: { flexDirection:'row', gap:8 },
-  hdrBtn: { width:36, height:36, borderRadius:11, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.08)' },
-  hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.5)' },
+  hdrBtn: { width:40, height:40, borderRadius:13, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.09)', borderWidth:1, borderColor:'rgba(200,184,232,0.14)' },
+  hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.55)', borderColor:'rgba(107,91,149,0.4)' },
 
   // Filter tabs inside dark header
   filtersScroll: { maxHeight:50 },

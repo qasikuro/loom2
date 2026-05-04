@@ -1,4 +1,5 @@
 import { Feather } from '@expo/vector-icons';
+import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -38,8 +39,25 @@ export default function CharacterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { character, setCharacter, outfits, deleteOutfit, stories, activeOutfitId, setActiveOutfitId } = useApp();
+  const { signOut } = useAuth();
+  const { user } = useUser();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+
+  async function handleSignOut() {
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: async () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          await signOut();
+          router.replace('/(auth)/sign-in' as any);
+        },
+      },
+    ]);
+  }
 
   const [editingName, setEditingName] = useState(false);
   const [editingBio, setEditingBio] = useState(false);
@@ -394,6 +412,39 @@ export default function CharacterScreen() {
             )}
           </View>
         </View>
+
+        {/* ── Account section ──────────────────────────────────────── */}
+        <View style={styles.accountSection}>
+          <Text style={[styles.accountSectionLabel, { color: colors.mutedForeground }]}>ACCOUNT</Text>
+          <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+            <View style={styles.accountRow}>
+              <View style={[styles.accountIconWrap, { backgroundColor: `${colors.primary}10` }]}>
+                <Feather name="mail" size={14} color={colors.primary} />
+              </View>
+              <View style={styles.accountInfo}>
+                <Text style={[styles.accountInfoLabel, { color: colors.mutedForeground }]}>Signed in as</Text>
+                <Text style={[styles.accountInfoVal, { color: colors.foreground }]} numberOfLines={1}>
+                  {user?.primaryEmailAddress?.emailAddress ?? '—'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.accountDivider, { backgroundColor: colors.border }]} />
+
+            <TouchableOpacity
+              style={styles.signOutRow}
+              onPress={handleSignOut}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.accountIconWrap, { backgroundColor: 'rgba(224,68,85,0.1)' }]}>
+                <Feather name="log-out" size={14} color="#E04455" />
+              </View>
+              <Text style={styles.signOutText}>Sign Out</Text>
+              <Feather name="chevron-right" size={14} color="rgba(224,68,85,0.5)" style={{ marginLeft: 'auto' }} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
       </ScrollView>
     </View>
   );
@@ -490,4 +541,16 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   setDisplayText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  // Account section
+  accountSection: { paddingHorizontal: 20, paddingBottom: 12, borderTopWidth: 1, borderTopColor: '#E2D9EE', paddingTop: 22, marginBottom: 8 },
+  accountSectionLabel: { fontSize: 9, fontFamily: 'Inter_700Bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 },
+  accountCard: { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  accountRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  accountIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  accountInfo: { flex: 1 },
+  accountInfoLabel: { fontSize: 10, fontFamily: 'Inter_400Regular', marginBottom: 2 },
+  accountInfoVal: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  accountDivider: { height: 1, marginHorizontal: 14 },
+  signOutRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  signOutText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#E04455', flex: 1 },
 });

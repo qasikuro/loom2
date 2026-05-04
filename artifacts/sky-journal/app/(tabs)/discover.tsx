@@ -176,7 +176,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 28, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
   headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
-  iconBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 2 },
+  iconBtn: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 2, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   tabsScroll: { maxHeight: 48 },
   tabsRow: { flexDirection: 'row', gap: 7, paddingVertical: 6 },
   tab: {

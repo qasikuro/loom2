@@ -140,14 +140,17 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.headerIconBtn}>
-              <Feather name="moon" size={18} color="rgba(200,184,232,0.65)" />
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => router.push('/(tabs)/profile')}
+            >
+              <Feather name="settings" size={17} color="rgba(200,184,232,0.75)" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconBtn}
               onPress={() => { setShowNotifs(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
             >
-              <Feather name="bell" size={18} color="rgba(200,184,232,0.65)" />
+              <Feather name="bell" size={17} color="rgba(200,184,232,0.75)" />
               {hasNotifs && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
@@ -516,12 +519,14 @@ const styles = StyleSheet.create({
   },
   headerIcons: { flexDirection: 'row', gap: 4 },
   headerIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,184,232,0.14)',
     position: 'relative',
   },
   notifDot: {
