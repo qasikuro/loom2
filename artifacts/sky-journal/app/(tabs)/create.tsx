@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
   Platform,
   StyleSheet,
   Text,
@@ -59,6 +58,7 @@ export default function CreateScreen() {
   const [showMoods, setShowMoods] = useState(false);
   const [panels, setPanels] = useState<StoryPanel[]>([makePanel()]);
   const [posting, setPosting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentMood = MOODS.find(m => m.label === mood);
 
@@ -67,7 +67,7 @@ export default function CreateScreen() {
   }
 
   function addPanel() {
-    if (panels.length >= 12) { Alert.alert('Max 12 panels per chapter'); return; }
+    if (panels.length >= 12) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPanels(prev => [...prev, makePanel()]);
   }
@@ -78,9 +78,10 @@ export default function CreateScreen() {
   }
 
   function handlePost() {
-    if (!chapterTitle.trim()) { Alert.alert('Give your chapter a title first.'); return; }
+    if (!chapterTitle.trim()) { setError('Give your chapter a title first.'); return; }
     const filled = panels.filter(p => p.text.trim() || p.imageUri);
-    if (!filled.length) { Alert.alert('Add at least one image or narration.'); return; }
+    if (!filled.length) { setError('Add at least one image or narration to a panel.'); return; }
+    setError(null);
     setPosting(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addStory({
@@ -136,7 +137,7 @@ export default function CreateScreen() {
             placeholder="Chapter title..."
             placeholderTextColor={colors.mutedForeground}
             value={chapterTitle}
-            onChangeText={setChapterTitle}
+            onChangeText={t => { setChapterTitle(t); if (error) setError(null); }}
             returnKeyType="done"
           />
 
@@ -239,6 +240,14 @@ export default function CreateScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Inline validation error */}
+        {error && (
+          <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
+            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
+
         {/* Publish button */}
         <TouchableOpacity style={styles.publishBtn} onPress={handlePost} disabled={posting} activeOpacity={0.85}>
           <LinearGradient colors={['#7B6BA8', '#6B5B95', '#5A4A80']} style={styles.publishGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
@@ -284,4 +293,6 @@ const styles = StyleSheet.create({
   publishBtn: { borderRadius: 30, overflow: 'hidden', marginBottom: 8 },
   publishGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
   publishText: { fontSize: 16, fontFamily: 'Inter_600SemiBold', color: '#fff' },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
+  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#DC2626' },
 });

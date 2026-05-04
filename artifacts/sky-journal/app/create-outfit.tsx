@@ -6,7 +6,6 @@ import { persistImageUri } from '@/utils/persistImage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
   Image,
   Platform,
   StyleSheet,
@@ -45,6 +44,7 @@ export default function CreateOutfitScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [isPublic, setIsPublic] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -65,7 +65,8 @@ export default function CreateOutfitScreen() {
   }
 
   function handleSave() {
-    if (!name.trim()) { Alert.alert('Give your outfit a name.'); return; }
+    if (!name.trim()) { setError('Give your outfit a name first.'); return; }
+    setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addOutfit({
@@ -141,7 +142,7 @@ export default function CreateOutfitScreen() {
             placeholder="e.g. Starlight Cape · Dawn Cloak..."
             placeholderTextColor={`${colors.mutedForeground}80`}
             value={name}
-            onChangeText={setName}
+            onChangeText={t => { setName(t); if (error) setError(null); }}
             returnKeyType="done"
           />
         </View>
@@ -181,6 +182,14 @@ export default function CreateOutfitScreen() {
             })}
           </View>
         </View>
+
+        {/* Inline validation error */}
+        {error && (
+          <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
+            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
+          </View>
+        )}
 
         {/* Visibility */}
         <View style={styles.field}>
@@ -237,4 +246,6 @@ const styles = StyleSheet.create({
   privacyRow: { flexDirection: 'row', gap: 10 },
   privBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
   privText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
+  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' },
 });

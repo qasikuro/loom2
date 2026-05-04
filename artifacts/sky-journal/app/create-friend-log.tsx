@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
   Platform,
   StyleSheet,
   Text,
@@ -43,6 +42,7 @@ export default function CreateFriendLogScreen() {
   const [mood, setMood] = useState('Warm');
   const [saving, setSaving] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Build suggestion list from past friend entries + static suggestions
   const pastFriends = Array.from(
@@ -54,7 +54,8 @@ export default function CreateFriendLogScreen() {
     : pastFriends.slice(0, 4);
 
   function handleSave() {
-    if (!friendName.trim()) { Alert.alert('Who did you meet?', 'Enter a friend\'s name.'); return; }
+    if (!friendName.trim()) { setError("Enter a friend's name to continue."); return; }
+    setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addJournalEntry({
@@ -115,7 +116,7 @@ export default function CreateFriendLogScreen() {
             placeholder="Friend's name or Sky ID..."
             placeholderTextColor={colors.mutedForeground}
             value={friendName}
-            onChangeText={t => { setFriendName(t); setShowSuggestions(true); }}
+            onChangeText={t => { setFriendName(t); setShowSuggestions(true); if (error) setError(null); }}
             onFocus={() => setShowSuggestions(true)}
             returnKeyType="done"
             onSubmitEditing={() => setShowSuggestions(false)}
@@ -188,6 +189,14 @@ export default function CreateFriendLogScreen() {
           ))}
         </View>
 
+        {/* Inline validation error */}
+        {error && (
+          <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
+            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
+          </View>
+        )}
+
         <View style={[styles.privateNote, { backgroundColor: 'rgba(58,120,184,0.07)', borderColor: 'rgba(58,120,184,0.15)' }]}>
           <Feather name="lock" size={12} color="rgba(58,120,184,0.6)" />
           <Text style={[styles.privateNoteText, { color: colors.mutedForeground }]}>
@@ -231,4 +240,6 @@ const styles = StyleSheet.create({
   moodChipText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   privateNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
   privateNoteText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 18, fontStyle: 'italic' },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
+  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' },
 });

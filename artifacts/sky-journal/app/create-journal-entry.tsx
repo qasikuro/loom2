@@ -6,7 +6,6 @@ import { persistImageUri } from '@/utils/persistImage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Alert,
   Image,
   Platform,
   StyleSheet,
@@ -66,6 +65,7 @@ export default function CreateJournalEntryScreen() {
   const [mood,       setMood]       = useState('Peaceful');
   const [imageUri,   setImageUri]   = useState<string | undefined>();
   const [saving,     setSaving]     = useState(false);
+  const [error,      setError]      = useState<string | null>(null);
 
   const today     = new Date();
   const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -85,10 +85,11 @@ export default function CreateJournalEntryScreen() {
   }
 
   function handleSave() {
-    if (!text.trim()) { Alert.alert('Write something first.'); return; }
+    if (!text.trim()) { setError('Write something first.'); return; }
     if (entryType === 'friend' && !friendName.trim()) {
-      Alert.alert('Who were you with?'); return;
+      setError('Who were you with?'); return;
     }
+    setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addJournalEntry({
@@ -162,7 +163,7 @@ export default function CreateJournalEntryScreen() {
               placeholder="Who were you with?"
               placeholderTextColor={colors.mutedForeground}
               value={friendName}
-              onChangeText={setFriendName}
+              onChangeText={t => { setFriendName(t); if (error) setError(null); }}
               returnKeyType="next"
               onSubmitEditing={() => inputRef.current?.focus()}
             />
@@ -193,7 +194,7 @@ export default function CreateJournalEntryScreen() {
           placeholder={cfg.placeholder}
           placeholderTextColor={`${colors.mutedForeground}70`}
           value={text}
-          onChangeText={setText}
+          onChangeText={t => { setText(t); if (error) setError(null); }}
           multiline
           textAlignVertical="top"
           autoFocus={entryType !== 'friend'}
@@ -244,6 +245,14 @@ export default function CreateJournalEntryScreen() {
           ))}
         </View>
 
+        {/* Inline validation error */}
+        {error && (
+          <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
+            <Feather name="alert-circle" size={14} color="#DC2626" />
+            <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
+          </View>
+        )}
+
         {/* Private note */}
         <View style={[styles.privateNote, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}15` }]}>
           <Feather name="lock" size={12} color={`${colors.primary}70`} />
@@ -287,4 +296,6 @@ const styles = StyleSheet.create({
   moodChipText:   { fontSize: 12, fontFamily: 'Inter_500Medium' },
   privateNote:    { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
   privateNoteText:{ flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 18, fontStyle: 'italic' },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
+  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium' },
 });

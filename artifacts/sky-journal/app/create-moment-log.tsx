@@ -4,7 +4,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Alert,
   Platform,
   StyleSheet,
   Text,
@@ -49,11 +48,13 @@ export default function CreateMomentLogScreen() {
   const [text, setText] = useState('');
   const [mood, setMood] = useState('Peaceful');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const prompt = PROMPTS[new Date().getDate() % PROMPTS.length];
 
   function handleSave() {
-    if (!text.trim()) { Alert.alert('Write something — even a single line.'); return; }
+    if (!text.trim()) { setError('Write something — even a single line.'); return; }
+    setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addJournalEntry({
@@ -124,7 +125,7 @@ export default function CreateMomentLogScreen() {
           placeholder="Let it out..."
           placeholderTextColor="rgba(200,184,232,0.28)"
           value={text}
-          onChangeText={setText}
+          onChangeText={t => { setText(t); if (error) setError(null); }}
           multiline
           textAlignVertical="top"
           autoFocus
@@ -148,6 +149,14 @@ export default function CreateMomentLogScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* Inline validation error */}
+        {error && (
+          <View style={styles.errorBanner}>
+            <Feather name="alert-circle" size={14} color="#F87171" />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
 
         <View style={styles.privateNote}>
           <Feather name="lock" size={12} color="rgba(200,184,232,0.4)" />
@@ -190,4 +199,6 @@ const styles = StyleSheet.create({
   moodChipText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
   privateNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, borderColor: 'rgba(200,184,232,0.12)', backgroundColor: 'rgba(200,184,232,0.04)' },
   privateNoteText: { flex: 1, fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 18, fontStyle: 'italic', color: 'rgba(200,184,232,0.45)' },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 10, borderColor: 'rgba(248,113,113,0.4)', backgroundColor: 'rgba(248,113,113,0.12)' },
+  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#F87171' },
 });
