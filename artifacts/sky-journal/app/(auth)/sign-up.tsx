@@ -49,13 +49,8 @@ export default function SignUpScreen() {
     await signUp.verifications.verifyEmailCode({ code });
     if (signUp.status === 'complete') {
       await signUp.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl('/');
-          if (url.startsWith('http')) {
-            // no-op for native
-          } else {
-            router.replace('/(tabs)');
-          }
+        navigate: () => {
+          router.replace('/(tabs)' as any);
         },
       });
     }

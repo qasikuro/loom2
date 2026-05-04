@@ -44,13 +44,8 @@ export default function SignInScreen() {
 
     if (signIn.status === 'complete') {
       await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl('/');
-          if (url.startsWith('http')) {
-            // no-op for native
-          } else {
-            router.replace('/(tabs)');
-          }
+        navigate: () => {
+          router.replace('/(tabs)' as any);
         },
       });
     } else if (signIn.status === 'needs_client_trust') {
@@ -62,7 +57,9 @@ export default function SignInScreen() {
     await signIn.mfa.verifyEmailCode({ code: verifyCode });
     if (signIn.status === 'complete') {
       await signIn.finalize({
-        navigate: () => router.replace('/(tabs)'),
+        navigate: () => {
+          router.replace('/(tabs)' as any);
+        },
       });
     }
   }
