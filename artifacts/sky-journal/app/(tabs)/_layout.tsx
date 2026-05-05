@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
 import { useAuth } from '@clerk/expo';
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Platform,
   StyleSheet,
   View,
@@ -26,17 +28,79 @@ function TabIcon({
   color: string;
   focused: boolean;
 }) {
+  const scale = useRef(new Animated.Value(focused ? 1.1 : 0.92)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: focused ? 1.1 : 0.92,
+      useNativeDriver: true,
+      tension: 70,
+      friction: 6,
+    }).start();
+  }, [focused]);
+
   return (
-    <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+    <Animated.View
+      style={[
+        styles.iconWrap,
+        focused && styles.iconWrapActive,
+        { transform: [{ scale }] },
+      ]}
+    >
       <Icon name={name} size={20} color={color} />
-    </View>
+    </Animated.View>
   );
 }
 
 function CreateIcon() {
+  const scale = useRef(new Animated.Value(1)).current;
+  const glow  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const breathe = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.08,
+          duration: 1800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        Animated.timing(scale, {
+          toValue: 0.96,
+          duration: 1800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+      ])
+    );
+    const glowLoop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, {
+          toValue: 1,
+          duration: 1800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        Animated.timing(glow, {
+          toValue: 0,
+          duration: 1800,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+      ])
+    );
+    breathe.start();
+    glowLoop.start();
+    return () => { breathe.stop(); glowLoop.stop(); };
+  }, []);
+
   return (
-    <View style={styles.createBtn}>
-      <Icon name="plus" size={24} color="#fff" />
+    <View style={styles.createWrap}>
+      {/* Glow halo behind button */}
+      <Animated.View style={[styles.createGlow, { opacity: glow }]} />
+      <Animated.View style={[styles.createBtn, { transform: [{ scale }] }]}>
+        <Icon name="plus" size={24} color="#fff" />
+      </Animated.View>
     </View>
   );
 }
@@ -166,6 +230,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(139,122,181,0.22)',
   },
 
+  createWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  createGlow: {
+    position: 'absolute',
+    width: BTN_SIZE + 24,
+    height: BTN_SIZE + 24,
+    borderRadius: (BTN_SIZE + 24) / 2,
+    backgroundColor: PURPLE,
+    opacity: 0,
+  },
   createBtn: {
     width: BTN_SIZE,
     height: BTN_SIZE,
@@ -173,10 +250,9 @@ const styles = StyleSheet.create({
     backgroundColor: PURPLE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
     shadowColor: PURPLE,
-    shadowOpacity: 0.55,
-    shadowRadius: 14,
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
     elevation: 14,
   },

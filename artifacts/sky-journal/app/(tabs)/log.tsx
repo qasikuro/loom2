@@ -3,9 +3,10 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
   Image,
   Platform,
   ScrollView,
@@ -325,9 +326,34 @@ const COMPOSE_TYPES = [
 ] as const;
 
 function ComposeFAB({ bottomPad }: { bottomPad: number }) {
-  const colors   = useColors();
+  const colors     = useColors();
   const [open, setOpen] = useState(false);
-  const anim    = useRef(new Animated.Value(0)).current;
+  const anim       = useRef(new Animated.Value(0)).current;
+  const floatAnim  = useRef(new Animated.Value(0)).current;
+
+  // Gentle float — FAB hovers up and down like a sky lantern
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: 1,
+          duration: 2600,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2600,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  const floatY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -7] });
 
   function toggle() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -367,12 +393,14 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
         );
       })}
 
-      {/* Main FAB */}
-      <TouchableOpacity style={[fab.main, SHADOW.md, { backgroundColor: colors.primary }]} onPress={toggle} activeOpacity={0.88}>
-        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-          <Icon name="edit-2" size={20} color="#fff" />
-        </Animated.View>
-      </TouchableOpacity>
+      {/* Main FAB — floats like a sky lantern */}
+      <Animated.View style={{ transform: [{ translateY: floatY }] }}>
+        <TouchableOpacity style={[fab.main, SHADOW.md, { backgroundColor: colors.primary }]} onPress={toggle} activeOpacity={0.88}>
+          <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+            <Icon name="edit-2" size={20} color="#fff" />
+          </Animated.View>
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }

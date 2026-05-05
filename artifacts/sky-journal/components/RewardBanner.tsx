@@ -1,5 +1,5 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
@@ -12,11 +12,43 @@ interface RewardBannerProps {
 }
 
 export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
-  const colors = useColors();
+  const colors    = useColors();
+  const slideAnim = useRef(new Animated.Value(-72)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Slide in from above with a spring, fade in simultaneously
+    Animated.parallel([
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 62,
+        friction: 9,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 280,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.quad),
+      }),
+    ]).start();
+  }, []);
+
+  const animStyle = {
+    transform: [{ translateY: slideAnim }],
+    opacity: fadeAnim,
+  };
 
   if (reward.isRising) {
     return (
-      <View style={[styles.risingCard, { backgroundColor: colors.night, borderColor: 'rgba(200,168,75,0.22)' }, SHADOW.md]}>
+      <Animated.View
+        style={[
+          animStyle,
+          styles.risingCard,
+          { backgroundColor: colors.night, borderColor: 'rgba(200,168,75,0.25)' },
+          SHADOW.md,
+        ]}
+      >
         <View style={[styles.risingIconWrap, { backgroundColor: 'rgba(200,168,75,0.18)' }]}>
           <Icon name="trending-up" size={18} color={colors.gold} />
         </View>
@@ -36,12 +68,19 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
             <Icon name="x" size={13} color="rgba(200,184,232,0.45)" />
           </TouchableOpacity>
         )}
-      </View>
+      </Animated.View>
     );
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}>
+    <Animated.View
+      style={[
+        animStyle,
+        styles.card,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        SHADOW.sm,
+      ]}
+    >
       <View style={[styles.iconWrap, { backgroundColor: `${colors.primary}12` }]}>
         <Icon name={reward.icon} size={18} color={colors.primary} />
       </View>
@@ -62,7 +101,7 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
           <Icon name="x" size={12} color={colors.mutedForeground} />
         </TouchableOpacity>
       )}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -77,64 +116,27 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  body: { flex: 1 },
+  body:    { flex: 1 },
   bodyTop: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
-  countText: {
-    fontSize: 22,
-    fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.5,
-  },
-  message: {
-    fontSize: 13,
-    fontFamily: 'Inter_400Regular',
-    lineHeight: 18,
-    flex: 1,
-  },
-  closeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+  countText: { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
+  message:   { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18, flex: 1 },
+  closeBtn:  {
+    width: 28, height: 28, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   risingCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
+    flexDirection: 'row', alignItems: 'center',
+    gap: 12, borderRadius: 16, borderWidth: 1, padding: 14,
   },
   risingIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  risingBody: { flex: 1, gap: 1 },
-  risingLabel: {
-    fontSize: 9,
-    fontFamily: 'Inter_600SemiBold',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-  },
-  risingTitle: {
-    fontSize: 14,
-    fontFamily: 'Inter_600SemiBold',
-    lineHeight: 20,
-  },
-  risingSubtitle: {
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
-  },
+  risingBody:     { flex: 1, gap: 1 },
+  risingLabel:    { fontSize: 9, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.2, textTransform: 'uppercase' },
+  risingTitle:    { fontSize: 14, fontFamily: 'Inter_600SemiBold', lineHeight: 20 },
+  risingSubtitle: { fontSize: 11, fontFamily: 'Inter_400Regular' },
 });

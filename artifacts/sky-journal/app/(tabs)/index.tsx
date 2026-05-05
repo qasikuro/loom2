@@ -2,9 +2,11 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Dimensions,
+  Easing,
   Image,
   Modal,
   Platform,
@@ -64,6 +66,17 @@ const CATEGORIES = [
   },
 ] as const;
 
+// Stars in the header
+const HEADER_STARS = [
+  { t: 14, l: 30,  s: 2 },
+  { t: 28, r: 50,  s: 3 },
+  { t: 8,  l: 160, s: 2 },
+  { t: 36, r: 140, s: 2 },
+  { t: 22, l: 220, s: 3 },
+  { t: 42, r: 220, s: 2 },
+] as const;
+
+// Gold sparkles on the hero
 const SPARKLES = [
   { t: 18, l: 22,  s: 5, o: 0.55 },
   { t: 44, l: 56,  s: 3, o: 0.35 },
@@ -97,6 +110,126 @@ export default function HomeScreen() {
 
   const activeOutfit = outfits.find(o => o.id === activeOutfitId) ?? null;
 
+  // ── Animations ──────────────────────────────────────────────────────────────
+
+  // Star twinkle – each header star pulses at a different rhythm
+  const starAnims = useRef(HEADER_STARS.map(() => new Animated.Value(0.28))).current;
+
+  // Gold sparkle shimmer
+  const sparkleAnims = useRef(SPARKLES.map(sp => new Animated.Value(sp.o))).current;
+
+  // Hero character float
+  const heroFloat = useRef(new Animated.Value(0)).current;
+
+  // Nav cards stagger entrance
+  const cardAnims = useRef(
+    CATEGORIES.map(() => ({
+      opacity:    new Animated.Value(0),
+      translateY: new Animated.Value(28),
+    }))
+  ).current;
+
+  // Character info card entrance
+  const infoCardAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Star twinkle loops
+    starAnims.forEach((anim, i) => {
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 0.9 + (i % 3) * 0.03,
+            duration: 800 + i * 180,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.sin),
+          }),
+          Animated.timing(anim, {
+            toValue: 0.15 + (i % 2) * 0.08,
+            duration: 1000 + i * 150,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.sin),
+          }),
+        ])
+      );
+      // Stagger each star
+      setTimeout(() => loop.start(), i * 320);
+    });
+
+    // Sparkle shimmer loops
+    sparkleAnims.forEach((anim, i) => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(anim, {
+            toValue: 0.9,
+            duration: 1400 + i * 200,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.sin),
+          }),
+          Animated.timing(anim, {
+            toValue: 0.1,
+            duration: 1200 + i * 180,
+            useNativeDriver: true,
+            easing: Easing.inOut(Easing.sin),
+          }),
+        ])
+      ).start();
+    });
+
+    // Hero float — gentle sine wave
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(heroFloat, {
+          toValue: 1,
+          duration: 3400,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        Animated.timing(heroFloat, {
+          toValue: 0,
+          duration: 3400,
+          useNativeDriver: true,
+          easing: Easing.inOut(Easing.sin),
+        }),
+      ])
+    ).start();
+
+    // Info card fade in
+    Animated.timing(infoCardAnim, {
+      toValue: 1,
+      duration: 500,
+      delay: 60,
+      useNativeDriver: true,
+      easing: Easing.out(Easing.quad),
+    }).start();
+
+    // Nav cards staggered entrance — drift down from sky
+    Animated.parallel(
+      cardAnims.map((anim, i) =>
+        Animated.parallel([
+          Animated.timing(anim.opacity, {
+            toValue: 1,
+            duration: 480,
+            delay: 140 + i * 100,
+            useNativeDriver: true,
+            easing: Easing.out(Easing.quad),
+          }),
+          Animated.spring(anim.translateY, {
+            toValue: 0,
+            delay: 140 + i * 100,
+            tension: 52,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ])
+      )
+    ).start();
+  }, []);
+
+  const heroFloatY = heroFloat.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, -9],
+  });
+
   return (
     <View style={styles.root}>
 
@@ -106,16 +239,21 @@ export default function HomeScreen() {
         style={[styles.headerGrad, { paddingTop: topPad }]}
         start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
       >
-        {/* Stars */}
-        {([
-          { t:14, l:30, s:2 }, { t:28, r:50, s:3 }, { t:8, l:160, s:2 },
-          { t:36, r:140, s:2 }, { t:22, l:220, s:3 }, { t:42, r:220, s:2 },
-        ] as Array<{t:number; s:number; l?:number; r?:number}>).map((st, i) => (
-          <View key={i} style={[styles.star, {
-            top: st.t, left: st.l, right: st.r,
-            width: st.s, height: st.s,
-            opacity: 0.28 + i * 0.06,
-          }]} />
+        {/* Animated twinkling stars */}
+        {(HEADER_STARS as ReadonlyArray<{ t: number; s: number; l?: number; r?: number }>).map((st, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              styles.star,
+              {
+                top: st.t,
+                left: (st as any).l,
+                right: (st as any).r,
+                width: st.s, height: st.s,
+                opacity: starAnims[i],
+              },
+            ]}
+          />
         ))}
 
         {/* Top row */}
@@ -179,33 +317,52 @@ export default function HomeScreen() {
 
         {/* ── Character Hero ─────────────────────────────────── */}
         <View style={[styles.charHero, { height: Math.round(SW * 0.72) }]}>
+          {/* Background gradient */}
           <LinearGradient
             colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          {activeOutfit?.imageUri
-            ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-            : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
-          }
-          <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
-          <LinearGradient colors={['transparent', 'rgba(15,13,30,0.95)']} style={styles.charHeroOverlay} pointerEvents="none" />
 
-          {SPARKLES.map((sp, i) => (
-            <View
+          {/* Floating character image */}
+          <Animated.View
+            style={[StyleSheet.absoluteFill, { transform: [{ translateY: heroFloatY }] }]}
+          >
+            {activeOutfit?.imageUri
+              ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            }
+          </Animated.View>
+
+          {/* Gradient overlays */}
+          <LinearGradient
+            colors={['rgba(18,16,42,0.5)', 'transparent']}
+            style={styles.charHeroTopOverlay}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(15,13,30,0.95)']}
+            style={styles.charHeroOverlay}
+            pointerEvents="none"
+          />
+
+          {/* Animated gold sparkle dots */}
+          {(SPARKLES as ReadonlyArray<{ t: number; s: number; o: number; l?: number; r?: number }>).map((sp, i) => (
+            <Animated.View
               key={i}
               style={{
                 position: 'absolute',
                 top: sp.t,
-                left:  'l' in sp ? (sp as any).l : undefined,
-                right: 'r' in sp ? (sp as any).r : undefined,
+                left:  (sp as any).l,
+                right: (sp as any).r,
                 width: sp.s, height: sp.s, borderRadius: sp.s,
                 backgroundColor: '#C8A84B',
-                opacity: sp.o,
+                opacity: sparkleAnims[i],
               }}
             />
           ))}
 
+          {/* Label */}
           <View style={styles.charHeroLabel}>
             <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
             {activeOutfit && (
@@ -216,10 +373,14 @@ export default function HomeScreen() {
             )}
           </View>
 
+          {/* Change outfit button */}
           {outfits.length > 0 && (
             <TouchableOpacity
               style={styles.changeOutfitBtn}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfitPicker(true); }}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setShowOutfitPicker(true);
+              }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Icon name="refresh-cw" size={14} color="rgba(200,184,232,0.9)" />
@@ -234,74 +395,91 @@ export default function HomeScreen() {
         contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Character info card */}
-        <TouchableOpacity
-          style={[styles.charInfoCard, SHADOW.sm]}
-          onPress={() => router.push('/(tabs)/profile')}
-          activeOpacity={0.86}
-        >
-          <View style={styles.charInfoLeft}>
-            <View style={styles.charNameRow}>
-              <Text style={styles.charInfoName}>{character.name || 'Sky Child'}</Text>
-              <Text style={styles.charInfoStar}>✦</Text>
-            </View>
-            {character.bio
-              ? <Text style={styles.charInfoBio} numberOfLines={2}>{character.bio}</Text>
-              : <Text style={styles.charInfoBioEmpty}>Tap to set your character bio...</Text>
-            }
-            {character.traits.length > 0 && (
-              <View style={styles.charInfoTraits}>
-                {character.traits.slice(0, 4).map(t => (
-                  <View key={t} style={styles.charInfoTrait}>
-                    <Text style={styles.charInfoTraitText}>{t}</Text>
-                  </View>
-                ))}
+        {/* Character info card — animated fade-in */}
+        <Animated.View style={{ opacity: infoCardAnim }}>
+          <TouchableOpacity
+            style={[styles.charInfoCard, SHADOW.sm]}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.86}
+          >
+            <View style={styles.charInfoLeft}>
+              <View style={styles.charNameRow}>
+                <Text style={styles.charInfoName}>{character.name || 'Sky Child'}</Text>
+                <Text style={styles.charInfoStar}>✦</Text>
               </View>
-            )}
-          </View>
-          <View style={styles.charInfoRight}>
-            <Text style={styles.charInfoCta}>Edit</Text>
-            <Icon name="chevron-right" size={14} color="rgba(139,122,181,0.7)" />
-          </View>
-        </TouchableOpacity>
+              {character.bio
+                ? <Text style={styles.charInfoBio} numberOfLines={2}>{character.bio}</Text>
+                : <Text style={styles.charInfoBioEmpty}>Tap to set your character bio...</Text>
+              }
+              {character.traits.length > 0 && (
+                <View style={styles.charInfoTraits}>
+                  {character.traits.slice(0, 4).map(t => (
+                    <View key={t} style={styles.charInfoTrait}>
+                      <Text style={styles.charInfoTraitText}>{t}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+            <View style={styles.charInfoRight}>
+              <Text style={styles.charInfoCta}>Edit</Text>
+              <Icon name="chevron-right" size={14} color="rgba(139,122,181,0.7)" />
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
 
         {/* Section label */}
         <Text style={styles.sectionLabel}>Where would you like to go?</Text>
 
-        {/* Navigation cards */}
+        {/* ── Animated navigation cards ──────────────────────── */}
         <View style={styles.hList}>
-          {CATEGORIES.map(cat => (
-            <TouchableOpacity
+          {CATEGORIES.map((cat, i) => (
+            <Animated.View
               key={cat.key}
-              style={[styles.hCard, SHADOW.sm]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push(cat.route); }}
-              activeOpacity={0.86}
+              style={{
+                opacity: cardAnims[i].opacity,
+                transform: [{ translateY: cardAnims[i].translateY }],
+              }}
             >
-              <Image source={cat.image} style={StyleSheet.absoluteFill} resizeMode="cover" />
-              <LinearGradient
-                colors={['rgba(12,10,26,0.94)', 'rgba(12,10,26,0.72)', 'rgba(12,10,26,0.14)']}
-                locations={[0, 0.5, 1]}
-                start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-              />
-              <View style={[styles.hCardIcon, { backgroundColor: cat.iconBg }]}>
-                <Icon name={cat.icon} size={16} color={cat.iconColor} />
-              </View>
-              <View style={styles.hCardLeft}>
-                <Text style={styles.hCardTitle}>{cat.title}</Text>
-                <Text style={styles.hCardDesc}>{cat.desc}</Text>
-              </View>
-              <View style={styles.hCardArrow}>
-                <Icon name="arrow-right" size={14} color="rgba(220,210,255,0.6)" />
-              </View>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.hCard, SHADOW.sm]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push(cat.route);
+                }}
+                activeOpacity={0.86}
+              >
+                <Image source={cat.image} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                <LinearGradient
+                  colors={['rgba(12,10,26,0.94)', 'rgba(12,10,26,0.72)', 'rgba(12,10,26,0.14)']}
+                  locations={[0, 0.5, 1]}
+                  start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                  style={StyleSheet.absoluteFill}
+                  pointerEvents="none"
+                />
+                <View style={[styles.hCardIcon, { backgroundColor: cat.iconBg }]}>
+                  <Icon name={cat.icon} size={16} color={cat.iconColor} />
+                </View>
+                <View style={styles.hCardLeft}>
+                  <Text style={styles.hCardTitle}>{cat.title}</Text>
+                  <Text style={styles.hCardDesc}>{cat.desc}</Text>
+                </View>
+                <View style={styles.hCardArrow}>
+                  <Icon name="arrow-right" size={14} color="rgba(220,210,255,0.6)" />
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
           ))}
         </View>
       </ScrollView>
 
       {/* ── Outfit picker modal ──────────────────────────────── */}
-      <Modal visible={showOutfitPicker} transparent animationType="slide" onRequestClose={() => setShowOutfitPicker(false)}>
+      <Modal
+        visible={showOutfitPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowOutfitPicker(false)}
+      >
         <Pressable style={styles.modalOverlay} onPress={() => setShowOutfitPicker(false)}>
           <Pressable
             style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24 }]}
@@ -356,7 +534,12 @@ export default function HomeScreen() {
       </Modal>
 
       {/* ── Notifications modal ──────────────────────────────── */}
-      <Modal visible={showNotifs} transparent animationType="slide" onRequestClose={() => setShowNotifs(false)}>
+      <Modal
+        visible={showNotifs}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowNotifs(false)}
+      >
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotifs(false)}>
           <Pressable
             style={[styles.notifsSheet, { paddingBottom: bottomPad + 24 }]}
@@ -389,16 +572,37 @@ export default function HomeScreen() {
                     backgroundColor: r.isRising ? 'rgba(200,168,75,0.08)' : 'rgba(255,255,255,0.04)',
                     borderColor: r.isRising ? 'rgba(200,168,75,0.25)' : 'rgba(200,184,232,0.1)',
                   }]}>
-                    <View style={[styles.notifIconWrap, { backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(139,122,181,0.18)' }]}>
-                      <Icon name={r.isRising ? 'trending-up' : (r.icon as any)} size={16} color={r.isRising ? '#C8A84B' : '#8B7AB5'} />
+                    <View style={[styles.notifIconWrap, {
+                      backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(139,122,181,0.18)',
+                    }]}>
+                      <Icon
+                        name={r.isRising ? 'trending-up' : (r.icon as any)}
+                        size={16}
+                        color={r.isRising ? '#C8A84B' : '#8B7AB5'}
+                      />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       {r.count !== undefined && (
-                        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5, color: r.isRising ? '#C8A84B' : '#EDE8FF' }}>{r.count}</Text>
+                        <Text style={{
+                          fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5,
+                          color: r.isRising ? '#C8A84B' : '#EDE8FF',
+                        }}>
+                          {r.count}
+                        </Text>
                       )}
-                      <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18, color: r.isRising ? 'rgba(240,234,248,0.9)' : 'rgba(200,184,232,0.82)' }}>{r.message}</Text>
+                      <Text style={{
+                        fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18,
+                        color: r.isRising ? 'rgba(240,234,248,0.9)' : 'rgba(200,184,232,0.82)',
+                      }}>
+                        {r.message}
+                      </Text>
                       {r.subMessage && (
-                        <Text style={{ fontSize: 11, fontFamily: 'Inter_400Regular', color: r.isRising ? 'rgba(200,168,75,0.72)' : 'rgba(200,184,232,0.45)' }}>{r.subMessage}</Text>
+                        <Text style={{
+                          fontSize: 11, fontFamily: 'Inter_400Regular',
+                          color: r.isRising ? 'rgba(200,168,75,0.72)' : 'rgba(200,184,232,0.45)',
+                        }}>
+                          {r.subMessage}
+                        </Text>
                       )}
                     </View>
                     <TouchableOpacity
@@ -422,9 +626,8 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#0F0D1E' },
 
-  // Header
   headerGrad: { position: 'relative', overflow: 'hidden' },
-  star: { position: 'absolute', borderRadius: 99, backgroundColor: 'rgba(220,210,255,1)' },
+  star:       { position: 'absolute', borderRadius: 99, backgroundColor: 'rgba(220,210,255,1)' },
 
   topRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -435,7 +638,7 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: 'rgba(200,184,232,0.45)',
     overflow: 'hidden', flexShrink: 0,
   },
-  avatar: { width: '100%', height: '100%' },
+  avatar:    { width: '100%', height: '100%' },
   nameBlock: { flex: 1 },
   charName:  { fontSize: 16, fontFamily: 'Inter_700Bold', color: 'rgba(235,228,255,0.97)', letterSpacing: -0.3 },
   subtitle:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', marginTop: 2, letterSpacing: 0.1 },
@@ -459,13 +662,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 20, paddingBottom: 14, gap: 8,
   },
-  statPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statPill:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.65)' },
-  statDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
+  statDot:      { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
 
-  // Hero
-  charHero: { position: 'relative', width: '100%', overflow: 'hidden' },
-  charHeroLabel: { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
+  charHero:          { position: 'relative', width: '100%', overflow: 'hidden' },
+  charHeroLabel:     { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
   charHeroLabelText: {
     fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3,
     color: 'rgba(235,228,255,0.95)',
@@ -480,7 +682,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(200,168,75,0.25)',
     alignSelf: 'flex-start',
   },
-  outfitNameText: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
+  outfitNameText:     { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
   charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 80, zIndex: 2 },
   charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, zIndex: 2 },
   changeOutfitBtn: {
@@ -491,11 +693,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  // Scrollable content
   cardsArea: { flex: 1 },
   cardsList:  { paddingTop: 16, paddingHorizontal: 16 },
 
-  // Character info card
   charInfoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -515,13 +715,11 @@ const styles = StyleSheet.create({
   charInfoTrait:    { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(139,122,181,0.18)', borderWidth: 1, borderColor: 'rgba(139,122,181,0.32)' },
   charInfoTraitText:{ fontSize: 11, fontFamily: 'Inter_500Medium', color: '#C8B8EE' },
 
-  // Section label
   sectionLabel: {
     fontSize: 11, fontFamily: 'Inter_700Bold', color: 'rgba(200,184,232,0.48)',
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12,
   },
 
-  // Navigation cards
   hList: { gap: 10 },
   hCard: {
     flexDirection: 'row', alignItems: 'center',
@@ -530,7 +728,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
   },
-  hCardIcon: {
+  hCardIcon:  {
     width: 42, height: 42, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
@@ -543,7 +741,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
 
-  // ── Modals ────────────────────────────────────────────────
+  // Modals
   modalOverlay: {
     flex: 1, backgroundColor: 'rgba(8,6,24,0.72)',
     justifyContent: 'flex-end',
@@ -554,7 +752,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center', marginBottom: 18,
   },
 
-  // Outfit picker
   pickerSheet: {
     backgroundColor: '#1C1840',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
@@ -567,7 +764,7 @@ const styles = StyleSheet.create({
   },
   pickerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#EDE8FF', letterSpacing: -0.3 },
   pickerSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic', marginBottom: 18 },
-  closeBtn: {
+  closeBtn:    {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center',
@@ -579,18 +776,17 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: 'transparent',
   },
   pickerCardActive: { borderColor: 'rgba(139,122,181,0.55)', backgroundColor: 'rgba(139,122,181,0.1)' },
-  pickerCardImg: { width: 66, height: 66, borderRadius: 14, overflow: 'hidden' },
-  pickerCardNone: { backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
-  pickerCardNoImg: { backgroundColor: 'rgba(139,122,181,0.1)', alignItems: 'center', justifyContent: 'center' },
-  pickerCardName: { fontSize: 11, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.75)', textAlign: 'center' },
-  pickerActiveDot: {
+  pickerCardImg:    { width: 66, height: 66, borderRadius: 14, overflow: 'hidden' },
+  pickerCardNone:   { backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
+  pickerCardNoImg:  { backgroundColor: 'rgba(139,122,181,0.1)', alignItems: 'center', justifyContent: 'center' },
+  pickerCardName:   { fontSize: 11, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.75)', textAlign: 'center' },
+  pickerActiveDot:  {
     position: 'absolute', top: 6, right: 6,
     width: 18, height: 18, borderRadius: 9,
     backgroundColor: '#8B7AB5',
     alignItems: 'center', justifyContent: 'center',
   },
 
-  // Notifications
   notifsSheet: {
     backgroundColor: '#1C1840',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
@@ -602,18 +798,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     gap: 10, marginBottom: 18,
   },
-  notifsTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#EDE8FF', flex: 1, letterSpacing: -0.3 },
-  countBadge: {
-    backgroundColor: '#8B7AB5', borderRadius: 10,
-    paddingHorizontal: 8, paddingVertical: 2,
-  },
-  countText: { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
-  notifsEmpty: { alignItems: 'center', paddingVertical: 40, gap: 12 },
-  notifsEmptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.5)', fontStyle: 'italic' },
-  notifItem: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
-    borderWidth: 1, borderRadius: 16, padding: 14,
-  },
-  notifIconWrap: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  dismissBtn:    { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  notifsTitle:    { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#EDE8FF', flex: 1, letterSpacing: -0.3 },
+  countBadge:     { backgroundColor: '#8B7AB5', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
+  countText:      { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
+  notifsEmpty:    { alignItems: 'center', paddingVertical: 40, gap: 12 },
+  notifsEmptyText:{ fontSize: 14, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.5)', fontStyle: 'italic' },
+  notifItem:      { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
+  notifIconWrap:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  dismissBtn:     { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

@@ -1,7 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
 import { useColors } from '@/hooks/useColors';
@@ -37,6 +37,27 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Entrance animation — card drifts up from below and fades in
+  const mountOpacity = useRef(new Animated.Value(0)).current;
+  const mountY       = useRef(new Animated.Value(20)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(mountOpacity, {
+        toValue: 1,
+        duration: 380,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.quad),
+      }),
+      Animated.spring(mountY, {
+        toValue: 0,
+        tension: 55,
+        friction: 9,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   function handleDeletePress() {
     if (confirmingDelete) {
       if (deleteTimer.current) clearTimeout(deleteTimer.current);
@@ -48,6 +69,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
   }
 
   return (
+    <Animated.View style={{ opacity: mountOpacity, transform: [{ translateY: mountY }] }}>
     <TouchableOpacity
       style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}
       onPress={onPress}
@@ -165,6 +187,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
         </View>
       </View>
     </TouchableOpacity>
+    </Animated.View>
   );
 }
 
