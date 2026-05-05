@@ -1,5 +1,4 @@
 import { Icon } from '@/components/Icon';
-import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,6 +27,76 @@ import type { BubbleStyle, PanelOverlay, StoryPanel } from '@/context/AppContext
 import { persistImageUri } from '@/utils/persistImage';
 
 const { width: SW } = Dimensions.get('window');
+const GAP      = 3;
+const CANVAS_H = 390;
+
+// ── Layout definitions ────────────────────────────────────────────────────────
+
+interface Layout {
+  key:   string;
+  label: string;
+  count: number;
+  rows:  number[][];   // each row → array of column flex-weights
+}
+
+const LAYOUTS: Layout[] = [
+  { key: '1',  label: 'Full',  count: 1, rows: [[1]] },
+  { key: '2v', label: 'Stack', count: 2, rows: [[1], [1]] },
+  { key: '2h', label: 'Side',  count: 2, rows: [[1, 1]] },
+  { key: '3a', label: '1+2',   count: 3, rows: [[1], [1, 1]] },
+  { key: '3b', label: '2+1',   count: 3, rows: [[1, 1], [1]] },
+  { key: '4',  label: '2×2',   count: 4, rows: [[1, 1], [1, 1]] },
+  { key: '5a', label: '1+4',   count: 5, rows: [[1], [1, 1], [1, 1]] },
+  { key: '5b', label: '3+2',   count: 5, rows: [[1, 1, 1], [1, 1]] },
+];
+
+function defaultLayoutKey(count: number): string {
+  if (count >= 5) return '5a';
+  if (count === 4) return '4';
+  if (count === 3) return '3a';
+  if (count === 2) return '2v';
+  return '1';
+}
+
+function getPanelW(layout: Layout, pIdx: number, canvasW: number): number {
+  let flat = 0;
+  for (const cols of layout.rows) {
+    const totalFlex = cols.reduce((a, b) => a + b, 0);
+    for (const flex of cols) {
+      if (flat === pIdx) return (canvasW - (cols.length - 1) * GAP) * (flex / totalFlex);
+      flat++;
+    }
+  }
+  return canvasW;
+}
+
+function getPanelH(layout: Layout, canvasH: number): number {
+  return (canvasH - (layout.rows.length - 1) * GAP) / layout.rows.length;
+}
+
+// ── Mini layout icon ──────────────────────────────────────────────────────────
+
+function LayoutIcon({ layout, size = 38 }: { layout: Layout; size?: number }) {
+  const numRows = layout.rows.length;
+  const rowH    = (size - (numRows - 1) * 2) / numRows;
+  return (
+    <View style={{ width: size, height: size, gap: 2 }}>
+      {layout.rows.map((cols, ri) => {
+        const totalFlex = cols.reduce((a, b) => a + b, 0);
+        return (
+          <View key={ri} style={{ flexDirection: 'row', height: rowH, gap: 2 }}>
+            {cols.map((flex, ci) => (
+              <View
+                key={ci}
+                style={{ flex: flex / totalFlex, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.35)' }}
+              />
+            ))}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -46,21 +115,13 @@ const BUBBLE_STYLES: { key: BubbleStyle; label: string; radius: number; hasTail:
 
 const STICKERS = ['✨','🌟','💫','🌙','☁️','🕊️','🌸','🍃','⭐','🌊','🦋','🌈','🔮','🌺','❄️','🌿'];
 
-const BG_PRESETS = [
-  { key: 'bg1',  src: Images.story_bg1 },
-  { key: 'bg2',  src: Images.story_bg2 },
-  { key: 'bg3',  src: Images.story_bg3 },
-  { key: 'char', src: Images.character_default },
-];
-
 function getBgSource(panel?: StoryPanel) {
   if (!panel) return null;
   if (panel.imageUri) return { uri: panel.imageUri };
-  const p = BG_PRESETS.find(b => b.key === panel.bgPreset);
-  return p?.src ?? null;
+  return null;
 }
 
-// ── DraggableOverlay ─────────────────────────────────────────────────────────
+// ── DraggableOverlay ──────────────────────────────────────────────────────────
 
 interface DraggableOverlayProps {
   overlay:    PanelOverlay;
@@ -107,14 +168,8 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
       {...pr.panHandlers}
     >
       {overlay.type === 'bubble' && (
-        <View style={[
-          styles.bubbleBox,
-          { borderRadius: bStyle.radius },
-          isSelected && styles.bubbleBoxSelected,
-        ]}>
-          <Text style={[styles.bubbleBoxText, { fontFamily: fontFam, fontSize }]}>
-            {overlay.content || '...'}
-          </Text>
+        <View style={[styles.bubbleBox, { borderRadius: bStyle.radius }, isSelected && styles.bubbleBoxSelected]}>
+          <Text style={[styles.bubbleBoxText, { fontFamily: fontFam, fontSize }]}>{overlay.content || '...'}</Text>
           {bStyle.hasTail && <View style={styles.bubbleTailDown} />}
         </View>
       )}
@@ -130,10 +185,12 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
           <Text style={{ fontSize }}>{overlay.content}</Text>
         </View>
       )}
-
-      {/* Delete badge */}
       {isSelected && (
-        <TouchableOpacity style={styles.deleteBadge} onPress={() => onDelete(overlay.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity
+          style={styles.deleteBadge}
+          onPress={() => onDelete(overlay.id)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
           <Icon name="x" size={9} color="#fff" />
         </TouchableOpacity>
       )}
@@ -141,7 +198,7 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
   );
 }
 
-// ── StaticOverlay (small panels, read-only) ──────────────────────────────────
+// ── StaticOverlay (non-active panels, read-only) ──────────────────────────────
 
 function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; panelW: number; panelH: number }) {
   const left    = overlay.xPct * panelW;
@@ -154,9 +211,18 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
   return (
     <View style={{ position: 'absolute', left, top, zIndex: 10 }}>
       {overlay.type === 'bubble' && (
-        <View style={[styles.bubbleBox, { borderRadius: bStyle.radius * scale, paddingHorizontal: 6, paddingVertical: 4, maxWidth: 90 }]}>
-          <Text style={[styles.bubbleBoxText, { fontFamily: fontFam, fontSize }]} numberOfLines={2}>{overlay.content}</Text>
-          {bStyle.hasTail && <View style={[styles.bubbleTailDown, { borderTopWidth: 5, borderLeftWidth: 5, borderRightWidth: 5, bottom: -5 }]} />}
+        <View style={[styles.bubbleBox, {
+          borderRadius: bStyle.radius * scale,
+          paddingHorizontal: 6, paddingVertical: 4, maxWidth: 90,
+        }]}>
+          <Text style={[styles.bubbleBoxText, { fontFamily: fontFam, fontSize }]} numberOfLines={2}>
+            {overlay.content}
+          </Text>
+          {bStyle.hasTail && (
+            <View style={[styles.bubbleTailDown, {
+              borderTopWidth: 5, borderLeftWidth: 5, borderRightWidth: 5, bottom: -5,
+            }]} />
+          )}
         </View>
       )}
       {overlay.type === 'text' && (
@@ -174,20 +240,24 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function PanelEditorScreen() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 48 : insets.top;
-  const botPad = Platform.OS === 'web' ? 20 : insets.bottom + 8;
+  const colors  = useColors();
+  const insets  = useSafeAreaInsets();
+  const topPad  = Platform.OS === 'web' ? 48 : insets.top;
+  const botPad  = Platform.OS === 'web' ? 20 : insets.bottom + 8;
 
   const draft = DraftStore.get();
-  const [panels,           setPanels]    = useState<StoryPanel[]>(draft?.panels ?? []);
-  const [activeIdx,        setActiveIdx] = useState(draft?.activePanelIndex ?? 0);
-  const [selId,            setSelId]     = useState<string | null>(null);
-  const [toolMode,         setToolMode]  = useState<'bubble' | 'text' | 'sticker' | null>(null);
-  const [largePanelW,      setLPW]       = useState(SW - 36);
-  const [largePanelH,      setLPH]       = useState(240);
+  const initPanels = draft?.panels ?? [];
 
-  if (!draft || panels.length === 0) {
+  const [panels,    setPanels]    = useState<StoryPanel[]>(initPanels);
+  const [layoutKey, setLayoutKey] = useState<string>(() => defaultLayoutKey(initPanels.length));
+  const [activeIdx, setActiveIdx] = useState(draft?.activePanelIndex ?? 0);
+  const [selId,     setSelId]     = useState<string | null>(null);
+  const [toolMode,  setToolMode]  = useState<'bubble' | 'text' | 'sticker' | null>(null);
+  const [canvasW,   setCanvasW]   = useState(SW - 36);
+
+  const currentLayout = LAYOUTS.find(l => l.key === layoutKey) ?? LAYOUTS[0];
+
+  if (!draft) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={{ color: colors.mutedForeground }}>No panel to edit.</Text>
@@ -198,7 +268,7 @@ export default function PanelEditorScreen() {
     );
   }
 
-  // ── State helpers ─────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
 
   function updatePanel(idx: number, updates: Partial<StoryPanel>) {
     setPanels(prev => {
@@ -215,7 +285,6 @@ export default function PanelEditorScreen() {
   }
 
   async function pickPanelImage(idx: number) {
-    if (idx >= panels.length) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
@@ -229,9 +298,23 @@ export default function PanelEditorScreen() {
     }
   }
 
-  function selectPreset(key: string) {
+  function changeLayout(key: string) {
     Haptics.selectionAsync();
-    updatePanel(activeIdx, { bgPreset: key, imageUri: undefined });
+    const newLayout = LAYOUTS.find(l => l.key === key) ?? LAYOUTS[0];
+    setLayoutKey(key);
+    setPanels(prev => {
+      let next = [...prev];
+      while (next.length < newLayout.count) {
+        next.push({ id: crypto.randomUUID(), text: '', imageUri: undefined, bgPreset: undefined, bubbleText: '', overlays: [] });
+      }
+      if (next.length > newLayout.count) next = next.slice(0, newLayout.count);
+      const d = DraftStore.get()!;
+      DraftStore.set({ panels: next, activePanelIndex: 0, onSave: d.onSave });
+      return next;
+    });
+    setActiveIdx(0);
+    setSelId(null);
+    setToolMode(null);
   }
 
   function addOverlay(type: PanelOverlay['type'], content = '') {
@@ -272,7 +355,6 @@ export default function PanelEditorScreen() {
   }
 
   function switchActive(idx: number) {
-    if (idx < 0 || idx >= panels.length) return;
     setActiveIdx(idx);
     setSelId(null);
     setToolMode(null);
@@ -286,8 +368,17 @@ export default function PanelEditorScreen() {
   }
 
   const selOverlay = getSelOverlay();
-  const SMALL_W    = (largePanelW - 4) / 2;
-  const SMALL_H    = 148;
+  const rowH       = getPanelH(currentLayout, CANVAS_H);
+
+  // Precompute row start indices
+  const rowStarts: number[] = [];
+  let counter = 0;
+  for (const cols of currentLayout.rows) {
+    rowStarts.push(counter);
+    counter += cols.length;
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <KeyboardAvoidingView
@@ -297,7 +388,11 @@ export default function PanelEditorScreen() {
       {/* Header */}
       <LinearGradient colors={['#1A1640', '#1E1A48']} style={[styles.headerGrad, { height: topPad + 58 }]} />
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <TouchableOpacity style={styles.headerBtn} onPress={() => { DraftStore.discard(); router.back(); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity
+          style={styles.headerBtn}
+          onPress={() => { DraftStore.discard(); router.back(); }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Edit Panel</Text>
@@ -312,100 +407,99 @@ export default function PanelEditorScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Manga panel grid ──────────────────────────────── */}
+        {/* ── Manga panel canvas ────────────────────────────── */}
         <View style={[styles.mangaWrapper, { backgroundColor: '#0B091A', borderColor: 'rgba(200,184,232,0.07)' }]}>
-
-          {/* Large active panel */}
-          <TouchableWithoutFeedback
-            onPress={() => {
-              if (selId) { setSelId(null); return; }
-              if (!getBgSource(activePanel)) pickPanelImage(activeIdx);
-            }}
+          <View
+            style={[styles.mangaCanvas, { height: CANVAS_H }]}
+            onLayout={e => setCanvasW(e.nativeEvent.layout.width)}
           >
-            <View
-              style={[styles.largePanelCell, { backgroundColor: colors.muted }]}
-              onLayout={e => { setLPW(e.nativeEvent.layout.width); setLPH(e.nativeEvent.layout.height); }}
-            >
-              {/* Background */}
-              {getBgSource(activePanel)
-                ? <Image source={getBgSource(activePanel)!} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                : (
-                  <View style={styles.emptyHint}>
-                    <Icon name="image" size={34} color="rgba(180,165,220,0.25)" />
-                    <Text style={styles.emptyHintText}>Tap to add photo</Text>
-                    <Text style={styles.emptyHintSub}>or choose background below</Text>
-                  </View>
-                )
-              }
-
-              {/* Dim overlay so text is readable */}
-              {getBgSource(activePanel) && <View style={styles.dimOverlay} />}
-
-              {/* Camera change button */}
-              {getBgSource(activePanel) && (
-                <TouchableOpacity style={styles.changeBtn} onPress={() => pickPanelImage(activeIdx)}>
-                  <Icon name="camera" size={14} color="rgba(235,228,255,0.9)" />
-                </TouchableOpacity>
-              )}
-
-              {/* Draggable overlays */}
-              {activePanel?.overlays?.map(ov => (
-                <DraggableOverlay
-                  key={ov.id}
-                  overlay={ov}
-                  panelW={largePanelW}
-                  panelH={largePanelH}
-                  isSelected={selId === ov.id}
-                  onSelect={setSelId}
-                  onMove={moveOverlay}
-                  onDelete={deleteOverlay}
-                />
-              ))}
-            </View>
-          </TouchableWithoutFeedback>
-
-          {/* Two small panels */}
-          <View style={styles.subRow}>
-            {[activeIdx + 1, activeIdx + 2].map((pIdx, i) => {
-              const p  = panels[pIdx];
-              const bg = getBgSource(p);
+            {currentLayout.rows.map((cols, ri) => {
+              const rowStart  = rowStarts[ri];
+              const totalFlex = cols.reduce((a, b) => a + b, 0);
               return (
-                <TouchableOpacity
-                  key={pIdx}
-                  style={[styles.smallPanelCell, i === 0 && { marginRight: 4 }, { backgroundColor: colors.muted }]}
-                  onPress={() => {
-                    if (p !== undefined) {
-                      switchActive(pIdx);
-                      if (!getBgSource(p)) pickPanelImage(pIdx);
-                    }
-                  }}
-                  activeOpacity={0.82}
-                >
-                  {bg ? (
-                    <>
-                      <Image source={bg} style={StyleSheet.absoluteFill} resizeMode="cover" />
-                      <View style={styles.dimOverlay} />
-                      {p?.overlays?.map(ov => (
-                        <StaticOverlay key={ov.id} overlay={ov} panelW={SMALL_W} panelH={SMALL_H} />
-                      ))}
-                    </>
-                  ) : (
-                    <View style={styles.emptyHint}>
-                      <Icon name="image" size={20} color="rgba(180,165,220,0.22)" />
-                    </View>
-                  )}
-                </TouchableOpacity>
+                <View key={ri} style={[styles.panelRow, { height: rowH }]}>
+                  {cols.map((flex, ci) => {
+                    const pIdx    = rowStart + ci;
+                    const panel   = panels[pIdx];
+                    const isActive = pIdx === activeIdx;
+                    const bg      = getBgSource(panel);
+                    const pW      = getPanelW(currentLayout, pIdx, canvasW);
+
+                    return (
+                      <TouchableWithoutFeedback
+                        key={ci}
+                        onPress={() => {
+                          if (isActive && selId) { setSelId(null); return; }
+                          switchActive(pIdx);
+                          if (!bg) pickPanelImage(pIdx);
+                        }}
+                      >
+                        <View style={[
+                          styles.panelCell,
+                          { flex: flex / totalFlex },
+                          isActive
+                            ? { borderColor: 'rgba(139,122,181,0.80)', borderWidth: 2 }
+                            : { borderColor: 'rgba(200,184,232,0.07)', borderWidth: 1 },
+                        ]}>
+                          {/* Background image */}
+                          {bg
+                            ? <Image source={bg} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                            : (
+                              <View style={styles.emptyHint}>
+                                <Icon name="image" size={isActive ? 26 : 16} color="rgba(180,165,220,0.25)" />
+                                {isActive && <Text style={styles.emptyHintText}>Tap to add photo</Text>}
+                              </View>
+                            )
+                          }
+
+                          {/* Dim */}
+                          {bg && <View style={styles.dimOverlay} />}
+
+                          {/* Camera change — active only */}
+                          {isActive && bg && (
+                            <TouchableOpacity style={styles.changeBtn} onPress={() => pickPanelImage(pIdx)}>
+                              <Icon name="camera" size={12} color="rgba(235,228,255,0.9)" />
+                            </TouchableOpacity>
+                          )}
+
+                          {/* Draggable overlays (active panel) */}
+                          {isActive && panel?.overlays?.map(ov => (
+                            <DraggableOverlay
+                              key={ov.id}
+                              overlay={ov}
+                              panelW={pW}
+                              panelH={rowH}
+                              isSelected={selId === ov.id}
+                              onSelect={setSelId}
+                              onMove={moveOverlay}
+                              onDelete={deleteOverlay}
+                            />
+                          ))}
+
+                          {/* Static overlays (inactive panels) */}
+                          {!isActive && panel?.overlays?.map(ov => (
+                            <StaticOverlay key={ov.id} overlay={ov} panelW={pW} panelH={rowH} />
+                          ))}
+                        </View>
+                      </TouchableWithoutFeedback>
+                    );
+                  })}
+                </View>
               );
             })}
           </View>
 
-          {/* Panel navigation dots */}
-          {panels.length > 1 && (
-            <View style={styles.dotsRow}>
-              {panels.map((_, i) => (
+          {/* Panel indicator */}
+          {currentLayout.count > 1 && (
+            <View style={styles.panelIndicator}>
+              {panels.slice(0, currentLayout.count).map((_, i) => (
                 <TouchableOpacity
                   key={i}
-                  style={[styles.dot, { backgroundColor: i === activeIdx ? colors.primary : 'rgba(200,184,232,0.22)' }, i === activeIdx && styles.dotActive]}
+                  style={[styles.dot, {
+                    backgroundColor: i === activeIdx ? 'rgba(139,122,181,0.9)' : 'rgba(200,184,232,0.22)',
+                    width:  i === activeIdx ? 18 : 7,
+                    height: 7,
+                  }]}
                   onPress={() => switchActive(i)}
                   hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
                 />
@@ -426,7 +520,11 @@ export default function PanelEditorScreen() {
               style={[
                 styles.toolBtn,
                 { borderColor: 'transparent' },
-                toolMode === mode && { backgroundColor: `${colors.primary}20`, borderColor: `${colors.primary}40`, borderWidth: 1 },
+                toolMode === mode && {
+                  backgroundColor: `${colors.primary}20`,
+                  borderColor: `${colors.primary}40`,
+                  borderWidth: 1,
+                },
               ]}
               onPress={() => {
                 Haptics.selectionAsync();
@@ -435,7 +533,9 @@ export default function PanelEditorScreen() {
               }}
             >
               <Icon name={icon} size={18} color={toolMode === mode ? colors.primary : colors.mutedForeground} />
-              <Text style={[styles.toolLabel, { color: toolMode === mode ? colors.primary : colors.mutedForeground }]}>{label}</Text>
+              <Text style={[styles.toolLabel, { color: toolMode === mode ? colors.primary : colors.mutedForeground }]}>
+                {label}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -474,7 +574,6 @@ export default function PanelEditorScreen() {
         {/* ── Selected overlay editor ───────────────────────── */}
         {selOverlay && (
           <View style={[styles.overlayEditor, { backgroundColor: colors.card, borderColor: `${colors.primary}28` }]}>
-            {/* Header row */}
             <View style={styles.editorHeaderRow}>
               <Icon
                 name={selOverlay.type === 'bubble' ? 'message-circle' : selOverlay.type === 'text' ? 'type' : 'star'}
@@ -489,7 +588,6 @@ export default function PanelEditorScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Text input */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <TextInput
                 style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border }]}
@@ -503,7 +601,6 @@ export default function PanelEditorScreen() {
               />
             )}
 
-            {/* Font picker */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <>
                 <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>FONT</Text>
@@ -514,7 +611,10 @@ export default function PanelEditorScreen() {
                       return (
                         <TouchableOpacity
                           key={f.key}
-                          style={[styles.chip, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? `${colors.primary}18` : colors.muted }]}
+                          style={[styles.chip, {
+                            borderColor: active ? colors.primary : colors.border,
+                            backgroundColor: active ? `${colors.primary}18` : colors.muted,
+                          }]}
                           onPress={() => { Haptics.selectionAsync(); updateOverlay(selOverlay.id, { fontFamily: f.key }); }}
                         >
                           <Text style={{ fontFamily: f.key as any, fontSize: 13, color: active ? colors.primary : colors.foreground }}>
@@ -528,7 +628,6 @@ export default function PanelEditorScreen() {
               </>
             )}
 
-            {/* Font size */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <>
                 <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>SIZE</Text>
@@ -538,7 +637,10 @@ export default function PanelEditorScreen() {
                     return (
                       <TouchableOpacity
                         key={sz}
-                        style={[styles.chip, styles.chipSq, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? `${colors.primary}18` : colors.muted }]}
+                        style={[styles.chip, styles.chipSq, {
+                          borderColor: active ? colors.primary : colors.border,
+                          backgroundColor: active ? `${colors.primary}18` : colors.muted,
+                        }]}
                         onPress={() => updateOverlay(selOverlay.id, { fontSize: sz })}
                       >
                         <Text style={{ fontSize: sz === 24 ? 15 : sz === 20 ? 13 : sz === 16 ? 11 : 10, color: active ? colors.primary : colors.foreground }}>
@@ -551,7 +653,6 @@ export default function PanelEditorScreen() {
               </>
             )}
 
-            {/* Bubble style */}
             {selOverlay.type === 'bubble' && (
               <>
                 <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>BUBBLE STYLE</Text>
@@ -561,7 +662,10 @@ export default function PanelEditorScreen() {
                     return (
                       <TouchableOpacity
                         key={bs.key}
-                        style={[styles.styleChip, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? `${colors.primary}18` : colors.muted }]}
+                        style={[styles.styleChip, {
+                          borderColor: active ? colors.primary : colors.border,
+                          backgroundColor: active ? `${colors.primary}18` : colors.muted,
+                        }]}
                         onPress={() => { Haptics.selectionAsync(); updateOverlay(selOverlay.id, { bubbleStyle: bs.key }); }}
                       >
                         <View style={[styles.stylePreview, { borderRadius: bs.radius }]} />
@@ -573,7 +677,6 @@ export default function PanelEditorScreen() {
               </>
             )}
 
-            {/* Sticker size */}
             {selOverlay.type === 'sticker' && (
               <>
                 <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>SIZE</Text>
@@ -583,7 +686,10 @@ export default function PanelEditorScreen() {
                     return (
                       <TouchableOpacity
                         key={sz}
-                        style={[styles.chip, styles.chipSq, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? `${colors.primary}18` : colors.muted }]}
+                        style={[styles.chip, styles.chipSq, {
+                          borderColor: active ? colors.primary : colors.border,
+                          backgroundColor: active ? `${colors.primary}18` : colors.muted,
+                        }]}
                         onPress={() => updateOverlay(selOverlay.id, { fontSize: sz })}
                       >
                         <Text style={{ fontSize: active ? 18 : 14, color: active ? colors.primary : colors.foreground }}>
@@ -598,30 +704,34 @@ export default function PanelEditorScreen() {
           </View>
         )}
 
-        {/* ── Background strip ──────────────────────────────── */}
-        <View style={[styles.bgCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>BACKGROUND</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bgScroll}>
-            {BG_PRESETS.map(({ key, src }) => {
-              const isActive = activePanel?.bgPreset === key && !activePanel?.imageUri;
-              return (
-                <TouchableOpacity
-                  key={key}
-                  style={[styles.bgThumb, isActive && { borderColor: colors.primary, borderWidth: 2.5 }]}
-                  onPress={() => selectPreset(key)}
-                  activeOpacity={0.8}
-                >
-                  <Image source={src} style={styles.bgThumbImg} resizeMode="cover" />
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity
-              style={[styles.bgThumb, styles.bgCustom, { borderColor: colors.border, backgroundColor: colors.muted }]}
-              onPress={() => pickPanelImage(activeIdx)}
-            >
-              <Icon name="camera" size={22} color={colors.mutedForeground} />
-              <Text style={[styles.bgCustomText, { color: colors.mutedForeground }]}>Custom</Text>
-            </TouchableOpacity>
+        {/* ── Frame / Layout selector ───────────────────────── */}
+        <View style={[styles.frameCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.frameTitleRow}>
+            <Icon name="layout" size={13} color={colors.primary} />
+            <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>FRAME LAYOUT</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.frameScroll}>
+            <View style={styles.frameRow}>
+              {LAYOUTS.map(layout => {
+                const isActive = layoutKey === layout.key;
+                return (
+                  <TouchableOpacity
+                    key={layout.key}
+                    style={[styles.frameOption, {
+                      borderColor: isActive ? colors.primary : colors.border,
+                      backgroundColor: isActive ? `${colors.primary}16` : colors.muted,
+                    }]}
+                    onPress={() => changeLayout(layout.key)}
+                    activeOpacity={0.75}
+                  >
+                    <LayoutIcon layout={layout} size={38} />
+                    <Text style={[styles.frameLabel, { color: isActive ? colors.primary : colors.mutedForeground }]}>
+                      {layout.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </ScrollView>
         </View>
       </ScrollView>
@@ -654,36 +764,39 @@ const styles = StyleSheet.create({
   scroll:        { flex: 1 },
   scrollContent: { paddingHorizontal: 14, paddingTop: 8, gap: 12 },
 
-  // Manga wrapper
-  mangaWrapper: { borderRadius: 16, borderWidth: 1, overflow: 'hidden', padding: 4, gap: 4 },
-  largePanelCell: { width: '100%', height: 240, overflow: 'hidden', borderRadius: 6, position: 'relative' },
-  smallPanelCell: { flex: 1, height: 148, overflow: 'hidden', borderRadius: 6, position: 'relative' },
-  subRow: { flexDirection: 'row', width: '100%' },
+  mangaWrapper: {
+    borderRadius: 16, borderWidth: 1, overflow: 'hidden', padding: 4,
+  },
+  mangaCanvas: {
+    borderRadius: 10, overflow: 'hidden',
+    gap: GAP, flexDirection: 'column',
+  },
+  panelRow: { flexDirection: 'row', gap: GAP },
+  panelCell: {
+    overflow: 'hidden', borderRadius: 6,
+    position: 'relative', backgroundColor: '#151228',
+  },
 
-  emptyHint:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
-  emptyHintText: { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(180,165,220,0.35)' },
-  emptyHintSub:  { fontSize: 10, fontFamily: 'Inter_400Regular', color: 'rgba(180,165,220,0.22)' },
+  panelIndicator: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    gap: 5, paddingVertical: 8,
+  },
+  dot: { borderRadius: 4 },
+
+  emptyHint:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
+  emptyHintText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(180,165,220,0.35)' },
   dimOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,6,22,0.22)' },
   changeBtn: {
-    position: 'absolute', top: 10, right: 10,
-    width: 32, height: 32, borderRadius: 16,
+    position: 'absolute', top: 7, right: 7,
+    width: 26, height: 26, borderRadius: 13,
     backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center', justifyContent: 'center', zIndex: 5,
   },
 
-  dotsRow:  { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 8 },
-  dot:      { width: 7, height: 7, borderRadius: 4 },
-  dotActive:{ width: 10, height: 10 },
-
-  // Overlay positioning wrapper
   overlayWrap: { position: 'absolute', zIndex: 20 },
-
-  // Speech bubble box
   bubbleBox: {
-    backgroundColor:   'rgba(255,255,255,0.93)',
-    paddingHorizontal:  10,
-    paddingVertical:     7,
-    maxWidth:           160,
+    backgroundColor: 'rgba(255,255,255,0.93)',
+    paddingHorizontal: 10, paddingVertical: 7, maxWidth: 160,
   },
   bubbleBoxSelected: { borderWidth: 1.5, borderColor: 'rgba(139,122,181,0.7)' },
   bubbleBoxText:     { color: '#1A1530', lineHeight: 16 },
@@ -695,17 +808,13 @@ const styles = StyleSheet.create({
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
     borderTopColor: 'rgba(255,255,255,0.93)',
   },
-
-  // Text overlay
   overlayText: {
-    textShadowColor:  'rgba(0,0,0,0.85)',
+    textShadowColor: 'rgba(0,0,0,0.85)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius:  4,
+    textShadowRadius: 4,
   },
-  textBoxSelected:   { borderWidth: 1, borderColor: 'rgba(139,122,181,0.7)', borderRadius: 6, padding: 2 },
-  stickerSelected:   { borderWidth: 1.5, borderColor: 'rgba(139,122,181,0.7)', borderRadius: 8, padding: 2 },
-
-  // Delete badge on selected overlays
+  textBoxSelected:  { borderWidth: 1, borderColor: 'rgba(139,122,181,0.7)', borderRadius: 6, padding: 2 },
+  stickerSelected:  { borderWidth: 1.5, borderColor: 'rgba(139,122,181,0.7)', borderRadius: 8, padding: 2 },
   deleteBadge: {
     position: 'absolute', top: -10, right: -10,
     width: 20, height: 20, borderRadius: 10,
@@ -713,10 +822,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', zIndex: 30,
   },
 
-  // Toolbar
-  toolbar: {
-    flexDirection: 'row', borderWidth: 1, borderRadius: 16, padding: 4, gap: 4,
-  },
+  toolbar: { flexDirection: 'row', borderWidth: 1, borderRadius: 16, padding: 4, gap: 4 },
   toolBtn: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
     gap: 5, paddingVertical: 11, borderRadius: 12, borderWidth: 1,
@@ -729,26 +835,23 @@ const styles = StyleSheet.create({
   },
   addCTAText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 
-  // Sticker picker
   stickerCard:  { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   stickerGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   stickerBtn:   { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   stickerEmoji: { fontSize: 24 },
 
-  // Overlay editor
-  overlayEditor: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
-  editorHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  overlayEditor:     { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
+  editorHeaderRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
   editorHeaderTitle: { flex: 1, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  editorDeleteBtn: { padding: 4 },
+  editorDeleteBtn:   { padding: 4 },
   editorInput: {
     fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20,
     minHeight: 58, borderWidth: 1, borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 9,
   },
 
-  // Pickers
   pickerLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.8, textTransform: 'uppercase' },
-  chipRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  chipRow:     { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: {
     paddingHorizontal: 14, paddingVertical: 9,
     borderRadius: 10, borderWidth: 1,
@@ -767,11 +870,14 @@ const styles = StyleSheet.create({
   },
   styleChipLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
 
-  // Background picker
-  bgCard:       { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
-  bgScroll:     { marginHorizontal: -4 },
-  bgThumb:      { width: 72, height: 72, borderRadius: 12, overflow: 'hidden', marginHorizontal: 4, borderWidth: 2, borderColor: 'transparent' },
-  bgThumbImg:   { width: '100%', height: '100%' },
-  bgCustom:     { alignItems: 'center', justifyContent: 'center', gap: 4 },
-  bgCustomText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  frameCard:     { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
+  frameTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  frameScroll:   { marginHorizontal: -4 },
+  frameRow:      { flexDirection: 'row', gap: 8, paddingHorizontal: 4 },
+  frameOption: {
+    alignItems: 'center', justifyContent: 'center', gap: 7,
+    paddingVertical: 10, paddingHorizontal: 10,
+    borderRadius: 14, borderWidth: 1.5, minWidth: 62,
+  },
+  frameLabel: { fontSize: 9, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.3, textTransform: 'uppercase' },
 });
