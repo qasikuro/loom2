@@ -57,12 +57,27 @@ export interface Character {
   username?: string;
 }
 
+export type BubbleStyle = 'rounded' | 'sharp' | 'oval';
+
+export interface PanelOverlay {
+  id:          string;
+  type:        'bubble' | 'text' | 'sticker';
+  content:     string;
+  xPct:        number;       // 0-1 of panel width
+  yPct:        number;       // 0-1 of panel height
+  fontFamily?: string;
+  fontSize?:   number;
+  bubbleStyle?:BubbleStyle;
+  color?:      string;       // text / bubble bg color key
+}
+
 export interface StoryPanel {
   id:          string;
   imageUri?:   string;
-  bgPreset?:   string;   // 'bg1' | 'bg2' | 'bg3' | 'char'
-  text:        string;   // narration / caption text
-  bubbleText?: string;   // speech-bubble overlay text
+  bgPreset?:   string;       // 'bg1' | 'bg2' | 'bg3' | 'char'
+  text:        string;       // narration / caption text (legacy)
+  bubbleText?: string;       // legacy speech-bubble text
+  overlays?:   PanelOverlay[];
 }
 
 export interface Story {

@@ -80,9 +80,9 @@ export default function StoryScreen() {
   const witnessedCount = (entry?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0);
   const savedCount     = entry?.savedCount      ?? post?.savedCount      ?? 0;
 
-  const panels: { imageUri?: string; bgPreset?: string; text: string; bubbleText?: string }[] =
+  const panels: { imageUri?: string; bgPreset?: string; text: string; bubbleText?: string; overlays?: import('@/context/AppContext').PanelOverlay[] }[] =
     entry
-      ? entry.panels.map(p => ({ imageUri: p.imageUri, bgPreset: p.bgPreset, text: p.text, bubbleText: p.bubbleText }))
+      ? entry.panels.map(p => ({ imageUri: p.imageUri, bgPreset: p.bgPreset, text: p.text, bubbleText: p.bubbleText, overlays: p.overlays }))
       : post
         ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text }))
         : [{ text: 'Story not found.' }];
@@ -211,13 +211,41 @@ export default function StoryScreen() {
                 style={styles.panelGradient}
               />
 
-              {/* Speech bubble (top-left, manga style) */}
+              {/* Legacy speech bubble */}
               {!!hasBubble && (
                 <View style={styles.speechBubble}>
                   <Text style={styles.speechBubbleText}>{panel.bubbleText}</Text>
                   <View style={styles.speechBubbleTail} />
                 </View>
               )}
+
+              {/* Overlay items (bubble / text / sticker) */}
+              {panel.overlays?.map(ov => {
+                const left = ov.xPct * SCREEN_WIDTH;
+                const top  = ov.yPct * (SCREEN_WIDTH * 4 / 3);
+                const fontFam = (ov.fontFamily ?? 'Inter_500Medium') as any;
+                const fontSize = ov.fontSize ?? (ov.type === 'sticker' ? 30 : 13);
+                const bRadius  = ov.bubbleStyle === 'sharp' ? 2 : ov.bubbleStyle === 'oval' ? 50 : 12;
+                const hasTail  = ov.bubbleStyle !== 'oval';
+                return (
+                  <View key={ov.id} style={{ position: 'absolute', left, top, zIndex: 15 }}>
+                    {ov.type === 'bubble' && (
+                      <View style={[styles.speechBubble, { borderRadius: bRadius, position: 'relative', top: 0, left: 0 }]}>
+                        <Text style={[styles.speechBubbleText, { fontFamily: fontFam, fontSize }]}>{ov.content}</Text>
+                        {hasTail && <View style={styles.speechBubbleTail} />}
+                      </View>
+                    )}
+                    {ov.type === 'text' && (
+                      <Text style={[styles.overlayReadText, { fontFamily: fontFam, fontSize, color: ov.color ?? '#ffffff' }]}>
+                        {ov.content}
+                      </Text>
+                    )}
+                    {ov.type === 'sticker' && (
+                      <Text style={{ fontSize }}>{ov.content}</Text>
+                    )}
+                  </View>
+                );
+              })}
 
               {/* Panel number badge */}
               <View style={[styles.panelNumBadge, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)' }]}>
@@ -424,6 +452,11 @@ const styles = StyleSheet.create({
     borderLeftColor:  'transparent',
     borderRightColor: 'transparent',
     borderTopColor:   'rgba(255,255,255,0.93)',
+  },
+  overlayReadText: {
+    textShadowColor:  'rgba(0,0,0,0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius:  4,
   },
   panelNumBadge: {
     position: 'absolute',

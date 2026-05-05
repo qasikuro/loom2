@@ -6,12 +6,25 @@ import { requireAuth, getUserId } from "../middleware/auth";
 
 const router: IRouter = Router();
 
+const OverlaySchema = z.object({
+  id:          z.string(),
+  type:        z.enum(['bubble', 'text', 'sticker']),
+  content:     z.string(),
+  xPct:        z.number(),
+  yPct:        z.number(),
+  fontFamily:  z.string().optional().nullable(),
+  fontSize:    z.number().optional().nullable(),
+  bubbleStyle: z.string().optional().nullable(),
+  color:       z.string().optional().nullable(),
+});
+
 const PanelSchema = z.object({
   id:         z.string(),
   text:       z.string(),
   imageUri:   z.string().optional().nullable(),
   bgPreset:   z.string().optional().nullable(),
   bubbleText: z.string().optional().nullable(),
+  overlays:   z.array(OverlaySchema).optional().nullable(),
 });
 
 const StoryInputSchema = z.object({
@@ -49,9 +62,12 @@ router.post("/stories", requireAuth, async (req, res) => {
   try {
     const { id, date, panels, ...rest } = parsed.data;
     const sanitizedPanels = panels.map(p => ({
-      id:       p.id,
-      text:     p.text,
-      imageUri: p.imageUri ?? undefined,
+      id:         p.id,
+      text:       p.text,
+      imageUri:   p.imageUri   ?? undefined,
+      bgPreset:   p.bgPreset   ?? undefined,
+      bubbleText: p.bubbleText ?? undefined,
+      overlays:   p.overlays   ?? undefined,
     }));
 
     const insertValues = {
