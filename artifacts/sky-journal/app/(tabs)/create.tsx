@@ -95,7 +95,7 @@ export default function CreateScreen() {
 
   function handlePublish() {
     if (!title.trim()) { setError('Give your story a title first.'); return; }
-    const filled = panels.filter(p => p.text.trim() || p.bubbleText?.trim() || p.imageUri || p.bgPreset);
+    const filled = panels.filter(p => p.text.trim() || p.bubbleText?.trim() || p.imageUri || p.bgPreset || (p.overlays && p.overlays.length > 0));
     if (!filled.length) { setError('Add content to at least one panel.'); return; }
     setError(null);
     setPosting(true);

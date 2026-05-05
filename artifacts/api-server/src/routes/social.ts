@@ -168,7 +168,7 @@ router.get("/discover", requireAuth, async (req, res) => {
 
     return res.json(
       scored.slice(0, 50).map(({ row, isFollowing }) => {
-        const panels = row.panels as Array<{ text?: string; imageUri?: string }>;
+        const panels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
         return {
           id:             row.id,
           authorUserId:   row.userId,

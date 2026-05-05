@@ -84,7 +84,7 @@ export default function StoryScreen() {
     entry
       ? entry.panels.map(p => ({ imageUri: p.imageUri, bgPreset: p.bgPreset, text: p.text, bubbleText: p.bubbleText, overlays: p.overlays }))
       : post
-        ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text }))
+        ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text, overlays: p.overlays }))
         : [{ text: 'Story not found.' }];
 
   const heroImageSrc = getPanelImageSource(panels[0]?.imageUri, panels[0]?.bgPreset);

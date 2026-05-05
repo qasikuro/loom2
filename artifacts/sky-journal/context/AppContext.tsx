@@ -130,7 +130,7 @@ export interface DiscoverPost {
   vibe:           string;
   saved:          boolean;
   isFollowing:    boolean;
-  panels?:        { text: string; imageUri?: string }[];
+  panels?:        { text: string; imageUri?: string; overlays?: PanelOverlay[] }[];
 }
 
 export interface Reward {
@@ -270,7 +270,11 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
     timeAgo:        relativeTimeDiscover(raw.date ?? raw.createdAt ?? new Date().toISOString()),
     chapterNumber:  raw.chapterNumber ?? 1,
     vibe:           raw.mood ?? 'Hopeful',
-    panels:         Array.isArray(raw.panels) ? raw.panels : [],
+    panels:         Array.isArray(raw.panels) ? raw.panels.map((p: any) => ({
+      text:     p.text     ?? '',
+      imageUri: p.imageUri ?? undefined,
+      overlays: Array.isArray(p.overlays) ? p.overlays : undefined,
+    })) : [],
   };
 }
 
