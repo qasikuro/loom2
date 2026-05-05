@@ -139,22 +139,28 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
   const posRef = useRef({ x: initX, y: initY });
   const anim   = useRef(new Animated.ValueXY({ x: initX, y: initY })).current;
 
+  // Keep a always-current ref so the PanResponder (created once) never
+  // captures stale callbacks or dimensions — the key fix for text-reset on drag.
+  const liveRef = useRef({ onMove, onSelect, onDelete, panelW, panelH, id: overlay.id });
+  liveRef.current = { onMove, onSelect, onDelete, panelW, panelH, id: overlay.id };
+
   const pr = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder:  () => true,
     onPanResponderGrant: () => {
       anim.setOffset({ x: posRef.current.x, y: posRef.current.y });
       anim.setValue({ x: 0, y: 0 });
-      onSelect(overlay.id);
+      liveRef.current.onSelect(liveRef.current.id);
     },
     onPanResponderMove: Animated.event([null, { dx: anim.x, dy: anim.y }], { useNativeDriver: false }),
     onPanResponderRelease: (_, gs) => {
+      const { panelW: pW, panelH: pH, id, onMove: mv } = liveRef.current;
       anim.flattenOffset();
-      const nx = Math.max(0, Math.min(panelW * 0.85, posRef.current.x + gs.dx));
-      const ny = Math.max(0, Math.min(panelH * 0.88, posRef.current.y + gs.dy));
+      const nx = Math.max(0, Math.min(pW * 0.85, posRef.current.x + gs.dx));
+      const ny = Math.max(0, Math.min(pH * 0.88, posRef.current.y + gs.dy));
       posRef.current = { x: nx, y: ny };
       anim.setValue({ x: nx, y: ny });
-      onMove(overlay.id, nx / panelW, ny / panelH);
+      mv(id, nx / pW, ny / pH);
     },
   })).current;
 
@@ -574,6 +580,7 @@ export default function PanelEditorScreen() {
         {/* ── Selected overlay editor ───────────────────────── */}
         {selOverlay && (
           <View style={[styles.overlayEditor, { backgroundColor: colors.card, borderColor: `${colors.primary}28` }]}>
+            {/* Header row */}
             <View style={styles.editorHeaderRow}>
               <Icon
                 name={selOverlay.type === 'bubble' ? 'message-circle' : selOverlay.type === 'text' ? 'type' : 'star'}
@@ -588,9 +595,51 @@ export default function PanelEditorScreen() {
               </TouchableOpacity>
             </View>
 
+            {/* ── Font quick-bar (always-visible for bubble/text) ── */}
+            {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
+              <View style={[styles.fontBar, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                {FONTS.map(f => {
+                  const active = selOverlay.fontFamily === f.key;
+                  return (
+                    <TouchableOpacity
+                      key={f.key}
+                      style={[styles.fontBarBtn, active && { backgroundColor: `${colors.primary}22`, borderColor: `${colors.primary}60` }]}
+                      onPress={() => { Haptics.selectionAsync(); updateOverlay(selOverlay.id, { fontFamily: f.key }); }}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.fontBarSample, { fontFamily: f.key as any, color: active ? colors.primary : colors.foreground }]}>
+                        Aa
+                      </Text>
+                      <Text style={[styles.fontBarLabel, { color: active ? colors.primary : colors.mutedForeground }]}>
+                        {f.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                {/* Size pills inline */}
+                <View style={[styles.fontBarDivider, { backgroundColor: colors.border }]} />
+                {[10, 13, 16, 20, 24].map(sz => {
+                  const active = selOverlay.fontSize === sz;
+                  return (
+                    <TouchableOpacity
+                      key={sz}
+                      style={[styles.sizePill, { borderColor: active ? colors.primary : 'transparent', backgroundColor: active ? `${colors.primary}22` : 'transparent' }]}
+                      onPress={() => updateOverlay(selOverlay.id, { fontSize: sz })}
+                    >
+                      <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: active ? colors.primary : colors.mutedForeground }}>
+                        {sz === 10 ? 'XS' : sz === 13 ? 'S' : sz === 16 ? 'M' : sz === 20 ? 'L' : 'XL'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Text input */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <TextInput
-                style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border }]}
+                style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border, fontFamily: (selOverlay.fontFamily ?? 'Inter_500Medium') as any }]}
                 value={selOverlay.content}
                 onChangeText={t => updateOverlay(selOverlay.id, { content: t })}
                 placeholder={selOverlay.type === 'bubble' ? 'The wind guides us…' : 'Enter text…'}
@@ -599,58 +648,6 @@ export default function PanelEditorScreen() {
                 textAlignVertical="top"
                 autoFocus
               />
-            )}
-
-            {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
-              <>
-                <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>FONT</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.chipRow}>
-                    {FONTS.map(f => {
-                      const active = selOverlay.fontFamily === f.key;
-                      return (
-                        <TouchableOpacity
-                          key={f.key}
-                          style={[styles.chip, {
-                            borderColor: active ? colors.primary : colors.border,
-                            backgroundColor: active ? `${colors.primary}18` : colors.muted,
-                          }]}
-                          onPress={() => { Haptics.selectionAsync(); updateOverlay(selOverlay.id, { fontFamily: f.key }); }}
-                        >
-                          <Text style={{ fontFamily: f.key as any, fontSize: 13, color: active ? colors.primary : colors.foreground }}>
-                            {f.label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
-              </>
-            )}
-
-            {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
-              <>
-                <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>SIZE</Text>
-                <View style={styles.chipRow}>
-                  {[10, 13, 16, 20, 24].map(sz => {
-                    const active = selOverlay.fontSize === sz;
-                    return (
-                      <TouchableOpacity
-                        key={sz}
-                        style={[styles.chip, styles.chipSq, {
-                          borderColor: active ? colors.primary : colors.border,
-                          backgroundColor: active ? `${colors.primary}18` : colors.muted,
-                        }]}
-                        onPress={() => updateOverlay(selOverlay.id, { fontSize: sz })}
-                      >
-                        <Text style={{ fontSize: sz === 24 ? 15 : sz === 20 ? 13 : sz === 16 ? 11 : 10, color: active ? colors.primary : colors.foreground }}>
-                          {sz === 10 ? 'XS' : sz === 13 ? 'S' : sz === 16 ? 'M' : sz === 20 ? 'L' : 'XL'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </>
             )}
 
             {selOverlay.type === 'bubble' && (
@@ -845,9 +842,26 @@ const styles = StyleSheet.create({
   editorHeaderTitle: { flex: 1, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   editorDeleteBtn:   { padding: 4 },
   editorInput: {
-    fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 20,
+    fontSize: 14, lineHeight: 20,
     minHeight: 58, borderWidth: 1, borderRadius: 12,
     paddingHorizontal: 12, paddingVertical: 9,
+  },
+
+  fontBar: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4, gap: 2,
+  },
+  fontBarBtn: {
+    flex: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4,
+    borderRadius: 9, borderWidth: 1, borderColor: 'transparent', gap: 2,
+  },
+  fontBarSample: { fontSize: 16 },
+  fontBarLabel:  { fontSize: 8, fontFamily: 'Inter_500Medium', letterSpacing: 0.2 },
+  fontBarDivider:{ width: 1, height: 32, marginHorizontal: 4 },
+  sizePill: {
+    paddingHorizontal: 7, paddingVertical: 5,
+    borderRadius: 7, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
   },
 
   pickerLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.8, textTransform: 'uppercase' },

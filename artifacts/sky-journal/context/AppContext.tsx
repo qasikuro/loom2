@@ -451,7 +451,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addStory = useCallback((story: Story) => {
     setStories(prev => {
       const updated = [story, ...prev.filter(s => s.id !== story.id)];
-      AsyncStorage.setItem('stories_v1', JSON.stringify(updated));
+      // Strip imageUri (can be large base64 on web) before caching to AsyncStorage
+      const slim = updated.map(s => ({
+        ...s,
+        panels: s.panels.map(p => ({ ...p, imageUri: undefined })),
+      }));
+      AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
       return updated;
     });
     apiFetch('/stories', {
