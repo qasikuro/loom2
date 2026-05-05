@@ -48,7 +48,7 @@ export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser } = useApp();
-  const [activeTab, setActiveTab]     = useState<TabType>('For You');
+  const [activeTab, setActiveTab]       = useState<TabType>('For You');
   const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
@@ -105,25 +105,26 @@ export default function DiscoverScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient colors={['#14112E', '#1A1640', '#1E1A48']} style={[styles.headerGrad, { height: topPad + 138 }]} />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 12 }]}>
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <View style={[styles.header, { paddingTop: topPad + 14 }]}>
         <View>
-          <Text style={[styles.headerTitle, { color: 'rgba(235,228,255,0.97)' }]}>Discover</Text>
-          <Text style={[styles.headerSub, { color: 'rgba(200,184,232,0.6)' }]}>Stories from the sky</Text>
+          <Text style={styles.headerTitle}>Discover</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Stories from the sky</Text>
         </View>
         <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.1)', borderColor: 'rgba(200,184,232,0.18)' }]}
+          style={[styles.iconBtn, { backgroundColor: 'rgba(139,122,181,0.18)', borderColor: 'rgba(139,122,181,0.30)' }]}
           onPress={() => { setActiveTab('People'); Haptics.selectionAsync(); }}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         >
-          <Icon name="users" size={17} color="rgba(200,184,232,0.75)" />
+          <Icon name="users" size={18} color="rgba(200,184,232,0.85)" />
         </TouchableOpacity>
       </View>
 
-      {/* Tabs */}
+      {/* ── Tabs ───────────────────────────────────────────────── */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={[styles.tabsRow, { paddingHorizontal: 18 }]}
+        contentContainerStyle={styles.tabsRow}
         style={styles.tabsScroll}
       >
         {TABS.map(tab => {
@@ -135,8 +136,8 @@ export default function DiscoverScreen() {
               style={[
                 styles.tab,
                 active
-                  ? { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }
-                  : { backgroundColor: colors.muted, borderColor: 'transparent' },
+                  ? { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}40` }
+                  : { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(200,184,232,0.1)' },
               ]}
             >
               <Text style={[styles.tabText, { color: active ? colors.primary : colors.mutedForeground }]}>
@@ -149,7 +150,7 @@ export default function DiscoverScreen() {
 
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-      {/* ── People tab ──────────────────────────────────────────────────── */}
+      {/* ── People tab ─────────────────────────────────────────── */}
       {activeTab === 'People' ? (
         <View style={{ flex: 1 }}>
           <View style={[styles.searchWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
@@ -166,29 +167,29 @@ export default function DiscoverScreen() {
             />
             {peopleLoading && <ActivityIndicator size="small" color={colors.primary} />}
             {!peopleLoading && peopleQuery.length > 0 && (
-              <TouchableOpacity onPress={() => { setPeopleQuery(''); setPeopleResults([]); }}>
+              <TouchableOpacity onPress={() => { setPeopleQuery(''); setPeopleResults([]); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Icon name="x" size={14} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
           </View>
 
           {peopleQuery.length < 2 ? (
-            <View style={styles.searchHint}>
-              <View style={[styles.searchHintIcon, { backgroundColor: `${colors.primary}0E` }]}>
-                <Icon name="users" size={24} color={`${colors.primary}60`} />
+            <View style={styles.emptyState}>
+              <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
+                <Icon name="users" size={28} color={`${colors.primary}70`} />
               </View>
-              <Text style={[styles.searchHintTitle, { color: colors.foreground }]}>Find Sky Friends</Text>
-              <Text style={[styles.searchHintSub, { color: colors.mutedForeground }]}>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Find Sky Friends</Text>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 Search by name or @handle to find other wanderers and follow their stories.
               </Text>
             </View>
           ) : peopleResults.length === 0 && !peopleLoading ? (
-            <View style={styles.searchHint}>
-              <View style={[styles.searchHintIcon, { backgroundColor: `${colors.primary}0E` }]}>
-                <Icon name="search" size={24} color={`${colors.primary}60`} />
+            <View style={styles.emptyState}>
+              <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
+                <Icon name="search" size={28} color={`${colors.primary}70`} />
               </View>
-              <Text style={[styles.searchHintTitle, { color: colors.foreground }]}>No wanderers found</Text>
-              <Text style={[styles.searchHintSub, { color: colors.mutedForeground }]}>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No wanderers found</Text>
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 Try a different name or username.
               </Text>
             </View>
@@ -196,7 +197,7 @@ export default function DiscoverScreen() {
             <FlatList
               data={peopleResults}
               keyExtractor={r => r.userId}
-              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: bottomPad }}
+              contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => {
                 const isFollowing = followingIds.includes(item.userId) || item.isFollowing;
@@ -244,7 +245,7 @@ export default function DiscoverScreen() {
           )}
         </View>
 
-      /* ── Vibes tab ──────────────────────────────────────────────────── */
+      /* ── Vibes tab ─────────────────────────────────────────────── */
       ) : activeTab === 'Vibes' ? (
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -254,19 +255,28 @@ export default function DiscoverScreen() {
             <>
               <TouchableOpacity
                 onPress={() => setSelectedVibe(null)}
-                style={[styles.backBtn, { backgroundColor: colors.muted }]}
+                style={[styles.backBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
               >
                 <Icon name="arrow-left" size={15} color={colors.foreground} />
                 <Text style={[styles.backText, { color: colors.foreground }]}>{selectedVibe}</Text>
               </TouchableOpacity>
               {vibePosts.length === 0 ? (
-                <View style={styles.empty}>
-                  <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}0F` }]}>
-                    <Icon name="compass" size={26} color={`${colors.primary}70`} />
+                <View style={styles.emptyState}>
+                  <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
+                    <Icon name="compass" size={28} color={`${colors.primary}70`} />
                   </View>
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Sky is quiet here</Text>
                   <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                     No public {selectedVibe} stories yet.
                   </Text>
+                  <TouchableOpacity
+                    style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => router.push('/(tabs)/create')}
+                    activeOpacity={0.85}
+                  >
+                    <Icon name="plus" size={15} color="#fff" />
+                    <Text style={styles.ctaBtnText}>Share a Story</Text>
+                  </TouchableOpacity>
                 </View>
               ) : vibePosts.map(post => (
                 <DiscoverCard
@@ -288,12 +298,12 @@ export default function DiscoverScreen() {
                   return (
                     <TouchableOpacity
                       key={vibe.label}
-                      style={[styles.vibeCard, { backgroundColor: `${vibe.color}20`, borderColor: `${vibe.color}40` }, SHADOW.xs]}
+                      style={[styles.vibeCard, { backgroundColor: `${vibe.color}18`, borderColor: `${vibe.color}35` }, SHADOW.xs]}
                       onPress={() => setSelectedVibe(vibe.label)}
-                      activeOpacity={0.88}
+                      activeOpacity={0.85}
                     >
-                      <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}28` }]}>
-                        <Icon name={vibe.icon} size={20} color={vibe.color} />
+                      <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}22` }]}>
+                        <Icon name={vibe.icon} size={22} color={vibe.color} />
                       </View>
                       <Text style={[styles.vibeLabel, { color: vibe.color }]}>{vibe.label}</Text>
                       <Text style={[styles.vibeCount, { color: `${vibe.color}80` }]}>{count} stories</Text>
@@ -305,7 +315,7 @@ export default function DiscoverScreen() {
           )}
         </ScrollView>
 
-      /* ── For You / New tabs ─────────────────────────────────────────── */
+      /* ── For You / New tabs ─────────────────────────────────────── */
       ) : (
         <FlatList
           data={activePosts}
@@ -317,12 +327,12 @@ export default function DiscoverScreen() {
               onSave={() => toggleSavePost(item.id)}
             />
           )}
-          contentContainerStyle={[styles.list, { paddingBottom: bottomPad }]}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}0F` }]}>
-                <Icon name="compass" size={26} color={`${colors.primary}70`} />
+            <View style={styles.emptyState}>
+              <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
+                <Icon name="compass" size={28} color={`${colors.primary}70`} />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>The sky is quiet</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
@@ -330,6 +340,14 @@ export default function DiscoverScreen() {
                   ? 'Follow other wanderers to see their stories here.'
                   : 'No public stories yet. Be the first to share one.'}
               </Text>
+              <TouchableOpacity
+                style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/(tabs)/create')}
+                activeOpacity={0.85}
+              >
+                <Icon name="plus" size={15} color="#fff" />
+                <Text style={styles.ctaBtnText}>Share a Story</Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -339,52 +357,114 @@ export default function DiscoverScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:    { flex: 1 },
-  headerGrad:   { position: 'absolute', top: 0, left: 0, right: 0 },
-  header:       { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 12 },
-  headerTitle:  { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
-  headerSub:    { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 3, letterSpacing: 0.1 },
-  iconBtn:      { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 2 },
-  tabsScroll:   { maxHeight: 52 },
-  tabsRow:      { flexDirection: 'row', gap: 8, paddingVertical: 8 },
-  tab:          { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 22, borderWidth: 1 },
-  tabText:      { fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1 },
-  divider:      { height: 1, marginTop: 1 },
-  list:         { paddingHorizontal: 16, paddingTop: 16 },
+  container:   { flex: 1 },
+  headerGrad:  { position: 'absolute', top: 0, left: 0, right: 0 },
 
-  // Search (People tab)
-  searchWrap:   { flexDirection: 'row', alignItems: 'center', gap: 10, margin: 14, borderRadius: 14, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
-  searchInput:  { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular' },
-  searchHint:   { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
-  searchHintIcon:  { width: 72, height: 72, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  searchHintTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
-  searchHintSub:   { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', textAlign: 'center', lineHeight: 20 },
+  header: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 28, fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.7, color: 'rgba(235,228,255,0.97)',
+  },
+  headerSub: { fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 3 },
 
-  // User card
-  userCard:     { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 10 },
-  userAvatar:   { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, flexShrink: 0 },
-  userAvatarText: { fontSize: 18, fontFamily: 'Inter_700Bold' },
-  userInfo:     { flex: 1, gap: 2 },
-  userName:     { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  userHandle:   { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  userBio:      { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
-  followBtn:    { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, flexShrink: 0 },
+  iconBtn: {
+    width: 44, height: 44, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, marginTop: 2,
+  },
+
+  tabsScroll: { maxHeight: 54 },
+  tabsRow: {
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 20, paddingVertical: 8,
+  },
+  tab: {
+    paddingHorizontal: 18, paddingVertical: 10,
+    borderRadius: 24, borderWidth: 1,
+  },
+  tabText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1 },
+
+  divider: { height: 1, marginBottom: 2 },
+
+  listContent: { paddingHorizontal: 16, paddingTop: 16 },
+
+  // People tab
+  searchWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    margin: 16, borderRadius: 14, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  searchInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular' },
+
+  userCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 10,
+  },
+  userAvatar: {
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, flexShrink: 0,
+  },
+  userAvatarText: { fontSize: 19, fontFamily: 'Inter_700Bold' },
+  userInfo:    { flex: 1, gap: 2 },
+  userName:    { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  userHandle:  { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  userBio:     { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  followBtn: {
+    paddingHorizontal: 16, height: 36,
+    borderRadius: 20, borderWidth: 1.5,
+    flexShrink: 0, alignItems: 'center', justifyContent: 'center',
+  },
   followBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
 
   // Vibes
-  vibesContent: { paddingHorizontal: 16, paddingTop: 14, gap: 16 },
-  vibesSubtitle: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
-  vibesGrid:    { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  vibeCard:     { width: '48%', borderRadius: 22, borderWidth: 1, padding: 18, gap: 10, minHeight: 128, justifyContent: 'center' },
-  vibeIconWrap: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start' },
-  vibeLabel:    { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.2 },
-  vibeCount:    { fontSize: 11, fontFamily: 'Inter_400Regular' },
-  backBtn:      { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  backText:     { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  vibesContent: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
+  vibesSubtitle: {
+    fontSize: 13, fontFamily: 'Inter_400Regular',
+    fontStyle: 'italic', color: 'rgba(200,184,232,0.6)',
+  },
+  vibesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  vibeCard: {
+    width: '48%', borderRadius: 22, borderWidth: 1,
+    padding: 18, gap: 10, minHeight: 134, justifyContent: 'center',
+  },
+  vibeIconWrap: {
+    width: 48, height: 48, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start',
+  },
+  vibeLabel: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.2 },
+  vibeCount: { fontSize: 11, fontFamily: 'Inter_400Regular' },
 
-  // Empty
-  empty:        { alignItems: 'center', paddingTop: 60, gap: 12, paddingHorizontal: 40 },
-  emptyIcon:    { width: 64, height: 64, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  emptyTitle:   { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
-  emptyText:    { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', textAlign: 'center', lineHeight: 20 },
+  backBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 22, borderWidth: 1, marginBottom: 4,
+  },
+  backText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center', paddingTop: 64, paddingHorizontal: 40, gap: 12,
+  },
+  emptyIcon: {
+    width: 72, height: 72, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  emptyTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.3 },
+  emptyText: {
+    fontSize: 14, fontFamily: 'Inter_400Regular',
+    fontStyle: 'italic', textAlign: 'center', lineHeight: 21,
+  },
+
+  // Primary CTA button
+  ctaBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingHorizontal: 24, height: 48, borderRadius: 24,
+    marginTop: 8,
+  },
+  ctaBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' },
 });

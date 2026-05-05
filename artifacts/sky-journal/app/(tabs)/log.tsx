@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+
 import React, { useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -566,6 +567,16 @@ export default function JournalScreen() {
                 ? 'Try a different word or mood.'
                 : 'This is your private space. Start writing ✦'}
             </Text>
+            {!searchQuery.trim() && (
+              <TouchableOpacity
+                style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+                onPress={() => { Haptics.selectionAsync(); router.push({ pathname: '/create-journal-entry', params: { type: 'diary' } }); }}
+                activeOpacity={0.85}
+              >
+                <Icon name="feather" size={15} color="#fff" />
+                <Text style={styles.emptyBtnText}>Write First Entry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           sections.map((section, si) => (
@@ -621,7 +632,7 @@ const styles = StyleSheet.create({
   privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.08)', borderWidth:1, borderColor:'rgba(200,184,232,0.18)' },
   privateBadgeText: { fontSize:10, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.7)' },
   headerRight: { flexDirection:'row', gap:8 },
-  hdrBtn: { width:40, height:40, borderRadius:13, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.09)', borderWidth:1, borderColor:'rgba(200,184,232,0.14)' },
+  hdrBtn: { width:44, height:44, borderRadius:14, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.09)', borderWidth:1, borderColor:'rgba(200,184,232,0.14)' },
   hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.55)', borderColor:'rgba(107,91,149,0.4)' },
 
   // Filter tabs inside dark header
@@ -660,4 +671,6 @@ const styles = StyleSheet.create({
   emptyIcon: { width:76, height:76, borderRadius:38, alignItems:'center', justifyContent:'center', marginBottom:4 },
   emptyTitle: { fontSize:19, fontFamily:'Inter_600SemiBold', textAlign:'center' },
   emptyText: { fontSize:14, fontFamily:'Inter_400Regular', textAlign:'center', lineHeight:22, fontStyle:'italic' },
+  emptyBtn: { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:24, height:48, borderRadius:24, marginTop:4 },
+  emptyBtnText: { fontSize:15, fontFamily:'Inter_600SemiBold', color:'#fff' },
 });

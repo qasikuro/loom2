@@ -28,7 +28,7 @@ const CATEGORIES = [
     desc: 'Log encounters with sky friends',
     icon: 'users'   as const,
     iconColor: '#7AB8F0',
-    iconBg:    'rgba(74,128,184,0.32)',
+    iconBg:    'rgba(74,128,184,0.28)',
     image: Images.story_bg2,
     route: '/(tabs)/log' as const,
   },
@@ -38,7 +38,7 @@ const CATEGORIES = [
     desc: 'Tell your sky adventures in panels',
     icon: 'layers'  as const,
     iconColor: '#C0A8F0',
-    iconBg:    'rgba(107,91,149,0.32)',
+    iconBg:    'rgba(107,91,149,0.28)',
     image: Images.story_bg1,
     route: '/(tabs)/create' as const,
   },
@@ -48,7 +48,7 @@ const CATEGORIES = [
     desc: 'Browse memories from the sky world',
     icon: 'compass' as const,
     iconColor: '#70D0A8',
-    iconBg:    'rgba(58,144,96,0.32)',
+    iconBg:    'rgba(58,144,96,0.28)',
     image: Images.story_bg3,
     route: '/(tabs)/discover' as const,
   },
@@ -58,7 +58,7 @@ const CATEGORIES = [
     desc: 'Record and display your sky looks',
     icon: 'star'    as const,
     iconColor: '#F0D070',
-    iconBg:    'rgba(200,168,75,0.32)',
+    iconBg:    'rgba(200,168,75,0.28)',
     image: Images.character_default,
     route: '/(tabs)/profile' as const,
   },
@@ -73,6 +73,8 @@ const SPARKLES = [
   { t: 76, l: 88,  s: 3, o: 0.28 },
   { t: 22, r: 140, s: 4, o: 0.38 },
 ] as const;
+
+const SW = Dimensions.get('window').width;
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -98,7 +100,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.root}>
 
-      {/* ── Dark navy header ──────────────────────────────────────── */}
+      {/* ── Dark navy header ──────────────────────────────────── */}
       <LinearGradient
         colors={['#12102A', '#1E1A48', '#221E52']}
         style={[styles.headerGrad, { paddingTop: topPad }]}
@@ -118,7 +120,11 @@ export default function HomeScreen() {
 
         {/* Top row */}
         <View style={styles.topRow}>
-          <TouchableOpacity style={styles.avatarRing} onPress={() => router.push('/(tabs)/profile')}>
+          <TouchableOpacity
+            style={styles.avatarRing}
+            onPress={() => router.push('/(tabs)/profile')}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          >
             {activeOutfit?.imageUri
               ? <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatar} resizeMode="cover" />
               : <Image source={Images.character_default} style={styles.avatar} resizeMode="cover" />
@@ -131,14 +137,19 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.headerIconBtn} onPress={() => router.push('/(tabs)/profile')}>
-              <Icon name="settings" size={17} color="rgba(200,184,232,0.75)" />
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => router.push('/(tabs)/profile')}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+            >
+              <Icon name="settings" size={18} color="rgba(200,184,232,0.80)" />
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconBtn}
               onPress={() => { setShowNotifs(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             >
-              <Icon name="bell" size={17} color="rgba(200,184,232,0.75)" />
+              <Icon name="bell" size={18} color="rgba(200,184,232,0.80)" />
               {hasNotifs && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
@@ -147,45 +158,39 @@ export default function HomeScreen() {
         {/* Stats strip */}
         <View style={styles.statsStrip}>
           <View style={styles.statPill}>
-            <Icon name="book-open" size={12} color="rgba(200,184,232,0.6)" />
+            <Icon name="book-open" size={12} color="rgba(200,184,232,0.65)" />
             <Text style={styles.statPillText}>{journalEntries.length} entries</Text>
           </View>
           <View style={styles.statDot} />
           <View style={styles.statPill}>
-            <Icon name="layers" size={12} color="rgba(200,184,232,0.6)" />
+            <Icon name="layers" size={12} color="rgba(200,184,232,0.65)" />
             <Text style={styles.statPillText}>{stories.length} stories</Text>
           </View>
           {lastSeen && (
             <>
               <View style={styles.statDot} />
               <View style={styles.statPill}>
-                <Icon name="clock" size={12} color="rgba(200,184,232,0.6)" />
+                <Icon name="clock" size={12} color="rgba(200,184,232,0.65)" />
                 <Text style={styles.statPillText}>Last: {lastSeen}</Text>
               </View>
             </>
           )}
         </View>
 
-        {/* ── Character Hero ──────────────────────────────────────── */}
-        <View style={styles.charHero}>
-          {/* 1. Base gradient background */}
+        {/* ── Character Hero ─────────────────────────────────── */}
+        <View style={[styles.charHero, { height: Math.round(SW * 0.72) }]}>
           <LinearGradient
             colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-
-          {/* 2. Outfit / default character image */}
           {activeOutfit?.imageUri
             ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
             : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
           }
-
-          {/* 3. Top + bottom gradient overlays */}
           <LinearGradient colors={['rgba(18,16,42,0.5)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
           <LinearGradient colors={['transparent', 'rgba(15,13,30,0.95)']} style={styles.charHeroOverlay} pointerEvents="none" />
 
-          {/* 4. Gold sparkle dots */}
           {SPARKLES.map((sp, i) => (
             <View
               key={i}
@@ -201,7 +206,6 @@ export default function HomeScreen() {
             />
           ))}
 
-          {/* 5. Label — on top of everything */}
           <View style={styles.charHeroLabel}>
             <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
             {activeOutfit && (
@@ -212,29 +216,29 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* 6. Change-outfit button */}
           {outfits.length > 0 && (
             <TouchableOpacity
               style={styles.changeOutfitBtn}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfitPicker(true); }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Icon name="refresh-cw" size={13} color="rgba(200,184,232,0.9)" />
+              <Icon name="refresh-cw" size={14} color="rgba(200,184,232,0.9)" />
             </TouchableOpacity>
           )}
         </View>
       </LinearGradient>
 
-      {/* ── Scrollable content ─────────────────────────────────────── */}
+      {/* ── Scrollable content ──────────────────────────────── */}
       <ScrollView
         style={styles.cardsArea}
-        contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 100 }]}
+        contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 110 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Character info card */}
         <TouchableOpacity
           style={[styles.charInfoCard, SHADOW.sm]}
           onPress={() => router.push('/(tabs)/profile')}
-          activeOpacity={0.88}
+          activeOpacity={0.86}
         >
           <View style={styles.charInfoLeft}>
             <View style={styles.charNameRow}>
@@ -255,61 +259,62 @@ export default function HomeScreen() {
               </View>
             )}
           </View>
-          <Icon name="chevron-right" size={16} color="rgba(200,184,232,0.45)" />
+          <View style={styles.charInfoRight}>
+            <Text style={styles.charInfoCta}>Edit</Text>
+            <Icon name="chevron-right" size={14} color="rgba(139,122,181,0.7)" />
+          </View>
         </TouchableOpacity>
 
         {/* Section label */}
         <Text style={styles.sectionLabel}>Where would you like to go?</Text>
 
-        {/* ── Illustration navigation cards ──────────────────────── */}
+        {/* Navigation cards */}
         <View style={styles.hList}>
           {CATEGORIES.map(cat => (
             <TouchableOpacity
               key={cat.key}
               style={[styles.hCard, SHADOW.sm]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push(cat.route); }}
-              activeOpacity={0.88}
+              activeOpacity={0.86}
             >
-              {/* Full-bleed background illustration */}
               <Image source={cat.image} style={StyleSheet.absoluteFill} resizeMode="cover" />
-
-              {/* Dark gradient overlay — opaque left, transparent right */}
               <LinearGradient
-                colors={['rgba(12,10,26,0.93)', 'rgba(12,10,26,0.68)', 'rgba(12,10,26,0.12)']}
-                locations={[0, 0.52, 1]}
+                colors={['rgba(12,10,26,0.94)', 'rgba(12,10,26,0.72)', 'rgba(12,10,26,0.14)']}
+                locations={[0, 0.5, 1]}
                 start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
                 style={StyleSheet.absoluteFill}
                 pointerEvents="none"
               />
-
-              {/* Icon badge */}
               <View style={[styles.hCardIcon, { backgroundColor: cat.iconBg }]}>
-                <Icon name={cat.icon} size={15} color={cat.iconColor} />
+                <Icon name={cat.icon} size={16} color={cat.iconColor} />
               </View>
-
-              {/* Text */}
               <View style={styles.hCardLeft}>
                 <Text style={styles.hCardTitle}>{cat.title}</Text>
                 <Text style={styles.hCardDesc}>{cat.desc}</Text>
               </View>
-
-              <Icon name="chevron-right" size={15} color="rgba(255,255,255,0.38)" />
+              <View style={styles.hCardArrow}>
+                <Icon name="arrow-right" size={14} color="rgba(220,210,255,0.6)" />
+              </View>
             </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
 
-      {/* ── Outfit picker modal ──────────────────────────────────── */}
+      {/* ── Outfit picker modal ──────────────────────────────── */}
       <Modal visible={showOutfitPicker} transparent animationType="slide" onRequestClose={() => setShowOutfitPicker(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowOutfitPicker(false)}>
           <Pressable
-            style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 20 }]}
+            style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24 }]}
             onPress={e => e.stopPropagation()}
           >
             <View style={styles.sheetHandle} />
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>Choose Display Outfit</Text>
-              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowOutfitPicker(false)}>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setShowOutfitPicker(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Icon name="x" size={16} color="rgba(200,184,232,0.6)" />
               </TouchableOpacity>
             </View>
@@ -350,11 +355,11 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Notifications modal ──────────────────────────────────── */}
+      {/* ── Notifications modal ──────────────────────────────── */}
       <Modal visible={showNotifs} transparent animationType="slide" onRequestClose={() => setShowNotifs(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotifs(false)}>
           <Pressable
-            style={[styles.notifsSheet, { paddingBottom: bottomPad + 20 }]}
+            style={[styles.notifsSheet, { paddingBottom: bottomPad + 24 }]}
             onPress={e => e.stopPropagation()}
           >
             <View style={styles.sheetHandle} />
@@ -363,7 +368,11 @@ export default function HomeScreen() {
               {hasNotifs && (
                 <View style={styles.countBadge}><Text style={styles.countText}>{rewards.length}</Text></View>
               )}
-              <TouchableOpacity style={styles.closeBtn} onPress={() => setShowNotifs(false)}>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setShowNotifs(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <Icon name="x" size={16} color="rgba(200,184,232,0.6)" />
               </TouchableOpacity>
             </View>
@@ -419,21 +428,21 @@ const styles = StyleSheet.create({
 
   topRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 18, paddingTop: 16, paddingBottom: 10, gap: 12,
+    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 12,
   },
   avatarRing: {
-    width: 48, height: 48, borderRadius: 24,
+    width: 50, height: 50, borderRadius: 25,
     borderWidth: 2, borderColor: 'rgba(200,184,232,0.45)',
     overflow: 'hidden', flexShrink: 0,
   },
   avatar: { width: '100%', height: '100%' },
   nameBlock: { flex: 1 },
-  charName: { fontSize: 16, fontFamily: 'Inter_700Bold', color: 'rgba(235,228,255,0.97)', letterSpacing: -0.3 },
+  charName:  { fontSize: 16, fontFamily: 'Inter_700Bold', color: 'rgba(235,228,255,0.97)', letterSpacing: -0.3 },
   subtitle:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', marginTop: 2, letterSpacing: 0.1 },
 
-  headerIcons: { flexDirection: 'row', gap: 6 },
+  headerIcons:   { flexDirection: 'row', gap: 8 },
   headerIconBtn: {
-    width: 42, height: 42, borderRadius: 14,
+    width: 44, height: 44, borderRadius: 15,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.09)',
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.14)',
@@ -451,11 +460,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 14, gap: 8,
   },
   statPill: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)' },
+  statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.65)' },
   statDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
 
   // Hero
-  charHero: { position: 'relative', width: '100%', height: Math.round(Dimensions.get('window').width * 0.75), overflow: 'hidden' },
+  charHero: { position: 'relative', width: '100%', overflow: 'hidden' },
   charHeroLabel: { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
   charHeroLabelText: {
     fontSize: 18, fontFamily: 'Inter_700Bold', letterSpacing: -0.3,
@@ -474,109 +483,137 @@ const styles = StyleSheet.create({
   outfitNameText: { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
   charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 80, zIndex: 2 },
   charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, zIndex: 2 },
-
   changeOutfitBtn: {
     position: 'absolute', bottom: 14, right: 16, zIndex: 10,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.14)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.2)',
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)',
     alignItems: 'center', justifyContent: 'center',
   },
 
   // Scrollable content
   cardsArea: { flex: 1 },
-  cardsList:  { paddingTop: 18, paddingHorizontal: 16 },
+  cardsList:  { paddingTop: 16, paddingHorizontal: 16 },
 
   // Character info card
   charInfoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 18, padding: 16,
-    marginBottom: 20,
+    borderRadius: 20, padding: 16,
+    marginBottom: 22,
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.12)',
   },
-  charInfoLeft: { flex: 1 },
-  charNameRow:  { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  charInfoName: { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#EDE8FF', letterSpacing: -0.3 },
-  charInfoStar: { fontSize: 12, color: '#C8A84B' },
-  charInfoBio:  { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.72)', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
+  charInfoLeft:     { flex: 1 },
+  charInfoRight:    { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
+  charInfoCta:      { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: 'rgba(139,122,181,0.75)' },
+  charNameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  charInfoName:     { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#EDE8FF', letterSpacing: -0.3 },
+  charInfoStar:     { fontSize: 12, color: '#C8A84B' },
+  charInfoBio:      { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.72)', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
   charInfoBioEmpty: { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.38)', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
-  charInfoTraits: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  charInfoTrait:  { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(139,122,181,0.18)', borderWidth: 1, borderColor: 'rgba(139,122,181,0.32)' },
-  charInfoTraitText: { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#C8B8EE' },
+  charInfoTraits:   { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  charInfoTrait:    { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(139,122,181,0.18)', borderWidth: 1, borderColor: 'rgba(139,122,181,0.32)' },
+  charInfoTraitText:{ fontSize: 11, fontFamily: 'Inter_500Medium', color: '#C8B8EE' },
 
   // Section label
   sectionLabel: {
-    fontSize: 11, fontFamily: 'Inter_700Bold', color: 'rgba(200,184,232,0.45)',
-    letterSpacing: 1.4, textTransform: 'uppercase', marginBottom: 14,
+    fontSize: 11, fontFamily: 'Inter_700Bold', color: 'rgba(200,184,232,0.48)',
+    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12,
   },
 
-  // Illustration navigation cards
+  // Navigation cards
   hList: { gap: 10 },
   hCard: {
     flexDirection: 'row', alignItems: 'center',
     borderRadius: 20, overflow: 'hidden',
-    height: 90, gap: 12,
+    height: 96, gap: 12,
     paddingHorizontal: 16,
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
   },
   hCardIcon: {
-    width: 38, height: 38, borderRadius: 12,
+    width: 42, height: 42, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  hCardLeft: { flex: 1, gap: 4 },
+  hCardLeft:  { flex: 1, gap: 4 },
   hCardTitle: { fontSize: 15, fontFamily: 'Inter_700Bold', color: '#EDE8FF', letterSpacing: -0.2 },
-  hCardDesc:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(220,210,255,0.7)', lineHeight: 16 },
+  hCardDesc:  { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(220,210,255,0.68)', lineHeight: 17 },
+  hCardArrow: {
+    width: 30, height: 30, borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
 
-  // Modals
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(10,8,28,0.72)', justifyContent: 'flex-end' },
+  // ── Modals ────────────────────────────────────────────────
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(8,6,24,0.72)',
+    justifyContent: 'flex-end',
+  },
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(200,184,232,0.3)',
+    alignSelf: 'center', marginBottom: 18,
+  },
 
+  // Outfit picker
   pickerSheet: {
     backgroundColor: '#1C1840',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 12, paddingHorizontal: 20,
+    paddingTop: 16, paddingHorizontal: 20,
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
   },
-  sheetHandle: {
-    width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.22)',
-    alignSelf: 'center', marginBottom: 16,
+  pickerHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 6,
   },
-  pickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  pickerTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#EDE8FF' },
-  pickerSub:    { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', marginBottom: 16, fontStyle: 'italic' },
-  pickerRow:    { flexDirection: 'row', gap: 12, paddingBottom: 4 },
+  pickerTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#EDE8FF', letterSpacing: -0.3 },
+  pickerSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic', marginBottom: 18 },
+  closeBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pickerRow: { flexDirection: 'row', gap: 12, paddingBottom: 4 },
   pickerCard: {
-    width: 90, alignItems: 'center', gap: 8,
-    padding: 4, borderRadius: 18, borderWidth: 2, borderColor: 'transparent',
-    position: 'relative',
+    width: 88, alignItems: 'center', gap: 8,
+    borderRadius: 16, padding: 10,
+    borderWidth: 1.5, borderColor: 'transparent',
   },
-  pickerCardActive: { borderColor: '#8B7AB5' },
-  pickerCardImg:    { width: 82, height: 110, borderRadius: 14, overflow: 'hidden' },
-  pickerCardNone:   { backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  pickerCardNoImg:  { backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
-  pickerCardName:   { fontSize: 11, fontFamily: 'Inter_500Medium', color: '#EDE8FF', textAlign: 'center' },
-  pickerActiveDot:  {
-    position: 'absolute', top: 8, right: 8, width: 22, height: 22,
-    borderRadius: 11, backgroundColor: '#8B7AB5', alignItems: 'center', justifyContent: 'center',
+  pickerCardActive: { borderColor: 'rgba(139,122,181,0.55)', backgroundColor: 'rgba(139,122,181,0.1)' },
+  pickerCardImg: { width: 66, height: 66, borderRadius: 14, overflow: 'hidden' },
+  pickerCardNone: { backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
+  pickerCardNoImg: { backgroundColor: 'rgba(139,122,181,0.1)', alignItems: 'center', justifyContent: 'center' },
+  pickerCardName: { fontSize: 11, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.75)', textAlign: 'center' },
+  pickerActiveDot: {
+    position: 'absolute', top: 6, right: 6,
+    width: 18, height: 18, borderRadius: 9,
+    backgroundColor: '#8B7AB5',
+    alignItems: 'center', justifyContent: 'center',
   },
-  closeBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
 
+  // Notifications
   notifsSheet: {
     backgroundColor: '#1C1840',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 12, paddingHorizontal: 20, maxHeight: 480,
+    paddingTop: 16, paddingHorizontal: 20,
+    maxHeight: '72%',
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.5, shadowRadius: 20, elevation: 20,
   },
-  notifsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  notifsTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', color: '#EDE8FF', flex: 1 },
-  countBadge:   { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: '#8B7AB5' },
-  countText:    { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
-  notifsEmpty:  { alignItems: 'center', paddingVertical: 36, gap: 12 },
-  notifsEmptyText: { fontSize: 15, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.55)' },
-
-  notifItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
-  notifIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  dismissBtn:    { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  notifsHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 10, marginBottom: 18,
+  },
+  notifsTitle: { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#EDE8FF', flex: 1, letterSpacing: -0.3 },
+  countBadge: {
+    backgroundColor: '#8B7AB5', borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 2,
+  },
+  countText: { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
+  notifsEmpty: { alignItems: 'center', paddingVertical: 40, gap: 12 },
+  notifsEmptyText: { fontSize: 14, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.5)', fontStyle: 'italic' },
+  notifItem: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    borderWidth: 1, borderRadius: 16, padding: 14,
+  },
+  notifIconWrap: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  dismissBtn:    { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });
