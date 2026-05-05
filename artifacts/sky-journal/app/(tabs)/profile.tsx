@@ -475,13 +475,22 @@ export default function CharacterScreen() {
                 <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Outfit Log</Text>
                 <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>Daily style · public or private</Text>
               </View>
-              <TouchableOpacity
-                style={[styles.addBtn, { backgroundColor: colors.primary }, SHADOW.sm]}
-                onPress={() => router.push('/create-outfit')}
-              >
-                <Icon name="plus" size={13} color="#fff" />
-                <Text style={styles.addBtnText}>Log Outfit</Text>
-              </TouchableOpacity>
+              <View style={styles.outfitHeaderBtns}>
+                <TouchableOpacity
+                  style={[styles.wardrobeBtn, { borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}0E` }]}
+                  onPress={() => { Haptics.selectionAsync(); router.push('/wardrobe' as any); }}
+                >
+                  <Icon name="grid" size={12} color={colors.primary} />
+                  <Text style={[styles.wardrobeBtnText, { color: colors.primary }]}>Wardrobe</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.addBtn, { backgroundColor: colors.primary }, SHADOW.sm]}
+                  onPress={() => router.push('/create-outfit')}
+                >
+                  <Icon name="plus" size={13} color="#fff" />
+                  <Text style={styles.addBtnText}>Log</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {outfits.length === 0 ? (
@@ -711,8 +720,11 @@ const styles = StyleSheet.create({
   sectionTitleRow: { gap: 3 },
   sectionTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
   sectionSub: { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic' },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20 },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 20 },
   addBtnText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  outfitHeaderBtns: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  wardrobeBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  wardrobeBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
   traitsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   traitChip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 12, paddingRight: 6, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   traitText: { fontSize: 13, fontFamily: 'Inter_500Medium' },

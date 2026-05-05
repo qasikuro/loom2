@@ -130,6 +130,10 @@ export default function RootLayout() {
                             name="my-stories"
                             options={{ presentation: 'card', animation: 'slide_from_right' }}
                           />
+                          <Stack.Screen
+                            name="wardrobe"
+                            options={{ presentation: 'card', animation: 'slide_from_right' }}
+                          />
                         </Stack>
                       </KeyboardProvider>
                     </GestureHandlerRootView>
