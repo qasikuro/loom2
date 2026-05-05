@@ -3,7 +3,7 @@ import type { StoryPanel } from '@/context/AppContext';
 interface DraftState {
   panels:           StoryPanel[];
   activePanelIndex: number;
-  onSave:           (panels: StoryPanel[]) => void;
+  onSave:           (panels: StoryPanel[], layoutKey: string) => void;
 }
 
 let _state: DraftState | null = null;
@@ -36,9 +36,9 @@ export const DraftStore = {
     );
   },
 
-  save() {
+  save(layoutKey: string) {
     if (_state) {
-      _state.onSave([..._state.panels]);
+      _state.onSave([..._state.panels], layoutKey);
       _state = null;
     }
   },

@@ -81,15 +81,16 @@ export interface StoryPanel {
 }
 
 export interface Story {
-  id:             string;
-  date:           string;
-  chapterTitle:   string;
-  panels:         StoryPanel[];
-  mood:           string;
-  location:       string;
-  isPublic:       boolean;
-  witnessedCount: number;
-  savedCount:     number;
+  id:              string;
+  date:            string;
+  chapterTitle:    string;
+  panels:          StoryPanel[];
+  mood:            string;
+  location:        string;
+  isPublic:        boolean;
+  witnessedCount:  number;
+  savedCount:      number;
+  pageLayoutKey?:  string;
 }
 
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
@@ -236,6 +237,7 @@ function toAppStory(raw: any): Story {
     isPublic:       raw.isPublic ?? raw.is_public ?? false,
     witnessedCount: raw.witnessedCount ?? raw.witnessed_count ?? 0,
     savedCount:     raw.savedCount     ?? raw.saved_count     ?? 0,
+    pageLayoutKey:  raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
   };
 }
 
@@ -466,13 +468,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     apiFetch('/stories', {
       method: 'POST',
       body:   JSON.stringify({
-        id:           story.id,
-        date:         story.date,
-        chapterTitle: story.chapterTitle,
-        panels:       story.panels,
-        mood:         story.mood,
-        location:     story.location,
-        isPublic:     story.isPublic,
+        id:            story.id,
+        date:          story.date,
+        chapterTitle:  story.chapterTitle,
+        panels:        story.panels,
+        mood:          story.mood,
+        location:      story.location,
+        isPublic:      story.isPublic,
+        pageLayoutKey: story.pageLayoutKey ?? null,
       }),
     })
       .then(() => loadSocialData())

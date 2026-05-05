@@ -369,7 +369,7 @@ export default function PanelEditorScreen() {
 
   function handleSave() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    DraftStore.save();
+    DraftStore.save(layoutKey);
     router.back();
   }
 

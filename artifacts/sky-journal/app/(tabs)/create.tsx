@@ -56,7 +56,8 @@ export default function CreateScreen() {
   const [mood, setMood]           = useState('Hopeful');
   const [location, setLocation]   = useState('Daylight Prairie');
   const [isPublic, setIsPublic]   = useState(true);
-  const [panels, setPanels]       = useState<StoryPanel[]>([makePanel()]);
+  const [panels, setPanels]             = useState<StoryPanel[]>([makePanel()]);
+  const [pageLayoutKey, setPageLayoutKey] = useState<string>('1');
   const [posting, setPosting]     = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [showMeta, setShowMeta]   = useState(false);
@@ -75,7 +76,7 @@ export default function CreateScreen() {
     DraftStore.set({
       panels,
       activePanelIndex: index,
-      onSave: (updated) => setPanels(updated),
+      onSave: (updated, layoutKey) => { setPanels(updated); setPageLayoutKey(layoutKey); },
     });
     router.push('/panel-editor');
   }
@@ -110,11 +111,13 @@ export default function CreateScreen() {
       isPublic,
       witnessedCount: 0,
       savedCount:     0,
+      pageLayoutKey,
     });
     setPosting(false);
     setTitle('');
     setDesc('');
     setPanels([makePanel()]);
+    setPageLayoutKey('1');
     router.push('/(tabs)');
   }
 

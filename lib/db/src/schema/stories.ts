@@ -11,8 +11,9 @@ export const storiesTable = pgTable("stories", {
   isPublic:       boolean("is_public").notNull().default(false),
   witnessedCount: integer("witnessed_count").notNull().default(0),
   savedCount:     integer("saved_count").notNull().default(0),
-  panels:         jsonb("panels").$type<StoryPanel[]>().notNull().default([]),
-  date:           timestamp("date", { withTimezone: true }).notNull(),
+  panels:          jsonb("panels").$type<StoryPanel[]>().notNull().default([]),
+  pageLayoutKey:   text("page_layout_key"),
+  date:            timestamp("date", { withTimezone: true }).notNull(),
   createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Animated,
   Dimensions,
   Image,
   Platform,
@@ -20,6 +19,42 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MoodBadge } from '@/components/MoodBadge';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import type { PanelOverlay } from '@/context/AppContext';
+
+// ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
+
+interface LayoutDef {
+  key:   string;
+  count: number;
+  rows:  number[][];
+}
+
+const LAYOUTS: LayoutDef[] = [
+  { key: '1',  count: 1, rows: [[1]] },
+  { key: '2v', count: 2, rows: [[1], [1]] },
+  { key: '2h', count: 2, rows: [[1, 1]] },
+  { key: '3a', count: 3, rows: [[1], [1, 1]] },
+  { key: '3b', count: 3, rows: [[1, 1], [1]] },
+  { key: '4',  count: 4, rows: [[1, 1], [1, 1]] },
+  { key: '5a', count: 5, rows: [[1], [1, 1], [1, 1]] },
+  { key: '5b', count: 5, rows: [[1, 1, 1], [1, 1]] },
+];
+
+const { width: SCREEN_W } = Dimensions.get('window');
+const GUTTER   = 3;
+const PAGE_H   = SCREEN_W * 1.33;   // portrait manga page aspect ratio
+
+function getLayout(key?: string): LayoutDef {
+  return LAYOUTS.find(l => l.key === key) ?? LAYOUTS[0];
+}
+
+function chunkPanels<T>(arr: T[], size: number): T[][] {
+  const pages: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) pages.push(arr.slice(i, i + size));
+  return pages;
+}
+
+// ── Background helpers ────────────────────────────────────────────────────────
 
 const BG_PRESET_MAP: Record<string, any> = {
   bg1:  Images.story_bg1,
@@ -33,8 +68,6 @@ function getPanelImageSource(imageUri?: string, bgPreset?: string) {
   if (bgPreset && BG_PRESET_MAP[bgPreset]) return BG_PRESET_MAP[bgPreset];
   return null;
 }
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const MOOD_GRADIENTS: Record<string, [string, string, string]> = {
   Hopeful:     ['#2A2060', '#3A3080', '#2E285A'],
@@ -51,44 +84,194 @@ function getGradient(mood: string): [string, string, string] {
   return MOOD_GRADIENTS[mood] ?? ['#1A1630', '#252070', '#1E1A4A'];
 }
 
+// ── Single cell renderer ──────────────────────────────────────────────────────
+
+interface CellPanel {
+  imageUri?:   string;
+  bgPreset?:   string;
+  text:        string;
+  bubbleText?: string;
+  overlays?:   PanelOverlay[];
+}
+
+function PanelCell({
+  panel,
+  cellW,
+  cellH,
+  gradient,
+}: {
+  panel:    CellPanel | undefined;
+  cellW:    number;
+  cellH:    number;
+  gradient: [string, string, string];
+}) {
+  if (!panel) {
+    return (
+      <View style={[styles.cell, { width: cellW, height: cellH, backgroundColor: '#0D0B1A' }]} />
+    );
+  }
+
+  const imgSrc    = getPanelImageSource(panel.imageUri, panel.bgPreset);
+  const hasBubble = panel.bubbleText?.trim();
+
+  return (
+    <View style={[styles.cell, { width: cellW, height: cellH }]}>
+      {imgSrc ? (
+        <Image source={imgSrc} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      ) : (
+        <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} />
+      )}
+
+      {/* Subtle vignette on image panels */}
+      {imgSrc && (
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.45)']}
+          style={[StyleSheet.absoluteFill, { top: '40%' }]}
+        />
+      )}
+
+      {/* Legacy speech bubble (top-left) */}
+      {!!hasBubble && (
+        <View style={styles.speechBubble}>
+          <Text style={styles.speechBubbleText} numberOfLines={4}>{panel.bubbleText}</Text>
+          <View style={styles.speechBubbleTail} />
+        </View>
+      )}
+
+      {/* Overlay items */}
+      {panel.overlays?.map(ov => {
+        const left     = ov.xPct * cellW;
+        const top      = ov.yPct * cellH;
+        const fontFam  = (ov.fontFamily ?? 'Inter_500Medium') as any;
+        const fontSize = ov.fontSize ?? (ov.type === 'sticker' ? 24 : 12);
+        const bRadius  = ov.bubbleStyle === 'sharp' ? 2 : ov.bubbleStyle === 'oval' ? 50 : 10;
+        const hasTail  = ov.bubbleStyle !== 'oval';
+
+        return (
+          <View key={ov.id} style={{ position: 'absolute', left, top, zIndex: 15 }}>
+            {ov.type === 'bubble' && (
+              <View style={[styles.speechBubble, { borderRadius: bRadius, position: 'relative', top: 0, left: 0, maxWidth: cellW * 0.72 }]}>
+                <Text style={[styles.speechBubbleText, { fontFamily: fontFam, fontSize }]} numberOfLines={6}>{ov.content}</Text>
+                {hasTail && <View style={styles.speechBubbleTail} />}
+              </View>
+            )}
+            {ov.type === 'text' && (
+              <Text style={[styles.overlayText, { fontFamily: fontFam, fontSize, color: ov.color ?? '#ffffff' }]}>
+                {ov.content}
+              </Text>
+            )}
+            {ov.type === 'sticker' && (
+              <Text style={{ fontSize }}>{ov.content}</Text>
+            )}
+          </View>
+        );
+      })}
+
+      {/* Narration caption (bottom strip) */}
+      {panel.text.trim().length > 0 && (
+        <View style={styles.captionBox}>
+          <Text style={styles.captionText} numberOfLines={3}>{panel.text}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Manga page renderer ───────────────────────────────────────────────────────
+
+function MangaPage({
+  panels,
+  layout,
+  gradient,
+  pageNum,
+  totalPages,
+}: {
+  panels:     (CellPanel | undefined)[];
+  layout:     LayoutDef;
+  gradient:   [string, string, string];
+  pageNum:    number;
+  totalPages: number;
+}) {
+  const numRows = layout.rows.length;
+  const rowH    = (PAGE_H - (numRows - 1) * GUTTER) / numRows;
+
+  let cellIdx = 0;
+
+  return (
+    <View style={[styles.page, { height: PAGE_H }]}>
+      {layout.rows.map((cols, ri) => {
+        const totalFlex = cols.reduce((a, b) => a + b, 0);
+        const rowCells  = cols.map((flex, ci) => {
+          const idx   = cellIdx++;
+          const cellW = (SCREEN_W - (cols.length - 1) * GUTTER) * (flex / totalFlex);
+          return (
+            <View key={ci} style={{ width: cellW, height: rowH }}>
+              <PanelCell
+                panel={panels[idx]}
+                cellW={cellW}
+                cellH={rowH}
+                gradient={gradient}
+              />
+            </View>
+          );
+        });
+        return (
+          <View key={ri} style={[styles.pageRow, { height: rowH, marginTop: ri > 0 ? GUTTER : 0 }]}>
+            {rowCells}
+          </View>
+        );
+      })}
+
+      {/* Page number */}
+      {totalPages > 1 && (
+        <View style={styles.pageNumBadge}>
+          <Text style={styles.pageNumText}>{pageNum} / {totalPages}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────────────
+
 export default function StoryScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
   const { stories, discoverPosts, toggleSavePost, deleteStory } = useApp();
-  const [witnessed, setWitnessed] = useState(false);
+
+  const [witnessed,        setWitnessed]        = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
-  // Both own stories and discover stories use the same `stories` array now
-  // since discoverPosts is derived from stories
-  const story = stories.find(s => s.id === id)
-    ?? (discoverPosts.find(p => p.id === id) ? stories.find(s => s.id === id) : null);
-  const post = discoverPosts.find(p => p.id === id) ?? null;
+  const story = stories.find(s => s.id === id) ?? null;
+  const post  = discoverPosts.find(p => p.id === id) ?? null;
   const isOwnStory = !!story;
 
-  const entry = story ?? null;
+  const title      = story?.chapterTitle ?? post?.chapterTitle ?? 'Untitled Chapter';
+  const mood       = story?.mood         ?? post?.mood         ?? 'Peaceful';
+  const authorName = post?.authorName    ?? 'You';
+  const chapterNum = post?.chapterNumber ?? 1;
+  const isSaved    = post?.saved         ?? false;
 
-  const title       = entry?.chapterTitle ?? post?.chapterTitle ?? 'Untitled Chapter';
-  const mood        = entry?.mood         ?? post?.mood         ?? 'Peaceful';
-  const authorName  = post?.authorName    ?? 'You';
-  const chapterNum  = post?.chapterNumber ?? 1;
-  const isSaved     = post?.saved         ?? false;
+  const witnessedCount = ((story?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0));
+  const savedCount     = story?.savedCount ?? post?.savedCount ?? 0;
 
-  const witnessedCount = (entry?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0);
-  const savedCount     = entry?.savedCount      ?? post?.savedCount      ?? 0;
+  const rawPanels: CellPanel[] = story
+    ? story.panels.map(p => ({ imageUri: p.imageUri, bgPreset: p.bgPreset, text: p.text, bubbleText: p.bubbleText, overlays: p.overlays }))
+    : post
+      ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text, overlays: p.overlays }))
+      : [{ text: 'Story not found.' }];
 
-  const panels: { imageUri?: string; bgPreset?: string; text: string; bubbleText?: string; overlays?: import('@/context/AppContext').PanelOverlay[] }[] =
-    entry
-      ? entry.panels.map(p => ({ imageUri: p.imageUri, bgPreset: p.bgPreset, text: p.text, bubbleText: p.bubbleText, overlays: p.overlays }))
-      : post
-        ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text, overlays: p.overlays }))
-        : [{ text: 'Story not found.' }];
+  const pageLayoutKey = story?.pageLayoutKey ?? (post as any)?.pageLayoutKey;
+  const layout        = getLayout(pageLayoutKey);
+  const pages         = chunkPanels(rawPanels, layout.count);
+  const gradient      = getGradient(mood);
 
-  const heroImageSrc = getPanelImageSource(panels[0]?.imageUri, panels[0]?.bgPreset);
-  const gradient     = getGradient(mood);
+  const heroImgSrc = getPanelImageSource(rawPanels[0]?.imageUri, rawPanels[0]?.bgPreset);
 
   function handleWitness() {
     if (!witnessed) {
@@ -116,37 +299,36 @@ export default function StoryScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.night }]}>
+    <View style={[styles.container, { backgroundColor: '#0D0B1A' }]}>
       <ScrollView
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad + 90 }]}
+        contentContainerStyle={{ paddingBottom: bottomPad + 90 }}
       >
-        {/* Hero banner */}
-        <View style={styles.heroWrap}>
-          {heroImageSrc ? (
-            <Image source={heroImageSrc} style={styles.heroImage} resizeMode="cover" />
+        {/* ── Hero cover ─────────────────────────────────── */}
+        <View style={[styles.hero, { height: topPad + 300 }]}>
+          {heroImgSrc ? (
+            <Image source={heroImgSrc} style={StyleSheet.absoluteFill} resizeMode="cover" />
           ) : (
-            <LinearGradient colors={gradient} style={styles.heroImage} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Icon name="star" size={14} color="rgba(200,184,232,0.2)" style={{ position:'absolute', top:40, left:36 }} />
-              <Icon name="star" size={9}  color="rgba(200,184,232,0.14)" style={{ position:'absolute', top:70, right:64 }} />
-              <Icon name="moon" size={40} color="rgba(200,184,232,0.08)" style={{ position:'absolute', top:30, right:30 }} />
-            </LinearGradient>
+            <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
           )}
           <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(26,22,48,0.92)']}
+            colors={['rgba(0,0,0,0.12)', 'rgba(13,11,26,0.94)']}
             style={StyleSheet.absoluteFill}
           />
-          {/* Buttons */}
+
+          {/* Back */}
           <TouchableOpacity style={[styles.backBtn, { top: topPad + 12 }]} onPress={() => router.back()}>
             <Icon name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
+
+          {/* Delete */}
           {isOwnStory && (
             <TouchableOpacity
               style={[
                 styles.moreBtn,
                 { top: topPad + 12 },
-                confirmingDelete && { backgroundColor: '#E04455', width: 'auto', paddingHorizontal: 12 },
+                confirmingDelete && { backgroundColor: '#E04455', paddingHorizontal: 14 },
               ]}
               onPress={handleDelete}
               activeOpacity={0.78}
@@ -158,10 +340,10 @@ export default function StoryScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Hero info */}
+          {/* Hero meta */}
           <View style={styles.heroOverlay}>
             <View style={styles.heroMeta}>
-              <View style={[styles.heroAvatar, { backgroundColor: `${colors.primary}50` }]}>
+              <View style={[styles.heroAvatar, { backgroundColor: `rgba(139,122,181,0.5)` }]}>
                 <Text style={styles.heroAvatarText}>{authorName.charAt(0)}</Text>
               </View>
               <View>
@@ -172,125 +354,46 @@ export default function StoryScreen() {
             <Text style={styles.heroTitle}>{title}</Text>
             <View style={styles.heroMoodRow}>
               <MoodBadge mood={mood} size="sm" />
-              <View style={[styles.panelCountBadge, { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.25)' }]}>
+              <View style={styles.infoBadge}>
                 <Icon name="layers" size={11} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.panelCountText}>{panels.length} panels</Text>
+                <Text style={styles.infoBadgeText}>{rawPanels.length} panels · {pages.length} page{pages.length !== 1 ? 's' : ''}</Text>
               </View>
             </View>
           </View>
         </View>
 
-        {/* Divider hint */}
-        <View style={[styles.readingHint, { backgroundColor: `${colors.primary}22` }]}>
-          <Icon name="arrow-down" size={13} color={`${colors.lavender}`} />
-          <Text style={[styles.readingHintText, { color: colors.lavender }]}>Scroll to read the story</Text>
+        {/* ── Manga pages ────────────────────────────────── */}
+        <View style={styles.pagesWrap}>
+          {pages.map((pagePanels, pi) => (
+            <MangaPage
+              key={pi}
+              panels={pagePanels}
+              layout={layout}
+              gradient={gradient}
+              pageNum={pi + 1}
+              totalPages={pages.length}
+            />
+          ))}
         </View>
 
-        {/* Manga panels */}
-        {panels.map((panel, idx) => {
-          const isLast   = idx === panels.length - 1;
-          const imgSrc   = getPanelImageSource(panel.imageUri, panel.bgPreset);
-          const hasBubble = panel.bubbleText?.trim();
-
-          return (
-            <View key={idx} style={[styles.panel, isLast && styles.panelLast]}>
-              {/* Image or gradient placeholder */}
-              {imgSrc ? (
-                <Image source={imgSrc} style={styles.panelImage} resizeMode="cover" />
-              ) : (
-                <LinearGradient colors={gradient} style={styles.panelImage} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }}>
-                  <Icon name="star" size={10} color="rgba(200,184,232,0.18)" style={{ position:'absolute', top:20, left:24 }} />
-                  <Icon name="star" size={7}  color="rgba(200,184,232,0.12)" style={{ position:'absolute', top:50, right:44 }} />
-                  <Icon name="moon" size={30} color="rgba(200,184,232,0.07)" style={{ position:'absolute', bottom:40, right:24 }} />
-                </LinearGradient>
-              )}
-
-              {/* Dark gradient over bottom of image */}
-              <LinearGradient
-                colors={['rgba(26,22,48,0)', 'rgba(26,22,48,0.88)']}
-                style={styles.panelGradient}
-              />
-
-              {/* Legacy speech bubble */}
-              {!!hasBubble && (
-                <View style={styles.speechBubble}>
-                  <Text style={styles.speechBubbleText}>{panel.bubbleText}</Text>
-                  <View style={styles.speechBubbleTail} />
-                </View>
-              )}
-
-              {/* Overlay items (bubble / text / sticker) */}
-              {panel.overlays?.map(ov => {
-                const left = ov.xPct * SCREEN_WIDTH;
-                const top  = ov.yPct * (SCREEN_WIDTH * 4 / 3);
-                const fontFam = (ov.fontFamily ?? 'Inter_500Medium') as any;
-                const fontSize = ov.fontSize ?? (ov.type === 'sticker' ? 30 : 13);
-                const bRadius  = ov.bubbleStyle === 'sharp' ? 2 : ov.bubbleStyle === 'oval' ? 50 : 12;
-                const hasTail  = ov.bubbleStyle !== 'oval';
-                return (
-                  <View key={ov.id} style={{ position: 'absolute', left, top, zIndex: 15 }}>
-                    {ov.type === 'bubble' && (
-                      <View style={[styles.speechBubble, { borderRadius: bRadius, position: 'relative', top: 0, left: 0 }]}>
-                        <Text style={[styles.speechBubbleText, { fontFamily: fontFam, fontSize }]}>{ov.content}</Text>
-                        {hasTail && <View style={styles.speechBubbleTail} />}
-                      </View>
-                    )}
-                    {ov.type === 'text' && (
-                      <Text style={[styles.overlayReadText, { fontFamily: fontFam, fontSize, color: ov.color ?? '#ffffff' }]}>
-                        {ov.content}
-                      </Text>
-                    )}
-                    {ov.type === 'sticker' && (
-                      <Text style={{ fontSize }}>{ov.content}</Text>
-                    )}
-                  </View>
-                );
-              })}
-
-              {/* Panel number badge */}
-              <View style={[styles.panelNumBadge, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)' }]}>
-                <Text style={styles.panelNumText}>{idx + 1} / {panels.length}</Text>
-              </View>
-
-              {/* Narration text box */}
-              {panel.text.trim().length > 0 && (
-                <View style={[styles.textBox, { backgroundColor: 'rgba(255,255,255,0.10)', borderColor: 'rgba(255,255,255,0.18)' }]}>
-                  <Text style={styles.panelText}>{panel.text}</Text>
-                </View>
-              )}
-            </View>
-          );
-        })}
-
-        {/* End card */}
-        <View style={[styles.endCard, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
-          <Icon name="star" size={22} color={colors.gold} />
-          <Text style={[styles.endTitle, { color: '#F0EAF8' }]}>End of Chapter {chapterNum}</Text>
-          <Text style={[styles.endSub, { color: 'rgba(200,184,232,0.7)' }]}>
-            {post ? `by ${authorName}` : 'Your story'}
-          </Text>
+        {/* ── End card ───────────────────────────────────── */}
+        <View style={[styles.endCard, { backgroundColor: 'rgba(139,122,181,0.12)', borderColor: 'rgba(139,122,181,0.25)' }]}>
+          <Icon name="star" size={22} color="#C8A84B" />
+          <Text style={styles.endTitle}>End of Chapter {chapterNum}</Text>
+          <Text style={styles.endSub}>{post ? `by ${authorName}` : 'Your story'}</Text>
           <View style={styles.endStats}>
-            <Icon name="eye" size={14} color="rgba(200,184,232,0.6)" />
-            <Text style={[styles.endStatText, { color: 'rgba(200,184,232,0.6)' }]}>{witnessedCount} witnessed</Text>
+            <Icon name="eye"      size={14} color="rgba(200,184,232,0.6)" />
+            <Text style={styles.endStatText}>{witnessedCount} witnessed</Text>
             <Icon name="bookmark" size={14} color="rgba(200,184,232,0.6)" style={{ marginLeft: 12 }} />
-            <Text style={[styles.endStatText, { color: 'rgba(200,184,232,0.6)' }]}>{savedCount} saved</Text>
+            <Text style={styles.endStatText}>{savedCount} saved</Text>
           </View>
         </View>
       </ScrollView>
 
-      {/* Sticky bottom bar */}
-      <View
-        style={[
-          styles.bottomBar,
-          {
-            backgroundColor: `${colors.night}F0`,
-            paddingBottom: bottomPad + 8,
-            borderTopColor: 'rgba(255,255,255,0.08)',
-          },
-        ]}
-      >
+      {/* ── Sticky bottom bar ──────────────────────────── */}
+      <View style={[styles.bottomBar, { backgroundColor: 'rgba(13,11,26,0.94)', paddingBottom: bottomPad + 8, borderTopColor: 'rgba(255,255,255,0.08)' }]}>
         <View style={styles.witnessedRow}>
-          <Icon name="eye" size={15} color="rgba(240,234,248,0.6)" />
+          <Icon name="eye"      size={15} color="rgba(240,234,248,0.6)" />
           <Text style={styles.witnessedNum}>{witnessedCount}</Text>
           <View style={styles.dotDivider} />
           <Icon name="bookmark" size={14} color="rgba(240,234,248,0.6)" />
@@ -300,34 +403,20 @@ export default function StoryScreen() {
         <View style={styles.actionRow}>
           {!!post && (
             <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {
-                  backgroundColor: isSaved ? `${colors.primary}30` : 'rgba(255,255,255,0.08)',
-                  borderColor: isSaved ? colors.primary : 'rgba(255,255,255,0.18)',
-                },
-              ]}
+              style={[styles.actionBtn, { backgroundColor: isSaved ? 'rgba(139,122,181,0.25)' : 'rgba(255,255,255,0.08)', borderColor: isSaved ? '#8B7AB5' : 'rgba(255,255,255,0.18)' }]}
               onPress={handleSave}
             >
-              <Icon name="bookmark" size={15} color={isSaved ? colors.primary : 'rgba(240,234,248,0.75)'} />
-              <Text style={[styles.actionBtnText, { color: isSaved ? colors.primary : 'rgba(240,234,248,0.75)' }]}>
-                {isSaved ? 'Saved' : 'Save'}
-              </Text>
+              <Icon name="bookmark" size={15} color={isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)'} />
+              <Text style={[styles.actionBtnText, { color: isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)' }]}>{isSaved ? 'Saved' : 'Save'}</Text>
             </TouchableOpacity>
           )}
 
           <TouchableOpacity
-            style={[
-              styles.witnessBtn,
-              {
-                backgroundColor: witnessed ? `${colors.gold}22` : `${colors.primary}30`,
-                borderColor: witnessed ? `${colors.gold}55` : `${colors.primary}55`,
-              },
-            ]}
+            style={[styles.witnessBtn, { backgroundColor: witnessed ? 'rgba(200,168,75,0.2)' : 'rgba(139,122,181,0.25)', borderColor: witnessed ? 'rgba(200,168,75,0.55)' : 'rgba(139,122,181,0.55)' }]}
             onPress={handleWitness}
           >
-            <Icon name="eye" size={15} color={witnessed ? colors.gold : colors.lavender} />
-            <Text style={[styles.actionBtnText, { color: witnessed ? colors.gold : colors.lavender }]}>
+            <Icon name="eye" size={15} color={witnessed ? '#C8A84B' : '#C8B8E8'} />
+            <Text style={[styles.actionBtnText, { color: witnessed ? '#C8A84B' : '#C8B8E8' }]}>
               {witnessed ? 'Witnessed ✦' : 'Witness'}
             </Text>
           </TouchableOpacity>
@@ -339,207 +428,109 @@ export default function StoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: {},
-  heroWrap: { width: '100%', height: 420, position: 'relative' },
-  heroImage: { width: '100%', height: '100%' },
+
+  hero:     { width: '100%', position: 'relative', overflow: 'hidden' },
+  heroOverlay: { position: 'absolute', bottom: 22, left: 20, right: 20, gap: 10 },
+  heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  heroAvatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  heroAuthor:  { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  heroChapter: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Inter_400Regular' },
+  heroTitle:   { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold', lineHeight: 32 },
+  heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  infoBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 9, paddingVertical: 4,
+    borderRadius: 12, borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  infoBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Inter_400Regular' },
+
   backBtn: {
-    position: 'absolute',
-    left: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    position: 'absolute', left: 16,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
   moreBtn: {
-    position: 'absolute',
-    right: 16,
-    height: 40,
-    minWidth: 40,
-    borderRadius: 20,
+    position: 'absolute', right: 16,
+    height: 40, minWidth: 40, borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.35)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'center', justifyContent: 'center',
   },
-  deleteConfirmText: {
-    color: '#fff',
-    fontSize: 13,
-    fontFamily: 'Inter_700Bold',
+  deleteConfirmText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
+
+  pagesWrap: { backgroundColor: '#0D0B1A', gap: 16, paddingTop: 8, paddingBottom: 8 },
+
+  page:    { width: SCREEN_W, overflow: 'hidden', backgroundColor: '#0D0B1A' },
+  pageRow: { flexDirection: 'row', gap: GUTTER },
+
+  pageNumBadge: {
+    position: 'absolute', bottom: 8, right: 12,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  heroOverlay: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
-    right: 20,
-    gap: 10,
-  },
-  heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  heroAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  heroAuthor: { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  heroChapter: { color: 'rgba(255,255,255,0.55)', fontSize: 11, fontFamily: 'Inter_400Regular' },
-  heroTitle: { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold', lineHeight: 32 },
-  heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  panelCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  panelCountText: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Inter_400Regular' },
-  readingHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-  },
-  readingHintText: { fontSize: 12, fontFamily: 'Inter_400Regular', letterSpacing: 0.3 },
-  panel: {
-    width: '100%',
-    aspectRatio: 3 / 4,
-    position: 'relative',
-    overflow: 'hidden',
-    marginBottom: 3,
-  },
-  panelLast: { marginBottom: 0 },
-  panelImage: { width: '100%', height: '100%' },
-  panelGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '55%',
-  },
+  pageNumText: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontFamily: 'Inter_400Regular' },
+
+  cell: { overflow: 'hidden', position: 'relative', backgroundColor: '#0D0B1A' },
+
   speechBubble: {
-    position:          'absolute',
-    top:               16,
-    left:              16,
-    backgroundColor:   'rgba(255,255,255,0.93)',
-    borderRadius:      12,
-    paddingHorizontal: 12,
-    paddingVertical:    9,
-    maxWidth:          '68%',
-    zIndex:            10,
+    position: 'absolute', top: 12, left: 12,
+    backgroundColor: 'rgba(255,255,255,0.94)',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
+    maxWidth: '70%', zIndex: 10,
   },
-  speechBubbleText: {
-    fontSize:   13,
-    fontFamily: 'Inter_500Medium',
-    color:      '#1A1530',
-    lineHeight: 18,
-    fontStyle:  'normal',
-  },
+  speechBubbleText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: '#1A1530', lineHeight: 17 },
   speechBubbleTail: {
-    position:         'absolute',
-    bottom:           -8,
-    left:             16,
-    width:             0,
-    height:            0,
-    borderLeftWidth:   8,
-    borderRightWidth:  8,
-    borderTopWidth:    8,
-    borderStyle:      'solid',
-    borderLeftColor:  'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor:   'rgba(255,255,255,0.93)',
+    position: 'absolute', bottom: -7, left: 14,
+    width: 0, height: 0,
+    borderLeftWidth: 7, borderRightWidth: 7, borderTopWidth: 7,
+    borderStyle: 'solid',
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderTopColor: 'rgba(255,255,255,0.94)',
   },
-  overlayReadText: {
-    textShadowColor:  'rgba(0,0,0,0.85)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius:  4,
+
+  overlayText: {
+    textShadowColor: 'rgba(0,0,0,0.9)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
   },
-  panelNumBadge: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
+
+  captionBox: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(13,11,26,0.82)',
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderTopWidth: 1, borderTopColor: 'rgba(200,184,232,0.12)',
   },
-  panelNumText: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 11,
-    fontFamily: 'Inter_400Regular',
+  captionText: {
+    color: 'rgba(240,234,248,0.92)', fontSize: 11,
+    fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 16,
   },
-  textBox: {
-    position: 'absolute',
-    bottom: 20,
-    left: 18,
-    right: 18,
-    padding: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  panelText: {
-    color: 'rgba(255,255,255,0.93)',
-    fontSize: 16,
-    fontFamily: 'Inter_400Regular',
-    fontStyle: 'italic',
-    lineHeight: 26,
-    textAlign: 'center',
-  },
+
   endCard: {
-    margin: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 32,
-    alignItems: 'center',
-    gap: 8,
+    margin: 16, borderRadius: 20, borderWidth: 1,
+    padding: 32, alignItems: 'center', gap: 8,
   },
-  endTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', marginTop: 8 },
-  endSub: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  endTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', color: '#F0EAF8', marginTop: 8 },
+  endSub:   { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.7)' },
   endStats: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
-  endStatText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
+  endStatText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)' },
+
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 14,
-    borderTopWidth: 1,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 14, borderTopWidth: 1,
   },
   witnessedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   witnessedNum: { color: 'rgba(240,234,248,0.6)', fontSize: 14, fontFamily: 'Inter_400Regular' },
-  dotDivider: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(240,234,248,0.3)',
-    marginHorizontal: 4,
-  },
+  dotDivider: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(240,234,248,0.3)', marginHorizontal: 4 },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 20,
-    borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1,
   },
   witnessBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 20,
-    borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, borderWidth: 1,
   },
   actionBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
 });

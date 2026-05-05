@@ -28,13 +28,14 @@ const PanelSchema = z.object({
 });
 
 const StoryInputSchema = z.object({
-  id:           z.string().uuid().optional().nullable(),
-  date:         z.string(),
-  chapterTitle: z.string().min(1).max(200),
-  panels:       z.array(PanelSchema).min(1),
-  mood:         z.string().default("Peaceful"),
-  location:     z.string().default(""),
-  isPublic:     z.boolean().default(false),
+  id:             z.string().uuid().optional().nullable(),
+  date:           z.string(),
+  chapterTitle:   z.string().min(1).max(200),
+  panels:         z.array(PanelSchema).min(1),
+  mood:           z.string().default("Peaceful"),
+  location:       z.string().default(""),
+  isPublic:       z.boolean().default(false),
+  pageLayoutKey:  z.string().optional().nullable(),
 });
 
 router.get("/stories", requireAuth, async (req, res) => {
@@ -73,9 +74,13 @@ router.post("/stories", requireAuth, async (req, res) => {
     const insertValues = {
       ...(id ? { id } : {}),
       userId,
-      date:   new Date(date),
-      panels: sanitizedPanels,
-      ...rest,
+      date:          new Date(date),
+      panels:        sanitizedPanels,
+      pageLayoutKey: rest.pageLayoutKey ?? null,
+      chapterTitle:  rest.chapterTitle,
+      mood:          rest.mood,
+      location:      rest.location,
+      isPublic:      rest.isPublic,
     };
 
     const [created] = await db
@@ -83,7 +88,12 @@ router.post("/stories", requireAuth, async (req, res) => {
       .values(insertValues)
       .onConflictDoUpdate({
         target: storiesTable.id,
-        set: { userId, date: new Date(date), panels: sanitizedPanels, ...rest },
+        set: {
+          userId, date: new Date(date), panels: sanitizedPanels,
+          pageLayoutKey: rest.pageLayoutKey ?? null,
+          chapterTitle: rest.chapterTitle, mood: rest.mood,
+          location: rest.location, isPublic: rest.isPublic,
+        },
       })
       .returning();
 
@@ -155,6 +165,7 @@ function serializeStory(row: typeof storiesTable.$inferSelect) {
     isPublic:       row.isPublic,
     witnessedCount: row.witnessedCount,
     savedCount:     row.savedCount,
+    pageLayoutKey:  row.pageLayoutKey ?? undefined,
     createdAt:      row.createdAt.toISOString(),
   };
 }
