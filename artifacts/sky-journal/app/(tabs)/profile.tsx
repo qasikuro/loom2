@@ -286,10 +286,10 @@ export default function CharacterScreen() {
 
           {/* Stats row */}
           <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
-            <View style={styles.statItem}>
+            <TouchableOpacity style={styles.statItem} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.7}>
               <Text style={[styles.statNum, { color: colors.foreground }]}>{stories.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
-            </View>
+            </TouchableOpacity>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statNum, { color: colors.foreground }]}>{outfits.length}</Text>
@@ -301,6 +301,24 @@ export default function CharacterScreen() {
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Witnessed</Text>
             </View>
           </View>
+
+          {/* My Stories shortcut */}
+          <TouchableOpacity
+            style={[styles.myStoriesBtn, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+            onPress={() => { Haptics.selectionAsync(); router.push('/my-stories' as any); }}
+            activeOpacity={0.82}
+          >
+            <View style={[styles.myStoriesIcon, { backgroundColor: `${colors.primary}18` }]}>
+              <Icon name="book-open" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.myStoriesTitle, { color: colors.foreground }]}>My Stories</Text>
+              <Text style={[styles.myStoriesSub, { color: colors.mutedForeground }]}>
+                {stories.length === 0 ? 'Start writing your first chapter' : `${stories.length} chapter${stories.length !== 1 ? 's' : ''} written`}
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
 
           {/* ── Attributes ───────────────────────────────────────── */}
           <View style={styles.section}>
@@ -573,7 +591,14 @@ const styles = StyleSheet.create({
   bioRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   bio: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22 },
   bioInput: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22, borderWidth: 1, borderRadius: 12, padding: 12 },
-  statsCard: { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 18, marginBottom: 26 },
+  myStoriesBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 26,
+  },
+  myStoriesIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  myStoriesTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: 2 },
+  myStoriesSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  statsCard: { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 18, marginBottom: 14 },
   statItem: { flex: 1, alignItems: 'center', gap: 4 },
   statNum: { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
   statLabel: { fontSize: 11, fontFamily: 'Inter_500Medium', letterSpacing: 0.2, textTransform: 'uppercase' },

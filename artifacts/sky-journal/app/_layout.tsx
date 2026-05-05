@@ -126,6 +126,10 @@ export default function RootLayout() {
                             name="panel-editor"
                             options={{ presentation: 'card', animation: 'slide_from_right' }}
                           />
+                          <Stack.Screen
+                            name="my-stories"
+                            options={{ presentation: 'card', animation: 'slide_from_right' }}
+                          />
                         </Stack>
                       </KeyboardProvider>
                     </GestureHandlerRootView>

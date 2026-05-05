@@ -374,8 +374,10 @@ export default function PanelEditorScreen() {
                   key={pIdx}
                   style={[styles.smallPanelCell, i === 0 && { marginRight: 4 }, { backgroundColor: colors.muted }]}
                   onPress={() => {
-                    if (p !== undefined) switchActive(pIdx);
-                    else if (pIdx < panels.length) pickPanelImage(pIdx);
+                    if (p !== undefined) {
+                      switchActive(pIdx);
+                      if (!getBgSource(p)) pickPanelImage(pIdx);
+                    }
                   }}
                   activeOpacity={0.82}
                 >
