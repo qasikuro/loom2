@@ -51,7 +51,7 @@ export default function DiscoverScreen() {
   const [activeTab, setActiveTab]       = useState<TabType>('For You');
   const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
 
   const [peopleQuery, setPeopleQuery]     = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
@@ -377,14 +377,15 @@ const styles = StyleSheet.create({
     borderWidth: 1, marginTop: 2,
   },
 
-  tabsScroll: { maxHeight: 54 },
+  tabsScroll: { flexShrink: 0 },
   tabsRow: {
     flexDirection: 'row', gap: 8,
-    paddingHorizontal: 20, paddingVertical: 8,
+    paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10,
   },
   tab: {
     paddingHorizontal: 18, paddingVertical: 10,
     borderRadius: 24, borderWidth: 1,
+    minHeight: 40,
   },
   tabText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1 },
 

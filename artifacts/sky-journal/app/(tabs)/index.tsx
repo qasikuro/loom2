@@ -97,7 +97,7 @@ export default function HomeScreen() {
   } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 28 : insets.bottom;
+  const bottomPad = Platform.OS === 'web' ? 28 : insets.bottom + 110;
 
   const [showNotifs,       setShowNotifs]       = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);

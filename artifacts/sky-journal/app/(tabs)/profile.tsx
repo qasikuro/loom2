@@ -59,7 +59,7 @@ export default function CharacterScreen() {
   const { signOut } = useAuth();
   const { user } = useUser();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const signOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);

@@ -421,7 +421,7 @@ export default function JournalScreen() {
   const insets  = useSafeAreaInsets();
   const { journalEntries, deleteJournalEntry } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 160;
 
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [searchQuery,  setSearchQuery]  = useState('');

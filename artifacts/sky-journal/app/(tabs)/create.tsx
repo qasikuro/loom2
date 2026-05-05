@@ -49,7 +49,7 @@ export default function CreateScreen() {
   const insets  = useSafeAreaInsets();
   const { addStory } = useApp();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 90;
+  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
   const [title, setTitle]         = useState('');
   const [description, setDesc]    = useState('');
