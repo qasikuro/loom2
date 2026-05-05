@@ -58,9 +58,11 @@ export interface Character {
 }
 
 export interface StoryPanel {
-  id:        string;
-  imageUri?: string;
-  text:      string;
+  id:          string;
+  imageUri?:   string;
+  bgPreset?:   string;   // 'bg1' | 'bg2' | 'bg3' | 'char'
+  text:        string;   // narration / caption text
+  bubbleText?: string;   // speech-bubble overlay text
 }
 
 export interface Story {

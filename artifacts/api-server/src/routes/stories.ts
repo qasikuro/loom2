@@ -7,9 +7,11 @@ import { requireAuth, getUserId } from "../middleware/auth";
 const router: IRouter = Router();
 
 const PanelSchema = z.object({
-  id:       z.string(),
-  text:     z.string(),
-  imageUri: z.string().optional().nullable(),
+  id:         z.string(),
+  text:       z.string(),
+  imageUri:   z.string().optional().nullable(),
+  bgPreset:   z.string().optional().nullable(),
+  bubbleText: z.string().optional().nullable(),
 });
 
 const StoryInputSchema = z.object({

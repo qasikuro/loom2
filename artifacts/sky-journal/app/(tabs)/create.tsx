@@ -1,10 +1,13 @@
 import { Icon } from '@/components/Icon';
+import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useRef, useState } from 'react';
 import {
+  Image,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -14,9 +17,22 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { MangaPanelEditor } from '@/components/MangaPanelEditor';
 import { useApp, type StoryPanel } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { DraftStore } from '@/utils/draftStore';
+
+const MAX_PANELS = 20;
+
+const MOODS = [
+  { label: 'Hopeful',     icon: 'sun'     as const, color: '#C8A84B' },
+  { label: 'Lonely',      icon: 'moon'    as const, color: '#7090C0' },
+  { label: 'Peaceful',    icon: 'cloud'   as const, color: '#78A8C8' },
+  { label: 'Romantic',    icon: 'heart'   as const, color: '#C870A0' },
+  { label: 'Chaotic',     icon: 'zap'     as const, color: '#D0784A' },
+  { label: 'Dreamy',      icon: 'star'    as const, color: '#8B6BA8' },
+  { label: 'Soft',        icon: 'feather' as const, color: '#9888C0' },
+  { label: 'Adventurous', icon: 'wind'    as const, color: '#60A878' },
+];
 
 const LOCATIONS = [
   'Daylight Prairie', 'Hidden Forest', 'Valley of Triumph',
@@ -24,103 +40,124 @@ const LOCATIONS = [
   'Vault of Knowledge', 'Aviary Village',
 ];
 
-const MOODS = [
-  { label: 'Hopeful', icon: 'sun' as const, color: '#C8A84B' },
-  { label: 'Lonely', icon: 'moon' as const, color: '#7090C0' },
-  { label: 'Peaceful', icon: 'cloud' as const, color: '#78A8C8' },
-  { label: 'Romantic', icon: 'heart' as const, color: '#C870A0' },
-  { label: 'Chaotic', icon: 'zap' as const, color: '#D0784A' },
-  { label: 'Dreamy', icon: 'star' as const, color: '#8B6BA8' },
-  { label: 'Soft', icon: 'feather' as const, color: '#9888C0' },
-  { label: 'Adventurous', icon: 'wind' as const, color: '#60A878' },
-];
-
 function makePanel(): StoryPanel {
-  return {
-    id: crypto.randomUUID(),
-    imageUri: undefined,
-    text: '',
-  };
+  return { id: crypto.randomUUID(), text: '', bubbleText: '' };
 }
 
 export default function CreateScreen() {
-  const colors = useColors();
-  const insets = useSafeAreaInsets();
+  const colors  = useColors();
+  const insets  = useSafeAreaInsets();
   const { addStory } = useApp();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const topPad    = Platform.OS === 'web' ? 48 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 90;
 
-  const [chapterTitle, setChapterTitle] = useState('');
-  const [mood, setMood] = useState('Hopeful');
-  const [location, setLocation] = useState('Daylight Prairie');
-  const [isPublic, setIsPublic] = useState(true);
-  const [showLocations, setShowLocations] = useState(false);
-  const [showMoods, setShowMoods] = useState(false);
-  const [panels, setPanels] = useState<StoryPanel[]>([makePanel()]);
-  const [posting, setPosting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [title, setTitle]         = useState('');
+  const [description, setDesc]    = useState('');
+  const [mood, setMood]           = useState('Hopeful');
+  const [location, setLocation]   = useState('Daylight Prairie');
+  const [isPublic, setIsPublic]   = useState(true);
+  const [panels, setPanels]       = useState<StoryPanel[]>([makePanel()]);
+  const [posting, setPosting]     = useState(false);
+  const [error, setError]         = useState<string | null>(null);
+  const [showMeta, setShowMeta]   = useState(false);
+  const [panelMenu, setPanelMenu] = useState<number | null>(null);
 
   const currentMood = MOODS.find(m => m.label === mood);
 
-  function updatePanel(i: number, p: StoryPanel) {
-    setPanels(prev => prev.map((old, idx) => idx === i ? p : old));
+  // When returning from panel-editor, panels state is already updated via DraftStore callback
+  // Just clear any stale menu state
+  useFocusEffect(useCallback(() => {
+    setPanelMenu(null);
+  }, []));
+
+  function openPanelEditor(index: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    DraftStore.set({
+      panels,
+      activePanelIndex: index,
+      onSave: (updated) => setPanels(updated),
+    });
+    router.push('/panel-editor');
   }
 
   function addPanel() {
-    if (panels.length >= 12) return;
+    if (panels.length >= MAX_PANELS) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPanels(prev => [...prev, makePanel()]);
   }
 
   function removePanel(i: number) {
+    if (panels.length <= 1) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setPanels(prev => prev.filter((_, idx) => idx !== i));
+    setPanelMenu(null);
   }
 
-  function handlePost() {
-    if (!chapterTitle.trim()) { setError('Give your chapter a title first.'); return; }
-    const filled = panels.filter(p => p.text.trim() || p.imageUri);
-    if (!filled.length) { setError('Add at least one image or narration to a panel.'); return; }
+  function handlePublish() {
+    if (!title.trim()) { setError('Give your story a title first.'); return; }
+    const filled = panels.filter(p => p.text.trim() || p.bubbleText?.trim() || p.imageUri || p.bgPreset);
+    if (!filled.length) { setError('Add content to at least one panel.'); return; }
     setError(null);
     setPosting(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addStory({
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
-      chapterTitle: chapterTitle.trim(),
-      panels: filled,
+      id:             crypto.randomUUID(),
+      date:           new Date().toISOString(),
+      chapterTitle:   title.trim(),
+      panels:         filled,
       mood,
       location,
       isPublic,
       witnessedCount: 0,
-      savedCount: 0,
+      savedCount:     0,
     });
     setPosting(false);
-    setChapterTitle('');
+    setTitle('');
+    setDesc('');
     setPanels([makePanel()]);
     router.push('/(tabs)');
   }
 
+  function getPanelPreview(panel: StoryPanel): string {
+    if (panel.bubbleText?.trim()) return panel.bubbleText.trim();
+    if (panel.text.trim()) return panel.text.trim();
+    return 'Tap to add content...';
+  }
+
+  function getPanelImageSource(panel: StoryPanel) {
+    if (panel.imageUri) return { uri: panel.imageUri };
+    if (panel.bgPreset) {
+      const map: Record<string, any> = {
+        bg1:  Images.story_bg1,
+        bg2:  Images.story_bg2,
+        bg3:  Images.story_bg3,
+        char: Images.character_default,
+      };
+      return map[panel.bgPreset] ?? null;
+    }
+    return null;
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={['#1A1640', '#1E1A48', '#22204C']} style={[styles.headerGrad, { height: topPad + 72 }]} />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      {/* Header gradient */}
+      <LinearGradient
+        colors={['#1A1640', '#1E1A48', '#22204C']}
+        style={[styles.headerGrad, { height: topPad + 72 }]}
+      />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>New Story</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            Manga panels · {panels.length}/12
-          </Text>
-        </View>
+      <View style={[styles.header, { paddingTop: topPad + 14 }]}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)')} style={styles.headerBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Story</Text>
         <TouchableOpacity
-          style={[styles.postBtn, { backgroundColor: posting ? colors.muted : colors.primary }]}
-          onPress={handlePost} disabled={posting}
+          style={styles.headerBtn}
+          onPress={() => setShowMeta(v => !v)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Icon name="send" size={14} color={posting ? colors.mutedForeground : '#fff'} />
-          <Text style={[styles.postBtnText, { color: posting ? colors.mutedForeground : '#fff' }]}>
-            {posting ? '...' : 'Publish'}
-          </Text>
+          <Icon name="more-horizontal" size={20} color="rgba(235,228,255,0.9)" />
         </TouchableOpacity>
       </View>
 
@@ -130,129 +167,237 @@ export default function CreateScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
       >
-        {/* Meta card */}
-        <View style={[styles.metaCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* ── Title + Description card ─────────────────────────── */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Title</Text>
           <TextInput
-            style={[styles.titleInput, { color: colors.foreground, borderBottomColor: colors.border }]}
-            placeholder="Chapter title..."
+            style={[styles.titleInput, { color: colors.foreground, borderColor: colors.border }]}
+            placeholder="A Day Above the Clouds"
             placeholderTextColor={colors.mutedForeground}
-            value={chapterTitle}
-            onChangeText={t => { setChapterTitle(t); if (error) setError(null); }}
-            returnKeyType="done"
+            value={title}
+            onChangeText={t => { setTitle(t); if (error) setError(null); }}
+            returnKeyType="next"
           />
 
-          {/* Location + Mood row */}
-          <View style={styles.metaRow}>
-            <TouchableOpacity
-              style={[styles.chip, { backgroundColor: colors.muted, borderColor: colors.border }]}
-              onPress={() => { setShowLocations(v => !v); setShowMoods(false); }}
-            >
-              <Icon name="map-pin" size={12} color={colors.primary} />
-              <Text style={[styles.chipText, { color: colors.foreground }]} numberOfLines={1}>{location}</Text>
-              <Icon name="chevron-down" size={11} color={colors.mutedForeground} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.chip, { backgroundColor: `${currentMood?.color}15`, borderColor: `${currentMood?.color}35` }]}
-              onPress={() => { setShowMoods(v => !v); setShowLocations(false); }}
-            >
-              <Icon name={currentMood?.icon ?? 'sun'} size={12} color={currentMood?.color} />
-              <Text style={[styles.chipText, { color: currentMood?.color }]}>{mood}</Text>
-              <Icon name="chevron-down" size={11} color={currentMood?.color} />
-            </TouchableOpacity>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>Description</Text>
+          <View style={styles.descWrapper}>
+            <TextInput
+              style={[styles.descInput, { color: colors.foreground }]}
+              placeholder="A short story about friendship and adventure in Sky."
+              placeholderTextColor={colors.mutedForeground}
+              value={description}
+              onChangeText={setDesc}
+              multiline
+              textAlignVertical="top"
+              returnKeyType="default"
+            />
+            <Image
+              source={Images.character_default}
+              style={styles.descIllustration}
+              resizeMode="contain"
+            />
           </View>
+        </View>
 
-          {showLocations && (
-            <View style={[styles.dropdown, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              {LOCATIONS.map(loc => (
-                <TouchableOpacity key={loc}
-                  style={[styles.dropItem, location === loc && { backgroundColor: `${colors.primary}10` }]}
-                  onPress={() => { setLocation(loc); setShowLocations(false); }}
-                >
-                  <Text style={[styles.dropText, { color: location === loc ? colors.primary : colors.foreground }]}>{loc}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          {showMoods && (
-            <View style={styles.moodGrid}>
+        {/* ── Mood / Location / Privacy (expandable) ───────────── */}
+        {showMeta && (
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {/* Mood */}
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Mood</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodRow}>
               {MOODS.map(m => (
-                <TouchableOpacity key={m.label}
-                  style={[styles.moodPill, {
-                    backgroundColor: mood === m.label ? `${m.color}25` : `${m.color}10`,
-                    borderColor: mood === m.label ? `${m.color}65` : `${m.color}25`,
-                    borderWidth: mood === m.label ? 1.5 : 1,
-                  }]}
-                  onPress={() => { setMood(m.label); setShowMoods(false); Haptics.selectionAsync(); }}
+                <TouchableOpacity
+                  key={m.label}
+                  style={[
+                    styles.moodChip,
+                    {
+                      backgroundColor: mood === m.label ? `${m.color}28` : `${m.color}10`,
+                      borderColor:     mood === m.label ? `${m.color}60` : `${m.color}20`,
+                      borderWidth:     mood === m.label ? 1.5 : 1,
+                    },
+                  ]}
+                  onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
                 >
                   <Icon name={m.icon} size={13} color={m.color} />
-                  <Text style={[styles.moodPillText, { color: m.color }]}>{m.label}</Text>
+                  <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
-          )}
+            </ScrollView>
 
-          {/* Public / Private */}
-          <View style={styles.privacyRow}>
-            {(['Private', 'Public'] as const).map(opt => {
-              const active = opt === 'Public' ? isPublic : !isPublic;
-              return (
-                <TouchableOpacity key={opt}
-                  style={[styles.privBtn, {
-                    backgroundColor: active ? `${colors.primary}15` : colors.muted,
-                    borderColor: active ? `${colors.primary}40` : colors.border,
-                    borderWidth: active ? 1.5 : 1,
-                  }]}
-                  onPress={() => setIsPublic(opt === 'Public')}
+            {/* Location */}
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>Location</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.moodRow}>
+              {LOCATIONS.map(loc => (
+                <TouchableOpacity
+                  key={loc}
+                  style={[
+                    styles.moodChip,
+                    {
+                      backgroundColor: location === loc ? `${colors.primary}18` : `${colors.primary}08`,
+                      borderColor:     location === loc ? `${colors.primary}50` : `${colors.primary}18`,
+                      borderWidth:     location === loc ? 1.5 : 1,
+                    },
+                  ]}
+                  onPress={() => setLocation(loc)}
                 >
-                  <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
-                  <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
+                  <Icon name="map-pin" size={12} color={location === loc ? colors.primary : colors.mutedForeground} />
+                  <Text style={[styles.moodChipText, { color: location === loc ? colors.primary : colors.mutedForeground }]}>{loc}</Text>
                 </TouchableOpacity>
-              );
-            })}
+              ))}
+            </ScrollView>
+
+            {/* Privacy */}
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>Visibility</Text>
+            <View style={styles.privRow}>
+              {(['Public', 'Private'] as const).map(opt => {
+                const active = opt === 'Public' ? isPublic : !isPublic;
+                return (
+                  <TouchableOpacity
+                    key={opt}
+                    style={[
+                      styles.privBtn,
+                      {
+                        backgroundColor: active ? `${colors.primary}18` : colors.muted,
+                        borderColor:     active ? `${colors.primary}50` : colors.border,
+                        borderWidth:     active ? 1.5 : 1,
+                      },
+                    ]}
+                    onPress={() => setIsPublic(opt === 'Public')}
+                  >
+                    <Icon name={opt === 'Public' ? 'globe' : 'lock'} size={13} color={active ? colors.primary : colors.mutedForeground} />
+                    <Text style={[styles.moodChipText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
+        )}
+
+        {/* ── Panels card ──────────────────────────────────────── */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* Panels header */}
+          <View style={styles.panelsHeader}>
+            <Text style={[styles.panelsTitle, { color: colors.foreground }]}>Panels</Text>
+            <View style={[styles.panelsBadge, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
+              <Text style={[styles.panelsBadgeText, { color: colors.primary }]}>
+                {panels.length}/{MAX_PANELS} ◆
+              </Text>
+            </View>
+          </View>
+
+          {/* Panel rows */}
+          {panels.map((panel, i) => {
+            const imgSrc = getPanelImageSource(panel);
+            const hasContent = !!(panel.imageUri || panel.bgPreset || panel.text.trim() || panel.bubbleText?.trim());
+            return (
+              <View key={panel.id}>
+                {i > 0 && <View style={[styles.panelDivider, { backgroundColor: colors.border }]} />}
+                <TouchableOpacity
+                  style={styles.panelRow}
+                  onPress={() => {
+                    if (panelMenu === i) { setPanelMenu(null); return; }
+                    openPanelEditor(i);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  {/* Drag handle */}
+                  <View style={styles.dragHandle}>
+                    <Icon name="menu" size={18} color={colors.mutedForeground} />
+                  </View>
+
+                  {/* Thumbnail */}
+                  <View style={[styles.thumb, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                    {imgSrc ? (
+                      <Image source={imgSrc} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    ) : (
+                      <Icon name="image" size={16} color={`${colors.mutedForeground}60`} />
+                    )}
+                  </View>
+
+                  {/* Info */}
+                  <View style={styles.panelInfo}>
+                    <Text style={[styles.panelName, { color: colors.foreground }]}>Panel {i + 1}</Text>
+                    <Text
+                      style={[styles.panelPreviewText, { color: hasContent ? colors.mutedForeground : `${colors.mutedForeground}60`, fontStyle: hasContent ? 'italic' : 'normal' }]}
+                      numberOfLines={1}
+                    >
+                      {getPanelPreview(panel)}
+                    </Text>
+                  </View>
+
+                  {/* Options */}
+                  <TouchableOpacity
+                    style={styles.panelMenuBtn}
+                    onPress={() => setPanelMenu(panelMenu === i ? null : i)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Icon name="more-horizontal" size={18} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+
+                {/* Inline options menu */}
+                {panelMenu === i && (
+                  <View style={[styles.panelOptionsRow, { borderColor: colors.border }]}>
+                    <TouchableOpacity
+                      style={styles.panelOptionBtn}
+                      onPress={() => { setPanelMenu(null); openPanelEditor(i); }}
+                    >
+                      <Icon name="edit-2" size={14} color={colors.primary} />
+                      <Text style={[styles.panelOptionText, { color: colors.primary }]}>Edit</Text>
+                    </TouchableOpacity>
+                    {panels.length > 1 && (
+                      <TouchableOpacity style={styles.panelOptionBtn} onPress={() => removePanel(i)}>
+                        <Icon name="trash-2" size={14} color="#E05C5C" />
+                        <Text style={[styles.panelOptionText, { color: '#E05C5C' }]}>Remove</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.panelOptionBtn} onPress={() => setPanelMenu(null)}>
+                      <Icon name="x" size={14} color={colors.mutedForeground} />
+                      <Text style={[styles.panelOptionText, { color: colors.mutedForeground }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            );
+          })}
         </View>
 
-        {/* Panels label */}
-        <View style={styles.panelsLabel}>
-          <Icon name="layers" size={14} color={colors.primary} />
-          <Text style={[styles.panelsLabelText, { color: colors.foreground }]}>Story Panels</Text>
-          <Text style={[styles.panelsLabelHint, { color: colors.mutedForeground }]}>Each panel = one manga page</Text>
-        </View>
-
-        {panels.map((panel, idx) => (
-          <MangaPanelEditor key={panel.id} panel={panel} index={idx} total={panels.length}
-            onChange={p => updatePanel(idx, p)} onDelete={() => removePanel(idx)} />
-        ))}
-
-        {/* Add panel */}
+        {/* ── Add Panel button ─────────────────────────────────── */}
         <TouchableOpacity
-          style={[styles.addBtn, { borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}07` }]}
+          style={[styles.addPanelBtn, { backgroundColor: '#1A1848', borderColor: `${colors.primary}30` }]}
           onPress={addPanel}
+          activeOpacity={0.8}
+          disabled={panels.length >= MAX_PANELS}
         >
-          <View style={[styles.addBtnIcon, { backgroundColor: `${colors.primary}18` }]}>
-            <Icon name="plus" size={20} color={colors.primary} />
+          <View style={[styles.addPanelIcon, { backgroundColor: `${colors.primary}20` }]}>
+            <Icon name="plus" size={18} color={colors.primary} />
           </View>
-          <View>
-            <Text style={[styles.addBtnText, { color: colors.primary }]}>Add Next Panel</Text>
-            <Text style={[styles.addBtnSub, { color: colors.mutedForeground }]}>{panels.length} / 12</Text>
-          </View>
+          <Text style={[styles.addPanelText, { color: colors.foreground }]}>Add Panel</Text>
         </TouchableOpacity>
 
-        {/* Inline validation error */}
+        {/* Error banner */}
         {error && (
-          <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-            <Icon name="alert-circle" size={14} color="#DC2626" />
+          <View style={styles.errorBanner}>
+            <Icon name="alert-circle" size={14} color="#E05C5C" />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
 
-        {/* Publish button */}
-        <TouchableOpacity style={styles.publishBtn} onPress={handlePost} disabled={posting} activeOpacity={0.85}>
-          <LinearGradient colors={['#7B6BA8', '#6B5B95', '#5A4A80']} style={styles.publishGrad} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+        {/* ── Publish button ───────────────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.publishBtn, { opacity: posting ? 0.6 : 1 }]}
+          onPress={handlePublish}
+          disabled={posting}
+          activeOpacity={0.85}
+        >
+          <LinearGradient
+            colors={['#7B6BA8', '#6B5B95', '#5A4A80']}
+            style={styles.publishGrad}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
             <Icon name="send" size={15} color="#fff" />
-            <Text style={styles.publishText}>{posting ? 'Publishing...' : 'Publish Story'}</Text>
+            <Text style={styles.publishText}>{posting ? 'Publishing…' : 'Publish Story'}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </KeyboardAwareScrollView>
@@ -261,38 +406,199 @@ export default function CreateScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  headerGrad: { position: 'absolute', top: 0, left: 0, right: 0 },
-  header: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 16 },
-  headerTitle: { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  headerSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 3, letterSpacing: 0.1 },
-  postBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 18, paddingVertical: 11, borderRadius: 22 },
-  postBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  scroll: { paddingHorizontal: 16, paddingTop: 6 },
-  metaCard: { borderRadius: 22, borderWidth: 1, padding: 18, gap: 14, marginBottom: 22 },
-  titleInput: { fontSize: 20, fontFamily: 'Inter_600SemiBold', paddingBottom: 12, borderBottomWidth: 1 },
-  metaRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
-  chipText: { fontSize: 13, fontFamily: 'Inter_400Regular' },
-  dropdown: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
-  dropItem: { paddingHorizontal: 14, paddingVertical: 11 },
-  dropText: { fontSize: 14, fontFamily: 'Inter_400Regular' },
-  moodGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingTop: 4 },
-  moodPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20 },
-  moodPillText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  privacyRow: { flexDirection: 'row', gap: 8 },
-  privBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12 },
-  privText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
-  panelsLabel: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
-  panelsLabelText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', flex: 1 },
-  panelsLabelHint: { fontSize: 11, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1.5, borderStyle: 'dashed', borderRadius: 16, padding: 18, marginBottom: 14 },
-  addBtnIcon: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  addBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  addBtnSub: { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
-  publishBtn: { borderRadius: 30, overflow: 'hidden', marginBottom: 8 },
-  publishGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
+  root:            { flex: 1 },
+  headerGrad:      { position: 'absolute', top: 0, left: 0, right: 0 },
+  header: {
+    flexDirection:   'row',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    paddingHorizontal: 18,
+    paddingBottom:   14,
+  },
+  headerBtn: {
+    width: 38, height: 38,
+    borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(235,228,255,0.95)',
+    letterSpacing: -0.2,
+  },
+
+  scroll:  { paddingHorizontal: 16, paddingTop: 8 },
+
+  card: {
+    borderRadius: 20,
+    borderWidth:  1,
+    padding:      18,
+    marginBottom: 14,
+  },
+
+  fieldLabel: {
+    fontSize:    11,
+    fontFamily:  'Inter_600SemiBold',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+
+  titleInput: {
+    fontSize:    18,
+    fontFamily:  'Inter_500Medium',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical:   11,
+  },
+
+  descWrapper:       { position: 'relative', minHeight: 80 },
+  descInput: {
+    fontSize:    14,
+    fontFamily:  'Inter_400Regular',
+    lineHeight:  22,
+    minHeight:   80,
+    paddingRight: 72,
+  },
+  descIllustration: {
+    position: 'absolute',
+    bottom:   0,
+    right:    0,
+    width:    64,
+    height:   64,
+    opacity:  0.35,
+  },
+
+  moodRow: { marginBottom: 4 },
+  moodChip: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            5,
+    paddingHorizontal: 12,
+    paddingVertical:    7,
+    borderRadius:   20,
+    marginRight:    7,
+  },
+  moodChipText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+
+  privRow:  { flexDirection: 'row', gap: 10 },
+  privBtn: {
+    flex:           1,
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            6,
+    paddingVertical: 10,
+    borderRadius:   12,
+  },
+
+  panelsHeader: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    marginBottom:   14,
+  },
+  panelsTitle:     { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  panelsBadge: {
+    paddingHorizontal: 10,
+    paddingVertical:    4,
+    borderRadius:      20,
+    borderWidth:        1,
+  },
+  panelsBadgeText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+
+  panelDivider: { height: 1, marginHorizontal: -2, opacity: 0.5 },
+  panelRow: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:            12,
+    paddingVertical: 11,
+  },
+
+  dragHandle: {
+    width:  24,
+    alignItems: 'center',
+  },
+
+  thumb: {
+    width:        68,
+    height:       52,
+    borderRadius: 10,
+    borderWidth:   1,
+    overflow:     'hidden',
+    alignItems:   'center',
+    justifyContent: 'center',
+  },
+
+  panelInfo: { flex: 1, gap: 3 },
+  panelName: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  panelPreviewText: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+  },
+
+  panelMenuBtn:    { padding: 4 },
+  panelOptionsRow: {
+    flexDirection:  'row',
+    gap:             8,
+    paddingBottom:  10,
+    paddingTop:      2,
+    paddingHorizontal: 36,
+    borderTopWidth: 0,
+  },
+  panelOptionBtn: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:             5,
+    paddingHorizontal: 12,
+    paddingVertical:    7,
+    borderRadius:   16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  panelOptionText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+
+  addPanelBtn: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:            10,
+    borderWidth:     1,
+    borderRadius:   28,
+    paddingVertical: 16,
+    marginBottom:   14,
+  },
+  addPanelIcon: {
+    width:          32,
+    height:         32,
+    borderRadius:   16,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+  addPanelText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+
+  errorBanner: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    gap:             8,
+    backgroundColor: 'rgba(224,92,92,0.12)',
+    borderWidth:     1,
+    borderColor:    'rgba(224,92,92,0.30)',
+    borderRadius:   12,
+    paddingHorizontal: 14,
+    paddingVertical:   10,
+    marginBottom:   12,
+  },
+  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#E05C5C' },
+
+  publishBtn:  { borderRadius: 30, overflow: 'hidden', marginBottom: 4 },
+  publishGrad: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'center',
+    gap:             8,
+    paddingVertical: 16,
+  },
   publishText: { fontSize: 16, fontFamily: 'Inter_600SemiBold', color: '#fff' },
-  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12 },
-  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#DC2626' },
 });

@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -19,6 +20,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MoodBadge } from '@/components/MoodBadge';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+
+const BG_PRESET_MAP: Record<string, any> = {
+  bg1:  Images.story_bg1,
+  bg2:  Images.story_bg2,
+  bg3:  Images.story_bg3,
+  char: Images.character_default,
+};
+
+function getPanelImageSource(imageUri?: string, bgPreset?: string) {
+  if (imageUri)  return { uri: imageUri };
+  if (bgPreset && BG_PRESET_MAP[bgPreset]) return BG_PRESET_MAP[bgPreset];
+  return null;
+}
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -66,14 +80,14 @@ export default function StoryScreen() {
   const witnessedCount = (entry?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0);
   const savedCount     = entry?.savedCount      ?? post?.savedCount      ?? 0;
 
-  const panels: { imageUri?: string; text: string }[] =
+  const panels: { imageUri?: string; bgPreset?: string; text: string; bubbleText?: string }[] =
     entry
-      ? entry.panels.map(p => ({ imageUri: p.imageUri, text: p.text }))
+      ? entry.panels.map(p => ({ imageUri: p.imageUri, bgPreset: p.bgPreset, text: p.text, bubbleText: p.bubbleText }))
       : post
         ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text }))
         : [{ text: 'Story not found.' }];
 
-  const heroImageUri = panels[0]?.imageUri;
+  const heroImageSrc = getPanelImageSource(panels[0]?.imageUri, panels[0]?.bgPreset);
   const gradient     = getGradient(mood);
 
   function handleWitness() {
@@ -110,8 +124,8 @@ export default function StoryScreen() {
       >
         {/* Hero banner */}
         <View style={styles.heroWrap}>
-          {heroImageUri ? (
-            <Image source={{ uri: heroImageUri }} style={styles.heroImage} resizeMode="cover" />
+          {heroImageSrc ? (
+            <Image source={heroImageSrc} style={styles.heroImage} resizeMode="cover" />
           ) : (
             <LinearGradient colors={gradient} style={styles.heroImage} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
               <Icon name="star" size={14} color="rgba(200,184,232,0.2)" style={{ position:'absolute', top:40, left:36 }} />
@@ -174,13 +188,15 @@ export default function StoryScreen() {
 
         {/* Manga panels */}
         {panels.map((panel, idx) => {
-          const isLast = idx === panels.length - 1;
+          const isLast   = idx === panels.length - 1;
+          const imgSrc   = getPanelImageSource(panel.imageUri, panel.bgPreset);
+          const hasBubble = panel.bubbleText?.trim();
 
           return (
             <View key={idx} style={[styles.panel, isLast && styles.panelLast]}>
               {/* Image or gradient placeholder */}
-              {panel.imageUri ? (
-                <Image source={{ uri: panel.imageUri }} style={styles.panelImage} resizeMode="cover" />
+              {imgSrc ? (
+                <Image source={imgSrc} style={styles.panelImage} resizeMode="cover" />
               ) : (
                 <LinearGradient colors={gradient} style={styles.panelImage} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }}>
                   <Icon name="star" size={10} color="rgba(200,184,232,0.18)" style={{ position:'absolute', top:20, left:24 }} />
@@ -194,6 +210,14 @@ export default function StoryScreen() {
                 colors={['rgba(26,22,48,0)', 'rgba(26,22,48,0.88)']}
                 style={styles.panelGradient}
               />
+
+              {/* Speech bubble (top-left, manga style) */}
+              {!!hasBubble && (
+                <View style={styles.speechBubble}>
+                  <Text style={styles.speechBubbleText}>{panel.bubbleText}</Text>
+                  <View style={styles.speechBubbleTail} />
+                </View>
+              )}
 
               {/* Panel number badge */}
               <View style={[styles.panelNumBadge, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.2)' }]}>
@@ -368,6 +392,38 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '55%',
+  },
+  speechBubble: {
+    position:          'absolute',
+    top:               16,
+    left:              16,
+    backgroundColor:   'rgba(255,255,255,0.93)',
+    borderRadius:      12,
+    paddingHorizontal: 12,
+    paddingVertical:    9,
+    maxWidth:          '68%',
+    zIndex:            10,
+  },
+  speechBubbleText: {
+    fontSize:   13,
+    fontFamily: 'Inter_500Medium',
+    color:      '#1A1530',
+    lineHeight: 18,
+    fontStyle:  'normal',
+  },
+  speechBubbleTail: {
+    position:         'absolute',
+    bottom:           -8,
+    left:             16,
+    width:             0,
+    height:            0,
+    borderLeftWidth:   8,
+    borderRightWidth:  8,
+    borderTopWidth:    8,
+    borderStyle:      'solid',
+    borderLeftColor:  'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor:   'rgba(255,255,255,0.93)',
   },
   panelNumBadge: {
     position: 'absolute',

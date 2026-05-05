@@ -122,6 +122,10 @@ export default function RootLayout() {
                             name="create-outfit"
                             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
                           />
+                          <Stack.Screen
+                            name="panel-editor"
+                            options={{ presentation: 'card', animation: 'slide_from_right' }}
+                          />
                         </Stack>
                       </KeyboardProvider>
                     </GestureHandlerRootView>
