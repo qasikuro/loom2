@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, followsTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, outfitsTable } from "@workspace/db";
 import { and, desc, eq, ilike, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -51,6 +51,122 @@ router.get("/users/search", requireAuth, async (req, res) => {
     })));
   } catch (err) {
     req.log.error({ err }, "Failed to search users");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Public user profile ───────────────────────────────────────────────────────
+
+router.get("/users/:userId", requireAuth, async (req, res) => {
+  const viewerId = getUserId(req);
+  const targetId = String(req.params.userId);
+
+  try {
+    const [charRows, followingRows] = await Promise.all([
+      db.select({
+        userId:   characterTable.userId,
+        name:     characterTable.name,
+        username: characterTable.username,
+        bio:      characterTable.bio,
+        traits:   characterTable.traits,
+        mood:     characterTable.mood,
+        isPublic: characterTable.isPublic,
+      })
+        .from(characterTable)
+        .where(eq(characterTable.userId, targetId))
+        .limit(1),
+
+      db.select({ followingId: followsTable.followingId })
+        .from(followsTable)
+        .where(eq(followsTable.followerId, viewerId)),
+    ]);
+
+    if (!charRows.length || !charRows[0].isPublic) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const char = charRows[0];
+    const followingSet = new Set(followingRows.map(r => r.followingId));
+
+    return res.json({
+      userId:      char.userId,
+      name:        char.name,
+      username:    char.username,
+      bio:         char.bio,
+      traits:      char.traits,
+      mood:        char.mood,
+      isFollowing: followingSet.has(targetId),
+    });
+  } catch (err) {
+    req.log.error({ err }, "Failed to get user profile");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/users/:userId/stories", requireAuth, async (req, res) => {
+  const targetId = String(req.params.userId);
+
+  try {
+    const rows = await db
+      .select({
+        id:             storiesTable.id,
+        chapterTitle:   storiesTable.chapterTitle,
+        mood:           storiesTable.mood,
+        location:       storiesTable.location,
+        panels:         storiesTable.panels,
+        witnessedCount: storiesTable.witnessedCount,
+        savedCount:     storiesTable.savedCount,
+        date:           storiesTable.date,
+      })
+      .from(storiesTable)
+      .where(and(eq(storiesTable.userId, targetId), eq(storiesTable.isPublic, true)))
+      .orderBy(desc(storiesTable.date))
+      .limit(50);
+
+    return res.json(rows.map(r => ({
+      id:             r.id,
+      chapterTitle:   r.chapterTitle,
+      mood:           r.mood,
+      location:       r.location,
+      panels:         r.panels,
+      witnessedCount: r.witnessedCount,
+      savedCount:     r.savedCount,
+      date:           r.date.toISOString(),
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to get user stories");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
+  const targetId = String(req.params.userId);
+
+  try {
+    const rows = await db
+      .select({
+        id:          outfitsTable.id,
+        name:        outfitsTable.name,
+        description: outfitsTable.description,
+        imageUri:    outfitsTable.imageUri,
+        tags:        outfitsTable.tags,
+        date:        outfitsTable.date,
+      })
+      .from(outfitsTable)
+      .where(and(eq(outfitsTable.userId, targetId), eq(outfitsTable.isPublic, true)))
+      .orderBy(desc(outfitsTable.date))
+      .limit(50);
+
+    return res.json(rows.map(r => ({
+      id:          r.id,
+      name:        r.name,
+      description: r.description,
+      imageUri:    r.imageUri,
+      tags:        r.tags,
+      date:        r.date.toISOString(),
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to get user outfits");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

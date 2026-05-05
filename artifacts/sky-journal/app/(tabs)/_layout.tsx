@@ -54,7 +54,6 @@ function TabIcon({
 
 function CreateIcon() {
   const scale = useRef(new Animated.Value(1)).current;
-  const glow  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const breathe = Animated.loop(
@@ -73,35 +72,14 @@ function CreateIcon() {
         }),
       ])
     );
-    const glowLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glow, {
-          toValue: 1,
-          duration: 1800,
-          useNativeDriver: true,
-          easing: Easing.inOut(Easing.sin),
-        }),
-        Animated.timing(glow, {
-          toValue: 0,
-          duration: 1800,
-          useNativeDriver: true,
-          easing: Easing.inOut(Easing.sin),
-        }),
-      ])
-    );
     breathe.start();
-    glowLoop.start();
-    return () => { breathe.stop(); glowLoop.stop(); };
+    return () => { breathe.stop(); };
   }, []);
 
   return (
-    <View style={styles.createWrap}>
-      {/* Glow halo behind button */}
-      <Animated.View style={[styles.createGlow, { opacity: glow }]} />
-      <Animated.View style={[styles.createBtn, { transform: [{ scale }] }]}>
-        <Icon name="plus" size={24} color="#fff" />
-      </Animated.View>
-    </View>
+    <Animated.View style={[styles.createBtn, { transform: [{ scale }] }]}>
+      <Icon name="plus" size={24} color="#fff" />
+    </Animated.View>
   );
 }
 
@@ -230,19 +208,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(139,122,181,0.22)',
   },
 
-  createWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  createGlow: {
-    position: 'absolute',
-    width: BTN_SIZE + 24,
-    height: BTN_SIZE + 24,
-    borderRadius: (BTN_SIZE + 24) / 2,
-    backgroundColor: PURPLE,
-    opacity: 0,
-  },
   createBtn: {
     width: BTN_SIZE,
     height: BTN_SIZE,
@@ -250,9 +215,10 @@ const styles = StyleSheet.create({
     backgroundColor: PURPLE,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 20,
     shadowColor: PURPLE,
-    shadowOpacity: 0.6,
-    shadowRadius: 16,
+    shadowOpacity: 0.55,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
     elevation: 14,
   },

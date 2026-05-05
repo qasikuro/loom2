@@ -325,6 +325,7 @@ export default function DiscoverScreen() {
               post={item}
               onPress={() => router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
+              onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
             />
           )}
           contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad }]}

@@ -420,7 +420,7 @@ export default function CharacterScreen() {
                     autoFocus
                     returnKeyType="done"
                     onSubmitEditing={() => addTrait(newTrait)}
-                    onBlur={() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }}
+                    onBlur={() => setTimeout(() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }, 200)}
                   />
                   <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
                     <Icon name="x" size={13} color={colors.mutedForeground} />

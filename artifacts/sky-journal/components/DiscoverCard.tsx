@@ -28,9 +28,10 @@ interface DiscoverCardProps {
   onPress?: () => void;
   onSave?: () => void;
   onDelete?: () => void;
+  onAuthorPress?: () => void;
 }
 
-export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardProps) {
+export function DiscoverCard({ post, onPress, onSave, onDelete, onAuthorPress }: DiscoverCardProps) {
   const colors   = useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
@@ -77,15 +78,25 @@ export function DiscoverCard({ post, onPress, onSave, onDelete }: DiscoverCardPr
     >
       {/* Author header */}
       <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28`, borderWidth: 1.5 }]}>
+        <TouchableOpacity
+          style={[styles.avatar, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28`, borderWidth: 1.5 }]}
+          onPress={onAuthorPress}
+          activeOpacity={onAuthorPress ? 0.75 : 1}
+          disabled={!onAuthorPress}
+        >
           <Text style={[styles.avatarText, { color: colors.primary }]}>{initial}</Text>
-        </View>
-        <View style={styles.authorMeta}>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.authorMeta}
+          onPress={onAuthorPress}
+          activeOpacity={onAuthorPress ? 0.75 : 1}
+          disabled={!onAuthorPress}
+        >
           <Text style={[styles.authorName, { color: colors.foreground }]}>{post.authorName}</Text>
           <Text style={[styles.authorHandle, { color: colors.mutedForeground }]}>
             {post.authorHandle} · {post.timeAgo}
           </Text>
-        </View>
+        </TouchableOpacity>
         <View style={[styles.chapterBadge, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}28` }]}>
           <Text style={[styles.chapterText, { color: colors.primary }]}>Ch. {post.chapterNumber}</Text>
         </View>
