@@ -119,7 +119,7 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
         date:           storiesTable.date,
       })
       .from(storiesTable)
-      .where(and(eq(storiesTable.userId, targetId), eq(storiesTable.isPublic, true)))
+      .where(eq(storiesTable.userId, targetId))
       .orderBy(desc(storiesTable.date))
       .limit(50);
 
@@ -153,7 +153,7 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
         date:        outfitsTable.date,
       })
       .from(outfitsTable)
-      .where(and(eq(outfitsTable.userId, targetId), eq(outfitsTable.isPublic, true)))
+      .where(eq(outfitsTable.userId, targetId))
       .orderBy(desc(outfitsTable.date))
       .limit(50);
 
