@@ -470,7 +470,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         location:     story.location,
         isPublic:     story.isPublic,
       }),
-    }).catch(() => null);
+    })
+      .then(() => loadSocialData())
+      .catch(() => null);
   }, []);
 
   const deleteStory = useCallback((id: string) => {

@@ -145,12 +145,7 @@ router.get("/discover", requireAuth, async (req, res) => {
       })
         .from(storiesTable)
         .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
-        .where(
-          and(
-            eq(storiesTable.isPublic, true),
-            ne(storiesTable.userId, userId),
-          ),
-        )
+        .where(eq(storiesTable.isPublic, true))
         .orderBy(desc(storiesTable.date))
         .limit(200),
     ]);

@@ -55,7 +55,7 @@ const ATTRIBUTE_SUGGESTIONS = [
 export default function CharacterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { character, setCharacter, outfits, deleteOutfit, stories, activeOutfitId, setActiveOutfitId } = useApp();
+  const { character, setCharacter, outfits, stories, activeOutfitId } = useApp();
   const { signOut } = useAuth();
   const { user } = useUser();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
@@ -76,7 +76,6 @@ export default function CharacterScreen() {
     }
   }
 
-  const [confirmingOutfitId, setConfirmingOutfitId] = useState<string | null>(null);
   const [editingName, setEditingName]               = useState(false);
   const [editingBio, setEditingBio]                 = useState(false);
   const [editingUsername, setEditingUsername]       = useState(false);
@@ -148,17 +147,6 @@ export default function CharacterScreen() {
     Haptics.selectionAsync();
     setCharacter({ ...character, isPublic: !character.isPublic });
   }
-  function handleDeleteOutfit(id: string) {
-    if (confirmingOutfitId === id) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setConfirmingOutfitId(null);
-      deleteOutfit(id);
-    } else {
-      setConfirmingOutfitId(id);
-      setTimeout(() => setConfirmingOutfitId(prev => prev === id ? null : prev), 3000);
-    }
-  }
-
   const suggestions = ATTRIBUTE_SUGGESTIONS.filter(
     s => !character.traits.includes(s) && s.toLowerCase().includes(newTrait.toLowerCase())
   );
@@ -468,141 +456,86 @@ export default function CharacterScreen() {
             )}
           </View>
 
-          {/* ── Outfit Log ──────────────────────────────────────── */}
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Outfit Log</Text>
-                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>Daily style · public or private</Text>
+          {/* ── Wardrobe card ────────────────────────────────── */}
+          <TouchableOpacity
+            style={[styles.myStoriesCard, { backgroundColor: colors.card, borderColor: `${colors.primary}30` }, SHADOW.sm]}
+            onPress={() => { Haptics.selectionAsync(); router.push('/wardrobe' as any); }}
+            activeOpacity={0.86}
+          >
+            {/* Header row */}
+            <View style={styles.myStoriesHeader}>
+              <View style={styles.myStoriesHeaderLeft}>
+                <View style={[styles.myStoriesIconWrap, { backgroundColor: `${colors.primary}20` }]}>
+                  <Icon name="grid" size={15} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={[styles.myStoriesTitle, { color: colors.foreground }]}>My Wardrobe</Text>
+                  <Text style={[styles.myStoriesSub, { color: colors.mutedForeground }]}>
+                    {outfits.length === 0
+                      ? 'Tap to log your first outfit'
+                      : `${outfits.length} outfit${outfits.length !== 1 ? 's' : ''} logged`}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.outfitHeaderBtns}>
+              <View style={styles.wardrobeHeaderRight}>
                 <TouchableOpacity
-                  style={[styles.wardrobeBtn, { borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}0E` }]}
-                  onPress={() => { Haptics.selectionAsync(); router.push('/wardrobe' as any); }}
+                  style={[styles.wardrobeLogBtn, { backgroundColor: colors.primary }]}
+                  onPress={(e) => { e.stopPropagation?.(); Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
+                  activeOpacity={0.8}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
-                  <Icon name="grid" size={12} color={colors.primary} />
-                  <Text style={[styles.wardrobeBtnText, { color: colors.primary }]}>Wardrobe</Text>
+                  <Icon name="plus" size={12} color="#fff" />
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.addBtn, { backgroundColor: colors.primary }, SHADOW.sm]}
-                  onPress={() => router.push('/create-outfit')}
-                >
-                  <Icon name="plus" size={13} color="#fff" />
-                  <Text style={styles.addBtnText}>Log</Text>
-                </TouchableOpacity>
+                <View style={[styles.myStoriesArrow, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
+                  <Icon name="arrow-right" size={14} color={colors.primary} />
+                </View>
               </View>
             </View>
 
-            {outfits.length === 0 ? (
-              <TouchableOpacity
-                style={[styles.outfitEmpty, { borderColor: colors.border, backgroundColor: colors.muted }]}
-                onPress={() => router.push('/create-outfit')}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.outfitEmptyIcon, { backgroundColor: `${colors.primary}10` }]}>
-                  <Icon name="star" size={22} color={`${colors.primary}70`} />
-                </View>
-                <View>
-                  <Text style={[styles.outfitEmptyTitle, { color: colors.foreground }]}>Log your first outfit</Text>
-                  <Text style={[styles.outfitEmptyText, { color: colors.mutedForeground }]}>Track your daily sky look</Text>
-                </View>
-                <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
-              </TouchableOpacity>
+            {/* Outfit thumbnails or empty hint */}
+            {outfits.length > 0 ? (
+              <View style={styles.myStoriesThumbs}>
+                {outfits.slice(0, 4).map((outfit, i) => (
+                  <View
+                    key={outfit.id}
+                    style={[
+                      styles.storyThumb,
+                      { marginLeft: i > 0 ? 8 : 0 },
+                      i === 0 && { flex: 1.4 },
+                    ]}
+                  >
+                    {outfit.imageUri ? (
+                      <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    ) : (
+                      <LinearGradient
+                        colors={[`${colors.primary}55`, `${colors.primary}18`]}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    )}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(8,6,22,0.82)']}
+                      style={styles.storyThumbGrad}
+                    />
+                    <Text style={styles.storyThumbTitle} numberOfLines={2}>{outfit.name}</Text>
+                  </View>
+                ))}
+                {outfits.length > 4 && (
+                  <View style={[styles.storyThumbMore, { backgroundColor: `${colors.primary}14`, marginLeft: 8 }]}>
+                    <Text style={[styles.storyThumbMoreText, { color: colors.primary }]}>
+                      +{outfits.length - 4}
+                    </Text>
+                  </View>
+                )}
+              </View>
             ) : (
-              <View style={styles.outfitList}>
-                {outfits.map(outfit => {
-                  const isActive = activeOutfitId === outfit.id;
-                  return (
-                    <View
-                      key={outfit.id}
-                      style={[
-                        styles.outfitCard,
-                        { backgroundColor: colors.card, borderColor: isActive ? colors.primary : colors.border },
-                        isActive && { borderWidth: 1.5 },
-                        SHADOW.xs,
-                      ]}
-                    >
-                      {outfit.imageUri ? (
-                        <Image source={{ uri: outfit.imageUri }} style={styles.outfitThumb} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.outfitThumbPlaceholder, { backgroundColor: `${colors.primary}10` }]}>
-                          <Icon name="star" size={20} color={`${colors.primary}55`} />
-                        </View>
-                      )}
-
-                      {isActive && (
-                        <View style={styles.activeThumbBadge}>
-                          <Icon name="home" size={9} color="#fff" />
-                        </View>
-                      )}
-
-                      <View style={styles.outfitInfo}>
-                        <View style={styles.outfitTop}>
-                          <Text style={[styles.outfitName, { color: colors.foreground }]} numberOfLines={1}>{outfit.name}</Text>
-                          <Text style={[styles.outfitDate, { color: colors.mutedForeground }]}>{fmtDate(outfit.date)}</Text>
-                        </View>
-                        <View style={styles.outfitMeta}>
-                          {outfit.tags.slice(0, 2).map(tag => (
-                            <View key={tag} style={[styles.outfitTag, { backgroundColor: `${colors.primary}0F` }]}>
-                              <Text style={[styles.outfitTagText, { color: colors.primary }]}>{tag}</Text>
-                            </View>
-                          ))}
-                          <View style={[styles.visChip, {
-                            backgroundColor: outfit.isPublic ? 'rgba(96,168,120,0.1)' : `${colors.primary}0F`,
-                          }]}>
-                            <Icon name={outfit.isPublic ? 'globe' : 'lock'} size={9} color={outfit.isPublic ? '#60A878' : colors.primary} />
-                            <Text style={[styles.visChipText, { color: outfit.isPublic ? '#60A878' : colors.primary }]}>
-                              {outfit.isPublic ? 'Public' : 'Private'}
-                            </Text>
-                          </View>
-                        </View>
-
-                        <TouchableOpacity
-                          style={[
-                            styles.setDisplayBtn,
-                            {
-                              backgroundColor: isActive ? `${colors.primary}14` : colors.muted,
-                              borderColor: isActive ? `${colors.primary}35` : colors.border,
-                            },
-                          ]}
-                          onPress={() => {
-                            Haptics.selectionAsync();
-                            setActiveOutfitId(isActive ? null : outfit.id);
-                          }}
-                        >
-                          <Icon
-                            name={isActive ? 'check-circle' : 'home'}
-                            size={11}
-                            color={isActive ? colors.primary : colors.mutedForeground}
-                          />
-                          <Text style={[styles.setDisplayText, { color: isActive ? colors.primary : colors.mutedForeground }]}>
-                            {isActive ? 'Shown on home' : 'Set as display'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      <TouchableOpacity
-                        style={[
-                          styles.outfitDeleteBtn,
-                          confirmingOutfitId === outfit.id
-                            ? { backgroundColor: '#E04455', paddingHorizontal: 10 }
-                            : { backgroundColor: colors.muted },
-                        ]}
-                        onPress={() => handleDeleteOutfit(outfit.id)}
-                        hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-                        activeOpacity={0.75}
-                      >
-                        {confirmingOutfitId === outfit.id
-                          ? <Text style={styles.outfitDeleteConfirmText}>Delete?</Text>
-                          : <Icon name="trash-2" size={12} color={colors.mutedForeground} />
-                        }
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })}
+              <View style={[styles.myStoriesEmpty, { borderColor: `${colors.primary}18` }]}>
+                <Icon name="star" size={20} color={`${colors.primary}40`} />
+                <Text style={[styles.myStoriesEmptyText, { color: colors.mutedForeground }]}>
+                  Your outfits will appear here
+                </Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* ── Account section ──────────────────────────────────────── */}
@@ -725,6 +658,8 @@ const styles = StyleSheet.create({
   outfitHeaderBtns: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   wardrobeBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   wardrobeBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  wardrobeHeaderRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  wardrobeLogBtn: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   traitsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   traitChip: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 12, paddingRight: 6, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   traitText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
