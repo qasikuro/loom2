@@ -18,9 +18,25 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Images } from '@/assets/images';
-import { apiFetch, useApp } from '@/context/AppContext';
+import { apiFetch, useApp, type Story } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
+
+const BG_MAP: Record<string, any> = {
+  bg1: Images.story_bg1, bg2: Images.story_bg2,
+  bg3: Images.story_bg3, char: Images.character_default,
+};
+function getCover(story: Story) {
+  const p = story.panels[0];
+  if (!p) return null;
+  if (p.imageUri) return { uri: p.imageUri };
+  if (p.bgPreset && BG_MAP[p.bgPreset]) return BG_MAP[p.bgPreset];
+  return null;
+}
+const MOOD_COLORS: Record<string, string> = {
+  Peaceful: '#8B7AB5', Joyful: '#D4A849', Melancholy: '#5D7BA5',
+  Nostalgic: '#A5785D', Hopeful: '#6BA57A', Dreamy: '#9B7AB5',
+};
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(iso: string) {
@@ -302,22 +318,81 @@ export default function CharacterScreen() {
             </View>
           </View>
 
-          {/* My Stories shortcut */}
+          {/* ── My Stories visual card ──────────────────────── */}
           <TouchableOpacity
-            style={[styles.myStoriesBtn, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+            style={[styles.myStoriesCard, { backgroundColor: colors.card, borderColor: `${colors.primary}30` }, SHADOW.sm]}
             onPress={() => { Haptics.selectionAsync(); router.push('/my-stories' as any); }}
-            activeOpacity={0.82}
+            activeOpacity={0.86}
           >
-            <View style={[styles.myStoriesIcon, { backgroundColor: `${colors.primary}18` }]}>
-              <Icon name="book-open" size={18} color={colors.primary} />
+            {/* Header row */}
+            <View style={styles.myStoriesHeader}>
+              <View style={styles.myStoriesHeaderLeft}>
+                <View style={[styles.myStoriesIconWrap, { backgroundColor: `${colors.primary}20` }]}>
+                  <Icon name="book-open" size={15} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={[styles.myStoriesTitle, { color: colors.foreground }]}>My Stories</Text>
+                  <Text style={[styles.myStoriesSub, { color: colors.mutedForeground }]}>
+                    {stories.length === 0
+                      ? 'Tap to write your first chapter'
+                      : `${stories.length} chapter${stories.length !== 1 ? 's' : ''} written`}
+                  </Text>
+                </View>
+              </View>
+              <View style={[styles.myStoriesArrow, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
+                <Icon name="arrow-right" size={14} color={colors.primary} />
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.myStoriesTitle, { color: colors.foreground }]}>My Stories</Text>
-              <Text style={[styles.myStoriesSub, { color: colors.mutedForeground }]}>
-                {stories.length === 0 ? 'Start writing your first chapter' : `${stories.length} chapter${stories.length !== 1 ? 's' : ''} written`}
-              </Text>
-            </View>
-            <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
+
+            {/* Story thumbnails or empty hint */}
+            {stories.length > 0 ? (
+              <View style={styles.myStoriesThumbs}>
+                {stories.slice(0, 4).map((story, i) => {
+                  const cover = getCover(story);
+                  const moodColor = MOOD_COLORS[story.mood] ?? colors.primary;
+                  return (
+                    <View
+                      key={story.id}
+                      style={[
+                        styles.storyThumb,
+                        { marginLeft: i > 0 ? 8 : 0 },
+                        i === 0 && { flex: 1.4 },
+                      ]}
+                    >
+                      {cover ? (
+                        <Image source={cover} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                      ) : (
+                        <LinearGradient
+                          colors={[`${moodColor}55`, `${moodColor}18`]}
+                          style={StyleSheet.absoluteFill}
+                        />
+                      )}
+                      <LinearGradient
+                        colors={['transparent', 'rgba(8,6,22,0.82)']}
+                        style={styles.storyThumbGrad}
+                      />
+                      <Text style={styles.storyThumbTitle} numberOfLines={2}>
+                        {story.chapterTitle}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {stories.length > 4 && (
+                  <View style={[styles.storyThumbMore, { backgroundColor: `${colors.primary}14`, marginLeft: 8 }]}>
+                    <Text style={[styles.storyThumbMoreText, { color: colors.primary }]}>
+                      +{stories.length - 4}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            ) : (
+              <View style={[styles.myStoriesEmpty, { borderColor: `${colors.primary}18` }]}>
+                <Icon name="star" size={20} color={`${colors.primary}40`} />
+                <Text style={[styles.myStoriesEmptyText, { color: `${colors.mutedForeground}` }]}>
+                  Your chapters will appear here
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* ── Attributes ───────────────────────────────────────── */}
@@ -591,13 +666,41 @@ const styles = StyleSheet.create({
   bioRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
   bio: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22 },
   bioInput: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 22, borderWidth: 1, borderRadius: 12, padding: 12 },
-  myStoriesBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    borderWidth: 1, borderRadius: 18, padding: 16, marginBottom: 26,
+  myStoriesCard: {
+    borderWidth: 1, borderRadius: 20, padding: 14,
+    marginBottom: 26, gap: 12,
   },
-  myStoriesIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  myStoriesTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: 2 },
+  myStoriesHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  myStoriesHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  myStoriesIconWrap:   { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  myStoriesArrow: {
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
+  },
+  myStoriesTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: 1 },
   myStoriesSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  myStoriesThumbs: { flexDirection: 'row', height: 100 },
+  storyThumb: {
+    flex: 1, borderRadius: 12, overflow: 'hidden',
+    backgroundColor: '#1C1840', position: 'relative',
+  },
+  storyThumbGrad: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%' },
+  storyThumbTitle: {
+    position: 'absolute', bottom: 6, left: 6, right: 6,
+    fontSize: 9, fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(240,234,255,0.92)', lineHeight: 12,
+  },
+  storyThumbMore: {
+    width: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+  },
+  storyThumbMoreText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  myStoriesEmpty: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    borderWidth: 1, borderStyle: 'dashed', borderRadius: 14,
+    paddingVertical: 18,
+  },
+  myStoriesEmptyText: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
   statsCard: { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 18, marginBottom: 14 },
   statItem: { flex: 1, alignItems: 'center', gap: 4 },
   statNum: { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
