@@ -253,7 +253,7 @@ export default function UserOutfitScreen() {
               style={[styles.profileBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.replace({ pathname: '/user/[userId]', params: { userId: params.authorUserId } } as any);
+                router.push({ pathname: '/user/[userId]', params: { userId: params.authorUserId } } as any);
               }}
               activeOpacity={0.82}
             >

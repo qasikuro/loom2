@@ -6,6 +6,7 @@ import storiesRouter from "./stories";
 import outfitsRouter from "./outfits";
 import uploadRouter from "./upload";
 import socialRouter from "./social";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(storiesRouter);
 router.use(outfitsRouter);
 router.use(uploadRouter);
 router.use(socialRouter);
+router.use(notificationsRouter);
 
 export default router;

@@ -1,4 +1,4 @@
-import { db, outfitsTable } from "@workspace/db";
+import { db, outfitsTable, followsTable, characterTable, notificationsTable } from "@workspace/db";
 import { and, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
@@ -57,12 +57,53 @@ router.post("/outfits", requireAuth, async (req, res) => {
       })
       .returning();
 
+    // Fan-out notifications to followers (fire & forget, non-blocking)
+    if (rest.isPublic) {
+      fanOutOutfitNotification(userId, created.id, rest.name, req).catch(() => null);
+    }
+
     return res.status(201).json(serializeOutfit(created));
   } catch (err) {
     req.log.error({ err }, "Failed to create outfit");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+async function fanOutOutfitNotification(
+  userId: string,
+  outfitId: string,
+  outfitName: string,
+  req: any,
+) {
+  try {
+    const [followers, actorRows] = await Promise.all([
+      db.select({ followerId: followsTable.followerId })
+        .from(followsTable)
+        .where(eq(followsTable.followingId, userId)),
+      db.select({ name: characterTable.name })
+        .from(characterTable)
+        .where(eq(characterTable.userId, userId))
+        .limit(1),
+    ]);
+
+    if (followers.length === 0) return;
+
+    const actorName = actorRows[0]?.name ?? "A sky child";
+
+    await db.insert(notificationsTable).values(
+      followers.map(f => ({
+        userId:    f.followerId,
+        actorId:   userId,
+        actorName,
+        type:      "new_outfit",
+        refId:     outfitId,
+        title:     outfitName,
+      })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to fan-out outfit notification");
+  }
+}
 
 router.delete("/outfits/:id", requireAuth, async (req, res) => {
   const userId = getUserId(req);

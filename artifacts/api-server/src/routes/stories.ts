@@ -1,4 +1,4 @@
-import { db, storiesTable } from "@workspace/db";
+import { db, storiesTable, followsTable, characterTable, notificationsTable } from "@workspace/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
@@ -104,6 +104,11 @@ router.post("/stories", requireAuth, async (req, res) => {
       })
       .returning();
 
+    // Fan-out notifications to followers (fire & forget, non-blocking)
+    if (rest.isPublic) {
+      fanOutStoryNotification(userId, created.id, rest.chapterTitle, req).catch(() => null);
+    }
+
     return res.status(201).json(serializeStory(created));
   } catch (err) {
     req.log.error({ err }, "Failed to create story");
@@ -111,17 +116,71 @@ router.post("/stories", requireAuth, async (req, res) => {
   }
 });
 
+async function fanOutStoryNotification(
+  userId: string,
+  storyId: string,
+  chapterTitle: string,
+  req: any,
+) {
+  try {
+    const [followers, actorRows] = await Promise.all([
+      db.select({ followerId: followsTable.followerId })
+        .from(followsTable)
+        .where(eq(followsTable.followingId, userId)),
+      db.select({ name: characterTable.name })
+        .from(characterTable)
+        .where(eq(characterTable.userId, userId))
+        .limit(1),
+    ]);
+
+    if (followers.length === 0) return;
+
+    const actorName = actorRows[0]?.name ?? "A sky child";
+
+    await db.insert(notificationsTable).values(
+      followers.map(f => ({
+        userId:    f.followerId,
+        actorId:   userId,
+        actorName,
+        type:      "new_story",
+        refId:     storyId,
+        title:     chapterTitle,
+      })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to fan-out story notification");
+  }
+}
+
 router.get("/stories/:id", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const storyId = String(req.params.id);
   try {
+    // Allow own stories OR public stories from public profiles
     const rows = await db
       .select()
       .from(storiesTable)
       .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
       .limit(1);
 
-    if (rows.length === 0) return res.status(404).json({ error: "Not found" });
+    if (rows.length === 0) {
+      // Try to find as a public story from a public profile
+      const publicRows = await db
+        .select({ story: storiesTable })
+        .from(storiesTable)
+        .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+        .where(
+          and(
+            eq(storiesTable.id, storyId),
+            eq(storiesTable.isPublic, true),
+            eq(characterTable.isPublic, true),
+          ),
+        )
+        .limit(1);
+
+      if (publicRows.length === 0) return res.status(404).json({ error: "Not found" });
+      return res.json(serializeStory(publicRows[0].story));
+    }
     return res.json(serializeStory(rows[0]));
   } catch (err) {
     req.log.error({ err }, "Failed to get story");
@@ -144,13 +203,18 @@ router.delete("/stories/:id", requireAuth, async (req, res) => {
 });
 
 router.post("/stories/:id/witness", requireAuth, async (req, res) => {
-  const userId = getUserId(req);
   const storyId = String(req.params.id);
   try {
+    // Allow witnessing any public story from a public profile
     const [updated] = await db
       .update(storiesTable)
       .set({ witnessedCount: sql`${storiesTable.witnessedCount} + 1` })
-      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
+      .where(
+        and(
+          eq(storiesTable.id, storyId),
+          eq(storiesTable.isPublic, true),
+        ),
+      )
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });

@@ -202,7 +202,11 @@ export default function DiscoverScreen() {
               renderItem={({ item }) => {
                 const isFollowing = followingIds.includes(item.userId) || item.isFollowing;
                 return (
-                  <View style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+                  <TouchableOpacity
+                    style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                    onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.userId } } as any)}
+                    activeOpacity={0.88}
+                  >
                     <View style={[styles.userAvatar, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
                       <Text style={[styles.userAvatarText, { color: colors.primary }]}>
                         {item.name.charAt(0).toUpperCase()}
@@ -238,7 +242,7 @@ export default function DiscoverScreen() {
                         {isFollowing ? 'Following' : 'Follow'}
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 );
               }}
             />

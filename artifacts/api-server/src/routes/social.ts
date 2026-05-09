@@ -103,10 +103,23 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
   }
 });
 
+// ── Public user stories (public only) ────────────────────────────────────────
+
 router.get("/users/:userId/stories", requireAuth, async (req, res) => {
   const targetId = String(req.params.userId);
 
   try {
+    // Verify the target profile is public
+    const [charRow] = await db
+      .select({ isPublic: characterTable.isPublic })
+      .from(characterTable)
+      .where(eq(characterTable.userId, targetId))
+      .limit(1);
+
+    if (!charRow?.isPublic) {
+      return res.json([]);
+    }
+
     const rows = await db
       .select({
         id:             storiesTable.id,
@@ -121,7 +134,12 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
         date:           storiesTable.date,
       })
       .from(storiesTable)
-      .where(eq(storiesTable.userId, targetId))
+      .where(
+        and(
+          eq(storiesTable.userId, targetId),
+          eq(storiesTable.isPublic, true),
+        ),
+      )
       .orderBy(desc(storiesTable.date))
       .limit(50);
 
@@ -143,10 +161,23 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
   }
 });
 
+// ── Public user outfits (public only) ────────────────────────────────────────
+
 router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
   const targetId = String(req.params.userId);
 
   try {
+    // Verify the target profile is public
+    const [charRow] = await db
+      .select({ isPublic: characterTable.isPublic })
+      .from(characterTable)
+      .where(eq(characterTable.userId, targetId))
+      .limit(1);
+
+    if (!charRow?.isPublic) {
+      return res.json([]);
+    }
+
     const rows = await db
       .select({
         id:          outfitsTable.id,
@@ -157,7 +188,12 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
         date:        outfitsTable.date,
       })
       .from(outfitsTable)
-      .where(eq(outfitsTable.userId, targetId))
+      .where(
+        and(
+          eq(outfitsTable.userId, targetId),
+          eq(outfitsTable.isPublic, true),
+        ),
+      )
       .orderBy(desc(outfitsTable.date))
       .limit(50);
 
@@ -235,7 +271,7 @@ router.get("/follows/following", requireAuth, async (req, res) => {
   }
 });
 
-// ── Discover feed (ranked) ────────────────────────────────────────────────────
+// ── Discover feed (ranked, excludes own posts, public profiles only) ──────────
 
 router.get("/discover", requireAuth, async (req, res) => {
   const userId = getUserId(req);
@@ -267,12 +303,18 @@ router.get("/discover", requireAuth, async (req, res) => {
       })
         .from(storiesTable)
         .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
-        .where(eq(storiesTable.isPublic, true))
+        .where(
+          and(
+            eq(storiesTable.isPublic, true),
+            eq(characterTable.isPublic, true),
+            ne(storiesTable.userId, userId),   // never show own stories
+          ),
+        )
         .orderBy(desc(storiesTable.date))
         .limit(200),
     ]);
 
-    const myMood      = myCharRows[0]?.mood ?? "Hopeful";
+    const myMood       = myCharRows[0]?.mood ?? "Hopeful";
     const followingSet = new Set(followingRows.map(r => r.followingId));
     const now          = Date.now();
 
@@ -282,7 +324,8 @@ router.get("/discover", requireAuth, async (req, res) => {
       const engagement  = Math.min(2, (row.witnessedCount + row.savedCount) / 25);
       const daysOld     = (now - row.date.getTime()) / 86_400_000;
       const recency     = Math.max(0, 1 - daysOld / 30);
-      const score       = (isFollowing ? 4 : 0) + (moodMatch ? 2 : 0) + engagement + recency;
+      // Followed users get highest priority
+      const score = (isFollowing ? 6 : 0) + (moodMatch ? 2 : 0) + engagement + recency;
       return { row, score, isFollowing };
     });
 

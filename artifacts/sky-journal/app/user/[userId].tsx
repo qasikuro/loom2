@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuth } from '@clerk/expo';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
@@ -66,6 +67,7 @@ export default function UserProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
+  const { userId: currentUserId } = useAuth();
   const { followingIds, followUser, unfollowUser } = useApp();
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -79,6 +81,7 @@ export default function UserProfileScreen() {
   const slideAnim = useRef(new Animated.Value(18)).current;
 
   const isFollowing = followingIds.includes(userId ?? '');
+  const isSelf      = currentUserId === userId;
 
   useEffect(() => {
     if (!userId) return;
@@ -218,28 +221,30 @@ export default function UserProfileScreen() {
             </View>
           )}
 
-          {/* Follow / Unfollow button */}
-          <TouchableOpacity
-            style={[
-              styles.followBtn,
-              isFollowing
-                ? { backgroundColor: colors.card, borderColor: colors.border }
-                : { backgroundColor: colors.primary, borderColor: colors.primary },
-            ]}
-            onPress={handleFollow}
-            activeOpacity={0.82}
-          >
-            <Icon
-              name={isFollowing ? 'user-check' : 'user-plus'}
-              size={15}
-              color={isFollowing ? colors.mutedForeground : '#fff'}
-            />
-            <Text style={[styles.followBtnText, { color: isFollowing ? colors.mutedForeground : '#fff' }]}>
-              {isFollowing ? 'Following' : 'Follow'}
-            </Text>
-          </TouchableOpacity>
+          {/* Follow / Unfollow button — hidden on own profile */}
+          {!isSelf && (
+            <TouchableOpacity
+              style={[
+                styles.followBtn,
+                isFollowing
+                  ? { backgroundColor: colors.card, borderColor: colors.border }
+                  : { backgroundColor: colors.primary, borderColor: colors.primary },
+              ]}
+              onPress={handleFollow}
+              activeOpacity={0.82}
+            >
+              <Icon
+                name={isFollowing ? 'user-check' : 'user-plus'}
+                size={15}
+                color={isFollowing ? colors.mutedForeground : '#fff'}
+              />
+              <Text style={[styles.followBtnText, { color: isFollowing ? colors.mutedForeground : '#fff' }]}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
-          {isFollowing && (
+          {!isSelf && isFollowing && (
             <View style={[styles.notifyBanner, { backgroundColor: `${moodColor}10`, borderColor: `${moodColor}28` }]}>
               <Icon name="bell" size={13} color={moodColor} />
               <Text style={[styles.notifyText, { color: moodColor }]}>

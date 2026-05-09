@@ -95,6 +95,7 @@ export default function HomeScreen() {
   const {
     character, journalEntries, stories, rewards, dismissReward,
     outfits, activeOutfitId, setActiveOutfitId,
+    serverNotifications, markServerNotificationsRead,
   } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -102,7 +103,8 @@ export default function HomeScreen() {
 
   const [showNotifs,       setShowNotifs]       = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
-  const hasNotifs = rewards.length > 0;
+  const unreadServerCount = serverNotifications.filter(n => !n.isRead).length;
+  const hasNotifs = rewards.length > 0 || unreadServerCount > 0;
 
   const latestEntry = journalEntries[0];
   const lastSeen    = latestEntry
@@ -285,7 +287,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.headerIconBtn, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(200,184,232,0.18)' }]}
-              onPress={() => { setShowNotifs(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             >
               <Icon name="bell" size={18} color="rgba(220,210,255,0.85)" />
@@ -561,13 +563,45 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            {rewards.length === 0 ? (
+            {rewards.length === 0 && serverNotifications.length === 0 ? (
               <View style={styles.notifsEmpty}>
                 <Icon name="bell-off" size={34} color={`${colors.mutedForeground}70`} />
                 <Text style={[styles.notifsEmptyText, { color: colors.mutedForeground }]}>You're all caught up ✦</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
+                {serverNotifications.length > 0 && serverNotifications.map(n => (
+                  <TouchableOpacity
+                    key={n.id}
+                    style={[styles.notifItem, {
+                      backgroundColor: 'rgba(120,86,255,0.07)',
+                      borderColor: 'rgba(120,86,255,0.22)',
+                    }]}
+                    onPress={() => {
+                      setShowNotifs(false);
+                      if (n.type === 'new_story') {
+                        router.push({ pathname: '/story/[id]', params: { id: n.refId, source: 'discover' } });
+                      }
+                    }}
+                    activeOpacity={0.82}
+                  >
+                    <View style={[styles.notifIconWrap, { backgroundColor: `${colors.primary}28` }]}>
+                      <Icon
+                        name={n.type === 'new_story' ? 'book-open' : 'star'}
+                        size={16}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
+                        {n.actorName}
+                      </Text>
+                      <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17, color: colors.mutedForeground }}>
+                        {n.type === 'new_story' ? 'shared a new story' : 'added a new outfit'}{n.title ? `: "${n.title}"` : ''}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
                 {rewards.map(r => (
                   <View key={r.id} style={[styles.notifItem, {
                     backgroundColor: r.isRising ? 'rgba(200,168,75,0.08)' : 'rgba(255,255,255,0.04)',

@@ -153,6 +153,17 @@ export interface Reward {
   isRising?:   boolean;
 }
 
+export interface ServerNotification {
+  id:        string;
+  actorId:   string;
+  actorName: string;
+  type:      'new_story' | 'new_outfit';
+  refId:     string;
+  title:     string;
+  isRead:    boolean;
+  createdAt: string;
+}
+
 // ── Context value ─────────────────────────────────────────────────────────────
 
 interface AppContextValue {
@@ -185,6 +196,9 @@ interface AppContextValue {
 
   rewards:       Reward[];
   dismissReward: (id: string) => void;
+
+  serverNotifications:         ServerNotification[];
+  markServerNotificationsRead: () => void;
 
   reloadData: () => Promise<void>;
 }
@@ -310,8 +324,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rewards, setRewards]               = useState<Reward[]>([]);
   const [activeOutfitId, setActiveOutfitIdState] = useState<string | null>(null);
 
-  const [discoverFeedRaw, setDiscoverFeedRaw] = useState<RawDiscoverItem[]>([]);
-  const [followingIds, setFollowingIds]       = useState<string[]>([]);
+  const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
+  const [followingIds, setFollowingIds]               = useState<string[]>([]);
+  const [serverNotifications, setServerNotifications] = useState<ServerNotification[]>([]);
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
     discoverFeedRaw.map(p => ({
@@ -388,13 +403,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('outfits_v1',    JSON.stringify(outs)),
       ]);
 
-      // Load social data in the background
+      // Load social and notification data in the background
       loadSocialData();
+      loadNotificationsData();
     } catch {
       setApiOnline(false);
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function loadNotificationsData() {
+    try {
+      const raw = await apiFetch<any[]>('/notifications').catch(() => []);
+      setServerNotifications(
+        (raw ?? []).map(r => ({
+          id:        r.id,
+          actorId:   r.actorId,
+          actorName: r.actorName,
+          type:      r.type as 'new_story' | 'new_outfit',
+          refId:     r.refId,
+          title:     r.title,
+          isRead:    r.isRead,
+          createdAt: r.createdAt,
+        })),
+      );
+    } catch { /* silently skip */ }
   }
 
   async function loadSocialData() {
@@ -589,6 +623,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRewards(prev => prev.filter(r => r.id !== id));
   }, []);
 
+  const markServerNotificationsRead = useCallback(() => {
+    setServerNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => null);
+  }, []);
+
   const reloadData = useCallback(async () => {
     await loadData();
   }, []);
@@ -603,6 +642,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       discoverPosts, toggleSavePost,
       followingIds, followUser, unfollowUser,
       rewards, dismissReward,
+      serverNotifications, markServerNotificationsRead,
       reloadData,
     }}>
       {children}
