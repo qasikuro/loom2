@@ -1,10 +1,15 @@
 import { Icon } from '@/components/Icon';
+import { DiscoverCard } from '@/components/DiscoverCard';
+import { apiFetch, useApp } from '@/context/AppContext';
+import { useColors } from '@/hooks/useColors';
+import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Platform,
   ScrollView,
@@ -16,23 +21,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DiscoverCard } from '@/components/DiscoverCard';
-import { apiFetch, useApp } from '@/context/AppContext';
-import { useColors } from '@/hooks/useColors';
-import { SHADOW } from '@/constants/colors';
+const SCREEN_W = Dimensions.get('window').width;
 
 const TABS = ['For You', 'New', 'Vibes', 'People'] as const;
 type TabType = (typeof TABS)[number];
 
 const VIBES = [
-  { label: 'Soft',        icon: 'feather'  as const, color: '#7B6BAA' },
-  { label: 'Lonely',      icon: 'moon'     as const, color: '#4A6898' },
-  { label: 'Romantic',    icon: 'heart'    as const, color: '#B86098' },
-  { label: 'Chaotic',     icon: 'zap'      as const, color: '#B85830' },
-  { label: 'Peaceful',    icon: 'cloud'    as const, color: '#3888A0' },
-  { label: 'Adventurous', icon: 'wind'     as const, color: '#3A9060' },
-  { label: 'Dreamy',      icon: 'star'     as const, color: '#7A5AB0' },
-  { label: 'Hopeful',     icon: 'sunrise'  as const, color: '#C8903A' },
+  { label: 'Soft',        icon: 'feather'  as const, color: '#9B87C8', dark: '#2D1E4A' },
+  { label: 'Lonely',      icon: 'moon'     as const, color: '#6B8EC8', dark: '#1A2A4A' },
+  { label: 'Romantic',    icon: 'heart'    as const, color: '#C87AA8', dark: '#3A1830' },
+  { label: 'Chaotic',     icon: 'zap'      as const, color: '#C87850', dark: '#3A1A0A' },
+  { label: 'Peaceful',    icon: 'cloud'    as const, color: '#58A0B8', dark: '#0A2A38' },
+  { label: 'Adventurous', icon: 'wind'     as const, color: '#58A878', dark: '#0A2A1A' },
+  { label: 'Dreamy',      icon: 'star'     as const, color: '#9878C8', dark: '#2A1848' },
+  { label: 'Hopeful',     icon: 'sunrise'  as const, color: '#C8A050', dark: '#3A2800' },
 ];
 
 interface UserSearchResult {
@@ -48,15 +50,22 @@ export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser } = useApp();
-  const [activeTab, setActiveTab]       = useState<TabType>('For You');
-  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
-  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
 
-  const [peopleQuery, setPeopleQuery]     = useState('');
+  const [activeTab,     setActiveTab]     = useState<TabType>('For You');
+  const [selectedVibe,  setSelectedVibe]  = useState<string | null>(null);
+  const [peopleQuery,   setPeopleQuery]   = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
+
+  function selectTab(tab: TabType) {
+    setActiveTab(tab);
+    setSelectedVibe(null);
+    Haptics.selectionAsync();
+  }
 
   function handlePeopleSearch(q: string) {
     setPeopleQuery(q);
@@ -75,213 +84,132 @@ export default function DiscoverScreen() {
     }, 400);
   }
 
-  function handleToggleFollow(result: UserSearchResult) {
+  function handleToggleFollow(item: UserSearchResult) {
     Haptics.selectionAsync();
-    const nowFollowing = followingIds.includes(result.userId) || result.isFollowing;
+    const nowFollowing = followingIds.includes(item.userId) || item.isFollowing;
     setPeopleResults(prev =>
-      prev.map(r => r.userId === result.userId ? { ...r, isFollowing: !nowFollowing } : r),
+      prev.map(r => r.userId === item.userId ? { ...r, isFollowing: !nowFollowing } : r),
     );
-    if (nowFollowing) {
-      unfollowUser(result.userId);
-    } else {
-      followUser(result.userId);
-    }
+    if (nowFollowing) unfollowUser(item.userId);
+    else followUser(item.userId);
   }
 
   const newPosts  = [...discoverPosts].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
-
   const vibePosts = selectedVibe
     ? discoverPosts.filter(p => p.vibe === selectedVibe || p.mood === selectedVibe)
     : discoverPosts;
-
   const activePosts =
     activeTab === 'For You' ? discoverPosts :
-    activeTab === 'New'     ? newPosts      :
-    vibePosts;
+    activeTab === 'New'     ? newPosts      : vibePosts;
+
+  const CARD_W = (SCREEN_W - 48) / 2;  // 2 columns with 16px padding each side + 16px gap
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={['#14112E', '#1A1640', '#1E1A48']} style={[styles.headerGrad, { height: topPad + 138 }]} />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
 
-      {/* ── Header ─────────────────────────────────────────────── */}
-      <View style={[styles.header, { paddingTop: topPad + 14 }]}>
-        <View>
-          <Text style={styles.headerTitle}>Discover</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Stories from the sky</Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.iconBtn, { backgroundColor: 'rgba(139,122,181,0.18)', borderColor: 'rgba(139,122,181,0.30)' }]}
-          onPress={() => { setActiveTab('People'); Haptics.selectionAsync(); }}
-          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-        >
-          <Icon name="users" size={18} color="rgba(200,184,232,0.85)" />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Tabs ───────────────────────────────────────────────── */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabsRow}
-        style={styles.tabsScroll}
+      {/* ── Gradient header (in-flow, not absolute) ─────────── */}
+      <LinearGradient
+        colors={['#12102A', '#1A1640', '#1E1B4A']}
+        style={{ paddingTop: topPad }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
       >
-        {TABS.map(tab => {
-          const active = activeTab === tab;
-          return (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => { setActiveTab(tab); setSelectedVibe(null); Haptics.selectionAsync(); }}
-              style={[
-                styles.tab,
-                active
-                  ? { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}40` }
-                  : { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(200,184,232,0.1)' },
-              ]}
-            >
-              <Text style={[styles.tabText, { color: active ? colors.primary : colors.mutedForeground }]}>
-                {tab}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
-
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-      {/* ── People tab ─────────────────────────────────────────── */}
-      {activeTab === 'People' ? (
-        <View style={{ flex: 1 }}>
-          <View style={[styles.searchWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-            <Icon name="search" size={15} color={colors.mutedForeground} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.foreground }]}
-              value={peopleQuery}
-              onChangeText={handlePeopleSearch}
-              placeholder="Search by name or @username…"
-              placeholderTextColor={colors.mutedForeground}
-              autoCorrect={false}
-              autoCapitalize="none"
-              returnKeyType="search"
-            />
-            {peopleLoading && <ActivityIndicator size="small" color={colors.primary} />}
-            {!peopleLoading && peopleQuery.length > 0 && (
-              <TouchableOpacity onPress={() => { setPeopleQuery(''); setPeopleResults([]); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Icon name="x" size={14} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            )}
+        {/* Title row */}
+        <View style={styles.headerRow}>
+          <View style={styles.headerText}>
+            <Text style={styles.headerTitle}>Discover</Text>
+            <Text style={styles.headerSub}>Stories from the sky</Text>
           </View>
+          <TouchableOpacity
+            style={styles.usersBtn}
+            onPress={() => selectTab('People')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="users" size={18} color="rgba(200,184,232,0.85)" />
+          </TouchableOpacity>
+        </View>
 
-          {peopleQuery.length < 2 ? (
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
-                <Icon name="users" size={28} color={`${colors.primary}70`} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Find Sky Friends</Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                Search by name or @handle to find other wanderers and follow their stories.
-              </Text>
-            </View>
-          ) : peopleResults.length === 0 && !peopleLoading ? (
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
-                <Icon name="search" size={28} color={`${colors.primary}70`} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No wanderers found</Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                Try a different name or username.
-              </Text>
-            </View>
-          ) : (
-            <FlatList
-              data={peopleResults}
-              keyExtractor={r => r.userId}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => {
-                const isFollowing = followingIds.includes(item.userId) || item.isFollowing;
-                return (
-                  <TouchableOpacity
-                    style={[styles.userCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
-                    onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.userId } } as any)}
-                    activeOpacity={0.88}
-                  >
-                    <View style={[styles.userAvatar, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
-                      <Text style={[styles.userAvatarText, { color: colors.primary }]}>
-                        {item.name.charAt(0).toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={styles.userInfo}>
-                      <Text style={[styles.userName, { color: colors.foreground }]} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      {item.username ? (
-                        <Text style={[styles.userHandle, { color: colors.primary }]}>@{item.username}</Text>
-                      ) : null}
-                      {item.bio ? (
-                        <Text style={[styles.userBio, { color: colors.mutedForeground }]} numberOfLines={1}>
-                          {item.bio}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <TouchableOpacity
-                      style={[
-                        styles.followBtn,
-                        isFollowing
-                          ? { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }
-                          : { backgroundColor: colors.primary, borderColor: colors.primary },
-                      ]}
-                      onPress={() => handleToggleFollow(item)}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={[
-                        styles.followBtnText,
-                        { color: isFollowing ? colors.primary : '#fff' },
-                      ]}>
-                        {isFollowing ? 'Following' : 'Follow'}
-                      </Text>
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                );
-              }}
+        {/* Tab pills row */}
+        <View style={styles.tabsRow}>
+          {TABS.map(tab => {
+            const active = activeTab === tab;
+            return (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => selectTab(tab)}
+                style={[
+                  styles.tabPill,
+                  active
+                    ? { backgroundColor: 'rgba(120,86,255,0.28)', borderColor: 'rgba(120,86,255,0.55)' }
+                    : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.14)' },
+                ]}
+                activeOpacity={0.75}
+              >
+                <Text style={[
+                  styles.tabText,
+                  { color: active ? '#C8B8F8' : 'rgba(200,184,232,0.55)' },
+                ]}>
+                  {tab}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </LinearGradient>
+
+      {/* Thin separator */}
+      <View style={[styles.sep, { backgroundColor: colors.border }]} />
+
+      {/* ── For You / New ──────────────────────────────────── */}
+      {(activeTab === 'For You' || activeTab === 'New') && (
+        <FlatList
+          key={activeTab}
+          data={activePosts}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => (
+            <DiscoverCard
+              post={item}
+              onPress={() => router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
+              onSave={() => toggleSavePost(item.id)}
+              onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
             />
           )}
-        </View>
+          contentContainerStyle={[styles.listPad, { paddingBottom: bottomPad }]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <EmptyFeed
+              tab={activeTab}
+              colors={colors}
+              onCreatePress={() => router.push('/(tabs)/create')}
+            />
+          }
+        />
+      )}
 
-      /* ── Vibes tab ─────────────────────────────────────────────── */
-      ) : activeTab === 'Vibes' ? (
+      {/* ── Vibes ─────────────────────────────────────────── */}
+      {activeTab === 'Vibes' && (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.vibesContent, { paddingBottom: bottomPad }]}
+          contentContainerStyle={[styles.vibesScroll, { paddingBottom: bottomPad }]}
         >
           {selectedVibe ? (
             <>
               <TouchableOpacity
+                style={[styles.backRow, { backgroundColor: colors.muted, borderColor: colors.border }]}
                 onPress={() => setSelectedVibe(null)}
-                style={[styles.backBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
               >
-                <Icon name="arrow-left" size={15} color={colors.foreground} />
+                <Icon name="arrow-left" size={14} color={colors.foreground} />
                 <Text style={[styles.backText, { color: colors.foreground }]}>{selectedVibe}</Text>
               </TouchableOpacity>
+
               {vibePosts.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
-                    <Icon name="compass" size={28} color={`${colors.primary}70`} />
-                  </View>
-                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Sky is quiet here</Text>
-                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                    No public {selectedVibe} stories yet.
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
-                    onPress={() => router.push('/(tabs)/create')}
-                    activeOpacity={0.85}
-                  >
-                    <Icon name="plus" size={15} color="#fff" />
-                    <Text style={styles.ctaBtnText}>Share a Story</Text>
-                  </TouchableOpacity>
-                </View>
+                <EmptyVibes
+                  vibe={selectedVibe}
+                  colors={colors}
+                  onCreatePress={() => router.push('/(tabs)/create')}
+                />
               ) : vibePosts.map(post => (
                 <DiscoverCard
                   key={post.id}
@@ -293,24 +221,32 @@ export default function DiscoverScreen() {
             </>
           ) : (
             <>
-              <Text style={[styles.vibesSubtitle, { color: colors.mutedForeground }]}>
+              <Text style={[styles.vibeHint, { color: colors.mutedForeground }]}>
                 Find stories that match your mood
               </Text>
-              <View style={styles.vibesGrid}>
+              <View style={styles.vibeGrid}>
                 {VIBES.map(vibe => {
                   const count = discoverPosts.filter(p => p.mood === vibe.label || p.vibe === vibe.label).length;
                   return (
                     <TouchableOpacity
                       key={vibe.label}
-                      style={[styles.vibeCard, { backgroundColor: `${vibe.color}18`, borderColor: `${vibe.color}35` }, SHADOW.xs]}
-                      onPress={() => setSelectedVibe(vibe.label)}
+                      style={[styles.vibeCard, { width: CARD_W, borderColor: `${vibe.color}35` }]}
+                      onPress={() => { setSelectedVibe(vibe.label); Haptics.selectionAsync(); }}
                       activeOpacity={0.85}
                     >
-                      <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}22` }]}>
+                      <LinearGradient
+                        colors={[`${vibe.color}22`, `${vibe.color}08`]}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0.1, y: 0 }}
+                        end={{ x: 0.9, y: 1 }}
+                      />
+                      <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}28` }]}>
                         <Icon name={vibe.icon} size={22} color={vibe.color} />
                       </View>
                       <Text style={[styles.vibeLabel, { color: vibe.color }]}>{vibe.label}</Text>
-                      <Text style={[styles.vibeCount, { color: `${vibe.color}80` }]}>{count} stories</Text>
+                      <Text style={[styles.vibeCount, { color: `${vibe.color}70` }]}>
+                        {count} {count === 1 ? 'story' : 'stories'}
+                      </Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -318,159 +254,341 @@ export default function DiscoverScreen() {
             </>
           )}
         </ScrollView>
+      )}
 
-      /* ── For You / New tabs ─────────────────────────────────────── */
-      ) : (
-        <FlatList
-          data={activePosts}
-          keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <DiscoverCard
-              post={item}
-              onPress={() => router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
-              onSave={() => toggleSavePost(item.id)}
-              onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
+      {/* ── People ─────────────────────────────────────────── */}
+      {activeTab === 'People' && (
+        <View style={styles.peopleRoot}>
+          {/* Search bar */}
+          <View style={[styles.searchBar, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <Icon name="search" size={15} color={colors.mutedForeground} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.foreground }]}
+              value={peopleQuery}
+              onChangeText={handlePeopleSearch}
+              placeholder="Search by name or @username…"
+              placeholderTextColor={colors.mutedForeground}
+              autoCorrect={false}
+              autoCapitalize="none"
+              returnKeyType="search"
+            />
+            {peopleLoading && (
+              <ActivityIndicator size="small" color={colors.primary} />
+            )}
+            {!peopleLoading && peopleQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => { setPeopleQuery(''); setPeopleResults([]); }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="x" size={14} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Results / empty states */}
+          {peopleQuery.length < 2 ? (
+            <PeopleEmptyStart colors={colors} />
+          ) : peopleResults.length === 0 && !peopleLoading ? (
+            <PeopleNoResults colors={colors} />
+          ) : (
+            <FlatList
+              data={peopleResults}
+              keyExtractor={r => r.userId}
+              contentContainerStyle={[styles.peopleList, { paddingBottom: bottomPad }]}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const isFollowing = followingIds.includes(item.userId) || item.isFollowing;
+                return (
+                  <TouchableOpacity
+                    style={[styles.personCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                    onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.userId } } as any)}
+                    activeOpacity={0.88}
+                  >
+                    <View style={[styles.personAvatar, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}35` }]}>
+                      <Text style={[styles.personInitial, { color: colors.primary }]}>
+                        {item.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+
+                    <View style={styles.personInfo}>
+                      <Text style={[styles.personName, { color: colors.foreground }]} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      {item.username ? (
+                        <Text style={[styles.personHandle, { color: colors.primary }]}>
+                          @{item.username}
+                        </Text>
+                      ) : null}
+                      {item.bio ? (
+                        <Text style={[styles.personBio, { color: colors.mutedForeground }]} numberOfLines={2}>
+                          {item.bio}
+                        </Text>
+                      ) : null}
+                    </View>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.followBtn,
+                        isFollowing
+                          ? { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}35` }
+                          : { backgroundColor: colors.primary, borderColor: colors.primary },
+                      ]}
+                      onPress={() => handleToggleFollow(item)}
+                      activeOpacity={0.8}
+                    >
+                      <Icon
+                        name={isFollowing ? 'user-check' : 'user-plus'}
+                        size={13}
+                        color={isFollowing ? colors.primary : '#fff'}
+                      />
+                      <Text style={[styles.followBtnText, { color: isFollowing ? colors.primary : '#fff' }]}>
+                        {isFollowing ? 'Following' : 'Follow'}
+                      </Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              }}
             />
           )}
-          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPad }]}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}12` }]}>
-                <Icon name="compass" size={28} color={`${colors.primary}70`} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>The sky is quiet</Text>
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                {activeTab === 'For You'
-                  ? 'Follow other wanderers to see their stories here.'
-                  : 'No public stories yet. Be the first to share one.'}
-              </Text>
-              <TouchableOpacity
-                style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push('/(tabs)/create')}
-                activeOpacity={0.85}
-              >
-                <Icon name="plus" size={15} color="#fff" />
-                <Text style={styles.ctaBtnText}>Share a Story</Text>
-              </TouchableOpacity>
-            </View>
-          }
-        />
+        </View>
       )}
     </View>
   );
 }
 
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function EmptyFeed({ tab, colors, onCreatePress }: { tab: string; colors: any; onCreatePress: () => void }) {
+  return (
+    <View style={styles.emptyWrap}>
+      <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
+        <Icon name="compass" size={30} color={`${colors.primary}70`} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>The sky is quiet</Text>
+      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
+        {tab === 'For You'
+          ? 'Follow other wanderers to see their stories here first.'
+          : 'No public stories yet. Be the first to share one.'}
+      </Text>
+      <TouchableOpacity
+        style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+        onPress={onCreatePress}
+        activeOpacity={0.85}
+      >
+        <Icon name="plus" size={14} color="#fff" />
+        <Text style={styles.ctaBtnText}>Share a Story</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function EmptyVibes({ vibe, colors, onCreatePress }: { vibe: string; colors: any; onCreatePress: () => void }) {
+  return (
+    <View style={styles.emptyWrap}>
+      <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
+        <Icon name="compass" size={30} color={`${colors.primary}70`} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Sky is quiet here</Text>
+      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
+        No public {vibe} stories yet. Be the first.
+      </Text>
+      <TouchableOpacity
+        style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
+        onPress={onCreatePress}
+        activeOpacity={0.85}
+      >
+        <Icon name="plus" size={14} color="#fff" />
+        <Text style={styles.ctaBtnText}>Share a Story</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function PeopleEmptyStart({ colors }: { colors: any }) {
+  return (
+    <View style={styles.emptyWrap}>
+      <View style={[styles.emptyStarRing, { borderColor: `${colors.primary}28` }]}>
+        <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}14` }]}>
+          <Icon name="users" size={30} color={`${colors.primary}70`} />
+        </View>
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Find Sky Friends</Text>
+      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
+        Search by name or @handle to find wanderers and follow their sky stories.
+      </Text>
+      <View style={[styles.searchHint, { borderColor: `${colors.primary}22`, backgroundColor: `${colors.primary}08` }]}>
+        <Icon name="search" size={12} color={`${colors.primary}70`} />
+        <Text style={[styles.searchHintText, { color: `${colors.primary}90` }]}>
+          Try searching "sky" or any @username
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function PeopleNoResults({ colors }: { colors: any }) {
+  return (
+    <View style={styles.emptyWrap}>
+      <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
+        <Icon name="search" size={30} color={`${colors.primary}70`} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No wanderers found</Text>
+      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
+        Try a different name or username.
+      </Text>
+    </View>
+  );
+}
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container:   { flex: 1 },
-  headerGrad:  { position: 'absolute', top: 0, left: 0, right: 0 },
+  root: { flex: 1 },
 
-  header: {
-    flexDirection: 'row', alignItems: 'flex-start',
+  // Header
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingBottom: 12,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 14,
   },
+  headerText:  { flex: 1, gap: 3 },
   headerTitle: {
-    fontSize: 28, fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.7, color: 'rgba(235,228,255,0.97)',
+    fontSize: 30, fontFamily: 'Inter_700Bold',
+    letterSpacing: -0.8, color: 'rgba(235,228,255,0.97)',
   },
-  headerSub: { fontSize: 13, fontFamily: 'Inter_400Regular', marginTop: 3 },
-
-  iconBtn: {
-    width: 44, height: 44, borderRadius: 15,
+  headerSub: {
+    fontSize: 13, fontFamily: 'Inter_400Regular',
+    color: 'rgba(200,184,232,0.55)',
+  },
+  usersBtn: {
+    width: 44, height: 44, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, marginTop: 2,
+    backgroundColor: 'rgba(120,86,255,0.15)',
+    borderWidth: 1, borderColor: 'rgba(120,86,255,0.28)',
+    marginTop: 2,
   },
 
-  tabsScroll: { flexShrink: 0 },
+  // Tabs
   tabsRow: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10,
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    gap: 8,
   },
-  tab: {
-    paddingHorizontal: 18, paddingVertical: 10,
-    borderRadius: 24, borderWidth: 1,
-    minHeight: 40,
+  tabPill: {
+    paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: 22, borderWidth: 1,
   },
   tabText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1 },
 
-  divider: { height: 1, marginBottom: 2 },
+  sep: { height: StyleSheet.hairlineWidth },
 
-  listContent: { paddingHorizontal: 16, paddingTop: 16 },
-
-  // People tab
-  searchWrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    margin: 16, borderRadius: 14, borderWidth: 1,
-    paddingHorizontal: 14, paddingVertical: 12,
-  },
-  searchInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular' },
-
-  userCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderRadius: 16, borderWidth: 1, padding: 14, marginBottom: 10,
-  },
-  userAvatar: {
-    width: 48, height: 48, borderRadius: 24,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, flexShrink: 0,
-  },
-  userAvatarText: { fontSize: 19, fontFamily: 'Inter_700Bold' },
-  userInfo:    { flex: 1, gap: 2 },
-  userName:    { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  userHandle:  { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  userBio:     { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
-  followBtn: {
-    paddingHorizontal: 16, height: 36,
-    borderRadius: 20, borderWidth: 1.5,
-    flexShrink: 0, alignItems: 'center', justifyContent: 'center',
-  },
-  followBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  // Feed list
+  listPad: { paddingHorizontal: 16, paddingTop: 14 },
 
   // Vibes
-  vibesContent: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
-  vibesSubtitle: {
+  vibesScroll: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
+  vibeHint: {
     fontSize: 13, fontFamily: 'Inter_400Regular',
-    fontStyle: 'italic', color: 'rgba(200,184,232,0.6)',
+    fontStyle: 'italic', textAlign: 'center',
+    paddingBottom: 4,
   },
-  vibesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  vibeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 12,
+  },
   vibeCard: {
-    width: '48%', borderRadius: 22, borderWidth: 1,
-    padding: 18, gap: 10, minHeight: 134, justifyContent: 'center',
+    borderRadius: 22, borderWidth: 1,
+    padding: 18, gap: 8,
+    minHeight: 128,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
   },
   vibeIconWrap: {
-    width: 48, height: 48, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center', alignSelf: 'flex-start',
+    width: 46, height: 46, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 4,
   },
-  vibeLabel: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.2 },
+  vibeLabel: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
   vibeCount: { fontSize: 11, fontFamily: 'Inter_400Regular' },
 
-  backBtn: {
+  backRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 22, borderWidth: 1, marginBottom: 4,
+    borderRadius: 22, borderWidth: 1, marginBottom: 6,
   },
   backText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
 
-  // Empty state
-  emptyState: {
-    alignItems: 'center', paddingTop: 64, paddingHorizontal: 40, gap: 12,
+  // People
+  peopleRoot: { flex: 1 },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    margin: 16, borderRadius: 16, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 13,
   },
-  emptyIcon: {
+  searchInput: {
+    flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular',
+    paddingVertical: 0,
+  },
+  peopleList: { paddingHorizontal: 16, gap: 10 },
+  personCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 18, borderWidth: 1,
+    padding: 14,
+  },
+  personAvatar: {
+    width: 50, height: 50, borderRadius: 25,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, flexShrink: 0,
+  },
+  personInitial:  { fontSize: 20, fontFamily: 'Inter_700Bold' },
+  personInfo:     { flex: 1, gap: 3 },
+  personName:     { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
+  personHandle:   { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  personBio:      { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 16 },
+  followBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, height: 36,
+    borderRadius: 18, borderWidth: 1.5,
+    flexShrink: 0,
+  },
+  followBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+
+  // Empty states
+  emptyWrap: {
+    alignItems: 'center', paddingTop: 60,
+    paddingHorizontal: 36, gap: 12,
+  },
+  emptyStarRing: {
+    width: 96, height: 96, borderRadius: 48,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, marginBottom: 4,
+  },
+  emptyIconBox: {
     width: 72, height: 72, borderRadius: 24,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+    alignItems: 'center', justifyContent: 'center',
   },
-  emptyTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.3 },
-  emptyText: {
+  emptyTitle: { fontSize: 19, fontFamily: 'Inter_700Bold', letterSpacing: -0.4 },
+  emptyBody:  {
     fontSize: 14, fontFamily: 'Inter_400Regular',
     fontStyle: 'italic', textAlign: 'center', lineHeight: 21,
   },
+  searchHint: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 12, borderWidth: 1, marginTop: 4,
+  },
+  searchHintText: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
 
-  // Primary CTA button
   ctaBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 24, height: 48, borderRadius: 24,
-    marginTop: 8,
+    marginTop: 6,
   },
   ctaBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' },
 });
