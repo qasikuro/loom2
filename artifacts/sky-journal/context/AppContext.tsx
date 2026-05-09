@@ -134,6 +134,7 @@ export interface DiscoverPost {
   witnessedCount: number;
   savedCount:     number;
   timeAgo:        string;
+  date:           string;
   chapterNumber:  number;
   vibe:           string;
   saved:          boolean;
@@ -280,6 +281,7 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
     witnessedCount: raw.witnessedCount ?? 0,
     savedCount:     raw.savedCount ?? 0,
     timeAgo:        relativeTimeDiscover(raw.date ?? raw.createdAt ?? new Date().toISOString()),
+    date:           raw.date ?? raw.createdAt ?? new Date().toISOString(),
     chapterNumber:  raw.chapterNumber ?? 1,
     vibe:           raw.mood ?? 'Hopeful',
     panels:         Array.isArray(raw.panels) ? raw.panels.map((p: any) => ({
@@ -287,6 +289,8 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
       imageUri: p.imageUri ?? undefined,
       overlays: Array.isArray(p.overlays) ? p.overlays : undefined,
     })) : [],
+    pages:          Array.isArray(raw.pages) ? raw.pages : undefined,
+    pageLayoutKey:  raw.pageLayoutKey ?? undefined,
   };
 }
 

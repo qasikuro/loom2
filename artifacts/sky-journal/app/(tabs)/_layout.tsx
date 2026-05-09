@@ -13,8 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/Icon';
 
-const PURPLE     = '#8B7AB5';
-const TAB_BAR_BG = '#1A1738';
+const PURPLE     = '#7856FF';
+const TAB_BAR_BG = '#0E0B1E';
 const INACTIVE   = 'rgba(200,184,232,0.42)';
 const BAR_HEIGHT = 64;
 const BTN_SIZE   = 54;
@@ -192,7 +192,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   loader: {
     flex: 1,
-    backgroundColor: '#1A1630',
+    backgroundColor: '#080714',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   iconWrapActive: {
-    backgroundColor: 'rgba(139,122,181,0.22)',
+    backgroundColor: 'rgba(120,86,255,0.22)',
   },
 
   createBtn: {

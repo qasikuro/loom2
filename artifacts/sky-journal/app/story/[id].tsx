@@ -5,7 +5,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-  Dimensions,
   Image,
   Platform,
   ScrollView,
@@ -13,11 +12,12 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MoodBadge } from '@/components/MoodBadge';
-import { useApp } from '@/context/AppContext';
+import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import type { PanelOverlay } from '@/context/AppContext';
 
@@ -40,9 +40,7 @@ const LAYOUTS: LayoutDef[] = [
   { key: '5b', count: 5, rows: [[1, 1, 1], [1, 1]] },
 ];
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const GUTTER   = 3;
-const PAGE_H   = SCREEN_W * 1.33;   // portrait manga page aspect ratio
+const GUTTER = 3;
 
 function getLayout(key?: string): LayoutDef {
   return LAYOUTS.find(l => l.key === key) ?? LAYOUTS[0];
@@ -185,25 +183,28 @@ function MangaPage({
   gradient,
   pageNum,
   totalPages,
+  screenW,
 }: {
   panels:     (CellPanel | undefined)[];
   layout:     LayoutDef;
   gradient:   [string, string, string];
   pageNum:    number;
   totalPages: number;
+  screenW:    number;
 }) {
+  const pageH   = screenW * 1.33;
   const numRows = layout.rows.length;
-  const rowH    = (PAGE_H - (numRows - 1) * GUTTER) / numRows;
+  const rowH    = (pageH - (numRows - 1) * GUTTER) / numRows;
 
   let cellIdx = 0;
 
   return (
-    <View style={[styles.page, { height: PAGE_H }]}>
+    <View style={[styles.page, { height: pageH }]}>
       {layout.rows.map((cols, ri) => {
         const totalFlex = cols.reduce((a, b) => a + b, 0);
         const rowCells  = cols.map((flex, ci) => {
           const idx   = cellIdx++;
-          const cellW = (SCREEN_W - (cols.length - 1) * GUTTER) * (flex / totalFlex);
+          const cellW = (screenW - (cols.length - 1) * GUTTER) * (flex / totalFlex);
           return (
             <View key={ci} style={{ width: cellW, height: rowH }}>
               <PanelCell
@@ -240,6 +241,7 @@ export default function StoryScreen() {
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
   const { stories, discoverPosts, toggleSavePost, deleteStory } = useApp();
 
+  const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -297,6 +299,7 @@ export default function StoryScreen() {
     if (!witnessed) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setWitnessed(true);
+      apiFetch(`/stories/${id}/witness`, { method: 'POST' }).catch(() => null);
     }
   }
 
@@ -394,6 +397,7 @@ export default function StoryScreen() {
                 gradient={gradient}
                 pageNum={pi + 1}
                 totalPages={renderPages.length}
+                screenW={screenW}
               />
             );
           })}
@@ -486,7 +490,7 @@ const styles = StyleSheet.create({
 
   pagesWrap: { backgroundColor: '#0D0B1A', gap: 16, paddingTop: 8, paddingBottom: 8 },
 
-  page:    { width: SCREEN_W, overflow: 'hidden', backgroundColor: '#0D0B1A' },
+  page:    { width: '100%', overflow: 'hidden', backgroundColor: '#0D0B1A' },
   pageRow: { flexDirection: 'row', gap: GUTTER },
 
   pageNumBadge: {

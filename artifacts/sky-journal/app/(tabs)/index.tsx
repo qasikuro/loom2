@@ -5,7 +5,6 @@ import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   Image,
   Modal,
@@ -16,6 +15,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -87,9 +87,8 @@ const SPARKLES = [
   { t: 22, r: 140, s: 4, o: 0.38 },
 ] as const;
 
-const SW = Dimensions.get('window').width;
-
 export default function HomeScreen() {
+  const { width: screenW } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const {
     character, journalEntries, stories, rewards, dismissReward,
@@ -316,7 +315,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Character Hero ─────────────────────────────────── */}
-        <View style={[styles.charHero, { height: Math.round(SW * 0.72) }]}>
+        <View style={[styles.charHero, { height: Math.round(screenW * 0.72) }]}>
           {/* Background gradient */}
           <LinearGradient
             colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}
@@ -624,7 +623,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#0F0D1E' },
+  root: { flex: 1, backgroundColor: '#080714' },
 
   headerGrad: { position: 'relative', overflow: 'hidden' },
   star:       { position: 'absolute', borderRadius: 99, backgroundColor: 'rgba(220,210,255,1)' },

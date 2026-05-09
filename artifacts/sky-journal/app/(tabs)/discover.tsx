@@ -89,7 +89,7 @@ export default function DiscoverScreen() {
   }
 
   const newPosts  = [...discoverPosts].sort((a, b) =>
-    new Date(b.timeAgo).getTime() - new Date(a.timeAgo).getTime()
+    new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
   const vibePosts = selectedVibe
