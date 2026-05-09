@@ -6,7 +6,7 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
-import { ClerkProvider, ClerkLoaded, useAuth } from '@clerk/expo';
+import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import * as Font from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -101,7 +101,6 @@ export default function RootLayout() {
         {/* App content — rendered immediately so Clerk/Router load in background */}
         {fontsReady && (
           <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-            <ClerkLoaded>
               <SafeAreaProvider>
                 <ErrorBoundary>
                   <QueryClientProvider client={queryClient}>
@@ -156,7 +155,6 @@ export default function RootLayout() {
                   </QueryClientProvider>
                 </ErrorBoundary>
               </SafeAreaProvider>
-            </ClerkLoaded>
           </ClerkProvider>
         )}
 
