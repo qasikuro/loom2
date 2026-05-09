@@ -1,5 +1,5 @@
 import { Icon } from '@/components/Icon';
-import { useSignUp } from '@clerk/expo/legacy';
+import { useSignUp } from '@clerk/expo';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
