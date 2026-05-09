@@ -21,7 +21,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+
+function ThemedRoot({ children }: { children: React.ReactNode }) {
+  const { isDark } = useTheme();
+  return (
+    <View style={{ flex: 1, backgroundColor: isDark ? '#080714' : '#F5F2FF' }}>
+      {children}
+    </View>
+  );
+}
 
 // Keep the native splash visible until we're ready to show our custom one
 SplashScreen.preventAutoHideAsync();
@@ -87,71 +96,71 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#080714' }}>
-      {/* App content — rendered immediately so Clerk/Router load in background */}
-      {fontsReady && (
-        <ThemeProvider>
-        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
-          <ClerkLoaded>
-            <SafeAreaProvider>
-              <ErrorBoundary>
-                <QueryClientProvider client={queryClient}>
-                  <AppProvider>
-                    <AuthTokenBridge />
-                    <AuthNavigator />
-                    <GestureHandlerRootView style={{ flex: 1 }}>
-                      <KeyboardProvider>
-                        <Stack screenOptions={{ headerShown: false }}>
-                          <Stack.Screen name="(auth)" />
-                          <Stack.Screen name="(tabs)" />
-                          <Stack.Screen
-                            name="story/[id]"
-                            options={{ presentation: 'card', animation: 'slide_from_bottom' }}
-                          />
-                          <Stack.Screen
-                            name="create-journal-entry"
-                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                          />
-                          <Stack.Screen
-                            name="create-friend-log"
-                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                          />
-                          <Stack.Screen
-                            name="create-moment-log"
-                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                          />
-                          <Stack.Screen
-                            name="create-outfit"
-                            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
-                          />
-                          <Stack.Screen
-                            name="panel-editor"
-                            options={{ presentation: 'card', animation: 'slide_from_right' }}
-                          />
-                          <Stack.Screen
-                            name="my-stories"
-                            options={{ presentation: 'card', animation: 'slide_from_right' }}
-                          />
-                          <Stack.Screen
-                            name="wardrobe"
-                            options={{ presentation: 'card', animation: 'slide_from_right' }}
-                          />
-                        </Stack>
-                      </KeyboardProvider>
-                    </GestureHandlerRootView>
-                  </AppProvider>
-                </QueryClientProvider>
-              </ErrorBoundary>
-            </SafeAreaProvider>
-          </ClerkLoaded>
-        </ClerkProvider>
-        </ThemeProvider>
-      )}
+    <ThemeProvider>
+      <ThemedRoot>
+        {/* App content — rendered immediately so Clerk/Router load in background */}
+        {fontsReady && (
+          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+            <ClerkLoaded>
+              <SafeAreaProvider>
+                <ErrorBoundary>
+                  <QueryClientProvider client={queryClient}>
+                    <AppProvider>
+                      <AuthTokenBridge />
+                      <AuthNavigator />
+                      <GestureHandlerRootView style={{ flex: 1 }}>
+                        <KeyboardProvider>
+                          <Stack screenOptions={{ headerShown: false }}>
+                            <Stack.Screen name="(auth)" />
+                            <Stack.Screen name="(tabs)" />
+                            <Stack.Screen
+                              name="story/[id]"
+                              options={{ presentation: 'card', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="create-journal-entry"
+                              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="create-friend-log"
+                              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="create-moment-log"
+                              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="create-outfit"
+                              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="panel-editor"
+                              options={{ presentation: 'card', animation: 'slide_from_right' }}
+                            />
+                            <Stack.Screen
+                              name="my-stories"
+                              options={{ presentation: 'card', animation: 'slide_from_right' }}
+                            />
+                            <Stack.Screen
+                              name="wardrobe"
+                              options={{ presentation: 'card', animation: 'slide_from_right' }}
+                            />
+                          </Stack>
+                        </KeyboardProvider>
+                      </GestureHandlerRootView>
+                    </AppProvider>
+                  </QueryClientProvider>
+                </ErrorBoundary>
+              </SafeAreaProvider>
+            </ClerkLoaded>
+          </ClerkProvider>
+        )}
 
-      {/* Custom splash — overlays everything, fades out when ready */}
-      {!splashDone && (
-        <AppSplashScreen onReady={handleSplashReady} />
-      )}
-    </View>
+        {/* Custom splash — overlays everything, fades out when ready */}
+        {!splashDone && (
+          <AppSplashScreen onReady={handleSplashReady} />
+        )}
+      </ThemedRoot>
+    </ThemeProvider>
   );
 }

@@ -232,7 +232,7 @@ export default function HomeScreen() {
   });
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
 
       {/* ── Dark navy header ──────────────────────────────────── */}
       <LinearGradient
@@ -277,18 +277,18 @@ export default function HomeScreen() {
 
           <View style={styles.headerIcons}>
             <TouchableOpacity
-              style={styles.headerIconBtn}
+              style={[styles.headerIconBtn, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(200,184,232,0.18)' }]}
               onPress={() => router.push('/(tabs)/profile')}
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             >
-              <Icon name="settings" size={18} color="rgba(200,184,232,0.80)" />
+              <Icon name="settings" size={18} color="rgba(220,210,255,0.85)" />
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.headerIconBtn}
+              style={[styles.headerIconBtn, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(200,184,232,0.18)' }]}
               onPress={() => { setShowNotifs(true); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
             >
-              <Icon name="bell" size={18} color="rgba(200,184,232,0.80)" />
+              <Icon name="bell" size={18} color="rgba(220,210,255,0.85)" />
               {hasNotifs && <View style={styles.notifDot} />}
             </TouchableOpacity>
           </View>
@@ -399,38 +399,38 @@ export default function HomeScreen() {
         {/* Character info card — animated fade-in */}
         <Animated.View style={{ opacity: infoCardAnim }}>
           <TouchableOpacity
-            style={[styles.charInfoCard, SHADOW.sm]}
+            style={[styles.charInfoCard, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={() => router.push('/(tabs)/profile')}
             activeOpacity={0.86}
           >
             <View style={styles.charInfoLeft}>
               <View style={styles.charNameRow}>
-                <Text style={styles.charInfoName}>{character.name || 'Sky Child'}</Text>
-                <Text style={styles.charInfoStar}>✦</Text>
+                <Text style={[styles.charInfoName, { color: colors.foreground }]}>{character.name || 'Sky Child'}</Text>
+                <Text style={[styles.charInfoStar, { color: colors.gold }]}>✦</Text>
               </View>
               {character.bio
-                ? <Text style={styles.charInfoBio} numberOfLines={2}>{character.bio}</Text>
-                : <Text style={styles.charInfoBioEmpty}>Tap to set your character bio...</Text>
+                ? <Text style={[styles.charInfoBio, { color: colors.mutedForeground }]} numberOfLines={2}>{character.bio}</Text>
+                : <Text style={[styles.charInfoBioEmpty, { color: `${colors.mutedForeground}80` }]}>Tap to set your character bio...</Text>
               }
               {character.traits.length > 0 && (
                 <View style={styles.charInfoTraits}>
                   {character.traits.slice(0, 4).map(t => (
-                    <View key={t} style={styles.charInfoTrait}>
-                      <Text style={styles.charInfoTraitText}>{t}</Text>
+                    <View key={t} style={[styles.charInfoTrait, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
+                      <Text style={[styles.charInfoTraitText, { color: colors.primary }]}>{t}</Text>
                     </View>
                   ))}
                 </View>
               )}
             </View>
             <View style={styles.charInfoRight}>
-              <Text style={styles.charInfoCta}>Edit</Text>
-              <Icon name="chevron-right" size={14} color="rgba(139,122,181,0.7)" />
+              <Text style={[styles.charInfoCta, { color: colors.primary }]}>Edit</Text>
+              <Icon name="chevron-right" size={14} color={`${colors.primary}80`} />
             </View>
           </TouchableOpacity>
         </Animated.View>
 
         {/* Section label */}
-        <Text style={styles.sectionLabel}>Where would you like to go?</Text>
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Where would you like to go?</Text>
 
         {/* ── Animated navigation cards ──────────────────────── */}
         <View style={styles.hList}>
@@ -483,49 +483,49 @@ export default function HomeScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowOutfitPicker(false)}>
           <Pressable
-            style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24 }]}
+            style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24, backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={e => e.stopPropagation()}
           >
-            <View style={styles.sheetHandle} />
+            <View style={[styles.sheetHandle, { backgroundColor: `${colors.primary}30` }]} />
             <View style={styles.pickerHeader}>
-              <Text style={styles.pickerTitle}>Choose Display Outfit</Text>
+              <Text style={[styles.pickerTitle, { color: colors.foreground }]}>Choose Display Outfit</Text>
               <TouchableOpacity
-                style={styles.closeBtn}
+                style={[styles.closeBtn, { backgroundColor: colors.muted }]}
                 onPress={() => setShowOutfitPicker(false)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Icon name="x" size={16} color="rgba(200,184,232,0.6)" />
+                <Icon name="x" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.pickerSub}>Selected outfit shows on your home & profile</Text>
+            <Text style={[styles.pickerSub, { color: colors.mutedForeground }]}>Selected outfit shows on your home & profile</Text>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerRow}>
               <TouchableOpacity
-                style={[styles.pickerCard, !activeOutfitId && styles.pickerCardActive]}
+                style={[styles.pickerCard, !activeOutfitId && { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}40` }]}
                 onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(null); setShowOutfitPicker(false); }}
               >
-                <View style={[styles.pickerCardImg, styles.pickerCardNone]}>
-                  <Icon name="slash" size={22} color="rgba(200,184,232,0.45)" />
+                <View style={[styles.pickerCardImg, { backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}>
+                  <Icon name="slash" size={22} color={colors.mutedForeground} />
                 </View>
-                <Text style={styles.pickerCardName}>None</Text>
+                <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]}>None</Text>
                 {!activeOutfitId && (
-                  <View style={styles.pickerActiveDot}><Icon name="check" size={10} color="#fff" /></View>
+                  <View style={[styles.pickerActiveDot, { backgroundColor: colors.primary }]}><Icon name="check" size={10} color="#fff" /></View>
                 )}
               </TouchableOpacity>
 
               {outfits.map(outfit => (
                 <TouchableOpacity
                   key={outfit.id}
-                  style={[styles.pickerCard, activeOutfitId === outfit.id && styles.pickerCardActive]}
+                  style={[styles.pickerCard, activeOutfitId === outfit.id && { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}40` }]}
                   onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(outfit.id); setShowOutfitPicker(false); }}
                 >
                   {outfit.imageUri
                     ? <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} resizeMode="cover" />
-                    : <View style={[styles.pickerCardImg, styles.pickerCardNoImg]}><Icon name="star" size={22} color="rgba(139,122,181,0.45)" /></View>
+                    : <View style={[styles.pickerCardImg, { backgroundColor: `${colors.primary}12`, alignItems: 'center', justifyContent: 'center' }]}><Icon name="star" size={22} color={`${colors.primary}60`} /></View>
                   }
-                  <Text style={styles.pickerCardName} numberOfLines={1}>{outfit.name}</Text>
+                  <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]} numberOfLines={1}>{outfit.name}</Text>
                   {activeOutfitId === outfit.id && (
-                    <View style={styles.pickerActiveDot}><Icon name="check" size={10} color="#fff" /></View>
+                    <View style={[styles.pickerActiveDot, { backgroundColor: colors.primary }]}><Icon name="check" size={10} color="#fff" /></View>
                   )}
                 </TouchableOpacity>
               ))}
@@ -543,28 +543,28 @@ export default function HomeScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotifs(false)}>
           <Pressable
-            style={[styles.notifsSheet, { paddingBottom: bottomPad + 24 }]}
+            style={[styles.notifsSheet, { paddingBottom: bottomPad + 24, backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={e => e.stopPropagation()}
           >
-            <View style={styles.sheetHandle} />
+            <View style={[styles.sheetHandle, { backgroundColor: `${colors.primary}30` }]} />
             <View style={styles.notifsHeader}>
-              <Text style={styles.notifsTitle}>Notifications</Text>
+              <Text style={[styles.notifsTitle, { color: colors.foreground }]}>Notifications</Text>
               {hasNotifs && (
-                <View style={styles.countBadge}><Text style={styles.countText}>{rewards.length}</Text></View>
+                <View style={[styles.countBadge, { backgroundColor: colors.primary }]}><Text style={styles.countText}>{rewards.length}</Text></View>
               )}
               <TouchableOpacity
-                style={styles.closeBtn}
+                style={[styles.closeBtn, { backgroundColor: colors.muted }]}
                 onPress={() => setShowNotifs(false)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Icon name="x" size={16} color="rgba(200,184,232,0.6)" />
+                <Icon name="x" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
             {rewards.length === 0 ? (
               <View style={styles.notifsEmpty}>
-                <Icon name="bell-off" size={34} color="rgba(200,184,232,0.4)" />
-                <Text style={styles.notifsEmptyText}>You're all caught up ✦</Text>
+                <Icon name="bell-off" size={34} color={`${colors.mutedForeground}70`} />
+                <Text style={[styles.notifsEmptyText, { color: colors.mutedForeground }]}>You're all caught up ✦</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
@@ -607,11 +607,11 @@ export default function HomeScreen() {
                       )}
                     </View>
                     <TouchableOpacity
-                      style={[styles.dismissBtn, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
+                      style={[styles.dismissBtn, { backgroundColor: colors.muted }]}
                       onPress={() => dismissReward(r.id)}
                       hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                     >
-                      <Icon name="x" size={12} color="rgba(200,184,232,0.5)" />
+                      <Icon name="x" size={12} color={colors.mutedForeground} />
                     </TouchableOpacity>
                   </View>
                 ))}
