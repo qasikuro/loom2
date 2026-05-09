@@ -113,7 +113,6 @@ function ClassicTabLayout() {
           borderTopWidth: 0,
           borderWidth: 1,
           borderColor: colors.border,
-          overflow: 'hidden',
           elevation: 20,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 6 },
