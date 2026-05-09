@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+body { width:390px; height:844px; background:#080714; font-family:'Inter',-apple-system,sans-serif; overflow:hidden; position:relative; }
+
+/* Header */
+.header { padding: 54px 20px 12px; background: linear-gradient(180deg,#12103A 0%,#0F0E2A 100%); }
+.header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.header-title { font-size:24px; font-weight:700; color:#EDE5FF; letter-spacing:-0.5px; }
+.header-sub { font-size:12px; color:rgba(200,184,232,0.45); letter-spacing:0.5px; }
+.header-btn { width:36px; height:36px; border-radius:18px; background:rgba(200,184,232,0.1); border:none; display:flex; align-items:center; justify-content:center; }
+
+/* Filter chips */
+.filter-row { display:flex; gap:8px; padding:12px 20px; overflow:hidden; }
+.chip { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; letter-spacing:0.3px; cursor:pointer; white-space:nowrap; }
+.chip-active { background:#6B5B95; color:#fff; }
+.chip-inactive { background:rgba(107,91,149,0.15); color:rgba(200,184,232,0.6); border:1px solid rgba(107,91,149,0.25); }
+
+/* Writing prompt */
+.prompt-card { margin:0 20px 16px; padding:14px 16px; background:rgba(107,91,149,0.12); border-radius:16px; border:1px solid rgba(107,91,149,0.22); }
+.prompt-label { font-size:10px; color:rgba(200,168,75,0.75); letter-spacing:2px; text-transform:uppercase; margin-bottom:5px; font-weight:600; }
+.prompt-text { font-size:13px; color:rgba(200,184,232,0.7); font-style:italic; line-height:1.5; }
+
+/* Entries */
+.section-header { padding:4px 20px 10px; font-size:11px; font-weight:700; color:rgba(200,184,232,0.4); letter-spacing:2px; text-transform:uppercase; }
+
+.entry-card { margin:0 20px 12px; background:rgba(255,255,255,0.04); border-radius:18px; border:1px solid rgba(200,184,232,0.09); padding:16px; }
+.entry-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10px; }
+.mood-badge { display:flex; align-items:center; gap:5px; padding:4px 10px; border-radius:10px; font-size:11px; font-weight:600; }
+.mood-hopeful { background:rgba(240,192,64,0.15); color:#F0C040; }
+.mood-soft { background:rgba(176,154,224,0.15); color:#B09AE0; }
+.mood-peaceful { background:rgba(120,168,200,0.15); color:#78A8C8; }
+.entry-time { font-size:11px; color:rgba(200,184,232,0.35); }
+.entry-type-tag { font-size:10px; color:rgba(200,184,232,0.4); letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; font-weight:600; }
+.entry-text { font-size:14px; color:rgba(200,184,232,0.82); line-height:1.55; font-style:italic; }
+.entry-friend { display:flex; align-items:center; gap:6px; margin-top:8px; }
+.friend-dot { width:6px; height:6px; border-radius:3px; background:#7AB8F0; }
+.friend-name { font-size:12px; color:#7AB8F0; font-weight:600; }
+
+/* New entry button */
+.fab { position:absolute; bottom:90px; right:20px; width:52px; height:52px; border-radius:26px; background:#6B5B95; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(107,91,149,0.5); }
+.fab svg { width:22px; height:22px; }
+
+/* Tab bar */
+.tabbar { position:absolute; bottom:0; left:0; right:0; height:72px; background:rgba(18,16,40,0.95); border-top:1px solid rgba(200,184,232,0.08); display:flex; align-items:center; justify-content:space-around; padding-bottom:12px; padding-top:4px; backdrop-filter:blur(20px); }
+.tab { display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 12px; border-radius:12px; cursor:pointer; }
+.tab-active .tab-icon { color:#6B5B95; }
+.tab-inactive .tab-icon { color:rgba(200,184,232,0.4); }
+.tab-label { font-size:10px; font-weight:600; letter-spacing:0.3px; }
+.tab-active .tab-label { color:#6B5B95; }
+.tab-inactive .tab-label { color:rgba(200,184,232,0.4); }
+.tab-create { width:52px; height:52px; border-radius:26px; background:#6B5B95; display:flex; align-items:center; justify-content:center; margin-bottom:12px; box-shadow:0 6px 18px rgba(107,91,149,0.55); }
+.icon-active { color:#6B5B95; }
+.icon-dim { color:rgba(200,184,232,0.38); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div>
+      <div class="header-title">Journal</div>
+      <div class="header-sub">YOUR CELESTIAL DIARY</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <div class="header-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(200,184,232,0.6)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+      <div class="header-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(200,184,232,0.6)" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="18" y2="18"/></svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter chips -->
+<div class="filter-row">
+  <div class="chip chip-active">All</div>
+  <div class="chip chip-inactive">Diary</div>
+  <div class="chip chip-inactive">Friends</div>
+  <div class="chip chip-inactive">Moments</div>
+</div>
+
+<!-- Prompt -->
+<div class="prompt-card">
+  <div class="prompt-label">✦ Today's Prompt</div>
+  <div class="prompt-text">"What small moment of beauty did you notice today that most people might have missed?"</div>
+</div>
+
+<!-- Today section -->
+<div class="section-header">TODAY</div>
+
+<!-- Entry 1 -->
+<div class="entry-card">
+  <div class="entry-top">
+    <div class="mood-badge mood-hopeful">☀ Hopeful</div>
+    <div class="entry-time">just now</div>
+  </div>
+  <div class="entry-type-tag">DIARY</div>
+  <div class="entry-text">"Today I finally reached the top of the canyon. The view was everything I imagined and more. I sat there for an hour just breathing."</div>
+</div>
+
+<!-- Yesterday section -->
+<div class="section-header">YESTERDAY</div>
+
+<!-- Entry 2 -->
+<div class="entry-card">
+  <div class="entry-top">
+    <div class="mood-badge mood-soft">✦ Soft</div>
+    <div class="entry-time">1 day ago</div>
+  </div>
+  <div class="entry-type-tag">FRIEND LOG</div>
+  <div class="entry-text">"Met the kindest sky kid near the butterfly field. We flew together until sunset without saying a word."</div>
+  <div class="entry-friend">
+    <div class="friend-dot"></div>
+    <div class="friend-name">Nova ✦</div>
+  </div>
+</div>
+
+<!-- Entry 3 -->
+<div class="entry-card" style="margin-bottom:90px;">
+  <div class="entry-top">
+    <div class="mood-badge mood-peaceful">☁ Peaceful</div>
+    <div class="entry-time">2 days ago</div>
+  </div>
+  <div class="entry-type-tag">MOMENT</div>
+  <div class="entry-text">"A moment of pure silence at the top of the Eye of Eden. Just clouds, light, and music."</div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab tab-inactive">
+    <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="tab-label">Home</span>
+  </div>
+  <div class="tab tab-active" style="background:rgba(107,91,149,0.12); border-radius:14px;">
+    <svg class="tab-icon icon-active" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    <span class="tab-label">Journal</span>
+  </div>
+  <div class="tab-create">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </div>
+  <div class="tab tab-inactive">
+    <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    <span class="tab-label">Discover</span>
+  </div>
+  <div class="tab tab-inactive">
+    <svg class="tab-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span class="tab-label">Profile</span>
+  </div>
+</div>
+</body>
+</html>

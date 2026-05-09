@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+body { width:390px; height:844px; background:#080714; font-family:'Inter',-apple-system,sans-serif; overflow:hidden; position:relative; }
+
+/* Header */
+.header { padding:54px 20px 0; background:linear-gradient(180deg,#12103A 0%,#0F0E2A 100%); }
+.header-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.header-title { font-size:24px; font-weight:700; color:#EDE5FF; letter-spacing:-0.5px; }
+.header-sub { font-size:12px; color:rgba(200,184,232,0.45); margin-top:2px; }
+
+/* Tab pills */
+.tab-pills { display:flex; gap:0; border-bottom:1px solid rgba(200,184,232,0.08); }
+.pill { padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; position:relative; }
+.pill-active { color:#6B5B95; }
+.pill-active::after { content:''; position:absolute; bottom:0; left:16px; right:16px; height:2px; background:#6B5B95; border-radius:1px; }
+.pill-inactive { color:rgba(200,184,232,0.4); }
+
+/* Cards */
+.feed { padding:12px 20px; display:flex; flex-direction:column; gap:14px; }
+
+.story-card { background:rgba(255,255,255,0.04); border-radius:20px; border:1px solid rgba(200,184,232,0.09); overflow:hidden; }
+.card-image { width:100%; height:160px; object-fit:cover; position:relative; }
+.card-img-bg { width:100%; height:160px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; }
+.card-body { padding:14px; }
+.card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.author-row { display:flex; align-items:center; gap:8px; }
+.avatar { width:30px; height:30px; border-radius:15px; background:linear-gradient(135deg,#6B5B95,#B09AE0); display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff; font-weight:700; }
+.author-name { font-size:13px; font-weight:600; color:#EDE5FF; }
+.author-handle { font-size:11px; color:rgba(200,184,232,0.45); }
+.mood-tag { padding:3px 9px; border-radius:8px; font-size:10px; font-weight:600; }
+.mood-peaceful { background:rgba(120,168,200,0.15); color:#78A8C8; }
+.mood-dreamy { background:rgba(152,120,200,0.15); color:#9878C8; }
+.card-title { font-size:16px; font-weight:700; color:#EDE5FF; margin-bottom:5px; letter-spacing:-0.3px; }
+.card-snippet { font-size:13px; color:rgba(200,184,232,0.6); font-style:italic; line-height:1.5; margin-bottom:10px; }
+.card-footer { display:flex; align-items:center; justify-content:space-between; }
+.card-stats { display:flex; gap:12px; }
+.stat { display:flex; align-items:center; gap:4px; font-size:12px; color:rgba(200,184,232,0.45); }
+.following-badge { padding:4px 10px; border-radius:10px; background:rgba(112,208,168,0.12); border:1px solid rgba(112,208,168,0.3); font-size:11px; color:#70D0A8; font-weight:600; }
+
+/* Stars */
+.star { position:absolute; border-radius:50%; background:#E8D8FF; }
+
+/* Tab bar */
+.tabbar { position:absolute; bottom:0; left:0; right:0; height:72px; background:rgba(18,16,40,0.95); border-top:1px solid rgba(200,184,232,0.08); display:flex; align-items:center; justify-content:space-around; padding-bottom:12px; padding-top:4px; }
+.tab { display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 12px; }
+.tab-label { font-size:10px; font-weight:600; letter-spacing:0.3px; }
+.tab-create { width:52px; height:52px; border-radius:26px; background:#6B5B95; display:flex; align-items:center; justify-content:center; margin-bottom:12px; box-shadow:0 6px 18px rgba(107,91,149,0.55); }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <div>
+      <div class="header-title">Discover</div>
+      <div class="header-sub">Sky stories from the world</div>
+    </div>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(200,184,232,0.5)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+  </div>
+  <div class="tab-pills">
+    <div class="pill pill-active">For You</div>
+    <div class="pill pill-inactive">New</div>
+    <div class="pill pill-inactive">Vibes</div>
+    <div class="pill pill-inactive">People</div>
+  </div>
+</div>
+
+<!-- Feed -->
+<div class="feed">
+  <!-- Card 1 -->
+  <div class="story-card">
+    <div class="card-img-bg" style="background:linear-gradient(160deg,#1C1646 0%,#2A2060 50%,#1A1030 100%);">
+      <div class="star" style="width:2px;height:2px;top:18px;left:40px;opacity:0.7;"></div>
+      <div class="star" style="width:3px;height:3px;top:30px;right:60px;opacity:0.9;"></div>
+      <div class="star" style="width:2px;height:2px;top:60px;left:100px;opacity:0.5;"></div>
+      <div class="star" style="width:2px;height:2px;bottom:30px;right:40px;opacity:0.6;"></div>
+      <div style="width:70px;height:70px;border-radius:50%;background:radial-gradient(circle,rgba(200,184,232,0.18) 0%,transparent 70%);border:1px solid rgba(200,184,232,0.15);display:flex;align-items:center;justify-content:center;">
+        <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#C8BEE0,#A898CC);"></div>
+      </div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,rgba(8,7,20,0.8));"></div>
+    </div>
+    <div class="card-body">
+      <div class="card-top">
+        <div class="author-row">
+          <div class="avatar">L</div>
+          <div>
+            <div class="author-name">Luna ✦</div>
+            <div class="author-handle">@luna_wanderer · 2h ago</div>
+          </div>
+        </div>
+        <div class="mood-tag mood-peaceful">☁ Peaceful</div>
+      </div>
+      <div class="card-title">The Forgotten Shore</div>
+      <div class="card-snippet">"I found a beach where the tide sang lullabies to the stars. No one else was there — just me and the sound…"</div>
+      <div class="card-footer">
+        <div class="card-stats">
+          <div class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            47 witnessed
+          </div>
+          <div class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            12 saved
+          </div>
+        </div>
+        <div class="following-badge">Following</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2 -->
+  <div class="story-card">
+    <div class="card-img-bg" style="background:linear-gradient(160deg,#180E30 0%,#2A1848 50%,#1A0E28 100%);height:130px;">
+      <div class="star" style="width:2px;height:2px;top:22px;left:55px;opacity:0.8;"></div>
+      <div class="star" style="width:2px;height:2px;top:50px;right:70px;opacity:0.6;"></div>
+      <div style="width:50px;height:50px;border-radius:50%;background:radial-gradient(circle,rgba(152,120,200,0.3) 0%,transparent 70%);position:absolute;top:30px;left:30px;"></div>
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#9878C8,#6B5B95);position:absolute;top:40px;left:42px;"></div>
+      <div style="position:absolute;bottom:0;left:0;right:0;height:50px;background:linear-gradient(transparent,rgba(8,7,20,0.8));"></div>
+    </div>
+    <div class="card-body">
+      <div class="card-top">
+        <div class="author-row">
+          <div class="avatar" style="background:linear-gradient(135deg,#9878C8,#6B5B95);">K</div>
+          <div>
+            <div class="author-name">Kira Stardust</div>
+            <div class="author-handle">@kira_s · yesterday</div>
+          </div>
+        </div>
+        <div class="mood-tag mood-dreamy">★ Dreamy</div>
+      </div>
+      <div class="card-title">Midnight in the Valley of Triumph</div>
+      <div class="card-snippet">"The aurora painted our wings in colours I have no name for yet…"</div>
+      <div class="card-footer">
+        <div class="card-stats">
+          <div class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            89 witnessed
+          </div>
+          <div class="stat">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            31 saved
+          </div>
+        </div>
+        <div style="padding:4px 10px;border-radius:10px;background:rgba(107,91,149,0.15);border:1px solid rgba(107,91,149,0.3);font-size:11px;color:rgba(200,184,232,0.6);font-weight:600;">Follow</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+  <div class="tab">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(200,184,232,0.38)" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    <span class="tab-label" style="color:rgba(200,184,232,0.38);">Home</span>
+  </div>
+  <div class="tab">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(200,184,232,0.38)" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    <span class="tab-label" style="color:rgba(200,184,232,0.38);">Journal</span>
+  </div>
+  <div class="tab-create">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </div>
+  <div class="tab" style="background:rgba(107,91,149,0.12);border-radius:14px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B5B95" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+    <span class="tab-label" style="color:#6B5B95;">Discover</span>
+  </div>
+  <div class="tab">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(200,184,232,0.38)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span class="tab-label" style="color:rgba(200,184,232,0.38);">Profile</span>
+  </div>
+</div>
+</body>
+</html>

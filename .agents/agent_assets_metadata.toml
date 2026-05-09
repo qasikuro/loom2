@@ -95,3 +95,39 @@ id = "B3nGXcWid-kgEzbP_6elb"
 uri = "file://screenshots/android_mockup.jpg"
 type = "image"
 title = "Sky Journal — Pixel 8 Pro"
+
+[[outputs]]
+id = "txR-w8kgkA3NGfBwHqS1U"
+uri = "file://screenshots/journey_all_screens.jpg"
+type = "image"
+title = "Sky Journal — Full App Journey (all 5 screens)"
+
+[[outputs]]
+id = "an80OM7WYfgRKMimP2Iml"
+uri = "file://screenshots/mockup_home.jpg"
+type = "image"
+title = "Home Screen"
+
+[[outputs]]
+id = "X0D8aHspXEAvgt2KB9Ryz"
+uri = "file://screenshots/mockup_journal.jpg"
+type = "image"
+title = "Journal Screen"
+
+[[outputs]]
+id = "qz7N0Qgna3VR_ddLniZ0m"
+uri = "file://screenshots/mockup_create.jpg"
+type = "image"
+title = "Create Story Screen"
+
+[[outputs]]
+id = "etZUfN9Rocce1VLGv0cXd"
+uri = "file://screenshots/mockup_discover.jpg"
+type = "image"
+title = "Discover Screen"
+
+[[outputs]]
+id = "vSVocvDVhoyPrw1t-T40S"
+uri = "file://screenshots/mockup_profile.jpg"
+type = "image"
+title = "Profile Screen"
