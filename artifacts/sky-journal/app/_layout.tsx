@@ -37,6 +37,7 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const clerkProxyUrl  = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 function AuthTokenBridge() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
@@ -100,7 +101,7 @@ export default function RootLayout() {
       <ThemedRoot>
         {/* App content — rendered immediately so Clerk/Router load in background */}
         {fontsReady && (
-          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} proxyUrl={clerkProxyUrl}>
               <SafeAreaProvider>
                 <ErrorBoundary>
                   <QueryClientProvider client={queryClient}>
