@@ -260,18 +260,38 @@ export default function StoryScreen() {
   const witnessedCount = ((story?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0));
   const savedCount     = story?.savedCount ?? post?.savedCount ?? 0;
 
-  const rawPanels: CellPanel[] = story
-    ? story.panels.map(p => ({ imageUri: p.imageUri, bgPreset: p.bgPreset, text: p.text, bubbleText: p.bubbleText, overlays: p.overlays }))
-    : post
-      ? (post.panels ?? [{ text: post.storySnippet }]).map(p => ({ imageUri: p.imageUri, text: p.text, overlays: p.overlays }))
-      : [{ text: 'Story not found.' }];
+  function toCellPanel(p: any): CellPanel {
+    return {
+      imageUri:   p.imageUri,
+      bgPreset:   p.bgPreset,
+      text:       p.text ?? '',
+      bubbleText: p.bubbleText,
+      overlays:   p.overlays,
+    };
+  }
 
-  const pageLayoutKey = story?.pageLayoutKey ?? (post as any)?.pageLayoutKey;
-  const layout        = getLayout(pageLayoutKey);
-  const pages         = chunkPanels(rawPanels, layout.count);
-  const gradient      = getGradient(mood);
+  type RenderPage = { layoutKey: string; panels: CellPanel[] };
+  let renderPages: RenderPage[];
 
-  const heroImgSrc = getPanelImageSource(rawPanels[0]?.imageUri, rawPanels[0]?.bgPreset);
+  if (story?.pages?.length) {
+    renderPages = story.pages.map(pg => ({ layoutKey: pg.layoutKey, panels: pg.panels.map(toCellPanel) }));
+  } else if (post?.pages?.length) {
+    renderPages = post.pages.map(pg => ({ layoutKey: pg.layoutKey, panels: pg.panels.map(toCellPanel) }));
+  } else {
+    const flatPanels: CellPanel[] = story
+      ? story.panels.map(toCellPanel)
+      : post
+        ? (post.panels ?? [{ text: post.storySnippet }]).map(toCellPanel)
+        : [{ text: 'Story not found.', imageUri: undefined, bgPreset: undefined, bubbleText: undefined, overlays: undefined }];
+    const fallbackKey = story?.pageLayoutKey ?? post?.pageLayoutKey ?? '1';
+    const fallbackLayout = getLayout(fallbackKey);
+    renderPages = chunkPanels(flatPanels, fallbackLayout.count).map(chunk => ({ layoutKey: fallbackKey, panels: chunk }));
+  }
+
+  const gradient   = getGradient(mood);
+  const firstPanel = renderPages[0]?.panels[0];
+  const heroImgSrc = getPanelImageSource(firstPanel?.imageUri, firstPanel?.bgPreset);
+  const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
 
   function handleWitness() {
     if (!witnessed) {
@@ -356,7 +376,7 @@ export default function StoryScreen() {
               <MoodBadge mood={mood} size="sm" />
               <View style={styles.infoBadge}>
                 <Icon name="layers" size={11} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.infoBadgeText}>{rawPanels.length} panels · {pages.length} page{pages.length !== 1 ? 's' : ''}</Text>
+                <Text style={styles.infoBadgeText}>{totalPanelCount} panels · {renderPages.length} page{renderPages.length !== 1 ? 's' : ''}</Text>
               </View>
             </View>
           </View>
@@ -364,16 +384,19 @@ export default function StoryScreen() {
 
         {/* ── Manga pages ────────────────────────────────── */}
         <View style={styles.pagesWrap}>
-          {pages.map((pagePanels, pi) => (
-            <MangaPage
-              key={pi}
-              panels={pagePanels}
-              layout={layout}
-              gradient={gradient}
-              pageNum={pi + 1}
-              totalPages={pages.length}
-            />
-          ))}
+          {renderPages.map((page, pi) => {
+            const pageLayout = getLayout(page.layoutKey);
+            return (
+              <MangaPage
+                key={pi}
+                panels={page.panels}
+                layout={pageLayout}
+                gradient={gradient}
+                pageNum={pi + 1}
+                totalPages={renderPages.length}
+              />
+            );
+          })}
         </View>
 
         {/* ── End card ───────────────────────────────────── */}

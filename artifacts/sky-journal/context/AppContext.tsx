@@ -80,6 +80,12 @@ export interface StoryPanel {
   overlays?:   PanelOverlay[];
 }
 
+export interface StoryPage {
+  id:        string;
+  layoutKey: string;
+  panels:    StoryPanel[];
+}
+
 export interface Story {
   id:              string;
   date:            string;
@@ -91,6 +97,7 @@ export interface Story {
   witnessedCount:  number;
   savedCount:      number;
   pageLayoutKey?:  string;
+  pages?:          StoryPage[];
 }
 
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
@@ -132,6 +139,8 @@ export interface DiscoverPost {
   saved:          boolean;
   isFollowing:    boolean;
   panels?:        { text: string; imageUri?: string; overlays?: PanelOverlay[] }[];
+  pages?:         StoryPage[];
+  pageLayoutKey?: string;
 }
 
 export interface Reward {
@@ -238,6 +247,7 @@ function toAppStory(raw: any): Story {
     witnessedCount: raw.witnessedCount ?? raw.witnessed_count ?? 0,
     savedCount:     raw.savedCount     ?? raw.saved_count     ?? 0,
     pageLayoutKey:  raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
+    pages:          Array.isArray(raw.pages) ? raw.pages : undefined,
   };
 }
 
@@ -476,6 +486,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         location:      story.location,
         isPublic:      story.isPublic,
         pageLayoutKey: story.pageLayoutKey ?? null,
+        pages:         story.pages ?? null,
       }),
     })
       .then(() => loadSocialData())

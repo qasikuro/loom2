@@ -36,6 +36,11 @@ const StoryInputSchema = z.object({
   location:       z.string().default(""),
   isPublic:       z.boolean().default(false),
   pageLayoutKey:  z.string().optional().nullable(),
+  pages:          z.array(z.object({
+    id:        z.string(),
+    layoutKey: z.string(),
+    panels:    z.array(PanelSchema),
+  })).optional().nullable(),
 });
 
 router.get("/stories", requireAuth, async (req, res) => {
@@ -77,6 +82,7 @@ router.post("/stories", requireAuth, async (req, res) => {
       date:          new Date(date),
       panels:        sanitizedPanels,
       pageLayoutKey: rest.pageLayoutKey ?? null,
+      pages:         (rest.pages ?? null) as any,
       chapterTitle:  rest.chapterTitle,
       mood:          rest.mood,
       location:      rest.location,
@@ -91,6 +97,7 @@ router.post("/stories", requireAuth, async (req, res) => {
         set: {
           userId, date: new Date(date), panels: sanitizedPanels,
           pageLayoutKey: rest.pageLayoutKey ?? null,
+          pages: (rest.pages ?? null) as any,
           chapterTitle: rest.chapterTitle, mood: rest.mood,
           location: rest.location, isPublic: rest.isPublic,
         },
@@ -166,6 +173,7 @@ function serializeStory(row: typeof storiesTable.$inferSelect) {
     witnessedCount: row.witnessedCount,
     savedCount:     row.savedCount,
     pageLayoutKey:  row.pageLayoutKey ?? undefined,
+    pages:          row.pages ?? undefined,
     createdAt:      row.createdAt.toISOString(),
   };
 }

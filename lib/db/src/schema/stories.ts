@@ -2,6 +2,12 @@ import { boolean, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle
 
 export type StoryPanel = { id: string; text: string; imageUri?: string };
 
+export type StoryPageDB = {
+  id: string;
+  layoutKey: string;
+  panels: StoryPanel[];
+};
+
 export const storiesTable = pgTable("stories", {
   id:             uuid("id").primaryKey().defaultRandom(),
   userId:         text("user_id").notNull().default("legacy"),
@@ -13,6 +19,7 @@ export const storiesTable = pgTable("stories", {
   savedCount:     integer("saved_count").notNull().default(0),
   panels:          jsonb("panels").$type<StoryPanel[]>().notNull().default([]),
   pageLayoutKey:   text("page_layout_key"),
+  pages:           jsonb("pages").$type<StoryPageDB[]>(),
   date:            timestamp("date", { withTimezone: true }).notNull(),
   createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
