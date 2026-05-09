@@ -44,37 +44,46 @@ export default function SignInScreen() {
 
   async function handleSignIn() {
     setErrorMsg('');
-    const { error } = await signIn.password({ emailAddress: email, password });
-    if (error) {
-      setErrorMsg(error.message ?? 'Sign-in failed. Please try again.');
-      return;
-    }
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) return;
-          const url = decorateUrl('/');
-          router.replace(url as any);
-        },
-      });
-    } else if (signIn.status === 'needs_client_trust') {
-      await signIn.mfa.sendEmailCode();
+    try {
+      const { error } = await signIn.password({ emailAddress: email, password });
+      if (error) {
+        setErrorMsg(error.message ?? 'Sign-in failed. Please try again.');
+        return;
+      }
+      if (signIn.status === 'complete') {
+        // finalize() with no args sets the session; navigate manually after
+        await signIn.finalize();
+        router.replace('/(tabs)' as any);
+      } else if (signIn.status === 'needs_client_trust') {
+        await signIn.mfa.sendEmailCode();
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Sign-in failed. Please try again.';
+      setErrorMsg(msg);
     }
   }
 
   async function handleVerify() {
     setErrorMsg('');
-    await signIn.mfa.verifyEmailCode({ code: mfaCode.trim() });
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) return;
-          const url = decorateUrl('/');
-          router.replace(url as any);
-        },
-      });
-    } else {
-      setErrorMsg('Verification failed. Please try again.');
+    try {
+      await signIn.mfa.verifyEmailCode({ code: mfaCode.trim() });
+      if (signIn.status === 'complete') {
+        await signIn.finalize();
+        router.replace('/(tabs)' as any);
+      } else {
+        setErrorMsg('Verification failed. Please try again.');
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Verification failed. Please try again.';
+      setErrorMsg(msg);
     }
   }
 

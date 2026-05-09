@@ -48,27 +48,42 @@ export default function SignUpScreen() {
 
   async function handleSignUp() {
     setErrorMsg('');
-    const { error } = await signUp.password({ emailAddress: email, password });
-    if (error) {
-      setErrorMsg(error.message ?? 'Could not create account. Please try again.');
-      return;
+    try {
+      const { error } = await signUp.password({ emailAddress: email, password });
+      if (error) {
+        setErrorMsg(error.message ?? 'Could not create account. Please try again.');
+        return;
+      }
+      // Send verification code to email
+      await signUp.verifications.sendEmailCode();
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Could not create account. Please try again.';
+      setErrorMsg(msg);
     }
-    await signUp.verifications.sendEmailCode();
   }
 
   async function handleVerify() {
     setErrorMsg('');
-    await signUp.verifications.verifyEmailCode({ code: code.trim() });
-    if (signUp.status === 'complete') {
-      await signUp.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) return;
-          const url = decorateUrl('/');
-          router.replace(url as any);
-        },
-      });
-    } else {
-      setErrorMsg('Verification could not be completed. Please try again.');
+    try {
+      await signUp.verifications.verifyEmailCode({ code: code.trim() });
+      if (signUp.status === 'complete') {
+        // finalize() with no args sets the session; navigate manually after
+        await signUp.finalize();
+        router.replace('/(tabs)' as any);
+      } else {
+        setErrorMsg('Verification could not be completed. Please try again.');
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Verification failed. Please try again.';
+      setErrorMsg(msg);
     }
   }
 
