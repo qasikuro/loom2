@@ -9,9 +9,15 @@ import { join } from "path";
 import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
+import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes";
 import { logger } from "./lib/logger";
-import { clerkAuth } from "./middleware/auth";
+import {
+  CLERK_PROXY_PATH,
+  clerkProxyMiddleware,
+  getClerkProxyHost,
+} from "./middlewares/clerkProxyMiddleware";
 
 const app: Express = express();
 
@@ -74,6 +80,9 @@ app.use(
   }),
 );
 
+// ── Clerk proxy (must be before body parsers — streams raw bytes) ──────────────
+app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
+
 // ── Body parsers ───────────────────────────────────────────────────────────────
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
@@ -82,7 +91,14 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use("/api/images", express.static(join(process.cwd(), "uploads")));
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
-app.use(clerkAuth);
+app.use(
+  clerkMiddleware((req) => ({
+    publishableKey: publishableKeyFromHost(
+      getClerkProxyHost(req) ?? "",
+      process.env.CLERK_PUBLISHABLE_KEY,
+    ),
+  })),
+);
 
 // ── API routes ─────────────────────────────────────────────────────────────────
 app.use("/api", router);
