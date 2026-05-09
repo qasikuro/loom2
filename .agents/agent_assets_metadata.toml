@@ -41,3 +41,39 @@ id = "i_49T1YoL8OKCG42jULR4"
 uri = "file://sky-journal-marketing.md"
 type = "text"
 title = "Sky Journal — Full Marketing Materials"
+
+[[outputs]]
+id = "mrXrOcqJVPqX1SUNswxVz"
+uri = "file://screenshots/01_welcome.jpg"
+type = "image"
+title = "1 – Welcome Screen"
+
+[[outputs]]
+id = "HCDtMSVVBApNglR2uoPfR"
+uri = "file://screenshots/02_home.jpg"
+type = "image"
+title = "2 – Home Screen"
+
+[[outputs]]
+id = "L95SrXTyUtqN1qnajeuVC"
+uri = "file://screenshots/03_journal.jpg"
+type = "image"
+title = "3 – Journal Screen"
+
+[[outputs]]
+id = "wurxj7O4RV5h3priPAovv"
+uri = "file://screenshots/04_create.jpg"
+type = "image"
+title = "4 – Create Story Screen"
+
+[[outputs]]
+id = "uKSVe17wDHs0zIVXq4Qyd"
+uri = "file://screenshots/05_discover.jpg"
+type = "image"
+title = "5 – Discover Screen"
+
+[[outputs]]
+id = "vq9bsYoRy8FbW0NwxfO1G"
+uri = "file://screenshots/06_profile.jpg"
+type = "image"
+title = "6 – Profile Screen"

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0">
+<title>Sky Journal – Welcome</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 390px; height: 844px; overflow: hidden; font-family: -apple-system, 'Inter', sans-serif; background: #080714; }
+
+  .screen {
+    width: 390px; height: 844px; position: relative; overflow: hidden;
+    background: linear-gradient(180deg, #0C0A1E 0%, #1A1640 40%, #2A1F5A 70%, #1A1640 100%);
+  }
+
+  /* Stars */
+  .stars { position: absolute; inset: 0; }
+  .star {
+    position: absolute; background: white; border-radius: 50%;
+    animation: twinkle 3s infinite ease-in-out;
+  }
+  @keyframes twinkle { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
+
+  /* Moon */
+  .moon {
+    position: absolute; top: 60px; right: 60px;
+    width: 60px; height: 60px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #E8E0FF, #C8B8E8);
+    box-shadow: 0 0 30px 10px rgba(200,184,232,0.3);
+  }
+
+  /* Floating islands */
+  .island {
+    position: absolute;
+    background: linear-gradient(180deg, #2A4060 0%, #1A2A40 100%);
+    border-radius: 50%;
+  }
+  .island-1 { width: 200px; height: 60px; bottom: 280px; left: -20px; transform: rotate(-5deg); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+  .island-2 { width: 150px; height: 45px; bottom: 220px; right: -10px; transform: rotate(3deg); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+  .island-3 { width: 100px; height: 30px; bottom: 350px; right: 60px; transform: rotate(-2deg); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+
+  /* Trees on islands */
+  .tree { position: absolute; bottom: 100%; width: 3px; background: #3A5070; }
+  .tree::after { content:''; position:absolute; top:-10px; left:-6px; width:15px; height:15px; border-radius:50%; background:#2A4860; }
+
+  /* Sky kid character */
+  .character {
+    position: absolute; bottom: 320px; left: 50%; transform: translateX(-50%);
+    width: 80px; height: 80px;
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float { 0%,100%{transform:translateX(-50%) translateY(0);} 50%{transform:translateX(-50%) translateY(-12px);} }
+
+  .char-body {
+    width: 50px; height: 60px; margin: 0 auto;
+    background: radial-gradient(circle at 50% 40%, #F5E8D0, #D4B896);
+    border-radius: 50% 50% 40% 40%;
+    position: relative;
+    box-shadow: 0 0 20px rgba(200,168,75,0.4);
+  }
+  .char-cape {
+    position: absolute; bottom: -10px; left: -15px; right: -15px;
+    height: 35px;
+    background: linear-gradient(180deg, #7856FF, #4A2ED0);
+    border-radius: 50%;
+    opacity: 0.9;
+  }
+  .char-glow {
+    position: absolute; top: -15px; left: -15px; right: -15px; bottom: -15px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(200,168,75,0.3) 0%, transparent 70%);
+  }
+  .char-eyes { position: absolute; top: 22px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+  .eye { width: 6px; height: 6px; background: #3A2010; border-radius: 50%; }
+  .char-hair {
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 30px; height: 20px;
+    background: radial-gradient(circle, #8B4513, #5A2D0C);
+    border-radius: 50% 50% 0 0;
+  }
+
+  /* Sparkles */
+  .sparkle {
+    position: absolute; color: #F0C040; font-size: 12px;
+    animation: sparkleAnim 2s infinite ease-in-out;
+  }
+  @keyframes sparkleAnim { 0%,100%{opacity:0;transform:scale(0);} 50%{opacity:1;transform:scale(1);} }
+
+  /* Content */
+  .content { position: absolute; bottom: 0; left: 0; right: 0; height: 300px; padding: 32px 32px 50px; }
+
+  .logo {
+    text-align: center; margin-bottom: 8px;
+    font-size: 42px; font-weight: 800; letter-spacing: -1px;
+    color: white;
+    text-shadow: 0 0 30px rgba(120,86,255,0.8);
+  }
+  .logo span { color: #C8B8E8; }
+
+  .tagline {
+    text-align: center; color: rgba(200,184,232,0.7);
+    font-size: 15px; margin-bottom: 36px; letter-spacing: 0.5px;
+  }
+
+  .btn-primary {
+    width: 100%; padding: 18px; border-radius: 100px;
+    background: linear-gradient(135deg, #7856FF, #4A2ED0);
+    color: white; font-size: 17px; font-weight: 600;
+    text-align: center; margin-bottom: 14px;
+    box-shadow: 0 8px 32px rgba(120,86,255,0.5);
+    letter-spacing: 0.3px;
+  }
+  .btn-secondary {
+    width: 100%; padding: 18px; border-radius: 100px;
+    border: 1.5px solid rgba(200,184,232,0.4);
+    color: rgba(200,184,232,0.9); font-size: 17px; font-weight: 500;
+    text-align: center;
+    background: rgba(255,255,255,0.05);
+  }
+
+  .status-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 0;
+    color: white; font-size: 15px; font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="status-right">
+      <span>●●●●</span>
+      <span>WiFi</span>
+      <span>🔋</span>
+    </div>
+  </div>
+
+  <!-- Stars -->
+  <div class="stars">
+    <div class="star" style="width:2px;height:2px;top:80px;left:40px;animation-delay:0s;"></div>
+    <div class="star" style="width:3px;height:3px;top:120px;left:100px;animation-delay:0.5s;"></div>
+    <div class="star" style="width:2px;height:2px;top:60px;left:200px;animation-delay:1s;"></div>
+    <div class="star" style="width:1px;height:1px;top:150px;left:280px;animation-delay:1.5s;"></div>
+    <div class="star" style="width:2px;height:2px;top:90px;left:320px;animation-delay:0.8s;"></div>
+    <div class="star" style="width:3px;height:3px;top:180px;left:50px;animation-delay:2s;"></div>
+    <div class="star" style="width:1px;height:1px;top:200px;left:160px;animation-delay:0.3s;"></div>
+    <div class="star" style="width:2px;height:2px;top:240px;left:230px;animation-delay:1.2s;"></div>
+    <div class="star" style="width:2px;height:2px;top:70px;left:370px;animation-delay:0.7s;"></div>
+    <div class="star" style="width:1px;height:1px;top:140px;left:350px;animation-delay:2.2s;"></div>
+    <div class="star" style="width:3px;height:3px;top:300px;left:80px;animation-delay:1.8s;"></div>
+    <div class="star" style="width:2px;height:2px;top:270px;left:340px;animation-delay:0.4s;"></div>
+  </div>
+
+  <!-- Moon -->
+  <div class="moon"></div>
+
+  <!-- Sparkles -->
+  <div class="sparkle" style="top:280px;left:80px;animation-delay:0s;">✦</div>
+  <div class="sparkle" style="top:260px;right:70px;animation-delay:1s;">✦</div>
+  <div class="sparkle" style="top:320px;left:160px;animation-delay:0.5s;">✧</div>
+  <div class="sparkle" style="top:240px;right:120px;animation-delay:1.5s;">✦</div>
+
+  <!-- Islands -->
+  <div class="island island-1"></div>
+  <div class="island island-2"></div>
+  <div class="island island-3"></div>
+
+  <!-- Character -->
+  <div class="character">
+    <div class="char-glow"></div>
+    <div class="char-body">
+      <div class="char-hair"></div>
+      <div class="char-eyes"><div class="eye"></div><div class="eye"></div></div>
+      <div class="char-cape"></div>
+    </div>
+  </div>
+
+  <!-- Bottom content -->
+  <div class="content">
+    <div class="logo">Sky <span>Journal</span></div>
+    <div class="tagline">Your dreamy space to write, create & wander</div>
+    <div class="btn-primary">Begin your journey</div>
+    <div class="btn-secondary">I already have a sky</div>
+  </div>
+</div>
+</body>
+</html>

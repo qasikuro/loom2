@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0">
+<title>Sky Journal – Profile</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 390px; height: 844px; overflow: hidden; font-family: -apple-system, 'Inter', sans-serif; background: #080714; color: white; }
+  .screen { width: 390px; height: 844px; position: relative; overflow: hidden; background: #0C0A1E; }
+
+  .status-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 0; color: white; font-size: 15px; font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+  /* Profile Banner */
+  .banner {
+    height: 220px; position: relative; overflow: hidden;
+    background: linear-gradient(160deg, #0E0C2A 0%, #1E1A50 40%, #2A1560 70%, #180A40 100%);
+  }
+  .banner-orb {
+    position: absolute; border-radius: 50%;
+    background: radial-gradient(circle, rgba(120,86,255,0.3) 0%, transparent 70%);
+  }
+  .orb1 { width: 200px; height: 200px; top: -60px; right: -40px; }
+  .orb2 { width: 150px; height: 150px; bottom: -40px; left: -30px; background: radial-gradient(circle, rgba(200,168,75,0.2) 0%, transparent 70%); }
+  .orb3 { width: 100px; height: 100px; top: 20px; left: 80px; background: radial-gradient(circle, rgba(184,212,240,0.15) 0%, transparent 70%); }
+
+  /* Stars */
+  .bstar { position: absolute; background: white; border-radius: 50%; opacity: 0.6; }
+
+  /* Avatar */
+  .avatar-wrap {
+    position: absolute; bottom: -44px; left: 50%; transform: translateX(-50%);
+    z-index: 10;
+  }
+  .avatar-glow {
+    position: absolute; inset: -16px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(120,86,255,0.4) 0%, transparent 70%);
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(0.95);opacity:0.5;} 50%{transform:scale(1.05);opacity:1;} }
+  .avatar {
+    width: 88px; height: 88px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #F5E8D0, #D4B896);
+    border: 3px solid rgba(120,86,255,0.5);
+    position: relative; overflow: visible;
+    box-shadow: 0 0 0 6px rgba(120,86,255,0.15);
+  }
+  .avatar-hair {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    width: 32px; height: 20px;
+    background: radial-gradient(circle, #8B4513, #5A2D0C);
+    border-radius: 50% 50% 0 0;
+  }
+  .avatar-eyes { position: absolute; top: 36px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+  .eye { width: 7px; height: 7px; background: #3A2010; border-radius: 50%; }
+  .avatar-cape {
+    position: absolute; bottom: -12px; left: -14px; right: -14px; height: 32px;
+    background: linear-gradient(180deg, #7856FF, #4A2ED0);
+    border-radius: 50%;
+  }
+  .active-badge {
+    position: absolute; bottom: -4px; right: -4px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #F0C040; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; border: 2px solid #0C0A1E;
+  }
+
+  /* Profile info */
+  .profile-info {
+    margin-top: 52px; padding: 0 24px 16px; text-align: center;
+  }
+  .profile-name { font-size: 22px; font-weight: 800; color: white; margin-bottom: 4px; }
+  .profile-handle { font-size: 14px; color: rgba(120,86,255,0.8); font-weight: 600; margin-bottom: 8px; }
+  .profile-bio { font-size: 14px; color: rgba(200,184,232,0.7); line-height: 1.6; margin-bottom: 12px; }
+  .profile-mood {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(120,86,255,0.15); border-radius: 100px; padding: 6px 14px;
+    font-size: 13px; color: rgba(200,184,232,0.9); border: 1px solid rgba(120,86,255,0.25);
+    margin-bottom: 14px;
+  }
+
+  /* Stats */
+  .stats-row {
+    display: flex; gap: 0; margin: 0 24px 16px;
+    background: rgba(255,255,255,0.05); border-radius: 18px;
+    border: 1px solid rgba(120,86,255,0.12); overflow: hidden;
+  }
+  .stat {
+    flex: 1; padding: 16px 8px; text-align: center;
+    border-right: 1px solid rgba(120,86,255,0.1);
+  }
+  .stat:last-child { border-right: none; }
+  .stat-val { font-size: 22px; font-weight: 800; color: white; }
+  .stat-label { font-size: 11px; color: rgba(200,184,232,0.5); margin-top: 3px; font-weight: 500; }
+
+  /* Traits */
+  .traits { padding: 0 24px 16px; }
+  .traits-label { font-size: 12px; font-weight: 600; color: rgba(200,184,232,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .traits-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .trait {
+    padding: 7px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+    background: rgba(120,86,255,0.15); color: #C8B8E8;
+    border: 1px solid rgba(120,86,255,0.3);
+  }
+
+  /* Outfit grid */
+  .outfit-section { padding: 0 24px; }
+  .outfit-label {
+    font-size: 13px; font-weight: 700; color: rgba(200,184,232,0.7);
+    display: flex; justify-content: space-between; margin-bottom: 12px;
+  }
+  .outfit-label a { color: rgba(120,86,255,0.7); font-weight: 500; font-size: 12px; }
+  .outfit-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .outfit-card {
+    border-radius: 14px; overflow: hidden; aspect-ratio: 1; position: relative;
+    border: 1px solid rgba(120,86,255,0.15);
+  }
+  .outfit-img {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center; font-size: 28px;
+  }
+  .outfit-card.active { border: 2px solid #7856FF; }
+  .outfit-active-badge {
+    position: absolute; top: 6px; right: 6px;
+    background: #7856FF; border-radius: 100px; font-size: 10px; font-weight: 700;
+    padding: 2px 7px; color: white;
+  }
+  .outfit-name {
+    position: absolute; bottom: 0; left: 0; right: 0; padding: 6px;
+    background: linear-gradient(0deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+    font-size: 11px; color: rgba(255,255,255,0.85); text-align: center; font-weight: 600;
+  }
+
+  /* Tab bar */
+  .tab-bar {
+    position: absolute; bottom: 12px; left: 16px; right: 16px; height: 68px;
+    background: rgba(20,16,50,0.95); border-radius: 28px;
+    display: flex; align-items: center; justify-content: space-around; padding: 0 8px;
+    border: 1px solid rgba(120,86,255,0.2);
+  }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; padding: 8px 0; }
+  .tab-icon { font-size: 22px; }
+  .tab-label { font-size: 10px; color: rgba(200,184,232,0.5); }
+  .tab-create {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #7856FF, #4A2ED0);
+    display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 18px;
+    box-shadow: 0 4px 20px rgba(120,86,255,0.5);
+  }
+
+  .og1 { background: linear-gradient(135deg, #1A1040, #2A2060); }
+  .og2 { background: linear-gradient(135deg, #102040, #203060); }
+  .og3 { background: linear-gradient(135deg, #201030, #302060); }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="status-right"><span>●●●●</span><span>WiFi</span><span>🔋</span></div>
+  </div>
+
+  <!-- Banner -->
+  <div class="banner">
+    <div class="banner-orb orb1"></div>
+    <div class="banner-orb orb2"></div>
+    <div class="banner-orb orb3"></div>
+    <div class="bstar" style="width:2px;height:2px;top:60px;left:50px;"></div>
+    <div class="bstar" style="width:3px;height:3px;top:80px;left:140px;"></div>
+    <div class="bstar" style="width:2px;height:2px;top:50px;left:230px;"></div>
+    <div class="bstar" style="width:1px;height:1px;top:100px;left:300px;"></div>
+    <div class="bstar" style="width:2px;height:2px;top:120px;left:80px;"></div>
+    <div class="bstar" style="width:2px;height:2px;top:40px;left:350px;"></div>
+    <!-- Avatar -->
+    <div class="avatar-wrap">
+      <div class="avatar-glow"></div>
+      <div class="avatar">
+        <div class="avatar-hair"></div>
+        <div class="avatar-eyes"><div class="eye"></div><div class="eye"></div></div>
+        <div class="avatar-cape"></div>
+        <div class="active-badge">✦</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Info -->
+  <div class="profile-info">
+    <div class="profile-name">Starweaver Luna</div>
+    <div class="profile-handle">@lunawanders</div>
+    <div class="profile-bio">Wanderer of skies, keeper of quiet moments. Writing my story one panel at a time.</div>
+    <div class="profile-mood">🌙 Dreamy</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-val">5</div>
+      <div class="stat-label">Stories</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">8</div>
+      <div class="stat-label">Outfits</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">142</div>
+      <div class="stat-label">Witnessed</div>
+    </div>
+  </div>
+
+  <!-- Traits -->
+  <div class="traits">
+    <div class="traits-label">Traits</div>
+    <div class="traits-row">
+      <div class="trait">Dreamer</div>
+      <div class="trait">Wanderer</div>
+      <div class="trait">Star-chaser</div>
+      <div class="trait">Gentle soul</div>
+    </div>
+  </div>
+
+  <!-- Outfits -->
+  <div class="outfit-section">
+    <div class="outfit-label">
+      <span>Outfit Log</span>
+      <a>See all</a>
+    </div>
+    <div class="outfit-grid">
+      <div class="outfit-card active og1">
+        <div class="outfit-img">✨</div>
+        <div class="outfit-active-badge">Active</div>
+        <div class="outfit-name">Sky Cape</div>
+      </div>
+      <div class="outfit-card og2">
+        <div class="outfit-img">🌙</div>
+        <div class="outfit-name">Night Robe</div>
+      </div>
+      <div class="outfit-card og3">
+        <div class="outfit-img">🌸</div>
+        <div class="outfit-name">Blossom</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-label">Home</div></div>
+    <div class="tab-item"><div class="tab-icon">📖</div><div class="tab-label">Journal</div></div>
+    <div class="tab-create">+</div>
+    <div class="tab-item"><div class="tab-icon">🌐</div><div class="tab-label">Discover</div></div>
+    <div class="tab-item active"><div class="tab-icon">👤</div><div class="tab-label" style="color:#7856FF;">Profile</div></div>
+  </div>
+</div>
+</body>
+</html>

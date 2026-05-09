@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0">
+<title>Sky Journal – Discover</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 390px; height: 844px; overflow: hidden; font-family: -apple-system, 'Inter', sans-serif; background: #080714; color: white; }
+  .screen { width: 390px; height: 844px; position: relative; overflow: hidden; background: #080714; }
+
+  .status-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 0; color: white; font-size: 15px; font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+  /* Header */
+  .header {
+    padding: 54px 20px 0;
+    background: linear-gradient(180deg, #14122E 0%, #0C0B22 100%);
+  }
+  .header-title { font-size: 34px; font-weight: 800; color: white; letter-spacing: -1px; margin-bottom: 16px; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid rgba(120,86,255,0.15);
+  }
+  .tab {
+    padding: 12px 18px; font-size: 14px; font-weight: 600;
+    color: rgba(200,184,232,0.5); position: relative;
+  }
+  .tab.active { color: #C8B8E8; }
+  .tab.active::after {
+    content: ''; position: absolute; bottom: -1px; left: 18px; right: 18px;
+    height: 2px; background: #7856FF; border-radius: 2px;
+  }
+
+  /* Content */
+  .content { padding: 16px 20px; display: flex; flex-direction: column; gap: 14px; }
+
+  /* Discover card */
+  .discover-card {
+    background: rgba(255,255,255,0.05); border-radius: 20px; overflow: hidden;
+    border: 1px solid rgba(120,86,255,0.12);
+  }
+
+  .card-author {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 12px;
+  }
+  .author-row { display: flex; align-items: center; gap: 10px; }
+  .author-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #F5E8D0, #D4B896);
+    position: relative; overflow: hidden;
+    border: 2px solid rgba(120,86,255,0.3);
+  }
+  .author-avatar-inner {
+    position: absolute; bottom: 0; left: -3px; right: -3px; height: 14px;
+    background: linear-gradient(180deg, #7856FF, #4A2ED0);
+    border-radius: 50%;
+  }
+  .author-name { font-size: 14px; font-weight: 700; color: white; }
+  .author-handle { font-size: 12px; color: rgba(200,184,232,0.5); }
+  .follow-btn {
+    padding: 7px 14px; border-radius: 100px; font-size: 12px; font-weight: 700;
+    border: 1.5px solid rgba(120,86,255,0.5); color: #C8B8E8; background: rgba(120,86,255,0.12);
+  }
+  .following-btn {
+    padding: 7px 14px; border-radius: 100px; font-size: 12px; font-weight: 700;
+    background: rgba(120,86,255,0.25); color: #C8B8E8; border: 1.5px solid rgba(120,86,255,0.4);
+  }
+
+  .card-panels {
+    display: grid; grid-template-columns: 2fr 1fr; gap: 2px; height: 160px; margin: 0 2px;
+  }
+  .panel-big {
+    border-radius: 12px 4px 4px 12px; overflow: hidden;
+    background: linear-gradient(135deg, #1A1040, #2A1560);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .panel-small-col { display: flex; flex-direction: column; gap: 2px; }
+  .panel-small {
+    flex: 1; border-radius: 4px; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .panel-small:last-child { border-radius: 4px 12px 12px 4px; }
+  .ps1 { background: linear-gradient(135deg, #0A2040, #1A3060); }
+  .ps2 { background: linear-gradient(135deg, #200A40, #300A60); }
+
+  .card-meta { padding: 14px 16px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .card-title { font-size: 16px; font-weight: 700; color: white; margin-bottom: 4px; }
+  .card-vibe {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(120,86,255,0.15); border-radius: 100px; padding: 4px 10px;
+    font-size: 12px; color: rgba(200,184,232,0.8); border: 1px solid rgba(120,86,255,0.25);
+  }
+  .card-actions { display: flex; gap: 14px; align-items: center; }
+  .action { display: flex; align-items: center; gap: 4px; font-size: 12px; color: rgba(200,184,232,0.5); }
+
+  /* Second card (partial) */
+  .discover-card2 {
+    background: rgba(255,255,255,0.04); border-radius: 20px; overflow: hidden;
+    border: 1px solid rgba(120,86,255,0.1); display: flex; gap: 14px; padding: 14px 16px;
+    align-items: center;
+  }
+  .card2-thumb {
+    width: 72px; height: 90px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #102030, #203060);
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+  }
+  .card2-content { flex: 1; }
+  .card2-author { font-size: 12px; color: rgba(200,184,232,0.5); margin-bottom: 4px; }
+  .card2-title { font-size: 15px; font-weight: 700; color: white; margin-bottom: 6px; }
+  .card2-vibe {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(240,192,64,0.12); border-radius: 100px; padding: 3px 10px;
+    font-size: 11px; color: rgba(240,192,64,0.8); border: 1px solid rgba(240,192,64,0.2);
+  }
+  .card2-witness { font-size: 12px; color: rgba(200,184,232,0.4); margin-top: 6px; }
+
+  /* Tab bar */
+  .tab-bar {
+    position: absolute; bottom: 12px; left: 16px; right: 16px; height: 68px;
+    background: rgba(20,16,50,0.95); border-radius: 28px;
+    display: flex; align-items: center; justify-content: space-around; padding: 0 8px;
+    border: 1px solid rgba(120,86,255,0.2);
+  }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; padding: 8px 0; }
+  .tab-icon { font-size: 22px; }
+  .tab-label { font-size: 10px; color: rgba(200,184,232,0.5); }
+  .tab-create {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #7856FF, #4A2ED0);
+    display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 18px;
+    box-shadow: 0 4px 20px rgba(120,86,255,0.5);
+  }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="status-right"><span>●●●●</span><span>WiFi</span><span>🔋</span></div>
+  </div>
+
+  <div class="header">
+    <div class="header-title">Discover</div>
+    <div class="tabs">
+      <div class="tab active">For You</div>
+      <div class="tab">New</div>
+      <div class="tab">Vibes</div>
+      <div class="tab">People</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Card 1 -->
+    <div class="discover-card">
+      <div class="card-author">
+        <div class="author-row">
+          <div class="author-avatar"><div class="author-avatar-inner"></div></div>
+          <div>
+            <div class="author-name">Starweaver Mira</div>
+            <div class="author-handle">@miraskies · Following</div>
+          </div>
+        </div>
+        <div class="following-btn">✓ Following</div>
+      </div>
+      <div class="card-panels">
+        <div class="panel-big">
+          <span style="font-size:40px;opacity:0.35;">🌌</span>
+        </div>
+        <div class="panel-small-col">
+          <div class="panel-small ps1"><span style="font-size:22px;opacity:0.35;">⭐</span></div>
+          <div class="panel-small ps2"><span style="font-size:22px;opacity:0.35;">🌙</span></div>
+        </div>
+      </div>
+      <div class="card-meta">
+        <div>
+          <div class="card-title">Between Two Dawns</div>
+          <div class="card-vibe">🌙 Dreamy</div>
+        </div>
+        <div class="card-actions">
+          <div class="action">👁 <span>24 witnessed</span></div>
+          <div class="action">🕊 <span>Save</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="discover-card2">
+      <div class="card2-thumb">🌅</div>
+      <div class="card2-content">
+        <div class="card2-author">@quietwanderer</div>
+        <div class="card2-title">The Unfinished Shore</div>
+        <div class="card2-vibe">✨ Hopeful</div>
+        <div class="card2-witness">38 witnessed · 5 saved</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div class="follow-btn">Follow</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-label">Home</div></div>
+    <div class="tab-item"><div class="tab-icon">📖</div><div class="tab-label">Journal</div></div>
+    <div class="tab-create">+</div>
+    <div class="tab-item active"><div class="tab-icon">🌐</div><div class="tab-label" style="color:#7856FF;">Discover</div></div>
+    <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-label">Profile</div></div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0">
+<title>Sky Journal – Journal</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 390px; height: 844px; overflow: hidden; font-family: -apple-system, 'Inter', sans-serif; background: #080714; color: white; }
+  .screen { width: 390px; height: 844px; position: relative; overflow: hidden; background: #0C0A1E; }
+
+  .status-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 0; color: white; font-size: 15px; font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+  /* Header */
+  .header {
+    padding: 54px 20px 20px;
+    background: linear-gradient(180deg, #1A1640 0%, #0F0E2A 100%);
+    position: relative; overflow: hidden;
+  }
+  .header-glow {
+    position: absolute; top: -40px; right: -40px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(120,86,255,0.15) 0%, transparent 70%);
+  }
+  .header-title {
+    font-size: 32px; font-weight: 800; color: white;
+    margin-bottom: 6px; letter-spacing: -0.5px;
+  }
+  .header-sub { font-size: 14px; color: rgba(200,184,232,0.6); }
+
+  /* Filter tabs */
+  .filter-tabs {
+    display: flex; gap: 8px; padding: 14px 20px;
+    background: rgba(12,10,30,0.98);
+    border-bottom: 1px solid rgba(120,86,255,0.1);
+    overflow: hidden;
+  }
+  .tab {
+    padding: 8px 16px; border-radius: 100px; font-size: 13px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .tab.active { background: rgba(120,86,255,0.25); color: #C8B8E8; border: 1px solid rgba(120,86,255,0.4); }
+  .tab.inactive { background: rgba(255,255,255,0.06); color: rgba(200,184,232,0.5); border: 1px solid transparent; }
+
+  /* Mini Calendar */
+  .mini-cal {
+    margin: 16px 20px; background: rgba(255,255,255,0.04);
+    border-radius: 18px; padding: 16px;
+    border: 1px solid rgba(120,86,255,0.12);
+  }
+  .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .cal-month { font-size: 14px; font-weight: 700; color: rgba(200,184,232,0.9); }
+  .cal-nav { font-size: 18px; color: rgba(200,184,232,0.4); }
+  .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-day {
+    text-align: center; font-size: 12px; padding: 5px 2px;
+    color: rgba(200,184,232,0.5); border-radius: 8px; position: relative;
+  }
+  .cal-day.today { background: rgba(120,86,255,0.3); color: white; font-weight: 700; }
+  .cal-day.has-entry::after {
+    content: ''; position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 50%; background: #7856FF;
+  }
+  .cal-day.header { color: rgba(200,184,232,0.3); font-weight: 600; font-size: 11px; }
+
+  /* Journal entries */
+  .entries { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+
+  .entry-card {
+    background: rgba(255,255,255,0.05); border-radius: 18px; padding: 18px;
+    border: 1px solid rgba(120,86,255,0.1); position: relative; overflow: hidden;
+  }
+  .entry-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    border-radius: 0 4px 4px 0;
+  }
+  .entry-card.diary::before { background: #7856FF; }
+  .entry-card.friend::before { background: #F0C040; }
+  .entry-card.moment::before { background: #B8D4F0; }
+
+  .entry-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .entry-type {
+    display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
+    color: rgba(200,184,232,0.7);
+  }
+  .entry-type-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .entry-time { font-size: 11px; color: rgba(200,184,232,0.35); }
+
+  .entry-text { font-size: 15px; color: rgba(255,255,255,0.88); line-height: 1.65; font-style: italic; }
+  .entry-mood {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
+    background: rgba(120,86,255,0.12); border-radius: 100px; padding: 4px 10px;
+    font-size: 12px; color: rgba(200,184,232,0.8); border: 1px solid rgba(120,86,255,0.2);
+  }
+
+  /* FAB */
+  .fab {
+    position: absolute; bottom: 90px; right: 24px;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, #7856FF, #4A2ED0);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; z-index: 20;
+    box-shadow: 0 8px 28px rgba(120,86,255,0.5);
+  }
+
+  /* Tab bar */
+  .tab-bar {
+    position: absolute; bottom: 12px; left: 16px; right: 16px; height: 68px;
+    background: rgba(20,16,50,0.95); border-radius: 28px;
+    display: flex; align-items: center; justify-content: space-around; padding: 0 8px;
+    border: 1px solid rgba(120,86,255,0.2);
+  }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; padding: 8px 0; }
+  .tab-icon { font-size: 22px; }
+  .tab-label { font-size: 10px; color: rgba(200,184,232,0.5); }
+  .tab-item.active .tab-label { color: #7856FF; }
+  .tab-create {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #7856FF, #4A2ED0);
+    display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 18px;
+    box-shadow: 0 4px 20px rgba(120,86,255,0.5);
+  }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="status-right"><span>●●●●</span><span>WiFi</span><span>🔋</span></div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-glow"></div>
+    <div class="header-title">Journal</div>
+    <div class="header-sub">Your private sky ✦ Always yours alone</div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-tabs">
+    <div class="tab active">All</div>
+    <div class="tab inactive">Diary</div>
+    <div class="tab inactive">Friend</div>
+    <div class="tab inactive">Moment</div>
+  </div>
+
+  <!-- Mini Calendar -->
+  <div class="mini-cal">
+    <div class="cal-header">
+      <div class="cal-month">May 2026</div>
+      <div class="cal-nav">‹ ›</div>
+    </div>
+    <div class="cal-days">
+      <div class="cal-day header">S</div><div class="cal-day header">M</div><div class="cal-day header">T</div>
+      <div class="cal-day header">W</div><div class="cal-day header">T</div><div class="cal-day header">F</div>
+      <div class="cal-day header">S</div>
+      <div class="cal-day">    </div><div class="cal-day">    </div><div class="cal-day">    </div>
+      <div class="cal-day">    </div><div class="cal-day has-entry">1</div><div class="cal-day has-entry">2</div>
+      <div class="cal-day">3</div>
+      <div class="cal-day">4</div><div class="cal-day has-entry">5</div><div class="cal-day has-entry">6</div>
+      <div class="cal-day has-entry">7</div><div class="cal-day">8</div><div class="cal-day today">9</div>
+      <div class="cal-day">10</div>
+    </div>
+  </div>
+
+  <!-- Entries -->
+  <div class="entries">
+    <div class="entry-card diary">
+      <div class="entry-top">
+        <div class="entry-type">
+          <div class="entry-type-dot" style="background:#7856FF;"></div>
+          Diary
+        </div>
+        <div class="entry-time">2h ago</div>
+      </div>
+      <div class="entry-text">"The sky looked different tonight — softer, like it was waiting for something only I could give it."</div>
+      <div class="entry-mood">🌙 Dreamy</div>
+    </div>
+
+    <div class="entry-card friend">
+      <div class="entry-top">
+        <div class="entry-type">
+          <div class="entry-type-dot" style="background:#F0C040;"></div>
+          Friend · Selene
+        </div>
+        <div class="entry-time">Yesterday</div>
+      </div>
+      <div class="entry-text">"We watched the dawn together and said nothing. Sometimes silence is the most golden thing."</div>
+      <div class="entry-mood">✨ Peaceful</div>
+    </div>
+
+    <div class="entry-card moment">
+      <div class="entry-top">
+        <div class="entry-type">
+          <div class="entry-type-dot" style="background:#B8D4F0;"></div>
+          Moment
+        </div>
+        <div class="entry-time">May 7</div>
+      </div>
+      <div class="entry-text">"Found a candle in the forgotten ark. Left it burning for the next wanderer."</div>
+      <div class="entry-mood">🕯️ Hopeful</div>
+    </div>
+  </div>
+
+  <!-- FAB -->
+  <div class="fab">✏️</div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item"><div class="tab-icon">🏠</div><div class="tab-label">Home</div></div>
+    <div class="tab-item active"><div class="tab-icon">📖</div><div class="tab-label" style="color:#7856FF;">Journal</div></div>
+    <div class="tab-create">+</div>
+    <div class="tab-item"><div class="tab-icon">🌐</div><div class="tab-label">Discover</div></div>
+    <div class="tab-item"><div class="tab-icon">👤</div><div class="tab-label">Profile</div></div>
+  </div>
+</div>
+</body>
+</html>

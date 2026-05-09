@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=390, initial-scale=1.0">
+<title>Sky Journal – Home</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 390px; height: 844px; overflow: hidden; font-family: -apple-system, 'Inter', sans-serif; background: #080714; color: white; }
+
+  .screen { width: 390px; height: 844px; position: relative; overflow: hidden; background: #080714; }
+
+  .status-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 44px; z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px 0; color: white; font-size: 15px; font-weight: 600;
+  }
+  .status-right { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+
+  /* Hero */
+  .hero {
+    position: relative; height: 340px;
+    background: linear-gradient(180deg, #12102A 0%, #1E1B48 50%, #2D235A 100%);
+    overflow: hidden;
+  }
+
+  /* Stars */
+  .star { position: absolute; background: white; border-radius: 50%; opacity: 0.7; }
+
+  /* Character hero */
+  .hero-char {
+    position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+    text-align: center;
+  }
+  .hero-avatar {
+    width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 12px;
+    background: radial-gradient(circle at 40% 35%, #F5E8D0, #D4B896);
+    position: relative;
+    box-shadow: 0 0 0 3px rgba(120,86,255,0.4), 0 0 30px rgba(120,86,255,0.3);
+  }
+  .hero-avatar::after {
+    content: '';
+    position: absolute; inset: -8px; border-radius: 50%;
+    border: 2px solid rgba(200,184,232,0.3);
+    animation: pulse 3s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1);opacity:0.3;} 50%{transform:scale(1.05);opacity:0.7;} }
+
+  .avatar-cape {
+    position: absolute; bottom: -10px; left: -15px; right: -15px; height: 30px;
+    background: linear-gradient(180deg, #7856FF, #4A2ED0);
+    border-radius: 50%;
+  }
+  .avatar-hair {
+    position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+    width: 28px; height: 18px;
+    background: radial-gradient(circle, #8B4513, #5A2D0C);
+    border-radius: 50% 50% 0 0;
+  }
+  .avatar-eyes { position: absolute; top: 32px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; }
+  .eye { width: 6px; height: 6px; background: #3A2010; border-radius: 50%; }
+
+  .hero-name { font-size: 20px; font-weight: 700; color: white; }
+  .hero-handle { font-size: 13px; color: rgba(200,184,232,0.7); margin-top: 3px; }
+
+  /* Stats strip */
+  .stats-strip {
+    display: flex; gap: 10px; padding: 14px 20px;
+    background: rgba(20,16,50,0.95);
+    border-bottom: 1px solid rgba(120,86,255,0.15);
+  }
+  .stat-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(120,86,255,0.15); border-radius: 100px;
+    padding: 6px 12px;
+    font-size: 13px; color: rgba(200,184,232,0.9);
+    border: 1px solid rgba(120,86,255,0.25);
+  }
+  .stat-pill strong { color: white; }
+
+  /* Scroll content */
+  .scroll-content { overflow: hidden; }
+
+  /* Section */
+  .section { padding: 20px 20px 0; }
+  .section-title {
+    font-size: 13px; font-weight: 600; color: rgba(200,184,232,0.5);
+    text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;
+  }
+
+  /* Nav cards */
+  .nav-cards { display: flex; flex-direction: column; gap: 10px; padding: 0 20px; }
+
+  .nav-card {
+    height: 90px; border-radius: 18px; overflow: hidden; position: relative;
+    display: flex; align-items: flex-end; padding: 14px 18px;
+  }
+  .nav-card-bg { position: absolute; inset: 0; }
+  .nav-card-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%); }
+  .nav-card-content { position: relative; z-index: 1; }
+  .nav-card-icon { font-size: 22px; margin-bottom: 4px; }
+  .nav-card-label { font-size: 17px; font-weight: 700; color: white; }
+  .nav-card-sub { font-size: 12px; color: rgba(255,255,255,0.7); }
+  .nav-arrow { position: absolute; right: 18px; bottom: 50%; transform: translateY(50%); font-size: 20px; color: rgba(255,255,255,0.7); z-index:1; }
+
+  /* Recent entry */
+  .recent { padding: 0 20px 20px; margin-top: 16px; }
+  .recent-card {
+    background: rgba(255,255,255,0.05); border-radius: 18px; padding: 18px;
+    border: 1px solid rgba(120,86,255,0.15);
+  }
+  .recent-tag {
+    display: inline-block; background: rgba(120,86,255,0.2); color: #C8B8E8;
+    border-radius: 100px; padding: 4px 12px; font-size: 12px; font-weight: 600;
+    margin-bottom: 10px; border: 1px solid rgba(120,86,255,0.3);
+  }
+  .recent-text { font-size: 15px; color: rgba(255,255,255,0.9); line-height: 1.6; font-style: italic; }
+  .recent-time { font-size: 12px; color: rgba(200,184,232,0.4); margin-top: 10px; }
+
+  /* Tab bar */
+  .tab-bar {
+    position: absolute; bottom: 12px; left: 16px; right: 16px; height: 68px;
+    background: rgba(20,16,50,0.95); border-radius: 28px;
+    display: flex; align-items: center; justify-content: space-around;
+    padding: 0 8px;
+    border: 1px solid rgba(120,86,255,0.2);
+    backdrop-filter: blur(20px);
+  }
+  .tab-item { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; padding: 8px 0; }
+  .tab-icon { font-size: 22px; }
+  .tab-label { font-size: 10px; color: rgba(200,184,232,0.5); }
+  .tab-item.active .tab-label { color: #7856FF; }
+  .tab-item.active .tab-icon { filter: drop-shadow(0 0 4px rgba(120,86,255,0.8)); }
+
+  .tab-create {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #7856FF, #4A2ED0);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 18px;
+    box-shadow: 0 4px 20px rgba(120,86,255,0.5);
+  }
+
+  /* Gold sparkles */
+  .sparkle { position: absolute; color: #F0C040; font-size: 14px; opacity: 0.8; }
+</style>
+</head>
+<body>
+<div class="screen">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="status-right"><span>●●●●</span><span>WiFi</span><span>🔋</span></div>
+  </div>
+
+  <!-- Hero -->
+  <div class="hero">
+    <!-- Stars -->
+    <div class="star" style="width:2px;height:2px;top:60px;left:30px;"></div>
+    <div class="star" style="width:3px;height:3px;top:90px;left:120px;"></div>
+    <div class="star" style="width:2px;height:2px;top:50px;left:220px;"></div>
+    <div class="star" style="width:1px;height:1px;top:110px;left:300px;"></div>
+    <div class="star" style="width:2px;height:2px;top:80px;left:360px;"></div>
+    <div class="star" style="width:3px;height:3px;top:140px;left:70px;"></div>
+    <div class="star" style="width:1px;height:1px;top:160px;left:180px;"></div>
+    <div class="star" style="width:2px;height:2px;top:200px;left:340px;"></div>
+
+    <!-- Sparkles -->
+    <div class="sparkle" style="top:180px;left:60px;">✦</div>
+    <div class="sparkle" style="top:160px;right:50px;">✧</div>
+    <div class="sparkle" style="top:220px;right:100px;">✦</div>
+
+    <div class="hero-char">
+      <div class="hero-avatar">
+        <div class="avatar-hair"></div>
+        <div class="avatar-eyes"><div class="eye"></div><div class="eye"></div></div>
+        <div class="avatar-cape"></div>
+      </div>
+      <div class="hero-name">Starweaver Luna</div>
+      <div class="hero-handle">@lunawanders · Dreamy</div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip">
+    <div class="stat-pill">📖 <strong>12</strong> entries</div>
+    <div class="stat-pill">✨ <strong>5</strong> stories</div>
+    <div class="stat-pill">👗 <strong>8</strong> outfits</div>
+  </div>
+
+  <!-- Nav Cards -->
+  <div style="height:12px;"></div>
+  <div class="section"><div class="section-title">Your Sky</div></div>
+  <div class="nav-cards">
+    <div class="nav-card" style="background: linear-gradient(135deg, #1E1B48, #2D235A);">
+      <div class="nav-card-overlay"></div>
+      <div class="nav-card-content">
+        <div class="nav-card-icon">📖</div>
+        <div class="nav-card-label">Moments</div>
+        <div class="nav-card-sub">12 private entries</div>
+      </div>
+      <div class="nav-arrow">›</div>
+    </div>
+    <div class="nav-card" style="background: linear-gradient(135deg, #1A2A50, #1A3A60);">
+      <div class="nav-card-overlay"></div>
+      <div class="nav-card-content">
+        <div class="nav-card-icon">🌸</div>
+        <div class="nav-card-label">Stories</div>
+        <div class="nav-card-sub">5 chapters shared</div>
+      </div>
+      <div class="nav-arrow">›</div>
+    </div>
+  </div>
+
+  <!-- Recent Entry -->
+  <div class="recent">
+    <div style="font-size:13px;font-weight:600;color:rgba(200,184,232,0.5);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;margin-top:16px;">Latest moment</div>
+    <div class="recent-card">
+      <div class="recent-tag">🌙 Dreamy</div>
+      <div class="recent-text">"The sky looked different tonight — softer, like it was waiting for something."</div>
+      <div class="recent-time">2 hours ago</div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <div class="tab-item active">
+      <div class="tab-icon">🏠</div>
+      <div class="tab-label">Home</div>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">📖</div>
+      <div class="tab-label">Journal</div>
+    </div>
+    <div class="tab-create">+</div>
+    <div class="tab-item">
+      <div class="tab-icon">🌐</div>
+      <div class="tab-label">Discover</div>
+    </div>
+    <div class="tab-item">
+      <div class="tab-icon">👤</div>
+      <div class="tab-label">Profile</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
