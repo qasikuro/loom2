@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "SkjYUmr0MWd2pGj_gEroZ"
@@ -36,3 +35,9 @@ id = "y7ipGBr1YG4SGBCf7nPQZ"
 uri = "file://artifacts/sky-journal/assets/images/story_bg3.png"
 type = "image"
 title = "story-bg-bridge-meeting"
+
+[[outputs]]
+id = "i_49T1YoL8OKCG42jULR4"
+uri = "file://sky-journal-marketing.md"
+type = "text"
+title = "Sky Journal — Full Marketing Materials"
