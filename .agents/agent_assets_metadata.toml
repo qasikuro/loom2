@@ -77,3 +77,21 @@ id = "vq9bsYoRy8FbW0NwxfO1G"
 uri = "file://screenshots/06_profile.jpg"
 type = "image"
 title = "6 – Profile Screen"
+
+[[outputs]]
+id = "l7Aj0OeCC7p7HWsmVAZV7"
+uri = "file://screenshots/both_phones_mockup.jpg"
+type = "image"
+title = "Sky Journal — iPhone 15 Pro + Pixel 8 Pro"
+
+[[outputs]]
+id = "TyIaQlPo2KD4DnKswtht2"
+uri = "file://screenshots/iphone_mockup.jpg"
+type = "image"
+title = "Sky Journal — iPhone 15 Pro"
+
+[[outputs]]
+id = "B3nGXcWid-kgEzbP_6elb"
+uri = "file://screenshots/android_mockup.jpg"
+type = "image"
+title = "Sky Journal — Pixel 8 Pro"
