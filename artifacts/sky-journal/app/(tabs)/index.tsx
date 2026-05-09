@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Images } from '@/assets/images';
 import { useApp } from '@/context/AppContext';
 import { SHADOW } from '@/constants/colors';
+import { useColors } from '@/hooks/useColors';
 
 const CATEGORIES = [
   {
@@ -88,6 +89,7 @@ const SPARKLES = [
 ] as const;
 
 export default function HomeScreen() {
+  const colors  = useColors();
   const { width: screenW } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const {
@@ -572,33 +574,33 @@ export default function HomeScreen() {
                     borderColor: r.isRising ? 'rgba(200,168,75,0.25)' : 'rgba(200,184,232,0.1)',
                   }]}>
                     <View style={[styles.notifIconWrap, {
-                      backgroundColor: r.isRising ? 'rgba(200,168,75,0.18)' : 'rgba(139,122,181,0.18)',
+                      backgroundColor: r.isRising ? `${colors.gold}30` : `${colors.primary}28`,
                     }]}>
                       <Icon
                         name={r.isRising ? 'trending-up' : (r.icon as any)}
                         size={16}
-                        color={r.isRising ? '#C8A84B' : '#8B7AB5'}
+                        color={r.isRising ? colors.gold : colors.primary}
                       />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
                       {r.count !== undefined && (
                         <Text style={{
                           fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5,
-                          color: r.isRising ? '#C8A84B' : '#EDE8FF',
+                          color: r.isRising ? colors.gold : colors.foreground,
                         }}>
                           {r.count}
                         </Text>
                       )}
                       <Text style={{
                         fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18,
-                        color: r.isRising ? 'rgba(240,234,248,0.9)' : 'rgba(200,184,232,0.82)',
+                        color: r.isRising ? colors.foreground : colors.mutedForeground,
                       }}>
                         {r.message}
                       </Text>
                       {r.subMessage && (
                         <Text style={{
                           fontSize: 11, fontFamily: 'Inter_400Regular',
-                          color: r.isRising ? 'rgba(200,168,75,0.72)' : 'rgba(200,184,232,0.45)',
+                          color: r.isRising ? `${colors.gold}B0` : `${colors.mutedForeground}90`,
                         }}>
                           {r.subMessage}
                         </Text>

@@ -21,6 +21,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 
 // Keep the native splash visible until we're ready to show our custom one
 SplashScreen.preventAutoHideAsync();
@@ -86,9 +87,10 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#1A1630' }}>
+    <View style={{ flex: 1, backgroundColor: '#080714' }}>
       {/* App content — rendered immediately so Clerk/Router load in background */}
       {fontsReady && (
+        <ThemeProvider>
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
           <ClerkLoaded>
             <SafeAreaProvider>
@@ -143,6 +145,7 @@ export default function RootLayout() {
             </SafeAreaProvider>
           </ClerkLoaded>
         </ClerkProvider>
+        </ThemeProvider>
       )}
 
       {/* Custom splash — overlays everything, fades out when ready */}

@@ -12,10 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/Icon';
+import { useColors } from '@/hooks/useColors';
 
-const PURPLE     = '#7856FF';
-const TAB_BAR_BG = '#0E0B1E';
-const INACTIVE   = 'rgba(200,184,232,0.42)';
 const BAR_HEIGHT = 64;
 const BTN_SIZE   = 54;
 
@@ -23,10 +21,12 @@ function TabIcon({
   name,
   color,
   focused,
+  primaryColor,
 }: {
-  name: IconName;
-  color: string;
-  focused: boolean;
+  name:         IconName;
+  color:        string;
+  focused:      boolean;
+  primaryColor: string;
 }) {
   const scale = useRef(new Animated.Value(focused ? 1.1 : 0.92)).current;
 
@@ -43,7 +43,7 @@ function TabIcon({
     <Animated.View
       style={[
         styles.iconWrap,
-        focused && styles.iconWrapActive,
+        focused && { backgroundColor: `${primaryColor}22` },
         { transform: [{ scale }] },
       ]}
     >
@@ -53,7 +53,8 @@ function TabIcon({
 }
 
 function CreateIcon() {
-  const scale = useRef(new Animated.Value(1)).current;
+  const colors = useColors();
+  const scale  = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     const breathe = Animated.loop(
@@ -77,13 +78,20 @@ function CreateIcon() {
   }, []);
 
   return (
-    <Animated.View style={[styles.createBtn, { transform: [{ scale }] }]}>
+    <Animated.View
+      style={[
+        styles.createBtn,
+        { backgroundColor: colors.primary, shadowColor: colors.primary },
+        { transform: [{ scale }] },
+      ]}
+    >
       <Icon name="plus" size={24} color="#fff" />
     </Animated.View>
   );
 }
 
 function ClassicTabLayout() {
+  const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb  = Platform.OS === 'web';
 
@@ -93,18 +101,18 @@ function ClassicTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor:   PURPLE,
-        tabBarInactiveTintColor: INACTIVE,
+        tabBarActiveTintColor:   colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
 
         tabBarStyle: {
           marginHorizontal: isWeb ? 0 : 12,
           marginBottom: barMarginBottom,
           height: isWeb ? 64 : BAR_HEIGHT,
           borderRadius: isWeb ? 0 : 28,
-          backgroundColor: TAB_BAR_BG,
+          backgroundColor: colors.tabBar,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(200,184,232,0.1)',
+          borderColor: colors.border,
           overflow: 'hidden',
           elevation: 20,
           shadowColor: '#000',
@@ -131,7 +139,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="home" color={color} focused={focused} />
+            <TabIcon name="home" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -140,7 +148,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Journal',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="book-open" color={color} focused={focused} />
+            <TabIcon name="book-open" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -158,7 +166,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Discover',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="compass" color={color} focused={focused} />
+            <TabIcon name="compass" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -167,7 +175,7 @@ function ClassicTabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="user" color={color} focused={focused} />
+            <TabIcon name="user" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -177,11 +185,12 @@ function ClassicTabLayout() {
 
 export default function TabLayout() {
   const { isSignedIn, isLoaded } = useAuth();
+  const colors = useColors();
 
   if (!isLoaded || !isSignedIn) {
     return (
-      <View style={styles.loader}>
-        <ActivityIndicator color="#C8A84B" size="large" />
+      <View style={[styles.loader, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.gold} size="large" />
       </View>
     );
   }
@@ -192,7 +201,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   loader: {
     flex: 1,
-    backgroundColor: '#080714',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -204,19 +212,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 12,
   },
-  iconWrapActive: {
-    backgroundColor: 'rgba(120,86,255,0.22)',
-  },
 
   createBtn: {
     width: BTN_SIZE,
     height: BTN_SIZE,
     borderRadius: BTN_SIZE / 2,
-    backgroundColor: PURPLE,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    shadowColor: PURPLE,
     shadowOpacity: 0.55,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 6 },
