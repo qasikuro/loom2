@@ -342,9 +342,29 @@ export default function UserProfileScreen() {
               ) : (
                 <View style={styles.outfitsGrid}>
                   {outfits.map(outfit => (
-                    <View
+                    <TouchableOpacity
                       key={outfit.id}
                       style={[styles.outfitCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        router.push({
+                          pathname: '/user-outfit',
+                          params: {
+                            outfitName:   outfit.name,
+                            outfitDesc:   outfit.description ?? '',
+                            outfitImage:  outfit.imageUri ?? '',
+                            outfitTags:   JSON.stringify(outfit.tags),
+                            outfitDate:   outfit.date,
+                            authorUserId: profile.userId,
+                            authorName:   profile.name,
+                            authorHandle: profile.username ?? '',
+                            authorBio:    profile.bio ?? '',
+                            authorMood:   profile.mood ?? '',
+                            authorTraits: JSON.stringify(profile.traits),
+                          },
+                        } as any);
+                      }}
+                      activeOpacity={0.84}
                     >
                       {outfit.imageUri ? (
                         <Image
@@ -368,7 +388,10 @@ export default function UserProfileScreen() {
                           </Text>
                         )}
                       </View>
-                    </View>
+                      <View style={styles.outfitArrow}>
+                        <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
+                      </View>
+                    </TouchableOpacity>
                   ))}
                 </View>
               )}
@@ -449,12 +472,13 @@ const styles = StyleSheet.create({
   moodPill:     { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1 },
   moodPillText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
 
-  outfitsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  outfitCard:  { width: '47.5%', borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  outfitImg:   { width: '100%', height: 120 },
-  outfitMeta:  { padding: 10, gap: 3 },
-  outfitName:  { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  outfitTags:  { fontSize: 11, fontFamily: 'Inter_400Regular', opacity: 0.7 },
+  outfitsGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  outfitCard:   { width: '47.5%', borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  outfitImg:    { width: '100%', height: 120 },
+  outfitMeta:   { padding: 10, gap: 3 },
+  outfitName:   { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  outfitTags:   { fontSize: 11, fontFamily: 'Inter_400Regular', opacity: 0.7 },
+  outfitArrow:  { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.22)' },
 
   emptyState: { alignItems: 'center', paddingVertical: 40, gap: 10 },
   emptyText:  { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center' },
