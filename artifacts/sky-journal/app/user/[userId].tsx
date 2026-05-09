@@ -21,6 +21,7 @@ import { useAuth } from '@clerk/expo';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
+import { ReportSheet } from '@/components/ReportSheet';
 
 const MOOD_COLORS: Record<string, string> = {
   Peaceful: '#8B7AB5', Joyful: '#D4A849', Melancholy: '#5D7BA5',
@@ -76,6 +77,7 @@ export default function UserProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
   const [tab,     setTab]     = useState<'stories' | 'outfits'>('stories');
+  const [reportSheetVisible, setReportSheetVisible] = useState(false);
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(18)).current;
@@ -253,6 +255,17 @@ export default function UserProfileScreen() {
             </View>
           )}
 
+          {!isSelf && (
+            <TouchableOpacity
+              style={styles.reportLink}
+              onPress={() => setReportSheetVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="flag" size={11} color="rgba(180,100,100,0.6)" />
+              <Text style={styles.reportLinkText}>Report this profile</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Tab switcher */}
           <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
             {(['stories', 'outfits'] as const).map(t => (
@@ -404,6 +417,14 @@ export default function UserProfileScreen() {
           )}
         </Animated.View>
       </ScrollView>
+
+      <ReportSheet
+        visible={reportSheetVisible}
+        targetType="user"
+        targetId={userId ?? ''}
+        targetLabel={profile?.name}
+        onClose={() => setReportSheetVisible(false)}
+      />
     </View>
   );
 }
@@ -456,6 +477,16 @@ const styles = StyleSheet.create({
     marginBottom: 16, marginHorizontal: 4,
   },
   notifyText: { fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1, lineHeight: 18 },
+
+  reportLink: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'center', marginBottom: 14,
+    paddingHorizontal: 10, paddingVertical: 6,
+  },
+  reportLinkText: {
+    fontSize: 11, fontFamily: 'Inter_400Regular',
+    color: 'rgba(180,100,100,0.6)', fontStyle: 'italic',
+  },
 
   tabRow:     { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16, marginTop: 6 },
   tabBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },

@@ -4,3 +4,4 @@ export * from "./journal-entries";
 export * from "./stories";
 export * from "./outfits";
 export * from "./notifications";
+export * from "./reports";

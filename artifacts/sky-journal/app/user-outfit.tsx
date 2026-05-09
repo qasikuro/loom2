@@ -2,10 +2,11 @@ import { Icon } from '@/components/Icon';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { ReportSheet } from '@/components/ReportSheet';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Animated,
   Image,
@@ -62,6 +63,7 @@ export default function UserOutfitScreen() {
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 16;
 
+  const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerOpacity = scrollY.interpolate({
     inputRange: [120, 200],
@@ -260,9 +262,26 @@ export default function UserOutfitScreen() {
               <Icon name="user" size={14} color={colors.mutedForeground} />
               <Text style={[styles.profileBtnText, { color: colors.mutedForeground }]}>Full Profile</Text>
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.reportBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              onPress={() => setReportSheetVisible(true)}
+              activeOpacity={0.82}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="flag" size={14} color="rgba(200,100,100,0.65)" />
+            </TouchableOpacity>
           </View>
         </View>
       </Animated.ScrollView>
+
+      <ReportSheet
+        visible={reportSheetVisible}
+        targetType="outfit"
+        targetId={params.authorUserId ?? ''}
+        targetLabel={`${params.authorName ?? 'this user'}'s outfit`}
+        onClose={() => setReportSheetVisible(false)}
+      />
     </View>
   );
 }
@@ -341,4 +360,5 @@ const styles = StyleSheet.create({
   followBtnText:  { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
   profileBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 11, borderRadius: 22, borderWidth: 1 },
   profileBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  reportBtn:      { width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

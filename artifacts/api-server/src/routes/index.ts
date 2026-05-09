@@ -7,6 +7,7 @@ import outfitsRouter from "./outfits";
 import uploadRouter from "./upload";
 import socialRouter from "./social";
 import notificationsRouter from "./notifications";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(outfitsRouter);
 router.use(uploadRouter);
 router.use(socialRouter);
 router.use(notificationsRouter);
+router.use(reportsRouter);
 
 export default router;

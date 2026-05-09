@@ -1,5 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { DiscoverCard } from '@/components/DiscoverCard';
+import { ReportSheet } from '@/components/ReportSheet';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
@@ -56,6 +57,7 @@ export default function DiscoverScreen() {
   const [peopleQuery,   setPeopleQuery]   = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(false);
+  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
@@ -173,6 +175,7 @@ export default function DiscoverScreen() {
               post={item}
               onPress={() => router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
+              onReport={() => setReportTargetId(item.id)}
               onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
             />
           )}
@@ -255,6 +258,14 @@ export default function DiscoverScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* ── Report sheet ──────────────────────────────────── */}
+      <ReportSheet
+        visible={!!reportTargetId}
+        targetType="story"
+        targetId={reportTargetId ?? ''}
+        onClose={() => setReportTargetId(null)}
+      />
 
       {/* ── People ─────────────────────────────────────────── */}
       {activeTab === 'People' && (

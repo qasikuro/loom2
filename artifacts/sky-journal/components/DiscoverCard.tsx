@@ -28,10 +28,11 @@ interface DiscoverCardProps {
   onPress?: () => void;
   onSave?: () => void;
   onDelete?: () => void;
+  onReport?: () => void;
   onAuthorPress?: () => void;
 }
 
-export function DiscoverCard({ post, onPress, onSave, onDelete, onAuthorPress }: DiscoverCardProps) {
+export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuthorPress }: DiscoverCardProps) {
   const colors   = useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
@@ -185,6 +186,15 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onAuthorPress }:
                 color={post.saved ? colors.primary : colors.mutedForeground}
               />
             </TouchableOpacity>
+            {onReport && (
+              <TouchableOpacity
+                onPress={onReport}
+                style={[styles.actionBtn, { backgroundColor: colors.muted, borderColor: colors.border, width: 36 }]}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              >
+                <Icon name="flag" size={14} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            )}
             {/* Read CTA */}
             <TouchableOpacity
               onPress={onPress}
