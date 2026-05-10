@@ -236,9 +236,9 @@ export default function HomeScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
 
-      {/* ── Dark navy header ──────────────────────────────────── */}
+      {/* ── Vivid header ──────────────────────────────────── */}
       <LinearGradient
-        colors={['#12102A', '#1E1A48', '#221E52']}
+        colors={['#140840', '#2E1498', '#5028B8']}
         style={[styles.headerGrad, { paddingTop: topPad }]}
         start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
       >

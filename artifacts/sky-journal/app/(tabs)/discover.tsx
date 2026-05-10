@@ -111,13 +111,17 @@ export default function DiscoverScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
 
-      {/* ── Gradient header (in-flow, not absolute) ─────────── */}
+      {/* ── Vivid gradient header (in-flow, not absolute) ─────────── */}
       <LinearGradient
-        colors={['#12102A', '#1A1640', '#1E1B4A']}
+        colors={['#1A0848', '#3A18B8', '#5430C0']}
         style={{ paddingTop: topPad }}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
+        <View style={{ position: 'absolute', width: 155, height: 155, borderRadius: 78, backgroundColor: 'rgba(100,60,255,0.16)', top: -35, right: -8, pointerEvents: 'none' }} />
+        <View style={{ position: 'absolute', width: 95, height: 95, borderRadius: 48, backgroundColor: 'rgba(60,140,240,0.12)', top: 22, left: -18, pointerEvents: 'none' }} />
+        <View style={{ position: 'absolute', width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(200,168,75,0.12)', bottom: 12, right: 68, pointerEvents: 'none' }} />
+
         {/* Title row */}
         <View style={styles.headerRow}>
           <View style={styles.headerText}>

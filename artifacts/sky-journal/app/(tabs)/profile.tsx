@@ -306,8 +306,8 @@ export default function CharacterScreen() {
   const totalWitnessed = stories.reduce((sum, s) => sum + s.witnessedCount, 0);
 
   const bannerColors = isDark
-    ? (['#2E2260', '#3A2E78', '#4A3888'] as const)
-    : (['#D4CAFF', '#C0B0F0', '#B8A8E8'] as const);
+    ? (['#281868', '#4228A8', '#5E44BC'] as const)
+    : (['#DDD2FF', '#C8B4F8', '#B4A4EC'] as const);
 
   const activeOutfit = activeOutfitId ? outfits.find(o => o.id === activeOutfitId) : null;
   const avatarSource = activeOutfit?.imageUri

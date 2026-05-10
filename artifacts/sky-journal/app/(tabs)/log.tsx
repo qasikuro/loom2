@@ -467,12 +467,16 @@ export default function JournalScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* ── Dark gradient header ─────────────────────────────────── */}
+      {/* ── Vivid gradient header ─────────────────────────────────── */}
       <LinearGradient
-        colors={['#1A1640', '#252070', '#2A2478']}
+        colors={['#180A50', '#36208C', '#6048A8']}
         style={[styles.headerGrad, { paddingTop: topPad }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       >
+        <View style={{ position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(140,100,240,0.18)', top: -20, right: 15, pointerEvents: 'none' }} />
+        <View style={{ position: 'absolute', width: 75, height: 75, borderRadius: 38, backgroundColor: 'rgba(200,168,75,0.11)', bottom: 8, left: 25, pointerEvents: 'none' }} />
+        <View style={{ position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(100,160,255,0.09)', top: 30, left: 140, pointerEvents: 'none' }} />
+
         {/* Top row */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>

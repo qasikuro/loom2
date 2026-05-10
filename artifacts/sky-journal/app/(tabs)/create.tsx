@@ -236,8 +236,9 @@ export default function CreateScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Header gradient */}
       <LinearGradient
-        colors={['#14103A', '#0E0B28', colors.background]}
+        colors={['#1E0A60', '#120940', colors.background]}
         style={[styles.headerGrad, { height: topPad + 80 }]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
 
       {/* Header */}
