@@ -4,8 +4,8 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -115,7 +115,7 @@ function PanelCell({
   return (
     <View style={[styles.cell, { width: cellW, height: cellH }]}>
       {imgSrc ? (
-        <Image source={imgSrc} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
       ) : (
         <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} />
       )}
@@ -331,7 +331,7 @@ export default function StoryScreen() {
         {/* ── Hero cover ─────────────────────────────────── */}
         <View style={[styles.hero, { height: topPad + 300 }]}>
           {heroImgSrc ? (
-            <Image source={heroImgSrc} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            <Image source={heroImgSrc} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
           ) : (
             <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
           )}

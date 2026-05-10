@@ -1,7 +1,8 @@
 import { Icon } from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
 import { useColors } from '@/hooks/useColors';
@@ -107,7 +108,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
       <View style={styles.imageWrap}>
         {post.imageUri ? (
           <>
-            <Image source={{ uri: post.imageUri }} style={styles.image} resizeMode="cover" />
+            <Image source={{ uri: post.imageUri }} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
             <LinearGradient
               colors={['rgba(0,0,0,0)', 'rgba(20,16,40,0.6)']}
               style={StyleSheet.absoluteFill}

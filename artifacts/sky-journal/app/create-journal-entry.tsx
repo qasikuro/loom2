@@ -5,8 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri } from '@/utils/persistImage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
-  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -252,7 +252,7 @@ export default function CreateJournalEntryScreen() {
         {/* Optional image */}
         {imageUri ? (
           <View style={styles.imagePreviewWrap}>
-            <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
+            <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
             <TouchableOpacity
               style={[styles.removeImg, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
               onPress={() => setImageUri(undefined)}

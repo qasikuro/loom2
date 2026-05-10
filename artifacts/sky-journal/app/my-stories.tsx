@@ -4,10 +4,10 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { Image } from 'expo-image';
 import {
   Dimensions,
   FlatList,
-  Image,
   Platform,
   StyleSheet,
   Text,
@@ -65,7 +65,7 @@ function StoryCard({ story, colors }: { story: Story; colors: ReturnType<typeof 
     >
       {/* Cover image */}
       {cover ? (
-        <Image source={cover} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <Image source={cover} style={StyleSheet.absoluteFill} contentFit="cover" />
       ) : (
         <LinearGradient
           colors={[`${moodColor}55`, `${moodColor}20`, '#0F0D1E']}

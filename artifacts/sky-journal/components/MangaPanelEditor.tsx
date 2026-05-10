@@ -2,8 +2,8 @@ import { Icon } from '@/components/Icon';
 import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import { persistImageUri } from '@/utils/persistImage';
+import { Image } from 'expo-image';
 import {
-  Image,
   StyleSheet,
   Text,
   TextInput,
@@ -74,7 +74,7 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
       >
         {panel.imageUri ? (
           <>
-            <Image source={{ uri: panel.imageUri }} style={styles.panelImage} resizeMode="cover" />
+            <Image source={{ uri: panel.imageUri }} style={styles.panelImage} contentFit="cover" cachePolicy="memory-disk" />
             <View style={styles.imageEditOverlay}>
               <View style={[styles.editChip, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
                 <Icon name="camera" size={12} color="#1E1830" />

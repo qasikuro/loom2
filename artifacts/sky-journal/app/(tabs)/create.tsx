@@ -4,8 +4,8 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { Image } from 'expo-image';
 import {
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -94,7 +94,7 @@ function MiniPageGrid({ page, getPanelImg }: { page: StoryPage; getPanelImg: (p:
                   }}
                 >
                   {imgSrc && (
-                    <Image source={imgSrc} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
                   )}
                   {!imgSrc && (
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -289,7 +289,7 @@ export default function CreateScreen() {
               textAlignVertical="top"
               returnKeyType="default"
             />
-            <Image source={Images.character_default} style={styles.descIllustration} resizeMode="contain" />
+            <Image source={Images.character_default} style={styles.descIllustration} contentFit="contain" />
           </View>
         </View>
 

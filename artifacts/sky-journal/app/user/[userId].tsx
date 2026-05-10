@@ -3,11 +3,11 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   Animated,
   Easing,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -311,7 +311,8 @@ export default function UserProfileScreen() {
                         <Image
                           source={{ uri: firstPanel.imageUri }}
                           style={styles.storyCover}
-                          resizeMode="cover"
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
                         />
                       ) : (
                         <LinearGradient
@@ -388,7 +389,8 @@ export default function UserProfileScreen() {
                         <Image
                           source={{ uri: outfit.imageUri }}
                           style={styles.outfitImg}
-                          resizeMode="cover"
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
                         />
                       ) : (
                         <LinearGradient

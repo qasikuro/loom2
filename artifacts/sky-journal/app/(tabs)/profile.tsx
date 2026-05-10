@@ -6,11 +6,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   Animated,
   Easing,
-  Image,
   Modal,
   Platform,
   Pressable,
@@ -100,7 +100,7 @@ function OutfitGridCard({
         ]}
       >
         {outfit.imageUri ? (
-          <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
           <LinearGradient
             colors={[`${colors.primary}55`, `${colors.primary}18`]}
@@ -382,7 +382,7 @@ export default function CharacterScreen() {
             {/* Gradient ring */}
             <View style={[styles.avatarRingOuter, { borderColor: colors.primary }]}>
               <View style={[styles.avatarRingInner, { borderColor: `${colors.primary}40`, backgroundColor: colors.card }]}>
-                <Image source={avatarSource} style={styles.avatarImg} resizeMode="cover" />
+                <Image source={avatarSource} style={styles.avatarImg} contentFit="cover" />
               </View>
             </View>
             {/* Sparkle decorations */}
@@ -530,7 +530,7 @@ export default function CharacterScreen() {
                   return (
                     <View key={story.id} style={[styles.storyThumb, { marginLeft: i > 0 ? 8 : 0 }, i === 0 && { flex: 1.4 }]}>
                       {cover ? (
-                        <Image source={cover} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                        <Image source={cover} style={StyleSheet.absoluteFill} contentFit="cover" />
                       ) : (
                         <LinearGradient colors={[`${moodColor}55`, `${moodColor}18`]} style={StyleSheet.absoluteFill} />
                       )}
@@ -731,7 +731,7 @@ export default function CharacterScreen() {
                   {/* Outfit image */}
                   <View style={[styles.modalImageWrap, { backgroundColor: `${colors.primary}14` }]}>
                     {selectedOutfit.imageUri ? (
-                      <Image source={{ uri: selectedOutfit.imageUri }} style={styles.modalImage} resizeMode="contain" />
+                      <Image source={{ uri: selectedOutfit.imageUri }} style={styles.modalImage} contentFit="contain" />
                     ) : (
                       <LinearGradient
                         colors={[`${colors.primary}55`, `${colors.primary}1A`]}
@@ -804,7 +804,7 @@ export default function CharacterScreen() {
                     {/* Character info */}
                     <View style={styles.charRow}>
                       <View style={[styles.charAvatar, { borderColor: colors.primary, backgroundColor: colors.muted }]}>
-                        <Image source={Images.character_default} style={styles.charAvatarImg} resizeMode="cover" />
+                        <Image source={Images.character_default} style={styles.charAvatarImg} contentFit="cover" />
                       </View>
                       <View style={{ flex: 1, gap: 2 }}>
                         <Text style={[styles.charName, { color: colors.foreground }]}>{character.name}</Text>

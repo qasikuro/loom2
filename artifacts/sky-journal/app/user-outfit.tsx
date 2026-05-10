@@ -7,9 +7,9 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   Animated,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -116,7 +116,7 @@ export default function UserOutfitScreen() {
         <View style={[styles.heroWrap, { height: IMG_H }]}>
           <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: imageScale }] }]}>
             {params.outfitImage ? (
-              <Image source={{ uri: params.outfitImage }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+              <Image source={{ uri: params.outfitImage }} style={StyleSheet.absoluteFill} contentFit="contain" />
             ) : (
               <LinearGradient
                 colors={[`${moodColor}55`, `${moodColor}18`, colors.background]}

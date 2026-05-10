@@ -4,10 +4,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   Animated,
   Easing,
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -149,7 +149,8 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
           <Image
             source={{ uri: entry.imageUri }}
             style={tc.thumbnail}
-            resizeMode="cover"
+            contentFit="cover"
+            cachePolicy="memory-disk"
           />
         )}
       </View>

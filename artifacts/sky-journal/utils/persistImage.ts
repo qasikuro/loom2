@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { getAuthToken } from '@/context/AppContext';
 
 const DIR = FileSystem.documentDirectory
   ? `${FileSystem.documentDirectory}sky_journal_images/`
@@ -32,9 +33,12 @@ function uniqueName(e: string): string {
 async function uploadToServer(base64Data: string, ext: string): Promise<string | null> {
   try {
     const apiBase = resolveApiBase();
+    const token = await getAuthToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(`${apiBase}/upload`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ data: base64Data, ext }),
     });
     if (!res.ok) return null;

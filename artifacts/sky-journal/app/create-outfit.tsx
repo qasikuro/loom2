@@ -5,8 +5,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri } from '@/utils/persistImage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { Image } from 'expo-image';
 import {
-  Image,
   Platform,
   StyleSheet,
   Text,
@@ -114,7 +114,7 @@ export default function CreateOutfitScreen() {
         >
           {imageUri ? (
             <>
-              <Image source={{ uri: imageUri }} style={styles.outfitImage} resizeMode="contain" />
+              <Image source={{ uri: imageUri }} style={styles.outfitImage} contentFit="contain" />
               <View style={styles.changeOverlay}>
                 <View style={[styles.changeChip, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
                   <Icon name="camera" size={13} color={colors.foreground} />

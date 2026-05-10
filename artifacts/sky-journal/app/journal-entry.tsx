@@ -6,8 +6,8 @@ import { useColors } from '@/hooks/useColors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
+import { Image } from 'expo-image';
 import {
-  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -121,7 +121,8 @@ export default function JournalEntryScreen() {
             <Image
               source={{ uri: entry.imageUri }}
               style={s.image}
-              resizeMode="contain"
+              contentFit="contain"
+              cachePolicy="memory-disk"
             />
           </View>
         )}

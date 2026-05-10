@@ -4,10 +4,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   Animated,
   Dimensions,
-  Image,
   KeyboardAvoidingView,
   PanResponder,
   Platform,
@@ -474,7 +474,7 @@ export default function PanelEditorScreen() {
                         ]}>
                           {/* Background image */}
                           {bg
-                            ? <Image source={bg} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                            ? <Image source={bg} style={StyleSheet.absoluteFill} contentFit="cover" />
                             : (
                               <View style={styles.emptyHint}>
                                 <Icon name="image" size={isActive ? 26 : 16} color="rgba(180,165,220,0.25)" />

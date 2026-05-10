@@ -23,6 +23,10 @@ export function setAuthTokenGetter(fn: TokenGetter) {
   _getToken = fn;
 }
 
+export async function getAuthToken(): Promise<string | null> {
+  return _getToken();
+}
+
 export async function apiFetch<T>(
   path: string,
   options?: RequestInit,

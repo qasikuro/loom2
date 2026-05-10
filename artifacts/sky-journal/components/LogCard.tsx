@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
 import { useColors } from '@/hooks/useColors';
@@ -28,7 +29,7 @@ function DiaryCard({ entry, onPress, onDelete }: LogCardProps) {
     >
       {entry.imageUri && (
         <View style={styles.coverWrap}>
-          <Image source={{ uri: entry.imageUri }} style={styles.coverImg} resizeMode="cover" />
+          <Image source={{ uri: entry.imageUri }} style={styles.coverImg} contentFit="cover" cachePolicy="memory-disk" />
           <View style={styles.coverOverlay} />
         </View>
       )}

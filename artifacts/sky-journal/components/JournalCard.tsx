@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
 import { useColors } from '@/hooks/useColors';
@@ -58,7 +59,7 @@ function DiaryCard({ entry, onDelete }: JournalCardProps) {
           {entry.text}
         </Text>
         {entry.imageUri && (
-          <Image source={{ uri: entry.imageUri }} style={styles.thumb} resizeMode="cover" />
+          <Image source={{ uri: entry.imageUri }} style={styles.thumb} contentFit="cover" cachePolicy="memory-disk" />
         )}
       </View>
       <View style={styles.footer}>

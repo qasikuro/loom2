@@ -3,10 +3,10 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
+import { Image } from 'expo-image';
 import {
   Animated,
   Easing,
-  Image,
   Modal,
   Platform,
   Pressable,
@@ -267,8 +267,8 @@ export default function HomeScreen() {
             hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
           >
             {activeOutfit?.imageUri
-              ? <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatar} resizeMode="cover" />
-              : <Image source={Images.character_default} style={styles.avatar} resizeMode="cover" />
+              ? <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatar} contentFit="cover" />
+              : <Image source={Images.character_default} style={styles.avatar} contentFit="cover" />
             }
           </TouchableOpacity>
 
@@ -332,8 +332,8 @@ export default function HomeScreen() {
             style={[StyleSheet.absoluteFill, { transform: [{ translateY: heroFloatY }] }]}
           >
             {activeOutfit?.imageUri
-              ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="contain" />
-              : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="contain" />
+              ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
+              : <Image source={Images.character_default} style={StyleSheet.absoluteFill} contentFit="contain" />
             }
           </Animated.View>
 
@@ -452,7 +452,7 @@ export default function HomeScreen() {
                 }}
                 activeOpacity={0.86}
               >
-                <Image source={cat.image} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                <Image source={cat.image} style={StyleSheet.absoluteFill} contentFit="cover" />
                 <LinearGradient
                   colors={['rgba(12,10,26,0.94)', 'rgba(12,10,26,0.72)', 'rgba(12,10,26,0.14)']}
                   locations={[0, 0.5, 1]}
@@ -522,7 +522,7 @@ export default function HomeScreen() {
                   onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(outfit.id); setShowOutfitPicker(false); }}
                 >
                   {outfit.imageUri
-                    ? <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} resizeMode="cover" />
+                    ? <Image source={{ uri: outfit.imageUri }} style={styles.pickerCardImg} contentFit="cover" />
                     : <View style={[styles.pickerCardImg, { backgroundColor: `${colors.primary}12`, alignItems: 'center', justifyContent: 'center' }]}><Icon name="star" size={22} color={`${colors.primary}60`} /></View>
                   }
                   <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]} numberOfLines={1}>{outfit.name}</Text>
