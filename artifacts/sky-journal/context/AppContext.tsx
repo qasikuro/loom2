@@ -200,7 +200,8 @@ interface AppContextValue {
   serverNotifications:         ServerNotification[];
   markServerNotificationsRead: () => void;
 
-  reloadData: () => Promise<void>;
+  reloadData:    () => Promise<void>;
+  clearUserData: () => Promise<void>;
 }
 
 // ── Defaults ──────────────────────────────────────────────────────────────────
@@ -373,9 +374,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // ── Clear all user data (call on sign-out) ────────────────────────────────
+
+  const ALL_CACHE_KEYS = [
+    'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
+    'discover_v1', 'following_v1', 'active_outfit_v1',
+  ];
+
+  const clearUserData = useCallback(async () => {
+    setCharacterState(DEFAULT_CHARACTER);
+    setJournalEntries([]);
+    setStories([]);
+    setOutfits([]);
+    setDiscoverFeedRaw([]);
+    setFollowingIds([]);
+    setActiveOutfitIdState(null);
+    setServerNotifications([]);
+    setSavedStoryIds(new Set());
+    setApiOnline(false);
+    await Promise.allSettled(ALL_CACHE_KEYS.map(k => AsyncStorage.removeItem(k)));
+  }, []);
+
   // Called by AuthTokenBridge once a valid Clerk token is available
   async function loadData() {
     setIsLoading(true);
+
+    // Reset to clean defaults before populating with the new user's API data.
+    // This prevents any previous user's cached state from leaking through.
+    setCharacterState(DEFAULT_CHARACTER);
+    setJournalEntries([]);
+    setStories([]);
+    setOutfits([]);
+    setDiscoverFeedRaw([]);
+    setFollowingIds([]);
+    setSavedStoryIds(new Set());
 
     try {
       const [charRaw, entriesRaw, storiesRaw, outfitsRaw] = await Promise.all([
@@ -644,6 +676,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       rewards, dismissReward,
       serverNotifications, markServerNotificationsRead,
       reloadData,
+      clearUserData,
     }}>
       {children}
     </AppContext.Provider>

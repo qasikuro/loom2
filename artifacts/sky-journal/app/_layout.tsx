@@ -41,7 +41,7 @@ const clerkProxyUrl  = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 function AuthTokenBridge() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
-  const { reloadData } = useApp();
+  const { reloadData, clearUserData } = useApp();
   const prevSignedIn = useRef<boolean | null>(null);
 
   useEffect(() => {
@@ -51,7 +51,10 @@ function AuthTokenBridge() {
       try { return await getToken(); } catch { return null; }
     });
     if (isSignedIn && prevSignedIn.current !== true) reloadData();
-    if (!isSignedIn && prevSignedIn.current === true) setAuthTokenGetter(async () => null);
+    if (!isSignedIn && prevSignedIn.current === true) {
+      setAuthTokenGetter(async () => null);
+      clearUserData();
+    }
     prevSignedIn.current = isSignedIn ?? false;
   }, [isLoaded, isSignedIn, getToken]);
 
