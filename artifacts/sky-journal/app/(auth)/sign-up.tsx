@@ -1,7 +1,8 @@
 import { Icon } from '@/components/Icon';
 import { useSignUp } from '@clerk/expo';
+import { type Href, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -27,7 +28,7 @@ const SPARKLES = [
 ];
 
 export default function SignUpScreen() {
-  const { signUp, setActive, isLoaded } = useSignUp();
+  const { signUp, errors, fetchStatus } = useSignUp();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -35,67 +36,35 @@ export default function SignUpScreen() {
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode]                 = useState('');
-  const [errorMsg, setErrorMsg]         = useState('');
-  const [isLoading, setIsLoading]       = useState(false);
-  const [pendingVerification, setPendingVerification] = useState(false);
+
+  const isLoading = fetchStatus === 'fetching';
+
+  const needsVerification =
+    signUp?.status === 'missing_requirements' &&
+    Array.isArray(signUp?.unverifiedFields) &&
+    signUp.unverifiedFields.includes('email_address') &&
+    (signUp?.missingFields?.length ?? 0) === 0;
 
   async function handleSignUp() {
-    if (!isLoaded || !signUp) return;
-    setErrorMsg('');
-    setIsLoading(true);
-    try {
-      await signUp.create({
-        emailAddress: email.trim(),
-        password,
-      });
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-      setPendingVerification(true);
-    } catch (err: any) {
-      const msg =
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        'Could not create account. Please try again.';
-      setErrorMsg(msg);
-    } finally {
-      setIsLoading(false);
-    }
+    const { error } = await signUp.password({ emailAddress: email.trim(), password });
+    if (error) return;
+    await signUp.verifications.sendEmailCode();
   }
 
   async function handleVerify() {
-    if (!isLoaded || !signUp) return;
-    setErrorMsg('');
-    setIsLoading(true);
-    try {
-      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
-      if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)' as any);
-      } else {
-        setErrorMsg('Verification could not be completed. Please try again.');
-      }
-    } catch (err: any) {
-      const msg =
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        'Verification failed. Please try again.';
-      setErrorMsg(msg);
-    } finally {
-      setIsLoading(false);
+    await signUp.verifications.verifyEmailCode({ code: code.trim() });
+    if (signUp.status === 'complete') {
+      await signUp.finalize({
+        navigate: ({ session, decorateUrl }) => {
+          if (session?.currentTask) return;
+          router.replace('/(tabs)' as Href);
+        },
+      });
     }
   }
 
-  async function handleResend() {
-    if (!signUp) return;
-    setErrorMsg('');
-    try {
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-    } catch { /* silent */ }
-  }
-
   // ── Verification screen ────────────────────────────────────────────────────
-  if (pendingVerification) {
+  if (needsVerification) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
         <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
@@ -117,7 +86,7 @@ export default function SignUpScreen() {
               <TextInput
                 style={styles.input}
                 value={code}
-                onChangeText={t => { setCode(t); setErrorMsg(''); }}
+                onChangeText={t => setCode(t)}
                 keyboardType="number-pad"
                 placeholder="Enter 6-digit code"
                 placeholderTextColor="rgba(200,184,232,0.4)"
@@ -126,7 +95,9 @@ export default function SignUpScreen() {
             </View>
           </View>
 
-          {!!errorMsg && <Text style={[styles.error, { marginTop: 12 }]}>{errorMsg}</Text>}
+          {!!errors?.fields?.code?.message && (
+            <Text style={[styles.error, { marginTop: 12 }]}>{errors.fields.code.message}</Text>
+          )}
 
           <TouchableOpacity
             style={[styles.btn, { marginTop: 24 }, (!code || isLoading) && styles.btnDisabled]}
@@ -139,10 +110,10 @@ export default function SignUpScreen() {
             }
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.textBtn} onPress={handleResend}>
+          <TouchableOpacity style={styles.textBtn} onPress={() => signUp.verifications.sendEmailCode()}>
             <Text style={styles.textBtnText}>Resend code</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => { setPendingVerification(false); setCode(''); setErrorMsg(''); }}>
+          <TouchableOpacity style={styles.textBtn} onPress={() => { signUp.reset(); setCode(''); }}>
             <Text style={styles.textBtnText}>Start over</Text>
           </TouchableOpacity>
         </View>
@@ -190,7 +161,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={t => { setEmail(t); setErrorMsg(''); }}
+                  onChangeText={t => setEmail(t)}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   placeholder="your@email.com"
@@ -198,6 +169,9 @@ export default function SignUpScreen() {
                   autoComplete="email"
                 />
               </View>
+              {!!errors?.fields?.emailAddress?.message && (
+                <Text style={styles.fieldError}>{errors.fields.emailAddress.message}</Text>
+              )}
             </View>
 
             <View style={styles.field}>
@@ -207,7 +181,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
-                  onChangeText={t => { setPassword(t); setErrorMsg(''); }}
+                  onChangeText={t => setPassword(t)}
                   secureTextEntry={!showPassword}
                   placeholder="Create a strong password"
                   placeholderTextColor="rgba(200,184,232,0.4)"
@@ -217,9 +191,10 @@ export default function SignUpScreen() {
                   <Icon name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
                 </TouchableOpacity>
               </View>
+              {!!errors?.fields?.password?.message && (
+                <Text style={styles.fieldError}>{errors.fields.password.message}</Text>
+              )}
             </View>
-
-            {!!errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
 
             <TouchableOpacity
               style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
@@ -268,6 +243,7 @@ const styles = StyleSheet.create({
   inputIcon: { paddingLeft: 14 },
   input: { flex: 1, height: 52, paddingHorizontal: 12, fontSize: 15, fontFamily: 'Inter_400Regular', color: '#F0ECFF' },
   eyeBtn: { position: 'absolute', right: 14, padding: 4 },
+  fieldError: { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#E06C75' },
   error: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#E06C75', textAlign: 'center', backgroundColor: 'rgba(224,108,117,0.12)', borderRadius: 10, padding: 10 },
   btn: { height: 54, borderRadius: 16, marginTop: 4, backgroundColor: '#6B5B95', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnDisabled: { opacity: 0.45 },

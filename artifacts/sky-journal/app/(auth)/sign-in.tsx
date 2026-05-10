@@ -1,7 +1,8 @@
 import { Icon } from '@/components/Icon';
 import { useSignIn } from '@clerk/expo';
+import { type Href, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link, useRouter } from 'expo-router';
+import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -27,43 +28,115 @@ const SPARKLES = [
 ];
 
 export default function SignInScreen() {
-  const { signIn, setActive, isLoaded } = useSignIn();
+  const { signIn, errors, fetchStatus } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg]         = useState('');
-  const [isLoading, setIsLoading]       = useState(false);
+  const [code, setCode]                 = useState('');
+
+  const isLoading = fetchStatus === 'fetching';
+  const needsClientTrust = signIn?.status === 'needs_client_trust';
 
   async function handleSignIn() {
-    if (!isLoaded || !signIn) return;
-    setErrorMsg('');
-    setIsLoading(true);
-    try {
-      const result = await signIn.create({
-        identifier: email.trim(),
-        password,
+    const { error } = await signIn.password({ emailAddress: email.trim(), password });
+    if (error) return;
+
+    if (signIn.status === 'complete') {
+      await signIn.finalize({
+        navigate: ({ session, decorateUrl }) => {
+          if (session?.currentTask) return;
+          const url = decorateUrl('/');
+          if (url.startsWith('http')) {
+            // no window on native — just push tabs
+            router.replace('/(tabs)' as Href);
+          } else {
+            router.replace('/(tabs)' as Href);
+          }
+        },
       });
-      if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)' as any);
-      } else {
-        setErrorMsg('Sign-in could not be completed. Please try again.');
-      }
-    } catch (err: any) {
-      const msg =
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        'Sign-in failed. Please try again.';
-      setErrorMsg(msg);
-    } finally {
-      setIsLoading(false);
+    } else if (signIn.status === 'needs_client_trust') {
+      const emailFactor = signIn.supportedSecondFactors?.find(
+        (f) => f.strategy === 'email_code',
+      );
+      if (emailFactor) await signIn.mfa.sendEmailCode();
     }
   }
 
+  async function handleVerify() {
+    await signIn.mfa.verifyEmailCode({ code: code.trim() });
+    if (signIn.status === 'complete') {
+      await signIn.finalize({
+        navigate: ({ session, decorateUrl }) => {
+          if (session?.currentTask) return;
+          router.replace('/(tabs)' as Href);
+        },
+      });
+    }
+  }
+
+  const fieldError =
+    errors?.fields?.identifier?.message ||
+    errors?.fields?.password?.message ||
+    errors?.fields?.code?.message ||
+    '';
+
+  // ── Email code verification screen ─────────────────────────────────────────
+  if (needsClientTrust) {
+    return (
+      <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
+        <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
+          <View style={styles.iconWrap}>
+            <LinearGradient colors={['#C8A84B', '#E8C870']} style={styles.iconCircle}>
+              <Icon name="shield" size={26} color="#1A1630" />
+            </LinearGradient>
+          </View>
+          <Text style={styles.title}>Verify your device</Text>
+          <Text style={styles.subtitle}>Enter the code sent to your email to continue</Text>
+
+          <View style={[styles.field, { marginTop: 8 }]}>
+            <View style={styles.inputWrap}>
+              <Icon name="key" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                value={code}
+                onChangeText={t => setCode(t)}
+                keyboardType="number-pad"
+                placeholder="000000"
+                placeholderTextColor="rgba(200,184,232,0.4)"
+                autoFocus
+                autoComplete="one-time-code"
+              />
+            </View>
+          </View>
+
+          {!!fieldError && <Text style={[styles.error, { marginTop: 12 }]}>{fieldError}</Text>}
+
+          <TouchableOpacity
+            style={[styles.btn, { marginTop: 24 }, (!code.trim() || isLoading) && styles.btnDisabled]}
+            onPress={handleVerify}
+            disabled={!code.trim() || isLoading}
+          >
+            {isLoading
+              ? <ActivityIndicator color="#fff" />
+              : <><Text style={styles.btnText}>Verify</Text><Text style={styles.btnStar}>✦</Text></>
+            }
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.textBtn} onPress={() => signIn.mfa.sendEmailCode()}>
+            <Text style={styles.textBtnText}>Resend code</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.textBtn} onPress={() => { signIn.reset(); setCode(''); }}>
+            <Text style={styles.textBtnText}>← Back to sign in</Text>
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+    );
+  }
+
+  // ── Password screen ────────────────────────────────────────────────────────
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
       {SPARKLES.map((sp, i) => (
@@ -103,7 +176,7 @@ export default function SignInScreen() {
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={t => { setEmail(t); setErrorMsg(''); }}
+                  onChangeText={t => setEmail(t)}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   placeholder="your@email.com"
@@ -111,6 +184,9 @@ export default function SignInScreen() {
                   autoComplete="email"
                 />
               </View>
+              {!!errors?.fields?.identifier?.message && (
+                <Text style={styles.fieldError}>{errors.fields.identifier.message}</Text>
+              )}
             </View>
 
             <View style={styles.field}>
@@ -120,7 +196,7 @@ export default function SignInScreen() {
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
-                  onChangeText={t => { setPassword(t); setErrorMsg(''); }}
+                  onChangeText={t => setPassword(t)}
                   secureTextEntry={!showPassword}
                   placeholder="Enter your password"
                   placeholderTextColor="rgba(200,184,232,0.4)"
@@ -130,9 +206,10 @@ export default function SignInScreen() {
                   <Icon name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
                 </TouchableOpacity>
               </View>
+              {!!errors?.fields?.password?.message && (
+                <Text style={styles.fieldError}>{errors.fields.password.message}</Text>
+              )}
             </View>
-
-            {!!errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
 
             <TouchableOpacity
               style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
@@ -181,6 +258,7 @@ const styles = StyleSheet.create({
   inputIcon: { paddingLeft: 14 },
   input: { flex: 1, height: 52, paddingHorizontal: 12, fontSize: 15, fontFamily: 'Inter_400Regular', color: '#F0ECFF' },
   eyeBtn: { position: 'absolute', right: 14, padding: 4 },
+  fieldError: { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#E06C75' },
   error: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#E06C75', textAlign: 'center', backgroundColor: 'rgba(224,108,117,0.12)', borderRadius: 10, padding: 10 },
   btn: { height: 54, borderRadius: 16, marginTop: 4, backgroundColor: '#6B5B95', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnDisabled: { opacity: 0.45 },
@@ -191,4 +269,6 @@ const styles = StyleSheet.create({
   dividerText: { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.5)' },
   outlineBtn: { height: 54, borderRadius: 16, borderWidth: 1.5, borderColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(107,91,149,0.12)' },
   outlineBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: 'rgba(200,184,232,0.9)' },
+  textBtn: { alignItems: 'center', marginTop: 20 },
+  textBtnText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.6)' },
 });
