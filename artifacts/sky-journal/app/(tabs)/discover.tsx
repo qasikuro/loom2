@@ -57,6 +57,7 @@ export default function DiscoverScreen() {
   const [peopleQuery,   setPeopleQuery]   = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(false);
+  const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,6 +72,7 @@ export default function DiscoverScreen() {
 
   function handlePeopleSearch(q: string) {
     setPeopleQuery(q);
+    setPeopleError(null);
     if (searchTimer.current) clearTimeout(searchTimer.current);
     if (q.trim().length < 2) { setPeopleResults([]); return; }
     setPeopleLoading(true);
@@ -78,8 +80,9 @@ export default function DiscoverScreen() {
       try {
         const res = await apiFetch<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(q.trim())}`);
         setPeopleResults(res ?? []);
-      } catch {
+      } catch (err: any) {
         setPeopleResults([]);
+        setPeopleError(err?.message ?? 'Search failed. Please try again.');
       } finally {
         setPeopleLoading(false);
       }
@@ -299,6 +302,13 @@ export default function DiscoverScreen() {
               </TouchableOpacity>
             )}
           </View>
+
+          {/* Error banner */}
+          {!!peopleError && (
+            <View style={{ marginHorizontal: 16, marginTop: -4, marginBottom: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(180,60,60,0.12)', borderWidth: 1, borderColor: 'rgba(180,60,60,0.25)' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: '#E06C75', textAlign: 'center' }}>{peopleError}</Text>
+            </View>
+          )}
 
           {/* Results / empty states */}
           {peopleQuery.length < 2 ? (

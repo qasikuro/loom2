@@ -24,7 +24,6 @@ router.get("/users/search", requireAuth, async (req, res) => {
       .from(characterTable)
       .where(
         and(
-          eq(characterTable.isPublic, true),
           ne(characterTable.userId, userId),
           or(
             ilike(characterTable.username, `${q}%`),

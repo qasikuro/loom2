@@ -49,12 +49,13 @@ export async function apiFetch<T>(
 // ── Models ────────────────────────────────────────────────────────────────────
 
 export interface Character {
-  name:      string;
-  bio:       string;
-  mood:      string;
-  traits:    string[];
-  isPublic:  boolean;
-  username?: string;
+  name:       string;
+  bio:        string;
+  mood:       string;
+  traits:     string[];
+  isPublic:   boolean;
+  username?:  string;
+  avatarUri?: string;
 }
 
 export type BubbleStyle = 'rounded' | 'sharp' | 'oval';
@@ -230,12 +231,13 @@ function relativeTimeDiscover(dateStr: string): string {
 
 function toAppCharacter(raw: any): Character {
   return {
-    name:     raw.name     ?? DEFAULT_CHARACTER.name,
-    bio:      raw.bio      ?? DEFAULT_CHARACTER.bio,
-    mood:     raw.mood     ?? DEFAULT_CHARACTER.mood,
-    traits:   Array.isArray(raw.traits) ? raw.traits : [],
-    isPublic: raw.isPublic ?? raw.is_public ?? true,
-    username: raw.username ?? undefined,
+    name:      raw.name      ?? DEFAULT_CHARACTER.name,
+    bio:       raw.bio       ?? DEFAULT_CHARACTER.bio,
+    mood:      raw.mood      ?? DEFAULT_CHARACTER.mood,
+    traits:    Array.isArray(raw.traits) ? raw.traits : [],
+    isPublic:  raw.isPublic  ?? raw.is_public ?? true,
+    username:  raw.username  ?? undefined,
+    avatarUri: raw.avatarUri ?? undefined,
   };
 }
 

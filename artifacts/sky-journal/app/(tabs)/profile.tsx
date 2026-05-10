@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import { MoodBadge } from '@/components/MoodBadge';
 import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -22,6 +23,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { persistImageUri } from '@/utils/persistImage';
 
 import { Images } from '@/assets/images';
 import { apiFetch, useApp, type Outfit, type Story } from '@/context/AppContext';
@@ -254,6 +256,27 @@ export default function CharacterScreen() {
   const [addingTrait,      setAddingTrait]       = useState(false);
   const [newTrait,         setNewTrait]          = useState('');
   const [showSuggestions,  setShowSuggestions]  = useState(false);
+  const [showMoodPicker,   setShowMoodPicker]   = useState(false);
+  const [avatarUploading,  setAvatarUploading]  = useState(false);
+
+  async function pickAvatar() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setAvatarUploading(true);
+    try {
+      const uri = await persistImageUri(result.assets[0].uri);
+      setCharacter({ ...character, avatarUri: uri });
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   function saveName() {
     if (nameVal.trim()) setCharacter({ ...character, name: nameVal.trim() });
@@ -310,9 +333,11 @@ export default function CharacterScreen() {
     : (['#DDD2FF', '#C8B4F8', '#B4A4EC'] as const);
 
   const activeOutfit = activeOutfitId ? outfits.find(o => o.id === activeOutfitId) : null;
-  const avatarSource = activeOutfit?.imageUri
-    ? { uri: activeOutfit.imageUri }
-    : Images.character_default;
+  const avatarSource = character.avatarUri
+    ? { uri: character.avatarUri }
+    : activeOutfit?.imageUri
+      ? { uri: activeOutfit.imageUri }
+      : Images.character_default;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -365,9 +390,16 @@ export default function CharacterScreen() {
             <Text style={[styles.sparkle, styles.sparkleB, { color: colors.primary, opacity: 0.55 }]}>✧</Text>
             <Text style={[styles.sparkle, styles.sparkleC, { color: colors.gold, opacity: 0.5 }]}>✶</Text>
             {/* Camera badge */}
-            <View style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
-              <Icon name="camera" size={11} color={colors.mutedForeground} />
-            </View>
+            <TouchableOpacity
+              style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+              onPress={pickAvatar}
+              activeOpacity={0.75}
+            >
+              {avatarUploading
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <Icon name="camera" size={11} color={colors.primary} />
+              }
+            </TouchableOpacity>
           </View>
 
           {/* Name + username + bio — centered */}
@@ -436,12 +468,15 @@ export default function CharacterScreen() {
               </TouchableOpacity>
             )}
 
-            {/* Mood badge */}
-            {character.mood && (
-              <View style={styles.moodRow}>
-                <MoodBadge mood={character.mood} />
-              </View>
-            )}
+            {/* Mood badge — tap to change */}
+            <TouchableOpacity
+              style={styles.moodRow}
+              onPress={() => { Haptics.selectionAsync(); setShowMoodPicker(true); }}
+              activeOpacity={0.75}
+            >
+              <MoodBadge mood={character.mood || 'Hopeful'} />
+              <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginLeft: 4, marginTop: 1 }} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -823,6 +858,49 @@ export default function CharacterScreen() {
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* ── Mood picker modal ────────────────────────────────── */}
+      <Modal visible={showMoodPicker} transparent animationType="slide" onRequestClose={() => setShowMoodPicker(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowMoodPicker(false)}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHandle} />
+            <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
+              <Text style={[styles.sectionTitle, { color: colors.foreground, marginBottom: 4 }]}>Choose your mood</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', color: colors.mutedForeground, fontStyle: 'italic', marginBottom: 16 }}>
+                How are you feeling in the sky today?
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: 24 }}>
+                {Object.keys(MOOD_COLORS).map(mood => {
+                  const isSelected = character.mood === mood;
+                  const moodColor  = MOOD_COLORS[mood];
+                  return (
+                    <TouchableOpacity
+                      key={mood}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 7,
+                        paddingHorizontal: 14, paddingVertical: 9,
+                        borderRadius: 20, borderWidth: isSelected ? 2 : 1,
+                        borderColor: isSelected ? moodColor : `${moodColor}45`,
+                        backgroundColor: isSelected ? `${moodColor}20` : `${moodColor}0A`,
+                      }}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setCharacter({ ...character, mood });
+                        setShowMoodPicker(false);
+                      }}
+                    >
+                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: moodColor }} />
+                      <Text style={{ fontSize: 14, fontFamily: isSelected ? 'Inter_600SemiBold' : 'Inter_400Regular', color: moodColor }}>
+                        {mood}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </View>
   );
