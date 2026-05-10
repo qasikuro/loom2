@@ -6,6 +6,7 @@ import express, {
 } from "express";
 import cors from "cors";
 import { join } from "path";
+import { access } from "fs/promises";
 import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -18,6 +19,7 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
+import { objectStorageClient } from "./lib/objectStorage";
 
 const app: Express = express();
 
@@ -87,16 +89,39 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
-// ── Static uploads ─────────────────────────────────────────────────────────────
-app.use(
-  "/api/images",
-  express.static(join(process.cwd(), "uploads"), {
-    maxAge: "7d",
-    setHeaders(res) {
-      res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-    },
-  }),
-);
+// ── Image serving: local disk fallback → GCS ──────────────────────────────────
+// New uploads go to GCS. Old local files are served from disk as a fallback
+// so existing database URLs keep working without a forced re-upload.
+const UPLOAD_DIR    = join(process.cwd(), "uploads");
+const GCS_BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
+
+app.get("/api/images/:filename", async (req: Request, res: Response) => {
+  const fname = req.params.filename;
+  if (!/^[\w.-]+$/.test(fname)) return res.status(400).end();
+
+  // 1. Try local disk (legacy uploads that predate GCS migration)
+  const localPath = join(UPLOAD_DIR, fname);
+  try {
+    await access(localPath);
+    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+    return res.sendFile(localPath);
+  } catch { /* not on disk — fall through to GCS */ }
+
+  // 2. Try GCS
+  if (!GCS_BUCKET_ID) return res.status(404).end();
+  try {
+    const file = objectStorageClient.bucket(GCS_BUCKET_ID).file(`images/${fname}`);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(404).end();
+
+    const [meta] = await file.getMetadata();
+    res.setHeader("Content-Type", (meta.contentType as string) || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+    file.createReadStream().pipe(res);
+  } catch {
+    return res.status(404).end();
+  }
+});
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 app.use(
