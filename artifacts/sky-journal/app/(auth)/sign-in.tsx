@@ -27,7 +27,7 @@ const SPARKLES = [
 ];
 
 export default function SignInScreen() {
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, setActive, isLoaded } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -35,27 +35,22 @@ export default function SignInScreen() {
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg]         = useState('');
-
-  // needs_client_trust — email code verification
-  const [mfaCode, setMfaCode]           = useState('');
-
-  const isLoading = fetchStatus === 'fetching';
-  const needsClientTrust = signIn?.status === 'needs_client_trust';
+  const [isLoading, setIsLoading]       = useState(false);
 
   async function handleSignIn() {
+    if (!isLoaded || !signIn) return;
     setErrorMsg('');
+    setIsLoading(true);
     try {
-      const { error } = await signIn.password({ emailAddress: email, password });
-      if (error) {
-        setErrorMsg(error.message ?? 'Sign-in failed. Please try again.');
-        return;
-      }
-      if (signIn.status === 'complete') {
-        // finalize() with no args sets the session; navigate manually after
-        await signIn.finalize();
+      const result = await signIn.create({
+        identifier: email.trim(),
+        password,
+      });
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)' as any);
-      } else if (signIn.status === 'needs_client_trust') {
-        await signIn.mfa.sendEmailCode();
+      } else {
+        setErrorMsg('Sign-in could not be completed. Please try again.');
       }
     } catch (err: any) {
       const msg =
@@ -64,89 +59,11 @@ export default function SignInScreen() {
         err?.message ||
         'Sign-in failed. Please try again.';
       setErrorMsg(msg);
+    } finally {
+      setIsLoading(false);
     }
   }
 
-  async function handleVerify() {
-    setErrorMsg('');
-    try {
-      await signIn.mfa.verifyEmailCode({ code: mfaCode.trim() });
-      if (signIn.status === 'complete') {
-        await signIn.finalize();
-        router.replace('/(tabs)' as any);
-      } else {
-        setErrorMsg('Verification failed. Please try again.');
-      }
-    } catch (err: any) {
-      const msg =
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        'Verification failed. Please try again.';
-      setErrorMsg(msg);
-    }
-  }
-
-  const fieldError =
-    errorMsg ||
-    (errors?.fields as any)?.identifier?.message ||
-    (errors?.fields as any)?.password?.message ||
-    '';
-
-  // ── Email code verification screen ─────────────────────────────────────────
-  if (needsClientTrust) {
-    return (
-      <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
-        <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
-          <View style={styles.iconWrap}>
-            <LinearGradient colors={['#C8A84B', '#E8C870']} style={styles.iconCircle}>
-              <Icon name="shield" size={26} color="#1A1630" />
-            </LinearGradient>
-          </View>
-          <Text style={styles.title}>Verify your device</Text>
-          <Text style={styles.subtitle}>Enter the code sent to your email to continue</Text>
-
-          <View style={[styles.field, { marginTop: 8 }]}>
-            <View style={styles.inputWrap}>
-              <Icon name="key" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={mfaCode}
-                onChangeText={t => { setMfaCode(t); setErrorMsg(''); }}
-                keyboardType="number-pad"
-                placeholder="000000"
-                placeholderTextColor="rgba(200,184,232,0.4)"
-                autoFocus
-                autoComplete="one-time-code"
-              />
-            </View>
-          </View>
-
-          {!!fieldError && <Text style={[styles.error, { marginTop: 12 }]}>{fieldError}</Text>}
-
-          <TouchableOpacity
-            style={[styles.btn, { marginTop: 24 }, (!mfaCode.trim() || isLoading) && styles.btnDisabled]}
-            onPress={handleVerify}
-            disabled={!mfaCode.trim() || isLoading}
-          >
-            {isLoading
-              ? <ActivityIndicator color="#fff" />
-              : <><Text style={styles.btnText}>Verify</Text><Text style={styles.btnStar}>✦</Text></>
-            }
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.textBtn} onPress={() => signIn.mfa.sendEmailCode()}>
-            <Text style={styles.textBtnText}>Resend code</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => { signIn.reset(); setMfaCode(''); setErrorMsg(''); }}>
-            <Text style={styles.textBtnText}>← Back to sign in</Text>
-          </TouchableOpacity>
-        </View>
-      </LinearGradient>
-    );
-  }
-
-  // ── Password screen ────────────────────────────────────────────────────────
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
       {SPARKLES.map((sp, i) => (
@@ -215,7 +132,7 @@ export default function SignInScreen() {
               </View>
             </View>
 
-            {!!fieldError && <Text style={styles.error}>{fieldError}</Text>}
+            {!!errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
 
             <TouchableOpacity
               style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
@@ -274,6 +191,4 @@ const styles = StyleSheet.create({
   dividerText: { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.5)' },
   outlineBtn: { height: 54, borderRadius: 16, borderWidth: 1.5, borderColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(107,91,149,0.12)' },
   outlineBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: 'rgba(200,184,232,0.9)' },
-  textBtn: { alignItems: 'center', marginTop: 20 },
-  textBtnText: { fontSize: 14, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.6)' },
 });

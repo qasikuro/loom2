@@ -27,7 +27,7 @@ const SPARKLES = [
 ];
 
 export default function SignUpScreen() {
-  const { signUp, errors, fetchStatus } = useSignUp();
+  const { signUp, setActive, isLoaded } = useSignUp();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -36,26 +36,20 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode]                 = useState('');
   const [errorMsg, setErrorMsg]         = useState('');
-
-  const isLoading = fetchStatus === 'fetching';
-
-  // Verification step: signUp exists, status is missing_requirements, email is unverified
-  const needsVerification =
-    signUp?.status === 'missing_requirements' &&
-    Array.isArray((signUp as any)?.unverifiedFields) &&
-    (signUp as any).unverifiedFields.includes('email_address') &&
-    ((signUp as any)?.missingFields?.length ?? 0) === 0;
+  const [isLoading, setIsLoading]       = useState(false);
+  const [pendingVerification, setPendingVerification] = useState(false);
 
   async function handleSignUp() {
+    if (!isLoaded || !signUp) return;
     setErrorMsg('');
+    setIsLoading(true);
     try {
-      const { error } = await signUp.password({ emailAddress: email, password });
-      if (error) {
-        setErrorMsg(error.message ?? 'Could not create account. Please try again.');
-        return;
-      }
-      // Send verification code to email
-      await signUp.verifications.sendEmailCode();
+      await signUp.create({
+        emailAddress: email.trim(),
+        password,
+      });
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      setPendingVerification(true);
     } catch (err: any) {
       const msg =
         err?.errors?.[0]?.longMessage ||
@@ -63,16 +57,19 @@ export default function SignUpScreen() {
         err?.message ||
         'Could not create account. Please try again.';
       setErrorMsg(msg);
+    } finally {
+      setIsLoading(false);
     }
   }
 
   async function handleVerify() {
+    if (!isLoaded || !signUp) return;
     setErrorMsg('');
+    setIsLoading(true);
     try {
-      await signUp.verifications.verifyEmailCode({ code: code.trim() });
-      if (signUp.status === 'complete') {
-        // finalize() with no args sets the session; navigate manually after
-        await signUp.finalize();
+      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)' as any);
       } else {
         setErrorMsg('Verification could not be completed. Please try again.');
@@ -84,23 +81,21 @@ export default function SignUpScreen() {
         err?.message ||
         'Verification failed. Please try again.';
       setErrorMsg(msg);
+    } finally {
+      setIsLoading(false);
     }
   }
 
   async function handleResend() {
+    if (!signUp) return;
     setErrorMsg('');
-    try { await signUp.verifications.sendEmailCode(); } catch { /* silent */ }
+    try {
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+    } catch { /* silent */ }
   }
 
-  const fieldError =
-    errorMsg ||
-    (errors?.fields as any)?.emailAddress?.message ||
-    (errors?.fields as any)?.password?.message ||
-    (errors?.fields as any)?.code?.message ||
-    '';
-
   // ── Verification screen ────────────────────────────────────────────────────
-  if (needsVerification) {
+  if (pendingVerification) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
         <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
@@ -131,7 +126,7 @@ export default function SignUpScreen() {
             </View>
           </View>
 
-          {!!fieldError && <Text style={[styles.error, { marginTop: 12 }]}>{fieldError}</Text>}
+          {!!errorMsg && <Text style={[styles.error, { marginTop: 12 }]}>{errorMsg}</Text>}
 
           <TouchableOpacity
             style={[styles.btn, { marginTop: 24 }, (!code || isLoading) && styles.btnDisabled]}
@@ -147,7 +142,7 @@ export default function SignUpScreen() {
           <TouchableOpacity style={styles.textBtn} onPress={handleResend}>
             <Text style={styles.textBtnText}>Resend code</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => { signUp.reset(); setCode(''); setErrorMsg(''); }}>
+          <TouchableOpacity style={styles.textBtn} onPress={() => { setPendingVerification(false); setCode(''); setErrorMsg(''); }}>
             <Text style={styles.textBtnText}>Start over</Text>
           </TouchableOpacity>
         </View>
@@ -224,7 +219,7 @@ export default function SignUpScreen() {
               </View>
             </View>
 
-            {!!fieldError && <Text style={styles.error}>{fieldError}</Text>}
+            {!!errorMsg && <Text style={styles.error}>{errorMsg}</Text>}
 
             <TouchableOpacity
               style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
