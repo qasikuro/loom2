@@ -4,10 +4,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri } from '@/utils/persistImage';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Image,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -66,6 +67,26 @@ export default function CreateJournalEntryScreen() {
   const [imageUri,   setImageUri]   = useState<string | undefined>();
   const [saving,     setSaving]     = useState(false);
   const [error,      setError]      = useState<string | null>(null);
+  const [fontSize,   setFontSize]   = useState(16);
+
+  const MIN_FONT = 12, MAX_FONT = 28;
+  const sizeRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => () => { if (sizeRef.current) clearInterval(sizeRef.current); }, []);
+
+  function holdDecrease() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFontSize(s => Math.max(MIN_FONT, s - 1));
+    sizeRef.current = setInterval(() => setFontSize(s => Math.max(MIN_FONT, s - 1)), 80);
+  }
+  function holdIncrease() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setFontSize(s => Math.min(MAX_FONT, s + 1));
+    sizeRef.current = setInterval(() => setFontSize(s => Math.min(MAX_FONT, s + 1)), 80);
+  }
+  function stopSize() {
+    if (sizeRef.current) { clearInterval(sizeRef.current); sizeRef.current = null; }
+  }
 
   const today     = new Date();
   const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
@@ -189,6 +210,8 @@ export default function CreateJournalEntryScreen() {
             color: colors.foreground,
             borderColor: colors.border,
             backgroundColor: colors.card,
+            fontSize,
+            lineHeight: Math.round(fontSize * 1.625),
           }]}
           placeholder={cfg.placeholder}
           placeholderTextColor={`${colors.mutedForeground}70`}
@@ -198,6 +221,30 @@ export default function CreateJournalEntryScreen() {
           textAlignVertical="top"
           autoFocus={entryType !== 'friend'}
         />
+
+        {/* Font size control */}
+        <View style={[styles.sizeBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Pressable
+            style={({ pressed }) => [styles.sizeSideBtn, pressed && { backgroundColor: `${cfg.accent}14` }]}
+            onPressIn={holdDecrease}
+            onPressOut={stopSize}
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 6 }}
+          >
+            <Text style={[styles.sizeASmall, { color: fontSize <= MIN_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground }]}>A</Text>
+            <Icon name="minus" size={10} color={fontSize <= MIN_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground} />
+          </Pressable>
+          <Text style={[styles.sizeCurrent, { color: colors.foreground }]}>{fontSize}</Text>
+          <Pressable
+            style={({ pressed }) => [styles.sizeSideBtn, pressed && { backgroundColor: `${cfg.accent}14` }]}
+            onPressIn={holdIncrease}
+            onPressOut={stopSize}
+            hitSlop={{ top: 8, bottom: 8, left: 6, right: 12 }}
+          >
+            <Icon name="plus" size={10} color={fontSize >= MAX_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground} />
+            <Text style={[styles.sizeALarge, { color: fontSize >= MAX_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground }]}>A</Text>
+          </Pressable>
+        </View>
+
         <Text style={[styles.charCount, { color: `${colors.mutedForeground}60` }]}>
           {text.length} chars
         </Text>
@@ -282,7 +329,12 @@ const styles = StyleSheet.create({
   friendInput:    { flex: 1, fontSize: 15, fontFamily: 'Inter_400Regular' },
   promptCard:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 },
   promptText:     { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 19 },
-  textArea:       { borderWidth: 1, borderRadius: 14, padding: 16, fontSize: 16, fontFamily: 'Inter_400Regular', lineHeight: 26, minHeight: 180, marginBottom: 4 },
+  textArea:       { borderWidth: 1, borderRadius: 14, padding: 16, fontFamily: 'Inter_400Regular', minHeight: 180, marginBottom: 0 },
+  sizeBar:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 22, paddingVertical: 2, paddingHorizontal: 4, marginTop: 10, marginBottom: 6, alignSelf: 'center' },
+  sizeSideBtn:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18 },
+  sizeASmall:     { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  sizeALarge:     { fontSize: 18, fontFamily: 'Inter_700Bold' },
+  sizeCurrent:    { fontSize: 13, fontFamily: 'Inter_600SemiBold', minWidth: 28, textAlign: 'center' },
   charCount:      { fontSize: 11, fontFamily: 'Inter_400Regular', textAlign: 'right', marginBottom: 14 },
   imagePreviewWrap:{ width: '100%', borderRadius: 14, overflow: 'hidden', marginBottom: 14, position: 'relative' },
   imagePreview:   { width: '100%', height: 200 },

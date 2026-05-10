@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   PanResponder,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -261,6 +262,8 @@ export default function PanelEditorScreen() {
   const [toolMode,  setToolMode]  = useState<'bubble' | 'text' | 'sticker' | null>(null);
   const [canvasW,   setCanvasW]   = useState(SW - 36);
 
+  const sizeHoldRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const currentLayout = LAYOUTS.find(l => l.key === layoutKey) ?? LAYOUTS[0];
 
   if (!draft) {
@@ -357,6 +360,29 @@ export default function PanelEditorScreen() {
     updatePanel(activeIdx, {
       overlays: activePanel.overlays.map(o => o.id === id ? { ...o, xPct, yPct } : o),
     });
+  }
+
+  function startOverlaySizeHold(overlayId: string, direction: number, min: number, max: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const capturedIdx = activeIdx;
+    function step() {
+      setPanels(prev => prev.map((p, i) => {
+        if (i !== capturedIdx) return p;
+        const ovs = (p.overlays ?? []).map(o => {
+          if (o.id !== overlayId) return o;
+          const cur = o.fontSize ?? (o.type === 'sticker' ? 30 : 13);
+          return { ...o, fontSize: Math.min(max, Math.max(min, cur + direction)) };
+        });
+        DraftStore.updatePanel(capturedIdx, { overlays: ovs });
+        return { ...p, overlays: ovs };
+      }));
+    }
+    step();
+    sizeHoldRef.current = setInterval(step, 80);
+  }
+
+  function stopOverlaySizeHold() {
+    if (sizeHoldRef.current) { clearInterval(sizeHoldRef.current); sizeHoldRef.current = null; }
   }
 
   function switchActive(idx: number) {
@@ -616,22 +642,31 @@ export default function PanelEditorScreen() {
                   );
                 })}
 
-                {/* Size pills inline */}
+                {/* Size hold control */}
                 <View style={[styles.fontBarDivider, { backgroundColor: colors.border }]} />
-                {[10, 13, 16, 20, 24].map(sz => {
-                  const active = selOverlay.fontSize === sz;
-                  return (
-                    <TouchableOpacity
-                      key={sz}
-                      style={[styles.sizePill, { borderColor: active ? colors.primary : 'transparent', backgroundColor: active ? `${colors.primary}22` : 'transparent' }]}
-                      onPress={() => updateOverlay(selOverlay.id, { fontSize: sz })}
-                    >
-                      <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: active ? colors.primary : colors.mutedForeground }}>
-                        {sz === 10 ? 'XS' : sz === 13 ? 'S' : sz === 16 ? 'M' : sz === 20 ? 'L' : 'XL'}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                <View style={styles.sizeHoldRow}>
+                  <Pressable
+                    style={({ pressed }) => [styles.sizeHoldBtn, pressed && { backgroundColor: `${colors.primary}18` }]}
+                    onPressIn={() => startOverlaySizeHold(selOverlay.id, -1, 8, 36)}
+                    onPressOut={stopOverlaySizeHold}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 3 }}
+                  >
+                    <Text style={[styles.overlayASmall, { color: colors.mutedForeground }]}>A</Text>
+                    <Icon name="minus" size={9} color={colors.mutedForeground} />
+                  </Pressable>
+                  <Text style={[styles.overlayFsNum, { color: colors.foreground }]}>
+                    {selOverlay.fontSize ?? 13}
+                  </Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.sizeHoldBtn, pressed && { backgroundColor: `${colors.primary}18` }]}
+                    onPressIn={() => startOverlaySizeHold(selOverlay.id, 1, 8, 36)}
+                    onPressOut={stopOverlaySizeHold}
+                    hitSlop={{ top: 6, bottom: 6, left: 3, right: 6 }}
+                  >
+                    <Icon name="plus" size={9} color={colors.mutedForeground} />
+                    <Text style={[styles.overlayALarge, { color: colors.mutedForeground }]}>A</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
 
@@ -676,24 +711,24 @@ export default function PanelEditorScreen() {
             {selOverlay.type === 'sticker' && (
               <>
                 <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>SIZE</Text>
-                <View style={styles.chipRow}>
-                  {[24, 32, 44, 56].map(sz => {
-                    const active = selOverlay.fontSize === sz;
-                    return (
-                      <TouchableOpacity
-                        key={sz}
-                        style={[styles.chip, styles.chipSq, {
-                          borderColor: active ? colors.primary : colors.border,
-                          backgroundColor: active ? `${colors.primary}18` : colors.muted,
-                        }]}
-                        onPress={() => updateOverlay(selOverlay.id, { fontSize: sz })}
-                      >
-                        <Text style={{ fontSize: active ? 18 : 14, color: active ? colors.primary : colors.foreground }}>
-                          {sz === 24 ? 'S' : sz === 32 ? 'M' : sz === 44 ? 'L' : 'XL'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+                <View style={[styles.chipRow, { alignItems: 'center' }]}>
+                  <Pressable
+                    style={({ pressed }) => [styles.chip, styles.chipSq, { borderColor: colors.border, backgroundColor: pressed ? `${colors.primary}22` : colors.muted }]}
+                    onPressIn={() => startOverlaySizeHold(selOverlay.id, -4, 16, 64)}
+                    onPressOut={stopOverlaySizeHold}
+                  >
+                    <Text style={{ fontSize: 16, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }}>−</Text>
+                  </Pressable>
+                  <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.foreground, minWidth: 36, textAlign: 'center' }}>
+                    {selOverlay.fontSize ?? 30}
+                  </Text>
+                  <Pressable
+                    style={({ pressed }) => [styles.chip, styles.chipSq, { borderColor: colors.border, backgroundColor: pressed ? `${colors.primary}22` : colors.muted }]}
+                    onPressIn={() => startOverlaySizeHold(selOverlay.id, 4, 16, 64)}
+                    onPressOut={stopOverlaySizeHold}
+                  >
+                    <Text style={{ fontSize: 16, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }}>+</Text>
+                  </Pressable>
                 </View>
               </>
             )}
@@ -862,6 +897,11 @@ const styles = StyleSheet.create({
     borderRadius: 7, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
+  sizeHoldRow:   { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  sizeHoldBtn:   { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 6, borderRadius: 8 },
+  overlayASmall: { fontSize: 9,  fontFamily: 'Inter_600SemiBold' },
+  overlayALarge: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  overlayFsNum:  { fontSize: 12, fontFamily: 'Inter_600SemiBold', minWidth: 22, textAlign: 'center' },
 
   pickerLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.8, textTransform: 'uppercase' },
   chipRow:     { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
