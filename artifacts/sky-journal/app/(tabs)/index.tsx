@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
 
   topRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 12,
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6, gap: 12,
   },
   avatarRing: {
     width: 50, height: 50, borderRadius: 25,
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
 
   statsStrip: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 14, gap: 8,
+    paddingHorizontal: 20, paddingBottom: 8, gap: 8,
   },
   statPill:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
   statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.65)' },

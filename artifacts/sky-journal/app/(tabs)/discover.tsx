@@ -466,20 +466,20 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 14,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
-  headerText:  { flex: 1, gap: 3 },
+  headerText:  { flex: 1, gap: 2 },
   headerTitle: {
-    fontSize: 30, fontFamily: 'Inter_700Bold',
+    fontSize: 26, fontFamily: 'Inter_700Bold',
     letterSpacing: -0.8, color: 'rgba(235,228,255,0.97)',
   },
   headerSub: {
-    fontSize: 13, fontFamily: 'Inter_400Regular',
+    fontSize: 12, fontFamily: 'Inter_400Regular',
     color: 'rgba(200,184,232,0.55)',
   },
   usersBtn: {
-    width: 44, height: 44, borderRadius: 14,
+    width: 38, height: 38, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(120,86,255,0.15)',
     borderWidth: 1, borderColor: 'rgba(120,86,255,0.28)',
@@ -490,12 +490,12 @@ const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingBottom: 10,
     gap: 8,
   },
   tabPill: {
-    paddingHorizontal: 16, paddingVertical: 9,
-    borderRadius: 22, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1,
   },
   tabText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1 },
 

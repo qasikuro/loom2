@@ -659,9 +659,9 @@ const styles = StyleSheet.create({
 
   // Header (dark)
   headerGrad: { paddingBottom: 0 },
-  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:14, paddingBottom:10 },
+  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:10, paddingBottom:6 },
   headerLeft: { flexDirection:'row', alignItems:'center', gap:10 },
-  title: { fontSize:26, fontFamily:'Inter_700Bold', letterSpacing:-0.5, color:'rgba(235,228,255,0.97)' },
+  title: { fontSize:22, fontFamily:'Inter_700Bold', letterSpacing:-0.5, color:'rgba(235,228,255,0.97)' },
   privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.08)', borderWidth:1, borderColor:'rgba(200,184,232,0.18)' },
   privateBadgeText: { fontSize:10, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.7)' },
   headerRight: { flexDirection:'row', gap:8 },
@@ -669,11 +669,11 @@ const styles = StyleSheet.create({
   hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.55)', borderColor:'rgba(107,91,149,0.4)' },
 
   // Filter tabs inside dark header
-  filtersScroll: { maxHeight:52 },
-  filtersRow: { flexDirection:'row', gap:8, paddingHorizontal:16, paddingVertical:8, paddingBottom:10 },
+  filtersScroll: { maxHeight:44 },
+  filtersRow: { flexDirection:'row', gap:8, paddingHorizontal:16, paddingVertical:5, paddingBottom:8 },
   filterTab: {
     flexDirection:'row', alignItems:'center', gap:5,
-    paddingHorizontal:14, paddingVertical:7, borderRadius:20,
+    paddingHorizontal:12, paddingVertical:5, borderRadius:20,
     backgroundColor:'rgba(255,255,255,0.1)',
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
   },
