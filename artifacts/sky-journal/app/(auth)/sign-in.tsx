@@ -1,8 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { useSignIn } from '@clerk/expo';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -36,48 +35,72 @@ export default function SignInScreen() {
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode]                 = useState('');
+  const [catchError, setCatchError]     = useState('');
 
   const isLoading = fetchStatus === 'fetching';
   const needsClientTrust = signIn?.status === 'needs_client_trust';
 
   async function handleSignIn() {
-    const { error } = await signIn.password({ emailAddress: email.trim(), password });
-    if (error) return;
-
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) return;
-          const url = decorateUrl('/');
-          if (url.startsWith('http')) {
-            // no window on native — just push tabs
+    if (!signIn) return;
+    setCatchError('');
+    try {
+      const { error } = await signIn.password({ emailAddress: email.trim(), password });
+      if (error) {
+        setCatchError(error.longMessage ?? error.message ?? 'Sign-in failed.');
+        return;
+      }
+      if (signIn.status === 'complete') {
+        await signIn.finalize({
+          navigate: ({ session }) => {
+            if (session?.currentTask) return;
             router.replace('/(tabs)' as Href);
-          } else {
-            router.replace('/(tabs)' as Href);
-          }
-        },
-      });
-    } else if (signIn.status === 'needs_client_trust') {
-      const emailFactor = signIn.supportedSecondFactors?.find(
-        (f) => f.strategy === 'email_code',
-      );
-      if (emailFactor) await signIn.mfa.sendEmailCode();
+          },
+        });
+      } else if (signIn.status === 'needs_client_trust') {
+        const emailFactor = signIn.supportedSecondFactors?.find(
+          (f: any) => f.strategy === 'email_code',
+        );
+        if (emailFactor) await signIn.mfa.sendEmailCode();
+      } else {
+        setCatchError(`Unexpected status: ${signIn.status}. Please try again.`);
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Sign-in failed. Please check your connection and try again.';
+      setCatchError(msg);
     }
   }
 
   async function handleVerify() {
-    await signIn.mfa.verifyEmailCode({ code: code.trim() });
-    if (signIn.status === 'complete') {
-      await signIn.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) return;
-          router.replace('/(tabs)' as Href);
-        },
-      });
+    if (!signIn) return;
+    setCatchError('');
+    try {
+      await signIn.mfa.verifyEmailCode({ code: code.trim() });
+      if (signIn.status === 'complete') {
+        await signIn.finalize({
+          navigate: ({ session }) => {
+            if (session?.currentTask) return;
+            router.replace('/(tabs)' as Href);
+          },
+        });
+      } else {
+        setCatchError('Verification failed. Please try again.');
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Verification failed.';
+      setCatchError(msg);
     }
   }
 
   const fieldError =
+    catchError ||
     errors?.fields?.identifier?.message ||
     errors?.fields?.password?.message ||
     errors?.fields?.code?.message ||
@@ -102,7 +125,7 @@ export default function SignInScreen() {
               <TextInput
                 style={styles.input}
                 value={code}
-                onChangeText={t => setCode(t)}
+                onChangeText={t => { setCode(t); setCatchError(''); }}
                 keyboardType="number-pad"
                 placeholder="000000"
                 placeholderTextColor="rgba(200,184,232,0.4)"
@@ -128,7 +151,7 @@ export default function SignInScreen() {
           <TouchableOpacity style={styles.textBtn} onPress={() => signIn.mfa.sendEmailCode()}>
             <Text style={styles.textBtnText}>Resend code</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => { signIn.reset(); setCode(''); }}>
+          <TouchableOpacity style={styles.textBtn} onPress={() => { signIn.reset(); setCode(''); setCatchError(''); }}>
             <Text style={styles.textBtnText}>← Back to sign in</Text>
           </TouchableOpacity>
         </View>
@@ -176,7 +199,7 @@ export default function SignInScreen() {
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={t => setEmail(t)}
+                  onChangeText={t => { setEmail(t); setCatchError(''); }}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   placeholder="your@email.com"
@@ -184,9 +207,6 @@ export default function SignInScreen() {
                   autoComplete="email"
                 />
               </View>
-              {!!errors?.fields?.identifier?.message && (
-                <Text style={styles.fieldError}>{errors.fields.identifier.message}</Text>
-              )}
             </View>
 
             <View style={styles.field}>
@@ -196,7 +216,7 @@ export default function SignInScreen() {
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
-                  onChangeText={t => setPassword(t)}
+                  onChangeText={t => { setPassword(t); setCatchError(''); }}
                   secureTextEntry={!showPassword}
                   placeholder="Enter your password"
                   placeholderTextColor="rgba(200,184,232,0.4)"
@@ -206,10 +226,9 @@ export default function SignInScreen() {
                   <Icon name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
                 </TouchableOpacity>
               </View>
-              {!!errors?.fields?.password?.message && (
-                <Text style={styles.fieldError}>{errors.fields.password.message}</Text>
-              )}
             </View>
+
+            {!!fieldError && <Text style={styles.error}>{fieldError}</Text>}
 
             <TouchableOpacity
               style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
@@ -258,7 +277,6 @@ const styles = StyleSheet.create({
   inputIcon: { paddingLeft: 14 },
   input: { flex: 1, height: 52, paddingHorizontal: 12, fontSize: 15, fontFamily: 'Inter_400Regular', color: '#F0ECFF' },
   eyeBtn: { position: 'absolute', right: 14, padding: 4 },
-  fieldError: { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#E06C75' },
   error: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#E06C75', textAlign: 'center', backgroundColor: 'rgba(224,108,117,0.12)', borderRadius: 10, padding: 10 },
   btn: { height: 54, borderRadius: 16, marginTop: 4, backgroundColor: '#6B5B95', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnDisabled: { opacity: 0.45 },

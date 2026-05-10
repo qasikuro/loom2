@@ -1,8 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { useSignUp } from '@clerk/expo';
-import { type Href, useRouter } from 'expo-router';
+import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -36,6 +35,7 @@ export default function SignUpScreen() {
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode]                 = useState('');
+  const [catchError, setCatchError]     = useState('');
 
   const isLoading = fetchStatus === 'fetching';
 
@@ -46,22 +46,56 @@ export default function SignUpScreen() {
     (signUp?.missingFields?.length ?? 0) === 0;
 
   async function handleSignUp() {
-    const { error } = await signUp.password({ emailAddress: email.trim(), password });
-    if (error) return;
-    await signUp.verifications.sendEmailCode();
+    if (!signUp) return;
+    setCatchError('');
+    try {
+      const { error } = await signUp.password({ emailAddress: email.trim(), password });
+      if (error) {
+        setCatchError(error.longMessage ?? error.message ?? 'Could not create account.');
+        return;
+      }
+      await signUp.verifications.sendEmailCode();
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Could not create account. Please check your connection and try again.';
+      setCatchError(msg);
+    }
   }
 
   async function handleVerify() {
-    await signUp.verifications.verifyEmailCode({ code: code.trim() });
-    if (signUp.status === 'complete') {
-      await signUp.finalize({
-        navigate: ({ session, decorateUrl }) => {
-          if (session?.currentTask) return;
-          router.replace('/(tabs)' as Href);
-        },
-      });
+    if (!signUp) return;
+    setCatchError('');
+    try {
+      await signUp.verifications.verifyEmailCode({ code: code.trim() });
+      if (signUp.status === 'complete') {
+        await signUp.finalize({
+          navigate: ({ session }) => {
+            if (session?.currentTask) return;
+            router.replace('/(tabs)' as Href);
+          },
+        });
+      } else {
+        setCatchError('Verification could not be completed. Please try again.');
+      }
+    } catch (err: any) {
+      const msg =
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        'Verification failed. Please try again.';
+      setCatchError(msg);
     }
   }
+
+  const fieldError =
+    catchError ||
+    errors?.fields?.emailAddress?.message ||
+    errors?.fields?.password?.message ||
+    errors?.fields?.code?.message ||
+    '';
 
   // ── Verification screen ────────────────────────────────────────────────────
   if (needsVerification) {
@@ -86,7 +120,7 @@ export default function SignUpScreen() {
               <TextInput
                 style={styles.input}
                 value={code}
-                onChangeText={t => setCode(t)}
+                onChangeText={t => { setCode(t); setCatchError(''); }}
                 keyboardType="number-pad"
                 placeholder="Enter 6-digit code"
                 placeholderTextColor="rgba(200,184,232,0.4)"
@@ -95,9 +129,7 @@ export default function SignUpScreen() {
             </View>
           </View>
 
-          {!!errors?.fields?.code?.message && (
-            <Text style={[styles.error, { marginTop: 12 }]}>{errors.fields.code.message}</Text>
-          )}
+          {!!fieldError && <Text style={[styles.error, { marginTop: 12 }]}>{fieldError}</Text>}
 
           <TouchableOpacity
             style={[styles.btn, { marginTop: 24 }, (!code || isLoading) && styles.btnDisabled]}
@@ -113,7 +145,7 @@ export default function SignUpScreen() {
           <TouchableOpacity style={styles.textBtn} onPress={() => signUp.verifications.sendEmailCode()}>
             <Text style={styles.textBtnText}>Resend code</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => { signUp.reset(); setCode(''); }}>
+          <TouchableOpacity style={styles.textBtn} onPress={() => { signUp.reset(); setCode(''); setCatchError(''); }}>
             <Text style={styles.textBtnText}>Start over</Text>
           </TouchableOpacity>
         </View>
@@ -161,7 +193,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={t => setEmail(t)}
+                  onChangeText={t => { setEmail(t); setCatchError(''); }}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   placeholder="your@email.com"
@@ -169,9 +201,6 @@ export default function SignUpScreen() {
                   autoComplete="email"
                 />
               </View>
-              {!!errors?.fields?.emailAddress?.message && (
-                <Text style={styles.fieldError}>{errors.fields.emailAddress.message}</Text>
-              )}
             </View>
 
             <View style={styles.field}>
@@ -181,7 +210,7 @@ export default function SignUpScreen() {
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
-                  onChangeText={t => setPassword(t)}
+                  onChangeText={t => { setPassword(t); setCatchError(''); }}
                   secureTextEntry={!showPassword}
                   placeholder="Create a strong password"
                   placeholderTextColor="rgba(200,184,232,0.4)"
@@ -191,10 +220,9 @@ export default function SignUpScreen() {
                   <Icon name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
                 </TouchableOpacity>
               </View>
-              {!!errors?.fields?.password?.message && (
-                <Text style={styles.fieldError}>{errors.fields.password.message}</Text>
-              )}
             </View>
+
+            {!!fieldError && <Text style={styles.error}>{fieldError}</Text>}
 
             <TouchableOpacity
               style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
@@ -243,7 +271,6 @@ const styles = StyleSheet.create({
   inputIcon: { paddingLeft: 14 },
   input: { flex: 1, height: 52, paddingHorizontal: 12, fontSize: 15, fontFamily: 'Inter_400Regular', color: '#F0ECFF' },
   eyeBtn: { position: 'absolute', right: 14, padding: 4 },
-  fieldError: { fontSize: 12, fontFamily: 'Inter_400Regular', color: '#E06C75' },
   error: { fontSize: 13, fontFamily: 'Inter_400Regular', color: '#E06C75', textAlign: 'center', backgroundColor: 'rgba(224,108,117,0.12)', borderRadius: 10, padding: 10 },
   btn: { height: 54, borderRadius: 16, marginTop: 4, backgroundColor: '#6B5B95', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   btnDisabled: { opacity: 0.45 },
