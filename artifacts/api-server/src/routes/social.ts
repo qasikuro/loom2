@@ -5,6 +5,12 @@ import { requireAuth, getUserId } from "../middleware/auth";
 
 const router: IRouter = Router();
 
+function safeDiscoverUri(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  if (uri.startsWith('file://') || uri.startsWith('data:') || uri.startsWith('blob:')) return null;
+  return uri;
+}
+
 // ── User search ───────────────────────────────────────────────────────────────
 
 router.get("/users/search", requireAuth, async (req, res) => {
@@ -340,7 +346,11 @@ router.get("/discover", requireAuth, async (req, res) => {
 
     return res.json(
       scored.slice(0, 50).map(({ row, isFollowing }) => {
-        const panels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
+        const rawPanels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
+        const panels = rawPanels.map(p => ({
+          ...p,
+          imageUri: safeDiscoverUri(p.imageUri),
+        }));
         return {
           id:             row.id,
           authorUserId:   row.userId,

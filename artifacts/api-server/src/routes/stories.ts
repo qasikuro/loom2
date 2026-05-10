@@ -70,7 +70,7 @@ router.post("/stories", requireAuth, async (req, res) => {
     const sanitizedPanels = panels.map(p => ({
       id:         p.id,
       text:       p.text,
-      imageUri:   p.imageUri   ?? undefined,
+      imageUri:   safeImageUri(p.imageUri ?? null) ?? undefined,
       bgPreset:   p.bgPreset   ?? undefined,
       bubbleText: p.bubbleText ?? undefined,
       overlays:   p.overlays   ?? undefined,
@@ -225,12 +225,23 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
   }
 });
 
+function safeImageUri(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  if (uri.startsWith('file://') || uri.startsWith('data:') || uri.startsWith('blob:')) return null;
+  return uri;
+}
+
+function sanitizePanels(panels: unknown): unknown[] {
+  if (!Array.isArray(panels)) return [];
+  return panels.map((p: any) => ({ ...p, imageUri: safeImageUri(p.imageUri) }));
+}
+
 function serializeStory(row: typeof storiesTable.$inferSelect) {
   return {
     id:             row.id,
     date:           row.date.toISOString(),
     chapterTitle:   row.chapterTitle,
-    panels:         row.panels,
+    panels:         sanitizePanels(row.panels),
     mood:           row.mood,
     location:       row.location,
     isPublic:       row.isPublic,
