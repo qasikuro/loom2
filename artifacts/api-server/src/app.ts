@@ -96,7 +96,7 @@ const UPLOAD_DIR    = join(process.cwd(), "uploads");
 const GCS_BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
 
 app.get("/api/images/:filename", async (req: Request, res: Response) => {
-  const fname = req.params.filename;
+  const fname = String(req.params.filename ?? "");
   if (!/^[\w.-]+$/.test(fname)) return res.status(400).end();
 
   // 1. Try local disk (legacy uploads that predate GCS migration)
