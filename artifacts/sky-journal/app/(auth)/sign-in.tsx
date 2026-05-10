@@ -41,17 +41,25 @@ export default function SignInScreen() {
   const needsClientTrust = signIn?.status === 'needs_client_trust';
 
   async function handleSignIn() {
-    if (!signIn) return;
+    console.log('[SignIn] handleSignIn called, signIn=', signIn ? 'defined' : 'undefined');
+    if (!signIn) {
+      setCatchError('Clerk not ready — please wait a moment and try again.');
+      return;
+    }
     setCatchError('');
     try {
+      console.log('[SignIn] calling signIn.password()');
       const { error } = await signIn.password({ emailAddress: email.trim(), password });
+      console.log('[SignIn] password() returned, error=', error, 'status=', signIn.status);
       if (error) {
         setCatchError(error.longMessage ?? error.message ?? 'Sign-in failed.');
         return;
       }
       if (signIn.status === 'complete') {
+        console.log('[SignIn] status complete, calling finalize()');
         await signIn.finalize({
           navigate: ({ session }) => {
+            console.log('[SignIn] navigate callback called, currentTask=', session?.currentTask);
             if (session?.currentTask) return;
             router.replace('/(tabs)' as Href);
           },
@@ -65,6 +73,7 @@ export default function SignInScreen() {
         setCatchError(`Unexpected status: ${signIn.status}. Please try again.`);
       }
     } catch (err: any) {
+      console.log('[SignIn] caught error:', JSON.stringify(err));
       const msg =
         err?.errors?.[0]?.longMessage ||
         err?.errors?.[0]?.message ||

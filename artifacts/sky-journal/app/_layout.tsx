@@ -6,14 +6,14 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from '@expo-google-fonts/inter';
-import { ClerkLoaded, ClerkProvider, useAuth } from '@clerk/expo';
+import { ClerkLoaded, ClerkLoading, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import * as Font from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -105,6 +105,11 @@ export default function RootLayout() {
         {/* App content — rendered immediately so Clerk/Router load in background */}
         {fontsReady && (
           <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} proxyUrl={clerkProxyUrl}>
+            <ClerkLoading>
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1A1630' }}>
+                <ActivityIndicator size="large" color="#C8A84B" />
+              </View>
+            </ClerkLoading>
             <ClerkLoaded>
               <SafeAreaProvider>
                 <ErrorBoundary>
