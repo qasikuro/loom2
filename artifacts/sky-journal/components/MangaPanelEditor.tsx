@@ -1,9 +1,11 @@
 import { Icon } from '@/components/Icon';
+import CropImageModal from '@/components/CropImageModal';
 import * as ImagePicker from 'expo-image-picker';
-import React from 'react';
+import React, { useState } from 'react';
 import { persistImageUri } from '@/utils/persistImage';
 import { Image } from 'expo-image';
 import {
+  ActivityIndicator,
   StyleSheet,
   Text,
   TextInput,
@@ -25,92 +27,122 @@ interface MangaPanelEditorProps {
 
 export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: MangaPanelEditorProps) {
   const colors = useColors();
+  const [pendingUri, setPendingUri] = useState<string | null>(null);
+  const [uploading, setUploading]   = useState(false);
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
-      quality: 0.85,
+      quality: 1,
     });
     if (!result.canceled && result.assets[0]) {
-      const persisted = await persistImageUri(result.assets[0].uri);
+      setPendingUri(result.assets[0].uri);
+    }
+  }
+
+  async function handleCropDone(croppedUri: string) {
+    setPendingUri(null);
+    setUploading(true);
+    try {
+      const persisted = await persistImageUri(croppedUri);
       onChange({ ...panel, imageUri: persisted });
+    } finally {
+      setUploading(false);
     }
   }
 
   return (
-    <View style={[styles.container, { borderColor: colors.border, backgroundColor: colors.card }, SHADOW.xs]}>
-      {/* Panel header */}
-      <View style={[styles.header, { borderBottomColor: colors.border }]}>
-        <View style={styles.panelNumRow}>
-          <View style={[styles.panelNum, { backgroundColor: `${colors.primary}12` }]}>
-            <Text style={[styles.panelNumText, { color: colors.primary }]}>{index + 1}</Text>
+    <>
+      <View style={[styles.container, { borderColor: colors.border, backgroundColor: colors.card }, SHADOW.xs]}>
+        {/* Panel header */}
+        <View style={[styles.header, { borderBottomColor: colors.border }]}>
+          <View style={styles.panelNumRow}>
+            <View style={[styles.panelNum, { backgroundColor: `${colors.primary}12` }]}>
+              <Text style={[styles.panelNumText, { color: colors.primary }]}>{index + 1}</Text>
+            </View>
+            <Text style={[styles.panelLabel, { color: colors.mutedForeground }]}>Panel {index + 1}</Text>
           </View>
-          <Text style={[styles.panelLabel, { color: colors.mutedForeground }]}>Panel {index + 1}</Text>
+          {total > 1 && (
+            <TouchableOpacity
+              onPress={onDelete}
+              style={[styles.deleteBtn, { backgroundColor: `${colors.destructive}0F` }]}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            >
+              <Icon name="trash-2" size={13} color={colors.destructive} />
+            </TouchableOpacity>
+          )}
         </View>
-        {total > 1 && (
-          <TouchableOpacity
-            onPress={onDelete}
-            style={[styles.deleteBtn, { backgroundColor: `${colors.destructive}0F` }]}
-            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          >
-            <Icon name="trash-2" size={13} color={colors.destructive} />
-          </TouchableOpacity>
-        )}
-      </View>
 
-      {/* Image area */}
-      <TouchableOpacity
-        style={[
-          styles.imageArea,
-          {
-            backgroundColor: panel.imageUri ? 'transparent' : colors.muted,
-            borderColor: panel.imageUri ? 'transparent' : colors.border,
-            borderStyle: panel.imageUri ? 'solid' : 'dashed',
-          },
-        ]}
-        onPress={pickImage}
-        activeOpacity={0.8}
-      >
-        {panel.imageUri ? (
-          <>
-            <Image source={{ uri: panel.imageUri }} style={styles.panelImage} contentFit="cover" cachePolicy="memory-disk" />
-            <View style={styles.imageEditOverlay}>
-              <View style={[styles.editChip, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
-                <Icon name="camera" size={12} color="#1E1830" />
-                <Text style={[styles.editChipText, { color: '#1E1830' }]}>Change photo</Text>
-              </View>
-            </View>
-          </>
-        ) : (
-          <View style={styles.imagePlaceholder}>
-            <View style={[styles.cameraIconBg, { backgroundColor: `${colors.primary}12` }]}>
-              <Icon name="image" size={28} color={`${colors.primary}90`} />
-            </View>
-            <Text style={[styles.placeholderTitle, { color: colors.mutedForeground }]}>Add panel image</Text>
-            <Text style={[styles.placeholderSub, { color: `${colors.mutedForeground}80` }]}>Tap to choose from gallery</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-
-      {/* Narration text */}
-      <View style={[styles.textSection, { borderTopColor: colors.border }]}>
-        <Text style={[styles.textLabel, { color: colors.mutedForeground }]}>NARRATION</Text>
-        <TextInput
+        {/* Image area */}
+        <TouchableOpacity
           style={[
-            styles.textInput,
-            { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background },
+            styles.imageArea,
+            {
+              backgroundColor: panel.imageUri ? 'transparent' : colors.muted,
+              borderColor: panel.imageUri ? 'transparent' : colors.border,
+              borderStyle: panel.imageUri ? 'solid' : 'dashed',
+            },
           ]}
-          placeholder="Write what happens in this panel..."
-          placeholderTextColor={`${colors.mutedForeground}70`}
-          value={panel.text}
-          onChangeText={t => onChange({ ...panel, text: t })}
-          multiline
-          textAlignVertical="top"
-          returnKeyType="default"
-        />
+          onPress={pickImage}
+          activeOpacity={0.8}
+          disabled={uploading}
+        >
+          {uploading ? (
+            <View style={styles.imagePlaceholder}>
+              <ActivityIndicator color={colors.primary} size="large" />
+              <Text style={[styles.placeholderSub, { color: colors.mutedForeground }]}>Uploading…</Text>
+            </View>
+          ) : panel.imageUri ? (
+            <>
+              <Image source={{ uri: panel.imageUri }} style={styles.panelImage} contentFit="cover" cachePolicy="memory-disk" />
+              <View style={styles.imageEditOverlay}>
+                <View style={[styles.editChip, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
+                  <Icon name="camera" size={12} color="#1E1830" />
+                  <Text style={[styles.editChipText, { color: '#1E1830' }]}>Change photo</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <View style={styles.imagePlaceholder}>
+              <View style={[styles.cameraIconBg, { backgroundColor: `${colors.primary}12` }]}>
+                <Icon name="image" size={28} color={`${colors.primary}90`} />
+              </View>
+              <Text style={[styles.placeholderTitle, { color: colors.mutedForeground }]}>Add panel image</Text>
+              <Text style={[styles.placeholderSub, { color: `${colors.mutedForeground}80` }]}>Tap to choose from gallery</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* Narration text */}
+        <View style={[styles.textSection, { borderTopColor: colors.border }]}>
+          <Text style={[styles.textLabel, { color: colors.mutedForeground }]}>NARRATION</Text>
+          <TextInput
+            style={[
+              styles.textInput,
+              { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background },
+            ]}
+            placeholder="Write what happens in this panel..."
+            placeholderTextColor={`${colors.mutedForeground}70`}
+            value={panel.text}
+            onChangeText={t => onChange({ ...panel, text: t })}
+            multiline
+            textAlignVertical="top"
+            returnKeyType="default"
+          />
+        </View>
       </View>
-    </View>
+
+      {/* Crop modal — rendered outside the card so it covers the full screen */}
+      {pendingUri && (
+        <CropImageModal
+          visible
+          uri={pendingUri}
+          onDone={handleCropDone}
+          onCancel={() => setPendingUri(null)}
+        />
+      )}
+    </>
   );
 }
 

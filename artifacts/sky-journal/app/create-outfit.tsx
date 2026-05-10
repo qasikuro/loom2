@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import CropImageModal from '@/components/CropImageModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,6 +8,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image } from 'expo-image';
 import {
+  ActivityIndicator,
   Platform,
   StyleSheet,
   Text,
@@ -21,40 +23,52 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 
 const VIBE_TAGS = [
-  { label: 'Casual', color: '#78A8C8' },
-  { label: 'Formal', color: '#6B5B95' },
-  { label: 'Dreamy', color: '#9888C0' },
+  { label: 'Casual',    color: '#78A8C8' },
+  { label: 'Formal',    color: '#6B5B95' },
+  { label: 'Dreamy',    color: '#9888C0' },
   { label: 'Adventure', color: '#60A878' },
-  { label: 'Cozy', color: '#C8A84B' },
-  { label: 'Dark', color: '#504070' },
-  { label: 'Soft', color: '#C870A0' },
-  { label: 'Ethereal', color: '#78C8C8' },
+  { label: 'Cozy',      color: '#C8A84B' },
+  { label: 'Dark',      color: '#504070' },
+  { label: 'Soft',      color: '#C870A0' },
+  { label: 'Ethereal',  color: '#78C8C8' },
 ];
 
 export default function CreateOutfitScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { addOutfit } = useApp();
-  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
 
-  const [name, setName] = useState('');
+  const [name, setName]               = useState('');
   const [description, setDescription] = useState('');
-  const [imageUri, setImageUri] = useState<string | undefined>();
+  const [imageUri, setImageUri]       = useState<string | undefined>();
+  const [pendingUri, setPendingUri]   = useState<string | null>(null);
+  const [uploading, setUploading]     = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [isPublic, setIsPublic] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isPublic, setIsPublic]       = useState(false);
+  const [saving, setSaving]           = useState(false);
+  const [error, setError]             = useState<string | null>(null);
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
-      quality: 0.85,
+      quality: 1,
     });
     if (!result.canceled && result.assets[0]) {
-      const persisted = await persistImageUri(result.assets[0].uri);
+      setPendingUri(result.assets[0].uri);
+    }
+  }
+
+  async function handleCropDone(croppedUri: string) {
+    setPendingUri(null);
+    setUploading(true);
+    try {
+      const persisted = await persistImageUri(croppedUri);
       setImageUri(persisted);
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -69,12 +83,12 @@ export default function CreateOutfitScreen() {
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addOutfit({
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
-      name: name.trim(),
+      id:          crypto.randomUUID(),
+      date:        new Date().toISOString(),
+      name:        name.trim(),
       description: description.trim(),
       imageUri,
-      tags: selectedTags,
+      tags:        selectedTags,
       isPublic,
     });
     setSaving(false);
@@ -82,138 +96,157 @@ export default function CreateOutfitScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <LinearGradient colors={['#E8E0F4', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
+    <>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <LinearGradient colors={['#E8E0F4', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
 
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
-          <Icon name="x" size={18} color={colors.foreground} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Log Outfit</Text>
-        <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
-          onPress={handleSave} disabled={saving}
-        >
-          <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-            {saving ? '...' : 'Save'}
-          </Text>
-        </TouchableOpacity>
-      </View>
+        <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
+            <Icon name="x" size={18} color={colors.foreground} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Log Outfit</Text>
+          <TouchableOpacity
+            style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
+            onPress={handleSave} disabled={saving}
+          >
+            <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
+              {saving ? '...' : 'Save'}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-      <KeyboardAwareScrollView
-        bottomOffset={20} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
-      >
-        {/* Image picker — tall portrait */}
-        <TouchableOpacity
-          style={[styles.imagePicker, {
-            backgroundColor: imageUri ? 'transparent' : colors.muted,
-            borderColor: imageUri ? 'transparent' : colors.border,
-          }]}
-          onPress={pickImage} activeOpacity={0.8}
+        <KeyboardAwareScrollView
+          bottomOffset={20} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
         >
-          {imageUri ? (
-            <>
-              <Image source={{ uri: imageUri }} style={styles.outfitImage} contentFit="contain" />
-              <View style={styles.changeOverlay}>
-                <View style={[styles.changeChip, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-                  <Icon name="camera" size={13} color={colors.foreground} />
-                  <Text style={[styles.changeChipText, { color: colors.foreground }]}>Change photo</Text>
+          {/* Image picker — tall portrait */}
+          <TouchableOpacity
+            style={[styles.imagePicker, {
+              backgroundColor: imageUri ? 'transparent' : colors.muted,
+              borderColor: imageUri ? 'transparent' : colors.border,
+            }]}
+            onPress={pickImage}
+            activeOpacity={0.8}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <View style={styles.imagePlaceholder}>
+                <ActivityIndicator color={colors.primary} size="large" />
+                <Text style={[styles.imagePlaceholderSub, { color: colors.mutedForeground }]}>Uploading…</Text>
+              </View>
+            ) : imageUri ? (
+              <>
+                <Image source={{ uri: imageUri }} style={styles.outfitImage} contentFit="contain" />
+                <View style={styles.changeOverlay}>
+                  <View style={[styles.changeChip, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
+                    <Icon name="camera" size={13} color={colors.foreground} />
+                    <Text style={[styles.changeChipText, { color: colors.foreground }]}>Change photo</Text>
+                  </View>
                 </View>
+              </>
+            ) : (
+              <View style={styles.imagePlaceholder}>
+                <View style={[styles.cameraCircle, { backgroundColor: `${colors.primary}15` }]}>
+                  <Icon name="camera" size={28} color={`${colors.primary}80`} />
+                </View>
+                <Text style={[styles.imagePlaceholderTitle, { color: colors.mutedForeground }]}>Add outfit photo</Text>
+                <Text style={[styles.imagePlaceholderSub, { color: `${colors.mutedForeground}70` }]}>Optional · Portrait works best</Text>
               </View>
-            </>
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <View style={[styles.cameraCircle, { backgroundColor: `${colors.primary}15` }]}>
-                <Icon name="camera" size={28} color={`${colors.primary}80`} />
-              </View>
-              <Text style={[styles.imagePlaceholderTitle, { color: colors.mutedForeground }]}>Add outfit photo</Text>
-              <Text style={[styles.imagePlaceholderSub, { color: `${colors.mutedForeground}70` }]}>Optional · Portrait works best</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Name */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Outfit name</Text>
+            <TextInput
+              style={[styles.nameInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+              placeholder="e.g. Starlight Cape · Dawn Cloak..."
+              placeholderTextColor={`${colors.mutedForeground}80`}
+              value={name}
+              onChangeText={t => { setName(t); if (error) setError(null); }}
+              returnKeyType="done"
+            />
+          </View>
+
+          {/* Description */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Notes (optional)</Text>
+            <TextInput
+              style={[styles.descInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+              placeholder="Where did you wear this? What does it feel like?"
+              placeholderTextColor={`${colors.mutedForeground}70`}
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Tags */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Vibe tags</Text>
+            <View style={styles.tagsGrid}>
+              {VIBE_TAGS.map(t => {
+                const active = selectedTags.includes(t.label);
+                return (
+                  <TouchableOpacity key={t.label}
+                    style={[styles.tagChip, {
+                      backgroundColor: active ? `${t.color}22` : `${t.color}0E`,
+                      borderColor:     active ? `${t.color}65` : `${t.color}22`,
+                      borderWidth:     active ? 1.5 : 1,
+                    }]}
+                    onPress={() => toggleTag(t.label)}
+                  >
+                    <Text style={[styles.tagText, { color: t.color }]}>{t.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Inline validation error */}
+          {error && (
+            <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
+              <Icon name="alert-circle" size={14} color="#DC2626" />
+              <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
             </View>
           )}
-        </TouchableOpacity>
 
-        {/* Name */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Outfit name</Text>
-          <TextInput
-            style={[styles.nameInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-            placeholder="e.g. Starlight Cape · Dawn Cloak..."
-            placeholderTextColor={`${colors.mutedForeground}80`}
-            value={name}
-            onChangeText={t => { setName(t); if (error) setError(null); }}
-            returnKeyType="done"
-          />
-        </View>
-
-        {/* Description */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Notes (optional)</Text>
-          <TextInput
-            style={[styles.descInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-            placeholder="Where did you wear this? What does it feel like?"
-            placeholderTextColor={`${colors.mutedForeground}70`}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-
-        {/* Tags */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Vibe tags</Text>
-          <View style={styles.tagsGrid}>
-            {VIBE_TAGS.map(t => {
-              const active = selectedTags.includes(t.label);
-              return (
-                <TouchableOpacity key={t.label}
-                  style={[styles.tagChip, {
-                    backgroundColor: active ? `${t.color}22` : `${t.color}0E`,
-                    borderColor: active ? `${t.color}65` : `${t.color}22`,
-                    borderWidth: active ? 1.5 : 1,
-                  }]}
-                  onPress={() => toggleTag(t.label)}
-                >
-                  <Text style={[styles.tagText, { color: t.color }]}>{t.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
+          {/* Visibility */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Visibility</Text>
+            <View style={styles.privacyRow}>
+              {(['Private', 'Public'] as const).map(opt => {
+                const active = opt === 'Private' ? !isPublic : isPublic;
+                return (
+                  <TouchableOpacity key={opt}
+                    style={[styles.privBtn, {
+                      backgroundColor: active ? `${colors.primary}15` : colors.muted,
+                      borderColor:     active ? `${colors.primary}40` : colors.border,
+                      borderWidth:     active ? 1.5 : 1,
+                    }]}
+                    onPress={() => setIsPublic(opt === 'Public')}
+                  >
+                    <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
+                    <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        </KeyboardAwareScrollView>
+      </View>
 
-        {/* Inline validation error */}
-        {error && (
-          <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-            <Icon name="alert-circle" size={14} color="#DC2626" />
-            <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
-          </View>
-        )}
-
-        {/* Visibility */}
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Visibility</Text>
-          <View style={styles.privacyRow}>
-            {(['Private', 'Public'] as const).map(opt => {
-              const active = opt === 'Private' ? !isPublic : isPublic;
-              return (
-                <TouchableOpacity key={opt}
-                  style={[styles.privBtn, {
-                    backgroundColor: active ? `${colors.primary}15` : colors.muted,
-                    borderColor: active ? `${colors.primary}40` : colors.border,
-                    borderWidth: active ? 1.5 : 1,
-                  }]}
-                  onPress={() => setIsPublic(opt === 'Public')}
-                >
-                  <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
-                  <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      </KeyboardAwareScrollView>
-    </View>
+      {/* Crop modal — full screen, rendered outside the scroll so it sits on top */}
+      {pendingUri && (
+        <CropImageModal
+          visible
+          uri={pendingUri}
+          onDone={handleCropDone}
+          onCancel={() => setPendingUri(null)}
+        />
+      )}
+    </>
   );
 }
 
