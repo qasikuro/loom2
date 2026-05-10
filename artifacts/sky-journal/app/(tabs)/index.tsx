@@ -319,7 +319,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Character Hero ─────────────────────────────────── */}
-        <View style={[styles.charHero, { height: Math.round(screenW * 0.72) }]}>
+        <View style={[styles.charHero, { height: Math.round(screenW * 0.54) }]}>
           {/* Background gradient */}
           <LinearGradient
             colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}

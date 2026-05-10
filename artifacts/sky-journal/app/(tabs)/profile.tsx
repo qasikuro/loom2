@@ -319,13 +319,13 @@ export default function CharacterScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
 
         {/* ── Banner ──────────────────────────────────────────────── */}
-        <View style={[styles.banner, { height: topPad + 180 }]}>
+        <View style={[styles.banner, { height: topPad + 110 }]}>
           <LinearGradient colors={bannerColors} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
           <View style={[styles.orbA, { backgroundColor: `${colors.primary}22` }]} />
           <View style={[styles.orbB, { backgroundColor: `${colors.gold}18` }]} />
           <View style={[styles.orbC, { backgroundColor: `${colors.primary}14` }]} />
 
-          <View style={[styles.bannerTop, { paddingTop: topPad + 14 }]}>
+          <View style={[styles.bannerTop, { paddingTop: topPad + 10 }]}>
             <View style={[styles.bannerChip, { backgroundColor: `${colors.primary}30`, borderColor: `${colors.primary}40` }]}>
               <Icon name="user" size={10} color={isDark ? 'rgba(220,210,255,0.9)' : colors.primary} />
               <Text style={[styles.bannerLabel, { color: isDark ? 'rgba(220,210,255,0.9)' : colors.primary }]}>CHARACTER</Text>
