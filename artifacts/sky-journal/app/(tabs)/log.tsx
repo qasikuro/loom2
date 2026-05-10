@@ -114,6 +114,7 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
     <TouchableOpacity
       style={[tc.card, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}
       activeOpacity={0.92}
+      onPress={() => { Haptics.selectionAsync(); router.push({ pathname: '/journal-entry', params: { id: entry.id } }); }}
     >
       {/* ─ Top row: avatar + name + time + star ─ */}
       <View style={tc.topRow}>
