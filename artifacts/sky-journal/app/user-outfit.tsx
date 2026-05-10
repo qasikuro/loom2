@@ -116,7 +116,7 @@ export default function UserOutfitScreen() {
         <View style={[styles.heroWrap, { height: IMG_H }]}>
           <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ scale: imageScale }] }]}>
             {params.outfitImage ? (
-              <Image source={{ uri: params.outfitImage }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              <Image source={{ uri: params.outfitImage }} style={StyleSheet.absoluteFill} resizeMode="contain" />
             ) : (
               <LinearGradient
                 colors={[`${moodColor}55`, `${moodColor}18`, colors.background]}

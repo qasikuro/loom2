@@ -49,8 +49,7 @@ export default function CreateOutfitScreen() {
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [3, 4],
+      allowsEditing: false,
       quality: 0.85,
     });
     if (!result.canceled && result.assets[0]) {
@@ -115,7 +114,7 @@ export default function CreateOutfitScreen() {
         >
           {imageUri ? (
             <>
-              <Image source={{ uri: imageUri }} style={styles.outfitImage} resizeMode="cover" />
+              <Image source={{ uri: imageUri }} style={styles.outfitImage} resizeMode="contain" />
               <View style={styles.changeOverlay}>
                 <View style={[styles.changeChip, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
                   <Icon name="camera" size={13} color={colors.foreground} />

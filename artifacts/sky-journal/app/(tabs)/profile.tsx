@@ -696,7 +696,7 @@ export default function CharacterScreen() {
                   {/* Outfit image */}
                   <View style={[styles.modalImageWrap, { backgroundColor: `${colors.primary}14` }]}>
                     {selectedOutfit.imageUri ? (
-                      <Image source={{ uri: selectedOutfit.imageUri }} style={styles.modalImage} resizeMode="cover" />
+                      <Image source={{ uri: selectedOutfit.imageUri }} style={styles.modalImage} resizeMode="contain" />
                     ) : (
                       <LinearGradient
                         colors={[`${colors.primary}55`, `${colors.primary}1A`]}

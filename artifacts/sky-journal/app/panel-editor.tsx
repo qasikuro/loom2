@@ -294,8 +294,7 @@ export default function PanelEditorScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [3, 4],
+      allowsEditing: false,
       quality: 0.88,
     });
     if (!res.canceled && res.assets[0]) {

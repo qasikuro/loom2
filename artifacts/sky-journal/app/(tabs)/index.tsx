@@ -332,8 +332,8 @@ export default function HomeScreen() {
             style={[StyleSheet.absoluteFill, { transform: [{ translateY: heroFloatY }] }]}
           >
             {activeOutfit?.imageUri
-              ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
-              : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+              : <Image source={Images.character_default} style={StyleSheet.absoluteFill} resizeMode="contain" />
             }
           </Animated.View>
 
