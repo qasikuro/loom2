@@ -7,12 +7,13 @@ import { requireAuth, getUserId } from "../middleware/auth";
 const router: IRouter = Router();
 
 const CharacterInputSchema = z.object({
-  name:     z.string().min(1).max(100),
-  bio:      z.string().max(500).default(""),
-  mood:     z.string().max(100).default("Hopeful"),
-  traits:   z.array(z.string()).default([]),
-  isPublic: z.boolean().default(true),
-  username: z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
+  name:      z.string().min(1).max(100),
+  bio:       z.string().max(500).default(""),
+  mood:      z.string().max(100).default("Hopeful"),
+  traits:    z.array(z.string()).default([]),
+  isPublic:  z.boolean().default(true),
+  username:  z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
+  avatarUri: z.string().url().nullable().optional(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {

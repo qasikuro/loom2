@@ -8,6 +8,7 @@ export const characterTable = pgTable("character", {
   mood:      text("mood").notNull().default("Hopeful"),
   traits:    jsonb("traits").$type<string[]>().notNull().default([]),
   isPublic:  boolean("is_public").notNull().default(true),
+  avatarUri: text("avatar_uri"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -41,6 +41,7 @@ interface PublicProfile {
   bio:         string;
   traits:      string[];
   mood:        string;
+  avatarUri:   string | null;
   isFollowing: boolean;
 }
 
@@ -193,7 +194,16 @@ export default function UserProfileScreen() {
           <View style={styles.avatarArea}>
             <View style={[styles.avatarRing, { borderColor: colors.background }]}>
               <View style={[styles.avatarInner, { backgroundColor: `${moodColor}22` }]}>
-                <Text style={[styles.avatarInitial, { color: moodColor }]}>{initial}</Text>
+                {profile.avatarUri ? (
+                  <Image
+                    source={{ uri: profile.avatarUri }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <Text style={[styles.avatarInitial, { color: moodColor }]}>{initial}</Text>
+                )}
               </View>
             </View>
           </View>

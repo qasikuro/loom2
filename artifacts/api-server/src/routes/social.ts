@@ -63,13 +63,14 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
   try {
     const [charRows, followingRows] = await Promise.all([
       db.select({
-        userId:   characterTable.userId,
-        name:     characterTable.name,
-        username: characterTable.username,
-        bio:      characterTable.bio,
-        traits:   characterTable.traits,
-        mood:     characterTable.mood,
-        isPublic: characterTable.isPublic,
+        userId:    characterTable.userId,
+        name:      characterTable.name,
+        username:  characterTable.username,
+        bio:       characterTable.bio,
+        traits:    characterTable.traits,
+        mood:      characterTable.mood,
+        isPublic:  characterTable.isPublic,
+        avatarUri: characterTable.avatarUri,
       })
         .from(characterTable)
         .where(eq(characterTable.userId, targetId))
@@ -94,6 +95,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       bio:         char.bio,
       traits:      char.traits,
       mood:        char.mood,
+      avatarUri:   char.avatarUri ?? null,
       isFollowing: followingSet.has(targetId),
     });
   } catch (err) {
@@ -196,11 +198,17 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
       .orderBy(desc(outfitsTable.date))
       .limit(50);
 
+    function safeImageUri(uri: string | null | undefined): string | null {
+      if (!uri) return null;
+      if (uri.startsWith('file://') || uri.startsWith('data:')) return null;
+      return uri;
+    }
+
     return res.json(rows.map(r => ({
       id:          r.id,
       name:        r.name,
       description: r.description,
-      imageUri:    r.imageUri,
+      imageUri:    safeImageUri(r.imageUri),
       tags:        r.tags,
       date:        r.date.toISOString(),
     })));
