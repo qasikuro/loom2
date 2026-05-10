@@ -38,42 +38,50 @@ export default function SignInScreen() {
   const [catchError, setCatchError]     = useState('');
 
   const isLoading = fetchStatus === 'fetching';
-  const needsClientTrust = signIn?.status === 'needs_client_trust';
+  const needsMfa =
+    signIn?.status === 'needs_client_trust' ||
+    signIn?.status === 'needs_second_factor';
+
+  async function sendMfaCode() {
+    if (!signIn) return;
+    const factors: any[] = (signIn as any).supportedSecondFactors ?? [];
+    const hasEmail = factors.some((f: any) => f.strategy === 'email_code');
+    const hasPhone = factors.some((f: any) => f.strategy === 'phone_code');
+    if (hasEmail) {
+      await signIn.mfa.sendEmailCode();
+    } else if (hasPhone) {
+      await signIn.mfa.sendPhoneCode();
+    }
+  }
 
   async function handleSignIn() {
-    console.log('[SignIn] handleSignIn called, signIn=', signIn ? 'defined' : 'undefined');
     if (!signIn) {
       setCatchError('Clerk not ready — please wait a moment and try again.');
       return;
     }
     setCatchError('');
     try {
-      console.log('[SignIn] calling signIn.password()');
       const { error } = await signIn.password({ emailAddress: email.trim(), password });
-      console.log('[SignIn] password() returned, error=', error, 'status=', signIn.status);
       if (error) {
         setCatchError(error.longMessage ?? error.message ?? 'Sign-in failed.');
         return;
       }
       if (signIn.status === 'complete') {
-        console.log('[SignIn] status complete, calling finalize()');
         await signIn.finalize({
           navigate: ({ session }) => {
-            console.log('[SignIn] navigate callback called, currentTask=', session?.currentTask);
             if (session?.currentTask) return;
             router.replace('/(tabs)' as Href);
           },
         });
-      } else if (signIn.status === 'needs_client_trust') {
-        const emailFactor = signIn.supportedSecondFactors?.find(
-          (f: any) => f.strategy === 'email_code',
-        );
-        if (emailFactor) await signIn.mfa.sendEmailCode();
+      } else if (
+        signIn.status === 'needs_client_trust' ||
+        signIn.status === 'needs_second_factor'
+      ) {
+        await sendMfaCode();
       } else {
-        setCatchError(`Unexpected status: ${signIn.status}. Please try again.`);
+        setCatchError(`Unexpected sign-in status: ${signIn.status}. Please try again.`);
       }
     } catch (err: any) {
-      console.log('[SignIn] caught error:', JSON.stringify(err));
       const msg =
         err?.errors?.[0]?.longMessage ||
         err?.errors?.[0]?.message ||
@@ -115,8 +123,8 @@ export default function SignInScreen() {
     errors?.fields?.code?.message ||
     '';
 
-  // ── Email code verification screen ─────────────────────────────────────────
-  if (needsClientTrust) {
+  // ── MFA / device trust verification screen ────────────────────────────────
+  if (needsMfa) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
         <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
@@ -157,7 +165,7 @@ export default function SignInScreen() {
             }
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.textBtn} onPress={() => signIn.mfa.sendEmailCode()}>
+          <TouchableOpacity style={styles.textBtn} onPress={sendMfaCode}>
             <Text style={styles.textBtnText}>Resend code</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.textBtn} onPress={() => { signIn.reset(); setCode(''); setCatchError(''); }}>
