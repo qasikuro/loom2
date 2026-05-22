@@ -107,18 +107,17 @@ app.get("/api/images/:filename", async (req: Request, res: Response) => {
     return res.sendFile(localPath);
   } catch { /* not on disk — fall through to GCS */ }
 
-  // 2. Try GCS
+  // 2. Try GCS — stream directly (one roundtrip instead of exists + getMetadata + read)
   if (!GCS_BUCKET_ID) return res.status(404).end();
   try {
-    const file = objectStorageClient.bucket(GCS_BUCKET_ID).file(`images/${fname}`);
-    const [exists] = await file.exists();
-    if (!exists) return res.status(404).end();
-
+    const file   = objectStorageClient.bucket(GCS_BUCKET_ID).file(`images/${fname}`);
     const [meta] = await file.getMetadata();
     res.setHeader("Content-Type", (meta.contentType as string) || "image/jpeg");
     res.setHeader("Cache-Control", "public, max-age=604800, immutable");
     file.createReadStream().pipe(res);
-  } catch {
+  } catch (err: any) {
+    // GCS returns 404 when the object doesn't exist
+    if (err?.code === 404 || err?.code === "404") return res.status(404).end();
     return res.status(404).end();
   }
 });

@@ -1,12 +1,29 @@
+/**
+ * POST /api/upload
+ *
+ * Accepts a base64-encoded image, compresses it with WhatsApp-style adaptive
+ * quality targeting ≤ 200 KB, then stores it in GCS.
+ *
+ * Compression strategy (mirrors WhatsApp's published approach):
+ *   1. Auto-rotate and strip EXIF metadata.
+ *   2. Resize to max 1600 px on the longest edge (no upscaling).
+ *   3. Start at JPEG quality 82 (mozjpeg encoder).
+ *   4. If the result is still > 200 KB, retry at quality 68.
+ *   5. If still > 200 KB, retry at quality 52.
+ *   6. Never go below quality 40 — visible artefacts below that threshold.
+ *   7. PNG images that have true alpha are kept as PNG (palette-quantised).
+ *      Everything else becomes JPEG regardless of input format.
+ */
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import sharp from "sharp";
 import { requireAuth } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
 
-const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
-const MAX_DIMENSION = 1200;   // px – longest edge
-const JPEG_QUALITY  = 80;     // 0-100
+const BUCKET_ID   = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
+const MAX_DIM     = 1600;           // px – longest edge (WhatsApp standard)
+const SIZE_TARGET = 200 * 1024;     // 200 KB target
+const QUALITY_STEPS = [82, 68, 52]; // quality ladder – stop as soon as ≤ 200 KB
 
 const UploadSchema = z.object({
   data: z.string().min(1),
@@ -27,13 +44,10 @@ router.post("/upload", requireAuth, async (req, res) => {
   }
 
   try {
-    const { data } = parsed.data;
-    const raw = data.replace(/^data:[^;]+;base64,/, "");
+    const raw      = parsed.data.data.replace(/^data:[^;]+;base64,/, "");
     const incoming = Buffer.from(raw, "base64");
 
-    // ── Compress & resize with sharp ──────────────────────────────────────────
-    // Detect if source is PNG with alpha – keep as PNG, otherwise convert to JPEG
-    const meta = await sharp(incoming).metadata();
+    const meta     = await sharp(incoming).metadata();
     const hasAlpha = !!(meta.hasAlpha && meta.channels && meta.channels >= 4);
 
     let compressed: Buffer;
@@ -41,29 +55,39 @@ router.post("/upload", requireAuth, async (req, res) => {
     let contentType: string;
 
     if (hasAlpha) {
-      // PNG: resize only (preserve transparency), quantise palette to reduce size
+      // True-transparency PNG: resize + palette quantise (no quality ladder needed)
       compressed = await sharp(incoming)
-        .rotate()                          // auto-rotate from EXIF
-        .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: "inside", withoutEnlargement: true })
-        .png({ compressionLevel: 8, palette: true })
+        .rotate()
+        .resize(MAX_DIM, MAX_DIM, { fit: "inside", withoutEnlargement: true })
+        .png({ compressionLevel: 9, palette: true, colors: 256 })
         .toBuffer();
       ext         = "png";
       contentType = "image/png";
     } else {
-      // Everything else → JPEG for smallest file size
-      compressed = await sharp(incoming)
-        .rotate()                          // auto-rotate from EXIF (also strips EXIF)
-        .resize(MAX_DIMENSION, MAX_DIMENSION, { fit: "inside", withoutEnlargement: true })
-        .jpeg({ quality: JPEG_QUALITY, mozjpeg: true })
-        .toBuffer();
+      // Adaptive-quality JPEG — step down quality until under SIZE_TARGET
+      compressed = Buffer.alloc(0); // satisfies TS; overwritten in loop
+      for (const quality of QUALITY_STEPS) {
+        compressed = await sharp(incoming)
+          .rotate()                // auto-rotate (strips EXIF as a side-effect)
+          .resize(MAX_DIM, MAX_DIM, { fit: "inside", withoutEnlargement: true })
+          .jpeg({ quality, mozjpeg: true })
+          .toBuffer();
+        if (compressed.byteLength <= SIZE_TARGET) break;
+      }
       ext         = "jpeg";
       contentType = "image/jpeg";
     }
 
     const fname = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${ext}`;
+
     req.log.info(
-      { original: incoming.byteLength, compressed: compressed.byteLength, fname },
-      "Image compressed before upload",
+      {
+        fname,
+        originalKb:   Math.round(incoming.byteLength   / 1024),
+        compressedKb: Math.round(compressed.byteLength / 1024),
+        ratio:        `${Math.round(compressed.byteLength / incoming.byteLength * 100)}%`,
+      },
+      "Image compressed (WhatsApp-style adaptive quality)",
     );
 
     const file = objectStorageClient.bucket(BUCKET_ID).file(`images/${fname}`);
