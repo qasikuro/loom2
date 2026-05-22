@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "expo-file-system": "^19.0.22",
-    "expo-image-manipulator": "^55.0.16",
+    "expo-image-manipulator": "^14.0.8",
     "lucide-react-native": "^1.14.0"
   }
 }

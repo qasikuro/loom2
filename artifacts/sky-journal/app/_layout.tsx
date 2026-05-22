@@ -90,8 +90,8 @@ export default function RootLayout() {
       .catch(() => { /* fonts optional — app still usable */ })
       .finally(() => {
         setFontsReady(true);
-        // Hide the native splash immediately — our custom one takes over
-        SplashScreen.hideAsync();
+        // Hide the native splash — silently ignore if not registered (hot-reload in Expo Go)
+        SplashScreen.hideAsync().catch(() => null);
       });
   }, []);
 
