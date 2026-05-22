@@ -128,59 +128,79 @@ export function AppSplashScreen({ onReady }: Props) {
       {/* Stars */}
       <StarField />
 
-      {/* Moon orb */}
-      <Animated.View style={[styles.moonWrap, { transform: [{ scale: moonScale }] }]}>
-        {/* Outer corona rings */}
-        <View style={[styles.corona, { width: MOON + 64, height: MOON + 64, borderRadius: (MOON + 64) / 2 }]} />
-        <View style={[styles.corona, styles.corona2, { width: MOON + 36, height: MOON + 36, borderRadius: (MOON + 36) / 2 }]} />
-        {/* Moon disc */}
-        <View style={styles.moonDisc}>
+      {/* ── Centre content ─────────────────────────────────────── */}
+      <View style={styles.centre}>
+        {/* Moon orb */}
+        <Animated.View style={[styles.moonWrap, { transform: [{ scale: moonScale }] }]}>
+          {/* Outer corona rings */}
+          <View style={[styles.corona, { width: MOON + 64, height: MOON + 64, borderRadius: (MOON + 64) / 2 }]} />
+          <View style={[styles.corona, styles.corona2, { width: MOON + 36, height: MOON + 36, borderRadius: (MOON + 36) / 2 }]} />
+          {/* Moon disc */}
+          <View style={styles.moonDisc}>
+            <LinearGradient
+              colors={['#C8BEE0', '#B8ACDA', '#A898CC']}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Crater shadow */}
+            <View style={styles.craterA} />
+            <View style={styles.craterB} />
+          </View>
+        </Animated.View>
+
+        {/* Text block */}
+        <Animated.View style={[styles.textBlock, { opacity: contentFade, transform: [{ translateY: titleY }] }]}>
+          {/* Divider label */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>YOUR CELESTIAL DIARY</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* "Sky" in large serif */}
+          <Text style={styles.wordSky}>Sky</Text>
+
+          {/* "JOURNAL" spaced gold */}
+          <Text style={styles.wordJournal}>JOURNAL</Text>
+
+          {/* Tagline */}
+          <Text style={styles.tagline}>where every sky moment lives forever</Text>
+
+          {/* Three dots */}
+          <View style={styles.dots}>
+            <View style={[styles.dot, { backgroundColor: 'rgba(200,184,232,0.22)' }]} />
+            <View style={[styles.dot, { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(200,168,75,0.65)' }]} />
+            <View style={[styles.dot, { backgroundColor: 'rgba(200,184,232,0.22)' }]} />
+          </View>
+        </Animated.View>
+      </View>
+
+      {/* ── Bottom branding strip ──────────────────────────────── */}
+      <Animated.View style={[styles.bottomStrip, { opacity: contentFade }]}>
+        {/* Shimmer line */}
+        <View style={styles.shimmerLine}>
           <LinearGradient
-            colors={['#C8BEE0', '#B8ACDA', '#A898CC']}
+            colors={['transparent', 'rgba(200,184,232,0.16)', 'transparent']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
             style={StyleSheet.absoluteFill}
           />
-          {/* Crater shadow */}
-          <View style={styles.craterA} />
-          <View style={styles.craterB} />
         </View>
+
+        {/* Constellation dots row */}
+        <View style={styles.constellationRow}>
+          {[0,1,2,3,4,5,6].map(i => (
+            <View
+              key={i}
+              style={[
+                styles.constDot,
+                i === 3 && { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(200,168,75,0.45)' },
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* Subtle footer tagline */}
+        <Text style={styles.footerText}>sky: children of the light</Text>
       </Animated.View>
-
-      {/* Text block */}
-      <Animated.View style={[styles.textBlock, { opacity: contentFade, transform: [{ translateY: titleY }] }]}>
-
-        {/* Divider label */}
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerLabel}>YOUR CELESTIAL DIARY</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* "Sky" in large serif */}
-        <Text style={styles.wordSky}>Sky</Text>
-
-        {/* "JOURNAL" spaced gold */}
-        <Text style={styles.wordJournal}>JOURNAL</Text>
-
-        {/* Tagline */}
-        <Text style={styles.tagline}>where every sky moment lives forever</Text>
-
-        {/* Three dots */}
-        <View style={styles.dots}>
-          <View style={[styles.dot, { backgroundColor: 'rgba(200,184,232,0.22)' }]} />
-          <View style={[styles.dot, { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(200,168,75,0.65)' }]} />
-          <View style={[styles.dot, { backgroundColor: 'rgba(200,184,232,0.22)' }]} />
-        </View>
-
-      </Animated.View>
-
-      {/* Bottom shimmer line */}
-      <View style={styles.shimmerLine}>
-        <LinearGradient
-          colors={['transparent', 'rgba(200,184,232,0.16)', 'transparent']}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </View>
     </Animated.View>
   );
 }
@@ -192,12 +212,46 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     zIndex: 9999,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: height * 0.11,
+    paddingBottom: height * 0.08,
+  },
+
+  // ── Layout zones ────────────────────────────────────────────────────────
+  centre: {
+    alignItems: 'center',
+    flex: 1,
     justifyContent: 'center',
+  },
+
+  bottomStrip: {
+    alignItems: 'center',
+    width: '100%',
+    gap: 14,
+  },
+
+  constellationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  constDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: 'rgba(200,184,232,0.20)',
+  },
+  footerText: {
+    fontSize: 10,
+    color: 'rgba(200,184,232,0.28)',
+    letterSpacing: 2.8,
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    textTransform: 'uppercase',
   },
 
   haze: {
     position: 'absolute',
-    bottom: height * 0.26,
+    bottom: height * 0.22,
     left: -80,
     right: -80,
     height: 200,
@@ -209,7 +263,7 @@ const styles = StyleSheet.create({
   moonWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 44,
+    marginBottom: 36,
   },
   corona: {
     position: 'absolute',
@@ -314,10 +368,7 @@ const styles = StyleSheet.create({
 
   // ── Bottom shimmer ───────────────────────────────────────────────────────
   shimmerLine: {
-    position: 'absolute',
-    bottom: 64,
-    left: 0,
-    right: 0,
+    width: '80%',
     height: 1,
   },
 });
