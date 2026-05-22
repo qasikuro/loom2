@@ -15,7 +15,10 @@ function safeDiscoverUri(uri: string | null | undefined): string | null {
 
 router.get("/users/search", requireAuth, async (req, res) => {
   const userId = getUserId(req);
-  const q = String(req.query.q ?? "").trim();
+  const raw = String(req.query.q ?? "").trim();
+  if (raw.length < 1) return res.json([]);
+  // Strip leading @ so users can search "@handle" or "handle" interchangeably
+  const q = raw.startsWith('@') ? raw.slice(1) : raw;
   if (q.length < 1) return res.json([]);
 
   try {

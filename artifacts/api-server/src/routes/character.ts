@@ -13,7 +13,7 @@ const CharacterInputSchema = z.object({
   traits:    z.array(z.string()).default([]),
   isPublic:  z.boolean().default(true),
   username:  z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
-  avatarUri: z.string().url().nullable().optional(),
+  avatarUri: z.string().nullable().optional(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {
