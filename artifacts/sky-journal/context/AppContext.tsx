@@ -415,7 +415,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const ALL_CACHE_KEYS = [
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
-    'discover_v1', 'following_v1', 'active_outfit_v1',
+    'discover_v1', 'following_v1',
+    // active_outfit_v1 is intentionally NOT cleared on logout so the outfit
+    // preference survives a logout/login cycle. loadData() validates the saved
+    // ID against the freshly loaded outfit list before applying it.
   ];
 
   const clearUserData = useCallback(async () => {
@@ -476,6 +479,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGallery(gal);
       setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
       setApiOnline(true);
+
+      // Restore active outfit across sessions.
+      // Prefer the saved outfit ID if it still exists in this user's outfit list;
+      // otherwise fall back to the most-recent outfit so the home screen is never blank.
+      if (outs.length > 0) {
+        const savedId = await AsyncStorage.getItem('active_outfit_v1');
+        const validId = savedId && outs.some(o => o.id === savedId) ? savedId : outs[0].id;
+        setActiveOutfitIdState(validId);
+        AsyncStorage.setItem('active_outfit_v1', validId).catch(() => null);
+      }
 
       await Promise.allSettled([
         AsyncStorage.setItem('character_v2',  JSON.stringify(char)),
