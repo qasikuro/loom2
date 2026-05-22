@@ -13,6 +13,15 @@ function resolveApiBase(): string {
 
 const API_BASE = resolveApiBase();
 
+// ── Resolve a possibly-relative API image path to an absolute URI ─────────────
+// Stored paths look like "/api/images/<file>". On native Expo there is no
+// implicit base, so we must prefix API_BASE. HTTPS / data / blob URIs pass through.
+function resolveUri(uri: string | null | undefined): string | undefined {
+  if (!uri) return undefined;
+  if (uri.startsWith('/')) return `${API_BASE}${uri}`;
+  return uri;
+}
+
 // ── Auth token getter (injected from Clerk context in _layout) ────────────────
 
 type TokenGetter = () => Promise<string | null>;
@@ -252,7 +261,7 @@ function toAppJournalEntry(raw: any): JournalEntry {
     type:       raw.type as JournalEntryType,
     text:       raw.text,
     mood:       raw.mood,
-    imageUri:   raw.imageUri  ?? raw.image_uri  ?? undefined,
+    imageUri:   resolveUri(raw.imageUri ?? raw.image_uri),
     friendName: raw.friendName ?? raw.friend_name ?? undefined,
   };
 }
@@ -262,7 +271,9 @@ function toAppStory(raw: any): Story {
     id:             raw.id,
     date:           typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
     chapterTitle:   raw.chapterTitle ?? raw.chapter_title,
-    panels:         Array.isArray(raw.panels) ? raw.panels : [],
+    panels:         Array.isArray(raw.panels)
+      ? raw.panels.map((p: any) => ({ ...p, imageUri: resolveUri(p.imageUri) }))
+      : [],
     mood:           raw.mood,
     location:       raw.location ?? '',
     isPublic:       raw.isPublic ?? raw.is_public ?? false,
@@ -279,7 +290,7 @@ function toAppOutfit(raw: any): Outfit {
     date:        typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
     name:        raw.name,
     description: raw.description ?? '',
-    imageUri:    raw.imageUri ?? raw.image_uri ?? undefined,
+    imageUri:    resolveUri(raw.imageUri ?? raw.image_uri),
     tags:        Array.isArray(raw.tags) ? raw.tags : [],
     isPublic:    raw.isPublic ?? raw.is_public ?? false,
   };
@@ -297,7 +308,7 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
       : `@${(raw.authorName ?? 'sky').toLowerCase().replace(/\s+/g, '')}`,
     chapterTitle:   raw.chapterTitle ?? '',
     storySnippet:   raw.storySnippet ?? '',
-    imageUri:       raw.imageUri ?? undefined,
+    imageUri:       resolveUri(raw.imageUri),
     mood:           raw.mood ?? 'Hopeful',
     witnessedCount: raw.witnessedCount ?? 0,
     savedCount:     raw.savedCount ?? 0,
@@ -307,7 +318,7 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
     vibe:           raw.mood ?? 'Hopeful',
     panels:         Array.isArray(raw.panels) ? raw.panels.map((p: any) => ({
       text:     p.text     ?? '',
-      imageUri: p.imageUri ?? undefined,
+      imageUri: resolveUri(p.imageUri),
       overlays: Array.isArray(p.overlays) ? p.overlays : undefined,
     })) : [],
     pages:          Array.isArray(raw.pages) ? raw.pages : undefined,
