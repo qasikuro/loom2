@@ -9,13 +9,38 @@ import {
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, count, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
-import { requireAdmin, getUserId } from "../middleware/auth";
+import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 
 const router: IRouter = Router();
 
 // ── Public config (no auth) ───────────────────────────────────────────────────
 router.get("/admin/config", (_req: Request, res: Response) => {
   res.json({ publishableKey: process.env.CLERK_PUBLISHABLE_KEY ?? "" });
+});
+
+// ── Bootstrap: claim first-admin (requires auth, only works when 0 admins exist)
+router.post("/admin/setup", requireAuth, async (req: Request, res: Response) => {
+  const userId = getUserId(req);
+  try {
+    const [{ adminCount }] = await db
+      .select({ adminCount: count() })
+      .from(characterTable)
+      .where(eq(characterTable.isAdmin, true));
+
+    if (adminCount > 0) {
+      return res.status(403).json({ error: "An admin already exists. Contact them to grant access." });
+    }
+
+    await db
+      .update(characterTable)
+      .set({ isAdmin: true })
+      .where(eq(characterTable.userId, userId));
+
+    return res.json({ ok: true, message: "You are now an admin." });
+  } catch (err) {
+    req.log.error({ err }, "Admin setup failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // ── Me / role check ──────────────────────────────────────────────────────────

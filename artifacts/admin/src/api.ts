@@ -39,6 +39,7 @@ export const api = {
   hideContent:   (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/hide`, { method: "PUT" }),
   unhideContent: (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/unhide`, { method: "PUT" }),
   deleteContent: (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}`, { method: "DELETE" }),
+  setupAdmin:    () => apiFetch<{ ok: boolean; message: string }>("/admin/setup", { method: "POST" }),
   getReports:    (status: string, offset = 0) => apiFetch<{ reports: Report[]; total: number }>(`/admin/reports?status=${status}&offset=${offset}&limit=50`),
   resolveReport: (id: string, status: "resolved" | "dismissed") => apiFetch(`/admin/reports/${id}/resolve`, { method: "PUT", body: JSON.stringify({ status }) }),
   deleteReport:  (id: string) => apiFetch(`/admin/reports/${id}`, { method: "DELETE" }),
