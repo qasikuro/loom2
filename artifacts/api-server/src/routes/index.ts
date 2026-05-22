@@ -8,6 +8,7 @@ import uploadRouter from "./upload";
 import socialRouter from "./social";
 import notificationsRouter from "./notifications";
 import reportsRouter from "./reports";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(uploadRouter);
 router.use(socialRouter);
 router.use(notificationsRouter);
 router.use(reportsRouter);
+router.use(adminRouter);
 
 export default router;

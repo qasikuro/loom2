@@ -15,6 +15,7 @@ export const storiesTable = pgTable("stories", {
   mood:           text("mood").notNull(),
   location:       text("location").notNull().default(""),
   isPublic:       boolean("is_public").notNull().default(false),
+  isHidden:       boolean("is_hidden").notNull().default(false),
   witnessedCount: integer("witnessed_count").notNull().default(0),
   savedCount:     integer("saved_count").notNull().default(0),
   panels:          jsonb("panels").$type<StoryPanel[]>().notNull().default([]),

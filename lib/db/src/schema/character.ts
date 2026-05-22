@@ -9,6 +9,8 @@ export const characterTable = pgTable("character", {
   traits:    jsonb("traits").$type<string[]>().notNull().default([]),
   isPublic:  boolean("is_public").notNull().default(true),
   avatarUri: text("avatar_uri"),
+  isAdmin:   boolean("is_admin").notNull().default(false),
+  isBanned:  boolean("is_banned").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

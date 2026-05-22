@@ -1,0 +1,196 @@
+import { useEffect, useState, useCallback } from "react";
+import { api, type AdminUser } from "../api";
+
+type ConfirmAction = { type: "ban" | "unban" | "delete" | "admin"; user: AdminUser };
+
+export default function UsersPage() {
+  const [users, setUsers]     = useState<AdminUser[]>([]);
+  const [total, setTotal]     = useState(0);
+  const [query, setQuery]     = useState("");
+  const [offset, setOffset]   = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState("");
+  const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
+  const [toast, setToast]     = useState("");
+
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
+
+  const load = useCallback(async (q: string, off: number) => {
+    setLoading(true);
+    setError("");
+    try {
+      const data = await api.getUsers(q, off);
+      setUsers(data.users);
+      setTotal(data.total);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(query, offset); }, [query, offset]);
+
+  const handleConfirm = async () => {
+    if (!confirm) return;
+    try {
+      if (confirm.type === "ban")    await api.banUser(confirm.user.userId);
+      if (confirm.type === "unban")  await api.unbanUser(confirm.user.userId);
+      if (confirm.type === "delete") await api.deleteUser(confirm.user.userId);
+      if (confirm.type === "admin")  await api.toggleAdmin(confirm.user.userId);
+      showToast("Done!");
+      setConfirm(null);
+      load(query, offset);
+    } catch (e: any) {
+      showToast("Error: " + e.message);
+      setConfirm(null);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">User Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">{total} total users</p>
+        </div>
+        <input
+          type="search"
+          placeholder="Search by name or username…"
+          className="border rounded-lg px-3 py-2 text-sm w-64 bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOffset(0); }}
+        />
+      </div>
+
+      {error && <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</div>}
+
+      <div className="bg-card rounded-xl border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/40">
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">User</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Username</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Active</th>
+                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="border-b">
+                    <td colSpan={5} className="px-4 py-3">
+                      <div className="h-4 bg-muted rounded animate-pulse w-full" />
+                    </td>
+                  </tr>
+                ))
+              ) : users.length === 0 ? (
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No users found</td></tr>
+              ) : users.map((u) => (
+                <tr key={u.userId} className="border-b hover:bg-muted/20 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{u.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{u.userId.slice(0, 16)}…</div>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {u.username ? `@${u.username}` : <span className="italic text-muted-foreground/60">none</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1">
+                      {u.isAdmin  && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">Admin</span>}
+                      {u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Banned</span>}
+                      {!u.isAdmin && !u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Active</span>}
+                      {!u.isPublic && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(u.updatedAt).toLocaleDateString()}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end gap-1 flex-wrap">
+                      <button
+                        onClick={() => setConfirm({ type: u.isBanned ? "unban" : "ban", user: u })}
+                        className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isBanned ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
+                      >
+                        {u.isBanned ? "Unban" : "Ban"}
+                      </button>
+                      <button
+                        onClick={() => setConfirm({ type: "admin", user: u })}
+                        className="px-2 py-1 text-xs rounded-md font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+                      >
+                        {u.isAdmin ? "Demote" : "Promote"}
+                      </button>
+                      <button
+                        onClick={() => setConfirm({ type: "delete", user: u })}
+                        className="px-2 py-1 text-xs rounded-md font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {total > 50 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+            <span className="text-sm text-muted-foreground">
+              {offset + 1}–{Math.min(offset + 50, total)} of {total}
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOffset(Math.max(0, offset - 50))}
+                disabled={offset === 0}
+                className="px-3 py-1 text-sm border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
+              >← Prev</button>
+              <button
+                onClick={() => setOffset(offset + 50)}
+                disabled={offset + 50 >= total}
+                className="px-3 py-1 text-sm border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
+              >Next →</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {confirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-xl border shadow-xl p-6 max-w-sm w-full space-y-4">
+            <h3 className="font-semibold text-lg capitalize">
+              {confirm.type === "admin" ? (confirm.user.isAdmin ? "Demote from Admin" : "Promote to Admin") : `${confirm.type} User`}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {confirm.type === "delete"
+                ? `This will permanently delete ${confirm.user.name} and all their content. This cannot be undone.`
+                : confirm.type === "ban"
+                ? `Ban ${confirm.user.name}? Their content will be hidden from the discover feed.`
+                : confirm.type === "unban"
+                ? `Unban ${confirm.user.name}? They will regain full access.`
+                : confirm.user.isAdmin
+                ? `Remove admin access from ${confirm.user.name}?`
+                : `Grant admin access to ${confirm.user.name}?`}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setConfirm(null)}
+                className="px-4 py-2 text-sm border rounded-lg hover:bg-muted transition-colors"
+              >Cancel</button>
+              <button
+                onClick={handleConfirm}
+                className={`px-4 py-2 text-sm rounded-lg font-medium text-white transition-opacity hover:opacity-90 ${confirm.type === "delete" ? "bg-red-600" : confirm.type === "ban" ? "bg-orange-600" : "bg-primary"}`}
+              >Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed bottom-4 right-4 bg-foreground text-background px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg z-50 animate-in slide-in-from-bottom-2">
+          {toast}
+        </div>
+      )}
+    </div>
+  );
+}

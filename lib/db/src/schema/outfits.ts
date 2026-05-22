@@ -8,6 +8,7 @@ export const outfitsTable = pgTable("outfits", {
   imageUri:    text("image_uri"),
   tags:        jsonb("tags").$type<string[]>().notNull().default([]),
   isPublic:    boolean("is_public").notNull().default(false),
+  isHidden:    boolean("is_hidden").notNull().default(false),
   date:        timestamp("date", { withTimezone: true }).notNull(),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -319,8 +319,10 @@ router.get("/discover", requireAuth, async (req, res) => {
         .where(
           and(
             eq(storiesTable.isPublic, true),
+            eq(storiesTable.isHidden, false),     // exclude admin-hidden stories
             eq(characterTable.isPublic, true),
-            ne(storiesTable.userId, userId),   // never show own stories
+            eq(characterTable.isBanned, false),   // exclude banned users
+            ne(storiesTable.userId, userId),       // never show own stories
           ),
         )
         .orderBy(desc(storiesTable.date))
