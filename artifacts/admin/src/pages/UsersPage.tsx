@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { api, type AdminUser } from "../api";
 
 type ConfirmAction = { type: "ban" | "unban" | "delete" | "admin"; user: AdminUser };
+type LimitEdit     = { userId: string; value: string };
 
 export default function UsersPage() {
   const [users, setUsers]     = useState<AdminUser[]>([]);
@@ -12,6 +13,8 @@ export default function UsersPage() {
   const [error, setError]     = useState("");
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
   const [toast, setToast]     = useState("");
+  const [limitEdit, setLimitEdit] = useState<LimitEdit | null>(null);
+  const [limitSaving, setLimitSaving] = useState(false);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
@@ -47,6 +50,26 @@ export default function UsersPage() {
     }
   };
 
+  const handleSaveLimit = async () => {
+    if (!limitEdit) return;
+    const n = parseInt(limitEdit.value, 10);
+    if (isNaN(n) || n < 1 || n > 50000) {
+      showToast("Enter a number between 1 and 50,000");
+      return;
+    }
+    setLimitSaving(true);
+    try {
+      await api.setGalleryLimit(limitEdit.userId, n);
+      setUsers(prev => prev.map(u => u.userId === limitEdit.userId ? { ...u, galleryLimit: n } : u));
+      showToast(`Gallery limit set to ${n}`);
+      setLimitEdit(null);
+    } catch (e: any) {
+      showToast("Error: " + e.message);
+    } finally {
+      setLimitSaving(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between gap-4">
@@ -73,6 +96,7 @@ export default function UsersPage() {
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">User</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Username</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Gallery Limit</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Active</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -81,13 +105,13 @@ export default function UsersPage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b">
-                    <td colSpan={5} className="px-4 py-3">
+                    <td colSpan={6} className="px-4 py-3">
                       <div className="h-4 bg-muted rounded animate-pulse w-full" />
                     </td>
                   </tr>
                 ))
               ) : users.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No users found</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No users found</td></tr>
               ) : users.map((u) => (
                 <tr key={u.userId} className="border-b hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
@@ -104,6 +128,39 @@ export default function UsersPage() {
                       {!u.isAdmin && !u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Active</span>}
                       {!u.isPublic && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {limitEdit?.userId === u.userId ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="number"
+                          min={1}
+                          max={50000}
+                          className="w-20 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                          value={limitEdit.value}
+                          onChange={e => setLimitEdit({ userId: u.userId, value: e.target.value })}
+                          onKeyDown={e => { if (e.key === "Enter") handleSaveLimit(); if (e.key === "Escape") setLimitEdit(null); }}
+                          autoFocus
+                        />
+                        <button
+                          onClick={handleSaveLimit}
+                          disabled={limitSaving}
+                          className="px-2 py-1 text-xs rounded bg-primary text-white font-medium disabled:opacity-50"
+                        >{limitSaving ? "…" : "Save"}</button>
+                        <button
+                          onClick={() => setLimitEdit(null)}
+                          className="px-2 py-1 text-xs rounded border hover:bg-muted"
+                        >✕</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setLimitEdit({ userId: u.userId, value: String(u.galleryLimit ?? 200) })}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground group"
+                      >
+                        <span className="font-medium tabular-nums">{u.galleryLimit ?? 200}</span>
+                        <span className="opacity-0 group-hover:opacity-60 transition-opacity text-[10px]">✏</span>
+                      </button>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(u.updatedAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3">

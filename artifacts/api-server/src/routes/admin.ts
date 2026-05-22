@@ -109,15 +109,16 @@ router.get("/admin/users", requireAdmin, async (req: Request, res: Response) => 
 
     const rows = await db
       .select({
-        userId:    characterTable.userId,
-        username:  characterTable.username,
-        name:      characterTable.name,
-        bio:       characterTable.bio,
-        mood:      characterTable.mood,
-        isPublic:  characterTable.isPublic,
-        isAdmin:   characterTable.isAdmin,
-        isBanned:  characterTable.isBanned,
-        updatedAt: characterTable.updatedAt,
+        userId:       characterTable.userId,
+        username:     characterTable.username,
+        name:         characterTable.name,
+        bio:          characterTable.bio,
+        mood:         characterTable.mood,
+        isPublic:     characterTable.isPublic,
+        isAdmin:      characterTable.isAdmin,
+        isBanned:     characterTable.isBanned,
+        galleryLimit: characterTable.galleryLimit,
+        updatedAt:    characterTable.updatedAt,
       })
       .from(characterTable)
       .where(where)
@@ -411,6 +412,26 @@ router.delete("/admin/reports/:id", requireAdmin, async (req: Request, res: Resp
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin delete report failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Gallery limit ─────────────────────────────────────────────────────────────
+
+router.put("/admin/users/:id/gallery-limit", requireAdmin, async (req: Request, res: Response) => {
+  const userId = String(req.params.id);
+  const { limit } = req.body;
+  if (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1 || limit > 50000) {
+    return res.status(400).json({ error: "Limit must be an integer between 1 and 50000" });
+  }
+  try {
+    await db
+      .update(characterTable)
+      .set({ galleryLimit: limit })
+      .where(eq(characterTable.userId, userId));
+    return res.json({ ok: true, limit });
+  } catch (err) {
+    req.log.error({ err }, "Admin set gallery limit failed");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

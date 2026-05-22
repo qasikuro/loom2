@@ -136,6 +136,18 @@ export interface Outfit {
   isPublic:    boolean;
 }
 
+export interface GalleryPhoto {
+  id:        string;
+  imageUri:  string;
+  caption:   string;
+  createdAt: string;
+}
+
+export interface GalleryUsage {
+  count: number;
+  limit: number;
+}
+
 export interface DiscoverPost {
   id:             string;
   authorUserId:   string;
@@ -200,6 +212,11 @@ interface AppContextValue {
   deleteOutfit:      (id: string) => void;
   activeOutfitId:    string | null;
   setActiveOutfitId: (id: string | null) => void;
+
+  gallery:          GalleryPhoto[];
+  galleryUsage:     GalleryUsage;
+  addGalleryPhoto:  (imageUri: string, caption?: string) => Promise<void>;
+  deleteGalleryPhoto: (id: string) => void;
 
   discoverPosts:  DiscoverPost[];
   toggleSavePost: (id: string) => void;
@@ -342,6 +359,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rewards, setRewards]               = useState<Reward[]>([]);
   const [activeOutfitId, setActiveOutfitIdState] = useState<string | null>(null);
 
+  const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
+  const [galleryUsage, setGalleryUsage] = useState<GalleryUsage>({ count: 0, limit: 200 });
+
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
   const [serverNotifications, setServerNotifications] = useState<ServerNotification[]>([]);
@@ -403,6 +423,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setJournalEntries([]);
     setStories([]);
     setOutfits([]);
+    setGallery([]);
+    setGalleryUsage({ count: 0, limit: 200 });
     setDiscoverFeedRaw([]);
     setFollowingIds([]);
     setActiveOutfitIdState(null);
@@ -427,22 +449,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedStoryIds(new Set());
 
     try {
-      const [charRaw, entriesRaw, storiesRaw, outfitsRaw] = await Promise.all([
+      const [charRaw, entriesRaw, storiesRaw, outfitsRaw, galleryRaw, usageRaw] = await Promise.all([
         apiFetch<any>('/character'),
         apiFetch<any[]>('/journal-entries'),
         apiFetch<any[]>('/stories'),
         apiFetch<any[]>('/outfits'),
+        apiFetch<any[]>('/gallery').catch(() => []),
+        apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
       ]);
 
       const char    = toAppCharacter(charRaw);
       const entries = (entriesRaw  ?? []).map(toAppJournalEntry);
       const stors   = (storiesRaw  ?? []).map(toAppStory);
       const outs    = (outfitsRaw  ?? []).map(toAppOutfit);
+      const gal     = (galleryRaw  ?? []).map((r: any): GalleryPhoto => ({
+        id:        r.id,
+        imageUri:  resolveUri(r.imageUri) ?? r.imageUri,
+        caption:   r.caption ?? '',
+        createdAt: r.createdAt,
+      }));
 
       setCharacterState(char);
       setJournalEntries(entries);
       setStories(stors);
       setOutfits(outs);
+      setGallery(gal);
+      setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
       setApiOnline(true);
 
       await Promise.allSettled([
@@ -637,6 +669,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // ── Gallery ────────────────────────────────────────────────────────────────
+
+  const addGalleryPhoto = useCallback(async (imageUri: string, caption = '') => {
+    try {
+      const created = await apiFetch<GalleryPhoto>('/gallery', {
+        method: 'POST',
+        body:   JSON.stringify({ imageUri, caption }),
+      });
+      const resolved = { ...created, imageUri: resolveUri(created.imageUri) ?? created.imageUri };
+      setGallery(prev => [resolved, ...prev]);
+      setGalleryUsage(prev => ({ ...prev, count: prev.count + 1 }));
+    } catch (err: any) {
+      if (err?.status === 429) {
+        throw new Error('Gallery limit reached');
+      }
+      throw err;
+    }
+  }, []);
+
+  const deleteGalleryPhoto = useCallback((id: string) => {
+    setGallery(prev => prev.filter(p => p.id !== id));
+    setGalleryUsage(prev => ({ ...prev, count: Math.max(0, prev.count - 1) }));
+    apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => null);
+  }, []);
+
   // ── Discover / Save ────────────────────────────────────────────────────────
 
   const toggleSavePost = useCallback((id: string) => {
@@ -689,6 +746,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       stories, addStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,
       outfits, addOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
+      gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
       discoverPosts, toggleSavePost,
       followingIds, followUser, unfollowUser,
       rewards, dismissReward,

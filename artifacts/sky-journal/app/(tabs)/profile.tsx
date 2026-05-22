@@ -26,7 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { persistImageUri } from '@/utils/persistImage';
 
 import { Images } from '@/assets/images';
-import { apiFetch, useApp, type Outfit, type Story } from '@/context/AppContext';
+import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/context/AppContext';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
@@ -167,7 +167,8 @@ export default function CharacterScreen() {
   const { isDark } = useTheme();
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
-  const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit } = useApp();
+  const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
+          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto } = useApp();
   const { signOut } = useAuth();
   const { user }    = useUser();
 
@@ -191,6 +192,62 @@ export default function CharacterScreen() {
   }, []);
   const glowScale   = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1.0,  1.14] });
   const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.42] });
+
+  // ── Gallery state ──────────────────────────────────────────────────────────
+  const galCols  = 3;
+  const galGap   = 4;
+  const galCardW = Math.floor((screenW - gridPad * 2 - galGap * (galCols - 1)) / galCols);
+
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryError,     setGalleryError]     = useState<string | null>(null);
+  const [selectedPhoto,    setSelectedPhoto]    = useState<GalleryPhoto | null>(null);
+  const [deletingPhoto,    setDeletingPhoto]    = useState(false);
+  const deletePhotoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function handleAddGalleryPhoto() {
+    if (galleryUsage.count >= galleryUsage.limit) {
+      setGalleryError(`Gallery full (${galleryUsage.limit} photos max)`);
+      return;
+    }
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: false,
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setGalleryUploading(true);
+    setGalleryError(null);
+    try {
+      const uri = await persistImageUri(result.assets[0].uri);
+      await addGalleryPhoto(uri, '');
+    } catch (err: any) {
+      setGalleryError(err?.message ?? 'Upload failed');
+    } finally {
+      setGalleryUploading(false);
+    }
+  }
+
+  function openPhoto(photo: GalleryPhoto) {
+    setSelectedPhoto(photo);
+    setDeletingPhoto(false);
+  }
+  function closePhoto() {
+    setSelectedPhoto(null);
+    setDeletingPhoto(false);
+  }
+  function handleDeletePhoto() {
+    if (!selectedPhoto) return;
+    if (deletingPhoto) {
+      if (deletePhotoTimer.current) clearTimeout(deletePhotoTimer.current);
+      deleteGalleryPhoto(selectedPhoto.id);
+      closePhoto();
+    } else {
+      setDeletingPhoto(true);
+      deletePhotoTimer.current = setTimeout(() => setDeletingPhoto(false), 3000);
+    }
+  }
 
   // ── Outfit modal state ─────────────────────────────────────────────────────
   const [selectedOutfitId,       setSelectedOutfitId]       = useState<string | null>(null);
@@ -603,6 +660,76 @@ export default function CharacterScreen() {
             )}
           </View>
 
+          {/* ── My Gallery ──────────────────────────────────────── */}
+          <View style={[styles.section, { borderTopColor: colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>My Gallery</Text>
+                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
+                  {galleryUsage.count} / {galleryUsage.limit} photos
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.addBtn, {
+                  backgroundColor: galleryUsage.count >= galleryUsage.limit || galleryUploading
+                    ? colors.muted : colors.primary,
+                }]}
+                onPress={handleAddGalleryPhoto}
+                disabled={galleryUsage.count >= galleryUsage.limit || galleryUploading}
+                activeOpacity={0.8}
+              >
+                {galleryUploading
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Icon name="image" size={13} color={galleryUsage.count >= galleryUsage.limit ? colors.mutedForeground : '#fff'} />
+                }
+                <Text style={[styles.addBtnText, {
+                  color: galleryUsage.count >= galleryUsage.limit ? colors.mutedForeground : '#fff',
+                }]}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {galleryError && (
+              <Text style={[styles.galError, { color: colors.destructive }]}>{galleryError}</Text>
+            )}
+
+            {gallery.length === 0 ? (
+              <TouchableOpacity
+                style={[styles.emptyOutfitCard, { borderColor: `${colors.primary}20`, backgroundColor: `${colors.primary}06` }]}
+                onPress={handleAddGalleryPhoto}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.emptyOutfitIcon, { backgroundColor: `${colors.primary}14` }]}>
+                  <Icon name="image" size={22} color={`${colors.primary}80`} />
+                </View>
+                <View style={{ flex: 1, gap: 3 }}>
+                  <Text style={[styles.emptyOutfitTitle, { color: colors.foreground }]}>Your personal gallery</Text>
+                  <Text style={[styles.emptyOutfitSub, { color: colors.mutedForeground }]}>
+                    Save up to {galleryUsage.limit} photos — only you can see them
+                  </Text>
+                </View>
+                <Icon name="arrow-right" size={14} color={`${colors.primary}60`} />
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.galGrid}>
+                {gallery.map(photo => (
+                  <TouchableOpacity
+                    key={photo.id}
+                    onPress={() => openPhoto(photo)}
+                    activeOpacity={0.88}
+                    style={[styles.galThumb, { width: galCardW, height: galCardW }]}
+                  >
+                    <Image
+                      source={{ uri: photo.imageUri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
           {/* ── Attributes ────────────────────────────────────── */}
           <View style={[styles.section, { borderTopColor: colors.border }]}>
             <View style={styles.sectionHeader}>
@@ -860,6 +987,62 @@ export default function CharacterScreen() {
         </View>
       </Modal>
 
+      {/* ── Gallery photo lightbox ───────────────────────────── */}
+      <Modal
+        visible={!!selectedPhoto}
+        transparent
+        animationType="fade"
+        onRequestClose={closePhoto}
+      >
+        <View style={styles.galModalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={closePhoto} />
+          <View style={[styles.galModalSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHandle} />
+
+            {selectedPhoto && (
+              <>
+                <View style={[styles.galModalImageWrap, { backgroundColor: '#0A0820' }]}>
+                  <Image
+                    source={{ uri: selectedPhoto.imageUri }}
+                    style={styles.galModalImage}
+                    contentFit="contain"
+                    cachePolicy="memory-disk"
+                  />
+                </View>
+
+                <View style={[styles.galModalBody, { paddingHorizontal: 20 }]}>
+                  <Text style={[styles.galModalDate, { color: colors.mutedForeground }]}>
+                    {new Date(selectedPhoto.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </Text>
+
+                  {selectedPhoto.caption ? (
+                    <Text style={[styles.galModalCaption, { color: colors.foreground }]}>
+                      {selectedPhoto.caption}
+                    </Text>
+                  ) : null}
+
+                  <TouchableOpacity
+                    style={[styles.deleteBtn, {
+                      backgroundColor: deletingPhoto ? colors.destructive : `${colors.destructive}14`,
+                      borderColor: colors.destructive,
+                      marginTop: 8,
+                    }]}
+                    onPress={handleDeletePhoto}
+                  >
+                    <Icon name="trash-2" size={14} color={deletingPhoto ? '#fff' : colors.destructive} />
+                    <Text style={[styles.deleteBtnText, { color: deletingPhoto ? '#fff' : colors.destructive }]}>
+                      {deletingPhoto ? 'Tap again to delete' : 'Delete photo'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <View style={{ height: 12 }} />
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Mood picker modal ────────────────────────────────── */}
       <Modal visible={showMoodPicker} transparent animationType="slide" onRequestClose={() => setShowMoodPicker(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowMoodPicker(false)}>
@@ -1068,4 +1251,18 @@ const styles = StyleSheet.create({
   charTraitText:    { fontSize: 11, fontFamily: 'Inter_500Medium' },
   deleteBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 11, borderRadius: 14, borderWidth: 1, marginTop: 4 },
   deleteBtnText:    { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+
+  // Gallery
+  galGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  galThumb: { borderRadius: 10, overflow: 'hidden', backgroundColor: '#1A1630' },
+  galError: { fontSize: 12, fontFamily: 'Inter_400Regular', marginBottom: 8 },
+
+  // Gallery lightbox modal
+  galModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.75)' },
+  galModalSheet:   { borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '90%', overflow: 'hidden' },
+  galModalImageWrap: { width: '100%', aspectRatio: 1, overflow: 'hidden' },
+  galModalImage:   { width: '100%', height: '100%' },
+  galModalBody:    { paddingVertical: 16, gap: 10 },
+  galModalDate:    { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  galModalCaption: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 21 },
 });
