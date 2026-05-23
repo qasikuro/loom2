@@ -5,6 +5,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name:    config.name    ?? "Sky Journal",
   slug:    config.slug    ?? "sky-journal",
   version: config.version ?? "1.0.0",
+  icon: './assets/images/logo.jpg',
+  splash: {
+    image: './assets/images/logo.jpg',
+    resizeMode: 'contain',
+    backgroundColor: '#0D0B1E',
+  },
   extra: {
     ...config.extra,
     // REPLIT_DEV_DOMAIN is available at bundle time in the Node.js environment.

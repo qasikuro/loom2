@@ -5,6 +5,7 @@ export const Images = {
   story_bg3: require('./story_bg3.png'),
   splash: require('./splash.png'),
   icon: require('./icon.png'),
+  logo: require('./logo.jpg'),
 } as const;
 
 export type ImageKey = keyof typeof Images;
