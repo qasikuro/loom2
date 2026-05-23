@@ -177,7 +177,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
                       <Text style={[
                         styles.reasonText,
                         { color: active ? colors.foreground : colors.mutedForeground },
-                        active && { fontFamily: 'Inter_600SemiBold' },
+                        active && { fontFamily: 'Satoshi-Bold' },
                       ]}>
                         {r.key}
                       </Text>
@@ -262,14 +262,14 @@ const styles = StyleSheet.create({
     width: 44, height: 44, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
   },
-  sheetTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
-  sheetSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  sheetTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  sheetSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 2 },
   closeBtn: {
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
 
-  sectionLabel: { fontSize: 12, fontFamily: 'Inter_500Medium', letterSpacing: 0.4, marginBottom: 10 },
+  sectionLabel: { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4, marginBottom: 10 },
 
   reasons:    { gap: 8, marginBottom: 16 },
   reasonRow:  {
@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
   },
-  reasonText:  { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular' },
+  reasonText:  { flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular' },
   reasonCheck: {
     width: 20, height: 20, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   detailsInput: {
     borderRadius: 14, borderWidth: 1,
     paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, fontFamily: 'Inter_400Regular',
+    fontSize: 14, fontFamily: 'Satoshi-Regular',
     minHeight: 80, marginBottom: 16,
   },
 
@@ -299,9 +299,9 @@ const styles = StyleSheet.create({
     height: 52, borderRadius: 16, borderWidth: 1.5,
     marginBottom: 10,
   },
-  submitBtnText: { fontSize: 15, fontFamily: 'Inter_700Bold' },
+  submitBtnText: { fontSize: 15, fontFamily: 'Satoshi-Bold' },
 
-  disclaimer: { fontSize: 11, fontFamily: 'Inter_400Regular', textAlign: 'center', fontStyle: 'italic' },
+  disclaimer: { fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'center', fontStyle: 'italic' },
 
   // Success
   successWrap: { alignItems: 'center', paddingVertical: 12, gap: 10 },
@@ -309,9 +309,9 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: 24,
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
-  successTitle: { fontSize: 19, fontFamily: 'Inter_700Bold', letterSpacing: -0.4 },
+  successTitle: { fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
   successBody:  {
-    fontSize: 14, fontFamily: 'Inter_400Regular',
+    fontSize: 14, fontFamily: 'Satoshi-Regular',
     textAlign: 'center', lineHeight: 21, fontStyle: 'italic',
     paddingHorizontal: 16,
   },

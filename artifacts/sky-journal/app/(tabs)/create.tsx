@@ -495,12 +495,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.07)',
   },
   headerTitle: {
-    fontSize: 17, fontFamily: 'Inter_700Bold',
+    fontSize: 17, fontFamily: 'Satoshi-Bold',
     color: '#FFFFFF', letterSpacing: -0.3,
     textAlign: 'center',
   },
   headerSub: {
-    fontSize: 11, fontFamily: 'Inter_400Regular',
+    fontSize: 11, fontFamily: 'Satoshi-Regular',
     textAlign: 'center', marginTop: 1,
   },
 
@@ -512,19 +512,19 @@ const styles = StyleSheet.create({
   },
 
   fieldLabel: {
-    fontSize: 10, fontFamily: 'Inter_600SemiBold',
+    fontSize: 10, fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.9, textTransform: 'uppercase', marginBottom: 8,
   },
 
   titleInput: {
-    fontSize: 18, fontFamily: 'Inter_500Medium',
+    fontSize: 18, fontFamily: 'Satoshi-Medium',
     borderWidth: 1, borderRadius: 14,
     paddingHorizontal: 14, paddingVertical: 12,
   },
 
   descWrapper:     { position: 'relative', minHeight: 80 },
   descInput: {
-    fontSize: 14, fontFamily: 'Inter_400Regular',
+    fontSize: 14, fontFamily: 'Satoshi-Regular',
     lineHeight: 22, minHeight: 80, paddingRight: 72,
     color: '#fff',
   },
@@ -539,7 +539,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 7,
     borderRadius: 20, marginRight: 7,
   },
-  chipText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  chipText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
   privRow: { flexDirection: 'row', gap: 10 },
   privBtn: {
@@ -552,13 +552,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start',
     justifyContent: 'space-between', marginBottom: 16,
   },
-  sectionTitle: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
-  sectionSub:   { fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 2 },
+  sectionTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  sectionSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2 },
   badge: {
     paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 20, borderWidth: 1,
   },
-  badgeText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  badgeText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   divider: { height: 1, marginHorizontal: -2, opacity: 0.4, marginVertical: 2 },
 
@@ -569,14 +569,14 @@ const styles = StyleSheet.create({
 
   pageInfo:    { flex: 1, gap: 4 },
   pageInfoTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  pageNum:     { fontSize: 13, fontFamily: 'Inter_700Bold' },
+  pageNum:     { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   layoutBadge: {
     paddingHorizontal: 8, paddingVertical: 2,
     borderRadius: 10, borderWidth: 1,
   },
-  layoutBadgeText: { fontSize: 10, fontFamily: 'Inter_600SemiBold' },
-  pagePreview: { fontSize: 11, fontFamily: 'Inter_400Regular', lineHeight: 16 },
-  panelCount:  { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  layoutBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  pagePreview: { fontSize: 11, fontFamily: 'Satoshi-Regular', lineHeight: 16 },
+  panelCount:  { fontSize: 10, fontFamily: 'Satoshi-Medium' },
 
   pageActions: { gap: 6 },
   actionBtn: {
@@ -597,8 +597,8 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
-  addPageTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  addPageSub:   { fontSize: 12, fontFamily: 'Inter_400Regular', marginTop: 1 },
+  addPageTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold' },
+  addPageSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 1 },
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -606,12 +606,12 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(224,92,92,0.28)', borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12,
   },
-  errorText: { flex: 1, fontSize: 13, fontFamily: 'Inter_500Medium', color: '#E05C5C' },
+  errorText: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Medium', color: '#E05C5C' },
 
   publishBtn:  { borderRadius: 30, overflow: 'hidden', marginBottom: 4 },
   publishGrad: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 8, paddingVertical: 17,
   },
-  publishText: { fontSize: 16, fontFamily: 'Inter_700Bold', color: '#fff', letterSpacing: -0.2 },
+  publishText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: -0.2 },
 });

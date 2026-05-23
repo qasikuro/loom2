@@ -465,16 +465,16 @@ const styles = StyleSheet.create({
     width: 80, height: 80, borderRadius: 40,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitial: { fontSize: 30, fontFamily: 'Inter_700Bold' },
+  avatarInitial: { fontSize: 30, fontFamily: 'Satoshi-Bold' },
 
   nameSection: { alignItems: 'center', marginBottom: 12, gap: 4 },
-  name:        { fontSize: 20, fontFamily: 'Inter_700Bold' },
-  handle:      { fontSize: 14, fontFamily: 'Inter_500Medium' },
-  bio:         { fontSize: 13, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20, opacity: 0.8, marginTop: 4, paddingHorizontal: 12 },
+  name:        { fontSize: 20, fontFamily: 'Satoshi-Bold' },
+  handle:      { fontSize: 14, fontFamily: 'Satoshi-Medium' },
+  bio:         { fontSize: 13, fontFamily: 'Satoshi-Regular', textAlign: 'center', lineHeight: 20, opacity: 0.8, marginTop: 4, paddingHorizontal: 12 },
 
   traitsRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 16 },
   traitChip:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  traitText:  { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  traitText:  { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   followBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
     borderRadius: 24, borderWidth: 1,
     alignSelf: 'center', marginBottom: 10,
   },
-  followBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  followBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
 
   notifyBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10,
     marginBottom: 16, marginHorizontal: 4,
   },
-  notifyText: { fontSize: 12, fontFamily: 'Inter_400Regular', flex: 1, lineHeight: 18 },
+  notifyText: { fontSize: 12, fontFamily: 'Satoshi-Regular', flex: 1, lineHeight: 18 },
 
   reportLink: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -498,13 +498,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
   },
   reportLinkText: {
-    fontSize: 11, fontFamily: 'Inter_400Regular',
+    fontSize: 11, fontFamily: 'Satoshi-Regular',
     color: 'rgba(180,100,100,0.6)', fontStyle: 'italic',
   },
 
   tabRow:     { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16, marginTop: 6 },
   tabBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabLabel:   { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  tabLabel:   { fontSize: 13, fontFamily: 'Satoshi-Bold' },
 
   contentList: { gap: 10, paddingBottom: 8 },
 
@@ -514,26 +514,26 @@ const styles = StyleSheet.create({
   },
   storyCover:   { width: 64, height: 72, borderRadius: 10 },
   storyMeta:    { flex: 1, gap: 4 },
-  storyTitle:   { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  storySnippet: { fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17, opacity: 0.8 },
+  storyTitle:   { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  storySnippet: { fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, opacity: 0.8 },
   storyStats:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
   statItem:     { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  statText:     { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  statText:     { fontSize: 11, fontFamily: 'Satoshi-Regular' },
   moodPill:     { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1 },
-  moodPillText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  moodPillText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
 
   outfitsGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   outfitCard:   { width: '47.5%', borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
   outfitImg:    { width: '100%', height: 120 },
   outfitMeta:   { padding: 10, gap: 3 },
-  outfitName:   { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  outfitTags:   { fontSize: 11, fontFamily: 'Inter_400Regular', opacity: 0.7 },
+  outfitName:   { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  outfitTags:   { fontSize: 11, fontFamily: 'Satoshi-Regular', opacity: 0.7 },
   outfitArrow:  { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.22)' },
 
   emptyState: { alignItems: 'center', paddingVertical: 40, gap: 10 },
-  emptyText:  { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center' },
+  emptyText:  { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center' },
 
-  errorText:    { fontSize: 15, fontFamily: 'Inter_400Regular', textAlign: 'center', marginTop: 8 },
+  errorText:    { fontSize: 15, fontFamily: 'Satoshi-Regular', textAlign: 'center', marginTop: 8 },
   backBtn:      { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, borderWidth: 1, marginTop: 4 },
-  backBtnText:  { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  backBtnText:  { fontSize: 14, fontFamily: 'Satoshi-Bold' },
 });

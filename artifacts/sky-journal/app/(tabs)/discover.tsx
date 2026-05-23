@@ -315,7 +315,7 @@ export default function DiscoverScreen() {
           {/* Error banner */}
           {!!peopleError && (
             <View style={{ marginHorizontal: 16, marginTop: -4, marginBottom: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(180,60,60,0.12)', borderWidth: 1, borderColor: 'rgba(180,60,60,0.25)' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Inter_400Regular', color: '#E06C75', textAlign: 'center' }}>{peopleError}</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#E06C75', textAlign: 'center' }}>{peopleError}</Text>
             </View>
           )}
 
@@ -491,11 +491,11 @@ const styles = StyleSheet.create({
   },
   headerText:  { flex: 1, gap: 2 },
   headerTitle: {
-    fontSize: 20, fontFamily: 'Inter_600SemiBold',
+    fontSize: 20, fontFamily: 'Satoshi-Bold',
     letterSpacing: -0.4, color: 'rgba(235,228,255,0.97)',
   },
   headerSub: {
-    fontSize: 11, fontFamily: 'Inter_400Regular',
+    fontSize: 11, fontFamily: 'Satoshi-Regular',
     color: 'rgba(200,184,232,0.55)',
   },
   usersBtn: {
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: 20, borderWidth: 1,
   },
-  tabText: { fontSize: 12, fontFamily: 'Inter_500Medium', letterSpacing: 0.1 },
+  tabText: { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 0.1 },
 
   sep: { height: StyleSheet.hairlineWidth },
 
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   // Vibes
   vibesScroll: { paddingHorizontal: 16, paddingTop: 16, gap: 14 },
   vibeHint: {
-    fontSize: 13, fontFamily: 'Inter_400Regular',
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
     fontStyle: 'italic', textAlign: 'center',
     paddingBottom: 4,
   },
@@ -549,15 +549,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 2,
   },
-  vibeLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.2 },
-  vibeCount: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  vibeLabel: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  vibeCount: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
 
   backRow: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 10,
     borderRadius: 22, borderWidth: 1, marginBottom: 6,
   },
-  backText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  backText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
 
   // People
   peopleRoot: { flex: 1 },
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: {
-    flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular',
+    flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular',
     paddingVertical: 0,
   },
   peopleList: { paddingHorizontal: 16, gap: 8 },
@@ -581,18 +581,18 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, flexShrink: 0,
   },
-  personInitial:  { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  personInitial:  { fontSize: 16, fontFamily: 'Satoshi-Bold' },
   personInfo:     { flex: 1, gap: 2 },
-  personName:     { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  personHandle:   { fontSize: 11, fontFamily: 'Inter_500Medium' },
-  personBio:      { fontSize: 11, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 15 },
+  personName:     { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  personHandle:   { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  personBio:      { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 15 },
   followBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 11, height: 30,
     borderRadius: 15, borderWidth: 1.5,
     flexShrink: 0,
   },
-  followBtnText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  followBtnText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
 
   // Empty states
   emptyWrap: {
@@ -608,9 +608,9 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: 24,
     alignItems: 'center', justifyContent: 'center',
   },
-  emptyTitle: { fontSize: 19, fontFamily: 'Inter_700Bold', letterSpacing: -0.4 },
+  emptyTitle: { fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
   emptyBody:  {
-    fontSize: 14, fontFamily: 'Inter_400Regular',
+    fontSize: 14, fontFamily: 'Satoshi-Regular',
     fontStyle: 'italic', textAlign: 'center', lineHeight: 21,
   },
   searchHint: {
@@ -618,12 +618,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 10,
     borderRadius: 12, borderWidth: 1, marginTop: 4,
   },
-  searchHintText: { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  searchHintText: { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 
   ctaBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 24, height: 48, borderRadius: 24,
     marginTop: 6,
   },
-  ctaBtnText: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#fff' },
+  ctaBtnText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#fff' },
 });

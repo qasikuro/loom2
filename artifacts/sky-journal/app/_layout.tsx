@@ -1,12 +1,6 @@
 import '@/polyfills';
 import '@/i18n';
 
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-} from '@expo-google-fonts/inter';
 import { ClerkLoaded, ClerkLoading, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import * as Font from 'expo-font';
@@ -83,10 +77,11 @@ export default function RootLayout() {
 
   useEffect(() => {
     Font.loadAsync({
-      Inter_400Regular,
-      Inter_500Medium,
-      Inter_600SemiBold,
-      Inter_700Bold,
+      'Satoshi-Regular': require('../assets/fonts/Satoshi-Regular.ttf'),
+      'Satoshi-Medium':  require('../assets/fonts/Satoshi-Medium.ttf'),
+      'Satoshi-Bold':    require('../assets/fonts/Satoshi-Bold.ttf'),
+      'Satoshi-Black':   require('../assets/fonts/Satoshi-Black.ttf'),
+      'Satoshi-Light':   require('../assets/fonts/Satoshi-Light.ttf'),
     })
       .catch(() => { /* fonts optional — app still usable */ })
       .finally(() => {

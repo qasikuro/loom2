@@ -121,8 +121,8 @@ const styles = StyleSheet.create({
   },
   body:    { flex: 1 },
   bodyTop: { flexDirection: 'row', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' },
-  countText: { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  message:   { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18, flex: 1 },
+  countText: { fontSize: 22, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
+  message:   { fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 18, flex: 1 },
   closeBtn:  {
     width: 28, height: 28, borderRadius: 8,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   risingBody:     { flex: 1, gap: 1 },
-  risingLabel:    { fontSize: 9, fontFamily: 'Inter_600SemiBold', letterSpacing: 1.2, textTransform: 'uppercase' },
-  risingTitle:    { fontSize: 14, fontFamily: 'Inter_600SemiBold', lineHeight: 20 },
-  risingSubtitle: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  risingLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
+  risingTitle:    { fontSize: 14, fontFamily: 'Satoshi-Bold', lineHeight: 20 },
+  risingSubtitle: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
 });

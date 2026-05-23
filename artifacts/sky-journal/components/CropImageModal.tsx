@@ -377,8 +377,8 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   topCenter:    { flex: 1, alignItems: 'center', paddingTop: 4 },
-  topTitle:     { color: '#fff', fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  topSub:       { color: 'rgba(255,255,255,0.42)', fontSize: 11, fontFamily: 'Inter_400Regular', marginTop: 2, textAlign: 'center' },
+  topTitle:     { color: '#fff', fontSize: 15, fontFamily: 'Satoshi-Bold' },
+  topSub:       { color: 'rgba(255,255,255,0.42)', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2, textAlign: 'center' },
   zoomBtns:     { flexDirection: 'row', gap: 6, marginTop: 2 },
   zoomBtn:      {
     width: 36, height: 36, borderRadius: 10,
@@ -404,5 +404,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center', gap: 7,
     paddingVertical: 14, borderRadius: 14,
   },
-  actionBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  actionBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
 });

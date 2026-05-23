@@ -124,7 +124,7 @@ function ClassicTabLayout() {
 
         tabBarLabelStyle: {
           fontSize:      10,
-          fontFamily:    'Inter_600SemiBold',
+          fontFamily:    'Satoshi-Bold',
           letterSpacing: 0.3,
           marginBottom:  5,
           marginTop:     1,

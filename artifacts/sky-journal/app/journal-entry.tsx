@@ -188,14 +188,14 @@ const s = StyleSheet.create({
     paddingHorizontal: 11, paddingVertical: 6,
     borderRadius: 14, borderWidth: 1,
   },
-  typeBadgeText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  typeBadgeText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   dateText: {
-    fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.4,
+    fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4,
     color: 'rgba(240,234,255,0.95)',
   },
   timeText: {
-    fontSize: 12, fontFamily: 'Inter_400Regular',
+    fontSize: 12, fontFamily: 'Satoshi-Regular',
     color: 'rgba(200,184,232,0.55)',
   },
 
@@ -210,10 +210,10 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, flexShrink: 0,
   },
-  friendInitial: { fontSize: 20, fontFamily: 'Inter_700Bold' },
+  friendInitial: { fontSize: 20, fontFamily: 'Satoshi-Bold' },
   friendInfo: { gap: 2 },
-  friendName: { fontSize: 17, fontFamily: 'Inter_600SemiBold' },
-  friendSub:  { fontSize: 12, fontFamily: 'Inter_400Regular' },
+  friendName: { fontSize: 17, fontFamily: 'Satoshi-Bold' },
+  friendSub:  { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 
   imageWrap: {
     width: '100%',
@@ -237,7 +237,7 @@ const s = StyleSheet.create({
   },
   bodyText: {
     flex: 1,
-    fontSize: 16, fontFamily: 'Inter_400Regular',
+    fontSize: 16, fontFamily: 'Satoshi-Regular',
     lineHeight: 27, fontStyle: 'italic',
   },
   momentBodyText: {
@@ -253,8 +253,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: 12, borderWidth: 1,
   },
-  footerPillText: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  footerPillText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
   notFound: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  notFoundText: { fontSize: 15, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  notFoundText: { fontSize: 15, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 });

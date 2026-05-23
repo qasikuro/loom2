@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 12, gap: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  stickyTitle: { flex: 1, fontSize: 15, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
+  stickyTitle: { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
 
   heroWrap:   { width: '100%', overflow: 'hidden' },
   heroFade:   { position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 },
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
   },
   heroLabel:  { position: 'absolute', left: 20, right: 20 },
   heroName:   {
-    fontSize: 26, fontFamily: 'Inter_700Bold', color: '#fff',
+    fontSize: 26, fontFamily: 'Satoshi-Bold', color: '#fff',
     letterSpacing: -0.5, lineHeight: 32,
     textShadowColor: 'rgba(0,0,0,0.55)',
     textShadowOffset: { width: 0, height: 1 },
@@ -321,46 +321,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9, paddingVertical: 4,
     borderWidth: 1, borderColor: 'rgba(200,168,75,0.25)',
   },
-  datePillText: { fontSize: 11, fontFamily: 'Inter_500Medium', color: 'rgba(240,228,200,0.9)' },
+  datePillText: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(240,228,200,0.9)' },
 
   tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, marginTop: 6, marginBottom: 4 },
   tag:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  tagText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  tagText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   descCard:   { marginHorizontal: 16, marginTop: 14, borderRadius: 16, borderWidth: 1, padding: 16 },
   descHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  descLabel:  { fontSize: 12, fontFamily: 'Inter_700Bold', letterSpacing: 0.5, textTransform: 'uppercase' },
-  descText:   { fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 22, fontStyle: 'italic' },
+  descLabel:  { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5, textTransform: 'uppercase' },
+  descText:   { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22, fontStyle: 'italic' },
 
   dividerRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, marginVertical: 22 },
   dividerLine:  { flex: 1, height: StyleSheet.hairlineWidth },
-  dividerLabel: { fontSize: 12, fontFamily: 'Inter_500Medium', letterSpacing: 1 },
+  dividerLabel: { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 1 },
 
   charCard:     { marginHorizontal: 16, marginBottom: 16, borderRadius: 20, borderWidth: 1, padding: 18, overflow: 'hidden' },
   charCardGrad: { ...StyleSheet.absoluteFillObject },
 
   charTop:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   charAvatar:   { width: 52, height: 52, borderRadius: 26, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  charInitial:  { fontSize: 22, fontFamily: 'Inter_700Bold' },
+  charInitial:  { fontSize: 22, fontFamily: 'Satoshi-Bold' },
   charNameBlock:{ flex: 1, gap: 2 },
-  charName:     { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
-  charHandle:   { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  charName:     { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  charHandle:   { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 
   moodBadge:     { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, flexShrink: 0 },
-  moodBadgeText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  moodBadgeText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
 
-  charBio:  { fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 20, fontStyle: 'italic', marginBottom: 12, opacity: 0.85 },
+  charBio:  { fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 20, fontStyle: 'italic', marginBottom: 12, opacity: 0.85 },
 
   traitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 },
   traitChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  traitText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  traitText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
 
   charDivider: { height: StyleSheet.hairlineWidth, marginBottom: 14 },
   charActions: { flexDirection: 'row', gap: 10 },
 
   followBtn:      { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 11, borderRadius: 22, borderWidth: 1 },
-  followBtnText:  { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  followBtnText:  { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   profileBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 11, borderRadius: 22, borderWidth: 1 },
-  profileBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  profileBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   reportBtn:      { width: 42, height: 42, borderRadius: 21, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

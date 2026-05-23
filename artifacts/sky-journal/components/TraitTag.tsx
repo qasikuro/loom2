@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Satoshi-Medium',
     letterSpacing: 0.2,
   },
 });

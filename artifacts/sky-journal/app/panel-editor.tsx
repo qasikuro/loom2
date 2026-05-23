@@ -103,10 +103,10 @@ function LayoutIcon({ layout, size = 38 }: { layout: Layout; size?: number }) {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const FONTS = [
-  { key: 'Inter_400Regular',  label: 'Regular'  },
-  { key: 'Inter_500Medium',   label: 'Medium'   },
-  { key: 'Inter_600SemiBold', label: 'SemiBold' },
-  { key: 'Inter_700Bold',     label: 'Bold'     },
+  { key: 'Satoshi-Regular',  label: 'Regular'  },
+  { key: 'Satoshi-Medium',   label: 'Medium'   },
+  { key: 'Satoshi-Bold', label: 'SemiBold' },
+  { key: 'Satoshi-Bold',     label: 'Bold'     },
 ] as const;
 
 const BUBBLE_STYLES: { key: BubbleStyle; label: string; radius: number; hasTail: boolean }[] = [
@@ -167,7 +167,7 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
   })).current;
 
   const bStyle   = BUBBLE_STYLES.find(b => b.key === (overlay.bubbleStyle ?? 'rounded')) ?? BUBBLE_STYLES[0];
-  const fontFam  = (overlay.fontFamily ?? 'Inter_500Medium') as any;
+  const fontFam  = (overlay.fontFamily ?? 'Satoshi-Medium') as any;
   const fontSize = overlay.fontSize ?? (overlay.type === 'sticker' ? 30 : 13);
 
   return (
@@ -212,7 +212,7 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
   const left    = overlay.xPct * panelW;
   const top     = overlay.yPct * panelH;
   const bStyle  = BUBBLE_STYLES.find(b => b.key === (overlay.bubbleStyle ?? 'rounded')) ?? BUBBLE_STYLES[0];
-  const fontFam = (overlay.fontFamily ?? 'Inter_500Medium') as any;
+  const fontFam = (overlay.fontFamily ?? 'Satoshi-Medium') as any;
   const scale   = 0.58;
   const fontSize = Math.max(8, (overlay.fontSize ?? 13) * scale);
 
@@ -333,7 +333,7 @@ export default function PanelEditorScreen() {
     const ov: PanelOverlay = {
       id, type, content,
       xPct: 0.08, yPct: 0.08,
-      fontFamily:  'Inter_500Medium',
+      fontFamily:  'Satoshi-Medium',
       fontSize:     type === 'sticker' ? 30 : 13,
       bubbleStyle: 'rounded',
       color:       '#ffffff',
@@ -615,7 +615,7 @@ export default function PanelEditorScreen() {
               />
               <Text style={[styles.editorHeaderTitle, { color: colors.primary }]}>
                 {selOverlay.type === 'bubble' ? 'Speech Bubble' : selOverlay.type === 'text' ? 'Text Overlay' : 'Sticker'}
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Inter_400Regular' }}>  · drag to move</Text>
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Regular' }}>  · drag to move</Text>
               </Text>
               <TouchableOpacity onPress={() => deleteOverlay(selOverlay.id)} style={styles.editorDeleteBtn}>
                 <Icon name="trash-2" size={14} color="#E05C5C" />
@@ -675,7 +675,7 @@ export default function PanelEditorScreen() {
             {/* Text input */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <TextInput
-                style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border, fontFamily: (selOverlay.fontFamily ?? 'Inter_500Medium') as any }]}
+                style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border, fontFamily: (selOverlay.fontFamily ?? 'Satoshi-Medium') as any }]}
                 value={selOverlay.content}
                 onChangeText={t => updateOverlay(selOverlay.id, { content: t })}
                 placeholder={selOverlay.type === 'bubble' ? 'The wind guides us…' : 'Enter text…'}
@@ -719,9 +719,9 @@ export default function PanelEditorScreen() {
                     onPressIn={() => startOverlaySizeHold(selOverlay.id, -4, 16, 64)}
                     onPressOut={stopOverlaySizeHold}
                   >
-                    <Text style={{ fontSize: 16, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }}>−</Text>
+                    <Text style={{ fontSize: 16, color: colors.mutedForeground, fontFamily: 'Satoshi-Bold' }}>−</Text>
                   </Pressable>
-                  <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.foreground, minWidth: 36, textAlign: 'center' }}>
+                  <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground, minWidth: 36, textAlign: 'center' }}>
                     {selOverlay.fontSize ?? 30}
                   </Text>
                   <Pressable
@@ -729,7 +729,7 @@ export default function PanelEditorScreen() {
                     onPressIn={() => startOverlaySizeHold(selOverlay.id, 4, 16, 64)}
                     onPressOut={stopOverlaySizeHold}
                   >
-                    <Text style={{ fontSize: 16, color: colors.mutedForeground, fontFamily: 'Inter_600SemiBold' }}>+</Text>
+                    <Text style={{ fontSize: 16, color: colors.mutedForeground, fontFamily: 'Satoshi-Bold' }}>+</Text>
                   </Pressable>
                 </View>
               </>
@@ -786,13 +786,13 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.07)',
   },
-  headerTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', color: 'rgba(235,228,255,0.95)' },
+  headerTitle: { fontSize: 18, fontFamily: 'Satoshi-Bold', color: 'rgba(235,228,255,0.95)' },
   saveBtn: {
     paddingHorizontal: 20, paddingVertical: 9, borderRadius: 20,
     backgroundColor: 'rgba(139,122,181,0.25)',
     borderWidth: 1, borderColor: 'rgba(139,122,181,0.50)',
   },
-  saveBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: 'rgba(220,210,255,0.95)' },
+  saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
 
   scroll:        { flex: 1 },
   scrollContent: { paddingHorizontal: 14, paddingTop: 8, gap: 12 },
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
   dot: { borderRadius: 4 },
 
   emptyHint:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
-  emptyHintText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(180,165,220,0.35)' },
+  emptyHintText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.35)' },
   dimOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,6,22,0.22)' },
   changeBtn: {
     position: 'absolute', top: 7, right: 7,
@@ -860,13 +860,13 @@ const styles = StyleSheet.create({
     flex: 1, alignItems: 'center', justifyContent: 'center',
     gap: 5, paddingVertical: 11, borderRadius: 12, borderWidth: 1,
   },
-  toolLabel: { fontSize: 11, fontFamily: 'Inter_500Medium' },
+  toolLabel: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
 
   addCTA: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1,
   },
-  addCTAText: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  addCTAText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
 
   stickerCard:  { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   stickerGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
 
   overlayEditor:     { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   editorHeaderRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  editorHeaderTitle: { flex: 1, fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  editorHeaderTitle: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Bold' },
   editorDeleteBtn:   { padding: 4 },
   editorInput: {
     fontSize: 14, lineHeight: 20,
@@ -892,7 +892,7 @@ const styles = StyleSheet.create({
     borderRadius: 9, borderWidth: 1, borderColor: 'transparent', gap: 2,
   },
   fontBarSample: { fontSize: 16 },
-  fontBarLabel:  { fontSize: 8, fontFamily: 'Inter_500Medium', letterSpacing: 0.2 },
+  fontBarLabel:  { fontSize: 8, fontFamily: 'Satoshi-Medium', letterSpacing: 0.2 },
   fontBarDivider:{ width: 1, height: 32, marginHorizontal: 4 },
   sizePill: {
     paddingHorizontal: 7, paddingVertical: 5,
@@ -901,11 +901,11 @@ const styles = StyleSheet.create({
   },
   sizeHoldRow:   { flexDirection: 'row', alignItems: 'center', gap: 2 },
   sizeHoldBtn:   { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6, paddingVertical: 6, borderRadius: 8 },
-  overlayASmall: { fontSize: 9,  fontFamily: 'Inter_600SemiBold' },
-  overlayALarge: { fontSize: 15, fontFamily: 'Inter_700Bold' },
-  overlayFsNum:  { fontSize: 12, fontFamily: 'Inter_600SemiBold', minWidth: 22, textAlign: 'center' },
+  overlayASmall: { fontSize: 9,  fontFamily: 'Satoshi-Bold' },
+  overlayALarge: { fontSize: 15, fontFamily: 'Satoshi-Bold' },
+  overlayFsNum:  { fontSize: 12, fontFamily: 'Satoshi-Bold', minWidth: 22, textAlign: 'center' },
 
-  pickerLabel: { fontSize: 10, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.8, textTransform: 'uppercase' },
+  pickerLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase' },
   chipRow:     { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   chip: {
     paddingHorizontal: 14, paddingVertical: 9,
@@ -923,7 +923,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.82)',
     borderWidth: 1, borderColor: 'rgba(0,0,0,0.08)',
   },
-  styleChipLabel: { fontSize: 12, fontFamily: 'Inter_500Medium' },
+  styleChipLabel: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
   frameCard:     { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   frameTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -934,5 +934,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 10,
     borderRadius: 14, borderWidth: 1.5, minWidth: 62,
   },
-  frameLabel: { fontSize: 9, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.3, textTransform: 'uppercase' },
+  frameLabel: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, textTransform: 'uppercase' },
 });

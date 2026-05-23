@@ -232,24 +232,24 @@ const styles = StyleSheet.create({
     width: 42, height: 42, borderRadius: 21,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  avatarText:   { fontSize: 16, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
+  avatarText:   { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   authorMeta:   { flex: 1, gap: 2 },
-  authorName:   { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  authorHandle: { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  authorName:   { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  authorHandle: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
   chapterBadge: {
     paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: 12, borderWidth: 1,
   },
-  chapterText: { fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.2 },
+  chapterText: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
   imageWrap:       { position: 'relative' },
   image:           { width: '100%', aspectRatio: 16 / 9 },
   placeholderInner: { flex: 1, position: 'relative' },
 
   body:    { padding: 14, paddingTop: 13, gap: 8 },
-  title:   { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
+  title:   { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   snippet: {
-    fontSize: 13, fontFamily: 'Inter_400Regular',
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
     lineHeight: 20, fontStyle: 'italic', opacity: 0.82,
   },
 
@@ -260,19 +260,19 @@ const styles = StyleSheet.create({
   statsGroup: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
   statItem:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statDot:    { width: 3, height: 3, borderRadius: 1.5 },
-  statText:   { fontSize: 11, fontFamily: 'Inter_400Regular' },
+  statText:   { fontSize: 11, fontFamily: 'Satoshi-Regular' },
 
   actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   actionBtn: {
     height: 36, minWidth: 36, borderRadius: 11, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
-  deleteConfirmText: { color: '#fff', fontSize: 11, fontFamily: 'Inter_600SemiBold' },
+  deleteConfirmText: { color: '#fff', fontSize: 11, fontFamily: 'Satoshi-Bold' },
 
   readBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
     height: 36, paddingHorizontal: 13,
     borderRadius: 11, borderWidth: 1,
   },
-  readBtnText: { fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  readBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
 });

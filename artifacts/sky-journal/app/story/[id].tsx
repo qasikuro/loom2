@@ -141,7 +141,7 @@ function PanelCell({
       {panel.overlays?.map(ov => {
         const left     = ov.xPct * cellW;
         const top      = ov.yPct * cellH;
-        const fontFam  = (ov.fontFamily ?? 'Inter_500Medium') as any;
+        const fontFam  = (ov.fontFamily ?? 'Satoshi-Medium') as any;
         const fontSize = ov.fontSize ?? (ov.type === 'sticker' ? 24 : 12);
         const bRadius  = ov.bubbleStyle === 'sharp' ? 2 : ov.bubbleStyle === 'oval' ? 50 : 10;
         const hasTail  = ov.bubbleStyle !== 'oval';
@@ -462,10 +462,10 @@ const styles = StyleSheet.create({
   heroOverlay: { position: 'absolute', bottom: 22, left: 20, right: 20, gap: 10 },
   heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroAvatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Inter_600SemiBold' },
-  heroAuthor:  { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
-  heroChapter: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Inter_400Regular' },
-  heroTitle:   { color: '#fff', fontSize: 24, fontFamily: 'Inter_700Bold', lineHeight: 32 },
+  heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  heroAuthor:  { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  heroChapter: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  heroTitle:   { color: '#fff', fontSize: 24, fontFamily: 'Satoshi-Bold', lineHeight: 32 },
   heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   infoBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderColor: 'rgba(255,255,255,0.22)',
   },
-  infoBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Inter_400Regular' },
+  infoBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Regular' },
 
   backBtn: {
     position: 'absolute', left: 16,
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center', justifyContent: 'center',
   },
-  deleteConfirmText: { color: '#fff', fontSize: 13, fontFamily: 'Inter_700Bold' },
+  deleteConfirmText: { color: '#fff', fontSize: 13, fontFamily: 'Satoshi-Bold' },
 
   pagesWrap: { backgroundColor: '#0D0B1A', gap: 16, paddingTop: 8, paddingBottom: 8 },
 
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.42)',
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  pageNumText: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontFamily: 'Inter_400Regular' },
+  pageNumText: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontFamily: 'Satoshi-Regular' },
 
   cell: { overflow: 'hidden', position: 'relative', backgroundColor: '#0D0B1A' },
 
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7,
     maxWidth: '70%', zIndex: 10,
   },
-  speechBubbleText: { fontSize: 12, fontFamily: 'Inter_500Medium', color: '#1A1530', lineHeight: 17 },
+  speechBubbleText: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#1A1530', lineHeight: 17 },
   speechBubbleTail: {
     position: 'absolute', bottom: -7, left: 14,
     width: 0, height: 0,
@@ -532,17 +532,17 @@ const styles = StyleSheet.create({
   },
   captionText: {
     color: 'rgba(240,234,248,0.92)', fontSize: 11,
-    fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 16,
+    fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 16,
   },
 
   endCard: {
     margin: 16, borderRadius: 20, borderWidth: 1,
     padding: 32, alignItems: 'center', gap: 8,
   },
-  endTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', color: '#F0EAF8', marginTop: 8 },
-  endSub:   { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.7)' },
+  endTitle: { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#F0EAF8', marginTop: 8 },
+  endSub:   { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.7)' },
   endStats: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
-  endStatText: { fontSize: 13, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.6)' },
+  endStatText: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.6)' },
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingTop: 14, borderTopWidth: 1,
   },
   witnessedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  witnessedNum: { color: 'rgba(240,234,248,0.6)', fontSize: 14, fontFamily: 'Inter_400Regular' },
+  witnessedNum: { color: 'rgba(240,234,248,0.6)', fontSize: 14, fontFamily: 'Satoshi-Regular' },
   dotDivider: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(240,234,248,0.3)', marginHorizontal: 4 },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtn: {
@@ -561,5 +561,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, borderWidth: 1,
   },
-  actionBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  actionBtnText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 });

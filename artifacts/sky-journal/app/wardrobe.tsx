@@ -264,7 +264,7 @@ export default function WardrobeScreen() {
             <Text style={[
               styles.tabBtnText,
               { color: tab === t ? '#fff' : colors.mutedForeground },
-              tab === t && { fontFamily: 'Inter_600SemiBold' },
+              tab === t && { fontFamily: 'Satoshi-Bold' },
             ]}>
               {t === 'outfits' ? 'Outfits' : 'Accessories'}
             </Text>
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(139,122,181,0.4)',
   },
   headerTitle: {
-    fontSize: 20, fontFamily: 'Inter_700Bold',
+    fontSize: 20, fontFamily: 'Satoshi-Bold',
     color: 'rgba(240,234,255,0.97)', letterSpacing: 0.2,
   },
 
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     padding: 3, marginBottom: 16,
   },
   tabBtn:     { flex: 1, paddingVertical: 10, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  tabBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  tabBtnText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 
   grid: { paddingHorizontal: GUTTER, paddingTop: 4 },
   row:  { marginBottom: GAP },
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   cardNameRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 5 },
   cardName: {
-    flex: 1, fontSize: 13, fontFamily: 'Inter_700Bold',
+    flex: 1, fontSize: 13, fontFamily: 'Satoshi-Bold',
     lineHeight: 18, letterSpacing: 0.1,
   },
   cardEmoji: { fontSize: 13, marginTop: 1 },
@@ -378,14 +378,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: 20, borderWidth: 1,
   },
-  tagText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  tagText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
 
   useBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingVertical: 6, paddingHorizontal: 10,
     borderRadius: 10, borderWidth: 1, marginTop: 2,
   },
-  useBtnText: { fontSize: 10, fontFamily: 'Inter_500Medium' },
+  useBtnText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
 
   // Empty
   emptyWrap: {
@@ -397,12 +397,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
   emptyIconText: { fontSize: 32, color: 'rgba(200,184,232,0.4)' },
-  emptyTitle:    { fontSize: 18, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
-  emptySub:      { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 },
+  emptyTitle:    { fontSize: 18, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
+  emptySub:      { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center', lineHeight: 20 },
   emptyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 20, paddingVertical: 11,
     borderRadius: 20, marginTop: 8,
   },
-  emptyBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#fff' },
+  emptyBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
 });

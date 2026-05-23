@@ -611,10 +611,10 @@ export default function HomeScreen() {
                       />
                     </View>
                     <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.foreground }}>
+                      <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>
                         {n.actorName}
                       </Text>
-                      <Text style={{ fontSize: 12, fontFamily: 'Inter_400Regular', lineHeight: 17, color: colors.mutedForeground }}>
+                      <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, color: colors.mutedForeground }}>
                         {n.type === 'new_story' ? 'shared a new story' : 'added a new outfit'}{n.title ? `: "${n.title}"` : ''}
                       </Text>
                     </View>
@@ -637,21 +637,21 @@ export default function HomeScreen() {
                     <View style={{ flex: 1, gap: 2 }}>
                       {r.count !== undefined && (
                         <Text style={{
-                          fontSize: 20, fontFamily: 'Inter_700Bold', letterSpacing: -0.5,
+                          fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5,
                           color: r.isRising ? colors.gold : colors.foreground,
                         }}>
                           {r.count}
                         </Text>
                       )}
                       <Text style={{
-                        fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 18,
+                        fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 18,
                         color: r.isRising ? colors.foreground : colors.mutedForeground,
                       }}>
                         {r.message}
                       </Text>
                       {r.subMessage && (
                         <Text style={{
-                          fontSize: 11, fontFamily: 'Inter_400Regular',
+                          fontSize: 11, fontFamily: 'Satoshi-Regular',
                           color: r.isRising ? `${colors.gold}B0` : `${colors.mutedForeground}90`,
                         }}>
                           {r.subMessage}
@@ -693,8 +693,8 @@ const styles = StyleSheet.create({
   },
   avatar:    { width: '100%', height: '100%' },
   nameBlock: { flex: 1 },
-  charName:  { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: 'rgba(235,228,255,0.97)', letterSpacing: -0.2 },
-  subtitle:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.50)', marginTop: 1, letterSpacing: 0.1 },
+  charName:  { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(235,228,255,0.97)', letterSpacing: -0.2 },
+  subtitle:  { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', marginTop: 1, letterSpacing: 0.1 },
 
   headerIcons:   { flexDirection: 'row', gap: 6 },
   headerIconBtn: {
@@ -716,13 +716,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 8, gap: 8,
   },
   statPill:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  statPillText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.65)' },
+  statPillText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.65)' },
   statDot:      { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
 
   charHero:          { position: 'relative', width: '100%', overflow: 'hidden' },
   charHeroLabel:     { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
   charHeroLabelText: {
-    fontSize: 15, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.2,
+    fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2,
     color: 'rgba(235,228,255,0.95)',
     textShadowColor: 'rgba(18,16,42,0.6)',
     textShadowOffset: { width: 0, height: 1 },
@@ -735,7 +735,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(200,168,75,0.25)',
     alignSelf: 'flex-start',
   },
-  outfitNameText:     { fontSize: 11, fontFamily: 'Inter_600SemiBold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
+  outfitNameText:     { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
   charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 80, zIndex: 2 },
   charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, zIndex: 2 },
   changeOutfitBtn: {
@@ -758,18 +758,18 @@ const styles = StyleSheet.create({
   },
   charInfoLeft:     { flex: 1 },
   charInfoRight:    { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
-  charInfoCta:      { fontSize: 12, fontFamily: 'Inter_500Medium', color: 'rgba(139,122,181,0.75)' },
+  charInfoCta:      { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(139,122,181,0.75)' },
   charNameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  charInfoName:     { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#EDE8FF', letterSpacing: -0.2 },
+  charInfoName:     { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.2 },
   charInfoStar:     { fontSize: 11, color: '#C8A84B' },
-  charInfoBio:      { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.72)', lineHeight: 18, fontStyle: 'italic', marginBottom: 6 },
-  charInfoBioEmpty: { fontSize: 12, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.38)', lineHeight: 18, fontStyle: 'italic', marginBottom: 6 },
+  charInfoBio:      { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.72)', lineHeight: 18, fontStyle: 'italic', marginBottom: 6 },
+  charInfoBioEmpty: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.38)', lineHeight: 18, fontStyle: 'italic', marginBottom: 6 },
   charInfoTraits:   { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   charInfoTrait:    { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(139,122,181,0.18)', borderWidth: 1, borderColor: 'rgba(139,122,181,0.32)' },
-  charInfoTraitText:{ fontSize: 11, fontFamily: 'Inter_500Medium', color: '#C8B8EE' },
+  charInfoTraitText:{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#C8B8EE' },
 
   sectionLabel: {
-    fontSize: 11, fontFamily: 'Inter_700Bold', color: 'rgba(200,184,232,0.48)',
+    fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.48)',
     letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12,
   },
 
@@ -786,8 +786,8 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   hCardLeft:  { flex: 1, gap: 3 },
-  hCardTitle: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: '#EDE8FF', letterSpacing: -0.1 },
-  hCardDesc:  { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(220,210,255,0.60)', lineHeight: 16 },
+  hCardTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.1 },
+  hCardDesc:  { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(220,210,255,0.60)', lineHeight: 16 },
   hCardArrow: {
     width: 30, height: 30, borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.09)',
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   lockLabel: {
-    fontSize: 13, fontFamily: 'Inter_600SemiBold',
+    fontSize: 13, fontFamily: 'Satoshi-Bold',
     color: 'rgba(220,210,255,0.80)', letterSpacing: 0.3,
   },
 
@@ -833,8 +833,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: 6,
   },
-  pickerTitle: { fontSize: 15, fontFamily: 'Inter_600SemiBold', color: '#EDE8FF', letterSpacing: -0.2 },
-  pickerSub:   { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic', marginBottom: 14 },
+  pickerTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.2 },
+  pickerSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic', marginBottom: 14 },
   closeBtn:    {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.07)',
@@ -850,7 +850,7 @@ const styles = StyleSheet.create({
   pickerCardImg:    { width: 66, height: 66, borderRadius: 14, overflow: 'hidden' },
   pickerCardNone:   { backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
   pickerCardNoImg:  { backgroundColor: 'rgba(139,122,181,0.1)', alignItems: 'center', justifyContent: 'center' },
-  pickerCardName:   { fontSize: 11, fontFamily: 'Inter_500Medium', color: 'rgba(200,184,232,0.75)', textAlign: 'center' },
+  pickerCardName:   { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.75)', textAlign: 'center' },
   pickerActiveDot:  {
     position: 'absolute', top: 6, right: 6,
     width: 18, height: 18, borderRadius: 9,
@@ -869,11 +869,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     gap: 10, marginBottom: 18,
   },
-  notifsTitle:    { fontSize: 18, fontFamily: 'Inter_700Bold', color: '#EDE8FF', flex: 1, letterSpacing: -0.3 },
+  notifsTitle:    { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', flex: 1, letterSpacing: -0.3 },
   countBadge:     { backgroundColor: '#8B7AB5', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  countText:      { fontSize: 12, fontFamily: 'Inter_700Bold', color: '#fff' },
+  countText:      { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#fff' },
   notifsEmpty:    { alignItems: 'center', paddingVertical: 40, gap: 12 },
-  notifsEmptyText:{ fontSize: 14, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.5)', fontStyle: 'italic' },
+  notifsEmptyText:{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.5)', fontStyle: 'italic' },
   notifItem:      { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
   notifIconWrap:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   dismissBtn:     { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

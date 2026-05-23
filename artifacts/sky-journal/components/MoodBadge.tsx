@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   label: {
-    fontFamily: 'Inter_500Medium',
+    fontFamily: 'Satoshi-Medium',
     letterSpacing: 0.2,
   },
 });

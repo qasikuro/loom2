@@ -196,18 +196,18 @@ const tc = StyleSheet.create({
     width:48, height:48, borderRadius:16,
     alignItems:'center', justifyContent:'center', flexShrink:0,
   },
-  avatarInitial: { fontSize:18, fontFamily:'Inter_700Bold', color:'#fff' },
+  avatarInitial: { fontSize:18, fontFamily:'Satoshi-Bold', color:'#fff' },
   nameCol: { flex:1 },
-  nameText: { fontSize:15, fontFamily:'Inter_600SemiBold', letterSpacing:-0.1 },
-  timeText: { fontSize:11, fontFamily:'Inter_400Regular', marginTop:2 },
+  nameText: { fontSize:15, fontFamily:'Satoshi-Bold', letterSpacing:-0.1 },
+  timeText: { fontSize:11, fontFamily:'Satoshi-Regular', marginTop:2 },
   contentRow: { flexDirection:'row', gap:12, alignItems:'flex-start' },
-  snippet: { flex:1, fontSize:14, fontFamily:'Inter_400Regular', lineHeight:21, fontStyle:'italic' },
+  snippet: { flex:1, fontSize:14, fontFamily:'Satoshi-Regular', lineHeight:21, fontStyle:'italic' },
   thumbnail: { width:68, height:68, borderRadius:14, flexShrink:0 },
   footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap' },
   typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:9, paddingVertical:4, borderRadius:12, borderWidth:1 },
-  typePillText: { fontSize:10, fontFamily:'Inter_500Medium' },
+  typePillText: { fontSize:10, fontFamily:'Satoshi-Medium' },
   deleteBtn: { height:30, paddingHorizontal:8, borderRadius:10, alignItems:'center', justifyContent:'center' },
-  deleteBtnText: { color:'#fff', fontSize:11, fontFamily:'Inter_600SemiBold' },
+  deleteBtnText: { color:'#fff', fontSize:11, fontFamily:'Satoshi-Bold' },
 });
 
 // ── Mini calendar ─────────────────────────────────────────────────────────────
@@ -297,12 +297,12 @@ const cal = StyleSheet.create({
   wrap: { marginHorizontal:16, marginBottom:14, borderRadius:16, borderWidth:1, padding:14 },
   monthRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:12 },
   navBtn: { width:30, height:30, borderRadius:9, alignItems:'center', justifyContent:'center' },
-  monthText: { fontSize:14, fontFamily:'Inter_600SemiBold' },
+  monthText: { fontSize:14, fontFamily:'Satoshi-Bold' },
   weekRow: { flexDirection:'row', marginBottom:6 },
-  weekDay: { flex:1, textAlign:'center', fontSize:10, fontFamily:'Inter_600SemiBold', letterSpacing:0.4, textTransform:'uppercase' },
+  weekDay: { flex:1, textAlign:'center', fontSize:10, fontFamily:'Satoshi-Bold', letterSpacing:0.4, textTransform:'uppercase' },
   grid: { flexDirection:'row', flexWrap:'wrap' },
   cell: { width:'14.28%', aspectRatio:1, alignItems:'center', justifyContent:'center', position:'relative' },
-  cellText: { fontSize:13, fontFamily:'Inter_400Regular' },
+  cellText: { fontSize:13, fontFamily:'Satoshi-Regular' },
   dot: { position:'absolute', bottom:2, width:4, height:4, borderRadius:2 },
 });
 
@@ -424,7 +424,7 @@ const fab = StyleSheet.create({
   actionRow:  { position:'absolute', right:0, flexDirection:'row', alignItems:'center', gap:10 },
   actionBtn:  { width:48, height:48, borderRadius:24, borderWidth:1, alignItems:'center', justifyContent:'center' },
   actionLabel:{ paddingHorizontal:10, paddingVertical:5, borderRadius:10 },
-  actionLabelText: { color:'#fff', fontSize:13, fontFamily:'Inter_500Medium' },
+  actionLabelText: { color:'#fff', fontSize:13, fontFamily:'Satoshi-Medium' },
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
@@ -674,9 +674,9 @@ const styles = StyleSheet.create({
   headerGrad: { paddingBottom: 0 },
   header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:10, paddingBottom:6 },
   headerLeft: { flexDirection:'row', alignItems:'center', gap:10 },
-  title: { fontSize:18, fontFamily:'Inter_600SemiBold', letterSpacing:-0.3, color:'rgba(235,228,255,0.97)' },
+  title: { fontSize:18, fontFamily:'Satoshi-Bold', letterSpacing:-0.3, color:'rgba(235,228,255,0.97)' },
   privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.08)', borderWidth:1, borderColor:'rgba(200,184,232,0.18)' },
-  privateBadgeText: { fontSize:10, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.7)' },
+  privateBadgeText: { fontSize:10, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.7)' },
   headerRight: { flexDirection:'row', gap:6 },
   hdrBtn: { width:38, height:38, borderRadius:12, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.09)', borderWidth:1, borderColor:'rgba(200,184,232,0.14)' },
   hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.55)', borderColor:'rgba(107,91,149,0.4)' },
@@ -691,17 +691,17 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
   },
   filterTabActive: { backgroundColor:'rgba(255,255,255,0.96)', borderColor:'transparent' },
-  filterLabel: { fontSize:12, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.8)' },
-  filterLabelActive: { color:'#2A1E50', fontFamily:'Inter_600SemiBold' },
+  filterLabel: { fontSize:12, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.8)' },
+  filterLabelActive: { color:'#2A1E50', fontFamily:'Satoshi-Bold' },
   filterCount: { paddingHorizontal:5, paddingVertical:1, borderRadius:10, backgroundColor:'rgba(255,255,255,0.15)', minWidth:18, alignItems:'center' },
   filterCountActive: { backgroundColor:'rgba(107,91,149,0.15)' },
-  filterCountText: { fontSize:10, fontFamily:'Inter_600SemiBold', color:'rgba(200,184,232,0.75)' },
+  filterCountText: { fontSize:10, fontFamily:'Satoshi-Bold', color:'rgba(200,184,232,0.75)' },
   filterCountTextActive: { color:'#6B5B95' },
 
   // Search
   searchBar: { flexDirection:'row', alignItems:'center', gap:9, borderWidth:1, borderRadius:13, paddingHorizontal:12, paddingVertical:9, marginHorizontal:16, marginTop:8 },
-  searchInput: { flex:1, fontSize:13, fontFamily:'Inter_400Regular' },
-  searchHint: { fontSize:12, fontFamily:'Inter_400Regular', fontStyle:'italic', paddingHorizontal:18, paddingTop:8, paddingBottom:4 },
+  searchInput: { flex:1, fontSize:13, fontFamily:'Satoshi-Regular' },
+  searchHint: { fontSize:12, fontFamily:'Satoshi-Regular', fontStyle:'italic', paddingHorizontal:18, paddingTop:8, paddingBottom:4 },
 
   // Timeline
   timelineContent: { paddingHorizontal:16, paddingTop:18 },
@@ -710,13 +710,13 @@ const styles = StyleSheet.create({
   dot: { width:12, height:12, borderRadius:6, borderWidth:2.5, zIndex:1 },
   line: { flex:1, width:2, marginTop:6, marginBottom:-6, borderRadius:1 },
   timelineRight: { flex:1, paddingBottom:24 },
-  dateLabel: { fontSize:11, fontFamily:'Inter_700Bold', marginBottom:12, marginTop:2, letterSpacing:1.2, textTransform:'uppercase' },
+  dateLabel: { fontSize:11, fontFamily:'Satoshi-Bold', marginBottom:12, marginTop:2, letterSpacing:1.2, textTransform:'uppercase' },
 
   // Empty
   empty: { flex:1, alignItems:'center', justifyContent:'center', paddingTop:80, paddingHorizontal:36, gap:14 },
   emptyIcon: { width:76, height:76, borderRadius:38, alignItems:'center', justifyContent:'center', marginBottom:4 },
-  emptyTitle: { fontSize:16, fontFamily:'Inter_600SemiBold', textAlign:'center' },
-  emptyText: { fontSize:13, fontFamily:'Inter_400Regular', textAlign:'center', lineHeight:20, fontStyle:'italic' },
+  emptyTitle: { fontSize:16, fontFamily:'Satoshi-Bold', textAlign:'center' },
+  emptyText: { fontSize:13, fontFamily:'Satoshi-Regular', textAlign:'center', lineHeight:20, fontStyle:'italic' },
   emptyBtn: { flexDirection:'row', alignItems:'center', gap:7, paddingHorizontal:20, height:40, borderRadius:20, marginTop:4 },
-  emptyBtnText: { fontSize:13, fontFamily:'Inter_600SemiBold', color:'#fff' },
+  emptyBtnText: { fontSize:13, fontFamily:'Satoshi-Bold', color:'#fff' },
 });

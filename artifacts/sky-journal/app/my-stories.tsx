@@ -208,7 +208,7 @@ export default function MyStoriesScreen() {
             <Text style={[
               styles.tabBtnText,
               { color: tab === t ? '#fff' : colors.mutedForeground },
-              tab === t && { fontFamily: 'Inter_600SemiBold' },
+              tab === t && { fontFamily: 'Satoshi-Bold' },
             ]}>
               {t === 'mine' ? tr('profile.myStoriesTitle') : tr('profile.sharedWithMe')}
             </Text>
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   headerTitle: {
-    fontSize: 20, fontFamily: 'Inter_700Bold',
+    fontSize: 20, fontFamily: 'Satoshi-Bold',
     color: 'rgba(240,234,255,0.97)',
     letterSpacing: 0.2,
   },
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     flex: 1, paddingVertical: 10, borderRadius: 26,
     alignItems: 'center', justifyContent: 'center',
   },
-  tabBtnText: { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  tabBtnText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 
   // Grid
   grid:  { paddingHorizontal: GUTTER, paddingTop: 4 },
@@ -299,12 +299,12 @@ const styles = StyleSheet.create({
   },
   cardBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12, gap: 6 },
   cardTitle: {
-    fontSize: 13, fontFamily: 'Inter_600SemiBold',
+    fontSize: 13, fontFamily: 'Satoshi-Bold',
     color: 'rgba(240,234,255,0.97)', lineHeight: 18,
   },
   cardMeta:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
   cardStat:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  cardStatText: { fontSize: 11, fontFamily: 'Inter_400Regular', color: 'rgba(200,184,232,0.75)' },
+  cardStatText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.75)' },
 
   // Empty
   emptyWrap: {
@@ -316,12 +316,12 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginBottom: 4,
   },
-  emptyTitle: { fontSize: 18, fontFamily: 'Inter_600SemiBold', textAlign: 'center' },
-  emptySub:   { fontSize: 14, fontFamily: 'Inter_400Regular', textAlign: 'center', lineHeight: 20 },
+  emptyTitle: { fontSize: 18, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
+  emptySub:   { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center', lineHeight: 20 },
   emptyBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: 20, paddingVertical: 11,
     borderRadius: 20, marginTop: 8,
   },
-  emptyBtnText: { fontSize: 14, fontFamily: 'Inter_600SemiBold', color: '#fff' },
+  emptyBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
 });
