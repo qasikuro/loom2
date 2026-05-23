@@ -1,7 +1,10 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { getAuthToken } from '@/context/AppContext';
+
+const MAX_DIM = 1600;
 
 function resolveApiBase(): string {
   const extra  = (Constants.expoConfig as any)?.extra;
@@ -12,6 +15,24 @@ function resolveApiBase(): string {
 function extFromUri(uri: string): string {
   const raw = uri.split('?')[0].split('.').pop() ?? 'jpg';
   return raw.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+}
+
+/**
+ * Resize a native file:// URI to at most MAX_DIM px on the longest edge.
+ * Returns a new file:// URI (from ImageManipulator cache). Falls back to the
+ * original URI if manipulation fails so the upload can still be attempted.
+ */
+async function resizeIfNeeded(uri: string): Promise<string> {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: MAX_DIM } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+    );
+    return result.uri;
+  } catch {
+    return uri;
+  }
 }
 
 async function uploadToServer(base64Data: string, ext: string): Promise<string | null> {
@@ -48,6 +69,9 @@ async function uploadToServer(base64Data: string, ext: string): Promise<string |
  * Uploads a local/blob/data URI to the server and returns the permanent https URL.
  * Returns null if the upload fails — callers must handle null and show an error.
  * Never stores local file:// paths (they are device-specific and invisible to others).
+ *
+ * Native file:// URIs are automatically resized to ≤1600 px before upload so
+ * full-resolution camera photos don't produce oversized payloads.
  */
 export async function persistImageUri(uri: string): Promise<string | null> {
   if (!uri) return null;
@@ -85,15 +109,15 @@ export async function persistImageUri(uri: string): Promise<string | null> {
   }
 
   // Native (iOS / Android):
-  // Read file as base64 and upload. If upload fails, return null so the caller
-  // can show a visible error. We never fall back to local file:// paths because
+  // Resize to ≤1600 px first so the base64 payload stays manageable, then
+  // read as base64 and upload. Never fall back to local file:// paths because
   // they are device-specific and invisible to other users.
   try {
-    const ext    = extFromUri(uri);
-    const base64 = await FileSystem.readAsStringAsync(uri, {
+    const resized = await resizeIfNeeded(uri);
+    const base64  = await FileSystem.readAsStringAsync(resized, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    const serverUrl = await uploadToServer(base64, ext);
+    const serverUrl = await uploadToServer(base64, 'jpeg');
     if (serverUrl) return serverUrl;
 
     console.error('[persistImage] GCS upload returned null for', uri);
