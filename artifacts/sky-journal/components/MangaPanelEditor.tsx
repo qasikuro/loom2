@@ -27,10 +27,13 @@ interface MangaPanelEditorProps {
 
 export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: MangaPanelEditorProps) {
   const colors = useColors();
-  const [pendingUri, setPendingUri] = useState<string | null>(null);
-  const [uploading, setUploading]   = useState(false);
+  const [pendingUri, setPendingUri]     = useState<string | null>(null);
+  const [uploading, setUploading]       = useState(false);
+  const [uploadError, setUploadError]   = useState<string | null>(null);
+  const [failedUri, setFailedUri]       = useState<string | null>(null);
 
   async function pickImage() {
+    setUploadError(null);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
@@ -41,17 +44,30 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
     }
   }
 
-  async function handleCropDone(croppedUri: string) {
-    setPendingUri(null);
+  async function doUpload(uri: string) {
+    setUploadError(null);
+    setFailedUri(null);
     setUploading(true);
     try {
-      const persisted = await persistImageUri(croppedUri);
+      const persisted = await persistImageUri(uri);
       if (persisted) {
         onChange({ ...panel, imageUri: persisted });
+      } else {
+        setUploadError('Upload failed — check your connection and tap Retry.');
+        setFailedUri(uri);
       }
     } finally {
       setUploading(false);
     }
+  }
+
+  async function handleCropDone(croppedUri: string) {
+    setPendingUri(null);
+    await doUpload(croppedUri);
+  }
+
+  async function handleRetry() {
+    if (failedUri) await doUpload(failedUri);
   }
 
   return (
@@ -82,11 +98,11 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
             styles.imageArea,
             {
               backgroundColor: panel.imageUri ? 'transparent' : colors.muted,
-              borderColor: panel.imageUri ? 'transparent' : colors.border,
+              borderColor: uploadError ? colors.destructive : panel.imageUri ? 'transparent' : colors.border,
               borderStyle: panel.imageUri ? 'solid' : 'dashed',
             },
           ]}
-          onPress={pickImage}
+          onPress={uploadError ? handleRetry : pickImage}
           activeOpacity={0.8}
           disabled={uploading}
         >
@@ -94,6 +110,14 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
             <View style={styles.imagePlaceholder}>
               <ActivityIndicator color={colors.primary} size="large" />
               <Text style={[styles.placeholderSub, { color: colors.mutedForeground }]}>Uploading…</Text>
+            </View>
+          ) : uploadError ? (
+            <View style={styles.imagePlaceholder}>
+              <View style={[styles.cameraIconBg, { backgroundColor: `${colors.destructive}15` }]}>
+                <Icon name="wifi-off" size={28} color={`${colors.destructive}90`} />
+              </View>
+              <Text style={[styles.placeholderTitle, { color: colors.destructive }]}>Upload failed</Text>
+              <Text style={[styles.placeholderSub, { color: colors.mutedForeground }]}>Tap to retry</Text>
             </View>
           ) : panel.imageUri ? (
             <>
@@ -115,6 +139,17 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
             </View>
           )}
         </TouchableOpacity>
+
+        {/* Error banner with retry */}
+        {uploadError && !uploading && (
+          <View style={[styles.errorRow, { backgroundColor: `${colors.destructive}10`, borderTopColor: `${colors.destructive}25` }]}>
+            <Icon name="alert-circle" size={13} color={colors.destructive} />
+            <Text style={[styles.errorText, { color: colors.destructive }]} numberOfLines={2}>{uploadError}</Text>
+            <TouchableOpacity onPress={handleRetry} style={[styles.retryBtn, { borderColor: `${colors.destructive}40`, backgroundColor: `${colors.destructive}12` }]}>
+              <Text style={[styles.retryText, { color: colors.destructive }]}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Narration text */}
         <View style={[styles.textSection, { borderTopColor: colors.border }]}>
@@ -206,6 +241,28 @@ const styles = StyleSheet.create({
   },
   placeholderTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   placeholderSub: { fontSize: 12, fontFamily: 'Satoshi-Regular' },
+  errorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+    lineHeight: 16,
+  },
+  retryBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  retryText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
   textSection: {
     padding: 14,
     gap: 9,

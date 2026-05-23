@@ -31,7 +31,8 @@ async function uploadToServer(base64Data: string, ext: string): Promise<string |
       body: JSON.stringify({ data: base64Data, ext }),
     });
     if (!res.ok) {
-      console.error('[persistImage] Upload failed — server returned', res.status);
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      console.error('[persistImage] Upload failed — server returned', res.status, body?.error ?? '');
       return null;
     }
     const json = await res.json() as { path: string };
