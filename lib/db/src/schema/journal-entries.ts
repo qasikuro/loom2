@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const journalEntriesTable = pgTable("journal_entries", {
   id:         uuid("id").primaryKey().defaultRandom(),
@@ -10,7 +10,9 @@ export const journalEntriesTable = pgTable("journal_entries", {
   friendName: text("friend_name"),
   date:       timestamp("date", { withTimezone: true }).notNull(),
   createdAt:  timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("journal_entries_user_id_idx").on(table.userId),
+]);
 
 export type JournalEntry      = typeof journalEntriesTable.$inferSelect;
 export type JournalEntryInput = typeof journalEntriesTable.$inferInsert;

@@ -1,4 +1,4 @@
-import { boolean, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const outfitsTable = pgTable("outfits", {
   id:          uuid("id").primaryKey().defaultRandom(),
@@ -11,7 +11,9 @@ export const outfitsTable = pgTable("outfits", {
   isHidden:    boolean("is_hidden").notNull().default(false),
   date:        timestamp("date", { withTimezone: true }).notNull(),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("outfits_user_id_idx").on(table.userId),
+]);
 
 export type Outfit      = typeof outfitsTable.$inferSelect;
 export type OutfitInput = typeof outfitsTable.$inferInsert;
