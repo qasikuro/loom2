@@ -191,10 +191,21 @@ export default function CropImageModal({
       const cropW   = Math.max(1, Math.min(naturalSize.w - originX, Math.round(frameW / totalScale)));
       const cropH   = Math.max(1, Math.min(naturalSize.h - originY, Math.round(frameH / totalScale)));
 
+      const MAX_DIM = 1600;
+      const actions: ImageManipulator.Action[] = [
+        { crop: { originX, originY, width: cropW, height: cropH } },
+      ];
+      if (cropW > MAX_DIM || cropH > MAX_DIM) {
+        actions.push(
+          cropW >= cropH
+            ? { resize: { width: MAX_DIM } }
+            : { resize: { height: MAX_DIM } },
+        );
+      }
       const result = await ImageManipulator.manipulateAsync(
         uri,
-        [{ crop: { originX, originY, width: cropW, height: cropH } }],
-        { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
+        actions,
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
       );
       onDone(result.uri);
     } catch {
