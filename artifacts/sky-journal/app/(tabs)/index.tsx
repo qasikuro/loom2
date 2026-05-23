@@ -107,7 +107,8 @@ export default function HomeScreen() {
   } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 28 : insets.bottom + 110;
+  // Tab bar height (64) + safe area + breathing room
+  const bottomPad = Platform.OS === 'web' ? 84 : insets.bottom + 90;
 
   const [showNotifs,       setShowNotifs]       = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
@@ -403,7 +404,7 @@ export default function HomeScreen() {
       {/* ── Scrollable content ──────────────────────────────── */}
       <ScrollView
         style={styles.cardsArea}
-        contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad + 110 }]}
+        contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Character info card — animated fade-in */}

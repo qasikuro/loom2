@@ -435,7 +435,8 @@ export default function JournalScreen() {
   const { t }   = useTranslation();
   const { journalEntries, deleteJournalEntry } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 160;
+  // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
+  const bottomPad = Platform.OS === 'web' ? 180 : insets.bottom + 180;
 
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [searchQuery,  setSearchQuery]  = useState('');
@@ -594,7 +595,7 @@ export default function JournalScreen() {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={[styles.timelineContent, { paddingBottom: bottomPad + 80 }]}
+        contentContainerStyle={[styles.timelineContent, { paddingBottom: bottomPad }]}
       >
         {sections.length === 0 ? (
           <View style={styles.empty}>

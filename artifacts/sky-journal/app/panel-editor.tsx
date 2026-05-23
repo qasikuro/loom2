@@ -105,10 +105,9 @@ function LayoutIcon({ layout, size = 38 }: { layout: Layout; size?: number }) {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const FONTS = [
-  { key: 'Satoshi-Regular',  label: 'Regular'  },
-  { key: 'Satoshi-Medium',   label: 'Medium'   },
-  { key: 'Satoshi-Bold', label: 'SemiBold' },
-  { key: 'Satoshi-Bold',     label: 'Bold'     },
+  { key: 'Satoshi-Regular', label: 'Regular' },
+  { key: 'Satoshi-Medium',  label: 'Medium'  },
+  { key: 'Satoshi-Bold',    label: 'Bold'    },
 ] as const;
 
 const BUBBLE_STYLES: { key: BubbleStyle; label: string; radius: number; hasTail: boolean }[] = [

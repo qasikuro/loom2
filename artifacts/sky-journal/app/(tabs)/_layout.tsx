@@ -126,12 +126,12 @@ function ClassicTabLayout() {
           fontSize:      10,
           fontFamily:    'Satoshi-Bold',
           letterSpacing: 0.3,
-          marginBottom:  5,
-          marginTop:     1,
+          marginBottom:  Platform.OS === 'android' ? 4 : 5,
+          marginTop:     Platform.OS === 'android' ? -2 : 1,
         },
 
         tabBarIconStyle: {
-          marginTop: 6,
+          marginTop: Platform.OS === 'android' ? 2 : 5,
         },
       }}
     >
