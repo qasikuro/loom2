@@ -86,7 +86,16 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
           activeOpacity={onAuthorPress ? 0.75 : 1}
           disabled={!onAuthorPress}
         >
-          <Text style={[styles.avatarText, { color: colors.primary }]}>{initial}</Text>
+          {post.authorAvatarUri ? (
+            <Image
+              source={{ uri: post.authorAvatarUri }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <Text style={[styles.avatarText, { color: colors.primary }]}>{initial}</Text>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.authorMeta}

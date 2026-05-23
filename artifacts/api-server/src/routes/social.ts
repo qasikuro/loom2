@@ -24,11 +24,12 @@ router.get("/users/search", requireAuth, async (req, res) => {
   try {
     const rows = await db
       .select({
-        userId:   characterTable.userId,
-        username: characterTable.username,
-        name:     characterTable.name,
-        bio:      characterTable.bio,
-        traits:   characterTable.traits,
+        userId:    characterTable.userId,
+        username:  characterTable.username,
+        name:      characterTable.name,
+        bio:       characterTable.bio,
+        traits:    characterTable.traits,
+        avatarUri: characterTable.avatarUri,
       })
       .from(characterTable)
       .where(
@@ -55,6 +56,7 @@ router.get("/users/search", requireAuth, async (req, res) => {
       name:        r.name,
       bio:         r.bio,
       traits:      r.traits,
+      avatarUri:   safeDiscoverUri(r.avatarUri),
       isFollowing: followingSet.has(r.userId),
     })));
   } catch (err) {
@@ -104,7 +106,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       bio:         char.bio,
       traits:      char.traits,
       mood:        char.mood,
-      avatarUri:   char.avatarUri ?? null,
+      avatarUri:   safeDiscoverUri(char.avatarUri),
       isFollowing: followingSet.has(targetId),
     });
   } catch (err) {
@@ -148,6 +150,7 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
         and(
           eq(storiesTable.userId, targetId),
           eq(storiesTable.isPublic, true),
+          eq(storiesTable.isHidden, false),
         ),
       )
       .orderBy(desc(storiesTable.date))
@@ -158,7 +161,12 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
       chapterTitle:   r.chapterTitle,
       mood:           r.mood,
       location:       r.location,
-      panels:         r.panels,
+      panels:         Array.isArray(r.panels)
+        ? r.panels.map((p: any) => ({
+            ...p,
+            imageUri: safeDiscoverUri(p.imageUri) ?? undefined,
+          }))
+        : [],
       pageLayoutKey:  r.pageLayoutKey ?? undefined,
       pages:          r.pages ?? undefined,
       witnessedCount: r.witnessedCount,
@@ -202,6 +210,7 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
         and(
           eq(outfitsTable.userId, targetId),
           eq(outfitsTable.isPublic, true),
+          eq(outfitsTable.isHidden, false),
         ),
       )
       .orderBy(desc(outfitsTable.date))
@@ -303,19 +312,20 @@ router.get("/discover", requireAuth, async (req, res) => {
         .where(eq(followsTable.followerId, userId)),
 
       db.select({
-        id:             storiesTable.id,
-        userId:         storiesTable.userId,
-        chapterTitle:   storiesTable.chapterTitle,
-        mood:           storiesTable.mood,
-        location:       storiesTable.location,
-        witnessedCount: storiesTable.witnessedCount,
-        savedCount:     storiesTable.savedCount,
-        panels:         storiesTable.panels,
-        pageLayoutKey:  storiesTable.pageLayoutKey,
-        pages:          storiesTable.pages,
-        date:           storiesTable.date,
-        authorName:     characterTable.name,
-        authorUsername: characterTable.username,
+        id:              storiesTable.id,
+        userId:          storiesTable.userId,
+        chapterTitle:    storiesTable.chapterTitle,
+        mood:            storiesTable.mood,
+        location:        storiesTable.location,
+        witnessedCount:  storiesTable.witnessedCount,
+        savedCount:      storiesTable.savedCount,
+        panels:          storiesTable.panels,
+        pageLayoutKey:   storiesTable.pageLayoutKey,
+        pages:           storiesTable.pages,
+        date:            storiesTable.date,
+        authorName:      characterTable.name,
+        authorUsername:  characterTable.username,
+        authorAvatarUri: characterTable.avatarUri,
       })
         .from(storiesTable)
         .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
@@ -357,21 +367,22 @@ router.get("/discover", requireAuth, async (req, res) => {
           imageUri: safeDiscoverUri(p.imageUri),
         }));
         return {
-          id:             row.id,
-          authorUserId:   row.userId,
-          authorName:     row.authorName,
-          authorUsername: row.authorUsername ?? null,
-          chapterTitle:   row.chapterTitle,
-          storySnippet:   panels[0]?.text ?? "",
-          imageUri:       panels[0]?.imageUri ?? null,
-          mood:           row.mood,
-          location:       row.location,
-          witnessedCount: row.witnessedCount,
-          savedCount:     row.savedCount,
-          date:           row.date.toISOString(),
+          id:              row.id,
+          authorUserId:    row.userId,
+          authorName:      row.authorName,
+          authorUsername:  row.authorUsername ?? null,
+          authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
+          chapterTitle:    row.chapterTitle,
+          storySnippet:    panels[0]?.text ?? "",
+          imageUri:        panels[0]?.imageUri ?? null,
+          mood:            row.mood,
+          location:        row.location,
+          witnessedCount:  row.witnessedCount,
+          savedCount:      row.savedCount,
+          date:            row.date.toISOString(),
           panels,
-          pageLayoutKey:  row.pageLayoutKey ?? undefined,
-          pages:          row.pages ?? undefined,
+          pageLayoutKey:   row.pageLayoutKey ?? undefined,
+          pages:           row.pages ?? undefined,
           isFollowing,
         };
       }),

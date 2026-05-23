@@ -48,7 +48,7 @@ export default function CreateOutfitScreen() {
   const [pendingUri, setPendingUri]   = useState<string | null>(null);
   const [uploading, setUploading]     = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [isPublic, setIsPublic]       = useState(false);
+  const [isPublic, setIsPublic]       = useState(true);
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState<string | null>(null);
 

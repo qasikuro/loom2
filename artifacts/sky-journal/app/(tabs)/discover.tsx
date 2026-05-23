@@ -6,6 +6,7 @@ import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -52,6 +53,7 @@ interface UserSearchResult {
   name:        string;
   bio:         string;
   traits:      string[];
+  avatarUri:   string | null;
   isFollowing: boolean;
 }
 
@@ -338,10 +340,19 @@ export default function DiscoverScreen() {
                     onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.userId } } as any)}
                     activeOpacity={0.88}
                   >
-                    <View style={[styles.personAvatar, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}35` }]}>
-                      <Text style={[styles.personInitial, { color: colors.primary }]}>
-                        {item.name.charAt(0).toUpperCase()}
-                      </Text>
+                    <View style={[styles.personAvatar, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}35`, overflow: 'hidden' }]}>
+                      {item.avatarUri ? (
+                        <Image
+                          source={{ uri: item.avatarUri }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <Text style={[styles.personInitial, { color: colors.primary }]}>
+                          {item.name.charAt(0).toUpperCase()}
+                        </Text>
+                      )}
                     </View>
 
                     <View style={styles.personInfo}>

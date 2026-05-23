@@ -150,25 +150,26 @@ export interface GalleryUsage {
 }
 
 export interface DiscoverPost {
-  id:             string;
-  authorUserId:   string;
-  authorName:     string;
-  authorHandle:   string;
-  chapterTitle:   string;
-  storySnippet:   string;
-  imageUri?:      string;
-  mood:           string;
-  witnessedCount: number;
-  savedCount:     number;
-  timeAgo:        string;
-  date:           string;
-  chapterNumber:  number;
-  vibe:           string;
-  saved:          boolean;
-  isFollowing:    boolean;
-  panels?:        { text: string; imageUri?: string; overlays?: PanelOverlay[] }[];
-  pages?:         StoryPage[];
-  pageLayoutKey?: string;
+  id:               string;
+  authorUserId:     string;
+  authorName:       string;
+  authorHandle:     string;
+  authorAvatarUri?: string | null;
+  chapterTitle:     string;
+  storySnippet:     string;
+  imageUri?:        string;
+  mood:             string;
+  witnessedCount:   number;
+  savedCount:       number;
+  timeAgo:          string;
+  date:             string;
+  chapterNumber:    number;
+  vibe:             string;
+  saved:            boolean;
+  isFollowing:      boolean;
+  panels?:          { text: string; imageUri?: string; overlays?: PanelOverlay[] }[];
+  pages?:           StoryPage[];
+  pageLayoutKey?:   string;
 }
 
 export interface Reward {
@@ -318,15 +319,16 @@ type RawDiscoverItem = Omit<DiscoverPost, 'saved' | 'isFollowing'>;
 
 function toRawDiscoverPost(raw: any): RawDiscoverItem {
   return {
-    id:             raw.id,
-    authorUserId:   raw.authorUserId ?? '',
-    authorName:     raw.authorName ?? 'Sky Child',
-    authorHandle:   raw.authorUsername
+    id:               raw.id,
+    authorUserId:     raw.authorUserId ?? '',
+    authorName:       raw.authorName ?? 'Sky Child',
+    authorHandle:     raw.authorUsername
       ? `@${raw.authorUsername}`
       : `@${(raw.authorName ?? 'sky').toLowerCase().replace(/\s+/g, '')}`,
-    chapterTitle:   raw.chapterTitle ?? '',
-    storySnippet:   raw.storySnippet ?? '',
-    imageUri:       resolveUri(raw.imageUri),
+    authorAvatarUri:  resolveUri(raw.authorAvatarUri) ?? null,
+    chapterTitle:     raw.chapterTitle ?? '',
+    storySnippet:     raw.storySnippet ?? '',
+    imageUri:         resolveUri(raw.imageUri),
     mood:           raw.mood ?? 'Hopeful',
     witnessedCount: raw.witnessedCount ?? 0,
     savedCount:     raw.savedCount ?? 0,
