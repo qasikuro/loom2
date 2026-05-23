@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
   Platform,
@@ -32,6 +33,7 @@ const FRIEND_SUGGESTIONS = [
 
 export default function CreateFriendLogScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { addJournalEntry, journalEntries } = useApp();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -82,10 +84,10 @@ export default function CreateFriendLogScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🤝</Text>
-          <Text style={[styles.headerTitle, { color: '#3A78B8' }]}>Friend Encounter</Text>
+          <Text style={[styles.headerTitle, { color: '#3A78B8' }]}>{t('journal.friendEncounterTitle')}</Text>
           <View style={[styles.privatePill, { backgroundColor: 'rgba(58,120,184,0.1)' }]}>
             <Icon name="lock" size={10} color="#3A78B8" />
-            <Text style={[styles.privatePillText, { color: '#3A78B8' }]}>Private</Text>
+            <Text style={[styles.privatePillText, { color: '#3A78B8' }]}>{t('common.private')}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -104,7 +106,7 @@ export default function CreateFriendLogScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
       >
         {/* Friend name */}
-        <Text style={[styles.label, { color: colors.mutedForeground }]}>Who did you meet?</Text>
+        <Text style={[styles.label, { color: colors.mutedForeground }]}>{t('journal.whoDidYouMeet')}</Text>
         <View style={[styles.nameRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.nameAvatar, { backgroundColor: friendName ? 'rgba(58,120,184,0.15)' : colors.muted }]}>
             <Text style={[styles.nameAvatarText, { color: friendName ? '#3A78B8' : colors.mutedForeground }]}>
@@ -160,7 +162,7 @@ export default function CreateFriendLogScreen() {
         )}
 
         {/* Note */}
-        <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 16 }]}>What happened? (optional)</Text>
+        <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 16 }]}>{t('journal.whatHappened')}</Text>
         <TextInput
           style={[styles.noteInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
           placeholder="We flew above the clouds together... or just a brief glance and a wave."
@@ -172,7 +174,7 @@ export default function CreateFriendLogScreen() {
         />
 
         {/* Mood */}
-        <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 16 }]}>How did it feel?</Text>
+        <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 16 }]}>{t('journal.howDidItFeel')}</Text>
         <View style={styles.moodGrid}>
           {MOODS.map(m => (
             <TouchableOpacity key={m.label}

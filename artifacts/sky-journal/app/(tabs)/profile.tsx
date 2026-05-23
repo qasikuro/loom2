@@ -30,6 +30,7 @@ import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
+import { useTranslation } from 'react-i18next';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -164,6 +165,7 @@ function ThemeToggle() {
 
 export default function CharacterScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const { isDark } = useTheme();
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
@@ -501,7 +503,7 @@ export default function CharacterScreen() {
                 {character.username ? (
                   <Text style={[styles.usernameText, { color: colors.primary }]}>@{character.username}</Text>
                 ) : (
-                  <Text style={[styles.usernamePlaceholder, { color: `${colors.mutedForeground}70` }]}>+ Set a username</Text>
+                  <Text style={[styles.usernamePlaceholder, { color: `${colors.mutedForeground}70` }]}>{t('profile.setUsername')}</Text>
                 )}
                 <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginTop: 1 }} />
               </TouchableOpacity>
@@ -519,7 +521,7 @@ export default function CharacterScreen() {
             ) : (
               <TouchableOpacity style={styles.bioRow} onPress={() => setEditingBio(true)}>
                 <Text style={[styles.bio, { color: character.bio ? colors.mutedForeground : `${colors.mutedForeground}60` }]}>
-                  {character.bio || 'Tap to add a bio...'}
+                  {character.bio || t('profile.tapBio')}
                 </Text>
                 <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} style={{ marginTop: 2 }} />
               </TouchableOpacity>
@@ -543,17 +545,17 @@ export default function CharacterScreen() {
           <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
             <TouchableOpacity style={styles.statItem} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.7}>
               <Text style={[styles.statNum, { color: colors.primary }]}>{stories.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('profile.stories')}</Text>
             </TouchableOpacity>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statNum, { color: colors.gold }]}>{outfits.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Outfits</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('profile.outfits')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statNum, { color: '#6BA57A' }]}>{totalWitnessed}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Witnessed</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('discover.witnessed')}</Text>
             </View>
           </View>
 
@@ -569,9 +571,9 @@ export default function CharacterScreen() {
                   <Icon name="book-open" size={15} color={colors.primary} />
                 </View>
                 <View>
-                  <Text style={[styles.sectionCardTitle, { color: colors.foreground }]}>My Stories</Text>
+                  <Text style={[styles.sectionCardTitle, { color: colors.foreground }]}>{t('profile.myStories')}</Text>
                   <Text style={[styles.sectionCardSub, { color: colors.mutedForeground }]}>
-                    {stories.length === 0 ? 'Write your first chapter' : `${stories.length} chapter${stories.length !== 1 ? 's' : ''} written`}
+                    {stories.length === 0 ? t('profile.writeFirstChapter') : stories.length === 1 ? t('profile.storyChapters', { n: 1 }) : t('profile.storyChaptersPlural', { n: stories.length })}
                   </Text>
                 </View>
               </View>
@@ -605,7 +607,7 @@ export default function CharacterScreen() {
             ) : (
               <View style={[styles.emptyHint, { borderColor: `${colors.primary}18` }]}>
                 <Icon name="star" size={20} color={`${colors.primary}40`} />
-                <Text style={[styles.emptyHintText, { color: colors.mutedForeground }]}>Your chapters will appear here</Text>
+                <Text style={[styles.emptyHintText, { color: colors.mutedForeground }]}>{t('profile.emptyStories')}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -614,9 +616,9 @@ export default function CharacterScreen() {
           <View style={[styles.section, { borderTopColor: colors.border }]}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>My Wardrobe</Text>
+                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
                 <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
-                  {outfits.length === 0 ? 'Log your first outfit' : `${outfits.length} outfit${outfits.length !== 1 ? 's' : ''} — tap to view`}
+                  {outfits.length === 0 ? t('profile.logFirstOutfit') : outfits.length === 1 ? t('profile.outfitsTapView', { n: 1 }) : t('profile.outfitsTapViewPlural', { n: outfits.length })}
                 </Text>
               </View>
               <TouchableOpacity
@@ -624,7 +626,7 @@ export default function CharacterScreen() {
                 onPress={() => { Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
               >
                 <Icon name="plus" size={13} color="#fff" />
-                <Text style={styles.addBtnText}>Add</Text>
+                <Text style={styles.addBtnText}>{t('profile.add')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -638,9 +640,9 @@ export default function CharacterScreen() {
                   <Icon name="wind" size={22} color={`${colors.primary}80`} />
                 </View>
                 <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={[styles.emptyOutfitTitle, { color: colors.foreground }]}>Log your look</Text>
+                  <Text style={[styles.emptyOutfitTitle, { color: colors.foreground }]}>{t('profile.emptyOutfitTitle')}</Text>
                   <Text style={[styles.emptyOutfitSub, { color: colors.mutedForeground }]}>
-                    Capture outfits that feel like you
+                    {t('profile.emptyOutfitSub')}
                   </Text>
                 </View>
                 <Icon name="arrow-right" size={14} color={`${colors.primary}60`} />
@@ -734,8 +736,8 @@ export default function CharacterScreen() {
           <View style={[styles.section, { borderTopColor: colors.border }]}>
             <View style={styles.sectionHeader}>
               <View>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Attributes</Text>
-                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>Define your character</Text>
+                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('profile.traits')}</Text>
+                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>{t('profile.defineCharacter')}</Text>
               </View>
             </View>
 
@@ -758,7 +760,7 @@ export default function CharacterScreen() {
                     style={[styles.traitInput, { color: colors.foreground }]}
                     value={newTrait}
                     onChangeText={t => { setNewTrait(t); setShowSuggestions(true); }}
-                    placeholder="Type trait…"
+                    placeholder={t('profile.traitPlaceholder')}
                     placeholderTextColor={colors.mutedForeground}
                     autoFocus returnKeyType="done"
                     onSubmitEditing={() => addTrait(newTrait)}
@@ -774,14 +776,14 @@ export default function CharacterScreen() {
                   onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}
                 >
                   <Icon name="plus" size={12} color={colors.primary} />
-                  <Text style={[styles.traitAddText, { color: colors.primary }]}>Add trait</Text>
+                  <Text style={[styles.traitAddText, { color: colors.primary }]}>{t('profile.addTrait')}</Text>
                 </TouchableOpacity>
               )}
             </View>
 
             {showSuggestions && suggestions.length > 0 && (
               <View style={styles.suggRow}>
-                <Text style={[styles.suggLabel, { color: colors.mutedForeground }]}>SUGGESTIONS</Text>
+                <Text style={[styles.suggLabel, { color: colors.mutedForeground }]}>{t('profile.suggestions')}</Text>
                 <View style={styles.suggChips}>
                   {suggestions.slice(0, 8).map(s => (
                     <TouchableOpacity
@@ -800,19 +802,19 @@ export default function CharacterScreen() {
 
           {/* ── Account section ──────────────────────────────────── */}
           <View style={[styles.section, { borderTopColor: colors.border }]}>
-            <Text style={[styles.accountSectionLabel, { color: colors.mutedForeground }]}>APPEARANCE</Text>
+            <Text style={[styles.accountSectionLabel, { color: colors.mutedForeground }]}>{t('profile.appearance')}</Text>
             <ThemeToggle />
           </View>
 
           <View style={[styles.accountCardWrap, { borderTopColor: colors.border }]}>
-            <Text style={[styles.accountSectionLabel, { color: colors.mutedForeground }]}>ACCOUNT</Text>
+            <Text style={[styles.accountSectionLabel, { color: colors.mutedForeground }]}>{t('profile.account')}</Text>
             <View style={[styles.accountCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
               <View style={styles.accountRow}>
                 <View style={[styles.accountIconWrap, { backgroundColor: `${colors.primary}10` }]}>
                   <Icon name="mail" size={14} color={colors.primary} />
                 </View>
                 <View style={styles.accountInfo}>
-                  <Text style={[styles.accountInfoLabel, { color: colors.mutedForeground }]}>Signed in as</Text>
+                  <Text style={[styles.accountInfoLabel, { color: colors.mutedForeground }]}>{t('profile.signedInAs')}</Text>
                   <Text style={[styles.accountInfoVal, { color: colors.foreground }]} numberOfLines={1}>
                     {user?.primaryEmailAddress?.emailAddress ?? '—'}
                   </Text>
@@ -830,7 +832,7 @@ export default function CharacterScreen() {
                   <Icon name="log-out" size={14} color={confirmingSignOut ? '#fff' : colors.destructive} />
                 </View>
                 <Text style={[styles.signOutText, { color: confirmingSignOut ? '#fff' : colors.destructive }]}>
-                  {confirmingSignOut ? 'Tap again to confirm' : 'Sign Out'}
+                  {confirmingSignOut ? t('profile.confirmSignOut') : t('profile.signOut')}
                 </Text>
                 <Icon name="chevron-right" size={14} color={confirmingSignOut ? 'rgba(255,255,255,0.6)' : `${colors.destructive}60`} style={{ marginLeft: 'auto' }} />
               </TouchableOpacity>
@@ -869,7 +871,7 @@ export default function CharacterScreen() {
                     )}
                     {selectedOutfit.id === activeOutfitId && (
                       <View style={[styles.modalActivePill, { backgroundColor: colors.primary }]}>
-                        <Text style={styles.modalActivePillText}>✦  Display outfit</Text>
+                        <Text style={styles.modalActivePillText}>{t('profile.displayOutfit')}</Text>
                       </View>
                     )}
                   </View>
@@ -917,14 +919,14 @@ export default function CharacterScreen() {
                         color={selectedOutfit.id === activeOutfitId ? colors.primary : '#fff'}
                       />
                       <Text style={[styles.setDisplayBtnText, { color: selectedOutfit.id === activeOutfitId ? colors.primary : '#fff' }]}>
-                        {selectedOutfit.id === activeOutfitId ? 'Remove from display' : 'Set as display outfit'}
+                        {selectedOutfit.id === activeOutfitId ? t('profile.removeDisplay') : t('profile.setDisplay')}
                       </Text>
                     </TouchableOpacity>
 
                     {/* Divider — Your Character */}
                     <View style={styles.charDivider}>
                       <View style={[styles.charDividerLine, { backgroundColor: colors.border }]} />
-                      <Text style={[styles.charDividerLabel, { color: colors.mutedForeground }]}>YOUR CHARACTER</Text>
+                      <Text style={[styles.charDividerLabel, { color: colors.mutedForeground }]}>{t('profile.yourCharacter')}</Text>
                       <View style={[styles.charDividerLine, { backgroundColor: colors.border }]} />
                     </View>
 

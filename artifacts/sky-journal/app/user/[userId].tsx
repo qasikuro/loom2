@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -68,6 +69,7 @@ interface PublicOutfit {
 export default function UserProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const colors    = useColors();
+  const { t } = useTranslation();
   const insets    = useSafeAreaInsets();
   const { userId: currentUserId } = useAuth();
   const { followingIds, followUser, unfollowUser } = useApp();
@@ -149,7 +151,7 @@ export default function UserProfileScreen() {
           style={[styles.backBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={() => router.back()}
         >
-          <Text style={[styles.backBtnText, { color: colors.primary }]}>Go back</Text>
+          <Text style={[styles.backBtnText, { color: colors.primary }]}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -272,7 +274,7 @@ export default function UserProfileScreen() {
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Icon name="flag" size={11} color="rgba(180,100,100,0.6)" />
-              <Text style={styles.reportLinkText}>Report this profile</Text>
+              <Text style={styles.reportLinkText}>{t('discover.reportProfile')}</Text>
             </TouchableOpacity>
           )}
 

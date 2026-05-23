@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -50,6 +51,7 @@ const TYPE_CFG = {
 export default function CreateJournalEntryScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
+  const { t: tr } = useTranslation();
   const { addJournalEntry } = useApp();
   const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
 
@@ -89,8 +91,8 @@ export default function CreateJournalEntryScreen() {
   }
 
   const today     = new Date();
-  const dateLabel = today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  const prompt    = PROMPTS[today.getDate() % PROMPTS.length];
+  const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const dayPrompt = tr(`journal.prompts_${today.getDate() % 6}` as any);
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -105,9 +107,9 @@ export default function CreateJournalEntryScreen() {
   }
 
   function handleSave() {
-    if (!text.trim()) { setError('Write something first.'); return; }
+    if (!text.trim()) { setError(tr('journal.writeSomethingFirst')); return; }
     if (entryType === 'friend' && !friendName.trim()) {
-      setError('Who were you with?'); return;
+      setError(tr('journal.whoWereYouWith')); return;
     }
     setError(null);
     setSaving(true);
@@ -146,11 +148,13 @@ export default function CreateJournalEntryScreen() {
         <View style={styles.headerCenter}>
           <View style={styles.headerTitleRow}>
             <Icon name={cfg.icon} size={14} color={cfg.accent} />
-            <Text style={[styles.headerTitle, { color: colors.foreground }]}>{cfg.title}</Text>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>
+              {entryType === 'diary' ? tr('journal.journalTitle') : entryType === 'friend' ? tr('journal.friendTitle') : tr('journal.momentTitle')}
+            </Text>
           </View>
           <View style={[styles.privatePill, { backgroundColor: `${colors.primary}12` }]}>
             <Icon name="lock" size={10} color={colors.primary} />
-            <Text style={[styles.privatePillText, { color: colors.primary }]}>Private</Text>
+            <Text style={[styles.privatePillText, { color: colors.primary }]}>{tr('journal.private')}</Text>
           </View>
         </View>
 
@@ -160,7 +164,7 @@ export default function CreateJournalEntryScreen() {
           disabled={saving}
         >
           <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-            {saving ? '...' : 'Save'}
+            {saving ? '...' : tr('journal.save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -180,7 +184,7 @@ export default function CreateJournalEntryScreen() {
             <Icon name="users" size={15} color="#4A6898" />
             <TextInput
               style={[styles.friendInput, { color: colors.foreground }]}
-              placeholder="Who were you with?"
+              placeholder={tr('journal.friendNamePlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               value={friendName}
               onChangeText={t => { setFriendName(t); if (error) setError(null); }}
@@ -197,9 +201,9 @@ export default function CreateJournalEntryScreen() {
         >
           <Icon name="feather" size={13} color={`${cfg.accent}80`} />
           <Text style={[styles.promptText, { color: colors.mutedForeground }]}>
-            {entryType === 'friend'  ? 'What moment do you want to remember with them?' :
-             entryType === 'moment'  ? 'Capture this feeling before it fades...' :
-             prompt}
+            {entryType === 'friend'  ? tr('journal.friendPrompt') :
+             entryType === 'moment'  ? tr('journal.momentPrompt') :
+             dayPrompt}
           </Text>
         </TouchableOpacity>
 
@@ -213,7 +217,7 @@ export default function CreateJournalEntryScreen() {
             fontSize,
             lineHeight: Math.round(fontSize * 1.625),
           }]}
-          placeholder={cfg.placeholder}
+          placeholder={entryType === 'diary' ? tr('journal.placeholder') : entryType === 'friend' ? tr('journal.friendPlaceholder') : tr('journal.momentPlaceholder')}
           placeholderTextColor={`${colors.mutedForeground}70`}
           value={text}
           onChangeText={t => { setText(t); if (error) setError(null); }}

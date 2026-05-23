@@ -26,6 +26,7 @@ import { useColors } from '@/hooks/useColors';
 import { DraftStore } from '@/utils/draftStore';
 import type { BubbleStyle, PanelOverlay, StoryPanel } from '@/context/AppContext';
 import { persistImageUri } from '@/utils/persistImage';
+import { useTranslation } from 'react-i18next';
 
 const { width: SW } = Dimensions.get('window');
 const GAP      = 3;
@@ -248,6 +249,7 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
 
 export default function PanelEditorScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const topPad  = Platform.OS === 'web' ? 48 : insets.top;
   const botPad  = Platform.OS === 'web' ? 20 : insets.bottom + 8;
@@ -269,9 +271,9 @@ export default function PanelEditorScreen() {
   if (!draft) {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
-        <Text style={{ color: colors.mutedForeground }}>No panel to edit.</Text>
+        <Text style={{ color: colors.mutedForeground }}>{t('create.noPanelToEdit')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-          <Text style={{ color: colors.primary }}>Go back</Text>
+          <Text style={{ color: colors.primary }}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -426,9 +428,9 @@ export default function PanelEditorScreen() {
         >
           <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Panel</Text>
+        <Text style={styles.headerTitle}>{t('create.editPanel')}</Text>
         <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>Save</Text>
+          <Text style={styles.saveBtnText}>{t('common.save')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -478,7 +480,7 @@ export default function PanelEditorScreen() {
                             : (
                               <View style={styles.emptyHint}>
                                 <Icon name="image" size={isActive ? 26 : 16} color="rgba(180,165,220,0.25)" />
-                                {isActive && <Text style={styles.emptyHintText}>Tap to add photo</Text>}
+                                {isActive && <Text style={styles.emptyHintText}>{t('create.tapToAddPhoto')}</Text>}
                               </View>
                             )
                           }
@@ -587,7 +589,7 @@ export default function PanelEditorScreen() {
         {/* ── Sticker picker ────────────────────────────────── */}
         {toolMode === 'sticker' && (
           <View style={[styles.stickerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>STICKERS</Text>
+            <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>{t('create.stickers')}</Text>
             <View style={styles.stickerGrid}>
               {STICKERS.map(e => (
                 <TouchableOpacity
@@ -686,7 +688,7 @@ export default function PanelEditorScreen() {
 
             {selOverlay.type === 'bubble' && (
               <>
-                <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>BUBBLE STYLE</Text>
+                <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>{t('create.bubbleStyle')}</Text>
                 <View style={styles.chipRow}>
                   {BUBBLE_STYLES.map(bs => {
                     const active = selOverlay.bubbleStyle === bs.key;
@@ -710,7 +712,7 @@ export default function PanelEditorScreen() {
 
             {selOverlay.type === 'sticker' && (
               <>
-                <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>SIZE</Text>
+                <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>{t('create.size')}</Text>
                 <View style={[styles.chipRow, { alignItems: 'center' }]}>
                   <Pressable
                     style={({ pressed }) => [styles.chip, styles.chipSq, { borderColor: colors.border, backgroundColor: pressed ? `${colors.primary}22` : colors.muted }]}
@@ -739,7 +741,7 @@ export default function PanelEditorScreen() {
         <View style={[styles.frameCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.frameTitleRow}>
             <Icon name="layout" size={13} color={colors.primary} />
-            <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>FRAME LAYOUT</Text>
+            <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>{t('create.frameLayout')}</Text>
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.frameScroll}>
             <View style={styles.frameRow}>

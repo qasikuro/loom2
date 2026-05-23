@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -36,6 +37,7 @@ const VIBE_TAGS = [
 export default function CreateOutfitScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t: tr } = useTranslation();
   const { addOutfit } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
@@ -78,7 +80,7 @@ export default function CreateOutfitScreen() {
   }
 
   function handleSave() {
-    if (!name.trim()) { setError('Give your outfit a name first.'); return; }
+    if (!name.trim()) { setError(tr('outfit.needName')); return; }
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -104,13 +106,13 @@ export default function CreateOutfitScreen() {
           <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
             <Icon name="x" size={18} color={colors.foreground} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Log Outfit</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{tr('outfit.logTitle')}</Text>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
             onPress={handleSave} disabled={saving}
           >
             <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-              {saving ? '...' : 'Save'}
+              {saving ? '...' : tr('outfit.saveOutfit')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -132,7 +134,7 @@ export default function CreateOutfitScreen() {
             {uploading ? (
               <View style={styles.imagePlaceholder}>
                 <ActivityIndicator color={colors.primary} size="large" />
-                <Text style={[styles.imagePlaceholderSub, { color: colors.mutedForeground }]}>Uploading…</Text>
+                <Text style={[styles.imagePlaceholderSub, { color: colors.mutedForeground }]}>{tr('outfit.uploading')}</Text>
               </View>
             ) : imageUri ? (
               <>
@@ -140,7 +142,7 @@ export default function CreateOutfitScreen() {
                 <View style={styles.changeOverlay}>
                   <View style={[styles.changeChip, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
                     <Icon name="camera" size={13} color={colors.foreground} />
-                    <Text style={[styles.changeChipText, { color: colors.foreground }]}>Change photo</Text>
+                    <Text style={[styles.changeChipText, { color: colors.foreground }]}>{tr('outfit.changePhoto')}</Text>
                   </View>
                 </View>
               </>
@@ -149,18 +151,18 @@ export default function CreateOutfitScreen() {
                 <View style={[styles.cameraCircle, { backgroundColor: `${colors.primary}15` }]}>
                   <Icon name="camera" size={28} color={`${colors.primary}80`} />
                 </View>
-                <Text style={[styles.imagePlaceholderTitle, { color: colors.mutedForeground }]}>Add outfit photo</Text>
-                <Text style={[styles.imagePlaceholderSub, { color: `${colors.mutedForeground}70` }]}>Optional · Portrait works best</Text>
+                <Text style={[styles.imagePlaceholderTitle, { color: colors.mutedForeground }]}>{tr('outfit.addPhoto')}</Text>
+                <Text style={[styles.imagePlaceholderSub, { color: `${colors.mutedForeground}70` }]}>{tr('outfit.photoHint')}</Text>
               </View>
             )}
           </TouchableOpacity>
 
           {/* Name */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Outfit name</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.name')}</Text>
             <TextInput
               style={[styles.nameInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-              placeholder="e.g. Starlight Cape · Dawn Cloak..."
+              placeholder={tr('outfit.namePlaceholder')}
               placeholderTextColor={`${colors.mutedForeground}80`}
               value={name}
               onChangeText={t => { setName(t); if (error) setError(null); }}
@@ -170,10 +172,10 @@ export default function CreateOutfitScreen() {
 
           {/* Description */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Notes (optional)</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.notes')}</Text>
             <TextInput
               style={[styles.descInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-              placeholder="Where did you wear this? What does it feel like?"
+              placeholder={tr('outfit.notesPlaceholder')}
               placeholderTextColor={`${colors.mutedForeground}70`}
               value={description}
               onChangeText={setDescription}
@@ -184,7 +186,7 @@ export default function CreateOutfitScreen() {
 
           {/* Tags */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Vibe tags</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.vibeTags')}</Text>
             <View style={styles.tagsGrid}>
               {VIBE_TAGS.map(t => {
                 const active = selectedTags.includes(t.label);
@@ -214,7 +216,7 @@ export default function CreateOutfitScreen() {
 
           {/* Visibility */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Visibility</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('common.visibility')}</Text>
             <View style={styles.privacyRow}>
               {(['Private', 'Public'] as const).map(opt => {
                 const active = opt === 'Private' ? !isPublic : isPublic;
@@ -228,7 +230,7 @@ export default function CreateOutfitScreen() {
                     onPress={() => setIsPublic(opt === 'Public')}
                   >
                     <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
-                    <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
+                    <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt === 'Private' ? tr('common.private') : tr('common.public')}</Text>
                   </TouchableOpacity>
                 );
               })}

@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp, type StoryPanel, type StoryPage } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { DraftStore } from '@/utils/draftStore';
+import { useTranslation } from 'react-i18next';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -116,6 +117,7 @@ function MiniPageGrid({ page, getPanelImg }: { page: StoryPage; getPanelImg: (p:
 export default function CreateScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
+  const { t: tr } = useTranslation();
   const { addStory } = useApp();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 120;
@@ -176,7 +178,7 @@ export default function CreateScreen() {
   // ── Publish ─────────────────────────────────────────────────────────────
 
   function handlePublish() {
-    if (!title.trim()) { setError('Give your story a title first.'); return; }
+    if (!title.trim()) { setError(tr('create.needTitle')); return; }
     const filledPages = pages
       .map(p => ({
         ...p,
@@ -185,7 +187,7 @@ export default function CreateScreen() {
         ),
       }))
       .filter(p => p.panels.length > 0);
-    if (!filledPages.length) { setError('Add content to at least one page.'); return; }
+    if (!filledPages.length) { setError(tr('create.needContent')); return; }
     setError(null);
     setPosting(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -247,8 +249,8 @@ export default function CreateScreen() {
           <Icon name="arrow-left" size={20} color="rgba(255,255,255,0.85)" />
         </TouchableOpacity>
         <View>
-          <Text style={styles.headerTitle}>Create Story</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{pages.length} page{pages.length !== 1 ? 's' : ''}</Text>
+          <Text style={styles.headerTitle}>{tr('create.title')}</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{pages.length === 1 ? tr('create.pages', { n: 1 }) : tr('create.pagesPlural', { n: pages.length })}</Text>
         </View>
         <TouchableOpacity
           style={[styles.headerBtn, showMeta && { backgroundColor: `${colors.primary}22` }]}
@@ -267,21 +269,21 @@ export default function CreateScreen() {
       >
         {/* ── Title + Description ──────────────────────────────── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Title</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('create.titleLabel')}</Text>
           <TextInput
             style={[styles.titleInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: `rgba(255,255,255,0.04)` }]}
-            placeholder="A Day Above the Clouds"
+            placeholder={tr('create.titlePlaceholder')}
             placeholderTextColor={colors.mutedForeground}
             value={title}
             onChangeText={t => { setTitle(t); if (error) setError(null); }}
             returnKeyType="next"
           />
 
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>Description</Text>
+          <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>{tr('create.descLabel')}</Text>
           <View style={styles.descWrapper}>
             <TextInput
               style={[styles.descInput, { color: colors.foreground }]}
-              placeholder="A short story about friendship and adventure in Sky."
+              placeholder={tr('create.descPlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               value={desc}
               onChangeText={setDesc}
@@ -296,7 +298,7 @@ export default function CreateScreen() {
         {/* ── Settings (expandable) ─────────────────────────────── */}
         {showMeta && (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Mood</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('create.moodLabel')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
               {MOODS.map(m => (
                 <TouchableOpacity
@@ -309,12 +311,12 @@ export default function CreateScreen() {
                   onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
                 >
                   <Icon name={m.icon} size={13} color={m.color} />
-                  <Text style={[styles.chipText, { color: m.color }]}>{m.label}</Text>
+                  <Text style={[styles.chipText, { color: m.color }]}>{tr(`moods.${m.label}` as any)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>Location</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>{tr('create.locationLabel')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
               {LOCATIONS.map(loc => (
                 <TouchableOpacity
@@ -332,7 +334,7 @@ export default function CreateScreen() {
               ))}
             </ScrollView>
 
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>Visibility</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>{tr('common.visibility')}</Text>
             <View style={styles.privRow}>
               {(['Public', 'Private'] as const).map(opt => {
                 const active = opt === 'Public' ? isPublic : !isPublic;
@@ -347,7 +349,7 @@ export default function CreateScreen() {
                     onPress={() => setIsPublic(opt === 'Public')}
                   >
                     <Icon name={opt === 'Public' ? 'globe' : 'lock'} size={13} color={active ? colors.primary : colors.mutedForeground} />
-                    <Text style={[styles.chipText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt}</Text>
+                    <Text style={[styles.chipText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt === 'Public' ? tr('common.public') : tr('common.private')}</Text>
                   </TouchableOpacity>
                 );
               })}

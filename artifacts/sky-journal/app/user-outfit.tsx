@@ -6,6 +6,7 @@ import { ReportSheet } from '@/components/ReportSheet';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import React, { useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -38,6 +39,7 @@ function fmtDate(iso: string) {
 
 export default function UserOutfitScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { followingIds, followUser, unfollowUser } = useApp();
   const params  = useLocalSearchParams<{
@@ -170,7 +172,7 @@ export default function UserOutfitScreen() {
           <View style={[styles.descCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
             <View style={styles.descHeader}>
               <Icon name="file-text" size={14} color={colors.primary} />
-              <Text style={[styles.descLabel, { color: colors.primary }]}>Notes</Text>
+              <Text style={[styles.descLabel, { color: colors.primary }]}>{t('outfit.notesLabel')}</Text>
             </View>
             <Text style={[styles.descText, { color: colors.foreground }]}>{params.outfitDesc}</Text>
           </View>
@@ -260,7 +262,7 @@ export default function UserOutfitScreen() {
               activeOpacity={0.82}
             >
               <Icon name="user" size={14} color={colors.mutedForeground} />
-              <Text style={[styles.profileBtnText, { color: colors.mutedForeground }]}>Full Profile</Text>
+              <Text style={[styles.profileBtnText, { color: colors.mutedForeground }]}>{t('discover.fullProfile')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

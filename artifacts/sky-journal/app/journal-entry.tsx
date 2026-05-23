@@ -3,6 +3,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React from 'react';
@@ -25,7 +26,7 @@ const DAYS_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','
 
 function formatFullDate(iso: string) {
   const d = new Date(iso);
-  return `${DAYS_FULL[d.getDay()]}, ${MONTHS_FULL[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -40,6 +41,7 @@ const TYPE_CFG = {
 
 export default function JournalEntryScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { id }  = useLocalSearchParams<{ id: string }>();
   const { journalEntries } = useApp();
@@ -57,7 +59,7 @@ export default function JournalEntryScreen() {
         </TouchableOpacity>
         <View style={s.notFound}>
           <Icon name="book-open" size={36} color={colors.mutedForeground} />
-          <Text style={[s.notFoundText, { color: colors.mutedForeground }]}>Entry not found</Text>
+          <Text style={[s.notFoundText, { color: colors.mutedForeground }]}>{t('discover.entryNotFound')}</Text>
         </View>
       </View>
     );
@@ -88,7 +90,7 @@ export default function JournalEntryScreen() {
           {/* Type badge */}
           <View style={[s.typeBadge, { backgroundColor: cfg.bg, borderColor: `${cfg.accent}40` }]}>
             <Icon name={cfg.icon} size={13} color={cfg.accent} />
-            <Text style={[s.typeBadgeText, { color: cfg.accent }]}>{cfg.label}</Text>
+            <Text style={[s.typeBadgeText, { color: cfg.accent }]}>{entry.type === 'diary' ? t('journal.journalTitle') : entry.type === 'friend' ? t('journal.friendTitle') : t('journal.momentTitle')}</Text>
           </View>
 
           {/* Date */}
@@ -110,7 +112,7 @@ export default function JournalEntryScreen() {
             </View>
             <View style={s.friendInfo}>
               <Text style={[s.friendName, { color: colors.foreground }]}>{entry.friendName}</Text>
-              <Text style={[s.friendSub, { color: '#5898D8' }]}>Friend encounter logged</Text>
+              <Text style={[s.friendSub, { color: '#5898D8' }]}>{t('journal.friendEncounterLogged')}</Text>
             </View>
           </View>
         )}
@@ -149,7 +151,7 @@ export default function JournalEntryScreen() {
           {entry.type === 'friend' && entry.friendName && (
             <View style={[s.footerPill, { backgroundColor: 'rgba(58,120,184,0.12)', borderColor: 'rgba(58,120,184,0.28)' }]}>
               <Icon name="users" size={11} color="#5898D8" />
-              <Text style={[s.footerPillText, { color: '#5898D8' }]}>With {entry.friendName}</Text>
+              <Text style={[s.footerPillText, { color: '#5898D8' }]}>{t('journal.with', { name: entry.friendName })}</Text>
             </View>
           )}
           {entry.type === 'moment' && (

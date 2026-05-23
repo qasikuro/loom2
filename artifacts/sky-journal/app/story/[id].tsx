@@ -20,6 +20,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import type { PanelOverlay } from '@/context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -237,6 +238,7 @@ function MangaPage({
 
 export default function StoryScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
   const { stories, discoverPosts, toggleSavePost, deleteStory } = useApp();
@@ -253,9 +255,9 @@ export default function StoryScreen() {
   const post  = discoverPosts.find(p => p.id === id) ?? null;
   const isOwnStory = !!story;
 
-  const title      = story?.chapterTitle ?? post?.chapterTitle ?? 'Untitled Chapter';
+  const title      = story?.chapterTitle ?? post?.chapterTitle ?? t('discover.untitledChapter');
   const mood       = story?.mood         ?? post?.mood         ?? 'Peaceful';
-  const authorName = post?.authorName    ?? 'You';
+  const authorName = post?.authorName    ?? t('common.you');
   const chapterNum = post?.chapterNumber ?? 1;
   const isSaved    = post?.saved         ?? false;
 
@@ -357,7 +359,7 @@ export default function StoryScreen() {
               activeOpacity={0.78}
             >
               {confirmingDelete
-                ? <Text style={styles.deleteConfirmText}>Delete?</Text>
+                ? <Text style={styles.deleteConfirmText}>{t('common.deleteConfirm')}</Text>
                 : <Icon name="trash-2" size={18} color="rgba(255,120,100,0.9)" />
               }
             </TouchableOpacity>
@@ -371,7 +373,7 @@ export default function StoryScreen() {
               </View>
               <View>
                 <Text style={styles.heroAuthor}>{authorName}</Text>
-                <Text style={styles.heroChapter}>Chapter {chapterNum}</Text>
+                <Text style={styles.heroChapter}>{t('discover.chapter')} {chapterNum}</Text>
               </View>
             </View>
             <Text style={styles.heroTitle}>{title}</Text>
@@ -379,7 +381,7 @@ export default function StoryScreen() {
               <MoodBadge mood={mood} size="sm" />
               <View style={styles.infoBadge}>
                 <Icon name="layers" size={11} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.infoBadgeText}>{totalPanelCount} panels · {renderPages.length} page{renderPages.length !== 1 ? 's' : ''}</Text>
+                <Text style={styles.infoBadgeText}>{renderPages.length === 1 ? t('discover.infoBadge', { panels: totalPanelCount, pages: renderPages.length }) : t('discover.infoBadgePlural', { panels: totalPanelCount, pages: renderPages.length })}</Text>
               </View>
             </View>
           </View>
@@ -406,13 +408,13 @@ export default function StoryScreen() {
         {/* ── End card ───────────────────────────────────── */}
         <View style={[styles.endCard, { backgroundColor: 'rgba(139,122,181,0.12)', borderColor: 'rgba(139,122,181,0.25)' }]}>
           <Icon name="star" size={22} color="#C8A84B" />
-          <Text style={styles.endTitle}>End of Chapter {chapterNum}</Text>
-          <Text style={styles.endSub}>{post ? `by ${authorName}` : 'Your story'}</Text>
+          <Text style={styles.endTitle}>{t('discover.endOfChapter', { n: chapterNum })}</Text>
+          <Text style={styles.endSub}>{post ? t('discover.byAuthor', { name: authorName }) : t('discover.yourStory')}</Text>
           <View style={styles.endStats}>
             <Icon name="eye"      size={14} color="rgba(200,184,232,0.6)" />
-            <Text style={styles.endStatText}>{witnessedCount} witnessed</Text>
+            <Text style={styles.endStatText}>{t('discover.witnessedCount', { n: witnessedCount })}</Text>
             <Icon name="bookmark" size={14} color="rgba(200,184,232,0.6)" style={{ marginLeft: 12 }} />
-            <Text style={styles.endStatText}>{savedCount} saved</Text>
+            <Text style={styles.endStatText}>{t('discover.savedCount', { n: savedCount })}</Text>
           </View>
         </View>
       </ScrollView>
@@ -434,7 +436,7 @@ export default function StoryScreen() {
               onPress={handleSave}
             >
               <Icon name="bookmark" size={15} color={isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)'} />
-              <Text style={[styles.actionBtnText, { color: isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)' }]}>{isSaved ? 'Saved' : 'Save'}</Text>
+              <Text style={[styles.actionBtnText, { color: isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)' }]}>{isSaved ? t('discover.saved') : t('discover.save')}</Text>
             </TouchableOpacity>
           )}
 
@@ -444,7 +446,7 @@ export default function StoryScreen() {
           >
             <Icon name="eye" size={15} color={witnessed ? '#C8A84B' : '#C8B8E8'} />
             <Text style={[styles.actionBtnText, { color: witnessed ? '#C8A84B' : '#C8B8E8' }]}>
-              {witnessed ? 'Witnessed ✦' : 'Witness'}
+              {witnessed ? t('discover.witnessedBadge') : t('discover.witness')}
             </Text>
           </TouchableOpacity>
         </View>

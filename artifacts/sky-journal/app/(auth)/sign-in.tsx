@@ -3,6 +3,7 @@ import { useSignIn } from '@clerk/expo';
 import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -27,6 +28,7 @@ const SPARKLES = [
 ];
 
 export default function SignInScreen() {
+  const { t } = useTranslation();
   const { signIn, errors, fetchStatus } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -56,14 +58,14 @@ export default function SignInScreen() {
 
   async function handleSignIn() {
     if (!signIn) {
-      setCatchError('Clerk not ready — please wait a moment and try again.');
+      setCatchError(t('auth.clerkNotReady'));
       return;
     }
     setCatchError('');
     try {
       const { error } = await signIn.password({ emailAddress: email.trim(), password });
       if (error) {
-        setCatchError(error.longMessage ?? error.message ?? 'Sign-in failed.');
+        setCatchError(error.longMessage ?? error.message ?? t('auth.signInFailed'));
         return;
       }
       if (signIn.status === 'complete') {
@@ -79,14 +81,14 @@ export default function SignInScreen() {
       ) {
         await sendMfaCode();
       } else {
-        setCatchError(`Unexpected sign-in status: ${signIn.status}. Please try again.`);
+        setCatchError(t('auth.unexpectedStatus'));
       }
     } catch (err: any) {
       const msg =
         err?.errors?.[0]?.longMessage ||
         err?.errors?.[0]?.message ||
         err?.message ||
-        'Sign-in failed. Please check your connection and try again.';
+        t('auth.signInFailed');
       setCatchError(msg);
     }
   }
@@ -104,14 +106,14 @@ export default function SignInScreen() {
           },
         });
       } else {
-        setCatchError('Verification failed. Please try again.');
+        setCatchError(t('auth.verifyFailed'));
       }
     } catch (err: any) {
       const msg =
         err?.errors?.[0]?.longMessage ||
         err?.errors?.[0]?.message ||
         err?.message ||
-        'Verification failed.';
+        t('auth.verifyFailed');
       setCatchError(msg);
     }
   }
@@ -123,7 +125,6 @@ export default function SignInScreen() {
     errors?.fields?.code?.message ||
     '';
 
-  // ── MFA / device trust verification screen ────────────────────────────────
   if (needsMfa) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
@@ -133,8 +134,8 @@ export default function SignInScreen() {
               <Icon name="shield" size={26} color="#1A1630" />
             </LinearGradient>
           </View>
-          <Text style={styles.title}>Verify your device</Text>
-          <Text style={styles.subtitle}>Enter the code sent to your email to continue</Text>
+          <Text style={styles.title}>{t('auth.verifyTitle')}</Text>
+          <Text style={styles.subtitle}>{t('auth.verifySub')}</Text>
 
           <View style={[styles.field, { marginTop: 8 }]}>
             <View style={styles.inputWrap}>
@@ -142,7 +143,7 @@ export default function SignInScreen() {
               <TextInput
                 style={styles.input}
                 value={code}
-                onChangeText={t => { setCode(t); setCatchError(''); }}
+                onChangeText={v => { setCode(v); setCatchError(''); }}
                 keyboardType="number-pad"
                 placeholder="000000"
                 placeholderTextColor="rgba(200,184,232,0.4)"
@@ -161,22 +162,21 @@ export default function SignInScreen() {
           >
             {isLoading
               ? <ActivityIndicator color="#fff" />
-              : <><Text style={styles.btnText}>Verify</Text><Text style={styles.btnStar}>✦</Text></>
+              : <><Text style={styles.btnText}>{t('auth.verify')}</Text><Text style={styles.btnStar}>✦</Text></>
             }
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.textBtn} onPress={sendMfaCode}>
-            <Text style={styles.textBtnText}>Resend code</Text>
+            <Text style={styles.textBtnText}>{t('auth.resendCode')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.textBtn} onPress={() => { signIn.reset(); setCode(''); setCatchError(''); }}>
-            <Text style={styles.textBtnText}>← Back to sign in</Text>
+            <Text style={styles.textBtnText}>{t('auth.backToSignIn')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
     );
   }
 
-  // ── Password screen ────────────────────────────────────────────────────────
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
       {SPARKLES.map((sp, i) => (
@@ -205,21 +205,21 @@ export default function SignInScreen() {
           </View>
 
           <Text style={styles.appName}>Sky Journal</Text>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+          <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+          <Text style={styles.subtitle}>{t('auth.signInSub')}</Text>
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <Text style={styles.label}>Email address</Text>
+              <Text style={styles.label}>{t('auth.email')}</Text>
               <View style={styles.inputWrap}>
                 <Icon name="mail" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={t => { setEmail(t); setCatchError(''); }}
+                  onChangeText={v => { setEmail(v); setCatchError(''); }}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholder="your@email.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   placeholderTextColor="rgba(200,184,232,0.4)"
                   autoComplete="email"
                 />
@@ -227,15 +227,15 @@ export default function SignInScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('auth.password')}</Text>
               <View style={styles.inputWrap}>
                 <Icon name="lock" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
-                  onChangeText={t => { setPassword(t); setCatchError(''); }}
+                  onChangeText={v => { setPassword(v); setCatchError(''); }}
                   secureTextEntry={!showPassword}
-                  placeholder="Enter your password"
+                  placeholder={t('auth.passwordPlaceholder')}
                   placeholderTextColor="rgba(200,184,232,0.4)"
                   autoComplete="password"
                 />
@@ -254,7 +254,7 @@ export default function SignInScreen() {
             >
               {isLoading
                 ? <ActivityIndicator color="#fff" />
-                : <><Text style={styles.btnText}>Continue</Text><Text style={styles.btnStar}>✦</Text></>
+                : <><Text style={styles.btnText}>{t('auth.continue')}</Text><Text style={styles.btnStar}>✦</Text></>
               }
             </TouchableOpacity>
 
@@ -263,13 +263,13 @@ export default function SignInScreen() {
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>New to Sky Journal?</Text>
+            <Text style={styles.dividerText}>{t('auth.newHere')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           <Link href={'/(auth)/sign-up' as any} asChild>
             <Pressable style={styles.outlineBtn}>
-              <Text style={styles.outlineBtnText}>Create an account</Text>
+              <Text style={styles.outlineBtnText}>{t('auth.createAccount')}</Text>
             </Pressable>
           </Link>
         </ScrollView>

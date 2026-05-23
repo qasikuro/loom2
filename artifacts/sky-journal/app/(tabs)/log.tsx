@@ -22,12 +22,14 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { useApp, type JournalEntry, type JournalEntryType } from '@/context/AppContext';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
+import { useTranslation } from 'react-i18next';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type FilterKey = 'all' | JournalEntryType;
+type TFunc = (key: string, opts?: Record<string, unknown>) => string;
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, t: TFunc): string {
   const d    = new Date(dateStr);
   const now  = new Date();
   const diff = now.getTime() - d.getTime();
@@ -35,13 +37,13 @@ function relativeTime(dateStr: string): string {
   const hours = Math.floor(diff / 3_600_000);
   const days  = Math.floor(diff / 86_400_000);
   const weeks = Math.floor(days / 7);
-  if (mins  < 1)  return 'just now';
-  if (mins  < 60) return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days  === 1) return 'yesterday';
-  if (days  < 7)  return `${days} days ago`;
-  if (weeks === 1) return '1 week ago';
-  return `${weeks} weeks ago`;
+  if (mins  < 1)  return t('common.justNow');
+  if (mins  < 60) return t('common.minsAgo', { n: mins });
+  if (hours < 24) return t('common.hoursAgo', { n: hours });
+  if (days  === 1) return t('common.yesterday');
+  if (days  < 7)  return t('common.daysAgo', { n: days });
+  if (weeks === 1) return t('common.weekAgo');
+  return t('common.weeksAgo', { n: weeks });
 }
 
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -52,16 +54,16 @@ function toDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 
-function formatHeader(dk: string) {
+function formatHeader(dk: string, t: TFunc): string {
   const today = toDateKey(new Date());
   const yest  = (() => { const d = new Date(); d.setDate(d.getDate()-1); return toDateKey(d); })();
-  if (dk === today) return 'Today';
-  if (dk === yest)  return 'Yesterday';
-  const [y,m,d] = dk.split('-').map(Number);
-  return `${MONTH_SHORT[m-1]} ${d}, ${y}`;
+  if (dk === today) return t('common.today');
+  if (dk === yest)  return t('common.yesterday');
+  const [y, m, d] = dk.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function groupByDate(entries: JournalEntry[]) {
+function groupByDate(entries: JournalEntry[], t: TFunc) {
   const map: Record<string, JournalEntry[]> = {};
   for (const e of entries) {
     const k = toDateKey(new Date(e.date));
@@ -69,15 +71,15 @@ function groupByDate(entries: JournalEntry[]) {
   }
   return Object.entries(map)
     .sort(([a],[b]) => b.localeCompare(a))
-    .map(([date, data]) => ({ date, label: formatHeader(date), data }));
+    .map(([date, data]) => ({ date, label: formatHeader(date, t), data }));
 }
 
 // ── Avatar config per entry type ───────────────────────────────────────────────
 
 const AVATAR_CFG = {
-  diary:  { bg: '#6B5B95', icon: 'feather' as const,   label: 'Diary Entry'   },
-  friend: { bg: '#4A6898', icon: 'users'   as const,   label: 'Friend'        },
-  moment: { bg: '#3A2E68', icon: 'moon'    as const,   label: 'Quick Moment'  },
+  diary:  { bg: '#6B5B95', icon: 'feather' as const,   labelKey: 'log.diaryLabel'   },
+  friend: { bg: '#4A6898', icon: 'users'   as const,   labelKey: 'log.friendLabel'  },
+  moment: { bg: '#3A2E68', icon: 'moon'    as const,   labelKey: 'log.momentLabel'  },
 };
 
 // ── Timeline entry card ───────────────────────────────────────────────────────
@@ -85,6 +87,7 @@ const AVATAR_CFG = {
 function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () => void }) {
   const colors = useColors();
   const cfg    = AVATAR_CFG[entry.type];
+  const { t }  = useTranslation();
   const [confirming, setConfirming] = React.useState(false);
   const confirmTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -100,7 +103,7 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
   }
 
   const displayName =
-    entry.type === 'friend' ? (entry.friendName ?? 'Someone') : cfg.label;
+    entry.type === 'friend' ? (entry.friendName ?? 'Someone') : t(cfg.labelKey);
 
   const initial =
     entry.type === 'friend'
@@ -132,7 +135,7 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
             {displayName}
           </Text>
           <Text style={[tc.timeText, { color: colors.mutedForeground }]}>
-            {relativeTime(entry.date)}
+            {relativeTime(entry.date, t)}
           </Text>
         </View>
 
@@ -161,13 +164,13 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
         {entry.type === 'friend' && !!entry.friendName && (
           <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.22)', borderColor:'rgba(74,104,152,0.38)' }]}>
             <Icon name="users" size={10} color="#7AAAE0" />
-            <Text style={[tc.typePillText, { color:'#7AAAE0' }]}>With {entry.friendName}</Text>
+            <Text style={[tc.typePillText, { color:'#7AAAE0' }]}>{t('log.withFriend', { name: entry.friendName })}</Text>
           </View>
         )}
         {entry.type === 'moment' && (
           <View style={[tc.typePill, { backgroundColor:'rgba(88,72,168,0.22)', borderColor:'rgba(88,72,168,0.38)' }]}>
             <Icon name="moon" size={10} color="#B0A0E0" />
-            <Text style={[tc.typePillText, { color:'#B0A0E0' }]}>Moment</Text>
+            <Text style={[tc.typePillText, { color:'#B0A0E0' }]}>{t('log.moment')}</Text>
           </View>
         )}
         <TouchableOpacity
@@ -177,7 +180,7 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
           activeOpacity={0.75}
         >
           {confirming
-            ? <Text style={tc.deleteBtnText}>Delete?</Text>
+            ? <Text style={tc.deleteBtnText}>{t('common.deleteConfirm')}</Text>
             : <Icon name="trash-2" size={12} color={colors.mutedForeground} />
           }
         </TouchableOpacity>
@@ -312,23 +315,31 @@ const FILTER_ICONS: Record<FilterKey, { name: 'book-open' | 'feather' | 'users' 
   moment: { name: 'moon',      color: '#5848A8' },
 };
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key:'all',    label:'All'     },
-  { key:'diary',  label:'Diary'   },
-  { key:'friend', label:'Friends' },
-  { key:'moment', label:'Moments' },
+const FILTERS: { key: FilterKey }[] = [
+  { key: 'all'    },
+  { key: 'diary'  },
+  { key: 'friend' },
+  { key: 'moment' },
 ];
+
+const FILTER_LABEL_KEYS: Record<FilterKey, string> = {
+  all:    'log.allFilter',
+  diary:  'log.diary',
+  friend: 'log.friends',
+  moment: 'log.moments',
+};
 
 // ── Compose FAB ───────────────────────────────────────────────────────────────
 
 const COMPOSE_TYPES = [
-  { type: 'moment',  label: 'Moment',   icon: 'moon'    as const, color: '#5848A8', bg: 'rgba(88,72,168,0.14)'  },
-  { type: 'friend',  label: 'Friend',   icon: 'users'   as const, color: '#4A6898', bg: 'rgba(74,104,152,0.14)' },
-  { type: 'diary',   label: 'Diary',    icon: 'feather' as const, color: '#6B5B95', bg: 'rgba(107,91,149,0.14)' },
+  { type: 'moment',  labelKey: 'log.composeMoment', icon: 'moon'    as const, color: '#5848A8', bg: 'rgba(88,72,168,0.14)'  },
+  { type: 'friend',  labelKey: 'log.composeFriend', icon: 'users'   as const, color: '#4A6898', bg: 'rgba(74,104,152,0.14)' },
+  { type: 'diary',   labelKey: 'log.composeDiary',  icon: 'feather' as const, color: '#6B5B95', bg: 'rgba(107,91,149,0.14)' },
 ] as const;
 
 function ComposeFAB({ bottomPad }: { bottomPad: number }) {
   const colors     = useColors();
+  const { t }      = useTranslation();
   const [open, setOpen] = useState(false);
   const anim       = useRef(new Animated.Value(0)).current;
   const floatAnim  = useRef(new Animated.Value(0)).current;
@@ -382,7 +393,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
         return (
           <Animated.View key={item.type} style={[fab.actionRow, { opacity, transform: [{ translateY }] }]}>
             <View style={[fab.actionLabel, { backgroundColor: 'rgba(26,22,48,0.88)' }]}>
-              <Text style={fab.actionLabelText}>{item.label}</Text>
+              <Text style={fab.actionLabelText}>{t(item.labelKey)}</Text>
             </View>
             <TouchableOpacity
               style={[fab.actionBtn, { backgroundColor: item.bg, borderColor: `${item.color}40` }]}
@@ -421,6 +432,7 @@ const fab = StyleSheet.create({
 export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
+  const { t }   = useTranslation();
   const { journalEntries, deleteJournalEntry } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 160;
@@ -445,7 +457,7 @@ export default function JournalScreen() {
     );
   }), [journalEntries, activeFilter, searchQuery]);
 
-  const sections = useMemo(() => groupByDate(filtered), [filtered]);
+  const sections = useMemo(() => groupByDate(filtered, t), [filtered, t]);
 
   const counts = {
     all:    journalEntries.length,
@@ -481,10 +493,10 @@ export default function JournalScreen() {
         {/* Top row */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.title}>My Journal</Text>
+            <Text style={styles.title}>{t('profile.journal')}</Text>
             <View style={styles.privateBadge}>
               <Icon name="lock" size={10} color="rgba(200,184,232,0.7)" />
-              <Text style={styles.privateBadgeText}>Private</Text>
+              <Text style={styles.privateBadgeText}>{t('common.private')}</Text>
             </View>
           </View>
           <View style={styles.headerRight}>
@@ -521,7 +533,7 @@ export default function JournalScreen() {
                   color={isActive ? ic.color : 'rgba(200,184,232,0.6)'}
                 />
                 <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
-                  {f.label}
+                  {t(FILTER_LABEL_KEYS[f.key])}
                 </Text>
                 {count > 0 && (
                   <View style={[styles.filterCount, isActive && styles.filterCountActive]}>

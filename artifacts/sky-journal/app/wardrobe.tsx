@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { useApp, type Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -168,6 +169,7 @@ function OutfitCard({ outfit, isActive, onSetActive, colors }: {
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyState({ colors }: { colors: ReturnType<typeof useColors> }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyWrap}>
       <LinearGradient
@@ -176,7 +178,7 @@ function EmptyState({ colors }: { colors: ReturnType<typeof useColors> }) {
       >
         <Text style={styles.emptyIconText}>✦</Text>
       </LinearGradient>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No outfits logged yet</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('profile.noOutfitsYet')}</Text>
       <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
         Record your daily Sky looks and{'\n'}build your wardrobe over time.
       </Text>
@@ -185,7 +187,7 @@ function EmptyState({ colors }: { colors: ReturnType<typeof useColors> }) {
         onPress={() => { Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
       >
         <Icon name="plus" size={14} color="#fff" />
-        <Text style={styles.emptyBtnText}>Log First Outfit</Text>
+        <Text style={styles.emptyBtnText}>{t('profile.logFirstOutfitBtn')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -194,6 +196,7 @@ function EmptyState({ colors }: { colors: ReturnType<typeof useColors> }) {
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function WardrobeScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { outfits, activeOutfitId, setActiveOutfitId } = useApp();
 
@@ -239,7 +242,7 @@ export default function WardrobeScreen() {
           <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Wardrobe</Text>
+        <Text style={styles.headerTitle}>{t('profile.wardrobeTitle')}</Text>
 
         <TouchableOpacity
           style={[styles.headerBtn, styles.headerBtnAccent]}
@@ -278,7 +281,7 @@ export default function WardrobeScreen() {
           >
             <Icon name="star" size={28} color={`${colors.primary}70`} />
           </LinearGradient>
-          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Coming soon</Text>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('common.comingSoon')}</Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
             Accessories logging will be{'\n'}available in a future update.
           </Text>

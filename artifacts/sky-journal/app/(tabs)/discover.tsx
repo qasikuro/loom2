@@ -3,6 +3,7 @@ import { DiscoverCard } from '@/components/DiscoverCard';
 import { ReportSheet } from '@/components/ReportSheet';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +28,13 @@ const SCREEN_W = Dimensions.get('window').width;
 const TABS = ['For You', 'New', 'Vibes', 'People'] as const;
 type TabType = (typeof TABS)[number];
 
+const TAB_LABEL_KEYS: Record<TabType, string> = {
+  'For You': 'discover.forYou',
+  'New':     'discover.new',
+  'Vibes':   'discover.vibes',
+  'People':  'discover.people',
+};
+
 const VIBES = [
   { label: 'Soft',        icon: 'feather'  as const, color: '#9B87C8', dark: '#2D1E4A' },
   { label: 'Lonely',      icon: 'moon'     as const, color: '#6B8EC8', dark: '#1A2A4A' },
@@ -50,6 +58,7 @@ interface UserSearchResult {
 export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
+  const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('For You');
@@ -128,8 +137,8 @@ export default function DiscoverScreen() {
         {/* Title row */}
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Discover</Text>
-            <Text style={styles.headerSub}>Stories from the sky</Text>
+            <Text style={styles.headerTitle}>{t('discover.title')}</Text>
+            <Text style={styles.headerSub}>{t('discover.subTitle')}</Text>
           </View>
           <TouchableOpacity
             style={styles.usersBtn}
@@ -160,7 +169,7 @@ export default function DiscoverScreen() {
                   styles.tabText,
                   { color: active ? '#C8B8F8' : 'rgba(200,184,232,0.55)' },
                 ]}>
-                  {tab}
+                  {t(TAB_LABEL_KEYS[tab])}
                 </Text>
               </TouchableOpacity>
             );
@@ -211,7 +220,7 @@ export default function DiscoverScreen() {
                 onPress={() => setSelectedVibe(null)}
               >
                 <Icon name="arrow-left" size={14} color={colors.foreground} />
-                <Text style={[styles.backText, { color: colors.foreground }]}>{selectedVibe}</Text>
+                <Text style={[styles.backText, { color: colors.foreground }]}>{t(`moods.${selectedVibe}` as any)}</Text>
               </TouchableOpacity>
 
               {vibePosts.length === 0 ? (
@@ -232,7 +241,7 @@ export default function DiscoverScreen() {
           ) : (
             <>
               <Text style={[styles.vibeHint, { color: colors.mutedForeground }]}>
-                Find stories that match your mood
+                {t('discover.findMood')}
               </Text>
               <View style={styles.vibeGrid}>
                 {VIBES.map(vibe => {
@@ -253,9 +262,9 @@ export default function DiscoverScreen() {
                       <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}28` }]}>
                         <Icon name={vibe.icon} size={22} color={vibe.color} />
                       </View>
-                      <Text style={[styles.vibeLabel, { color: vibe.color }]}>{vibe.label}</Text>
+                      <Text style={[styles.vibeLabel, { color: vibe.color }]}>{t(`moods.${vibe.label}` as any)}</Text>
                       <Text style={[styles.vibeCount, { color: `${vibe.color}70` }]}>
-                        {count} {count === 1 ? 'story' : 'stories'}
+                        {count} {count === 1 ? t('discover.story') : t('discover.stories')}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -284,7 +293,7 @@ export default function DiscoverScreen() {
               style={[styles.searchInput, { color: colors.foreground }]}
               value={peopleQuery}
               onChangeText={handlePeopleSearch}
-              placeholder="Search by name or @username…"
+              placeholder={t('discover.searchPlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               autoCorrect={false}
               autoCapitalize="none"
@@ -367,7 +376,7 @@ export default function DiscoverScreen() {
                         color={isFollowing ? colors.primary : '#fff'}
                       />
                       <Text style={[styles.followBtnText, { color: isFollowing ? colors.primary : '#fff' }]}>
-                        {isFollowing ? 'Following' : 'Follow'}
+                        {isFollowing ? t('discover.following') : t('discover.follow')}
                       </Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -384,16 +393,15 @@ export default function DiscoverScreen() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function EmptyFeed({ tab, colors, onCreatePress }: { tab: string; colors: any; onCreatePress: () => void }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyWrap}>
       <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
         <Icon name="compass" size={30} color={`${colors.primary}70`} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>The sky is quiet</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discover.emptyFeed')}</Text>
       <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        {tab === 'For You'
-          ? 'Follow other wanderers to see their stories here first.'
-          : 'No public stories yet. Be the first to share one.'}
+        {t('discover.emptyFeedSub')}
       </Text>
       <TouchableOpacity
         style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
@@ -401,21 +409,22 @@ function EmptyFeed({ tab, colors, onCreatePress }: { tab: string; colors: any; o
         activeOpacity={0.85}
       >
         <Icon name="plus" size={14} color="#fff" />
-        <Text style={styles.ctaBtnText}>Share a Story</Text>
+        <Text style={styles.ctaBtnText}>{t('discover.beFirst')}</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 function EmptyVibes({ vibe, colors, onCreatePress }: { vibe: string; colors: any; onCreatePress: () => void }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyWrap}>
       <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
         <Icon name="compass" size={30} color={`${colors.primary}70`} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Sky is quiet here</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discover.emptyFeed')}</Text>
       <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        No public {vibe} stories yet. Be the first.
+        {t('discover.emptyVibes', { vibe: t(`moods.${vibe}` as any) })}
       </Text>
       <TouchableOpacity
         style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
@@ -423,7 +432,7 @@ function EmptyVibes({ vibe, colors, onCreatePress }: { vibe: string; colors: any
         activeOpacity={0.85}
       >
         <Icon name="plus" size={14} color="#fff" />
-        <Text style={styles.ctaBtnText}>Share a Story</Text>
+        <Text style={styles.ctaBtnText}>{t('discover.beFirst')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -452,14 +461,15 @@ function PeopleEmptyStart({ colors }: { colors: any }) {
 }
 
 function PeopleNoResults({ colors }: { colors: any }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyWrap}>
       <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
         <Icon name="search" size={30} color={`${colors.primary}70`} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No wanderers found</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discover.noResults')}</Text>
       <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        Try a different name or username.
+        {t('discover.tryDifferent')}
       </Text>
     </View>
   );

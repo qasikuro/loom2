@@ -3,6 +3,7 @@ import { useSignUp } from '@clerk/expo';
 import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -27,6 +28,7 @@ const SPARKLES = [
 ];
 
 export default function SignUpScreen() {
+  const { t } = useTranslation();
   const { signUp, errors, fetchStatus } = useSignUp();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -78,14 +80,14 @@ export default function SignUpScreen() {
           },
         });
       } else {
-        setCatchError('Verification could not be completed. Please try again.');
+        setCatchError(t('auth.verifyFailed'));
       }
     } catch (err: any) {
       const msg =
         err?.errors?.[0]?.longMessage ||
         err?.errors?.[0]?.message ||
         err?.message ||
-        'Verification failed. Please try again.';
+        t('auth.verifyFailed');
       setCatchError(msg);
     }
   }
@@ -97,7 +99,6 @@ export default function SignUpScreen() {
     errors?.fields?.code?.message ||
     '';
 
-  // ── Verification screen ────────────────────────────────────────────────────
   if (needsVerification) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
@@ -107,22 +108,21 @@ export default function SignUpScreen() {
               <Text style={styles.iconStar}>✦</Text>
             </LinearGradient>
           </View>
-          <Text style={styles.title}>Check your email</Text>
+          <Text style={styles.title}>{t('auth.checkEmail')}</Text>
           <Text style={styles.subtitle}>
-            We sent a verification code to{'\n'}
-            <Text style={{ color: '#C8A84B' }}>{email}</Text>
+            {t('auth.codeSentTo', { email })}
           </Text>
 
           <View style={[styles.field, { marginTop: 8 }]}>
-            <Text style={styles.label}>Verification Code</Text>
+            <Text style={styles.label}>{t('auth.verificationCode')}</Text>
             <View style={styles.inputWrap}>
               <Icon name="shield" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 value={code}
-                onChangeText={t => { setCode(t); setCatchError(''); }}
+                onChangeText={v => { setCode(v); setCatchError(''); }}
                 keyboardType="number-pad"
-                placeholder="Enter 6-digit code"
+                placeholder={t('auth.enterCode')}
                 placeholderTextColor="rgba(200,184,232,0.4)"
                 autoFocus
               />
@@ -138,22 +138,21 @@ export default function SignUpScreen() {
           >
             {isLoading
               ? <ActivityIndicator color="#fff" />
-              : <><Text style={styles.btnText}>Verify & Enter</Text><Text style={styles.btnStar}>✦</Text></>
+              : <><Text style={styles.btnText}>{t('auth.verifyEnter')}</Text><Text style={styles.btnStar}>✦</Text></>
             }
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.textBtn} onPress={() => signUp.verifications.sendEmailCode()}>
-            <Text style={styles.textBtnText}>Resend code</Text>
+            <Text style={styles.textBtnText}>{t('auth.resendCode')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.textBtn} onPress={() => { signUp.reset(); setCode(''); setCatchError(''); }}>
-            <Text style={styles.textBtnText}>Start over</Text>
+            <Text style={styles.textBtnText}>{t('auth.startOver')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
     );
   }
 
-  // ── Sign-up form ───────────────────────────────────────────────────────────
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
       {SPARKLES.map((sp, i) => (
@@ -182,21 +181,21 @@ export default function SignUpScreen() {
           </View>
 
           <Text style={styles.appName}>Sky Journal</Text>
-          <Text style={styles.title}>Begin your journey</Text>
-          <Text style={styles.subtitle}>Create your account to save your sky memories</Text>
+          <Text style={styles.title}>{t('auth.beginJourney')}</Text>
+          <Text style={styles.subtitle}>{t('auth.signUpSub')}</Text>
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <Text style={styles.label}>Email address</Text>
+              <Text style={styles.label}>{t('auth.email')}</Text>
               <View style={styles.inputWrap}>
                 <Icon name="mail" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={email}
-                  onChangeText={t => { setEmail(t); setCatchError(''); }}
+                  onChangeText={v => { setEmail(v); setCatchError(''); }}
                   autoCapitalize="none"
                   keyboardType="email-address"
-                  placeholder="your@email.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   placeholderTextColor="rgba(200,184,232,0.4)"
                   autoComplete="email"
                 />
@@ -204,15 +203,15 @@ export default function SignUpScreen() {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={styles.label}>{t('auth.password')}</Text>
               <View style={styles.inputWrap}>
                 <Icon name="lock" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
                 <TextInput
                   style={[styles.input, { paddingRight: 44 }]}
                   value={password}
-                  onChangeText={t => { setPassword(t); setCatchError(''); }}
+                  onChangeText={v => { setPassword(v); setCatchError(''); }}
                   secureTextEntry={!showPassword}
-                  placeholder="Create a strong password"
+                  placeholder={t('auth.passwordCreatePlaceholder')}
                   placeholderTextColor="rgba(200,184,232,0.4)"
                   autoComplete="new-password"
                 />
@@ -231,7 +230,7 @@ export default function SignUpScreen() {
             >
               {isLoading
                 ? <ActivityIndicator color="#fff" />
-                : <><Text style={styles.btnText}>Create account</Text><Text style={styles.btnStar}>✦</Text></>
+                : <><Text style={styles.btnText}>{t('auth.createAccountBtn')}</Text><Text style={styles.btnStar}>✦</Text></>
               }
             </TouchableOpacity>
 
@@ -240,13 +239,13 @@ export default function SignUpScreen() {
 
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Already have an account?</Text>
+            <Text style={styles.dividerText}>{t('auth.alreadyHave')}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           <Link href={'/(auth)/sign-in' as any} asChild>
             <Pressable style={styles.outlineBtn}>
-              <Text style={styles.outlineBtnText}>Sign in</Text>
+              <Text style={styles.outlineBtnText}>{t('auth.signIn')}</Text>
             </Pressable>
           </Link>
         </ScrollView>

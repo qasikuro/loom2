@@ -24,6 +24,7 @@ import { Images } from '@/assets/images';
 import { useApp } from '@/context/AppContext';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
+import { useTranslation } from 'react-i18next';
 
 const CATEGORIES = [
   {
@@ -96,6 +97,7 @@ const SPARKLES = [
 
 export default function HomeScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const { width: screenW } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const {
@@ -279,8 +281,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <View style={styles.nameBlock}>
-            <Text style={styles.charName} numberOfLines={1}>{character.name || 'Sky Child'}</Text>
-            <Text style={styles.subtitle}>Your journey, your memories.</Text>
+            <Text style={styles.charName} numberOfLines={1}>{character.name || t('home.skyChild')}</Text>
+            <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
           </View>
 
           <View style={styles.headerIcons}>
@@ -306,19 +308,19 @@ export default function HomeScreen() {
         <View style={styles.statsStrip}>
           <View style={styles.statPill}>
             <Icon name="book-open" size={12} color="rgba(200,184,232,0.65)" />
-            <Text style={styles.statPillText}>{journalEntries.length} entries</Text>
+            <Text style={styles.statPillText}>{t('home.entries', { n: journalEntries.length })}</Text>
           </View>
           <View style={styles.statDot} />
           <View style={styles.statPill}>
             <Icon name="layers" size={12} color="rgba(200,184,232,0.65)" />
-            <Text style={styles.statPillText}>{stories.length} stories</Text>
+            <Text style={styles.statPillText}>{t('home.stories', { n: stories.length })}</Text>
           </View>
           {lastSeen && (
             <>
               <View style={styles.statDot} />
               <View style={styles.statPill}>
                 <Icon name="clock" size={12} color="rgba(200,184,232,0.65)" />
-                <Text style={styles.statPillText}>Last: {lastSeen}</Text>
+                <Text style={styles.statPillText}>{t('home.lastSeen', { date: lastSeen })}</Text>
               </View>
             </>
           )}
@@ -373,7 +375,7 @@ export default function HomeScreen() {
 
           {/* Label */}
           <View style={styles.charHeroLabel}>
-            <Text style={styles.charHeroLabelText}>MY SKY KID</Text>
+            <Text style={styles.charHeroLabelText}>{t('home.mySkykid')}</Text>
             {activeOutfit && (
               <View style={styles.outfitNamePill}>
                 <Icon name="star" size={9} color="rgba(200,168,75,0.9)" />
@@ -413,12 +415,12 @@ export default function HomeScreen() {
           >
             <View style={styles.charInfoLeft}>
               <View style={styles.charNameRow}>
-                <Text style={[styles.charInfoName, { color: colors.foreground }]}>{character.name || 'Sky Child'}</Text>
+                <Text style={[styles.charInfoName, { color: colors.foreground }]}>{character.name || t('home.skyChild')}</Text>
                 <Text style={[styles.charInfoStar, { color: colors.gold }]}>✦</Text>
               </View>
               {character.bio
                 ? <Text style={[styles.charInfoBio, { color: colors.mutedForeground }]} numberOfLines={2}>{character.bio}</Text>
-                : <Text style={[styles.charInfoBioEmpty, { color: `${colors.mutedForeground}80` }]}>Tap to set your character bio...</Text>
+                : <Text style={[styles.charInfoBioEmpty, { color: `${colors.mutedForeground}80` }]}>{t('home.tapBio')}</Text>
               }
               {character.traits.length > 0 && (
                 <View style={styles.charInfoTraits}>
@@ -431,14 +433,14 @@ export default function HomeScreen() {
               )}
             </View>
             <View style={styles.charInfoRight}>
-              <Text style={[styles.charInfoCta, { color: colors.primary }]}>Edit</Text>
+              <Text style={[styles.charInfoCta, { color: colors.primary }]}>{t('home.edit')}</Text>
               <Icon name="chevron-right" size={14} color={`${colors.primary}80`} />
             </View>
           </TouchableOpacity>
         </Animated.View>
 
         {/* Section label */}
-        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Features being added</Text>
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('home.featuresBeingAdded')}</Text>
 
         {/* ── Animated navigation cards ──────────────────────── */}
         <View style={styles.hList}>
@@ -506,7 +508,7 @@ export default function HomeScreen() {
           >
             <View style={[styles.sheetHandle, { backgroundColor: `${colors.primary}30` }]} />
             <View style={styles.pickerHeader}>
-              <Text style={[styles.pickerTitle, { color: colors.foreground }]}>Choose Display Outfit</Text>
+              <Text style={[styles.pickerTitle, { color: colors.foreground }]}>{t('home.chooseOutfit')}</Text>
               <TouchableOpacity
                 style={[styles.closeBtn, { backgroundColor: colors.muted }]}
                 onPress={() => setShowOutfitPicker(false)}
@@ -515,7 +517,7 @@ export default function HomeScreen() {
                 <Icon name="x" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
-            <Text style={[styles.pickerSub, { color: colors.mutedForeground }]}>Selected outfit shows on your home & profile</Text>
+            <Text style={[styles.pickerSub, { color: colors.mutedForeground }]}>{t('home.outfitSubtitle')}</Text>
 
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerRow}>
               <TouchableOpacity
@@ -525,7 +527,7 @@ export default function HomeScreen() {
                 <View style={[styles.pickerCardImg, { backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}>
                   <Icon name="slash" size={22} color={colors.mutedForeground} />
                 </View>
-                <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]}>None</Text>
+                <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]}>{t('home.none')}</Text>
                 {!activeOutfitId && (
                   <View style={[styles.pickerActiveDot, { backgroundColor: colors.primary }]}><Icon name="check" size={10} color="#fff" /></View>
                 )}

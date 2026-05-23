@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp, type Story } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTranslation } from 'react-i18next';
 
 const { width: SW } = Dimensions.get('window');
 const GUTTER  = 14;
@@ -114,6 +115,7 @@ function StoryCard({ story, colors }: { story: Story; colors: ReturnType<typeof 
 
 // ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyState({ tab, colors }: { tab: string; colors: ReturnType<typeof useColors> }) {
+  const { t: tr } = useTranslation();
   return (
     <View style={styles.emptyWrap}>
       <LinearGradient
@@ -136,7 +138,7 @@ function EmptyState({ tab, colors }: { tab: string; colors: ReturnType<typeof us
           onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/create' as any); }}
         >
           <Icon name="plus" size={14} color="#fff" />
-          <Text style={styles.emptyBtnText}>Create Story</Text>
+          <Text style={styles.emptyBtnText}>{tr('create.createStory')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -146,6 +148,7 @@ function EmptyState({ tab, colors }: { tab: string; colors: ReturnType<typeof us
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function MyStoriesScreen() {
   const colors = useColors();
+  const { t: tr } = useTranslation();
   const insets = useSafeAreaInsets();
   const { stories } = useApp();
 
@@ -181,7 +184,7 @@ export default function MyStoriesScreen() {
         >
           <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Stories</Text>
+        <Text style={styles.headerTitle}>{tr('profile.myStoriesTitle')}</Text>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/create' as any); }}
@@ -207,7 +210,7 @@ export default function MyStoriesScreen() {
               { color: tab === t ? '#fff' : colors.mutedForeground },
               tab === t && { fontFamily: 'Inter_600SemiBold' },
             ]}>
-              {t === 'mine' ? 'My Stories' : 'Shared with Me'}
+              {t === 'mine' ? tr('profile.myStoriesTitle') : tr('profile.sharedWithMe')}
             </Text>
           </TouchableOpacity>
         ))}

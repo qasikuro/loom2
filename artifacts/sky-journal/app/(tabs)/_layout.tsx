@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import React, { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -94,6 +95,7 @@ function ClassicTabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const isWeb  = Platform.OS === 'web';
+  const { t }  = useTranslation();
 
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 8);
 
@@ -136,7 +138,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('nav.home'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="home" color={color} focused={focused} primaryColor={colors.primary} />
           ),
@@ -145,7 +147,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="log"
         options={{
-          title: 'Journal',
+          title: t('nav.journal'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="book-open" color={color} focused={focused} primaryColor={colors.primary} />
           ),
@@ -163,7 +165,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="discover"
         options={{
-          title: 'Discover',
+          title: t('nav.discover'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="compass" color={color} focused={focused} primaryColor={colors.primary} />
           ),
@@ -172,7 +174,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('nav.profile'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="user" color={color} focused={focused} primaryColor={colors.primary} />
           ),

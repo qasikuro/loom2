@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import React, { useRef, useState } from 'react';
 import {
   Platform,
@@ -39,6 +40,7 @@ const PROMPTS = [
 
 export default function CreateMomentLogScreen() {
   const colors = useColors();
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { addJournalEntry } = useApp();
   const inputRef = useRef<TextInput>(null);
@@ -88,10 +90,10 @@ export default function CreateMomentLogScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🌙</Text>
-          <Text style={styles.headerTitle}>Quick Moment</Text>
+          <Text style={styles.headerTitle}>{t('journal.quickMomentTitle')}</Text>
           <View style={styles.privatePill}>
             <Icon name="lock" size={10} color="rgba(200,184,232,0.7)" />
-            <Text style={styles.privatePillText}>Private</Text>
+            <Text style={styles.privatePillText}>{t('common.private')}</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -133,7 +135,7 @@ export default function CreateMomentLogScreen() {
         <Text style={styles.charCount}>{text.length} characters</Text>
 
         {/* Mood */}
-        <Text style={styles.moodLabel}>How are you feeling?</Text>
+        <Text style={styles.moodLabel}>{t('journal.moodPlaceholder')}</Text>
         <View style={styles.moodGrid}>
           {MOODS.map(m => (
             <TouchableOpacity key={m.label}
