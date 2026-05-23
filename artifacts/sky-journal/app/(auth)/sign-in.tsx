@@ -20,37 +20,24 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type AuthMode = 'password' | 'emailCode';
-
 export default function SignInScreen() {
   const { t } = useTranslation();
   const { signIn, errors, fetchStatus } = useSignIn();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [authMode, setAuthMode]           = useState<AuthMode>('password');
-  const [email, setEmail]                 = useState('');
-  const [password, setPassword]           = useState('');
-  const [showPassword, setShowPassword]   = useState(false);
-  const [code, setCode]                   = useState('');
-  const [catchError, setCatchError]       = useState('');
-  const [emailCodeSent, setEmailCodeSent] = useState(false);
-  const [codeSentMsg, setCodeSentMsg]     = useState('');
-  const [focusedField, setFocusedField]   = useState<string | null>(null);
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [code, setCode]                 = useState('');
+  const [catchError, setCatchError]     = useState('');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const isLoading = fetchStatus === 'fetching';
 
   const needsMfa =
     signIn?.status === 'needs_client_trust' ||
     signIn?.status === 'needs_second_factor';
-
-  function switchMode(mode: AuthMode) {
-    setAuthMode(mode);
-    setCatchError('');
-    setCode('');
-    setEmailCodeSent(false);
-    setCodeSentMsg('');
-  }
 
   async function sendMfaCode() {
     if (!signIn) return;
@@ -68,14 +55,21 @@ export default function SignInScreen() {
       const { error } = await signIn.password({ emailAddress: email.trim(), password });
       if (error) { setCatchError(error.longMessage ?? error.message ?? t('auth.signInFailed')); return; }
       if (signIn.status === 'complete') {
-        await signIn.finalize({ navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); } });
+        await signIn.finalize({
+          navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); },
+        });
       } else if (signIn.status === 'needs_client_trust' || signIn.status === 'needs_second_factor') {
         await sendMfaCode();
       } else {
         setCatchError(t('auth.unexpectedStatus'));
       }
     } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.signInFailed'));
+      setCatchError(
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        t('auth.signInFailed')
+      );
     }
   }
 
@@ -85,44 +79,19 @@ export default function SignInScreen() {
     try {
       await signIn.mfa.verifyEmailCode({ code: code.trim() });
       if (signIn.status === 'complete') {
-        await signIn.finalize({ navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); } });
+        await signIn.finalize({
+          navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); },
+        });
       } else {
         setCatchError(t('auth.verifyFailed'));
       }
     } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.verifyFailed'));
-    }
-  }
-
-  async function handleSendEmailCode() {
-    if (!signIn) { setCatchError(t('auth.clerkNotReady')); return; }
-    if (!email.trim()) { setCatchError(t('auth.enterEmailFirst')); return; }
-    setCatchError('');
-    setCodeSentMsg('');
-    try {
-      await signIn.create({ identifier: email.trim() });
-      const factors: any[] = (signIn as any).supportedFirstFactors ?? [];
-      const emailFactor = factors.find((f: any) => f.strategy === 'email_code');
-      await (signIn as any).prepareFirstFactor({ strategy: 'email_code', emailAddressId: emailFactor?.emailAddressId ?? '' });
-      setEmailCodeSent(true);
-      setCodeSentMsg(t('auth.codeSent'));
-    } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.emailCodeFailed'));
-    }
-  }
-
-  async function handleVerifyEmailCode() {
-    if (!signIn) return;
-    setCatchError('');
-    try {
-      const result = await (signIn as any).attemptFirstFactor({ strategy: 'email_code', code: code.trim() });
-      if (result.status === 'complete') {
-        await signIn.finalize({ navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); } });
-      } else {
-        setCatchError(t('auth.verifyFailed'));
-      }
-    } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.verifyFailed'));
+      setCatchError(
+        err?.errors?.[0]?.longMessage ||
+        err?.errors?.[0]?.message ||
+        err?.message ||
+        t('auth.verifyFailed')
+      );
     }
   }
 
@@ -133,7 +102,7 @@ export default function SignInScreen() {
     errors?.fields?.code?.message ||
     '';
 
-  // ── MFA screen ────────────────────────────────────────────────────────────
+  // ── MFA screen (only shown if account has 2FA configured) ─────────────────
   if (needsMfa) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
@@ -207,7 +176,7 @@ export default function SignInScreen() {
                 <TextInput
                   style={styles.inputText}
                   value={email}
-                  onChangeText={v => { setEmail(v); setCatchError(''); setEmailCodeSent(false); setCodeSentMsg(''); }}
+                  onChangeText={v => { setEmail(v); setCatchError(''); }}
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   autoCapitalize="none"
@@ -221,101 +190,41 @@ export default function SignInScreen() {
             </View>
 
             {/* Password */}
-            {authMode === 'password' && (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
-                <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
-                  <TextInput
-                    style={[styles.inputText, { paddingRight: 52 }]}
-                    value={password}
-                    onChangeText={v => { setPassword(v); setCatchError(''); }}
-                    onFocus={() => setFocusedField('password')}
-                    onBlur={() => setFocusedField(null)}
-                    secureTextEntry={!showPassword}
-                    placeholder={t('auth.passwordPlaceholder')}
-                    placeholderTextColor="rgba(200,184,232,0.35)"
-                    autoComplete="password"
-                    returnKeyType="done"
-                    onSubmitEditing={handleSignIn}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
+              <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
+                <TextInput
+                  style={[styles.inputText, { paddingRight: 52 }]}
+                  value={password}
+                  onChangeText={v => { setPassword(v); setCatchError(''); }}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
+                  secureTextEntry={!showPassword}
+                  placeholder={t('auth.passwordPlaceholder')}
+                  placeholderTextColor="rgba(200,184,232,0.35)"
+                  autoComplete="password"
+                  returnKeyType="done"
+                  onSubmitEditing={handleSignIn}
+                />
+                <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(p => !p)}>
+                  <Icon
+                    name={showPassword ? 'eye-off' : 'eye'}
+                    size={18}
+                    color={focusedField === 'password' ? 'rgba(200,184,232,0.8)' : 'rgba(200,184,232,0.4)'}
                   />
-                  <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(p => !p)}>
-                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} color={focusedField === 'password' ? 'rgba(200,184,232,0.8)' : 'rgba(200,184,232,0.4)'} />
-                  </TouchableOpacity>
-                </View>
+                </TouchableOpacity>
               </View>
-            )}
-
-            {/* OTP code (email code mode, after send) */}
-            {authMode === 'emailCode' && emailCodeSent && (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t('auth.verificationCode')}</Text>
-                <View style={[styles.inputBox, focusedField === 'code' && styles.inputBoxFocused]}>
-                  <TextInput
-                    style={styles.inputText}
-                    value={code}
-                    onChangeText={v => { setCode(v); setCatchError(''); }}
-                    onFocus={() => setFocusedField('code')}
-                    onBlur={() => setFocusedField(null)}
-                    keyboardType="number-pad"
-                    placeholder={t('auth.enterCode')}
-                    placeholderTextColor="rgba(200,184,232,0.35)"
-                    autoFocus
-                    autoComplete="one-time-code"
-                  />
-                </View>
-                {!!codeSentMsg && <Text style={styles.successText}>{codeSentMsg}</Text>}
-              </View>
-            )}
+            </View>
 
             {!!fieldError && <Text style={styles.errorText}>{fieldError}</Text>}
 
-            {/* Password mode CTA */}
-            {authMode === 'password' && (
-              <>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, (!email || !password || isLoading) && styles.primaryBtnDisabled]}
-                  onPress={handleSignIn}
-                  disabled={!email || !password || isLoading}
-                >
-                  {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.continue')}</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('emailCode')}>
-                  <Text style={styles.switchLinkText}>{t('auth.emailCodeTab')} →</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Email code mode: send step */}
-            {authMode === 'emailCode' && !emailCodeSent && (
-              <>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, (!email.trim() || isLoading) && styles.primaryBtnDisabled]}
-                  onPress={handleSendEmailCode}
-                  disabled={!email.trim() || isLoading}
-                >
-                  {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.sendCode')}</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('password')}>
-                  <Text style={styles.switchLinkText}>{t('auth.passwordTab')} →</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {/* Email code mode: verify step */}
-            {authMode === 'emailCode' && emailCodeSent && (
-              <>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, (!code.trim() || isLoading) && styles.primaryBtnDisabled]}
-                  onPress={handleVerifyEmailCode}
-                  disabled={!code.trim() || isLoading}
-                >
-                  {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.verifyEnter')}</Text>}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.ghostBtn} onPress={handleSendEmailCode}>
-                  <Text style={styles.ghostBtnText}>{t('auth.resendCode')}</Text>
-                </TouchableOpacity>
-              </>
-            )}
+            <TouchableOpacity
+              style={[styles.primaryBtn, (!email || !password || isLoading) && styles.primaryBtnDisabled]}
+              onPress={handleSignIn}
+              disabled={!email || !password || isLoading}
+            >
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.continue')}</Text>}
+            </TouchableOpacity>
 
             <View nativeID="clerk-captcha" />
           </View>
@@ -397,13 +306,6 @@ const styles = StyleSheet.create({
     padding: 6,
   },
 
-  successText: {
-    fontSize: 12,
-    fontFamily: 'Satoshi-Regular',
-    color: '#6DD68E',
-    marginLeft: 2,
-    marginTop: 2,
-  },
   errorText: {
     fontSize: 13,
     fontFamily: 'Satoshi-Regular',
@@ -429,13 +331,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     color: '#fff',
     letterSpacing: 0.2,
-  },
-
-  switchLink: { alignItems: 'center', paddingVertical: 6 },
-  switchLinkText: {
-    fontSize: 13,
-    fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.4)',
   },
 
   ghostBtn: { alignItems: 'center', paddingVertical: 8 },
