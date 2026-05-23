@@ -5,6 +5,22 @@ import UserDetailDrawer from "../components/UserDetailDrawer";
 type ConfirmAction = { type: "ban" | "unban" | "delete" | "admin"; user: AdminUser };
 type LimitEdit     = { userId: string; value: string };
 
+function fmtDate(ts: number | string | null | undefined, fallback = "—") {
+  if (!ts) return fallback;
+  return new Date(Number(ts)).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function fmtRelative(ts: number | null | undefined) {
+  if (!ts) return null;
+  const diffMs  = Date.now() - Number(ts);
+  const diffDays = Math.floor(diffMs / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 30)  return `${diffDays}d ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
+}
+
 export default function UsersPage() {
   const [users, setUsers]     = useState<AdminUser[]>([]);
   const [total, setTotal]     = useState(0);
@@ -74,7 +90,7 @@ export default function UsersPage() {
 
   return (
     <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold">User Management</h1>
           <p className="text-sm text-muted-foreground mt-1">{total} total users</p>
@@ -96,10 +112,10 @@ export default function UsersPage() {
             <thead>
               <tr className="border-b bg-muted/40">
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">User</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Username</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Email</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Sign-in</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Gallery Limit</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Last Active</th>
                 <th className="text-right px-4 py-3 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -114,87 +130,114 @@ export default function UsersPage() {
                 ))
               ) : users.length === 0 ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No users found</td></tr>
-              ) : users.map((u) => (
-                <tr key={u.userId} className="border-b hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="font-medium">{u.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{u.userId.slice(0, 16)}…</div>
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {u.username ? `@${u.username}` : <span className="italic text-muted-foreground/60">none</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
-                      {u.isAdmin  && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">Admin</span>}
-                      {u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Banned</span>}
-                      {!u.isAdmin && !u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Active</span>}
-                      {!u.isPublic && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    {limitEdit?.userId === u.userId ? (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min={1}
-                          max={50000}
-                          className="w-20 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                          value={limitEdit.value}
-                          onChange={e => setLimitEdit({ userId: u.userId, value: e.target.value })}
-                          onKeyDown={e => { if (e.key === "Enter") handleSaveLimit(); if (e.key === "Escape") setLimitEdit(null); }}
-                          autoFocus
-                        />
-                        <button
-                          onClick={handleSaveLimit}
-                          disabled={limitSaving}
-                          className="px-2 py-1 text-xs rounded bg-primary text-white font-medium disabled:opacity-50"
-                        >{limitSaving ? "…" : "Save"}</button>
-                        <button
-                          onClick={() => setLimitEdit(null)}
-                          className="px-2 py-1 text-xs rounded border hover:bg-muted"
-                        >✕</button>
+              ) : users.map((u) => {
+                const relative = fmtRelative(u.lastSignInAt);
+                const absolute = fmtDate(u.lastSignInAt);
+                return (
+                  <tr key={u.userId} className="border-b hover:bg-muted/20 transition-colors">
+                    {/* User */}
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{u.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {u.username ? `@${u.username}` : <span className="italic opacity-60">no username</span>}
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setLimitEdit({ userId: u.userId, value: String(u.galleryLimit ?? 200) })}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground group"
-                      >
-                        <span className="font-medium tabular-nums">{u.galleryLimit ?? 200}</span>
-                        <span className="opacity-0 group-hover:opacity-60 transition-opacity text-[10px]">✏</span>
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(u.updatedAt).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1 flex-wrap">
-                      <button
-                        onClick={() => setDetailUserId(u.userId)}
-                        className="px-2 py-1 text-xs rounded-md font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
-                      >
-                        View
-                      </button>
-                      <button
-                        onClick={() => setConfirm({ type: u.isBanned ? "unban" : "ban", user: u })}
-                        className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isBanned ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
-                      >
-                        {u.isBanned ? "Unban" : "Ban"}
-                      </button>
-                      <button
-                        onClick={() => setConfirm({ type: "admin", user: u })}
-                        className="px-2 py-1 text-xs rounded-md font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
-                      >
-                        {u.isAdmin ? "Demote" : "Promote"}
-                      </button>
-                      <button
-                        onClick={() => setConfirm({ type: "delete", user: u })}
-                        className="px-2 py-1 text-xs rounded-md font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                      <div className="text-[10px] text-muted-foreground/60 font-mono">{u.userId.slice(0, 20)}…</div>
+                    </td>
+
+                    {/* Email */}
+                    <td className="px-4 py-3">
+                      {u.email ? (
+                        <a
+                          href={`mailto:${u.email}?subject=Sky Journal Support`}
+                          className="text-blue-600 hover:underline text-xs break-all"
+                          title="Send email"
+                        >{u.email}</a>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/60 italic">—</span>
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap gap-1">
+                        {u.isAdmin  && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">Admin</span>}
+                        {u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Banned</span>}
+                        {!u.isAdmin && !u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Active</span>}
+                        {!u.isPublic && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
+                      </div>
+                    </td>
+
+                    {/* Last Sign-in */}
+                    <td className="px-4 py-3">
+                      {u.lastSignInAt ? (
+                        <div>
+                          <div className="text-xs font-medium">{relative}</div>
+                          <div className="text-[10px] text-muted-foreground">{absolute}</div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/60 italic">Never</span>
+                      )}
+                    </td>
+
+                    {/* Gallery Limit */}
+                    <td className="px-4 py-3">
+                      {limitEdit?.userId === u.userId ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min={1}
+                            max={50000}
+                            className="w-20 border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                            value={limitEdit.value}
+                            onChange={e => setLimitEdit({ userId: u.userId, value: e.target.value })}
+                            onKeyDown={e => { if (e.key === "Enter") handleSaveLimit(); if (e.key === "Escape") setLimitEdit(null); }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={handleSaveLimit}
+                            disabled={limitSaving}
+                            className="px-2 py-1 text-xs rounded bg-primary text-white font-medium disabled:opacity-50"
+                          >{limitSaving ? "…" : "Save"}</button>
+                          <button
+                            onClick={() => setLimitEdit(null)}
+                            className="px-2 py-1 text-xs rounded border hover:bg-muted"
+                          >✕</button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setLimitEdit({ userId: u.userId, value: String(u.galleryLimit ?? 200) })}
+                          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground group"
+                        >
+                          <span className="font-medium tabular-nums">{u.galleryLimit ?? 200}</span>
+                          <span className="opacity-0 group-hover:opacity-60 transition-opacity text-[10px]">✏</span>
+                        </button>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1 flex-wrap">
+                        <button
+                          onClick={() => setDetailUserId(u.userId)}
+                          className="px-2 py-1 text-xs rounded-md font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                        >View</button>
+                        <button
+                          onClick={() => setConfirm({ type: u.isBanned ? "unban" : "ban", user: u })}
+                          className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isBanned ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
+                        >{u.isBanned ? "Unban" : "Ban"}</button>
+                        <button
+                          onClick={() => setConfirm({ type: "admin", user: u })}
+                          className="px-2 py-1 text-xs rounded-md font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
+                        >{u.isAdmin ? "Demote" : "Promote"}</button>
+                        <button
+                          onClick={() => setConfirm({ type: "delete", user: u })}
+                          className="px-2 py-1 text-xs rounded-md font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                        >Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -252,7 +295,7 @@ export default function UsersPage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-4 right-4 bg-foreground text-background px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg z-50 animate-in slide-in-from-bottom-2">
+        <div className="fixed bottom-4 right-4 bg-foreground text-background px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg z-50">
           {toast}
         </div>
       )}

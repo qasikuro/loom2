@@ -37,7 +37,7 @@ export const api = {
   deleteUser:    (id: string) => apiFetch(`/admin/users/${id}`, { method: "DELETE" }),
   toggleAdmin:     (id: string) => apiFetch<{ isAdmin: boolean }>(`/admin/users/${id}/toggle-admin`, { method: "PUT" }),
   setGalleryLimit: (id: string, limit: number) => apiFetch<{ ok: boolean; limit: number }>(`/admin/users/${id}/gallery-limit`, { method: "PUT", body: JSON.stringify({ limit }) }),
-  getContent:    (type: "stories" | "outfits", offset = 0) => apiFetch<{ items: ContentItem[]; total: number }>(`/admin/content?type=${type}&offset=${offset}&limit=50`),
+  getContent:    (type: "stories" | "outfits", offset = 0, q = "", dateFrom = "", dateTo = "") => apiFetch<{ items: ContentItem[]; total: number }>(`/admin/content?type=${type}&offset=${offset}&limit=50&q=${encodeURIComponent(q)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}`),
   hideContent:   (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/hide`, { method: "PUT" }),
   unhideContent: (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/unhide`, { method: "PUT" }),
   deleteContent: (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}`, { method: "DELETE" }),
@@ -68,6 +68,8 @@ export interface AdminUser {
   isBanned:     boolean;
   galleryLimit: number;
   updatedAt:    string;
+  email?:       string | null;
+  lastSignInAt?: number | null;
 }
 
 export interface AdminUserDetail extends AdminUser {

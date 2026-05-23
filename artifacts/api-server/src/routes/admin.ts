@@ -8,7 +8,7 @@ import {
   followsTable,
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, count, desc, eq, gte, ilike, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, lte, ne, or } from "drizzle-orm";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 import { clerkClient } from "@clerk/express";
 
@@ -197,7 +197,25 @@ router.get("/admin/users", requireAdmin, async (req: Request, res: Response) => 
       .from(characterTable)
       .where(where);
 
-    return res.json({ users: rows, total });
+    // Merge Clerk sign-in data (non-fatal)
+    const clerkMap = new Map<string, { email?: string; lastSignInAt?: number | null }>();
+    try {
+      if (rows.length > 0) {
+        const clerkUsers = await clerkClient.users.getUserList({
+          userId: rows.map(r => r.userId),
+          limit: rows.length,
+        });
+        for (const cu of clerkUsers.data) {
+          clerkMap.set(cu.id, {
+            email: cu.emailAddresses[0]?.emailAddress,
+            lastSignInAt: cu.lastSignInAt ?? null,
+          });
+        }
+      }
+    } catch { /* non-fatal */ }
+
+    const merged = rows.map(r => ({ ...r, ...clerkMap.get(r.userId) }));
+    return res.json({ users: merged, total });
   } catch (err) {
     req.log.error({ err }, "Admin list users failed");
     return res.status(500).json({ error: "Internal server error" });
@@ -298,12 +316,21 @@ router.delete("/admin/users/:id", requireAdmin, async (req: Request, res: Respon
 // ── Content moderation ────────────────────────────────────────────────────────
 
 router.get("/admin/content", requireAdmin, async (req: Request, res: Response) => {
-  const type   = String(req.query.type ?? "stories");
-  const limit  = Math.min(100, Math.max(1, Number(req.query.limit ?? 50)));
-  const offset = Math.max(0, Number(req.query.offset ?? 0));
+  const type     = String(req.query.type ?? "stories");
+  const limit    = Math.min(100, Math.max(1, Number(req.query.limit ?? 50)));
+  const offset   = Math.max(0, Number(req.query.offset ?? 0));
+  const q        = String(req.query.q ?? "").trim();
+  const dateFrom = req.query.dateFrom ? new Date(String(req.query.dateFrom)) : null;
+  const dateTo   = req.query.dateTo   ? (() => { const d = new Date(String(req.query.dateTo)); d.setDate(d.getDate() + 1); return d; })() : null;
 
   try {
     if (type === "outfits") {
+      const conditions = [];
+      if (q) conditions.push(or(ilike(characterTable.name, `%${q}%`), ilike(characterTable.username, `%${q}%`)));
+      if (dateFrom && !isNaN(dateFrom.getTime())) conditions.push(gte(outfitsTable.createdAt, dateFrom));
+      if (dateTo   && !isNaN(dateTo.getTime()))   conditions.push(lte(outfitsTable.createdAt, dateTo));
+      const where = conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
+
       const rows = await db
         .select({
           id:          outfitsTable.id,
@@ -320,15 +347,26 @@ router.get("/admin/content", requireAdmin, async (req: Request, res: Response) =
         })
         .from(outfitsTable)
         .leftJoin(characterTable, eq(characterTable.userId, outfitsTable.userId))
+        .where(where)
         .orderBy(desc(outfitsTable.createdAt))
         .limit(limit)
         .offset(offset);
 
-      const [{ total }] = await db.select({ total: count() }).from(outfitsTable);
+      const [{ total }] = await db
+        .select({ total: count() })
+        .from(outfitsTable)
+        .leftJoin(characterTable, eq(characterTable.userId, outfitsTable.userId))
+        .where(where);
       return res.json({ items: rows, total });
     }
 
     // Default: stories
+    const conditions = [];
+    if (q) conditions.push(or(ilike(characterTable.name, `%${q}%`), ilike(characterTable.username, `%${q}%`)));
+    if (dateFrom && !isNaN(dateFrom.getTime())) conditions.push(gte(storiesTable.createdAt, dateFrom));
+    if (dateTo   && !isNaN(dateTo.getTime()))   conditions.push(lte(storiesTable.createdAt, dateTo));
+    const where = conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
+
     const rows = await db
       .select({
         id:             storiesTable.id,
@@ -346,11 +384,16 @@ router.get("/admin/content", requireAdmin, async (req: Request, res: Response) =
       })
       .from(storiesTable)
       .leftJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+      .where(where)
       .orderBy(desc(storiesTable.createdAt))
       .limit(limit)
       .offset(offset);
 
-    const [{ total }] = await db.select({ total: count() }).from(storiesTable);
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(storiesTable)
+      .leftJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+      .where(where);
     return res.json({ items: rows, total });
   } catch (err) {
     req.log.error({ err }, "Admin list content failed");
