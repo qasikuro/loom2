@@ -268,6 +268,11 @@ export default function HomeScreen() {
           />
         ))}
 
+        {/* Skyloom brand bar */}
+        <View style={styles.brandBar}>
+          <Image source={Images.logo} style={styles.brandLogo} contentFit="contain" />
+        </View>
+
         {/* Top row */}
         <View style={styles.topRow}>
           <TouchableOpacity
@@ -682,6 +687,9 @@ const styles = StyleSheet.create({
 
   headerGrad: { position: 'relative', overflow: 'hidden' },
   star:       { position: 'absolute', borderRadius: 99, backgroundColor: 'rgba(220,210,255,1)' },
+
+  brandBar:  { alignItems: 'center', paddingTop: 6, paddingBottom: 2 },
+  brandLogo: { width: 80, height: 80 },
 
   topRow: {
     flexDirection: 'row', alignItems: 'center',

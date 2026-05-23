@@ -2,7 +2,7 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name:    config.name    ?? "Sky Journal",
+  name:    config.name    ?? "Skyloom",
   slug:    config.slug    ?? "sky-journal",
   version: config.version ?? "1.0.0",
   icon: './assets/images/logo.jpg',
