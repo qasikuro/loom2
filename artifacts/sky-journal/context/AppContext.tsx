@@ -266,13 +266,14 @@ function relativeTimeDiscover(dateStr: string): string {
 
 function toAppCharacter(raw: any): Character {
   return {
-    name:      raw.name      ?? DEFAULT_CHARACTER.name,
-    bio:       raw.bio       ?? DEFAULT_CHARACTER.bio,
-    mood:      raw.mood      ?? DEFAULT_CHARACTER.mood,
-    traits:    Array.isArray(raw.traits) ? raw.traits : [],
-    isPublic:  raw.isPublic  ?? raw.is_public ?? true,
-    username:  raw.username  ?? undefined,
-    avatarUri: raw.avatarUri ?? undefined,
+    name:          raw.name          ?? DEFAULT_CHARACTER.name,
+    bio:           raw.bio           ?? DEFAULT_CHARACTER.bio,
+    mood:          raw.mood          ?? DEFAULT_CHARACTER.mood,
+    traits:        Array.isArray(raw.traits) ? raw.traits : [],
+    isPublic:      raw.isPublic      ?? raw.is_public      ?? true,
+    username:      raw.username      ?? undefined,
+    avatarUri:     raw.avatarUri     ?? undefined,
+    activeOutfitId: raw.activeOutfitId ?? raw.active_outfit_id ?? undefined,
   };
 }
 
@@ -399,20 +400,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadFromCache() {
     try {
-      const [c, j, s, o, d, f] = await Promise.all([
+      const [c, j, s, o, d, f, sv] = await Promise.all([
         AsyncStorage.getItem('character_v2'),
         AsyncStorage.getItem('journal_v2'),
         AsyncStorage.getItem('stories_v1'),
         AsyncStorage.getItem('outfits_v1'),
         AsyncStorage.getItem('discover_v1'),
         AsyncStorage.getItem('following_v1'),
+        AsyncStorage.getItem('saved_stories_v1'),
       ]);
-      if (c) setCharacterState(JSON.parse(c));
-      if (j) setJournalEntries(JSON.parse(j));
-      if (s) setStories(JSON.parse(s));
-      if (o) setOutfits(JSON.parse(o));
-      if (d) setDiscoverFeedRaw(JSON.parse(d));
-      if (f) setFollowingIds(JSON.parse(f));
+      if (c)  setCharacterState(JSON.parse(c));
+      if (j)  setJournalEntries(JSON.parse(j));
+      if (s)  setStories(JSON.parse(s));
+      if (o)  setOutfits(JSON.parse(o));
+      if (d)  setDiscoverFeedRaw(JSON.parse(d));
+      if (f)  setFollowingIds(JSON.parse(f));
+      if (sv) { try { setSavedStoryIds(new Set(JSON.parse(sv))); } catch { /* ignore */ } }
     } catch { /* use defaults */ } finally {
       setIsLoading(false);
     }
@@ -422,7 +425,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const ALL_CACHE_KEYS = [
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
-    'discover_v1', 'following_v1',
+    'discover_v1', 'following_v1', 'saved_stories_v1',
     // active_outfit_v1 is intentionally NOT cleared on logout so the outfit
     // preference survives a logout/login cycle. loadData() validates the saved
     // ID against the freshly loaded outfit list before applying it.
@@ -459,16 +462,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedStoryIds(new Set());
 
     try {
+      // Each core call has its own .catch so one failure doesn't wipe the others.
       const [charRaw, entriesRaw, storiesRaw, outfitsRaw, galleryRaw, usageRaw] = await Promise.all([
-        apiFetch<any>('/character'),
-        apiFetch<any[]>('/journal-entries'),
-        apiFetch<any[]>('/stories'),
-        apiFetch<any[]>('/outfits'),
+        apiFetch<any>('/character').catch(() => null),
+        apiFetch<any[]>('/journal-entries').catch(() => null),
+        apiFetch<any[]>('/stories').catch(() => null),
+        apiFetch<any[]>('/outfits').catch(() => null),
         apiFetch<any[]>('/gallery').catch(() => []),
         apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
       ]);
 
-      const char    = toAppCharacter(charRaw);
+      // If every core fetch failed (token not ready / network down) restore the
+      // last-known cache so the user isn't left with a completely blank screen.
+      if (!charRaw && !entriesRaw && !storiesRaw && !outfitsRaw) {
+        await loadFromCache();
+        setApiOnline(false);
+        return;
+      }
+
+      const char    = charRaw ? toAppCharacter(charRaw) : DEFAULT_CHARACTER;
       const entries = (entriesRaw  ?? []).map(toAppJournalEntry);
       const stors   = (storiesRaw  ?? []).map(toAppStory);
       const outs    = (outfitsRaw  ?? []).map(toAppOutfit);
@@ -497,6 +509,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('active_outfit_v1', validId).catch(() => null);
       }
 
+      // Restore saved-story IDs that were bookmarked in previous sessions.
+      AsyncStorage.getItem('saved_stories_v1').then(raw => {
+        if (raw) { try { setSavedStoryIds(new Set(JSON.parse(raw))); } catch { /* ignore */ } }
+      }).catch(() => null);
+
       await Promise.allSettled([
         AsyncStorage.setItem('character_v2',  JSON.stringify(char)),
         AsyncStorage.setItem('journal_v2',    JSON.stringify(entries)),
@@ -508,6 +525,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loadSocialData();
       loadNotificationsData();
     } catch {
+      // Unexpected error — restore from cache rather than leaving a blank screen.
+      await loadFromCache();
       setApiOnline(false);
     } finally {
       setIsLoading(false);
@@ -788,6 +807,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedStoryIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
+      AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
       return next;
     });
   }, []);
