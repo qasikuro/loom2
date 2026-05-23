@@ -207,7 +207,8 @@ export default function CharacterScreen() {
   const deletePhotoTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function handleAddGalleryPhoto() {
-    if (galleryUsage.count >= galleryUsage.limit) {
+    const remaining = galleryUsage.limit - galleryUsage.count;
+    if (remaining <= 0) {
       setGalleryError(`Gallery full (${galleryUsage.limit} photos max)`);
       return;
     }
@@ -216,15 +217,25 @@ export default function CharacterScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
+      allowsMultipleSelection: true,
+      selectionLimit: remaining,
       quality: 0.85,
     });
-    if (result.canceled || !result.assets[0]) return;
+    if (result.canceled || !result.assets.length) return;
     setGalleryUploading(true);
     setGalleryError(null);
     try {
-      const uri = await persistImageUri(result.assets[0].uri);
-      if (!uri) throw new Error('Photo upload failed — check your connection and try again.');
-      await addGalleryPhoto(uri, '');
+      const results = await Promise.allSettled(
+        result.assets.map(async (asset) => {
+          const uri = await persistImageUri(asset.uri);
+          if (!uri) throw new Error('Photo upload failed — check your connection and try again.');
+          await addGalleryPhoto(uri, '');
+        }),
+      );
+      const failed = results.filter(r => r.status === 'rejected').length;
+      if (failed > 0) {
+        setGalleryError(`${failed} photo${failed > 1 ? 's' : ''} failed to upload — check your connection.`);
+      }
     } catch (err: any) {
       setGalleryError(err?.message ?? 'Upload failed');
     } finally {
