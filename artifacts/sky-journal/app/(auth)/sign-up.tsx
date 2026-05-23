@@ -20,15 +20,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const SPARKLES = [
-  { t: 80,  l: 20,  s: 3, o: 0.6 },
-  { t: 140, r: 30,  s: 4, o: 0.5 },
-  { t: 230, l: 50,  s: 2, o: 0.45 },
-  { t: 100, r: 70,  s: 3, o: 0.7 },
-  { t: 320, l: 15,  s: 4, o: 0.3 },
-  { t: 380, r: 45,  s: 3, o: 0.4 },
-];
-
 type SignupMode = 'withPassword' | 'noPassword';
 
 export default function SignUpScreen() {
@@ -45,6 +36,7 @@ export default function SignUpScreen() {
   const [catchError, setCatchError]         = useState('');
   const [emailCodeSent, setEmailCodeSent]   = useState(false);
   const [codeSentMsg, setCodeSentMsg]       = useState('');
+  const [focusedField, setFocusedField]     = useState<string | null>(null);
 
   const isLoading = fetchStatus === 'fetching';
 
@@ -159,80 +151,68 @@ export default function SignUpScreen() {
     errors?.fields?.code?.message ||
     '';
 
+  // ── Verification screen ───────────────────────────────────────────────────
   if (needsVerification) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
-        <View style={[styles.container, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 }]}>
+        <View style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]}>
           <View style={styles.logoWrap}>
             <Image source={Images.logo} style={styles.logo} contentFit="contain" />
           </View>
           <Text style={styles.title}>{t('auth.checkEmail')}</Text>
-          <Text style={styles.subtitle}>
-            {t('auth.codeSentTo', { email })}
-          </Text>
+          <Text style={styles.subtitle}>{t('auth.codeSentTo', { email })}</Text>
 
-          <View style={[styles.field, { marginTop: 8 }]}>
-            <Text style={styles.label}>{t('auth.verificationCode')}</Text>
-            <View style={styles.inputWrap}>
-              <Icon name="shield" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>{t('auth.verificationCode')}</Text>
+            <View style={[styles.inputBox, focusedField === 'code' && styles.inputBoxFocused]}>
               <TextInput
-                style={styles.input}
+                style={styles.inputText}
                 value={code}
                 onChangeText={v => { setCode(v); setCatchError(''); }}
+                onFocus={() => setFocusedField('code')}
+                onBlur={() => setFocusedField(null)}
                 keyboardType="number-pad"
                 placeholder={t('auth.enterCode')}
-                placeholderTextColor="rgba(200,184,232,0.4)"
+                placeholderTextColor="rgba(200,184,232,0.35)"
                 autoFocus
+                autoComplete="one-time-code"
               />
             </View>
           </View>
 
-          {!!fieldError && <Text style={[styles.error, { marginTop: 12 }]}>{fieldError}</Text>}
+          {!!fieldError && <Text style={styles.errorText}>{fieldError}</Text>}
 
           <TouchableOpacity
-            style={[styles.btn, { marginTop: 24 }, (!code || isLoading) && styles.btnDisabled]}
+            style={[styles.primaryBtn, (!code || isLoading) && styles.primaryBtnDisabled]}
             onPress={handleVerify}
             disabled={!code || isLoading}
           >
             {isLoading
               ? <ActivityIndicator color="#fff" />
-              : <><Text style={styles.btnText}>{t('auth.verifyEnter')}</Text><Text style={styles.btnStar}>✦</Text></>
+              : <Text style={styles.primaryBtnText}>{t('auth.verifyEnter')}</Text>
             }
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.textBtn} onPress={() => signUp.verifications.sendEmailCode()}>
-            <Text style={styles.textBtnText}>{t('auth.resendCode')}</Text>
+          <TouchableOpacity style={styles.ghostBtn} onPress={() => signUp.verifications.sendEmailCode()}>
+            <Text style={styles.ghostBtnText}>{t('auth.resendCode')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.textBtn} onPress={() => { signUp.reset(); setCode(''); setCatchError(''); }}>
-            <Text style={styles.textBtnText}>{t('auth.startOver')}</Text>
+          <TouchableOpacity style={styles.ghostBtn} onPress={() => { signUp.reset(); setCode(''); setCatchError(''); }}>
+            <Text style={styles.ghostBtnText}>{t('auth.startOver')}</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
     );
   }
 
+  // ── Main sign-up screen ───────────────────────────────────────────────────
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
-      {SPARKLES.map((sp, i) => (
-        <View
-          key={i}
-          style={{
-            position: 'absolute',
-            top: sp.t,
-            left: 'l' in sp ? (sp as any).l : undefined,
-            right: 'r' in sp ? (sp as any).r : undefined,
-            width: sp.s, height: sp.s, borderRadius: sp.s,
-            backgroundColor: '#C8A84B', opacity: sp.o,
-          }}
-        />
-      ))}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Skyloom logo */}
           <View style={styles.logoWrap}>
             <Image source={Images.logo} style={styles.logo} contentFit="contain" />
           </View>
@@ -241,82 +221,87 @@ export default function SignUpScreen() {
           <Text style={styles.subtitle}>{t('auth.signUpSub')}</Text>
 
           <View style={styles.form}>
-            {/* Email field — shared by both modes */}
-            <View style={styles.field}>
-              <Text style={styles.label}>{t('auth.email')}</Text>
-              <View style={styles.inputWrap}>
-                <Icon name="mail" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+            {/* Email */}
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>{t('auth.email')}</Text>
+              <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
                 <TextInput
-                  style={styles.input}
+                  style={styles.inputText}
                   value={email}
                   onChangeText={v => { setEmail(v); setCatchError(''); setEmailCodeSent(false); setCodeSentMsg(''); }}
+                  onFocus={() => setFocusedField('email')}
+                  onBlur={() => setFocusedField(null)}
                   autoCapitalize="none"
                   keyboardType="email-address"
                   placeholder={t('auth.emailPlaceholder')}
-                  placeholderTextColor="rgba(200,184,232,0.4)"
+                  placeholderTextColor="rgba(200,184,232,0.35)"
                   autoComplete="email"
+                  returnKeyType="next"
                 />
               </View>
             </View>
 
+            {/* Password (withPassword mode) */}
             {signupMode === 'withPassword' && (
-              <View style={styles.field}>
-                <Text style={styles.label}>{t('auth.password')}</Text>
-                <View style={styles.inputWrap}>
-                  <Icon name="lock" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
+                <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
                   <TextInput
-                    style={[styles.input, { paddingRight: 44 }]}
+                    style={[styles.inputText, { paddingRight: 52 }]}
                     value={password}
                     onChangeText={v => { setPassword(v); setCatchError(''); }}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
                     secureTextEntry={!showPassword}
                     placeholder={t('auth.passwordCreatePlaceholder')}
-                    placeholderTextColor="rgba(200,184,232,0.4)"
+                    placeholderTextColor="rgba(200,184,232,0.35)"
                     autoComplete="new-password"
+                    returnKeyType="done"
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(p => !p)}>
-                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={16} color="rgba(200,184,232,0.5)" />
+                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} color={focusedField === 'password' ? 'rgba(200,184,232,0.8)' : 'rgba(200,184,232,0.4)'} />
                   </TouchableOpacity>
                 </View>
               </View>
             )}
 
+            {/* OTP code (noPassword mode, after send) */}
             {signupMode === 'noPassword' && emailCodeSent && (
-              <View style={styles.field}>
-                <Text style={styles.label}>{t('auth.verificationCode')}</Text>
-                <View style={styles.inputWrap}>
-                  <Icon name="shield" size={16} color="rgba(200,184,232,0.5)" style={styles.inputIcon} />
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{t('auth.verificationCode')}</Text>
+                <View style={[styles.inputBox, focusedField === 'code' && styles.inputBoxFocused]}>
                   <TextInput
-                    style={styles.input}
+                    style={styles.inputText}
                     value={code}
                     onChangeText={v => { setCode(v); setCatchError(''); }}
+                    onFocus={() => setFocusedField('code')}
+                    onBlur={() => setFocusedField(null)}
                     keyboardType="number-pad"
                     placeholder={t('auth.enterCode')}
-                    placeholderTextColor="rgba(200,184,232,0.4)"
+                    placeholderTextColor="rgba(200,184,232,0.35)"
                     autoFocus
                     autoComplete="one-time-code"
                   />
                 </View>
-                {!!codeSentMsg && (
-                  <Text style={styles.successMsg}>{codeSentMsg}</Text>
-                )}
+                {!!codeSentMsg && <Text style={styles.successText}>{codeSentMsg}</Text>}
               </View>
             )}
 
-            {!!fieldError && <Text style={styles.error}>{fieldError}</Text>}
+            {!!fieldError && <Text style={styles.errorText}>{fieldError}</Text>}
 
+            {/* CTA buttons */}
             {signupMode === 'withPassword' && (
               <>
                 <TouchableOpacity
-                  style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
+                  style={[styles.primaryBtn, (!email || !password || isLoading) && styles.primaryBtnDisabled]}
                   onPress={handleSignUp}
                   disabled={!email || !password || isLoading}
                 >
                   {isLoading
                     ? <ActivityIndicator color="#fff" />
-                    : <><Text style={styles.btnText}>{t('auth.createAccountBtn')}</Text><Text style={styles.btnStar}>✦</Text></>
+                    : <Text style={styles.primaryBtnText}>{t('auth.createAccountBtn')}</Text>
                   }
                 </TouchableOpacity>
-
                 <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('noPassword')}>
                   <Text style={styles.switchLinkText}>{t('auth.noPasswordTab')} →</Text>
                 </TouchableOpacity>
@@ -326,16 +311,15 @@ export default function SignUpScreen() {
             {signupMode === 'noPassword' && !emailCodeSent && (
               <>
                 <TouchableOpacity
-                  style={[styles.btn, (!email.trim() || isLoading) && styles.btnDisabled]}
+                  style={[styles.primaryBtn, (!email.trim() || isLoading) && styles.primaryBtnDisabled]}
                   onPress={handleSendEmailCodeSignUp}
                   disabled={!email.trim() || isLoading}
                 >
                   {isLoading
                     ? <ActivityIndicator color="#fff" />
-                    : <><Text style={styles.btnText}>{t('auth.sendCode')}</Text><Icon name="send" size={14} color="#fff" /></>
+                    : <Text style={styles.primaryBtnText}>{t('auth.sendCode')}</Text>
                   }
                 </TouchableOpacity>
-
                 <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('withPassword')}>
                   <Text style={styles.switchLinkText}>{t('auth.withPasswordTab')} →</Text>
                 </TouchableOpacity>
@@ -345,17 +329,17 @@ export default function SignUpScreen() {
             {signupMode === 'noPassword' && emailCodeSent && (
               <>
                 <TouchableOpacity
-                  style={[styles.btn, (!code.trim() || isLoading) && styles.btnDisabled]}
+                  style={[styles.primaryBtn, (!code.trim() || isLoading) && styles.primaryBtnDisabled]}
                   onPress={handleVerifyEmailCodeSignUp}
                   disabled={!code.trim() || isLoading}
                 >
                   {isLoading
                     ? <ActivityIndicator color="#fff" />
-                    : <><Text style={styles.btnText}>{t('auth.verifyEnter')}</Text><Text style={styles.btnStar}>✦</Text></>
+                    : <Text style={styles.primaryBtnText}>{t('auth.verifyEnter')}</Text>
                   }
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.textBtn} onPress={handleSendEmailCodeSignUp}>
-                  <Text style={styles.textBtnText}>{t('auth.resendCode')}</Text>
+                <TouchableOpacity style={styles.ghostBtn} onPress={handleSendEmailCodeSignUp}>
+                  <Text style={styles.ghostBtnText}>{t('auth.resendCode')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -363,7 +347,7 @@ export default function SignUpScreen() {
             <View nativeID="clerk-captcha" />
           </View>
 
-          <View style={styles.divider}>
+          <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>{t('auth.alreadyHave')}</Text>
             <View style={styles.dividerLine} />
@@ -382,40 +366,139 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  container: { paddingHorizontal: 28, alignItems: 'stretch' },
+  container: { paddingHorizontal: 24, alignItems: 'stretch' },
 
-  logoWrap: { alignItems: 'center', marginBottom: 16 },
-  logo: { width: 180, height: 180 },
+  logoWrap: { alignItems: 'center', marginBottom: 12 },
+  logo: { width: 130, height: 130 },
 
-  title: { fontSize: 26, fontFamily: 'Satoshi-Bold', color: '#F0ECFF', textAlign: 'center', letterSpacing: -0.5, marginBottom: 6 },
-  subtitle: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.65)', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+  title: {
+    fontSize: 28,
+    fontFamily: 'Satoshi-Bold',
+    color: '#F0ECFF',
+    textAlign: 'center',
+    letterSpacing: -0.6,
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.55)',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 28,
+  },
 
-  switchLink: { alignItems: 'center', paddingVertical: 4 },
-  switchLinkText: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', letterSpacing: 0.2 },
+  form: { gap: 16 },
 
-  form: { gap: 18 },
-  field: { gap: 8 },
-  label: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, color: 'rgba(200,184,232,0.75)', textTransform: 'uppercase' },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(45,31,94,0.5)', borderRadius: 14, borderWidth: 1, borderColor: 'rgba(107,91,149,0.45)' },
-  inputIcon: { paddingLeft: 14 },
-  input: { flex: 1, height: 52, paddingHorizontal: 12, fontSize: 15, fontFamily: 'Satoshi-Regular', color: '#F0ECFF' },
-  eyeBtn: { position: 'absolute', right: 14, padding: 4 },
+  fieldGroup: { gap: 6 },
+  fieldLabel: {
+    fontSize: 13,
+    fontFamily: 'Satoshi-Medium',
+    color: 'rgba(200,184,232,0.7)',
+    marginLeft: 2,
+  },
+  inputBox: {
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(107,91,149,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  inputBoxFocused: {
+    borderColor: 'rgba(180,160,240,0.75)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  inputText: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Satoshi-Regular',
+    color: '#F0ECFF',
+    letterSpacing: 0.1,
+  },
+  eyeBtn: {
+    position: 'absolute',
+    right: 14,
+    padding: 6,
+  },
 
-  successMsg: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: '#6DD68E', marginTop: 2 },
-  error: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#E06C75', textAlign: 'center', backgroundColor: 'rgba(224,108,117,0.12)', borderRadius: 10, padding: 10 },
+  successText: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+    color: '#6DD68E',
+    marginLeft: 2,
+    marginTop: 2,
+  },
+  errorText: {
+    fontSize: 13,
+    fontFamily: 'Satoshi-Regular',
+    color: '#E06C75',
+    textAlign: 'center',
+    backgroundColor: 'rgba(224,108,117,0.1)',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 4,
+  },
 
-  btn: { height: 54, borderRadius: 16, marginTop: 4, backgroundColor: '#6B5B95', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  btnDisabled: { opacity: 0.45 },
-  btnText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff' },
-  btnStar: { fontSize: 12, color: '#C8A84B' },
+  primaryBtn: {
+    height: 56,
+    borderRadius: 14,
+    backgroundColor: '#6B5B95',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+  },
+  primaryBtnDisabled: { opacity: 0.4 },
+  primaryBtnText: {
+    fontSize: 16,
+    fontFamily: 'Satoshi-Bold',
+    color: '#fff',
+    letterSpacing: 0.2,
+  },
 
-  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 28 },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(107,91,149,0.3)' },
-  dividerText: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.5)' },
+  switchLink: { alignItems: 'center', paddingVertical: 6 },
+  switchLinkText: {
+    fontSize: 13,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.4)',
+  },
 
-  outlineBtn: { height: 54, borderRadius: 16, borderWidth: 1.5, borderColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(107,91,149,0.12)' },
-  outlineBtnText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.9)' },
+  ghostBtn: { alignItems: 'center', paddingVertical: 8 },
+  ghostBtnText: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Medium',
+    color: 'rgba(200,184,232,0.55)',
+  },
 
-  textBtn: { alignItems: 'center', marginTop: 16 },
-  textBtnText: { fontSize: 14, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.6)' },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 24,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(107,91,149,0.25)' },
+  dividerText: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.4)',
+  },
+
+  outlineBtn: {
+    height: 56,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: 'rgba(107,91,149,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(107,91,149,0.08)',
+  },
+  outlineBtnText: {
+    fontSize: 15,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(200,184,232,0.85)',
+    letterSpacing: 0.2,
+  },
 });
