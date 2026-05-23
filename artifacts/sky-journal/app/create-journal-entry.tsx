@@ -67,8 +67,9 @@ export default function CreateJournalEntryScreen() {
   const [friendName, setFriendName] = useState('');
   const [mood,       setMood]       = useState('Peaceful');
   const [imageUri,   setImageUri]   = useState<string | undefined>();
-  const [saving,     setSaving]     = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
+  const [saving,        setSaving]        = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [error,         setError]         = useState<string | null>(null);
   const [fontSize,   setFontSize]   = useState(16);
 
   const MIN_FONT = 12, MAX_FONT = 28;
@@ -101,11 +102,17 @@ export default function CreateJournalEntryScreen() {
       quality: 0.8,
     });
     if (!result.canceled && result.assets[0]) {
-      const persisted = await persistImageUri(result.assets[0].uri);
-      if (persisted) {
-        setImageUri(persisted);
-      } else {
-        setError('Photo upload failed — check your connection and try again.');
+      setUploadingImage(true);
+      try {
+        const persisted = await persistImageUri(result.assets[0].uri);
+        if (persisted) {
+          setImageUri(persisted);
+          setError(null);
+        } else {
+          setError('Photo upload failed — check your connection and try again.');
+        }
+      } finally {
+        setUploadingImage(false);
       }
     }
   }
@@ -163,12 +170,12 @@ export default function CreateJournalEntryScreen() {
         </View>
 
         <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : cfg.accent }]}
+          style={[styles.saveBtn, { backgroundColor: (saving || uploadingImage) ? colors.muted : cfg.accent }]}
           onPress={handleSave}
-          disabled={saving}
+          disabled={saving || uploadingImage}
         >
-          <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-            {saving ? '...' : tr('journal.save')}
+          <Text style={[styles.saveBtnText, { color: (saving || uploadingImage) ? colors.mutedForeground : '#fff' }]}>
+            {uploadingImage ? '↑' : saving ? '...' : tr('journal.save')}
           </Text>
         </TouchableOpacity>
       </View>

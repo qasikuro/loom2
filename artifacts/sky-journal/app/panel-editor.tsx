@@ -464,6 +464,7 @@ export default function PanelEditorScreen() {
   }
 
   function handleSave() {
+    if (uploadingSet.size > 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     DraftStore.save(layoutKey);
     router.back();
@@ -498,8 +499,14 @@ export default function PanelEditorScreen() {
           <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('create.editPanel')}</Text>
-        <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-          <Text style={styles.saveBtnText}>{t('common.save')}</Text>
+        <TouchableOpacity
+          style={[styles.saveBtn, uploadingSet.size > 0 && { opacity: 0.4 }]}
+          onPress={handleSave}
+          disabled={uploadingSet.size > 0}
+        >
+          <Text style={styles.saveBtnText}>
+            {uploadingSet.size > 0 ? t('create.uploading') : t('common.save')}
+          </Text>
         </TouchableOpacity>
       </View>
 
