@@ -1,7 +1,6 @@
 /**
- * Beautiful in-app animated splash screen.
+ * Skyloom in-app animated splash screen.
  * Shown while fonts load; fades out gracefully into the app.
- * Theme: Sky: Children of the Light — deep navy/lavender, moon, golden glow.
  */
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
@@ -16,7 +15,6 @@ import {
 
 const { width, height } = Dimensions.get('window');
 
-// ── Deterministic star field (no Math.random — deterministic for RN) ───────
 function pseudoRand(seed: number): number {
   const x = Math.sin(seed + 1) * 43758.5453123;
   return x - Math.floor(x);
@@ -72,12 +70,10 @@ function StarField() {
   );
 }
 
-// ── Props ──────────────────────────────────────────────────────────────────
 interface Props {
   onReady: () => void;
 }
 
-// ── Main component ─────────────────────────────────────────────────────────
 export function AppSplashScreen({ onReady }: Props) {
   const screenFade  = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
@@ -85,13 +81,11 @@ export function AppSplashScreen({ onReady }: Props) {
   const glowPulse   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade content in
     Animated.parallel([
       Animated.timing(contentFade, { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.spring(titleY,      { toValue: 0, tension: 42, friction: 9, useNativeDriver: true }),
     ]).start();
 
-    // Pulsing moon glow
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowPulse, { toValue: 1, duration: 1900, useNativeDriver: true }),
@@ -99,7 +93,6 @@ export function AppSplashScreen({ onReady }: Props) {
       ])
     ).start();
 
-    // Hold, then fade out entire screen and call onReady
     const t = setTimeout(() => {
       Animated.timing(screenFade, {
         toValue: 0,
@@ -115,33 +108,25 @@ export function AppSplashScreen({ onReady }: Props) {
 
   return (
     <Animated.View style={[styles.root, { opacity: screenFade }]} pointerEvents="none">
-      {/* Background gradient */}
       <LinearGradient
         colors={['#0D0B1E', '#141030', '#1C1646', '#231C54']}
         locations={[0, 0.28, 0.62, 1]}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Soft horizon haze */}
       <View style={styles.haze} />
-
-      {/* Stars */}
       <StarField />
 
-      {/* ── Centre content ─────────────────────────────────────── */}
       <View style={styles.centre}>
         {/* Moon orb */}
         <Animated.View style={[styles.moonWrap, { transform: [{ scale: moonScale }] }]}>
-          {/* Outer corona rings */}
           <View style={[styles.corona, { width: MOON + 64, height: MOON + 64, borderRadius: (MOON + 64) / 2 }]} />
           <View style={[styles.corona, styles.corona2, { width: MOON + 36, height: MOON + 36, borderRadius: (MOON + 36) / 2 }]} />
-          {/* Moon disc */}
           <View style={styles.moonDisc}>
             <LinearGradient
               colors={['#C8BEE0', '#B8ACDA', '#A898CC']}
               style={StyleSheet.absoluteFill}
             />
-            {/* Crater shadow */}
             <View style={styles.craterA} />
             <View style={styles.craterB} />
           </View>
@@ -149,23 +134,18 @@ export function AppSplashScreen({ onReady }: Props) {
 
         {/* Text block */}
         <Animated.View style={[styles.textBlock, { opacity: contentFade, transform: [{ translateY: titleY }] }]}>
-          {/* Divider label */}
           <View style={styles.dividerRow}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerLabel}>YOUR CELESTIAL DIARY</Text>
+            <Text style={styles.dividerLabel}>YOUR SKY COMPANION</Text>
             <View style={styles.dividerLine} />
           </View>
 
-          {/* "Sky" in large serif */}
+          {/* SKYLOOM wordmark */}
           <Text style={styles.wordSky}>Sky</Text>
+          <Text style={styles.wordLoom}>LOOM</Text>
 
-          {/* "JOURNAL" spaced gold */}
-          <Text style={styles.wordJournal}>JOURNAL</Text>
+          <Text style={styles.tagline}>memories bloom here</Text>
 
-          {/* Tagline */}
-          <Text style={styles.tagline}>where every sky moment lives forever</Text>
-
-          {/* Three dots */}
           <View style={styles.dots}>
             <View style={[styles.dot, { backgroundColor: 'rgba(200,184,232,0.22)' }]} />
             <View style={[styles.dot, { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(200,168,75,0.65)' }]} />
@@ -174,9 +154,7 @@ export function AppSplashScreen({ onReady }: Props) {
         </Animated.View>
       </View>
 
-      {/* ── Bottom branding strip ──────────────────────────────── */}
       <Animated.View style={[styles.bottomStrip, { opacity: contentFade }]}>
-        {/* Shimmer line */}
         <View style={styles.shimmerLine}>
           <LinearGradient
             colors={['transparent', 'rgba(200,184,232,0.16)', 'transparent']}
@@ -185,7 +163,6 @@ export function AppSplashScreen({ onReady }: Props) {
           />
         </View>
 
-        {/* Constellation dots row */}
         <View style={styles.constellationRow}>
           {[0,1,2,3,4,5,6].map(i => (
             <View
@@ -198,7 +175,6 @@ export function AppSplashScreen({ onReady }: Props) {
           ))}
         </View>
 
-        {/* Subtle footer tagline */}
         <Text style={styles.footerText}>sky: children of the light</Text>
       </Animated.View>
     </Animated.View>
@@ -217,7 +193,6 @@ const styles = StyleSheet.create({
     paddingBottom: height * 0.08,
   },
 
-  // ── Layout zones ────────────────────────────────────────────────────────
   centre: {
     alignItems: 'center',
     flex: 1,
@@ -259,7 +234,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(90,72,160,0.14)',
   },
 
-  // ── Moon ────────────────────────────────────────────────────────────────
   moonWrap: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -303,7 +277,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(20,16,48,0.18)',
   },
 
-  // ── Text ────────────────────────────────────────────────────────────────
   textBlock: {
     alignItems: 'center',
     paddingHorizontal: 40,
@@ -335,7 +308,7 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 22,
   },
-  wordJournal: {
+  wordLoom: {
     fontSize: 22,
     color: 'rgba(200,168,75,0.90)',
     letterSpacing: 8,
@@ -366,7 +339,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
 
-  // ── Bottom shimmer ───────────────────────────────────────────────────────
   shimmerLine: {
     width: '80%',
     height: 1,
