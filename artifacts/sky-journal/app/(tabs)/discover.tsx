@@ -8,13 +8,14 @@ import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -61,7 +62,7 @@ export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { t }     = useTranslation();
-  const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser } = useApp();
+  const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('For You');
   const [selectedVibe,  setSelectedVibe]  = useState<string | null>(null);
@@ -70,10 +71,29 @@ export default function DiscoverScreen() {
   const [peopleLoading, setPeopleLoading] = useState(false);
   const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [refreshing,    setRefreshing]    = useState(false);
+  const searchTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastFetchRef   = useRef<number>(0);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
+
+  // Refresh the discover feed when the tab comes into focus,
+  // but at most once every 2 minutes to avoid hammering the API.
+  useFocusEffect(useCallback(() => {
+    const now = Date.now();
+    if (now - lastFetchRef.current > 2 * 60 * 1000) {
+      lastFetchRef.current = now;
+      refreshFeed().catch(() => null);
+    }
+  }, [refreshFeed]));
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    lastFetchRef.current = Date.now();
+    await refreshFeed().catch(() => null);
+    setRefreshing(false);
+  }, [refreshFeed]);
 
   function selectTab(tab: TabType) {
     setActiveTab(tab);
@@ -199,6 +219,14 @@ export default function DiscoverScreen() {
           )}
           contentContainerStyle={[styles.listPad, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <EmptyFeed
               tab={activeTab}
@@ -214,6 +242,14 @@ export default function DiscoverScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.vibesScroll, { paddingBottom: bottomPad }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
           {selectedVibe ? (
             <>

@@ -237,6 +237,7 @@ interface AppContextValue {
   markServerNotificationsRead: () => void;
 
   reloadData:    () => Promise<void>;
+  refreshFeed:   () => Promise<void>;
   clearUserData: () => Promise<void>;
 }
 
@@ -847,6 +848,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await loadData();
   }, []);
 
+  const refreshFeed = useCallback(async () => {
+    await loadSocialData();
+  }, []);
+
   return (
     <AppContext.Provider value={{
       isLoading, apiOnline,
@@ -860,6 +865,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       rewards, dismissReward,
       serverNotifications, markServerNotificationsRead,
       reloadData,
+      refreshFeed,
       clearUserData,
     }}>
       {children}
