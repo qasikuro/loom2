@@ -167,10 +167,10 @@ export function JournalCard(props: JournalCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 14,
-    marginBottom: 10,
+    padding: 12,
+    marginBottom: 8,
     gap: 0,
   },
   diaryAccent: {
@@ -194,15 +194,15 @@ const styles = StyleSheet.create({
   deleteBtn: { width: 30, height: 30, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   divider: { height: 1, marginBottom: 12 },
   contentRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 10 },
-  diaryText: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', lineHeight: 23, fontStyle: 'italic' },
+  diaryText: { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 21, fontStyle: 'italic' },
   thumb: { width: 72, height: 88, borderRadius: 11, flexShrink: 0 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
   // Friend
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   friendAvatar: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  friendAvatarText: { fontSize: 17, fontFamily: 'Inter_700Bold' },
+  friendAvatarText: { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
   friendInfo: { gap: 1 },
-  friendName: { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  friendName: { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
   friendLabel: { fontSize: 11, fontFamily: 'Inter_500Medium', letterSpacing: 0.2 },
   noteText: {
     fontSize: 13, fontFamily: 'Inter_400Regular', lineHeight: 21, fontStyle: 'italic',
@@ -222,5 +222,5 @@ const styles = StyleSheet.create({
   },
   momentDate: { fontSize: 13, fontFamily: 'Inter_600SemiBold', color: 'rgba(220,210,244,0.85)' },
   momentTime: { fontSize: 10, fontFamily: 'Inter_400Regular', marginTop: 1, color: 'rgba(200,184,232,0.45)' },
-  momentText: { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 23, color: 'rgba(240,234,248,0.82)', marginBottom: 10 },
+  momentText: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 21, color: 'rgba(240,234,248,0.82)', marginBottom: 8 },
 });

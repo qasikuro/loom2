@@ -481,11 +481,11 @@ const styles = StyleSheet.create({
   },
   headerText:  { flex: 1, gap: 2 },
   headerTitle: {
-    fontSize: 26, fontFamily: 'Inter_700Bold',
-    letterSpacing: -0.8, color: 'rgba(235,228,255,0.97)',
+    fontSize: 20, fontFamily: 'Inter_600SemiBold',
+    letterSpacing: -0.4, color: 'rgba(235,228,255,0.97)',
   },
   headerSub: {
-    fontSize: 12, fontFamily: 'Inter_400Regular',
+    fontSize: 11, fontFamily: 'Inter_400Regular',
     color: 'rgba(200,184,232,0.55)',
   },
   usersBtn: {
@@ -504,10 +504,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tabPill: {
-    paddingHorizontal: 14, paddingVertical: 6,
+    paddingHorizontal: 12, paddingVertical: 5,
     borderRadius: 20, borderWidth: 1,
   },
-  tabText: { fontSize: 13, fontFamily: 'Inter_600SemiBold', letterSpacing: 0.1 },
+  tabText: { fontSize: 12, fontFamily: 'Inter_500Medium', letterSpacing: 0.1 },
 
   sep: { height: StyleSheet.hairlineWidth },
 
@@ -528,18 +528,18 @@ const styles = StyleSheet.create({
     rowGap: 12,
   },
   vibeCard: {
-    borderRadius: 22, borderWidth: 1,
-    padding: 18, gap: 8,
-    minHeight: 128,
+    borderRadius: 18, borderWidth: 1,
+    padding: 14, gap: 6,
+    minHeight: 110,
     justifyContent: 'flex-end',
     overflow: 'hidden',
   },
   vibeIconWrap: {
-    width: 46, height: 46, borderRadius: 15,
+    width: 38, height: 38, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  vibeLabel: { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
+  vibeLabel: { fontSize: 14, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.2 },
   vibeCount: { fontSize: 11, fontFamily: 'Inter_400Regular' },
 
   backRow: {
@@ -552,37 +552,37 @@ const styles = StyleSheet.create({
   // People
   peopleRoot: { flex: 1 },
   searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    margin: 16, borderRadius: 16, borderWidth: 1,
-    paddingHorizontal: 14, paddingVertical: 13,
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    margin: 16, borderRadius: 13, borderWidth: 1,
+    paddingHorizontal: 12, paddingVertical: 10,
   },
   searchInput: {
-    flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular',
+    flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular',
     paddingVertical: 0,
   },
-  peopleList: { paddingHorizontal: 16, gap: 10 },
+  peopleList: { paddingHorizontal: 16, gap: 8 },
   personCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    borderRadius: 18, borderWidth: 1,
-    padding: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 16, borderWidth: 1,
+    padding: 12,
   },
   personAvatar: {
-    width: 50, height: 50, borderRadius: 25,
+    width: 42, height: 42, borderRadius: 21,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, flexShrink: 0,
   },
-  personInitial:  { fontSize: 20, fontFamily: 'Inter_700Bold' },
-  personInfo:     { flex: 1, gap: 3 },
-  personName:     { fontSize: 15, fontFamily: 'Inter_600SemiBold' },
-  personHandle:   { fontSize: 12, fontFamily: 'Inter_500Medium' },
-  personBio:      { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 16 },
+  personInitial:  { fontSize: 16, fontFamily: 'Inter_600SemiBold' },
+  personInfo:     { flex: 1, gap: 2 },
+  personName:     { fontSize: 14, fontFamily: 'Inter_600SemiBold' },
+  personHandle:   { fontSize: 11, fontFamily: 'Inter_500Medium' },
+  personBio:      { fontSize: 11, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 15 },
   followBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, height: 36,
-    borderRadius: 18, borderWidth: 1.5,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 11, height: 30,
+    borderRadius: 15, borderWidth: 1.5,
     flexShrink: 0,
   },
-  followBtnText: { fontSize: 12, fontFamily: 'Inter_600SemiBold' },
+  followBtnText: { fontSize: 11, fontFamily: 'Inter_600SemiBold' },
 
   // Empty states
   emptyWrap: {

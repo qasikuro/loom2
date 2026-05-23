@@ -1121,10 +1121,10 @@ const styles = StyleSheet.create({
   // Name / Bio
   nameSection:     { alignItems: 'center', gap: 5, paddingHorizontal: 24, marginTop: 10, marginBottom: 4 },
   nameRow:         { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name:            { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.6 },
+  name:            { fontSize: 22, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.4 },
   editHint:        { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   nameEditWrap:    { borderBottomWidth: 2, paddingBottom: 3, alignSelf: 'stretch', alignItems: 'center' },
-  nameEditInput:   { fontSize: 26, fontFamily: 'Inter_700Bold', letterSpacing: -0.6, textAlign: 'center' },
+  nameEditInput:   { fontSize: 22, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.4, textAlign: 'center' },
   usernameRow:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
   usernameText:    { fontSize: 13, fontFamily: 'Inter_500Medium' },
   usernamePlaceholder: { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
@@ -1133,8 +1133,8 @@ const styles = StyleSheet.create({
   usernameEditInput: { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular' },
   usernameError:   { fontSize: 11, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
   bioRow:          { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  bio:             { flex: 1, fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 20, textAlign: 'center' },
-  bioInput:        { fontSize: 14, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 20, borderWidth: 1, borderRadius: 12, padding: 12, alignSelf: 'stretch' },
+  bio:             { flex: 1, fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 19, textAlign: 'center' },
+  bioInput:        { fontSize: 13, fontFamily: 'Inter_400Regular', fontStyle: 'italic', lineHeight: 19, borderWidth: 1, borderRadius: 12, padding: 10, alignSelf: 'stretch' },
   moodRow:         { marginTop: 4 },
 
   // Body
@@ -1143,8 +1143,8 @@ const styles = StyleSheet.create({
   // Stats
   statsCard:   { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 18, marginBottom: 14, marginTop: 14 },
   statItem:    { flex: 1, alignItems: 'center', gap: 4 },
-  statNum:     { fontSize: 22, fontFamily: 'Inter_700Bold', letterSpacing: -0.5 },
-  statLabel:   { fontSize: 11, fontFamily: 'Inter_500Medium', letterSpacing: 0.2, textTransform: 'uppercase' },
+  statNum:     { fontSize: 18, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.4 },
+  statLabel:   { fontSize: 10, fontFamily: 'Inter_500Medium', letterSpacing: 0.2, textTransform: 'uppercase' },
   statDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4 },
 
   // Section card (stories / wardrobe nav)
@@ -1152,8 +1152,8 @@ const styles = StyleSheet.create({
   sectionCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionCardLeft:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
   sectionCardIcon:   { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  sectionCardTitle:  { fontSize: 15, fontFamily: 'Inter_600SemiBold', marginBottom: 1 },
-  sectionCardSub:    { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
+  sectionCardTitle:  { fontSize: 13, fontFamily: 'Inter_600SemiBold', marginBottom: 1 },
+  sectionCardSub:    { fontSize: 11, fontFamily: 'Inter_400Regular', fontStyle: 'italic' },
   arrowCircle:       { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   thumbsRow:         { flexDirection: 'row', height: 96 },
   storyThumb:        { flex: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#1C1840', position: 'relative' },
@@ -1167,10 +1167,10 @@ const styles = StyleSheet.create({
   // Sections
   section:       { borderTopWidth: 1, paddingTop: 22, marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
-  sectionTitle:  { fontSize: 17, fontFamily: 'Inter_700Bold', letterSpacing: -0.3 },
-  sectionSub:    { fontSize: 12, fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginTop: 2 },
-  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
-  addBtnText:    { color: '#fff', fontSize: 13, fontFamily: 'Inter_600SemiBold' },
+  sectionTitle:  { fontSize: 14, fontFamily: 'Inter_600SemiBold', letterSpacing: -0.2 },
+  sectionSub:    { fontSize: 11, fontFamily: 'Inter_400Regular', fontStyle: 'italic', marginTop: 2 },
+  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20 },
+  addBtnText:    { color: '#fff', fontSize: 12, fontFamily: 'Inter_600SemiBold' },
 
   // Outfit empty state
   emptyOutfitCard:  { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1, borderStyle: 'dashed', borderRadius: 16, padding: 16 },
@@ -1188,8 +1188,8 @@ const styles = StyleSheet.create({
 
   // Traits
   traitsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  traitChip:   { flexDirection: 'row', alignItems: 'center', gap: 7, paddingLeft: 12, paddingRight: 6, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  traitText:   { fontSize: 13, fontFamily: 'Inter_500Medium' },
+  traitChip:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 10, paddingRight: 5, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  traitText:   { fontSize: 12, fontFamily: 'Inter_500Medium' },
   traitRemove: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   traitAddWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5 },
   traitInput:  { fontSize: 13, fontFamily: 'Inter_400Regular', minWidth: 80, maxWidth: 120 },

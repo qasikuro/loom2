@@ -662,11 +662,11 @@ const styles = StyleSheet.create({
   headerGrad: { paddingBottom: 0 },
   header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:10, paddingBottom:6 },
   headerLeft: { flexDirection:'row', alignItems:'center', gap:10 },
-  title: { fontSize:22, fontFamily:'Inter_700Bold', letterSpacing:-0.5, color:'rgba(235,228,255,0.97)' },
+  title: { fontSize:18, fontFamily:'Inter_600SemiBold', letterSpacing:-0.3, color:'rgba(235,228,255,0.97)' },
   privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.08)', borderWidth:1, borderColor:'rgba(200,184,232,0.18)' },
   privateBadgeText: { fontSize:10, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.7)' },
-  headerRight: { flexDirection:'row', gap:8 },
-  hdrBtn: { width:44, height:44, borderRadius:14, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.09)', borderWidth:1, borderColor:'rgba(200,184,232,0.14)' },
+  headerRight: { flexDirection:'row', gap:6 },
+  hdrBtn: { width:38, height:38, borderRadius:12, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.09)', borderWidth:1, borderColor:'rgba(200,184,232,0.14)' },
   hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.55)', borderColor:'rgba(107,91,149,0.4)' },
 
   // Filter tabs inside dark header
@@ -679,7 +679,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
   },
   filterTabActive: { backgroundColor:'rgba(255,255,255,0.96)', borderColor:'transparent' },
-  filterLabel: { fontSize:13, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.8)' },
+  filterLabel: { fontSize:12, fontFamily:'Inter_500Medium', color:'rgba(200,184,232,0.8)' },
   filterLabelActive: { color:'#2A1E50', fontFamily:'Inter_600SemiBold' },
   filterCount: { paddingHorizontal:5, paddingVertical:1, borderRadius:10, backgroundColor:'rgba(255,255,255,0.15)', minWidth:18, alignItems:'center' },
   filterCountActive: { backgroundColor:'rgba(107,91,149,0.15)' },
@@ -687,8 +687,8 @@ const styles = StyleSheet.create({
   filterCountTextActive: { color:'#6B5B95' },
 
   // Search
-  searchBar: { flexDirection:'row', alignItems:'center', gap:9, borderWidth:1, borderRadius:14, paddingHorizontal:13, paddingVertical:11, marginHorizontal:16, marginTop:10 },
-  searchInput: { flex:1, fontSize:15, fontFamily:'Inter_400Regular' },
+  searchBar: { flexDirection:'row', alignItems:'center', gap:9, borderWidth:1, borderRadius:13, paddingHorizontal:12, paddingVertical:9, marginHorizontal:16, marginTop:8 },
+  searchInput: { flex:1, fontSize:13, fontFamily:'Inter_400Regular' },
   searchHint: { fontSize:12, fontFamily:'Inter_400Regular', fontStyle:'italic', paddingHorizontal:18, paddingTop:8, paddingBottom:4 },
 
   // Timeline
@@ -703,8 +703,8 @@ const styles = StyleSheet.create({
   // Empty
   empty: { flex:1, alignItems:'center', justifyContent:'center', paddingTop:80, paddingHorizontal:36, gap:14 },
   emptyIcon: { width:76, height:76, borderRadius:38, alignItems:'center', justifyContent:'center', marginBottom:4 },
-  emptyTitle: { fontSize:19, fontFamily:'Inter_600SemiBold', textAlign:'center' },
-  emptyText: { fontSize:14, fontFamily:'Inter_400Regular', textAlign:'center', lineHeight:22, fontStyle:'italic' },
-  emptyBtn: { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:24, height:48, borderRadius:24, marginTop:4 },
-  emptyBtnText: { fontSize:15, fontFamily:'Inter_600SemiBold', color:'#fff' },
+  emptyTitle: { fontSize:16, fontFamily:'Inter_600SemiBold', textAlign:'center' },
+  emptyText: { fontSize:13, fontFamily:'Inter_400Regular', textAlign:'center', lineHeight:20, fontStyle:'italic' },
+  emptyBtn: { flexDirection:'row', alignItems:'center', gap:7, paddingHorizontal:20, height:40, borderRadius:20, marginTop:4 },
+  emptyBtnText: { fontSize:13, fontFamily:'Inter_600SemiBold', color:'#fff' },
 });
