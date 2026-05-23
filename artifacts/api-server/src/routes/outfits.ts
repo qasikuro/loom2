@@ -22,7 +22,7 @@ router.get("/outfits", requireAuth, async (req, res) => {
     const rows = await db
       .select()
       .from(outfitsTable)
-      .where(eq(outfitsTable.userId, userId))
+      .where(and(eq(outfitsTable.userId, userId), eq(outfitsTable.isHidden, false)))
       .orderBy(desc(outfitsTable.date));
     return res.json(rows.map(serializeOutfit));
   } catch (err) {

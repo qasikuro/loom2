@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 
 // ── API base URL (baked in at build time via app.config.ts) ───────────────────
 
@@ -544,6 +545,67 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ]);
     } catch { /* silently skip */ }
   }
+
+  // Silent foreground refresh — fetches fresh data without resetting state first
+  // so there is no UI flash. Admin deletions/amendments take effect the moment
+  // the user brings the app back to the foreground.
+  async function softLoadData() {
+    const token = await _getToken();
+    if (!token) return;
+
+    try {
+      const [charRaw, entriesRaw, storiesRaw, outfitsRaw, galleryRaw, usageRaw] = await Promise.all([
+        apiFetch<any>('/character'),
+        apiFetch<any[]>('/journal-entries'),
+        apiFetch<any[]>('/stories'),
+        apiFetch<any[]>('/outfits'),
+        apiFetch<any[]>('/gallery').catch(() => []),
+        apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
+      ]);
+
+      const char    = toAppCharacter(charRaw);
+      const entries = (entriesRaw ?? []).map(toAppJournalEntry);
+      const stors   = (storiesRaw ?? []).map(toAppStory);
+      const outs    = (outfitsRaw ?? []).map(toAppOutfit);
+      const gal     = (galleryRaw ?? []).map((r: any): GalleryPhoto => ({
+        id:        r.id,
+        imageUri:  resolveUri(r.imageUri) ?? r.imageUri,
+        caption:   r.caption ?? '',
+        createdAt: r.createdAt,
+      }));
+
+      setCharacterState(char);
+      setJournalEntries(entries);
+      setStories(stors);
+      setOutfits(outs);
+      setGallery(gal);
+      setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
+      setApiOnline(true);
+
+      await Promise.allSettled([
+        AsyncStorage.setItem('character_v2', JSON.stringify(char)),
+        AsyncStorage.setItem('journal_v2',   JSON.stringify(entries)),
+        AsyncStorage.setItem('stories_v1',   JSON.stringify(stors)),
+        AsyncStorage.setItem('outfits_v1',   JSON.stringify(outs)),
+      ]);
+
+      loadSocialData();
+    } catch { /* silently fail — keep showing cached data */ }
+  }
+
+  // Re-fetch from the API every time the app comes to the foreground so that
+  // admin amendments (removed stories, account changes) are reflected without
+  // requiring a full sign-out / sign-in cycle.
+  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (appStateRef.current !== 'active' && nextState === 'active') {
+        softLoadData();
+      }
+      appStateRef.current = nextState;
+    });
+    return () => sub.remove();
+  }, []);
 
   // ── Character ──────────────────────────────────────────────────────────────
 

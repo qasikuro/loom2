@@ -49,7 +49,7 @@ router.get("/stories", requireAuth, async (req, res) => {
     const rows = await db
       .select()
       .from(storiesTable)
-      .where(eq(storiesTable.userId, userId))
+      .where(and(eq(storiesTable.userId, userId), eq(storiesTable.isHidden, false)))
       .orderBy(desc(storiesTable.date));
     return res.json(rows.map(serializeStory));
   } catch (err) {
@@ -156,11 +156,11 @@ router.get("/stories/:id", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const storyId = String(req.params.id);
   try {
-    // Allow own stories OR public stories from public profiles
+    // Allow own stories OR public stories from public profiles (never hidden)
     const rows = await db
       .select()
       .from(storiesTable)
-      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId), eq(storiesTable.isHidden, false)))
       .limit(1);
 
     if (rows.length === 0) {
@@ -173,6 +173,7 @@ router.get("/stories/:id", requireAuth, async (req, res) => {
           and(
             eq(storiesTable.id, storyId),
             eq(storiesTable.isPublic, true),
+            eq(storiesTable.isHidden, false),
             eq(characterTable.isPublic, true),
           ),
         )
