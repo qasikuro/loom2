@@ -144,9 +144,10 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
           </Text>
         ) : null}
 
-        {/* Footer */}
+        {/* Footer — two rows so stats and actions never collide */}
         <View style={styles.footer}>
-          <View style={styles.statsGroup}>
+          {/* Row 1: stats */}
+          <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Icon name="eye" size={12} color={colors.mutedForeground} />
               <Text style={[styles.statText, { color: colors.mutedForeground }]}>
@@ -159,7 +160,8 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
             <MoodBadge mood={post.vibe} size="sm" />
           </View>
 
-          <View style={styles.actions}>
+          {/* Row 2: action buttons, right-aligned */}
+          <View style={styles.actionsRow}>
             {onDelete && (
               <TouchableOpacity
                 onPress={handleDeletePress}
@@ -205,7 +207,6 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
                 <Icon name="flag" size={14} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
-            {/* Read CTA */}
             <TouchableOpacity
               onPress={onPress}
               style={[styles.readBtn, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}35` }]}
@@ -262,16 +263,14 @@ const styles = StyleSheet.create({
     lineHeight: 20, fontStyle: 'italic', opacity: 0.82,
   },
 
-  footer: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginTop: 2,
-  },
-  statsGroup: { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 },
-  statItem:   { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statDot:    { width: 3, height: 3, borderRadius: 1.5 },
-  statText:   { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  footer: { marginTop: 4, gap: 10 },
 
-  actions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statsRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  actionsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
+
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statDot:  { width: 3, height: 3, borderRadius: 1.5 },
+  statText: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
   actionBtn: {
     height: 36, minWidth: 36, borderRadius: 11, borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
