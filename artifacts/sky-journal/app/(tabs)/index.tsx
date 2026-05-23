@@ -27,46 +27,51 @@ import { useColors } from '@/hooks/useColors';
 
 const CATEGORIES = [
   {
-    key: 'moments',
-    title: 'Moments & Friends',
-    desc: 'Log encounters with sky friends',
-    icon: 'users'   as const,
-    iconColor: '#7AB8F0',
-    iconBg:    'rgba(74,128,184,0.28)',
-    image: Images.story_bg2,
-    route: '/(tabs)/log' as const,
+    key: 'flames',
+    title: 'App Flames and Energy System',
+    desc: 'Track your celestial flames and energy',
+    icon: 'zap'     as const,
+    iconColor: '#F0C060',
+    iconBg:    'rgba(200,160,40,0.28)',
+    image: Images.story_bg1,
   },
   {
-    key: 'stories',
-    title: 'Manga Stories',
-    desc: 'Tell your sky adventures in panels',
-    icon: 'layers'  as const,
+    key: 'guides',
+    title: 'Guides and Video',
+    desc: 'Explore sky tutorials and walkthroughs',
+    icon: 'play-circle' as const,
+    iconColor: '#A8D8F0',
+    iconBg:    'rgba(60,140,190,0.28)',
+    image: Images.story_bg2,
+  },
+  {
+    key: 'marketplace',
+    title: 'Marketplace',
+    desc: 'Trade items and discover rare finds',
+    icon: 'shopping-bag' as const,
     iconColor: '#C0A8F0',
     iconBg:    'rgba(107,91,149,0.28)',
-    image: Images.story_bg1,
-    route: '/(tabs)/create' as const,
+    image: Images.story_bg3,
   },
   {
-    key: 'discover',
-    title: 'Discover',
-    desc: 'Browse memories from the sky world',
+    key: 'discovers',
+    title: 'Discovers',
+    desc: 'Uncover hidden realms and sky secrets',
     icon: 'compass' as const,
     iconColor: '#70D0A8',
     iconBg:    'rgba(58,144,96,0.28)',
-    image: Images.story_bg3,
-    route: '/(tabs)/discover' as const,
+    image: Images.character_default,
   },
   {
-    key: 'outfit',
-    title: 'Outfit Log',
-    desc: 'Record and display your sky looks',
-    icon: 'star'    as const,
-    iconColor: '#F0D070',
-    iconBg:    'rgba(200,168,75,0.28)',
-    image: Images.character_default,
-    route: '/(tabs)/profile' as const,
+    key: 'connections',
+    title: 'Connections and Requests',
+    desc: 'Manage your sky friendships and bonds',
+    icon: 'users'   as const,
+    iconColor: '#F0A8C0',
+    iconBg:    'rgba(180,80,120,0.28)',
+    image: Images.story_bg1,
   },
-] as const;
+];
 
 // Stars in the header
 const HEADER_STARS = [
@@ -447,12 +452,8 @@ export default function HomeScreen() {
             >
               <TouchableOpacity
                 style={[styles.hCard, SHADOW.sm]}
-                onPress={() => {
-                  if (cat.key === 'moments') return;
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  router.push(cat.route);
-                }}
-                activeOpacity={cat.key === 'moments' ? 1 : 0.86}
+                onPress={() => {}}
+                activeOpacity={1}
               >
                 <Image source={cat.image} style={StyleSheet.absoluteFill} contentFit="cover" />
                 <LinearGradient
@@ -473,7 +474,7 @@ export default function HomeScreen() {
                   <Icon name="arrow-right" size={14} color="rgba(220,210,255,0.6)" />
                 </View>
 
-                {cat.key === 'moments' && (
+                {true && (
                   <BlurView
                     intensity={Platform.OS === 'web' ? 12 : 22}
                     tint="dark"
