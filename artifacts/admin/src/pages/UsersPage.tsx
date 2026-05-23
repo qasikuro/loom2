@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { api, type AdminUser } from "../api";
+import UserDetailDrawer from "../components/UserDetailDrawer";
 
 type ConfirmAction = { type: "ban" | "unban" | "delete" | "admin"; user: AdminUser };
 type LimitEdit     = { userId: string; value: string };
@@ -15,6 +16,7 @@ export default function UsersPage() {
   const [toast, setToast]     = useState("");
   const [limitEdit, setLimitEdit] = useState<LimitEdit | null>(null);
   const [limitSaving, setLimitSaving] = useState(false);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
@@ -166,6 +168,12 @@ export default function UsersPage() {
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1 flex-wrap">
                       <button
+                        onClick={() => setDetailUserId(u.userId)}
+                        className="px-2 py-1 text-xs rounded-md font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                      >
+                        View
+                      </button>
+                      <button
                         onClick={() => setConfirm({ type: u.isBanned ? "unban" : "ban", user: u })}
                         className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isBanned ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
                       >
@@ -248,6 +256,12 @@ export default function UsersPage() {
           {toast}
         </div>
       )}
+
+      <UserDetailDrawer
+        userId={detailUserId}
+        onClose={() => setDetailUserId(null)}
+        onActionDone={() => load(query, offset)}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { api, type ContentItem } from "../api";
+import UserDetailDrawer from "../components/UserDetailDrawer";
 
 export default function ContentPage() {
   const [contentType, setContentType] = useState<"stories" | "outfits">("stories");
@@ -10,6 +11,7 @@ export default function ContentPage() {
   const [error, setError]   = useState("");
   const [confirm, setConfirm] = useState<{ action: "hide" | "unhide" | "delete"; item: ContentItem } | null>(null);
   const [toast, setToast]   = useState("");
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
@@ -114,7 +116,12 @@ export default function ContentPage() {
                   </td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(item.date).toLocaleDateString()}</td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex justify-end gap-1 flex-wrap">
+                      <button
+                        onClick={() => setDetailUserId(item.userId)}
+                        className="px-2 py-1 text-xs rounded-md font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                        title="View author profile"
+                      >Author</button>
                       <button
                         onClick={() => setConfirm({ action: item.isHidden ? "unhide" : "hide", item })}
                         className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${item.isHidden ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
@@ -173,6 +180,11 @@ export default function ContentPage() {
           {toast}
         </div>
       )}
+
+      <UserDetailDrawer
+        userId={detailUserId}
+        onClose={() => setDetailUserId(null)}
+      />
     </div>
   );
 }

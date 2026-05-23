@@ -8,8 +8,9 @@ import {
   followsTable,
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, count, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, ne, or } from "drizzle-orm";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
+import { clerkClient } from "@clerk/express";
 
 const router: IRouter = Router();
 
@@ -88,6 +89,71 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
     });
   } catch (err) {
     req.log.error({ err }, "Admin stats failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── User detail (with Clerk email + content counts) ──────────────────────────
+
+router.get("/admin/users/:id", requireAdmin, async (req: Request, res: Response) => {
+  const targetId = String(req.params.id);
+  try {
+    const [row] = await db
+      .select({
+        userId:       characterTable.userId,
+        username:     characterTable.username,
+        name:         characterTable.name,
+        bio:          characterTable.bio,
+        mood:         characterTable.mood,
+        traits:       characterTable.traits,
+        isPublic:     characterTable.isPublic,
+        isAdmin:      characterTable.isAdmin,
+        isBanned:     characterTable.isBanned,
+        galleryLimit: characterTable.galleryLimit,
+        updatedAt:    characterTable.updatedAt,
+      })
+      .from(characterTable)
+      .where(eq(characterTable.userId, targetId))
+      .limit(1);
+
+    if (!row) return res.status(404).json({ error: "User not found" });
+
+    // Fetch email from Clerk (non-fatal if it fails)
+    let email: string | null = null;
+    let clerkCreatedAt: number | null = null;
+    try {
+      const clerkUser = await clerkClient.users.getUser(targetId);
+      email          = clerkUser.emailAddresses[0]?.emailAddress ?? null;
+      clerkCreatedAt = clerkUser.createdAt;
+    } catch { /* user may not exist in Clerk yet */ }
+
+    // Content counts
+    const [
+      [{ storyCount }],
+      [{ outfitCount }],
+      [{ journalCount }],
+      [{ followingCount }],
+      [{ followersCount }],
+    ] = await Promise.all([
+      db.select({ storyCount:    count() }).from(storiesTable)       .where(eq(storiesTable.userId,       targetId)),
+      db.select({ outfitCount:   count() }).from(outfitsTable)       .where(eq(outfitsTable.userId,       targetId)),
+      db.select({ journalCount:  count() }).from(journalEntriesTable).where(eq(journalEntriesTable.userId, targetId)),
+      db.select({ followingCount: count() }).from(followsTable)      .where(eq(followsTable.followerId,   targetId)),
+      db.select({ followersCount: count() }).from(followsTable)      .where(eq(followsTable.followingId,  targetId)),
+    ]);
+
+    return res.json({
+      ...row,
+      email,
+      clerkCreatedAt,
+      storyCount,
+      outfitCount,
+      journalCount,
+      followingCount,
+      followersCount,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Admin get user detail failed");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -27,7 +27,8 @@ export async function apiFetch<T = unknown>(
 }
 
 export const api = {
-  getConfig:     () => apiFetch<{ publishableKey: string }>("/admin/config"),
+  getConfig:      () => apiFetch<{ publishableKey: string }>("/admin/config"),
+  getUserDetail:  (id: string) => apiFetch<AdminUserDetail>(`/admin/users/${id}`),
   getMe:         () => apiFetch<{ userId: string; name: string; isAdmin: boolean }>("/admin/me"),
   getStats:      () => apiFetch<Stats>("/admin/stats"),
   getUsers:      (q = "", offset = 0) => apiFetch<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
@@ -67,6 +68,17 @@ export interface AdminUser {
   isBanned:     boolean;
   galleryLimit: number;
   updatedAt:    string;
+}
+
+export interface AdminUserDetail extends AdminUser {
+  email:          string | null;
+  clerkCreatedAt: number | null;
+  traits:         string[] | null;
+  storyCount:     number;
+  outfitCount:    number;
+  journalCount:   number;
+  followingCount: number;
+  followersCount: number;
 }
 
 export interface ContentItem {
