@@ -265,9 +265,9 @@ export default function PanelEditorScreen() {
   const [selId,       setSelId]       = useState<string | null>(null);
   const [toolMode,    setToolMode]    = useState<'bubble' | 'text' | 'sticker' | null>(null);
   const [canvasW,     setCanvasW]     = useState(SW - 36);
-  const [pendingUri,  setPendingUri]  = useState<string | null>(null);
-  const [pendingIdx,  setPendingIdx]  = useState<number>(0);
-  const [uploadingIdx,setUploadingIdx]= useState<number | null>(null);
+  const [pendingUri,    setPendingUri]    = useState<string | null>(null);
+  const [pendingIdx,    setPendingIdx]    = useState<number>(0);
+  const [uploadingSet,  setUploadingSet]  = useState<Set<number>>(new Set());
 
   const sizeHoldRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -303,25 +303,69 @@ export default function PanelEditorScreen() {
   async function pickPanelImage(idx: number) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: false,
-      quality: 1,
+      mediaTypes:              ['images'],
+      allowsEditing:           false,
+      allowsMultipleSelection: true,
+      quality:                 1,
     });
-    if (!res.canceled && res.assets[0]) {
+    if (res.canceled || res.assets.length === 0) return;
+
+    // ── Single pick → show crop modal ─────────────────────────────────────
+    if (res.assets.length === 1) {
       setPendingIdx(idx);
       setPendingUri(res.assets[0].uri);
+      return;
     }
+
+    // ── Multi-pick → expand panels if needed, upload all in parallel ──────
+    const d = DraftStore.get();
+    if (!d) return;
+
+    const needed      = Math.min(5, idx + res.assets.length);
+    const finalCount  = Math.max(panels.length, needed);
+
+    // Expand panels array to fit
+    const expandedPanels = [...panels];
+    while (expandedPanels.length < finalCount) {
+      expandedPanels.push({ id: crypto.randomUUID(), text: '', imageUri: undefined, bgPreset: undefined, bubbleText: '', overlays: [] });
+    }
+
+    // Switch to the smallest layout that fits finalCount
+    const bestLayout = LAYOUTS.slice().sort((a, b) => a.count - b.count).find(l => l.count >= finalCount)
+      ?? LAYOUTS[LAYOUTS.length - 1];
+
+    setLayoutKey(bestLayout.key);
+    setPanels(expandedPanels);
+    DraftStore.set({ panels: expandedPanels, activePanelIndex: idx, onSave: d.onSave });
+
+    // Determine which panel slots to fill (starting at idx)
+    const targetIndices = res.assets.map((_, i) => idx + i).filter(i => i < finalCount);
+    setUploadingSet(new Set(targetIndices));
+
+    // Upload all in parallel
+    targetIndices.forEach(async (panelIdx, i) => {
+      try {
+        const uri = await persistImageUri(res.assets[i].uri);
+        setPanels(prev => {
+          const next = prev.map((p, pi) => pi === panelIdx ? { ...p, imageUri: uri, bgPreset: undefined } : p);
+          DraftStore.updatePanel(panelIdx, { imageUri: uri, bgPreset: undefined });
+          return next;
+        });
+      } finally {
+        setUploadingSet(prev => { const s = new Set(prev); s.delete(panelIdx); return s; });
+      }
+    });
   }
 
   async function handleCropDone(croppedUri: string) {
     const idx = pendingIdx;
     setPendingUri(null);
-    setUploadingIdx(idx);
+    setUploadingSet(new Set([idx]));
     try {
       const uri = await persistImageUri(croppedUri);
       updatePanel(idx, { imageUri: uri, bgPreset: undefined });
     } finally {
-      setUploadingIdx(null);
+      setUploadingSet(new Set());
     }
   }
 
@@ -513,7 +557,7 @@ export default function PanelEditorScreen() {
                           )}
 
                           {/* Upload spinner overlay */}
-                          {uploadingIdx === pIdx && (
+                          {uploadingSet.has(pIdx) && (
                             <View style={styles.uploadOverlay}>
                               <ActivityIndicator color="#fff" size="small" />
                             </View>
