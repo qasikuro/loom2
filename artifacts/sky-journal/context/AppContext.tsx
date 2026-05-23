@@ -105,6 +105,7 @@ export interface Story {
   id:              string;
   date:            string;
   chapterTitle:    string;
+  description:     string;
   panels:          StoryPanel[];
   mood:            string;
   location:        string;
@@ -156,6 +157,7 @@ export interface DiscoverPost {
   authorHandle:     string;
   authorAvatarUri?: string | null;
   chapterTitle:     string;
+  description?:     string;
   storySnippet:     string;
   imageUri?:        string;
   mood:             string;
@@ -290,6 +292,7 @@ function toAppStory(raw: any): Story {
     id:             raw.id,
     date:           typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
     chapterTitle:   raw.chapterTitle ?? raw.chapter_title,
+    description:    raw.description ?? '',
     panels:         Array.isArray(raw.panels)
       ? raw.panels.map((p: any) => ({ ...p, imageUri: resolveUri(p.imageUri) }))
       : [],
@@ -678,6 +681,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         id:            story.id,
         date:          story.date,
         chapterTitle:  story.chapterTitle,
+        description:   story.description ?? '',
         panels:        story.panels,
         mood:          story.mood,
         location:      story.location,

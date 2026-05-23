@@ -195,6 +195,7 @@ export default function CreateScreen() {
       id:             crypto.randomUUID(),
       date:           new Date().toISOString(),
       chapterTitle:   title.trim(),
+      description:    desc.trim(),
       panels:         filledPages.flatMap(p => p.panels),
       mood,
       location,

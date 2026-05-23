@@ -12,6 +12,7 @@ export const storiesTable = pgTable("stories", {
   id:             uuid("id").primaryKey().defaultRandom(),
   userId:         text("user_id").notNull().default("legacy"),
   chapterTitle:   text("chapter_title").notNull(),
+  description:    text("description").notNull().default(""),
   mood:           text("mood").notNull(),
   location:       text("location").notNull().default(""),
   isPublic:       boolean("is_public").notNull().default(false),

@@ -136,6 +136,7 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
       .select({
         id:             storiesTable.id,
         chapterTitle:   storiesTable.chapterTitle,
+        description:    storiesTable.description,
         mood:           storiesTable.mood,
         location:       storiesTable.location,
         panels:         storiesTable.panels,
@@ -159,6 +160,7 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
     return res.json(rows.map(r => ({
       id:             r.id,
       chapterTitle:   r.chapterTitle,
+      description:    r.description ?? '',
       mood:           r.mood,
       location:       r.location,
       panels:         Array.isArray(r.panels)
@@ -315,6 +317,7 @@ router.get("/discover", requireAuth, async (req, res) => {
         id:              storiesTable.id,
         userId:          storiesTable.userId,
         chapterTitle:    storiesTable.chapterTitle,
+        description:     storiesTable.description,
         mood:            storiesTable.mood,
         location:        storiesTable.location,
         witnessedCount:  storiesTable.witnessedCount,
@@ -373,6 +376,7 @@ router.get("/discover", requireAuth, async (req, res) => {
           authorUsername:  row.authorUsername ?? null,
           authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
           chapterTitle:    row.chapterTitle,
+          description:     row.description ?? '',
           storySnippet:    panels[0]?.text ?? "",
           imageUri:        panels[0]?.imageUri ?? null,
           mood:            row.mood,

@@ -377,6 +377,11 @@ export default function StoryScreen() {
               </View>
             </View>
             <Text style={styles.heroTitle}>{title}</Text>
+            {!!(story?.description ?? post?.description) && (
+              <Text style={styles.heroDescription}>
+                {story?.description ?? post?.description}
+              </Text>
+            )}
             <View style={styles.heroMoodRow}>
               <MoodBadge mood={mood} size="sm" />
               <View style={styles.infoBadge}>
@@ -465,7 +470,8 @@ const styles = StyleSheet.create({
   heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Satoshi-Bold' },
   heroAuthor:  { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Satoshi-Bold' },
   heroChapter: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Satoshi-Regular' },
-  heroTitle:   { color: '#fff', fontSize: 24, fontFamily: 'Satoshi-Bold', lineHeight: 32 },
+  heroTitle:       { color: '#fff', fontSize: 24, fontFamily: 'Satoshi-Bold', lineHeight: 32 },
+  heroDescription: { color: 'rgba(255,255,255,0.72)', fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 20, fontStyle: 'italic' },
   heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   infoBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
