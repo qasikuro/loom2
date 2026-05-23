@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   KeyboardAvoidingView,
@@ -27,6 +28,7 @@ import { DraftStore } from '@/utils/draftStore';
 import type { BubbleStyle, PanelOverlay, StoryPanel } from '@/context/AppContext';
 import { persistImageUri } from '@/utils/persistImage';
 import { useTranslation } from 'react-i18next';
+import CropImageModal from '@/components/CropImageModal';
 
 const { width: SW } = Dimensions.get('window');
 const GAP      = 3;
@@ -257,12 +259,15 @@ export default function PanelEditorScreen() {
   const draft = DraftStore.get();
   const initPanels = draft?.panels ?? [];
 
-  const [panels,    setPanels]    = useState<StoryPanel[]>(initPanels);
-  const [layoutKey, setLayoutKey] = useState<string>(() => defaultLayoutKey(initPanels.length));
-  const [activeIdx, setActiveIdx] = useState(draft?.activePanelIndex ?? 0);
-  const [selId,     setSelId]     = useState<string | null>(null);
-  const [toolMode,  setToolMode]  = useState<'bubble' | 'text' | 'sticker' | null>(null);
-  const [canvasW,   setCanvasW]   = useState(SW - 36);
+  const [panels,      setPanels]      = useState<StoryPanel[]>(initPanels);
+  const [layoutKey,   setLayoutKey]   = useState<string>(() => defaultLayoutKey(initPanels.length));
+  const [activeIdx,   setActiveIdx]   = useState(draft?.activePanelIndex ?? 0);
+  const [selId,       setSelId]       = useState<string | null>(null);
+  const [toolMode,    setToolMode]    = useState<'bubble' | 'text' | 'sticker' | null>(null);
+  const [canvasW,     setCanvasW]     = useState(SW - 36);
+  const [pendingUri,  setPendingUri]  = useState<string | null>(null);
+  const [pendingIdx,  setPendingIdx]  = useState<number>(0);
+  const [uploadingIdx,setUploadingIdx]= useState<number | null>(null);
 
   const sizeHoldRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -300,11 +305,23 @@ export default function PanelEditorScreen() {
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
-      quality: 0.88,
+      quality: 1,
     });
     if (!res.canceled && res.assets[0]) {
-      const uri = await persistImageUri(res.assets[0].uri);
+      setPendingIdx(idx);
+      setPendingUri(res.assets[0].uri);
+    }
+  }
+
+  async function handleCropDone(croppedUri: string) {
+    const idx = pendingIdx;
+    setPendingUri(null);
+    setUploadingIdx(idx);
+    try {
+      const uri = await persistImageUri(croppedUri);
       updatePanel(idx, { imageUri: uri, bgPreset: undefined });
+    } finally {
+      setUploadingIdx(null);
     }
   }
 
@@ -493,6 +510,13 @@ export default function PanelEditorScreen() {
                             <TouchableOpacity style={styles.changeBtn} onPress={() => pickPanelImage(pIdx)}>
                               <Icon name="camera" size={12} color="rgba(235,228,255,0.9)" />
                             </TouchableOpacity>
+                          )}
+
+                          {/* Upload spinner overlay */}
+                          {uploadingIdx === pIdx && (
+                            <View style={styles.uploadOverlay}>
+                              <ActivityIndicator color="#fff" size="small" />
+                            </View>
                           )}
 
                           {/* Draggable overlays (active panel) */}
@@ -768,6 +792,15 @@ export default function PanelEditorScreen() {
           </ScrollView>
         </View>
       </ScrollView>
+
+      {pendingUri && (
+        <CropImageModal
+          visible
+          uri={pendingUri}
+          onDone={handleCropDone}
+          onCancel={() => setPendingUri(null)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -819,6 +852,7 @@ const styles = StyleSheet.create({
   emptyHint:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
   emptyHintText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.35)' },
   dimOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,6,22,0.22)' },
+  uploadOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', zIndex: 30 },
   changeBtn: {
     position: 'absolute', top: 7, right: 7,
     width: 26, height: 26, borderRadius: 13,
