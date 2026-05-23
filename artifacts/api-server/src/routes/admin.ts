@@ -339,6 +339,7 @@ router.get("/admin/content", requireAdmin, async (req: Request, res: Response) =
         isHidden:       storiesTable.isHidden,
         witnessedCount: storiesTable.witnessedCount,
         savedCount:     storiesTable.savedCount,
+        panels:         storiesTable.panels,
         date:           storiesTable.date,
         authorName:     characterTable.name,
         username:       characterTable.username,

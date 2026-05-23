@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { api, type ContentItem } from "../api";
+import { api, type ContentItem, type StoryPanel } from "../api";
 import UserDetailDrawer from "../components/UserDetailDrawer";
 
 export default function ContentPage() {
@@ -12,6 +12,7 @@ export default function ContentPage() {
   const [confirm, setConfirm] = useState<{ action: "hide" | "unhide" | "delete"; item: ContentItem } | null>(null);
   const [toast, setToast]   = useState("");
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
+  const [preview, setPreview] = useState<ContentItem | null>(null);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
@@ -51,6 +52,13 @@ export default function ContentPage() {
     setOffset(0);
   };
 
+  const thumbnailUri = (item: ContentItem): string | null => {
+    if (contentType === "outfits") return item.imageUri ?? null;
+    const panels = item.panels ?? [];
+    for (const p of panels) { if (p.imageUri) return p.imageUri; }
+    return null;
+  };
+
   return (
     <div className="p-6 space-y-5">
       <div>
@@ -79,6 +87,7 @@ export default function ContentPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
+                <th className="text-left px-4 py-3 font-medium text-muted-foreground w-16">Preview</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Title</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Author</th>
                 <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
@@ -90,52 +99,102 @@ export default function ContentPage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b">
-                    <td colSpan={5} className="px-4 py-3">
+                    <td colSpan={6} className="px-4 py-3">
                       <div className="h-4 bg-muted rounded animate-pulse w-full" />
                     </td>
                   </tr>
                 ))
               ) : items.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No content found</td></tr>
-              ) : items.map((item) => (
-                <tr key={item.id} className="border-b hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="font-medium line-clamp-1">{item.chapterTitle ?? item.name ?? "—"}</div>
-                    {item.mood && <div className="text-xs text-muted-foreground">{item.mood}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    <div>{item.authorName ?? "Unknown"}</div>
-                    {item.username && <div className="text-xs">@{item.username}</div>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1 flex-wrap">
-                      {item.isHidden  && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Hidden</span>}
-                      {item.isPublic  && !item.isHidden && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Public</span>}
-                      {!item.isPublic && !item.isHidden && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(item.date).toLocaleDateString()}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1 flex-wrap">
-                      <button
-                        onClick={() => setDetailUserId(item.userId)}
-                        className="px-2 py-1 text-xs rounded-md font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
-                        title="View author profile"
-                      >Author</button>
-                      <button
-                        onClick={() => setConfirm({ action: item.isHidden ? "unhide" : "hide", item })}
-                        className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${item.isHidden ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No content found</td></tr>
+              ) : items.map((item) => {
+                const thumb = thumbnailUri(item);
+                return (
+                  <tr key={item.id} className="border-b hover:bg-muted/20 transition-colors">
+                    {/* Thumbnail */}
+                    <td className="px-4 py-2">
+                      <div
+                        className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex items-center justify-center cursor-pointer border hover:border-primary transition-colors flex-shrink-0"
+                        onClick={() => setPreview(item)}
+                        title="Preview content"
                       >
-                        {item.isHidden ? "Unhide" : "Hide"}
-                      </button>
+                        {thumb ? (
+                          <img src={thumb} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-lg text-muted-foreground">
+                            {contentType === "stories" ? "📖" : "👗"}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Title */}
+                    <td className="px-4 py-3">
                       <button
-                        onClick={() => setConfirm({ action: "delete", item })}
-                        className="px-2 py-1 text-xs rounded-md font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                      >Delete</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        className="text-left hover:underline font-medium line-clamp-1"
+                        onClick={() => setPreview(item)}
+                      >
+                        {item.chapterTitle ?? item.name ?? "—"}
+                      </button>
+                      <div className="flex gap-1.5 mt-0.5 flex-wrap">
+                        {item.mood && <span className="text-xs text-muted-foreground">{item.mood}</span>}
+                        {contentType === "stories" && item.panels && (
+                          <span className="text-xs text-muted-foreground">{item.panels.length} panel{item.panels.length !== 1 ? "s" : ""}</span>
+                        )}
+                        {contentType === "stories" && (item.witnessedCount ?? 0) > 0 && (
+                          <span className="text-xs text-muted-foreground">👁 {item.witnessedCount}</span>
+                        )}
+                        {item.tags && item.tags.length > 0 && (
+                          <span className="text-xs text-muted-foreground">{item.tags.slice(0, 3).join(", ")}</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Author */}
+                    <td className="px-4 py-3 text-muted-foreground">
+                      <div>{item.authorName ?? "Unknown"}</div>
+                      {item.username && <div className="text-xs">@{item.username}</div>}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 flex-wrap">
+                        {item.isHidden  && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Hidden</span>}
+                        {item.isPublic  && !item.isHidden && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Public</span>}
+                        {!item.isPublic && !item.isHidden && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
+                      </div>
+                    </td>
+
+                    {/* Date */}
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(item.date).toLocaleDateString()}</td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1 flex-wrap">
+                        <button
+                          onClick={() => setPreview(item)}
+                          className="px-2 py-1 text-xs rounded-md font-medium bg-muted text-foreground hover:bg-muted/80 transition-colors border"
+                          title="Preview content"
+                        >View</button>
+                        <button
+                          onClick={() => setDetailUserId(item.userId)}
+                          className="px-2 py-1 text-xs rounded-md font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-200"
+                          title="View author profile"
+                        >Author</button>
+                        <button
+                          onClick={() => setConfirm({ action: item.isHidden ? "unhide" : "hide", item })}
+                          className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${item.isHidden ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
+                        >
+                          {item.isHidden ? "Unhide" : "Hide"}
+                        </button>
+                        <button
+                          onClick={() => setConfirm({ action: "delete", item })}
+                          className="px-2 py-1 text-xs rounded-md font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                        >Delete</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -153,6 +212,125 @@ export default function ContentPage() {
         )}
       </div>
 
+      {/* ── Content Preview Modal ───────────────────────────────────────────── */}
+      {preview && (
+        <div className="fixed inset-0 bg-black/60 flex items-start justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-card rounded-2xl border shadow-2xl w-full max-w-2xl my-8 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-start justify-between p-5 border-b">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-lg leading-snug truncate">
+                  {preview.chapterTitle ?? preview.name ?? "Untitled"}
+                </h3>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {preview.authorName && (
+                    <span className="text-sm text-muted-foreground">by {preview.authorName}{preview.username ? ` (@${preview.username})` : ""}</span>
+                  )}
+                  {preview.mood && (
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary font-medium">{preview.mood}</span>
+                  )}
+                  {preview.isHidden && <span className="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700 font-medium">Hidden</span>}
+                  {preview.isPublic && !preview.isHidden && <span className="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-700 font-medium">Public</span>}
+                  {!preview.isPublic && !preview.isHidden && <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 font-medium">Private</span>}
+                </div>
+              </div>
+              <button
+                onClick={() => setPreview(null)}
+                className="ml-4 p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground flex-shrink-0"
+              >✕</button>
+            </div>
+
+            {/* Story panels */}
+            {contentType === "stories" && preview.panels && preview.panels.length > 0 && (
+              <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+                {preview.panels.map((panel: StoryPanel, i: number) => (
+                  <div key={i} className="rounded-xl border overflow-hidden bg-muted/30">
+                    {panel.imageUri && (
+                      <img
+                        src={panel.imageUri}
+                        alt={`Panel ${i + 1}`}
+                        className="w-full object-cover max-h-72"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    )}
+                    {(panel.text || panel.bubbleText) && (
+                      <div className="p-3 space-y-1">
+                        {panel.text && <p className="text-sm leading-relaxed">{panel.text}</p>}
+                        {panel.bubbleText && (
+                          <p className="text-sm italic text-muted-foreground bg-background rounded-lg px-3 py-2 border">
+                            "{panel.bubbleText}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {!panel.imageUri && !panel.text && !panel.bubbleText && (
+                      <div className="p-4 text-center text-sm text-muted-foreground">Empty panel</div>
+                    )}
+                    <div className="px-3 py-1.5 border-t bg-muted/20">
+                      <span className="text-xs text-muted-foreground font-medium">Panel {i + 1}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Outfit image + details */}
+            {contentType === "outfits" && (
+              <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+                {preview.imageUri && (
+                  <img
+                    src={preview.imageUri}
+                    alt={preview.name}
+                    className="w-full max-h-80 object-contain rounded-xl border bg-muted/20"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                )}
+                {!preview.imageUri && (
+                  <div className="h-32 rounded-xl border bg-muted/30 flex items-center justify-center text-muted-foreground text-sm">
+                    No image
+                  </div>
+                )}
+                {preview.description && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{preview.description}</p>
+                )}
+                {preview.tags && preview.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {preview.tags.map((tag: string) => (
+                      <span key={tag} className="px-2.5 py-1 text-xs rounded-full bg-primary/10 text-primary font-medium">{tag}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-between p-4 border-t bg-muted/20">
+              <div className="text-xs text-muted-foreground">
+                {new Date(preview.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
+                {(preview.witnessedCount ?? 0) > 0 && <span className="ml-3">👁 {preview.witnessedCount} witnessed</span>}
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setDetailUserId(preview.userId); setPreview(null); }}
+                  className="px-3 py-1.5 text-xs rounded-lg font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors"
+                >Author Profile</button>
+                <button
+                  onClick={() => { setConfirm({ action: preview.isHidden ? "unhide" : "hide", item: preview }); setPreview(null); }}
+                  className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors ${preview.isHidden ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-orange-100 text-orange-700 hover:bg-orange-200"}`}
+                >
+                  {preview.isHidden ? "Unhide" : "Hide"}
+                </button>
+                <button
+                  onClick={() => { setConfirm({ action: "delete", item: preview }); setPreview(null); }}
+                  className="px-3 py-1.5 text-xs rounded-lg font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                >Delete</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm modal ─────────────────────────────────────────────────────── */}
       {confirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-xl border shadow-xl p-6 max-w-sm w-full space-y-4">

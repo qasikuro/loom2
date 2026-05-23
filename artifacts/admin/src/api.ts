@@ -81,16 +81,27 @@ export interface AdminUserDetail extends AdminUser {
   followersCount: number;
 }
 
+export interface StoryPanel {
+  id?: string;
+  imageUri?: string;
+  text?: string;
+  bubbleText?: string;
+}
+
 export interface ContentItem {
   id: string;
   userId: string;
   chapterTitle?: string;
   name?: string;
+  description?: string;
+  imageUri?: string;
+  tags?: string[];
   mood?: string;
   isPublic: boolean;
   isHidden: boolean;
   witnessedCount?: number;
   savedCount?: number;
+  panels?: StoryPanel[];
   date: string;
   authorName: string | null;
   username: string | null;
