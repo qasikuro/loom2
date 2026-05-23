@@ -438,7 +438,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* Section label */}
-        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Where would you like to go?</Text>
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Features being added</Text>
 
         {/* ── Animated navigation cards ──────────────────────── */}
         <View style={styles.hList}>
@@ -476,7 +476,7 @@ export default function HomeScreen() {
 
                 {true && (
                   <BlurView
-                    intensity={Platform.OS === 'web' ? 12 : 22}
+                    intensity={Platform.OS === 'web' ? 40 : 80}
                     tint="dark"
                     style={[StyleSheet.absoluteFill, styles.lockedOverlay]}
                   >
