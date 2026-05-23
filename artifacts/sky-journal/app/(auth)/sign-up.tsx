@@ -240,28 +240,6 @@ export default function SignUpScreen() {
           <Text style={styles.title}>{t('auth.beginJourney')}</Text>
           <Text style={styles.subtitle}>{t('auth.signUpSub')}</Text>
 
-          {/* Signup mode tab switcher */}
-          <View style={styles.tabRow}>
-            <TouchableOpacity
-              style={[styles.tab, signupMode === 'withPassword' && styles.tabActive]}
-              onPress={() => switchMode('withPassword')}
-            >
-              <Icon name="lock" size={13} color={signupMode === 'withPassword' ? '#F0ECFF' : 'rgba(200,184,232,0.5)'} />
-              <Text style={[styles.tabText, signupMode === 'withPassword' && styles.tabTextActive]}>
-                {t('auth.withPasswordTab')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, signupMode === 'noPassword' && styles.tabActive]}
-              onPress={() => switchMode('noPassword')}
-            >
-              <Icon name="zap" size={13} color={signupMode === 'noPassword' ? '#F0ECFF' : 'rgba(200,184,232,0.5)'} />
-              <Text style={[styles.tabText, signupMode === 'noPassword' && styles.tabTextActive]}>
-                {t('auth.noPasswordTab')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.form}>
             {/* Email field — shared by both modes */}
             <View style={styles.field}>
@@ -327,29 +305,41 @@ export default function SignUpScreen() {
             {!!fieldError && <Text style={styles.error}>{fieldError}</Text>}
 
             {signupMode === 'withPassword' && (
-              <TouchableOpacity
-                style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
-                onPress={handleSignUp}
-                disabled={!email || !password || isLoading}
-              >
-                {isLoading
-                  ? <ActivityIndicator color="#fff" />
-                  : <><Text style={styles.btnText}>{t('auth.createAccountBtn')}</Text><Text style={styles.btnStar}>✦</Text></>
-                }
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
+                  onPress={handleSignUp}
+                  disabled={!email || !password || isLoading}
+                >
+                  {isLoading
+                    ? <ActivityIndicator color="#fff" />
+                    : <><Text style={styles.btnText}>{t('auth.createAccountBtn')}</Text><Text style={styles.btnStar}>✦</Text></>
+                  }
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('noPassword')}>
+                  <Text style={styles.switchLinkText}>{t('auth.noPasswordTab')} →</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             {signupMode === 'noPassword' && !emailCodeSent && (
-              <TouchableOpacity
-                style={[styles.btn, (!email.trim() || isLoading) && styles.btnDisabled]}
-                onPress={handleSendEmailCodeSignUp}
-                disabled={!email.trim() || isLoading}
-              >
-                {isLoading
-                  ? <ActivityIndicator color="#fff" />
-                  : <><Text style={styles.btnText}>{t('auth.sendCode')}</Text><Icon name="send" size={14} color="#fff" /></>
-                }
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[styles.btn, (!email.trim() || isLoading) && styles.btnDisabled]}
+                  onPress={handleSendEmailCodeSignUp}
+                  disabled={!email.trim() || isLoading}
+                >
+                  {isLoading
+                    ? <ActivityIndicator color="#fff" />
+                    : <><Text style={styles.btnText}>{t('auth.sendCode')}</Text><Icon name="send" size={14} color="#fff" /></>
+                  }
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('withPassword')}>
+                  <Text style={styles.switchLinkText}>{t('auth.withPasswordTab')} →</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             {signupMode === 'noPassword' && emailCodeSent && (
@@ -400,23 +390,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontFamily: 'Satoshi-Bold', color: '#F0ECFF', textAlign: 'center', letterSpacing: -0.5, marginBottom: 6 },
   subtitle: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.65)', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
 
-  tabRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(45,31,94,0.6)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(107,91,149,0.35)',
-    padding: 4,
-    marginBottom: 24,
-    gap: 4,
-  },
-  tab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 10, borderRadius: 11,
-  },
-  tabActive: { backgroundColor: 'rgba(107,91,149,0.65)' },
-  tabText: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)' },
-  tabTextActive: { color: '#F0ECFF' },
+  switchLink: { alignItems: 'center', paddingVertical: 4 },
+  switchLinkText: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', letterSpacing: 0.2 },
 
   form: { gap: 18 },
   field: { gap: 8 },

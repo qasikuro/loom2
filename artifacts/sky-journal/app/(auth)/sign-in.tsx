@@ -270,28 +270,6 @@ export default function SignInScreen() {
           <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
           <Text style={styles.subtitle}>{t('auth.signInSub')}</Text>
 
-          {/* Auth mode tab switcher */}
-          <View style={styles.tabRow}>
-            <TouchableOpacity
-              style={[styles.tab, authMode === 'password' && styles.tabActive]}
-              onPress={() => switchMode('password')}
-            >
-              <Icon name="lock" size={13} color={authMode === 'password' ? '#F0ECFF' : 'rgba(200,184,232,0.5)'} />
-              <Text style={[styles.tabText, authMode === 'password' && styles.tabTextActive]}>
-                {t('auth.passwordTab')}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, authMode === 'emailCode' && styles.tabActive]}
-              onPress={() => switchMode('emailCode')}
-            >
-              <Icon name="mail" size={13} color={authMode === 'emailCode' ? '#F0ECFF' : 'rgba(200,184,232,0.5)'} />
-              <Text style={[styles.tabText, authMode === 'emailCode' && styles.tabTextActive]}>
-                {t('auth.emailCodeTab')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-
           <View style={styles.form}>
             {/* Email field — shared by both modes */}
             <View style={styles.field}>
@@ -357,29 +335,43 @@ export default function SignInScreen() {
             {!!fieldError && <Text style={styles.error}>{fieldError}</Text>}
 
             {authMode === 'password' && (
-              <TouchableOpacity
-                style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
-                onPress={handleSignIn}
-                disabled={!email || !password || isLoading}
-              >
-                {isLoading
-                  ? <ActivityIndicator color="#fff" />
-                  : <><Text style={styles.btnText}>{t('auth.continue')}</Text><Text style={styles.btnStar}>✦</Text></>
-                }
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[styles.btn, (!email || !password || isLoading) && styles.btnDisabled]}
+                  onPress={handleSignIn}
+                  disabled={!email || !password || isLoading}
+                >
+                  {isLoading
+                    ? <ActivityIndicator color="#fff" />
+                    : <><Text style={styles.btnText}>{t('auth.continue')}</Text><Text style={styles.btnStar}>✦</Text></>
+                  }
+                </TouchableOpacity>
+
+                {/* Soft switch to email code */}
+                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('emailCode')}>
+                  <Text style={styles.switchLinkText}>{t('auth.emailCodeTab')} →</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             {authMode === 'emailCode' && !emailCodeSent && (
-              <TouchableOpacity
-                style={[styles.btn, (!email.trim() || isLoading) && styles.btnDisabled]}
-                onPress={handleSendEmailCode}
-                disabled={!email.trim() || isLoading}
-              >
-                {isLoading
-                  ? <ActivityIndicator color="#fff" />
-                  : <><Text style={styles.btnText}>{t('auth.sendCode')}</Text><Icon name="send" size={14} color="#fff" /></>
-                }
-              </TouchableOpacity>
+              <>
+                <TouchableOpacity
+                  style={[styles.btn, (!email.trim() || isLoading) && styles.btnDisabled]}
+                  onPress={handleSendEmailCode}
+                  disabled={!email.trim() || isLoading}
+                >
+                  {isLoading
+                    ? <ActivityIndicator color="#fff" />
+                    : <><Text style={styles.btnText}>{t('auth.sendCode')}</Text><Icon name="send" size={14} color="#fff" /></>
+                  }
+                </TouchableOpacity>
+
+                {/* Soft switch back to password */}
+                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('password')}>
+                  <Text style={styles.switchLinkText}>{t('auth.passwordTab')} →</Text>
+                </TouchableOpacity>
+              </>
             )}
 
             {authMode === 'emailCode' && emailCodeSent && (
@@ -430,24 +422,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontFamily: 'Satoshi-Bold', color: '#F0ECFF', textAlign: 'center', letterSpacing: -0.5, marginBottom: 6 },
   subtitle: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.65)', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
 
-  tabRow: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(45,31,94,0.6)',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(107,91,149,0.35)',
-    padding: 4,
-    marginBottom: 24,
-    gap: 4,
-  },
-  tab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 10, borderRadius: 11,
-  },
-  tabActive: { backgroundColor: 'rgba(107,91,149,0.65)' },
-  tabText: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)' },
-  tabTextActive: { color: '#F0ECFF' },
-
   form: { gap: 18 },
   field: { gap: 8 },
   label: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, color: 'rgba(200,184,232,0.75)', textTransform: 'uppercase' },
@@ -463,6 +437,9 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.45 },
   btnText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff' },
   btnStar: { fontSize: 12, color: '#C8A84B' },
+
+  switchLink: { alignItems: 'center', paddingVertical: 4 },
+  switchLinkText: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', letterSpacing: 0.2 },
 
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 28 },
   dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(107,91,149,0.3)' },
