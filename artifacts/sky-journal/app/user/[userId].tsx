@@ -35,15 +35,25 @@ function fmtDate(iso: string) {
   return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
-interface PublicProfile {
-  userId:      string;
+interface ActiveOutfit {
+  id:          string;
   name:        string;
-  username:    string | null;
-  bio:         string;
-  traits:      string[];
-  mood:        string;
-  avatarUri:   string | null;
-  isFollowing: boolean;
+  description: string;
+  imageUri:    string | null;
+  tags:        string[];
+}
+
+interface PublicProfile {
+  userId:        string;
+  name:          string;
+  username:      string | null;
+  bio:           string;
+  traits:        string[];
+  mood:          string;
+  avatarUri:     string | null;
+  activeOutfitId: string | null;
+  activeOutfit:  ActiveOutfit | null;
+  isFollowing:   boolean;
 }
 
 interface PublicStory {
@@ -275,6 +285,68 @@ export default function UserProfileScreen() {
             >
               <Icon name="flag" size={11} color="rgba(180,100,100,0.6)" />
               <Text style={styles.reportLinkText}>{t('discover.reportProfile')}</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* ── Active outfit spotlight ─────────────────────────── */}
+          {profile.activeOutfit && (
+            <TouchableOpacity
+              style={[styles.activeOutfitCard, { backgroundColor: colors.card, borderColor: `${moodColor}30` }, SHADOW.xs]}
+              onPress={() => {
+                router.push({
+                  pathname: '/user-outfit',
+                  params: {
+                    outfitName:   profile.activeOutfit!.name,
+                    outfitDesc:   profile.activeOutfit!.description ?? '',
+                    outfitImage:  profile.activeOutfit!.imageUri ?? '',
+                    outfitTags:   JSON.stringify(profile.activeOutfit!.tags),
+                    outfitDate:   '',
+                    authorUserId: profile.userId,
+                    authorName:   profile.name,
+                    authorHandle: profile.username ?? '',
+                    authorBio:    profile.bio ?? '',
+                    authorMood:   profile.mood ?? '',
+                    authorTraits: JSON.stringify(profile.traits),
+                  },
+                } as any);
+              }}
+              activeOpacity={0.84}
+            >
+              {profile.activeOutfit.imageUri ? (
+                <Image
+                  source={{ uri: profile.activeOutfit.imageUri }}
+                  style={styles.activeOutfitImg}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <LinearGradient
+                  colors={[`${moodColor}44`, `${moodColor}18`]}
+                  style={styles.activeOutfitImg}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                />
+              )}
+              <View style={styles.activeOutfitInfo}>
+                <View style={styles.activeOutfitLabel}>
+                  <Icon name="star" size={11} color={moodColor} />
+                  <Text style={[styles.activeOutfitLabelText, { color: moodColor }]}>Wearing now</Text>
+                </View>
+                <Text style={[styles.activeOutfitName, { color: colors.foreground }]} numberOfLines={1}>
+                  {profile.activeOutfit.name}
+                </Text>
+                {profile.activeOutfit.description ? (
+                  <Text style={[styles.activeOutfitDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
+                    {profile.activeOutfit.description}
+                  </Text>
+                ) : null}
+                {profile.activeOutfit.tags.length > 0 && (
+                  <Text style={[styles.activeOutfitTags, { color: colors.mutedForeground }]} numberOfLines={1}>
+                    {profile.activeOutfit.tags.slice(0, 3).join(' · ')}
+                  </Text>
+                )}
+              </View>
+              <Icon name="chevron-right" size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           )}
 
@@ -529,6 +601,19 @@ const styles = StyleSheet.create({
   outfitName:   { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   outfitTags:   { fontSize: 11, fontFamily: 'Satoshi-Regular', opacity: 0.7 },
   outfitArrow:  { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.22)' },
+
+  activeOutfitCard: {
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 16, borderWidth: 1,
+    padding: 12, gap: 12, marginBottom: 16,
+  },
+  activeOutfitImg:  { width: 72, height: 80, borderRadius: 12 },
+  activeOutfitInfo: { flex: 1, gap: 3 },
+  activeOutfitLabel: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
+  activeOutfitLabelText: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4 },
+  activeOutfitName: { fontSize: 15, fontFamily: 'Satoshi-Bold' },
+  activeOutfitDesc: { fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, opacity: 0.8 },
+  activeOutfitTags: { fontSize: 11, fontFamily: 'Satoshi-Regular', opacity: 0.65 },
 
   emptyState: { alignItems: 'center', paddingVertical: 40, gap: 10 },
   emptyText:  { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center' },

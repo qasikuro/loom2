@@ -14,13 +14,14 @@ function safeImageUri(uri: string | null | undefined): string | null {
 const router: IRouter = Router();
 
 const CharacterInputSchema = z.object({
-  name:      z.string().min(1).max(100),
-  bio:       z.string().max(500).default(""),
-  mood:      z.string().max(100).default("Hopeful"),
-  traits:    z.array(z.string()).default([]),
-  isPublic:  z.boolean().default(true),
-  username:  z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
-  avatarUri: z.string().nullable().optional(),
+  name:           z.string().min(1).max(100),
+  bio:            z.string().max(500).default(""),
+  mood:           z.string().max(100).default("Hopeful"),
+  traits:         z.array(z.string()).default([]),
+  isPublic:       z.boolean().default(true),
+  username:       z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
+  avatarUri:      z.string().nullable().optional(),
+  activeOutfitId: z.string().nullable().optional(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {
@@ -54,7 +55,11 @@ router.put("/character", requireAuth, async (req, res) => {
   }
 
   try {
-    const safeData = { ...parsed.data, avatarUri: safeImageUri(parsed.data.avatarUri) };
+    const safeData = {
+      ...parsed.data,
+      avatarUri: safeImageUri(parsed.data.avatarUri),
+      activeOutfitId: parsed.data.activeOutfitId ?? null,
+    };
     const [updated] = await db
       .insert(characterTable)
       .values({ userId, ...safeData, updatedAt: new Date() })
@@ -69,6 +74,24 @@ router.put("/character", requireAuth, async (req, res) => {
       return res.status(409).json({ error: "Username already taken" });
     }
     req.log.error({ err }, "Failed to update character");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/character/active-outfit", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { activeOutfitId } = req.body as { activeOutfitId: string | null };
+  try {
+    await db
+      .insert(characterTable)
+      .values({ userId, name: "Sky Child", activeOutfitId: activeOutfitId ?? null, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: characterTable.userId,
+        set: { activeOutfitId: activeOutfitId ?? null, updatedAt: new Date() },
+      });
+    return res.json({ activeOutfitId: activeOutfitId ?? null });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update active outfit");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

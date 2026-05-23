@@ -63,13 +63,14 @@ export async function apiFetch<T>(
 // ── Models ────────────────────────────────────────────────────────────────────
 
 export interface Character {
-  name:       string;
-  bio:        string;
-  mood:       string;
-  traits:     string[];
-  isPublic:   boolean;
-  username?:  string;
-  avatarUri?: string;
+  name:           string;
+  bio:            string;
+  mood:           string;
+  traits:         string[];
+  isPublic:       boolean;
+  username?:      string;
+  avatarUri?:     string;
+  activeOutfitId?: string | null;
 }
 
 export type BubbleStyle = 'rounded' | 'sharp' | 'oval';
@@ -748,6 +749,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } else {
       AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
     }
+    // Sync to server so other users can see the selected outfit
+    apiFetch('/character/active-outfit', {
+      method: 'PATCH',
+      body:   JSON.stringify({ activeOutfitId: id }),
+    }).catch(() => null);
   }, []);
 
   // ── Gallery ────────────────────────────────────────────────────────────────

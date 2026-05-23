@@ -74,14 +74,15 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
   try {
     const [charRows, followingRows] = await Promise.all([
       db.select({
-        userId:    characterTable.userId,
-        name:      characterTable.name,
-        username:  characterTable.username,
-        bio:       characterTable.bio,
-        traits:    characterTable.traits,
-        mood:      characterTable.mood,
-        isPublic:  characterTable.isPublic,
-        avatarUri: characterTable.avatarUri,
+        userId:         characterTable.userId,
+        name:           characterTable.name,
+        username:       characterTable.username,
+        bio:            characterTable.bio,
+        traits:         characterTable.traits,
+        mood:           characterTable.mood,
+        isPublic:       characterTable.isPublic,
+        avatarUri:      characterTable.avatarUri,
+        activeOutfitId: characterTable.activeOutfitId,
       })
         .from(characterTable)
         .where(eq(characterTable.userId, targetId))
@@ -99,15 +100,54 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
     const char = charRows[0];
     const followingSet = new Set(followingRows.map(r => r.followingId));
 
+    // Fetch active outfit data if one is set
+    let activeOutfit: null | {
+      id: string; name: string; description: string;
+      imageUri: string | null; tags: string[];
+    } = null;
+
+    if (char.activeOutfitId) {
+      const [outfitRow] = await db
+        .select({
+          id:          outfitsTable.id,
+          name:        outfitsTable.name,
+          description: outfitsTable.description,
+          imageUri:    outfitsTable.imageUri,
+          tags:        outfitsTable.tags,
+          isPublic:    outfitsTable.isPublic,
+        })
+        .from(outfitsTable)
+        .where(
+          and(
+            eq(outfitsTable.id, char.activeOutfitId),
+            eq(outfitsTable.userId, targetId),
+            eq(outfitsTable.isPublic, true),
+          ),
+        )
+        .limit(1);
+
+      if (outfitRow) {
+        activeOutfit = {
+          id:          outfitRow.id,
+          name:        outfitRow.name,
+          description: outfitRow.description ?? '',
+          imageUri:    safeDiscoverUri(outfitRow.imageUri),
+          tags:        Array.isArray(outfitRow.tags) ? outfitRow.tags : [],
+        };
+      }
+    }
+
     return res.json({
-      userId:      char.userId,
-      name:        char.name,
-      username:    char.username,
-      bio:         char.bio,
-      traits:      char.traits,
-      mood:        char.mood,
-      avatarUri:   safeDiscoverUri(char.avatarUri),
-      isFollowing: followingSet.has(targetId),
+      userId:        char.userId,
+      name:          char.name,
+      username:      char.username,
+      bio:           char.bio,
+      traits:        char.traits,
+      mood:          char.mood,
+      avatarUri:     safeDiscoverUri(char.avatarUri),
+      activeOutfitId: char.activeOutfitId ?? null,
+      activeOutfit,
+      isFollowing:   followingSet.has(targetId),
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get user profile");
