@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -447,10 +448,11 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={[styles.hCard, SHADOW.sm]}
                 onPress={() => {
+                  if (cat.key === 'moments') return;
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   router.push(cat.route);
                 }}
-                activeOpacity={0.86}
+                activeOpacity={cat.key === 'moments' ? 1 : 0.86}
               >
                 <Image source={cat.image} style={StyleSheet.absoluteFill} contentFit="cover" />
                 <LinearGradient
@@ -470,6 +472,19 @@ export default function HomeScreen() {
                 <View style={styles.hCardArrow}>
                   <Icon name="arrow-right" size={14} color="rgba(220,210,255,0.6)" />
                 </View>
+
+                {cat.key === 'moments' && (
+                  <BlurView
+                    intensity={Platform.OS === 'web' ? 12 : 22}
+                    tint="dark"
+                    style={[StyleSheet.absoluteFill, styles.lockedOverlay]}
+                  >
+                    <View style={styles.lockBadge}>
+                      <Icon name="lock" size={15} color="rgba(235,228,255,0.90)" />
+                    </View>
+                    <Text style={styles.lockLabel}>Coming soon</Text>
+                  </BlurView>
+                )}
               </TouchableOpacity>
             </Animated.View>
           ))}
@@ -774,6 +789,24 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 10,
     backgroundColor: 'rgba(255,255,255,0.09)',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  lockedOverlay: {
+    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Platform.OS === 'web' ? 'rgba(10,8,26,0.62)' : undefined,
+  },
+  lockBadge: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: 'rgba(200,184,232,0.15)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.25)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  lockLabel: {
+    fontSize: 13, fontFamily: 'Inter_600SemiBold',
+    color: 'rgba(220,210,255,0.80)', letterSpacing: 0.3,
   },
 
   // Modals
