@@ -621,13 +621,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     apiFetch('/character', {
       method: 'PUT',
       body:   JSON.stringify({
-        name:      c.name,
-        bio:       c.bio,
-        mood:      c.mood,
-        traits:    c.traits,
-        isPublic:  c.isPublic,
-        username:  c.username ?? null,
-        avatarUri: c.avatarUri ?? null,
+        name:           c.name,
+        bio:            c.bio,
+        mood:           c.mood,
+        traits:         c.traits,
+        isPublic:       c.isPublic,
+        username:       c.username       ?? null,
+        avatarUri:      c.avatarUri      ?? null,
+        activeOutfitId: c.activeOutfitId ?? null,
       }),
     }).catch(() => null);
   }, []);
