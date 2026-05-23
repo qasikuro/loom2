@@ -4,6 +4,13 @@ import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 
+/** Strip device-local URIs that are invisible to other users. */
+function safeImageUri(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  if (uri.startsWith("http://") || uri.startsWith("https://")) return uri;
+  return null;
+}
+
 const router: IRouter = Router();
 
 const CharacterInputSchema = z.object({
@@ -47,12 +54,13 @@ router.put("/character", requireAuth, async (req, res) => {
   }
 
   try {
+    const safeData = { ...parsed.data, avatarUri: safeImageUri(parsed.data.avatarUri) };
     const [updated] = await db
       .insert(characterTable)
-      .values({ userId, ...parsed.data, updatedAt: new Date() })
+      .values({ userId, ...safeData, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: characterTable.userId,
-        set: { ...parsed.data, updatedAt: new Date() },
+        set: { ...safeData, updatedAt: new Date() },
       })
       .returning();
     return res.json(updated);

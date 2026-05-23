@@ -223,6 +223,7 @@ export default function CharacterScreen() {
     setGalleryError(null);
     try {
       const uri = await persistImageUri(result.assets[0].uri);
+      if (!uri) throw new Error('Photo upload failed — check your connection and try again.');
       await addGalleryPhoto(uri, '');
     } catch (err: any) {
       setGalleryError(err?.message ?? 'Upload failed');
@@ -317,6 +318,7 @@ export default function CharacterScreen() {
   const [showSuggestions,  setShowSuggestions]  = useState(false);
   const [showMoodPicker,   setShowMoodPicker]   = useState(false);
   const [avatarUploading,  setAvatarUploading]  = useState(false);
+  const [avatarError,      setAvatarError]      = useState<string | null>(null);
 
   async function pickAvatar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -329,9 +331,14 @@ export default function CharacterScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
     setAvatarUploading(true);
+    setAvatarError(null);
     try {
       const uri = await persistImageUri(result.assets[0].uri);
-      setCharacter({ ...character, avatarUri: uri });
+      if (uri) {
+        setCharacter({ ...character, avatarUri: uri });
+      } else {
+        setAvatarError('Upload failed — check your connection');
+      }
     } finally {
       setAvatarUploading(false);
     }
@@ -460,6 +467,11 @@ export default function CharacterScreen() {
               }
             </TouchableOpacity>
           </View>
+          {avatarError ? (
+            <Text style={{ color: '#DC2626', fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'center', marginTop: 6 }}>
+              {avatarError}
+            </Text>
+          ) : null}
 
           {/* Name + username + bio — centered */}
           <View style={styles.nameSection}>

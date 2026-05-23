@@ -268,6 +268,7 @@ export default function PanelEditorScreen() {
   const [pendingUri,    setPendingUri]    = useState<string | null>(null);
   const [pendingIdx,    setPendingIdx]    = useState<number>(0);
   const [uploadingSet,  setUploadingSet]  = useState<Set<number>>(new Set());
+  const [uploadError,   setUploadError]   = useState<string | null>(null);
 
   const sizeHoldRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -346,11 +347,15 @@ export default function PanelEditorScreen() {
     targetIndices.forEach(async (panelIdx, i) => {
       try {
         const uri = await persistImageUri(res.assets[i].uri);
-        setPanels(prev => {
-          const next = prev.map((p, pi) => pi === panelIdx ? { ...p, imageUri: uri, bgPreset: undefined } : p);
-          DraftStore.updatePanel(panelIdx, { imageUri: uri, bgPreset: undefined });
-          return next;
-        });
+        if (uri) {
+          setPanels(prev => {
+            const next = prev.map((p, pi) => pi === panelIdx ? { ...p, imageUri: uri, bgPreset: undefined } : p);
+            DraftStore.updatePanel(panelIdx, { imageUri: uri, bgPreset: undefined });
+            return next;
+          });
+        } else {
+          setUploadError('Photo upload failed — check your connection and try again.');
+        }
       } finally {
         setUploadingSet(prev => { const s = new Set(prev); s.delete(panelIdx); return s; });
       }
@@ -363,7 +368,11 @@ export default function PanelEditorScreen() {
     setUploadingSet(new Set([idx]));
     try {
       const uri = await persistImageUri(croppedUri);
-      updatePanel(idx, { imageUri: uri, bgPreset: undefined });
+      if (uri) {
+        updatePanel(idx, { imageUri: uri, bgPreset: undefined });
+      } else {
+        setUploadError('Photo upload failed — check your connection and try again.');
+      }
     } finally {
       setUploadingSet(new Set());
     }
@@ -608,6 +617,17 @@ export default function PanelEditorScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Upload error banner ───────────────────────────── */}
+        {uploadError ? (
+          <TouchableOpacity
+            onPress={() => setUploadError(null)}
+            style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
+            <Text style={{ color: '#DC2626', fontSize: 12, fontFamily: 'Satoshi-Regular', flex: 1 }}>{uploadError}</Text>
+            <Text style={{ color: '#DC2626', fontSize: 12 }}>✕</Text>
+          </TouchableOpacity>
+        ) : null}
 
         {/* ── Toolbar ───────────────────────────────────────── */}
         <View style={[styles.toolbar, { backgroundColor: colors.card, borderColor: colors.border }]}>

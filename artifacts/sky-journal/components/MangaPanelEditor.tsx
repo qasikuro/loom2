@@ -46,7 +46,9 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
     setUploading(true);
     try {
       const persisted = await persistImageUri(croppedUri);
-      onChange({ ...panel, imageUri: persisted });
+      if (persisted) {
+        onChange({ ...panel, imageUri: persisted });
+      }
     } finally {
       setUploading(false);
     }

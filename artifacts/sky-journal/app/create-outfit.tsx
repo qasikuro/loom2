@@ -68,7 +68,12 @@ export default function CreateOutfitScreen() {
     setUploading(true);
     try {
       const persisted = await persistImageUri(croppedUri);
-      setImageUri(persisted);
+      if (persisted) {
+        setImageUri(persisted);
+        setError(null);
+      } else {
+        setError('Photo upload failed — check your connection and try again.');
+      }
     } finally {
       setUploading(false);
     }

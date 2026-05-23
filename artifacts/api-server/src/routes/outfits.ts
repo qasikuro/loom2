@@ -4,6 +4,13 @@ import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 
+/** Strip device-local URIs that are invisible to other users. */
+function safeImageUri(uri: string | null | undefined): string | null {
+  if (!uri) return null;
+  if (uri.startsWith("http://") || uri.startsWith("https://")) return uri;
+  return null;
+}
+
 const router: IRouter = Router();
 
 const OutfitInputSchema = z.object({
@@ -46,6 +53,7 @@ router.post("/outfits", requireAuth, async (req, res) => {
       userId,
       date: new Date(date),
       ...rest,
+      imageUri: safeImageUri(rest.imageUri),
     };
 
     const [created] = await db
@@ -53,7 +61,7 @@ router.post("/outfits", requireAuth, async (req, res) => {
       .values(insertValues)
       .onConflictDoUpdate({
         target: outfitsTable.id,
-        set: { userId, date: new Date(date), ...rest },
+        set: { userId, date: new Date(date), ...rest, imageUri: safeImageUri(rest.imageUri) },
       })
       .returning();
 

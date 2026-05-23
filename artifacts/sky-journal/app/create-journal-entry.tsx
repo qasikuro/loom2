@@ -102,7 +102,11 @@ export default function CreateJournalEntryScreen() {
     });
     if (!result.canceled && result.assets[0]) {
       const persisted = await persistImageUri(result.assets[0].uri);
-      setImageUri(persisted);
+      if (persisted) {
+        setImageUri(persisted);
+      } else {
+        setError('Photo upload failed — check your connection and try again.');
+      }
     }
   }
 
