@@ -45,7 +45,10 @@ function AuthTokenBridge() {
       if (!isSignedIn) return null;
       try { return await getToken(); } catch { return null; }
     });
-    if (isSignedIn && prevSignedIn.current !== true) reloadData();
+    if (isSignedIn && prevSignedIn.current !== true) {
+      // Small delay lets Clerk finish issuing the JWT before the first fetch.
+      setTimeout(() => reloadData(), 400);
+    }
     if (!isSignedIn && prevSignedIn.current === true) {
       setAuthTokenGetter(async () => null);
       clearUserData();

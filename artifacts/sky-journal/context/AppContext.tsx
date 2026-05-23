@@ -473,9 +473,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
       ]);
 
-      // If every core fetch failed (token not ready / network down) restore the
-      // last-known cache so the user isn't left with a completely blank screen.
+      // If every core fetch failed, the Clerk token may not be ready yet
+      // (common race condition right after sign-in). Wait 1.5 s and try once more
+      // before falling back to the local cache.
       if (!charRaw && !entriesRaw && !storiesRaw && !outfitsRaw) {
+        await new Promise(r => setTimeout(r, 1500));
+        const token = await _getToken();
+        if (token) {
+          // Token is now available — retry the full load recursively.
+          return loadData();
+        }
+        // Still no token (offline / genuine auth failure) — use cached data.
         await loadFromCache();
         setApiOnline(false);
         return;
