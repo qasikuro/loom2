@@ -244,7 +244,11 @@ export default function CharacterScreen() {
       return;
     }
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
+    // 'limited' on iOS 14+ means user granted access to specific photos — picker still works
+    if (perm.status === 'denied' || perm.status === 'restricted') {
+      setGalleryError('Photo access denied — enable it in Settings to add photos.');
+      return;
+    }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: false,
@@ -437,7 +441,8 @@ export default function CharacterScreen() {
 
   async function pickAvatar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return;
+    // allow 'limited' (iOS 14+ selective access); only block if explicitly denied
+    if (perm.status === 'denied' || perm.status === 'restricted') return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
