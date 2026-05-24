@@ -594,15 +594,18 @@ export default function CharacterScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Mood badge + trait chips in one horizontal scroll row */}
+          {/* Mood badge — separate row, tap to change */}
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); setShowMoodPicker(true); }}
+            activeOpacity={0.75}
+            style={styles.moodRow}
+          >
+            <MoodBadge mood={character.mood || 'Hopeful'} size="sm" />
+            <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+
+          {/* Trait chips row */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.traitChipsScroll} contentContainerStyle={styles.traitChipsRow}>
-            <TouchableOpacity
-              onPress={() => { Haptics.selectionAsync(); setShowMoodPicker(true); }}
-              activeOpacity={0.75}
-              style={{ marginRight: 6 }}
-            >
-              <MoodBadge mood={character.mood || 'Hopeful'} />
-            </TouchableOpacity>
             {character.traits.map(tr => (
               <View key={tr} style={[styles.traitChip, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}28` }]}>
                 <Text style={[styles.traitText, { color: colors.primary }]}>{tr}</Text>
@@ -1361,36 +1364,37 @@ const styles = StyleSheet.create({
 
   // Profile floating card
   profileCard: {
-    marginTop: -48,
-    marginHorizontal: 16,
-    borderRadius: 24,
+    marginTop: -44,
+    marginHorizontal: 14,
+    borderRadius: 22,
     borderWidth: 1,
-    padding: 20,
+    paddingHorizontal: 16,
+    paddingTop: 14,
     paddingBottom: 0,
-    gap: 6,
+    gap: 3,
   },
   nameBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
     borderWidth: 1,
   },
   profileCardStats: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    marginHorizontal: -20,
-    marginTop: 14,
-    paddingVertical: 14,
+    marginHorizontal: -16,
+    marginTop: 10,
+    paddingVertical: 11,
   },
   traitChipsScroll: {
-    marginTop: 8,
-    marginHorizontal: -20,
-    marginBottom: 4,
+    marginTop: 6,
+    marginHorizontal: -16,
+    marginBottom: 2,
   },
   traitChipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     gap: 6,
   },
 
