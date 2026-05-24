@@ -843,10 +843,10 @@ const styles = StyleSheet.create({
 
   charInfoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: '#1E1C30',
+    backgroundColor: '#27243E',
     borderRadius: 22, padding: 18,
     marginBottom: 22,
-    borderWidth: 1, borderColor: 'rgba(160,120,255,0.11)',
+    borderWidth: 1, borderColor: 'rgba(160,120,255,0.14)',
     shadowColor: '#7040C0',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.40,
@@ -943,8 +943,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     borderRadius: 18, borderWidth: 1,
     paddingHorizontal: 16, paddingVertical: 15,
-    backgroundColor: '#1E1C30',
-    borderColor: 'rgba(155,120,255,0.11)',
+    backgroundColor: '#27243E',
+    borderColor: 'rgba(155,120,255,0.14)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.40,
