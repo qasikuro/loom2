@@ -685,103 +685,103 @@ export default function CharacterScreen() {
         <View style={[styles.body, { paddingHorizontal: 16, paddingTop: 16 }]}>
 
           {/* ── About me card (birthday / country / links) ────── */}
-          <View style={[styles.sectionCard, { backgroundColor: '#EAE4FA', borderColor: 'rgba(150,120,220,0.22)' }, SHADOW.xs]}>
+          <View style={[styles.sectionCard, { backgroundColor: '#1A1540', borderColor: 'rgba(155,120,255,0.18)' }, SHADOW.sm]}>
             <View style={styles.sectionCardHeader}>
               <View style={styles.sectionCardLeft}>
                 <View style={[styles.sectionCardIcon, { backgroundColor: 'rgba(120,86,255,0.14)' }]}>
                   <Text style={{ fontSize: 18 }}>🐰</Text>
                 </View>
-                <Text style={[styles.sectionCardTitle, { color: '#1A1040' }]}>About Me</Text>
+                <Text style={[styles.sectionCardTitle, { color: '#EDE8FF' }]}>About Me</Text>
               </View>
             </View>
 
             {/* Birthday */}
-            <View style={[styles.aboutRow, { borderTopColor: 'rgba(120,86,255,0.14)' }]}>
-              <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(120,86,255,0.12)' }]}>
-                <Icon name="gift" size={13} color="#7856FF" />
+            <View style={[styles.aboutRow, { borderTopColor: 'rgba(155,120,255,0.15)' }]}>
+              <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(155,120,255,0.18)' }]}>
+                <Icon name="gift" size={13} color="rgba(190,160,255,0.90)" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.aboutLabel, { color: 'rgba(60,30,100,0.6)' }]}>Birthday</Text>
+                <Text style={[styles.aboutLabel, { color: 'rgba(200,180,255,0.55)' }]}>Birthday</Text>
                 {editingBirthday ? (
                   <TextInput
-                    style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.08)' }]}
+                    style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.10)' }]}
                     value={birthdayVal}
                     onChangeText={setBirthdayVal}
                     placeholder="e.g. 1998-03-15 or March 15"
-                    placeholderTextColor="rgba(60,30,100,0.38)"
+                    placeholderTextColor="rgba(200,180,255,0.35)"
                     autoFocus returnKeyType="done"
                     onSubmitEditing={saveBirthday} onBlur={saveBirthday}
                   />
                 ) : (
                   <TouchableOpacity onPress={() => { setBirthdayVal(character.birthday ?? ''); setEditingBirthday(true); }} activeOpacity={0.7}>
-                    <Text style={[styles.aboutValue, { color: character.birthday ? '#1A1040' : 'rgba(60,30,100,0.42)' }]}>
+                    <Text style={[styles.aboutValue, { color: character.birthday ? '#EDE8FF' : 'rgba(200,180,255,0.38)' }]}>
                       {character.birthday || 'Add birthday'}
                     </Text>
                   </TouchableOpacity>
                 )}
               </View>
-              <Icon name="edit-2" size={11} color="rgba(120,86,255,0.45)" />
+              <Icon name="edit-2" size={11} color="rgba(180,150,255,0.50)" />
             </View>
 
             {/* Country */}
-            <View style={[styles.aboutRow, { borderTopColor: 'rgba(120,86,255,0.14)', borderTopWidth: 0.75 }]}>
-              <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(120,86,255,0.12)' }]}>
-                <Icon name="map-pin" size={13} color="#7856FF" />
+            <View style={[styles.aboutRow, { borderTopColor: 'rgba(155,120,255,0.15)', borderTopWidth: 0.75 }]}>
+              <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(155,120,255,0.18)' }]}>
+                <Icon name="map-pin" size={13} color="rgba(190,160,255,0.90)" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.aboutLabel, { color: 'rgba(60,30,100,0.6)' }]}>Country</Text>
+                <Text style={[styles.aboutLabel, { color: 'rgba(200,180,255,0.55)' }]}>Country</Text>
                 {editingCountry ? (
                   <TextInput
-                    style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.08)' }]}
+                    style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.10)' }]}
                     value={countryVal}
                     onChangeText={setCountryVal}
                     placeholder="e.g. Japan"
-                    placeholderTextColor="rgba(60,30,100,0.38)"
+                    placeholderTextColor="rgba(200,180,255,0.35)"
                     autoFocus returnKeyType="done"
                     onSubmitEditing={saveCountry} onBlur={saveCountry}
                   />
                 ) : (
                   <TouchableOpacity onPress={() => { setCountryVal(character.country ?? ''); setEditingCountry(true); }} activeOpacity={0.7}>
-                    <Text style={[styles.aboutValue, { color: character.country ? '#1A1040' : 'rgba(60,30,100,0.42)' }]}>
+                    <Text style={[styles.aboutValue, { color: character.country ? '#EDE8FF' : 'rgba(200,180,255,0.38)' }]}>
                       {character.country || 'Add country'}
                     </Text>
                   </TouchableOpacity>
                 )}
               </View>
-              <Icon name="edit-2" size={11} color="rgba(120,86,255,0.45)" />
+              <Icon name="edit-2" size={11} color="rgba(180,150,255,0.50)" />
             </View>
 
             {/* Links */}
-            <View style={[styles.aboutRow, { borderTopColor: 'rgba(120,86,255,0.14)', borderTopWidth: 0.75, flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
+            <View style={[styles.aboutRow, { borderTopColor: 'rgba(155,120,255,0.15)', borderTopWidth: 0.75, flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(120,86,255,0.12)' }]}>
-                  <Icon name="link" size={13} color="#7856FF" />
+                <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(155,120,255,0.18)' }]}>
+                  <Icon name="link" size={13} color="rgba(190,160,255,0.90)" />
                 </View>
-                <Text style={[styles.aboutLabel, { color: 'rgba(60,30,100,0.6)', flex: 1 }]}>Links</Text>
+                <Text style={[styles.aboutLabel, { color: 'rgba(200,180,255,0.55)', flex: 1 }]}>Links</Text>
                 {(character.links ?? []).length < 6 && (
                   <TouchableOpacity
-                    style={[styles.linkAddBtn, { backgroundColor: 'rgba(120,86,255,0.12)', borderColor: 'rgba(120,86,255,0.3)' }]}
+                    style={[styles.linkAddBtn, { backgroundColor: 'rgba(155,120,255,0.16)', borderColor: 'rgba(155,120,255,0.36)' }]}
                     onPress={openAddLink}
                   >
-                    <Icon name="plus" size={11} color="#7856FF" />
-                    <Text style={[styles.linkAddText, { color: '#7856FF' }]}>Add</Text>
+                    <Icon name="plus" size={11} color="rgba(190,160,255,0.90)" />
+                    <Text style={[styles.linkAddText, { color: 'rgba(190,160,255,0.90)' }]}>Add</Text>
                   </TouchableOpacity>
                 )}
               </View>
               {(character.links ?? []).map((link, idx) => (
-                <View key={idx} style={[styles.linkItemRow, { backgroundColor: 'rgba(120,86,255,0.08)', borderColor: 'rgba(120,86,255,0.22)' }]}>
+                <View key={idx} style={[styles.linkItemRow, { backgroundColor: 'rgba(155,120,255,0.10)', borderColor: 'rgba(155,120,255,0.24)' }]}>
                   {editingLinkIdx === idx ? (
                     <View style={{ flex: 1, gap: 5 }}>
                       <TextInput
-                        style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
+                        style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
                         value={linkLabelVal} onChangeText={setLinkLabelVal}
-                        placeholder="Label" placeholderTextColor="rgba(60,30,100,0.38)"
+                        placeholder="Label" placeholderTextColor="rgba(200,180,255,0.35)"
                         returnKeyType="next"
                       />
                       <TextInput
-                        style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
+                        style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
                         value={linkUrlVal} onChangeText={setLinkUrlVal}
-                        placeholder="https://..." placeholderTextColor="rgba(60,30,100,0.38)"
+                        placeholder="https://..." placeholderTextColor="rgba(200,180,255,0.35)"
                         autoCapitalize="none" keyboardType="url"
                         returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
                         autoFocus
@@ -790,29 +790,29 @@ export default function CharacterScreen() {
                   ) : (
                     <>
                       <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLink(idx)} activeOpacity={0.75}>
-                        <Text style={[styles.aboutValue, { color: '#1A1040' }]}>{link.label}</Text>
-                        <Text style={[{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(60,30,100,0.55)', marginTop: 1 }]} numberOfLines={1}>{link.url}</Text>
+                        <Text style={[styles.aboutValue, { color: '#EDE8FF' }]}>{link.label}</Text>
+                        <Text style={[{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.52)', marginTop: 1 }]} numberOfLines={1}>{link.url}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => removeLink(idx)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                        <Icon name="x" size={13} color="rgba(120,86,255,0.5)" />
+                        <Icon name="x" size={13} color="rgba(180,150,255,0.55)" />
                       </TouchableOpacity>
                     </>
                   )}
                 </View>
               ))}
               {editingLinkIdx === (character.links ?? []).length && (
-                <View style={[styles.linkItemRow, { backgroundColor: 'rgba(120,86,255,0.08)', borderColor: '#7856FF' }]}>
+                <View style={[styles.linkItemRow, { backgroundColor: 'rgba(155,120,255,0.10)', borderColor: 'rgba(155,120,255,0.55)' }]}>
                   <View style={{ flex: 1, gap: 5 }}>
                     <TextInput
-                      style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
+                      style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
                       value={linkLabelVal} onChangeText={setLinkLabelVal}
-                      placeholder="Label" placeholderTextColor="rgba(60,30,100,0.38)"
+                      placeholder="Label" placeholderTextColor="rgba(200,180,255,0.35)"
                       returnKeyType="next" autoFocus
                     />
                     <TextInput
-                      style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
+                      style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
                       value={linkUrlVal} onChangeText={setLinkUrlVal}
-                      placeholder="https://..." placeholderTextColor="rgba(60,30,100,0.38)"
+                      placeholder="https://..." placeholderTextColor="rgba(200,180,255,0.35)"
                       autoCapitalize="none" keyboardType="url"
                       returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
                     />
@@ -824,10 +824,10 @@ export default function CharacterScreen() {
 
           {/* ── Current Outfit spotlight ──────────────────────────── */}
           {activeOutfit && (
-            <View style={[styles.spotlightCard, { backgroundColor: '#EAE4FA', borderColor: 'rgba(150,120,220,0.22)' }, SHADOW.sm]}>
+            <View style={[styles.spotlightCard, { backgroundColor: '#1A1540', borderColor: 'rgba(155,120,255,0.18)' }, SHADOW.sm]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 2 }}>
                 <Text style={{ fontSize: 16 }}>🪡</Text>
-                <Text style={[styles.spotlightLabel, { color: 'rgba(60,30,100,0.65)', textTransform: 'none', letterSpacing: 0, fontSize: 13, fontFamily: 'Satoshi-Bold' }]}>Current Outfit</Text>
+                <Text style={[styles.spotlightLabel, { color: '#EDE8FF', textTransform: 'none', letterSpacing: 0, fontSize: 13, fontFamily: 'Satoshi-Bold' }]}>Current Outfit</Text>
               </View>
               <View style={styles.spotlightRow}>
                 {/* Left: outfit image */}
@@ -847,19 +847,19 @@ export default function CharacterScreen() {
                 </TouchableOpacity>
                 {/* Right: info */}
                 <View style={styles.spotlightInfo}>
-                  <Text style={[styles.spotlightAboutLabel, { color: 'rgba(60,30,100,0.52)' }]}>About this look</Text>
-                  <Text style={[styles.spotlightDesc, { color: 'rgba(30,10,70,0.75)' }]} numberOfLines={3}>
+                  <Text style={[styles.spotlightAboutLabel, { color: 'rgba(200,180,255,0.55)' }]}>About this look</Text>
+                  <Text style={[styles.spotlightDesc, { color: 'rgba(210,196,240,0.90)' }]} numberOfLines={3}>
                     {activeOutfit.description || activeOutfit.name}
                   </Text>
                   <View style={styles.spotlightTags}>
                     {(activeOutfit.tags ?? []).slice(0, 3).map(tag => (
-                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: 'rgba(120,86,255,0.14)', borderColor: 'rgba(120,86,255,0.32)' }]}>
-                        <Text style={[styles.spotlightTagText, { color: '#7856FF' }]}>{tag}</Text>
+                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: 'rgba(155,120,255,0.18)', borderColor: 'rgba(155,120,255,0.36)' }]}>
+                        <Text style={[styles.spotlightTagText, { color: 'rgba(190,165,255,0.95)' }]}>{tag}</Text>
                       </View>
                     ))}
                     {(activeOutfit.tags ?? []).length === 0 && (
-                      <View style={[styles.spotlightTag, { backgroundColor: 'rgba(232,184,48,0.14)', borderColor: 'rgba(232,184,48,0.32)' }]}>
-                        <Text style={[styles.spotlightTagText, { color: '#8B6A1A' }]}>Displayed</Text>
+                      <View style={[styles.spotlightTag, { backgroundColor: 'rgba(232,184,48,0.16)', borderColor: 'rgba(232,184,48,0.36)' }]}>
+                        <Text style={[styles.spotlightTagText, { color: 'rgba(232,184,48,0.95)' }]}>Displayed</Text>
                       </View>
                     )}
                   </View>
