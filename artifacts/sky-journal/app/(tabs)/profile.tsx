@@ -1262,6 +1262,19 @@ export default function CharacterScreen() {
                       </Text>
                     ) : null}
 
+                    {/* Character Story */}
+                    {!!(selectedOutfit as any).story && (
+                      <View style={[styles.modalStoryCard, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}22` }]}>
+                        <View style={styles.modalStoryHeader}>
+                          <Icon name="book-open" size={13} color={colors.primary} />
+                          <Text style={[styles.modalStoryLabel, { color: colors.primary }]}>Character Story</Text>
+                        </View>
+                        <Text style={[styles.modalStoryText, { color: colors.foreground }]}>
+                          {(selectedOutfit as any).story}
+                        </Text>
+                      </View>
+                    )}
+
                     {/* Set display button */}
                     <TouchableOpacity
                       style={[styles.setDisplayBtn, {
@@ -1815,7 +1828,11 @@ const styles = StyleSheet.create({
   modalTags:    { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   modalTag:     { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
   modalTagText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
-  modalDesc:    { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 21 },
+  modalDesc:       { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 21 },
+  modalStoryCard:  { borderRadius: 14, borderWidth: 1, padding: 14, gap: 8 },
+  modalStoryHeader:{ flexDirection: 'row', alignItems: 'center', gap: 6 },
+  modalStoryLabel: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.6, textTransform: 'uppercase' },
+  modalStoryText:  { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22 },
   setDisplayBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 16, borderWidth: 1.5 },
   setDisplayBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   charDivider:      { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
