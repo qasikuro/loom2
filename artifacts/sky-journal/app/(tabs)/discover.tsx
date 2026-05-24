@@ -152,9 +152,9 @@ export default function DiscoverScreen() {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={{ position: 'absolute', width: 155, height: 155, borderRadius: 78, backgroundColor: 'rgba(100,60,255,0.16)', top: -35, right: -8, pointerEvents: 'none' }} />
-        <View style={{ position: 'absolute', width: 95, height: 95, borderRadius: 48, backgroundColor: 'rgba(60,140,240,0.12)', top: 22, left: -18, pointerEvents: 'none' }} />
-        <View style={{ position: 'absolute', width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(200,168,75,0.12)', bottom: 12, right: 68, pointerEvents: 'none' }} />
+        <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(120,70,255,0.20)', top: -50, right: -20, pointerEvents: 'none' }} />
+        <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(60,140,240,0.14)', top: 20, left: -28, pointerEvents: 'none' }} />
+        <View style={{ position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(244,168,200,0.14)', bottom: 8, right: 80, pointerEvents: 'none' }} />
 
         {/* Title row */}
         <View style={styles.headerRow}>
@@ -533,23 +533,23 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 14,
     paddingBottom: 10,
   },
-  headerText:  { flex: 1, gap: 2 },
+  headerText:  { flex: 1, gap: 3 },
   headerTitle: {
-    fontSize: 20, fontFamily: 'Satoshi-Bold',
-    letterSpacing: -0.5, color: 'rgba(235,225,255,0.97)',
+    fontSize: 22, fontFamily: 'Satoshi-Bold',
+    letterSpacing: -0.6, color: '#EDE8FF',
   },
   headerSub: {
-    fontSize: 11, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.52)',
+    fontSize: 12, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(210,196,240,0.55)', fontStyle: 'italic',
   },
   usersBtn: {
-    width: 38, height: 38, borderRadius: 12,
+    width: 40, height: 40, borderRadius: 13,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(120,86,255,0.12)',
-    borderWidth: 1, borderColor: 'rgba(120,86,255,0.22)',
+    backgroundColor: 'rgba(155,120,255,0.14)',
+    borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)',
     marginTop: 2,
   },
 
@@ -557,120 +557,136 @@ const styles = StyleSheet.create({
   tabsRow: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 14,
     gap: 8,
   },
   tabPill: {
-    paddingHorizontal: 13, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 15, paddingVertical: 8,
+    borderRadius: 22, borderWidth: 1,
   },
-  tabText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  tabText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
 
   sep: { height: StyleSheet.hairlineWidth },
 
   // Feed list
-  listPad: { paddingHorizontal: 16, paddingTop: 16 },
+  listPad: { paddingHorizontal: 16, paddingTop: 18 },
 
   // Vibes
-  vibesScroll: { paddingHorizontal: 16, paddingTop: 18, gap: 14 },
+  vibesScroll: { paddingHorizontal: 16, paddingTop: 20, gap: 16 },
   vibeHint: {
-    fontSize: 12, fontFamily: 'Satoshi-Regular',
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
     fontStyle: 'italic', textAlign: 'center',
+    color: 'rgba(210,196,240,0.55)',
     paddingBottom: 4,
   },
   vibeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 12,
+    rowGap: 14,
   },
   vibeCard: {
-    borderRadius: 16, borderWidth: 1,
-    padding: 14, gap: 6,
-    minHeight: 108,
+    borderRadius: 20, borderWidth: 1,
+    padding: 16, gap: 6,
+    minHeight: 122,
     justifyContent: 'flex-end',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 4,
   },
   vibeIconWrap: {
-    width: 36, height: 36, borderRadius: 11,
+    width: 44, height: 44, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 3,
+    marginBottom: 4,
   },
-  vibeLabel: { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
-  vibeCount: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  vibeLabel: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  vibeCount: { fontSize: 11, fontFamily: 'Satoshi-Medium', opacity: 0.72 },
 
   backRow: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
-    alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: 22, borderWidth: 1, marginBottom: 6,
+    alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 24, borderWidth: 1, marginBottom: 8,
   },
   backText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
 
   // People
   peopleRoot: { flex: 1 },
   searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 9,
-    margin: 14, borderRadius: 12, borderWidth: 1,
-    paddingHorizontal: 13, paddingVertical: 11,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    margin: 16, borderRadius: 16, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 13,
   },
   searchInput: {
     flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular',
     paddingVertical: 0,
   },
-  peopleList: { paddingHorizontal: 16, gap: 8 },
+  peopleList: { paddingHorizontal: 16, gap: 10 },
   personCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderRadius: 14, borderWidth: 1,
-    padding: 13,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 18, borderWidth: 1,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 3,
   },
   personAvatar: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 46, height: 46, borderRadius: 23,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1.5, flexShrink: 0,
+    borderWidth: 2, flexShrink: 0,
   },
-  personInitial:  { fontSize: 15, fontFamily: 'Satoshi-Bold' },
-  personInfo:     { flex: 1, gap: 2 },
-  personName:     { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  personHandle:   { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  personInitial:  { fontSize: 17, fontFamily: 'Satoshi-Bold' },
+  personInfo:     { flex: 1, gap: 3 },
+  personName:     { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  personHandle:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   personBio:      { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 16 },
   followBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 12, height: 30,
-    borderRadius: 15, borderWidth: 1.5,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 13, height: 34,
+    borderRadius: 17, borderWidth: 1.5,
     flexShrink: 0,
   },
-  followBtnText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  followBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   // Empty states
   emptyWrap: {
-    alignItems: 'center', paddingTop: 56,
-    paddingHorizontal: 32, gap: 12,
+    alignItems: 'center', paddingTop: 60,
+    paddingHorizontal: 32, gap: 14,
   },
   emptyStarRing: {
-    width: 88, height: 88, borderRadius: 44,
+    width: 96, height: 96, borderRadius: 48,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1.5, marginBottom: 4,
   },
   emptyIconBox: {
-    width: 64, height: 64, borderRadius: 20,
+    width: 68, height: 68, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
   },
-  emptyTitle: { fontSize: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
+  emptyTitle: { fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
   emptyBody:  {
     fontSize: 13, fontFamily: 'Satoshi-Regular',
-    fontStyle: 'italic', textAlign: 'center', lineHeight: 20,
+    fontStyle: 'italic', textAlign: 'center', lineHeight: 21,
   },
   searchHint: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 9,
-    borderRadius: 11, borderWidth: 1, marginTop: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 14, borderWidth: 1, marginTop: 4,
   },
   searchHintText: { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 
   ctaBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 24, height: 46, borderRadius: 23,
-    marginTop: 4,
+    paddingHorizontal: 28, height: 48, borderRadius: 24,
+    marginTop: 6,
+    shadowColor: '#9B78FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.40,
+    shadowRadius: 12,
+    elevation: 6,
   },
   ctaBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
 });

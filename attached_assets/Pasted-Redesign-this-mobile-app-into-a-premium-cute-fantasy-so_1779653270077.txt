@@ -1,0 +1,210 @@
+Redesign this mobile app into a premium cute fantasy social platform targeted toward female users age 13–35.
+Keep the magical Sky-inspired identity but make the UI feel production-ready, emotionally warm, modern, addictive, and App Store quality.
+
+Fix the current UI problems:
+
+inconsistent spacing
+
+weak hierarchy
+
+oversized cards
+
+too much flat purple
+
+outdated glassmorphism
+
+low depth
+
+prototype feeling
+
+weak typography
+
+cluttered layouts
+
+poor visual grouping
+
+heavy navigation bar
+
+generic feed cards
+
+
+STYLE DIRECTION: Create a dreamy celestial aesthetic using:
+
+deep indigo backgrounds
+
+lavender gradients
+
+blush pink highlights
+
+moonlight glow
+
+floating particles
+
+soft lighting
+
+rounded organic cards
+
+premium glass surfaces
+
+subtle shadows
+
+layered depth
+
+
+The app should feel: cute, cozy, magical, feminine, expressive, collectible, soft, premium, emotionally comforting.
+
+Avoid:
+
+harsh borders
+
+sharp corners
+
+neon cyberpunk
+
+heavy blur
+
+flat sections
+
+plain white cards
+
+generic Android UI look
+
+
+TYPOGRAPHY: Use soft rounded typography like SF Pro Rounded or Nunito. Improve hierarchy with:
+
+bold elegant usernames
+
+softer metadata
+
+smaller subtitles
+
+clearer section spacing
+
+better contrast
+
+cleaner line height
+
+
+Use larger breathing room everywhere.
+
+NAVBAR: Redesign bottom navbar into a floating translucent dock with soft blur and glow. Center action button should feel magical:
+
+floating glowing orb
+
+elevated
+
+animated pulse
+
+soft aura
+
+
+Selected tabs should have glowing pill backgrounds.
+
+PROFILE SCREEN: Make the profile feel like a magical identity card.
+
+Fix:
+
+cluttered layout
+
+outdated tags
+
+generic stats
+
+bright cards
+
+weak alignment
+
+
+Add:
+
+glowing avatar ring
+
+rarity badge
+
+floating particles
+
+elegant bio styling
+
+translucent rounded tags
+
+collectible stat cards
+
+cinematic outfit showcase
+
+softer dividers
+
+premium edit buttons
+
+
+HOME SCREEN: Make the home screen immersive and emotional.
+
+Transform story cards into cinematic feature cards with:
+
+layered image treatment
+
+atmospheric overlays
+
+editorial typography
+
+depth blur
+
+floating UI
+
+premium spacing
+
+
+Friends section should become:
+
+horizontal avatar carousel
+
+glowing online indicators
+
+cozy social vibe
+
+
+DISCOVER SCREEN: Redesign feed into immersive visual storytelling cards.
+
+Improve:
+
+card depth
+
+typography hierarchy
+
+image presentation
+
+interaction buttons
+
+spacing
+
+readability
+
+
+Filter chips should become:
+
+floating translucent pills
+
+soft animated glow
+
+elastic interactions
+
+
+MICROINTERACTIONS: Add:
+
+spring animations
+
+glow transitions
+
+soft scaling
+
+shimmer highlights
+
+floating movement
+
+smooth page transitions
+
+breathing animations
+
+
+Everything should feel tactile and alive.
+
+FINAL RESULT: The UI should look like a top-tier fantasy social app designed by elite mobile designers from Apple, Pinterest, and Riot Games — cute, feminine, magical, emotionally addictive, and fully production-ready.
