@@ -449,6 +449,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   ];
 
   const clearUserData = useCallback(async () => {
+    // Reset in-memory state immediately so the UI goes blank on sign-out.
+    // We intentionally keep the AsyncStorage cache intact — if the same user
+    // signs back in, loadFromCache() will show their data instantly while the
+    // API call completes, eliminating the white-screen lag.
     setCharacterState(DEFAULT_CHARACTER);
     setJournalEntries([]);
     setStories([]);
@@ -461,22 +465,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setServerNotifications([]);
     setSavedStoryIds(new Set());
     setApiOnline(false);
-    await Promise.allSettled(ALL_CACHE_KEYS.map(k => AsyncStorage.removeItem(k)));
   }, []);
 
   // Called by AuthTokenBridge once a valid Clerk token is available
   async function loadData() {
     setIsLoading(true);
-
-    // Reset to clean defaults before populating with the new user's API data.
-    // This prevents any previous user's cached state from leaking through.
-    setCharacterState(DEFAULT_CHARACTER);
-    setJournalEntries([]);
-    setStories([]);
-    setOutfits([]);
-    setDiscoverFeedRaw([]);
-    setFollowingIds([]);
-    setSavedStoryIds(new Set());
 
     try {
       // Each core call has its own .catch so one failure doesn't wipe the others.
@@ -673,6 +666,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         username:       c.username       ?? null,
         avatarUri:      c.avatarUri      ?? null,
         activeOutfitId: c.activeOutfitId ?? null,
+        birthday:       c.birthday       ?? null,
+        country:        c.country        ?? null,
+        links:          c.links          ?? null,
       }),
     }).catch(() => null);
   }, []);
