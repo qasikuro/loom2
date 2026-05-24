@@ -1,0 +1,174 @@
+1. Visual Hierarchy Prompt
+
+> Redesign this mobile app screen with a world-class visual hierarchy. Make the UI feel calm, premium, modern, and emotionally balanced. Reduce visual competition between elements. Create one clear focal point at the top, secondary content below, and soft passive background elements. Use the 60-30-10 design rule with dark surfaces, muted secondary purples, and minimal accent glow. Make the interface feel intentional, structured, and enterprise-level like Apple, Linear, or Arc Browser.
+
+
+
+
+---
+
+2. Glassmorphism Prompt
+
+> Improve the glassmorphism on this UI to feel premium and elegant instead of overly blurry. Use subtle transparency (10–18%), soft blur (10–14px), thin translucent borders, realistic layered shadows, and restrained highlights. Avoid excessive glow. Make the glass surfaces feel expensive, lightweight, futuristic, and highly readable like VisionOS or modern iOS interfaces.
+
+
+
+
+---
+
+3. Typography Prompt
+
+> Refine the typography system of this mobile app UI using professional product design principles. Create a clean typographic hierarchy with only four text sizes: hero title, section title, body text, and captions. Improve spacing, letter spacing, font weights, and readability. Make the text feel polished, minimal, premium, and emotionally balanced like Spotify, Notion, or Linear mobile apps.
+
+
+
+
+---
+
+4. Spacing System Prompt
+
+> Rebuild the layout spacing of this app screen using a strict 8-point grid system. Ensure consistent padding, margins, gaps, and alignment throughout the UI. Increase breathing space and rhythm between sections. Make the interface feel clean, organized, modern, and visually balanced like a world-class enterprise mobile application.
+
+
+
+
+---
+
+5. Bottom Navigation Prompt
+
+> Redesign the bottom navigation bar into a sleek premium floating dock. Reduce heaviness and glow. Use elegant icons with consistent stroke width, subtle blur, soft shadows, and refined spacing. Make the navigation feel modern, minimal, and luxurious like Arc Search, Airbnb, or iOS dock design. Focus on clarity, elegance, and ease of interaction.
+
+
+
+
+---
+
+6. Hero Section Prompt
+
+> Redesign the top hero profile card to feel cinematic, structured, and emotionally immersive. Use a large banner image with elegant gradient overlays, layered depth, refined avatar placement, balanced text alignment, and polished tag organization. Make the hero section feel premium and memorable like a featured profile in a world-class social or gaming app.
+
+
+
+
+---
+
+7. Color Palette Prompt
+
+> Refine the color palette of this app UI into a cohesive premium dark theme. Use deep dark surfaces, muted elevated layers, soft controlled purples, and restrained accent colors. Improve contrast and readability while keeping the dreamy fantasy aesthetic. Make the colors feel luxurious, modern, and emotionally calming like a high-end digital product.
+
+
+
+
+---
+
+8. Depth & Shadows Prompt
+
+> Improve the depth system of this UI using realistic layered shadows, subtle elevation, ambient lighting, and consistent light direction. Create a sense of spatial hierarchy without overusing glow. Make cards and components feel tactile, premium, and naturally elevated like Apple or VisionOS design systems.
+
+
+
+
+---
+
+9. Content Density Prompt
+
+> Reorganize the layout and content density of this app screen to create a balanced reading flow. Reduce clutter, improve grouping, and create consistent breathing room between elements. Make the interface feel easier to scan, cleaner, calmer, and more premium while preserving functionality.
+
+
+
+
+---
+
+10. Icon System Prompt
+
+> Replace the current icons with a unified premium icon system. Use consistent stroke widths, optical sizing, spacing, and visual weight across the interface. Make the icons feel elegant, modern, and minimal like SF Symbols or Lucide icons used in high-end product design.
+
+
+
+
+---
+
+11. Microinteractions Prompt
+
+> Add premium microinteractions and animations to this mobile UI. Include soft scaling on taps, spring-based transitions, smooth opacity animations, floating ambient motion, subtle hover elevation, and elegant tab transitions. Make the app feel alive, tactile, responsive, and emotionally satisfying without becoming distracting.
+
+
+
+
+---
+
+12. Signature Identity Prompt
+
+> Transform this app into a unique signature visual identity with a cohesive artistic direction. Create a celestial dream-like interface with subtle particles, cinematic gradients, ambient lighting, emotional depth, and futuristic fantasy aesthetics. Make the design feel iconic, recognizable, and emotionally immersive instead of generic.
+
+
+
+
+---
+
+13. Minimalism Prompt
+
+> Simplify this UI by removing unnecessary visual elements, duplicate containers, excessive glow, redundant labels, and visual noise. Focus on restraint, clarity, and confidence. Preserve functionality while making the experience feel calmer, cleaner, and more sophisticated like a premium modern product.
+
+
+
+
+---
+
+14. Feature Cards Prompt
+
+> Redesign the “coming soon” feature cards into elegant premium content previews. Use cinematic background images, dark gradient overlays, refined typography, subtle locked states, and tasteful status indicators. Avoid oversized overlay text. Make the cards feel exciting, luxurious, and professionally designed.
+
+
+
+
+---
+
+15. Contrast & Accessibility Prompt
+
+> Improve the accessibility and visual contrast of this mobile app UI while preserving the dark fantasy aesthetic. Increase text readability, clarify interactive elements, and ensure proper contrast ratios between surfaces, text, and backgrounds. Make the interface feel more polished, usable, and enterprise-grade.
+
+
+
+
+---
+
+16. Animation Timing Prompt
+
+> Refine the animation system of this app using premium motion design principles. Use smooth 180–250ms transitions, natural easing curves, opacity fades, subtle transforms, and restrained spring physics. Make every interaction feel fluid, responsive, elegant, and emotionally satisfying like Apple-quality motion design.
+
+
+
+
+---
+
+17. Grid Alignment Prompt
+
+> Rebuild this mobile UI using a professional alignment and layout grid system. Ensure all cards, text, icons, tags, and buttons align consistently with invisible structural columns. Improve edge margins, internal alignment, and visual rhythm to create a polished enterprise-level interface.
+
+
+
+
+---
+
+18. Breathing Space Prompt
+
+> Increase whitespace and visual breathing room throughout this app interface. Reduce crowding, create calmer spacing between sections, and improve layout rhythm. Make the UI feel more luxurious, modern, and emotionally relaxing while maintaining strong information hierarchy.
+
+
+
+
+---
+
+19. Image Treatment Prompt
+
+> Improve the imagery treatment across this app UI using cinematic color grading, unified tones, soft vignette overlays, elegant crops, and atmospheric lighting. Make all images feel cohesive, immersive, and professionally art-directed within the interface.
+
+
+
+
+---
+
+20. Enterprise-Level Product Polish Prompt
+
+> Transform this mobile app screen into a world-class enterprise-level UI/UX design created by elite product designers. Focus on visual hierarchy, spacing discipline, refined typography, restrained effects, premium motion, accessibility, elegant surfaces, and cohesive design systems. Maintain the emotional fantasy aesthetic while making the app feel modern, polished, iconic, and App Store feature-worthy.
