@@ -462,9 +462,24 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ── Friends section ──────────────────────────────── */}
-        {friends.length > 0 && (
-          <View style={styles.friendsSection}>
-            <Text style={[styles.friendsLabel, { color: colors.mutedForeground }]}>Friends</Text>
+        <View style={styles.friendsSection}>
+          <Text style={[styles.friendsLabel, { color: colors.mutedForeground }]}>Friends</Text>
+          {friends.length === 0 ? (
+            <TouchableOpacity
+              style={[styles.friendsEmptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push('/(tabs)/discover')}
+              activeOpacity={0.82}
+            >
+              <View style={[styles.friendsEmptyIcon, { backgroundColor: `${colors.primary}15` }]}>
+                <Icon name="users" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.friendsEmptyTitle, { color: colors.foreground }]}>No friends yet</Text>
+                <Text style={[styles.friendsEmptySub, { color: colors.mutedForeground }]}>Find people to follow in Discover</Text>
+              </View>
+              <Icon name="chevron-right" size={14} color={`${colors.primary}70`} />
+            </TouchableOpacity>
+          ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.friendsRow}>
               {friends.map(friend => {
                 const initial   = friend.name.charAt(0).toUpperCase();
@@ -505,8 +520,8 @@ export default function HomeScreen() {
                 );
               })}
             </ScrollView>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* Section label */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('home.featuresBeingAdded')}</Text>
@@ -907,6 +922,17 @@ const styles = StyleSheet.create({
     fontSize: 10, fontFamily: 'Satoshi-Medium',
     textAlign: 'center', maxWidth: 58,
   },
+  friendsEmptyCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 14, borderWidth: 1,
+    paddingHorizontal: 14, paddingVertical: 12,
+  },
+  friendsEmptyIcon: {
+    width: 38, height: 38, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  friendsEmptyTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  friendsEmptySub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 1 },
 
   // Modals
   modalOverlay: {
