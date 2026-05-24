@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon, type IconName } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
+import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 
 const BAR_HEIGHT = 64;
 const BTN_SIZE   = 54;
@@ -24,7 +24,7 @@ function TabIcon({
   focused,
   primaryColor,
 }: {
-  name:         IconName;
+  name:         SkyIconName;
   color:        string;
   focused:      boolean;
   primaryColor: string;
@@ -44,11 +44,17 @@ function TabIcon({
     <Animated.View
       style={[
         styles.iconWrap,
-        focused && { backgroundColor: `${primaryColor}22` },
+        focused && { backgroundColor: `${primaryColor}20` },
         { transform: [{ scale }] },
       ]}
     >
-      <Icon name={name} size={20} color={color} />
+      <SkyIcon
+        name={name}
+        size={22}
+        color={color}
+        accentColor={focused ? primaryColor : color}
+        strokeWidth={focused ? 1.8 : 1.5}
+      />
     </Animated.View>
   );
 }
@@ -86,7 +92,7 @@ function CreateIcon() {
         { transform: [{ scale }] },
       ]}
     >
-      <Icon name="plus" size={24} color="#fff" />
+      <SkyIcon name="sky-star" size={26} color="#fff" accentColor="#E8B830" strokeWidth={1.6} />
     </Animated.View>
   );
 }
@@ -140,7 +146,7 @@ function ClassicTabLayout() {
         options={{
           title: t('nav.home'),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="home" color={color} focused={focused} primaryColor={colors.primary} />
+            <TabIcon name="sky-home" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -149,7 +155,7 @@ function ClassicTabLayout() {
         options={{
           title: t('nav.journal'),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="book-open" color={color} focused={focused} primaryColor={colors.primary} />
+            <TabIcon name="sky-journal" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -167,7 +173,7 @@ function ClassicTabLayout() {
         options={{
           title: t('nav.discover'),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="compass" color={color} focused={focused} primaryColor={colors.primary} />
+            <TabIcon name="sky-lantern" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -176,7 +182,7 @@ function ClassicTabLayout() {
         options={{
           title: t('nav.profile'),
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="user" color={color} focused={focused} primaryColor={colors.primary} />
+            <TabIcon name="sky-profile" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />

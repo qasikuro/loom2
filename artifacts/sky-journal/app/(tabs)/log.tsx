@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -308,11 +309,11 @@ const cal = StyleSheet.create({
 
 // ── Filter tabs ───────────────────────────────────────────────────────────────
 
-const FILTER_ICONS: Record<FilterKey, { name: 'book-open' | 'feather' | 'users' | 'moon'; color: string }> = {
-  all:    { name: 'book-open', color: '#9A8EB4' },
-  diary:  { name: 'feather',   color: '#6B5B95' },
-  friend: { name: 'users',     color: '#4A6898' },
-  moment: { name: 'moon',      color: '#5848A8' },
+const FILTER_ICONS: Record<FilterKey, { name: SkyIconName; color: string }> = {
+  all:    { name: 'sky-constellation', color: '#9A8EB4' },
+  diary:  { name: 'sky-quill',         color: '#7856FF' },
+  friend: { name: 'sky-friends',       color: '#4A6898' },
+  moment: { name: 'sky-moon-star',     color: '#5848A8' },
 };
 
 const FILTERS: { key: FilterKey }[] = [
@@ -501,13 +502,22 @@ export default function JournalScreen() {
               style={[styles.hdrBtn, showCalendar && styles.hdrBtnActive]}
               onPress={() => setShowCalendar(v => !v)}
             >
-              <Icon name="calendar" size={16} color={showCalendar ? '#fff' : 'rgba(200,184,232,0.7)'} />
+              <SkyIcon
+                name="sky-calendar"
+                size={18}
+                color={showCalendar ? '#fff' : 'rgba(200,184,232,0.78)'}
+                accentColor={showCalendar ? '#E8B830' : 'rgba(200,184,232,0.55)'}
+                strokeWidth={1.5}
+              />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.hdrBtn, showSearch && styles.hdrBtnActive]}
               onPress={() => { setShowSearch(v => !v); if (showSearch) setSearchQuery(''); }}
             >
-              <Icon name={showSearch ? 'x' : 'search'} size={16} color={showSearch ? '#fff' : 'rgba(200,184,232,0.7)'} />
+              {showSearch
+                ? <Icon name="x" size={16} color="#fff" />
+                : <SkyIcon name="sky-search-star" size={18} color="rgba(200,184,232,0.78)" accentColor="rgba(200,184,232,0.55)" strokeWidth={1.5} />
+              }
             </TouchableOpacity>
           </View>
         </View>
@@ -524,10 +534,12 @@ export default function JournalScreen() {
                 style={[styles.filterTab, isActive && styles.filterTabActive]}
                 onPress={() => { setActiveFilter(f.key); Haptics.selectionAsync(); }}
               >
-                <Icon
+                <SkyIcon
                   name={ic.name}
-                  size={12}
-                  color={isActive ? ic.color : 'rgba(200,184,232,0.6)'}
+                  size={14}
+                  color={isActive ? ic.color : 'rgba(200,184,232,0.55)'}
+                  accentColor={isActive ? ic.color : 'rgba(200,184,232,0.35)'}
+                  strokeWidth={isActive ? 1.7 : 1.4}
                 />
                 <Text style={[styles.filterLabel, isActive && styles.filterLabelActive]}>
                   {t(FILTER_LABEL_KEYS[f.key])}
@@ -675,12 +687,12 @@ const styles = StyleSheet.create({
   privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1, borderColor:'rgba(200,184,232,0.12)' },
   privateBadgeText: { fontSize:10, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.60)' },
   headerRight: { flexDirection:'row', gap:6 },
-  hdrBtn: { width:36, height:36, borderRadius:12, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.07)', borderWidth:1, borderColor:'rgba(200,184,232,0.10)' },
-  hdrBtnActive: { backgroundColor:'rgba(120,86,255,0.22)', borderColor:'rgba(120,86,255,0.35)' },
+  hdrBtn: { width:40, height:40, borderRadius:13, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.11)', borderWidth:1, borderColor:'rgba(200,184,232,0.16)' },
+  hdrBtnActive: { backgroundColor:'rgba(120,86,255,0.28)', borderColor:'rgba(120,86,255,0.40)' },
 
   // Filter tabs inside dark header
-  filtersScroll: { maxHeight:44 },
-  filtersRow: { flexDirection:'row', gap:7, paddingHorizontal:16, paddingVertical:5, paddingBottom:14 },
+  filtersScroll: { maxHeight:56 },
+  filtersRow: { flexDirection:'row', gap:7, paddingHorizontal:16, paddingVertical:8, paddingBottom:12 },
   filterTab: {
     flexDirection:'row', alignItems:'center', gap:5,
     paddingHorizontal:11, paddingVertical:6, borderRadius:20,
