@@ -466,7 +466,7 @@ export default function CharacterScreen() {
 
         {/* ── Profile header ──────────────────────────────────────── */}
         <LinearGradient
-          colors={['#100828', '#1C1048', '#281860']}
+          colors={['#141220', '#201E34', '#22203A']}
           style={[styles.profileHeader, { paddingTop: topPad + 8 }]}
           start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
         >
@@ -680,7 +680,7 @@ export default function CharacterScreen() {
         <View style={[styles.body, { paddingHorizontal: 16, paddingTop: 16 }]}>
 
           {/* ── About me card (birthday / country / links) ────── */}
-          <View style={[styles.sectionCard, { backgroundColor: '#1A1540', borderColor: 'rgba(155,120,255,0.18)' }, SHADOW.sm]}>
+          <View style={[styles.sectionCard, { backgroundColor: '#1E1C30', borderColor: 'rgba(155,120,255,0.11)' }, SHADOW.sm]}>
             <View style={styles.sectionCardHeader}>
               <View style={styles.sectionCardLeft}>
                 <View style={[styles.sectionCardIcon, { backgroundColor: 'rgba(155,120,255,0.16)' }]}>
@@ -819,7 +819,7 @@ export default function CharacterScreen() {
 
           {/* ── Current Outfit spotlight ──────────────────────────── */}
           {activeOutfit && (
-            <View style={[styles.spotlightCard, { backgroundColor: '#1A1540', borderColor: 'rgba(155,120,255,0.18)' }, SHADOW.sm]}>
+            <View style={[styles.spotlightCard, { backgroundColor: '#1E1C30', borderColor: 'rgba(155,120,255,0.11)' }, SHADOW.sm]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 2 }}>
                 <Text style={{ fontSize: 16 }}>🪡</Text>
                 <Text style={[styles.spotlightLabel, { color: '#EDE8FF', textTransform: 'none', letterSpacing: 0, fontSize: 13, fontFamily: 'Satoshi-Bold' }]}>Current Outfit</Text>
@@ -1363,13 +1363,13 @@ const styles = StyleSheet.create({
 
   // Stats card
   statsLightCard: {
-    backgroundColor: '#1A1540',
+    backgroundColor: '#1E1C30',
     borderRadius: 18,
     marginHorizontal: 14,
     marginTop: 12,
     paddingVertical: 18,
     borderWidth: 1,
-    borderColor: 'rgba(155,120,255,0.16)',
+    borderColor: 'rgba(155,120,255,0.10)',
     overflow: 'hidden',
   },
   statsDataRow:     { flexDirection: 'row', paddingHorizontal: 8 },

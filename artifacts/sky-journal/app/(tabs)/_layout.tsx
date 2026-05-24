@@ -163,7 +163,7 @@ function ClassicTabLayout() {
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(180,140,255,0.12)',
+          borderColor: 'rgba(180,140,255,0.07)',
           elevation: 20,
           shadowColor: '#7840D0',
           shadowOffset: { width: 0, height: 6 },
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
 
   iconWrapFocused: {
     borderWidth: 1,
-    borderColor: 'rgba(190,150,255,0.32)',
+    borderColor: 'rgba(190,150,255,0.20)',
   },
 
   iconGlowBg: {
