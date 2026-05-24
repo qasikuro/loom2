@@ -81,25 +81,17 @@ const CATEGORIES = [
   },
 ];
 
-// Stars in the header
+// Stars in the header — restrained, 3 only
 const HEADER_STARS = [
-  { t: 14, l: 30,  s: 2 },
-  { t: 28, r: 50,  s: 3 },
-  { t: 8,  l: 160, s: 2 },
-  { t: 36, r: 140, s: 2 },
-  { t: 22, l: 220, s: 3 },
-  { t: 42, r: 220, s: 2 },
+  { t: 16, l: 42,  s: 2 },
+  { t: 26, r: 60,  s: 2 },
+  { t: 10, l: 180, s: 1.5 },
 ] as const;
 
-// Gold sparkles on the hero
+// Gold sparkle accents on the hero — 2 max
 const SPARKLES = [
-  { t: 18, l: 22,  s: 5, o: 0.55 },
-  { t: 44, l: 56,  s: 3, o: 0.35 },
-  { t: 12, l: 120, s: 4, o: 0.45 },
-  { t: 60, r: 28,  s: 6, o: 0.5  },
-  { t: 30, r: 70,  s: 3, o: 0.3  },
-  { t: 76, l: 88,  s: 3, o: 0.28 },
-  { t: 22, r: 140, s: 4, o: 0.38 },
+  { t: 20, l: 28,  s: 4, o: 0.40 },
+  { t: 55, r: 32,  s: 3, o: 0.30 },
 ] as const;
 
 export default function HomeScreen() {
@@ -268,9 +260,9 @@ export default function HomeScreen() {
 
       {/* ── Vivid header ──────────────────────────────────── */}
       <LinearGradient
-        colors={['#140840', '#2E1498', '#5028B8']}
+        colors={['#0A0818', '#18083A', '#2A1262']}
         style={[styles.headerGrad, { paddingTop: topPad }]}
-        start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
+        start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
       >
         {/* Animated twinkling stars */}
         {(HEADER_STARS as ReadonlyArray<{ t: number; s: number; l?: number; r?: number }>).map((st, i) => (
@@ -567,14 +559,15 @@ export default function HomeScreen() {
 
                 {true && (
                   <BlurView
-                    intensity={Platform.OS === 'web' ? 40 : 80}
+                    intensity={Platform.OS === 'web' ? 16 : 32}
                     tint="dark"
                     style={[StyleSheet.absoluteFill, styles.lockedOverlay]}
+                    pointerEvents="none"
                   >
-                    <View style={styles.lockBadge}>
-                      <Icon name="lock" size={15} color="rgba(235,228,255,0.90)" />
+                    <View style={styles.lockPill}>
+                      <Icon name="lock" size={10} color="rgba(210,200,255,0.72)" />
+                      <Text style={styles.lockLabel}>Soon</Text>
                     </View>
-                    <Text style={styles.lockLabel}>Coming soon</Text>
                   </BlurView>
                 )}
               </TouchableOpacity>
@@ -780,164 +773,177 @@ const styles = StyleSheet.create({
 
   topRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6, gap: 12,
+    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, gap: 12,
   },
   avatarRing: {
-    width: 50, height: 50, borderRadius: 25,
-    borderWidth: 2, borderColor: 'rgba(200,184,232,0.45)',
+    width: 46, height: 46, borderRadius: 23,
+    borderWidth: 1.5, borderColor: 'rgba(200,184,232,0.30)',
     overflow: 'hidden', flexShrink: 0,
   },
   avatar:    { width: '100%', height: '100%' },
   nameBlock: { flex: 1 },
-  charName:  { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(235,228,255,0.97)', letterSpacing: -0.2 },
-  subtitle:  { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', marginTop: 1, letterSpacing: 0.1 },
+  charName:  { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(240,236,255,1)', letterSpacing: -0.4 },
+  subtitle:  { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.42)', marginTop: 2, letterSpacing: 0.2 },
 
-  headerIcons:   { flexDirection: 'row', gap: 6 },
+  headerIcons:   { flexDirection: 'row', gap: 8 },
   headerIconBtn: {
-    width: 38, height: 38, borderRadius: 13,
+    width: 36, height: 36, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.14)',
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.10)',
     position: 'relative',
   },
   notifDot: {
-    position: 'absolute', top: 9, right: 9,
-    width: 7, height: 7, borderRadius: 4,
+    position: 'absolute', top: 8, right: 8,
+    width: 6, height: 6, borderRadius: 3,
     backgroundColor: '#E04455',
-    borderWidth: 1.5, borderColor: '#1E1A48',
+    borderWidth: 1.5, borderColor: '#1A1638',
   },
 
   statsStrip: {
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingBottom: 8, gap: 8,
+    paddingHorizontal: 20, paddingTop: 2, paddingBottom: 12, gap: 8,
   },
-  statPill:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  statPillText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.65)' },
-  statDot:      { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.3)' },
+  statPill:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statPillText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.52)' },
+  statDot:      { width: 2.5, height: 2.5, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.25)' },
 
   charHero:          { position: 'relative', width: '100%', overflow: 'hidden' },
-  charHeroLabel:     { position: 'absolute', top: 14, left: 16, zIndex: 10, gap: 6 },
+  charHeroLabel:     { position: 'absolute', top: 12, left: 16, zIndex: 10, gap: 5 },
   charHeroLabelText: {
-    fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2,
-    color: 'rgba(235,228,255,0.95)',
-    textShadowColor: 'rgba(18,16,42,0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4,
+    color: 'rgba(220,210,255,0.72)',
+    textTransform: 'uppercase',
   },
   outfitNamePill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(18,16,42,0.52)', borderRadius: 10,
-    paddingHorizontal: 9, paddingVertical: 4,
-    borderWidth: 1, borderColor: 'rgba(200,168,75,0.25)',
+    backgroundColor: 'rgba(12,10,24,0.60)', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: 'rgba(200,168,75,0.20)',
     alignSelf: 'flex-start',
   },
-  outfitNameText:     { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,228,200,0.92)', letterSpacing: 0.2 },
-  charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 80, zIndex: 2 },
-  charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, zIndex: 2 },
+  outfitNameText:     { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(232,220,190,0.88)', letterSpacing: 0.1 },
+  charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 64, zIndex: 2 },
+  charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 110, zIndex: 2 },
   changeOutfitBtn: {
-    position: 'absolute', bottom: 14, right: 16, zIndex: 10,
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)',
+    position: 'absolute', bottom: 12, right: 16, zIndex: 10,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.10)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.16)',
     alignItems: 'center', justifyContent: 'center',
   },
 
   cardsArea: { flex: 1 },
-  cardsList:  { paddingTop: 16, paddingHorizontal: 16 },
+  cardsList:  { paddingTop: 20, paddingHorizontal: 16 },
 
   charInfoCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 20, padding: 16,
-    marginBottom: 22,
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 18, padding: 16,
+    marginBottom: 20,
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 3,
   },
   charInfoLeft:     { flex: 1 },
   charInfoRight:    { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
-  charInfoCta:      { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(139,122,181,0.75)' },
-  charNameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 },
-  charInfoName:     { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.2 },
-  charInfoStar:     { fontSize: 11, color: '#C8A84B' },
-  charInfoBio:      { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.72)', lineHeight: 18, fontStyle: 'italic', marginBottom: 6 },
-  charInfoBioEmpty: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.38)', lineHeight: 18, fontStyle: 'italic', marginBottom: 6 },
+  charInfoCta:      { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(120,86,255,0.65)' },
+  charNameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  charInfoName:     { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#EDEAFF', letterSpacing: -0.3 },
+  charInfoStar:     { fontSize: 10, color: '#C8A030' },
+  charInfoBio:      { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.65)', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
+  charInfoBioEmpty: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.30)', lineHeight: 19, fontStyle: 'italic', marginBottom: 8 },
   charInfoTraits:   { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  charInfoTrait:    { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(139,122,181,0.18)', borderWidth: 1, borderColor: 'rgba(139,122,181,0.32)' },
-  charInfoTraitText:{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#C8B8EE' },
+  charInfoTrait:    { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(120,86,255,0.10)', borderWidth: 1, borderColor: 'rgba(120,86,255,0.20)' },
+  charInfoTraitText:{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.80)' },
 
   sectionLabel: {
-    fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.48)',
-    letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12,
+    fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.38)',
+    letterSpacing: 1.8, textTransform: 'uppercase', marginBottom: 10,
   },
 
-  hList: { gap: 8 },
+  hList: { gap: 10 },
   hCard: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 18, overflow: 'hidden',
-    height: 80, gap: 12,
+    borderRadius: 16, overflow: 'hidden',
+    height: 76, gap: 12,
     paddingHorizontal: 14,
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.07)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.45,
+    shadowRadius: 6,
+    elevation: 3,
   },
   hCardIcon:  {
-    width: 36, height: 36, borderRadius: 11,
+    width: 34, height: 34, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   hCardLeft:  { flex: 1, gap: 3 },
-  hCardTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.1 },
-  hCardDesc:  { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(220,210,255,0.60)', lineHeight: 16 },
+  hCardTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#EDEAFF', letterSpacing: -0.2 },
+  hCardDesc:  { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.52)', lineHeight: 17 },
   hCardArrow: {
-    width: 30, height: 30, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.09)',
+    width: 28, height: 28, borderRadius: 9,
+    backgroundColor: 'rgba(255,255,255,0.07)',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   lockedOverlay: {
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(10,8,26,0.62)' : undefined,
+    borderRadius: 16,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    padding: 10,
+    backgroundColor: Platform.OS === 'web' ? 'rgba(6,5,18,0.58)' : undefined,
   },
-  lockBadge: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: 'rgba(200,184,232,0.15)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.25)',
-    alignItems: 'center', justifyContent: 'center',
+  lockPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(10,8,24,0.70)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.16)',
+    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
   },
   lockLabel: {
-    fontSize: 13, fontFamily: 'Satoshi-Bold',
-    color: 'rgba(220,210,255,0.80)', letterSpacing: 0.3,
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(200,184,232,0.65)', letterSpacing: 0.3,
   },
 
   // Friends row
-  friendsSection: { marginTop: 4, marginBottom: 2 },
+  friendsSection: { marginTop: 0, marginBottom: 20 },
   friendsLabel: {
     fontSize: 11, fontFamily: 'Satoshi-Bold',
-    textTransform: 'uppercase', letterSpacing: 0.9,
-    marginBottom: 10, paddingHorizontal: 0,
+    textTransform: 'uppercase', letterSpacing: 1.4,
+    marginBottom: 12, paddingHorizontal: 0,
+    color: 'rgba(200,184,232,0.38)',
   },
-  friendsRow: { gap: 12, paddingVertical: 2 },
-  friendBubbleWrap: { alignItems: 'center', gap: 5, width: 60 },
+  friendsRow: { gap: 14, paddingVertical: 2 },
+  friendBubbleWrap: { alignItems: 'center', gap: 5, width: 58 },
   friendBubble: {
-    width: 52, height: 52, borderRadius: 26,
-    borderWidth: 2, overflow: 'hidden',
+    width: 48, height: 48, borderRadius: 24,
+    borderWidth: 1.5, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
   },
-  friendBubbleInitial: { fontSize: 20, fontFamily: 'Satoshi-Bold' },
+  friendBubbleInitial: { fontSize: 18, fontFamily: 'Satoshi-Bold' },
   friendBubbleName: {
     fontSize: 10, fontFamily: 'Satoshi-Medium',
-    textAlign: 'center', maxWidth: 58,
+    textAlign: 'center', maxWidth: 56,
   },
   friendsEmptyCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     borderRadius: 14, borderWidth: 1,
-    paddingHorizontal: 14, paddingVertical: 12,
+    paddingHorizontal: 14, paddingVertical: 13,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 2,
   },
   friendsEmptyIcon: {
-    width: 38, height: 38, borderRadius: 12,
+    width: 36, height: 36, borderRadius: 11,
     alignItems: 'center', justifyContent: 'center',
   },
-  friendsEmptyTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  friendsEmptySub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 1 },
+  friendsEmptyTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  friendsEmptySub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 2 },
 
   // Modals
   modalOverlay: {
@@ -951,10 +957,10 @@ const styles = StyleSheet.create({
   },
 
   pickerSheet: {
-    backgroundColor: '#1C1840',
+    backgroundColor: '#0E0B22',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingTop: 16, paddingHorizontal: 20,
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
   },
   pickerHeader: {
     flexDirection: 'row', alignItems: 'center',
@@ -986,11 +992,11 @@ const styles = StyleSheet.create({
   },
 
   notifsSheet: {
-    backgroundColor: '#1C1840',
+    backgroundColor: '#0E0B22',
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     paddingTop: 16, paddingHorizontal: 20,
     maxHeight: '72%',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.1)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
   },
   notifsHeader: {
     flexDirection: 'row', alignItems: 'center',

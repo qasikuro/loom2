@@ -107,31 +107,31 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: colors.mutedForeground,
 
         tabBarStyle: {
-          marginHorizontal: isWeb ? 0 : 12,
+          marginHorizontal: isWeb ? 0 : 14,
           marginBottom: barMarginBottom,
           height: isWeb ? 64 : BAR_HEIGHT,
           borderRadius: isWeb ? 0 : 28,
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: colors.border,
-          elevation: 20,
+          borderColor: 'rgba(255,255,255,0.06)',
+          elevation: 16,
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.55,
-          shadowRadius: 20,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.35,
+          shadowRadius: 16,
         },
 
         tabBarLabelStyle: {
           fontSize:      10,
-          fontFamily:    'Satoshi-Bold',
-          letterSpacing: 0.3,
+          fontFamily:    'Satoshi-Medium',
+          letterSpacing: 0.2,
           marginBottom:  Platform.OS === 'android' ? 4 : 5,
-          marginTop:     Platform.OS === 'android' ? -2 : 1,
+          marginTop:     Platform.OS === 'android' ? -2 : 0,
         },
 
         tabBarIconStyle: {
-          marginTop: Platform.OS === 'android' ? 2 : 5,
+          marginTop: Platform.OS === 'android' ? 2 : 4,
         },
       }}
     >
