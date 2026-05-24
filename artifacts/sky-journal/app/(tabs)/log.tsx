@@ -190,23 +190,23 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
 }
 
 const tc = StyleSheet.create({
-  card: { borderRadius:20, borderWidth:1, padding:16, gap:11, marginBottom:10 },
+  card: { borderRadius:16, borderWidth:1, padding:15, gap:10, marginBottom:10 },
   topRow: { flexDirection:'row', alignItems:'center', gap:12 },
   avatar: {
-    width:48, height:48, borderRadius:16,
+    width:44, height:44, borderRadius:14,
     alignItems:'center', justifyContent:'center', flexShrink:0,
   },
   avatarInitial: { fontSize:18, fontFamily:'Satoshi-Bold', color:'#fff' },
   nameCol: { flex:1 },
-  nameText: { fontSize:15, fontFamily:'Satoshi-Bold', letterSpacing:-0.1 },
+  nameText: { fontSize:14, fontFamily:'Satoshi-Bold', letterSpacing:-0.2 },
   timeText: { fontSize:11, fontFamily:'Satoshi-Regular', marginTop:2 },
   contentRow: { flexDirection:'row', gap:12, alignItems:'flex-start' },
-  snippet: { flex:1, fontSize:14, fontFamily:'Satoshi-Regular', lineHeight:21, fontStyle:'italic' },
-  thumbnail: { width:68, height:68, borderRadius:14, flexShrink:0 },
+  snippet: { flex:1, fontSize:13, fontFamily:'Satoshi-Regular', lineHeight:20, fontStyle:'italic' },
+  thumbnail: { width:64, height:64, borderRadius:12, flexShrink:0 },
   footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap' },
-  typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:9, paddingVertical:4, borderRadius:12, borderWidth:1 },
+  typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, borderWidth:1 },
   typePillText: { fontSize:10, fontFamily:'Satoshi-Medium' },
-  deleteBtn: { height:30, paddingHorizontal:8, borderRadius:10, alignItems:'center', justifyContent:'center' },
+  deleteBtn: { height:28, paddingHorizontal:8, borderRadius:9, alignItems:'center', justifyContent:'center' },
   deleteBtnText: { color:'#fff', fontSize:11, fontFamily:'Satoshi-Bold' },
 });
 
@@ -294,12 +294,12 @@ function MiniCalendar({
 }
 
 const cal = StyleSheet.create({
-  wrap: { marginHorizontal:16, marginBottom:14, borderRadius:16, borderWidth:1, padding:14 },
+  wrap: { marginHorizontal:16, marginBottom:14, borderRadius:14, borderWidth:1, padding:14 },
   monthRow: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', marginBottom:12 },
-  navBtn: { width:30, height:30, borderRadius:9, alignItems:'center', justifyContent:'center' },
+  navBtn: { width:28, height:28, borderRadius:9, alignItems:'center', justifyContent:'center' },
   monthText: { fontSize:14, fontFamily:'Satoshi-Bold' },
   weekRow: { flexDirection:'row', marginBottom:6 },
-  weekDay: { flex:1, textAlign:'center', fontSize:10, fontFamily:'Satoshi-Bold', letterSpacing:0.4, textTransform:'uppercase' },
+  weekDay: { flex:1, textAlign:'center', fontSize:10, fontFamily:'Satoshi-Bold', letterSpacing:0.6, textTransform:'uppercase' },
   grid: { flexDirection:'row', flexWrap:'wrap' },
   cell: { width:'14.28%', aspectRatio:1, alignItems:'center', justifyContent:'center', position:'relative' },
   cellText: { fontSize:13, fontFamily:'Satoshi-Regular' },
@@ -392,7 +392,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
         const opacity    = anim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0, 1] });
         return (
           <Animated.View key={item.type} style={[fab.actionRow, { opacity, transform: [{ translateY }] }]}>
-            <View style={[fab.actionLabel, { backgroundColor: 'rgba(26,22,48,0.88)' }]}>
+            <View style={[fab.actionLabel, { backgroundColor: 'rgba(26,22,48,0.88)', borderWidth:1, borderColor:'rgba(200,184,232,0.12)' }]}>
               <Text style={fab.actionLabelText}>{t(item.labelKey)}</Text>
             </View>
             <TouchableOpacity
@@ -420,11 +420,11 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
 
 const fab = StyleSheet.create({
   wrap:       { position:'absolute', right:20, alignItems:'flex-end' },
-  main:       { width:56, height:56, borderRadius:28, alignItems:'center', justifyContent:'center' },
+  main:       { width:52, height:52, borderRadius:26, alignItems:'center', justifyContent:'center' },
   actionRow:  { position:'absolute', right:0, flexDirection:'row', alignItems:'center', gap:10 },
   actionBtn:  { width:48, height:48, borderRadius:24, borderWidth:1, alignItems:'center', justifyContent:'center' },
-  actionLabel:{ paddingHorizontal:10, paddingVertical:5, borderRadius:10 },
-  actionLabelText: { color:'#fff', fontSize:13, fontFamily:'Satoshi-Medium' },
+  actionLabel:{ paddingHorizontal:10, paddingVertical:5, borderRadius:12 },
+  actionLabelText: { color:'#fff', fontSize:12, fontFamily:'Satoshi-Medium' },
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
@@ -483,14 +483,10 @@ export default function JournalScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* ── Vivid gradient header ─────────────────────────────────── */}
       <LinearGradient
-        colors={['#180A50', '#36208C', '#6048A8']}
+        colors={['#0A0818', '#170A42', '#2C1465']}
         style={[styles.headerGrad, { paddingTop: topPad }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       >
-        <View style={{ position: 'absolute', width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(140,100,240,0.18)', top: -20, right: 15, pointerEvents: 'none' }} />
-        <View style={{ position: 'absolute', width: 75, height: 75, borderRadius: 38, backgroundColor: 'rgba(200,168,75,0.11)', bottom: 8, left: 25, pointerEvents: 'none' }} />
-        <View style={{ position: 'absolute', width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(100,160,255,0.09)', top: 30, left: 140, pointerEvents: 'none' }} />
-
         {/* Top row */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -673,51 +669,51 @@ const styles = StyleSheet.create({
 
   // Header (dark)
   headerGrad: { paddingBottom: 0 },
-  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:10, paddingBottom:6 },
+  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:12, paddingBottom:8 },
   headerLeft: { flexDirection:'row', alignItems:'center', gap:10 },
-  title: { fontSize:18, fontFamily:'Satoshi-Bold', letterSpacing:-0.3, color:'rgba(235,228,255,0.97)' },
-  privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.08)', borderWidth:1, borderColor:'rgba(200,184,232,0.18)' },
-  privateBadgeText: { fontSize:10, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.7)' },
+  title: { fontSize:20, fontFamily:'Satoshi-Bold', letterSpacing:-0.3, color:'rgba(235,228,255,0.97)' },
+  privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1, borderColor:'rgba(200,184,232,0.12)' },
+  privateBadgeText: { fontSize:10, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.60)' },
   headerRight: { flexDirection:'row', gap:6 },
-  hdrBtn: { width:38, height:38, borderRadius:12, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.09)', borderWidth:1, borderColor:'rgba(200,184,232,0.14)' },
-  hdrBtnActive: { backgroundColor:'rgba(107,91,149,0.55)', borderColor:'rgba(107,91,149,0.4)' },
+  hdrBtn: { width:36, height:36, borderRadius:12, alignItems:'center', justifyContent:'center', backgroundColor:'rgba(255,255,255,0.07)', borderWidth:1, borderColor:'rgba(200,184,232,0.10)' },
+  hdrBtnActive: { backgroundColor:'rgba(120,86,255,0.22)', borderColor:'rgba(120,86,255,0.35)' },
 
   // Filter tabs inside dark header
   filtersScroll: { maxHeight:44 },
-  filtersRow: { flexDirection:'row', gap:8, paddingHorizontal:16, paddingVertical:5, paddingBottom:8 },
+  filtersRow: { flexDirection:'row', gap:7, paddingHorizontal:16, paddingVertical:5, paddingBottom:14 },
   filterTab: {
     flexDirection:'row', alignItems:'center', gap:5,
-    paddingHorizontal:12, paddingVertical:5, borderRadius:20,
-    backgroundColor:'rgba(255,255,255,0.1)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
+    paddingHorizontal:11, paddingVertical:6, borderRadius:20,
+    backgroundColor:'rgba(255,255,255,0.04)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.12)',
   },
-  filterTabActive: { backgroundColor:'rgba(255,255,255,0.96)', borderColor:'transparent' },
-  filterLabel: { fontSize:12, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.8)' },
-  filterLabelActive: { color:'#2A1E50', fontFamily:'Satoshi-Bold' },
-  filterCount: { paddingHorizontal:5, paddingVertical:1, borderRadius:10, backgroundColor:'rgba(255,255,255,0.15)', minWidth:18, alignItems:'center' },
-  filterCountActive: { backgroundColor:'rgba(107,91,149,0.15)' },
+  filterTabActive: { backgroundColor:'rgba(120,86,255,0.16)', borderColor:'rgba(120,86,255,0.30)' },
+  filterLabel: { fontSize:12, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.55)' },
+  filterLabelActive: { color:'rgba(235,225,255,0.95)', fontFamily:'Satoshi-Bold' },
+  filterCount: { paddingHorizontal:6, paddingVertical:2, borderRadius:9, backgroundColor:'rgba(255,255,255,0.10)', minWidth:18, alignItems:'center' },
+  filterCountActive: { backgroundColor:'rgba(120,86,255,0.28)' },
   filterCountText: { fontSize:10, fontFamily:'Satoshi-Bold', color:'rgba(200,184,232,0.75)' },
-  filterCountTextActive: { color:'#6B5B95' },
+  filterCountTextActive: { color:'#fff' },
 
   // Search
-  searchBar: { flexDirection:'row', alignItems:'center', gap:9, borderWidth:1, borderRadius:13, paddingHorizontal:12, paddingVertical:9, marginHorizontal:16, marginTop:8 },
+  searchBar: { flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderRadius:14, paddingHorizontal:14, paddingVertical:11, marginHorizontal:16, marginTop:0, borderColor:'rgba(255,255,255,0.08)' },
   searchInput: { flex:1, fontSize:13, fontFamily:'Satoshi-Regular' },
-  searchHint: { fontSize:12, fontFamily:'Satoshi-Regular', fontStyle:'italic', paddingHorizontal:18, paddingTop:8, paddingBottom:4 },
+  searchHint: { fontSize:12, fontFamily:'Satoshi-Regular', fontStyle:'italic', marginHorizontal:16, marginBottom:6 },
 
   // Timeline
-  timelineContent: { paddingHorizontal:16, paddingTop:18 },
+  timelineContent: { paddingHorizontal:16, paddingTop:16 },
   timelineRow: { flexDirection:'row', gap:14 },
   timelineLeft: { width:22, alignItems:'center', paddingTop:4 },
-  dot: { width:12, height:12, borderRadius:6, borderWidth:2.5, zIndex:1 },
+  dot: { width:12, height:12, borderRadius:6, borderWidth:1.5, zIndex:1 },
   line: { flex:1, width:2, marginTop:6, marginBottom:-6, borderRadius:1 },
   timelineRight: { flex:1, paddingBottom:24 },
-  dateLabel: { fontSize:11, fontFamily:'Satoshi-Bold', marginBottom:12, marginTop:2, letterSpacing:1.2, textTransform:'uppercase' },
+  dateLabel: { fontSize:11, fontFamily:'Satoshi-Bold', marginBottom:10, marginTop:2, letterSpacing:1.4, textTransform:'uppercase' },
 
   // Empty
-  empty: { flex:1, alignItems:'center', justifyContent:'center', paddingTop:80, paddingHorizontal:36, gap:14 },
-  emptyIcon: { width:76, height:76, borderRadius:38, alignItems:'center', justifyContent:'center', marginBottom:4 },
-  emptyTitle: { fontSize:16, fontFamily:'Satoshi-Bold', textAlign:'center' },
+  empty: { flex:1, alignItems:'center', justifyContent:'center', paddingTop:60, paddingHorizontal:36, gap:14 },
+  emptyIcon: { width:64, height:64, borderRadius:20, alignItems:'center', justifyContent:'center', marginBottom:4 },
+  emptyTitle: { fontSize:18, fontFamily:'Satoshi-Bold', textAlign:'center', letterSpacing:-0.3 },
   emptyText: { fontSize:13, fontFamily:'Satoshi-Regular', textAlign:'center', lineHeight:20, fontStyle:'italic' },
-  emptyBtn: { flexDirection:'row', alignItems:'center', gap:7, paddingHorizontal:20, height:40, borderRadius:20, marginTop:4 },
-  emptyBtnText: { fontSize:13, fontFamily:'Satoshi-Bold', color:'#fff' },
+  emptyBtn: { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:24, height:48, borderRadius:24, marginTop:4 },
+  emptyBtnText: { fontSize:14, fontFamily:'Satoshi-Bold', color:'#fff' },
 });

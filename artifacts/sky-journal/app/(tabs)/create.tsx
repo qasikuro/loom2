@@ -75,7 +75,7 @@ function MiniPageGrid({ page, getPanelImg }: { page: StoryPage; getPanelImg: (p:
   let idx = 0;
 
   return (
-    <View style={{ width: GRID_W, height: GRID_H, borderRadius: 8, overflow: 'hidden', backgroundColor: '#0A0820' }}>
+    <View style={{ width: GRID_W, height: GRID_H, borderRadius: 8, overflow: 'hidden', backgroundColor: '#07060F' }}>
       {layout.rows.map((cols, ri) => {
         const totalFlex = cols.reduce((a, b) => a + b, 0);
         return (
@@ -89,7 +89,7 @@ function MiniPageGrid({ page, getPanelImg }: { page: StoryPage; getPanelImg: (p:
                   key={ci}
                   style={{
                     width: cellW, height: rowH,
-                    backgroundColor: '#1C1840',
+                    backgroundColor: '#100D22',
                     marginLeft: ci > 0 ? GRID_G : 0,
                     overflow: 'hidden',
                   }}
@@ -239,7 +239,7 @@ export default function CreateScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       {/* Header gradient */}
       <LinearGradient
-        colors={['#1E0A60', '#120940', colors.background]}
+        colors={['#0A0616', '#06040F', colors.background]}
         style={[styles.headerGrad, { height: topPad + 80 }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       />
@@ -486,18 +486,19 @@ const styles = StyleSheet.create({
     flexDirection:    'row',
     alignItems:       'center',
     justifyContent:   'space-between',
-    paddingHorizontal: 18,
-    paddingBottom:    14,
+    paddingHorizontal: 20,
+    paddingBottom:    16,
   },
   headerBtn: {
     width: 40, height: 40,
     borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.10)',
   },
   headerTitle: {
-    fontSize: 17, fontFamily: 'Satoshi-Bold',
-    color: '#FFFFFF', letterSpacing: -0.3,
+    fontSize: 18, fontFamily: 'Satoshi-Bold',
+    color: '#FFFFFF', letterSpacing: -0.4,
     textAlign: 'center',
   },
   headerSub: {
@@ -505,28 +506,28 @@ const styles = StyleSheet.create({
     textAlign: 'center', marginTop: 1,
   },
 
-  scroll: { paddingHorizontal: 16, paddingTop: 8 },
+  scroll: { paddingHorizontal: 16, paddingTop: 12 },
 
   card: {
-    borderRadius: 20, borderWidth: 1,
-    padding: 18, marginBottom: 14,
+    borderRadius: 16, borderWidth: 1,
+    padding: 16, marginBottom: 12,
   },
 
   fieldLabel: {
     fontSize: 10, fontFamily: 'Satoshi-Bold',
-    letterSpacing: 0.9, textTransform: 'uppercase', marginBottom: 8,
+    letterSpacing: 1.6, textTransform: 'uppercase', marginBottom: 10,
   },
 
   titleInput: {
-    fontSize: 18, fontFamily: 'Satoshi-Medium',
-    borderWidth: 1, borderRadius: 14,
-    paddingHorizontal: 14, paddingVertical: 12,
+    fontSize: 17, fontFamily: 'Satoshi-Medium',
+    borderWidth: 1, borderRadius: 12,
+    paddingHorizontal: 13, paddingVertical: 12,
   },
 
   descWrapper:     { position: 'relative', minHeight: 80 },
   descInput: {
-    fontSize: 14, fontFamily: 'Satoshi-Regular',
-    lineHeight: 22, minHeight: 80, paddingRight: 72,
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
+    lineHeight: 20, minHeight: 80, paddingRight: 72,
     color: '#fff',
   },
   descIllustration: {
@@ -537,7 +538,7 @@ const styles = StyleSheet.create({
   chipRow: { marginBottom: 4 },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: 11, paddingVertical: 5,
     borderRadius: 20, marginRight: 7,
   },
   chipText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
@@ -546,26 +547,26 @@ const styles = StyleSheet.create({
   privBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 6,
-    paddingVertical: 10, borderRadius: 12,
+    paddingHorizontal: 14, height: 36, borderRadius: 18,
   },
 
   sectionHeader: {
     flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between', marginBottom: 16,
+    justifyContent: 'space-between', marginBottom: 14,
   },
-  sectionTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
-  sectionSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2 },
+  sectionTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  sectionSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2, fontStyle: 'italic' },
   badge: {
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 9, paddingVertical: 3,
+    borderRadius: 10, borderWidth: 1,
   },
-  badgeText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  badgeText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
 
   divider: { height: 1, marginHorizontal: -2, opacity: 0.4, marginVertical: 2 },
 
   pageRow: {
     flexDirection: 'row', alignItems: 'center',
-    gap: 12, paddingVertical: 12,
+    gap: 10, paddingVertical: 12,
   },
 
   pageInfo:    { flex: 1, gap: 4 },
@@ -576,8 +577,8 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1,
   },
   layoutBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  pagePreview: { fontSize: 11, fontFamily: 'Satoshi-Regular', lineHeight: 16 },
-  panelCount:  { fontSize: 10, fontFamily: 'Satoshi-Medium' },
+  pagePreview: { fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 18 },
+  panelCount:  { fontSize: 11, fontFamily: 'Satoshi-Medium' },
 
   pageActions: { gap: 6 },
   actionBtn: {
@@ -587,32 +588,33 @@ const styles = StyleSheet.create({
   },
 
   addPageBtn: {
-    borderWidth: 1, borderRadius: 20,
-    overflow: 'hidden', marginBottom: 14,
+    borderWidth: 1, borderRadius: 16,
+    overflow: 'hidden', marginBottom: 12,
+    height: 64,
   },
   addPageGrad: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 14, paddingVertical: 16, paddingHorizontal: 16,
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    gap: 12, paddingHorizontal: 16, paddingVertical: 0, borderRadius: 16,
   },
   addPageIconWrap: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 40, height: 40, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
   },
-  addPageTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold' },
+  addPageTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   addPageSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 1 },
 
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: 'rgba(224,92,92,0.12)', borderWidth: 1,
     borderColor: 'rgba(224,92,92,0.28)', borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10, marginBottom: 12,
+    padding: 12, marginBottom: 10,
   },
-  errorText: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Medium', color: '#E05C5C' },
+  errorText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#E05C5C' },
 
-  publishBtn:  { borderRadius: 30, overflow: 'hidden', marginBottom: 4 },
+  publishBtn:  { borderRadius: 20, overflow: 'hidden', marginTop: 8 },
   publishGrad: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 8, paddingVertical: 17,
+    justifyContent: 'center', gap: 8, paddingVertical: 16, paddingHorizontal: 24,
   },
-  publishText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: -0.2 },
+  publishText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#fff' },
 });

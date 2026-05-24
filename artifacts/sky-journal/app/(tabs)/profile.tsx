@@ -466,10 +466,10 @@ export default function CharacterScreen() {
 
         {/* ── Banner ──────────────────────────────────────────────── */}
         <View style={[styles.banner, { height: topPad + 110 }]}>
-          <LinearGradient colors={bannerColors} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
-          <View style={[styles.orbA, { backgroundColor: `${colors.primary}22` }]} />
-          <View style={[styles.orbB, { backgroundColor: `${colors.gold}18` }]} />
-          <View style={[styles.orbC, { backgroundColor: `${colors.primary}14` }]} />
+          <LinearGradient colors={['#0A0818', '#18083C', '#2C1462']} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+          <View style={[styles.orbA, { backgroundColor: 'rgba(120,86,255,0.08)' }]} />
+          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.06)' }]} />
+          <View style={[styles.orbC, { backgroundColor: 'rgba(100,140,255,0.05)' }]} />
 
           <View style={[styles.bannerTop, { paddingTop: topPad + 10 }]}>
             <View style={[styles.bannerChip, { backgroundColor: `${colors.primary}30`, borderColor: `${colors.primary}40` }]}>
@@ -506,10 +506,6 @@ export default function CharacterScreen() {
                 <Image source={avatarSource} style={styles.avatarImg} contentFit="cover" />
               </View>
             </View>
-            {/* Sparkle decorations */}
-            <Text style={[styles.sparkle, styles.sparkleA, { color: colors.gold, opacity: 0.7 }]}>✦</Text>
-            <Text style={[styles.sparkle, styles.sparkleB, { color: colors.primary, opacity: 0.55 }]}>✧</Text>
-            <Text style={[styles.sparkle, styles.sparkleC, { color: colors.gold, opacity: 0.5 }]}>✶</Text>
             {/* Camera badge */}
             <TouchableOpacity
               style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
@@ -1307,19 +1303,19 @@ const styles = StyleSheet.create({
   orbB:     { position: 'absolute', width: 140, height: 140, borderRadius: 70,  bottom: -20, left: -40 },
   orbC:     { position: 'absolute', width: 80,  height: 80,  borderRadius: 40,  top: 30, left: '50%' },
   bannerTop:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  bannerChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  bannerLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 2 },
-  visToggle:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
-  visToggleText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  bannerChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1 },
+  bannerLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8 },
+  visToggle:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
+  visToggleText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
 
   // Avatar
-  avatarSection: { alignItems: 'center', marginTop: -60, paddingBottom: 8 },
+  avatarSection: { alignItems: 'center', marginTop: -56, paddingBottom: 8 },
   avatarCenter:  { position: 'relative', width: 128, height: 128, alignItems: 'center', justifyContent: 'center' },
   avatarGlow:    { position: 'absolute', width: 128, height: 128, borderRadius: 64 },
-  avatarRingOuter: { width: 116, height: 116, borderRadius: 58, borderWidth: 3, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  avatarRingInner: { width: 108, height: 108, borderRadius: 54, borderWidth: 2, overflow: 'hidden' },
+  avatarRingOuter: { width: 108, height: 108, borderRadius: 54, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  avatarRingInner: { width: 100, height: 100, borderRadius: 50, borderWidth: 1.5, overflow: 'hidden' },
   avatarImg:     { width: '100%', height: '100%' },
-  avatarEditBadge: { position: 'absolute', bottom: 4, right: 2, width: 26, height: 26, borderRadius: 8, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  avatarEditBadge: { position: 'absolute', bottom: 4, right: 2, width: 24, height: 24, borderRadius: 7, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   sparkle:  { position: 'absolute', fontFamily: 'Satoshi-Bold' },
   sparkleA: { fontSize: 14, top: 2,   right: -2  },
   sparkleB: { fontSize: 10, bottom: 8, left: -2   },
@@ -1328,55 +1324,55 @@ const styles = StyleSheet.create({
   // Name / Bio
   nameSection:     { alignItems: 'center', gap: 5, paddingHorizontal: 24, marginTop: 10, marginBottom: 4 },
   nameRow:         { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name:            { fontSize: 22, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
-  editHint:        { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  name:            { fontSize: 24, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
+  editHint:        { width: 24, height: 24, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   nameEditWrap:    { borderBottomWidth: 2, paddingBottom: 3, alignSelf: 'stretch', alignItems: 'center' },
   nameEditInput:   { fontSize: 22, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4, textAlign: 'center' },
   usernameRow:     { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  usernameText:    { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  usernameText:    { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   usernamePlaceholder: { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
   usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
   usernameAt:      { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   usernameEditInput: { flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular' },
   usernameError:   { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
   bioRow:          { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  bio:             { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 19, textAlign: 'center' },
-  bioInput:        { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 19, borderWidth: 1, borderRadius: 12, padding: 10, alignSelf: 'stretch' },
+  bio:             { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18, textAlign: 'center' },
+  bioInput:        { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18, borderWidth: 1, borderRadius: 10, padding: 10, alignSelf: 'stretch' },
   moodRow:         { marginTop: 4 },
 
   // Body
   body: {},
 
   // Stats
-  statsCard:   { flexDirection: 'row', borderWidth: 1, borderRadius: 18, paddingVertical: 18, marginBottom: 14, marginTop: 14 },
+  statsCard:   { flexDirection: 'row', borderWidth: 1, borderRadius: 16, paddingVertical: 16, marginBottom: 12, marginTop: 14 },
   statItem:    { flex: 1, alignItems: 'center', gap: 4 },
-  statNum:     { fontSize: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
-  statLabel:   { fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: 0.2, textTransform: 'uppercase' },
+  statNum:     { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  statLabel:   { fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4, textTransform: 'uppercase' },
   statDivider: { width: 1, alignSelf: 'stretch', marginVertical: 4 },
 
   // Section card (stories / wardrobe nav)
-  sectionCard:       { borderWidth: 1, borderRadius: 20, padding: 14, marginBottom: 20, gap: 12 },
+  sectionCard:       { borderWidth: 1, borderRadius: 18, padding: 14, marginBottom: 16, gap: 12 },
   sectionCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   sectionCardLeft:   { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionCardIcon:   { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  sectionCardIcon:   { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   sectionCardTitle:  { fontSize: 13, fontFamily: 'Satoshi-Bold', marginBottom: 1 },
   sectionCardSub:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
-  arrowCircle:       { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  arrowCircle:       { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   thumbsRow:         { flexDirection: 'row', height: 96 },
-  storyThumb:        { flex: 1, borderRadius: 12, overflow: 'hidden', backgroundColor: '#1C1840', position: 'relative' },
+  storyThumb:        { flex: 1, borderRadius: 10, overflow: 'hidden', backgroundColor: '#1C1840', position: 'relative' },
   thumbGrad:         { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%' },
   thumbTitle:        { position: 'absolute', bottom: 6, left: 6, right: 6, fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.92)', lineHeight: 12 },
   thumbMore:         { width: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  thumbMoreText:     { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  thumbMoreText:     { fontSize: 12, fontFamily: 'Satoshi-Bold' },
   emptyHint:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderStyle: 'dashed', borderRadius: 14, paddingVertical: 18 },
   emptyHintText:     { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 
   // Sections
-  section:       { borderTopWidth: 1, paddingTop: 22, marginBottom: 24 },
+  section:       { borderTopWidth: 1, paddingTop: 20, marginBottom: 20 },
   sectionHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 },
-  sectionTitle:  { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  sectionTitle:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   sectionSub:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', marginTop: 2 },
-  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20 },
+  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   addBtnText:    { color: '#fff', fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   // Outfit empty state
@@ -1387,7 +1383,7 @@ const styles = StyleSheet.create({
 
   // Outfit grid
   outfitGrid:      { flexDirection: 'row', flexWrap: 'wrap' },
-  outfitGridCard:  { borderRadius: 16, overflow: 'hidden', borderWidth: 1, position: 'relative' },
+  outfitGridCard:  { borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative' },
   outfitGridGrad:  { position: 'absolute', bottom: 0, left: 0, right: 0, height: '55%' },
   outfitActiveBadge:     { position: 'absolute', top: 8, right: 8, width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   outfitActiveBadgeText: { fontSize: 12, color: '#fff' },
@@ -1395,30 +1391,30 @@ const styles = StyleSheet.create({
 
   // Traits
   traitsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  traitChip:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 10, paddingRight: 5, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  traitChip:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingLeft: 9, paddingRight: 4, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   traitText:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   traitRemove: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  traitAddWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5 },
-  traitInput:  { fontSize: 13, fontFamily: 'Satoshi-Regular', minWidth: 80, maxWidth: 120 },
-  traitAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed' },
-  traitAddText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  traitAddWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
+  traitInput:  { fontSize: 12, fontFamily: 'Satoshi-Regular', minWidth: 80, maxWidth: 120 },
+  traitAddBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed' },
+  traitAddText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   suggRow:     { marginTop: 14, gap: 8 },
-  suggLabel:   { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1, textTransform: 'uppercase' },
+  suggLabel:   { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
   suggChips:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  suggChip:    { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 14, borderWidth: 1 },
+  suggChip:    { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1 },
   suggText:    { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 
   // Theme toggle
-  themeToggleRow: { flexDirection: 'row', borderRadius: 16, borderWidth: 1, padding: 4, gap: 4, marginBottom: 4 },
-  themeOption:    { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, borderRadius: 12, borderWidth: 1 },
+  themeToggleRow: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, padding: 4, gap: 4, marginBottom: 4 },
+  themeOption:    { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 7, borderRadius: 10, borderWidth: 1 },
   themeOptionText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   // Account
   accountCardWrap:      { paddingTop: 22, marginBottom: 8 },
-  accountSectionLabel:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 },
-  accountCard:     { borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  accountRow:      { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  accountIconWrap: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  accountSectionLabel:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 10 },
+  accountCard:     { borderRadius: 16, borderWidth: 1, overflow: 'hidden' },
+  accountRow:      { flexDirection: 'row', alignItems: 'center', gap: 11, padding: 13 },
+  accountIconWrap: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   accountInfo:     { flex: 1 },
   accountInfoLabel: { fontSize: 10, fontFamily: 'Satoshi-Regular', marginBottom: 2 },
   accountInfoVal:  { fontSize: 14, fontFamily: 'Satoshi-Bold' },
@@ -1428,8 +1424,8 @@ const styles = StyleSheet.create({
 
   // Modal
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
-  modalSheet:   { borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '88%', overflow: 'hidden' },
-  modalHandle:  { width: 40, height: 4, borderRadius: 2, backgroundColor: 'rgba(120,86,255,0.3)', alignSelf: 'center', marginTop: 10, marginBottom: 4 },
+  modalSheet:   { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '88%', overflow: 'hidden' },
+  modalHandle:  { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(120,86,255,0.25)', alignSelf: 'center', marginTop: 10, marginBottom: 6 },
   modalImageWrap: { position: 'relative', alignItems: 'center', justifyContent: 'center' },
   modalImage:     { width: '100%', height: 220, alignItems: 'center', justifyContent: 'center' },
   modalActivePill: { position: 'absolute', bottom: 12, left: 16, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
@@ -1468,8 +1464,8 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 9,
     alignItems: 'center', justifyContent: 'center',
   },
-  aboutLabel: { fontSize: 10, fontFamily: 'Satoshi-Medium', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 1 },
-  aboutValue: { fontSize: 14, fontFamily: 'Satoshi-Medium' },
+  aboutLabel: { fontSize: 10, fontFamily: 'Satoshi-Medium', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 1 },
+  aboutValue: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
   aboutInput: {
     fontSize: 13, fontFamily: 'Satoshi-Regular',
     borderWidth: 1.5, borderRadius: 9,
@@ -1489,12 +1485,12 @@ const styles = StyleSheet.create({
 
   // Gallery
   galGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
-  galThumb: { borderRadius: 10, overflow: 'hidden', backgroundColor: '#1A1630' },
+  galThumb: { borderRadius: 8, overflow: 'hidden', backgroundColor: '#1A1630' },
   galError: { fontSize: 12, fontFamily: 'Satoshi-Regular', marginBottom: 8 },
 
   // Gallery lightbox modal
   galModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.75)' },
-  galModalSheet:   { borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: '90%', overflow: 'hidden' },
+  galModalSheet:   { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', overflow: 'hidden' },
   galModalImageWrap: { width: '100%', aspectRatio: 1, overflow: 'hidden' },
   galModalImage:   { width: '100%', height: '100%' },
   galModalBody:    { paddingVertical: 16, gap: 10 },
