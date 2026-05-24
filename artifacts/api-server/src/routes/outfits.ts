@@ -114,6 +114,36 @@ async function fanOutOutfitNotification(
   }
 }
 
+router.patch("/outfits/:id", requireAuth, async (req, res) => {
+  const userId  = getUserId(req);
+  const outfitId = String(req.params.id);
+  const parsed = OutfitInputSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+  }
+  try {
+    const rawBody = req.body as Record<string, unknown>;
+    const updateSet: Record<string, unknown> = {};
+    if (parsed.data.name        !== undefined) updateSet.name        = parsed.data.name;
+    if (parsed.data.description !== undefined) updateSet.description = parsed.data.description;
+    if ('story' in rawBody && rawBody.story  !== undefined) updateSet.story = String(rawBody.story ?? '');
+    if ('imageUri' in parsed.data)             updateSet.imageUri    = safeImageUri(parsed.data.imageUri);
+    if (parsed.data.tags        !== undefined) updateSet.tags        = parsed.data.tags;
+    if (parsed.data.isPublic    !== undefined) updateSet.isPublic    = parsed.data.isPublic;
+
+    const [updated] = await db
+      .update(outfitsTable)
+      .set(updateSet as any)
+      .where(and(eq(outfitsTable.id, outfitId), eq(outfitsTable.userId, userId)))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    return res.json(serializeOutfit(updated));
+  } catch (err) {
+    req.log.error({ err }, "Failed to update outfit");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/outfits/:id", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const outfitId = String(req.params.id);

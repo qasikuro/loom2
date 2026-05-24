@@ -213,9 +213,10 @@ interface AppContextValue {
   character:    Character;
   setCharacter: (c: Character) => void;
 
-  stories:     Story[];
-  addStory:    (s: Story) => void;
-  deleteStory: (id: string) => void;
+  stories:      Story[];
+  addStory:     (s: Story) => void;
+  updateStory:  (id: string, updates: Partial<Omit<Story, 'id'>>) => void;
+  deleteStory:  (id: string) => void;
 
   journalEntries:     JournalEntry[];
   addJournalEntry:    (e: JournalEntry) => void;
@@ -223,6 +224,7 @@ interface AppContextValue {
 
   outfits:           Outfit[];
   addOutfit:         (o: Outfit) => void;
+  updateOutfit:      (id: string, updates: Partial<Omit<Outfit, 'id'>>) => void;
   deleteOutfit:      (id: string) => void;
   activeOutfitId:    string | null;
   setActiveOutfitId: (id: string | null) => void;
@@ -738,6 +740,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .catch(() => null);
   }, []);
 
+  const updateStory = useCallback((id: string, updates: Partial<Omit<Story, 'id'>>) => {
+    setStories(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, ...updates } : s);
+      const slim = updated.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
+      AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
+      return updated;
+    });
+    apiFetch(`/stories/${id}`, {
+      method: 'PATCH',
+      body:   JSON.stringify({
+        chapterTitle:  updates.chapterTitle,
+        description:   updates.description ?? '',
+        panels:        updates.panels,
+        mood:          updates.mood,
+        location:      updates.location,
+        isPublic:      updates.isPublic,
+        pageLayoutKey: updates.pageLayoutKey ?? null,
+        pages:         updates.pages ?? null,
+      }),
+    }).catch(() => null);
+  }, []);
+
   const deleteStory = useCallback((id: string) => {
     setStories(prev => {
       const updated = prev.filter(s => s.id !== id);
@@ -767,6 +791,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tags:        outfit.tags,
         isPublic:    outfit.isPublic,
       }),
+    }).catch(() => null);
+  }, []);
+
+  const updateOutfit = useCallback((id: string, updates: Partial<Omit<Outfit, 'id'>>) => {
+    setOutfits(prev => {
+      const updated = prev.map(o => o.id === id ? { ...o, ...updates } : o);
+      AsyncStorage.setItem('outfits_v1', JSON.stringify(updated)).catch(() => null);
+      return updated;
+    });
+    apiFetch(`/outfits/${id}`, {
+      method: 'PATCH',
+      body:   JSON.stringify(updates),
     }).catch(() => null);
   }, []);
 
@@ -884,9 +920,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       isLoading, apiOnline,
       character, setCharacter,
-      stories, addStory, deleteStory,
+      stories, addStory, updateStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,
-      outfits, addOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
+      outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
       discoverPosts, toggleSavePost,
       followingIds, followUser, unfollowUser,

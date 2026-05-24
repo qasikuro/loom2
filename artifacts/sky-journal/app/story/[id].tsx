@@ -347,6 +347,17 @@ export default function StoryScreen() {
             <Icon name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
 
+          {/* Edit */}
+          {isOwnStory && !confirmingDelete && (
+            <TouchableOpacity
+              style={[styles.editBtn, { top: topPad + 12 }]}
+              onPress={() => router.push({ pathname: '/(tabs)/create', params: { editId: id } } as any)}
+              activeOpacity={0.78}
+            >
+              <Icon name="edit-2" size={18} color="rgba(200,184,232,0.9)" />
+            </TouchableOpacity>
+          )}
+
           {/* Delete */}
           {isOwnStory && (
             <TouchableOpacity
@@ -484,6 +495,12 @@ const styles = StyleSheet.create({
 
   backBtn: {
     position: 'absolute', left: 16,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  editBtn: {
+    position: 'absolute', right: 68,
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.35)',
     alignItems: 'center', justifyContent: 'center',

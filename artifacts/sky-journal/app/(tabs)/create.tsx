@@ -2,8 +2,8 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Platform,
@@ -118,7 +118,7 @@ export default function CreateScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { t: tr } = useTranslation();
-  const { addStory } = useApp();
+  const { addStory, updateStory, stories } = useApp();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
@@ -133,6 +133,32 @@ export default function CreateScreen() {
   const [showMeta, setShowMeta] = useState(false);
 
   const currentMood = MOODS.find(m => m.label === mood);
+
+  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const prevEditIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (editId && editId !== prevEditIdRef.current) {
+      const s = stories.find(st => st.id === editId);
+      if (s) {
+        setTitle(s.chapterTitle);
+        setDesc(s.description ?? '');
+        setMood(s.mood);
+        setLocation(s.location);
+        setIsPublic(s.isPublic);
+        setPages(s.pages?.length ? s.pages : [{ id: crypto.randomUUID(), layoutKey: s.pageLayoutKey ?? '1', panels: s.panels }]);
+      }
+      prevEditIdRef.current = editId;
+    } else if (!editId && prevEditIdRef.current) {
+      setTitle('');
+      setDesc('');
+      setMood('Hopeful');
+      setLocation('Daylight Prairie');
+      setIsPublic(true);
+      setPages([makePage()]);
+      prevEditIdRef.current = null;
+    }
+  }, [editId, stories]);
 
   useFocusEffect(useCallback(() => {
     // nothing needed on focus
@@ -191,25 +217,41 @@ export default function CreateScreen() {
     setError(null);
     setPosting(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addStory({
-      id:             crypto.randomUUID(),
-      date:           new Date().toISOString(),
-      chapterTitle:   title.trim(),
-      description:    desc.trim(),
-      panels:         filledPages.flatMap(p => p.panels),
-      mood,
-      location,
-      isPublic,
-      witnessedCount: 0,
-      savedCount:     0,
-      pageLayoutKey:  filledPages[0].layoutKey,
-      pages:          filledPages,
-    });
-    setPosting(false);
-    setTitle('');
-    setDesc('');
-    setPages([makePage()]);
-    router.push('/(tabs)');
+
+    if (editId) {
+      updateStory(editId, {
+        chapterTitle:   title.trim(),
+        description:    desc.trim(),
+        panels:         filledPages.flatMap(p => p.panels),
+        mood,
+        location,
+        isPublic,
+        pageLayoutKey:  filledPages[0].layoutKey,
+        pages:          filledPages,
+      });
+      setPosting(false);
+      router.replace('/(tabs)/create' as any);
+    } else {
+      addStory({
+        id:             crypto.randomUUID(),
+        date:           new Date().toISOString(),
+        chapterTitle:   title.trim(),
+        description:    desc.trim(),
+        panels:         filledPages.flatMap(p => p.panels),
+        mood,
+        location,
+        isPublic,
+        witnessedCount: 0,
+        savedCount:     0,
+        pageLayoutKey:  filledPages[0].layoutKey,
+        pages:          filledPages,
+      });
+      setPosting(false);
+      setTitle('');
+      setDesc('');
+      setPages([makePage()]);
+      router.push('/(tabs)');
+    }
   }
 
   // ── Panel image helper ───────────────────────────────────────────────────
@@ -469,8 +511,10 @@ export default function CreateScreen() {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Icon name="send" size={15} color="#fff" />
-            <Text style={styles.publishText}>{posting ? 'Publishing…' : 'Publish Story'}</Text>
+            <Icon name={editId ? 'check' : 'send'} size={15} color="#fff" />
+            <Text style={styles.publishText}>
+              {posting ? (editId ? 'Saving…' : 'Publishing…') : (editId ? 'Save Changes' : 'Publish Story')}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
       </KeyboardAwareScrollView>

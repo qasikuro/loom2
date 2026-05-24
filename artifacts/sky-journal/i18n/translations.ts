@@ -158,7 +158,7 @@ const en = {
     howDidItFeel: 'How did it feel?',
   },
   outfit: {
-    logTitle: 'Log Outfit', notesLabel: 'Notes', addPhoto: 'Add outfit photo',
+    logTitle: 'Log Outfit', editTitle: 'Edit Outfit', notesLabel: 'Notes', addPhoto: 'Add outfit photo',
     photoHint: 'Optional · Portrait works best', changePhoto: 'Change photo',
     uploading: 'Uploading…', name: 'Outfit name',
     namePlaceholder: 'e.g. Starlight Cape · Dawn Cloak...',

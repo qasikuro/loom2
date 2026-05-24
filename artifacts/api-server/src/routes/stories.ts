@@ -191,6 +191,46 @@ router.get("/stories/:id", requireAuth, async (req, res) => {
   }
 });
 
+router.patch("/stories/:id", requireAuth, async (req, res) => {
+  const userId  = getUserId(req);
+  const storyId = String(req.params.id);
+  const parsed  = StoryInputSchema.partial().safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+  }
+  try {
+    const updateSet: Record<string, unknown> = {};
+    if (parsed.data.chapterTitle  !== undefined) updateSet.chapterTitle  = parsed.data.chapterTitle;
+    if (parsed.data.description   !== undefined) updateSet.description   = parsed.data.description;
+    if (parsed.data.mood          !== undefined) updateSet.mood          = parsed.data.mood;
+    if (parsed.data.location      !== undefined) updateSet.location      = parsed.data.location;
+    if (parsed.data.isPublic      !== undefined) updateSet.isPublic      = parsed.data.isPublic;
+    if ('pageLayoutKey' in parsed.data)          updateSet.pageLayoutKey = parsed.data.pageLayoutKey ?? null;
+    if ('pages' in parsed.data)                  updateSet.pages         = (parsed.data.pages ?? null) as unknown;
+    if (parsed.data.panels        !== undefined) {
+      updateSet.panels = parsed.data.panels.map(p => ({
+        id:         p.id,
+        text:       p.text,
+        imageUri:   safeImageUri(p.imageUri ?? null) ?? undefined,
+        bgPreset:   p.bgPreset   ?? undefined,
+        bubbleText: p.bubbleText ?? undefined,
+        overlays:   p.overlays   ?? undefined,
+      }));
+    }
+
+    const [updated] = await db
+      .update(storiesTable)
+      .set(updateSet as any)
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    return res.json(serializeStory(updated));
+  } catch (err) {
+    req.log.error({ err }, "Failed to update story");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.delete("/stories/:id", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const storyId = String(req.params.id);

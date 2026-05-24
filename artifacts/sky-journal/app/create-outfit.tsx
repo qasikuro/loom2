@@ -5,8 +5,8 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri } from '@/utils/persistImage';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
@@ -38,20 +38,48 @@ export default function CreateOutfitScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t: tr } = useTranslation();
-  const { addOutfit } = useApp();
+  const { addOutfit, updateOutfit } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
 
-  const [name, setName]               = useState('');
-  const [description, setDescription] = useState('');
-  const [story, setStory]             = useState('');
-  const [imageUri, setImageUri]       = useState<string | undefined>();
+  const params = useLocalSearchParams<{
+    editId?:          string;
+    editName?:        string;
+    editDescription?: string;
+    editStory?:       string;
+    editImageUri?:    string;
+    editTags?:        string;
+    editIsPublic?:    string;
+  }>();
+
+  const editId = params.editId;
+  const isEditing = !!editId;
+
+  const [name, setName]               = useState(params.editName ?? '');
+  const [description, setDescription] = useState(params.editDescription ?? '');
+  const [story, setStory]             = useState(params.editStory ?? '');
+  const [imageUri, setImageUri]       = useState<string | undefined>(params.editImageUri || undefined);
   const [pendingUri, setPendingUri]   = useState<string | null>(null);
   const [uploading, setUploading]     = useState(false);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [isPublic, setIsPublic]       = useState(true);
+  const [selectedTags, setSelectedTags] = useState<string[]>(() => {
+    try { return params.editTags ? JSON.parse(params.editTags) : []; }
+    catch { return []; }
+  });
+  const [isPublic, setIsPublic]       = useState(params.editIsPublic !== 'false');
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isEditing) {
+      setName(params.editName ?? '');
+      setDescription(params.editDescription ?? '');
+      setStory(params.editStory ?? '');
+      setImageUri(params.editImageUri || undefined);
+      try { setSelectedTags(params.editTags ? JSON.parse(params.editTags) : []); } catch { setSelectedTags([]); }
+      setIsPublic(params.editIsPublic !== 'false');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -90,16 +118,27 @@ export default function CreateOutfitScreen() {
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    addOutfit({
-      id:          crypto.randomUUID(),
-      date:        new Date().toISOString(),
-      name:        name.trim(),
-      description: description.trim(),
-      story:       story.trim(),
-      imageUri,
-      tags:        selectedTags,
-      isPublic,
-    });
+    if (isEditing && editId) {
+      updateOutfit(editId, {
+        name:        name.trim(),
+        description: description.trim(),
+        story:       story.trim(),
+        imageUri,
+        tags:        selectedTags,
+        isPublic,
+      });
+    } else {
+      addOutfit({
+        id:          crypto.randomUUID(),
+        date:        new Date().toISOString(),
+        name:        name.trim(),
+        description: description.trim(),
+        story:       story.trim(),
+        imageUri,
+        tags:        selectedTags,
+        isPublic,
+      });
+    }
     setSaving(false);
     router.back();
   }
@@ -113,7 +152,7 @@ export default function CreateOutfitScreen() {
           <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
             <Icon name="x" size={18} color={colors.foreground} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{tr('outfit.logTitle')}</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')}</Text>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
             onPress={handleSave} disabled={saving}

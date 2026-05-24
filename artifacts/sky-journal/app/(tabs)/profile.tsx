@@ -1323,6 +1323,36 @@ export default function CharacterScreen() {
                       </View>
                     )}
 
+                    {/* Edit */}
+                    <TouchableOpacity
+                      style={[styles.deleteBtn, {
+                        backgroundColor: `${colors.primary}12`,
+                        borderColor:     colors.primary,
+                        marginBottom: 8,
+                      }]}
+                      onPress={() => {
+                        if (!selectedOutfit) return;
+                        closeOutfit();
+                        router.push({
+                          pathname: '/create-outfit',
+                          params: {
+                            editId:          selectedOutfit.id,
+                            editName:        selectedOutfit.name,
+                            editDescription: selectedOutfit.description ?? '',
+                            editStory:       (selectedOutfit as any).story ?? '',
+                            editImageUri:    selectedOutfit.imageUri ?? '',
+                            editTags:        JSON.stringify(selectedOutfit.tags ?? []),
+                            editIsPublic:    selectedOutfit.isPublic ? 'true' : 'false',
+                          },
+                        } as any);
+                      }}
+                    >
+                      <Icon name="edit-2" size={14} color={colors.primary} />
+                      <Text style={[styles.deleteBtnText, { color: colors.primary }]}>
+                        Edit outfit
+                      </Text>
+                    </TouchableOpacity>
+
                     {/* Delete */}
                     <TouchableOpacity
                       style={[styles.deleteBtn, {
