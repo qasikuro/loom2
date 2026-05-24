@@ -302,10 +302,15 @@ export default function HomeScreen() {
             }
           </TouchableOpacity>
 
-          <View style={styles.nameBlock}>
+          <TouchableOpacity
+            style={styles.nameBlock}
+            onPress={() => router.push('/(tabs)/profile')}
+            activeOpacity={0.7}
+            hitSlop={{ top: 4, bottom: 4, left: 0, right: 4 }}
+          >
             <Text style={styles.charName} numberOfLines={1}>{character.name || t('home.skyChild')}</Text>
             <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.headerIcons}>
             <TouchableOpacity
