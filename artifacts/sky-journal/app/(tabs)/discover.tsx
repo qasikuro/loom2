@@ -1,5 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { DiscoverCard } from '@/components/DiscoverCard';
+import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { ReportSheet } from '@/components/ReportSheet';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -62,7 +63,7 @@ export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { t }     = useTranslation();
-  const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed } = useApp();
+  const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('For You');
   const [selectedVibe,  setSelectedVibe]  = useState<string | null>(null);
@@ -208,9 +209,10 @@ export default function DiscoverScreen() {
           key={activeTab}
           data={activePosts}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <DiscoverCard
               post={item}
+              delay={Math.min(index * 75, 400)}
               onPress={() => router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
@@ -228,11 +230,19 @@ export default function DiscoverScreen() {
             />
           }
           ListEmptyComponent={
-            <EmptyFeed
-              tab={activeTab}
-              colors={colors}
-              onCreatePress={() => router.push('/(tabs)/create')}
-            />
+            isLoading && discoverPosts.length === 0 ? (
+              <View>
+                {[0, 1, 2].map(i => (
+                  <SkeletonDiscoverCard key={i} style={{ opacity: 1 - i * 0.22 }} />
+                ))}
+              </View>
+            ) : (
+              <EmptyFeed
+                tab={activeTab}
+                colors={colors}
+                onCreatePress={() => router.push('/(tabs)/create')}
+              />
+            )
           }
         />
       )}

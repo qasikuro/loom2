@@ -2,7 +2,7 @@ import { Icon } from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
-import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
 import { useColors } from '@/hooks/useColors';
@@ -30,9 +30,10 @@ interface DiscoverCardProps {
   onDelete?: () => void;
   onReport?: () => void;
   onAuthorPress?: () => void;
+  delay?: number;
 }
 
-export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuthorPress }: DiscoverCardProps) {
+export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuthorPress, delay = 0 }: DiscoverCardProps) {
   const colors   = useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
@@ -41,19 +42,28 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mountOpacity = useRef(new Animated.Value(0)).current;
-  const mountY       = useRef(new Animated.Value(16)).current;
+  const mountY       = useRef(new Animated.Value(20)).current;
+  const pressScale   = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(mountOpacity, {
-        toValue: 1, duration: 360, useNativeDriver: true,
+        toValue: 1, duration: 380, delay, useNativeDriver: true,
         easing: Easing.out(Easing.quad),
       }),
       Animated.spring(mountY, {
-        toValue: 0, tension: 60, friction: 10, useNativeDriver: true,
+        toValue: 0, delay, tension: 65, friction: 11, useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function handlePressIn() {
+    Animated.spring(pressScale, { toValue: 0.976, useNativeDriver: true, tension: 220, friction: 15 }).start();
+  }
+  function handlePressOut() {
+    Animated.spring(pressScale, { toValue: 1, useNativeDriver: true, tension: 180, friction: 10 }).start();
+  }
 
   function handleDeletePress() {
     if (confirmingDelete) {
@@ -66,11 +76,12 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
   }
 
   return (
-    <Animated.View style={{ opacity: mountOpacity, transform: [{ translateY: mountY }] }}>
-      <TouchableOpacity
+    <Animated.View style={{ opacity: mountOpacity, transform: [{ translateY: mountY }, { scale: pressScale }] }}>
+      <Pressable
         style={styles.card}
         onPress={onPress}
-        activeOpacity={0.9}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
       >
         {/* ── Image hero area ── */}
         <View style={styles.imageWrap}>
@@ -219,7 +230,7 @@ export function DiscoverCard({ post, onPress, onSave, onDelete, onReport, onAuth
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableOpacity>
+      </Pressable>
     </Animated.View>
   );
 }

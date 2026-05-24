@@ -10,6 +10,7 @@ import {
   Animated,
   Easing,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,6 +25,7 @@ import { useApp, type JournalEntry, type JournalEntryType } from '@/context/AppC
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
+import { SkeletonCard } from '@/components/Skeleton';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -85,12 +87,39 @@ const AVATAR_CFG = {
 
 // ── Timeline entry card ───────────────────────────────────────────────────────
 
-function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () => void }) {
+function TimelineCard({ entry, onDelete, index = 0 }: { entry: JournalEntry; onDelete: () => void; index?: number }) {
   const colors = useColors();
   const cfg    = AVATAR_CFG[entry.type];
   const { t }  = useTranslation();
   const [confirming, setConfirming] = React.useState(false);
   const confirmTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Entrance animation (staggered by index) ───────────────────────────────
+  const entranceOpacity = React.useRef(new Animated.Value(0)).current;
+  const entranceY       = React.useRef(new Animated.Value(22)).current;
+  const pressScale      = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    const delay = Math.min(index * 55, 350);
+    Animated.parallel([
+      Animated.timing(entranceOpacity, {
+        toValue: 1, duration: 380, delay,
+        useNativeDriver: true, easing: Easing.out(Easing.quad),
+      }),
+      Animated.spring(entranceY, {
+        toValue: 0, delay,
+        useNativeDriver: true, tension: 65, friction: 11,
+      }),
+    ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handlePressIn() {
+    Animated.spring(pressScale, { toValue: 0.974, useNativeDriver: true, tension: 220, friction: 15 }).start();
+  }
+  function handlePressOut() {
+    Animated.spring(pressScale, { toValue: 1, useNativeDriver: true, tension: 180, friction: 10 }).start();
+  }
 
   function handleTrash() {
     if (confirming) {
@@ -111,87 +140,83 @@ function TimelineCard({ entry, onDelete }: { entry: JournalEntry; onDelete: () =
       ? (entry.friendName?.[0] ?? '?').toUpperCase()
       : null;
 
-  // First line of text as the snippet
   const snippet = entry.text.split('\n')[0].trim().slice(0, 120) || entry.text.slice(0, 120);
 
   return (
-    <TouchableOpacity
-      style={[tc.card, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}
-      activeOpacity={0.92}
-      onPress={() => { Haptics.selectionAsync(); router.push({ pathname: '/journal-entry', params: { id: entry.id } }); }}
-    >
-      {/* ─ Top row: avatar + name + time + star ─ */}
-      <View style={tc.topRow}>
-        {/* Avatar */}
-        <View style={[tc.avatar, { backgroundColor: cfg.bg }]}>
-          {initial
-            ? <Text style={tc.avatarInitial}>{initial}</Text>
-            : <Icon name={cfg.icon} size={17} color="rgba(255,255,255,0.88)" />
-          }
+    <Animated.View style={{ opacity: entranceOpacity, transform: [{ translateY: entranceY }, { scale: pressScale }] }}>
+      <Pressable
+        style={[tc.card, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}
+        onPress={() => { Haptics.selectionAsync(); router.push({ pathname: '/journal-entry', params: { id: entry.id } }); }}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        {/* ─ Left accent strip ─ */}
+        <View style={[tc.accentStrip, { backgroundColor: cfg.bg }]} pointerEvents="none" />
+
+        {/* ─ Top row: avatar + name + time + star ─ */}
+        <View style={tc.topRow}>
+          <View style={[tc.avatar, { backgroundColor: cfg.bg }]}>
+            {initial
+              ? <Text style={tc.avatarInitial}>{initial}</Text>
+              : <Icon name={cfg.icon} size={17} color="rgba(255,255,255,0.88)" />
+            }
+          </View>
+          <View style={tc.nameCol}>
+            <Text style={[tc.nameText, { color: colors.foreground }]} numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text style={[tc.timeText, { color: colors.mutedForeground }]}>
+              {relativeTime(entry.date, t)}
+            </Text>
+          </View>
+          <Icon name="star" size={16} color="#C8A84B" />
         </View>
 
-        {/* Name + time */}
-        <View style={tc.nameCol}>
-          <Text style={[tc.nameText, { color: colors.foreground }]} numberOfLines={1}>
-            {displayName}
+        {/* ─ Content: snippet + optional thumbnail ─ */}
+        <View style={tc.contentRow}>
+          <Text style={[tc.snippet, { color: colors.mutedForeground }]} numberOfLines={3}>
+            {snippet}
           </Text>
-          <Text style={[tc.timeText, { color: colors.mutedForeground }]}>
-            {relativeTime(entry.date, t)}
-          </Text>
+          {entry.imageUri && (
+            <Image source={{ uri: entry.imageUri }} style={tc.thumbnail} contentFit="cover" cachePolicy="memory-disk" />
+          )}
         </View>
 
-        {/* Star bookmark */}
-        <Icon name="star" size={16} color="#C8A84B" />
-      </View>
-
-      {/* ─ Content: snippet + optional thumbnail ─ */}
-      <View style={tc.contentRow}>
-        <Text style={[tc.snippet, { color: colors.mutedForeground }]} numberOfLines={3}>
-          {snippet}
-        </Text>
-        {entry.imageUri && (
-          <Image
-            source={{ uri: entry.imageUri }}
-            style={tc.thumbnail}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
-        )}
-      </View>
-
-      {/* ─ Footer: mood + delete ─ */}
-      <View style={tc.footer}>
-        <MoodBadge mood={entry.mood} size="sm" />
-        {entry.type === 'friend' && !!entry.friendName && (
-          <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.22)', borderColor:'rgba(74,104,152,0.38)' }]}>
-            <Icon name="users" size={10} color="#7AAAE0" />
-            <Text style={[tc.typePillText, { color:'#7AAAE0' }]}>{t('log.withFriend', { name: entry.friendName })}</Text>
-          </View>
-        )}
-        {entry.type === 'moment' && (
-          <View style={[tc.typePill, { backgroundColor:'rgba(88,72,168,0.22)', borderColor:'rgba(88,72,168,0.38)' }]}>
-            <Icon name="moon" size={10} color="#B0A0E0" />
-            <Text style={[tc.typePillText, { color:'#B0A0E0' }]}>{t('log.moment')}</Text>
-          </View>
-        )}
-        <TouchableOpacity
-          style={[tc.deleteBtn, { marginLeft: 'auto', backgroundColor: confirming ? '#E04455' : colors.muted, minWidth: confirming ? 68 : 28 }]}
-          onPress={handleTrash}
-          hitSlop={{ top:8, right:8, bottom:8, left:8 }}
-          activeOpacity={0.75}
-        >
-          {confirming
-            ? <Text style={tc.deleteBtnText}>{t('common.deleteConfirm')}</Text>
-            : <Icon name="trash-2" size={12} color={colors.mutedForeground} />
-          }
-        </TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+        {/* ─ Footer: mood + delete ─ */}
+        <View style={tc.footer}>
+          <MoodBadge mood={entry.mood} size="sm" />
+          {entry.type === 'friend' && !!entry.friendName && (
+            <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.22)', borderColor:'rgba(74,104,152,0.38)' }]}>
+              <Icon name="users" size={10} color="#7AAAE0" />
+              <Text style={[tc.typePillText, { color:'#7AAAE0' }]}>{t('log.withFriend', { name: entry.friendName })}</Text>
+            </View>
+          )}
+          {entry.type === 'moment' && (
+            <View style={[tc.typePill, { backgroundColor:'rgba(88,72,168,0.22)', borderColor:'rgba(88,72,168,0.38)' }]}>
+              <Icon name="moon" size={10} color="#B0A0E0" />
+              <Text style={[tc.typePillText, { color:'#B0A0E0' }]}>{t('log.moment')}</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={[tc.deleteBtn, { marginLeft: 'auto', backgroundColor: confirming ? '#E04455' : colors.muted, minWidth: confirming ? 68 : 28 }]}
+            onPress={handleTrash}
+            hitSlop={{ top:8, right:8, bottom:8, left:8 }}
+            activeOpacity={0.75}
+          >
+            {confirming
+              ? <Text style={tc.deleteBtnText}>{t('common.deleteConfirm')}</Text>
+              : <Icon name="trash-2" size={12} color={colors.mutedForeground} />
+            }
+          </TouchableOpacity>
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const tc = StyleSheet.create({
-  card: { borderRadius:16, borderWidth:1, padding:15, gap:10, marginBottom:10 },
+  card: { borderRadius:16, borderWidth:1, padding:15, paddingLeft:18, gap:10, marginBottom:10, overflow:'hidden' },
+  accentStrip: { position:'absolute', left:0, top:0, bottom:0, width:3, borderTopLeftRadius:16, borderBottomLeftRadius:16 },
   topRow: { flexDirection:'row', alignItems:'center', gap:12 },
   avatar: {
     width:44, height:44, borderRadius:14,
@@ -434,7 +459,7 @@ export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { t }   = useTranslation();
-  const { journalEntries, deleteJournalEntry } = useApp();
+  const { journalEntries, deleteJournalEntry, isLoading } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
   const bottomPad = Platform.OS === 'web' ? 180 : insets.bottom + 180;
@@ -605,26 +630,39 @@ export default function JournalScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.timelineContent, { paddingBottom: bottomPad }]}
       >
-        {sections.length === 0 ? (
+        {isLoading && journalEntries.length === 0 ? (
+          /* ── Skeleton loading ──────────────────────────────────── */
+          [0, 1, 2, 3].map(i => (
+            <SkeletonCard key={i} style={{ opacity: 1 - i * 0.18, marginBottom: 10 }} />
+          ))
+        ) : sections.length === 0 ? (
+          /* ── Atmospheric empty state ───────────────────────────── */
           <View style={styles.empty}>
-            <View style={[styles.emptyIcon, { backgroundColor:`${colors.primary}10` }]}>
-              <Icon
-                name={FILTER_ICONS[activeFilter].name}
-                size={32}
-                color={FILTER_ICONS[activeFilter].color}
-              />
+            {/* Nested rings */}
+            <View style={[styles.emptyOuterRing, { borderColor: `${colors.primary}18` }]}>
+              <View style={[styles.emptyInnerRing, { borderColor: `${colors.primary}28` }]}>
+                <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}14` }]}>
+                  <SkyIcon
+                    name={FILTER_ICONS[activeFilter].name}
+                    size={27}
+                    color={FILTER_ICONS[activeFilter].color}
+                    accentColor={FILTER_ICONS[activeFilter].color}
+                    strokeWidth={1.6}
+                  />
+                </View>
+              </View>
             </View>
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              {searchQuery.trim() ? `No results for "${searchQuery}"` : 'Nothing here yet'}
+              {searchQuery.trim() ? `No results for "${searchQuery}"` : 'Your sky is quiet...'}
             </Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               {searchQuery.trim()
                 ? 'Try a different word or mood.'
-                : 'This is your private space. Start writing ✦'}
+                : 'This is your private space.\nEach entry becomes a star in your sky.'}
             </Text>
             {!searchQuery.trim() && (
               <TouchableOpacity
-                style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+                style={[styles.emptyBtn, { backgroundColor: colors.primary }, SHADOW.glow]}
                 onPress={() => { Haptics.selectionAsync(); router.push({ pathname: '/create-journal-entry', params: { type: 'diary' } }); }}
                 activeOpacity={0.85}
               >
@@ -634,6 +672,7 @@ export default function JournalScreen() {
             )}
           </View>
         ) : (
+          /* ── Entries timeline ──────────────────────────────────── */
           sections.map((section, si) => (
             <View
               key={section.date}
@@ -656,10 +695,11 @@ export default function JournalScreen() {
                   <Text style={[styles.dateLabel, { color: colors.mutedForeground }]}>
                     {section.label}
                   </Text>
-                  {section.data.map(entry => (
+                  {section.data.map((entry, i) => (
                     <TimelineCard
                       key={entry.id}
                       entry={entry}
+                      index={si * 5 + i}
                       onDelete={() => handleDelete(entry.id)}
                     />
                   ))}
@@ -723,7 +763,9 @@ const styles = StyleSheet.create({
 
   // Empty
   empty: { flex:1, alignItems:'center', justifyContent:'center', paddingTop:60, paddingHorizontal:36, gap:14 },
-  emptyIcon: { width:64, height:64, borderRadius:20, alignItems:'center', justifyContent:'center', marginBottom:4 },
+  emptyOuterRing: { width:110, height:110, borderRadius:55, borderWidth:1, alignItems:'center', justifyContent:'center', marginBottom:4 },
+  emptyInnerRing: { width:88, height:88, borderRadius:44, borderWidth:1, alignItems:'center', justifyContent:'center' },
+  emptyIcon: { width:64, height:64, borderRadius:20, alignItems:'center', justifyContent:'center' },
   emptyTitle: { fontSize:18, fontFamily:'Satoshi-Bold', textAlign:'center', letterSpacing:-0.3 },
   emptyText: { fontSize:13, fontFamily:'Satoshi-Regular', textAlign:'center', lineHeight:20, fontStyle:'italic' },
   emptyBtn: { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:24, height:48, borderRadius:24, marginTop:4 },
