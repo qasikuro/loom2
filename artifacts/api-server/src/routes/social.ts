@@ -159,7 +159,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
 
     // Fetch active outfit data if one is set
     let activeOutfit: null | {
-      id: string; name: string; description: string;
+      id: string; name: string; description: string; story: string;
       imageUri: string | null; tags: string[];
     } = null;
 
@@ -169,6 +169,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
           id:          outfitsTable.id,
           name:        outfitsTable.name,
           description: outfitsTable.description,
+          story:       outfitsTable.story,
           imageUri:    outfitsTable.imageUri,
           tags:        outfitsTable.tags,
           isPublic:    outfitsTable.isPublic,
@@ -188,6 +189,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
           id:          outfitRow.id,
           name:        outfitRow.name,
           description: outfitRow.description ?? '',
+          story:       outfitRow.story ?? '',
           imageUri:    safeDiscoverUri(outfitRow.imageUri),
           tags:        Array.isArray(outfitRow.tags) ? outfitRow.tags : [],
         };
@@ -303,6 +305,7 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
         id:          outfitsTable.id,
         name:        outfitsTable.name,
         description: outfitsTable.description,
+        story:       outfitsTable.story,
         imageUri:    outfitsTable.imageUri,
         tags:        outfitsTable.tags,
         date:        outfitsTable.date,

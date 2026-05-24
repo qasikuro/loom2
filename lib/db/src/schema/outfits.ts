@@ -5,6 +5,7 @@ export const outfitsTable = pgTable("outfits", {
   userId:      text("user_id").notNull().default("legacy"),
   name:        text("name").notNull(),
   description: text("description").notNull().default(""),
+  story:       text("story").notNull().default(""),
   imageUri:    text("image_uri"),
   tags:        jsonb("tags").$type<string[]>().notNull().default([]),
   isPublic:    boolean("is_public").notNull().default(false),

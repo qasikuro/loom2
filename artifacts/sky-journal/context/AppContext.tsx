@@ -142,6 +142,7 @@ export interface Outfit {
   date:        string;
   name:        string;
   description: string;
+  story:       string;
   imageUri?:   string;
   tags:        string[];
   isPublic:    boolean;
@@ -243,6 +244,7 @@ interface AppContextValue {
 
   serverNotifications:         ServerNotification[];
   markServerNotificationsRead: () => void;
+  deleteServerNotification:    (id: string) => void;
 
   reloadData:    () => Promise<void>;
   refreshFeed:   () => Promise<void>;
@@ -326,6 +328,7 @@ function toAppOutfit(raw: any): Outfit {
     date:        typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
     name:        raw.name,
     description: raw.description ?? '',
+    story:       raw.story ?? '',
     imageUri:    resolveUri(raw.imageUri ?? raw.image_uri),
     tags:        Array.isArray(raw.tags) ? raw.tags : [],
     isPublic:    raw.isPublic ?? raw.is_public ?? false,
@@ -759,6 +762,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         date:        outfit.date,
         name:        outfit.name,
         description: outfit.description,
+        story:       outfit.story ?? '',
         imageUri:    outfit.imageUri ?? null,
         tags:        outfit.tags,
         isPublic:    outfit.isPublic,
@@ -863,6 +867,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => null);
   }, []);
 
+  const deleteServerNotification = useCallback((id: string) => {
+    setServerNotifications(prev => prev.filter(n => n.id !== id));
+    apiFetch(`/notifications/${id}`, { method: 'DELETE' }).catch(() => null);
+  }, []);
+
   const reloadData = useCallback(async () => {
     await loadData();
   }, []);
@@ -882,7 +891,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       discoverPosts, toggleSavePost,
       followingIds, followUser, unfollowUser,
       rewards, dismissReward,
-      serverNotifications, markServerNotificationsRead,
+      serverNotifications, markServerNotificationsRead, deleteServerNotification,
       reloadData,
       refreshFeed,
       clearUserData,

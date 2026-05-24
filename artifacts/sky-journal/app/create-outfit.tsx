@@ -44,6 +44,7 @@ export default function CreateOutfitScreen() {
 
   const [name, setName]               = useState('');
   const [description, setDescription] = useState('');
+  const [story, setStory]             = useState('');
   const [imageUri, setImageUri]       = useState<string | undefined>();
   const [pendingUri, setPendingUri]   = useState<string | null>(null);
   const [uploading, setUploading]     = useState(false);
@@ -94,6 +95,7 @@ export default function CreateOutfitScreen() {
       date:        new Date().toISOString(),
       name:        name.trim(),
       description: description.trim(),
+      story:       story.trim(),
       imageUri,
       tags:        selectedTags,
       isPublic,
@@ -175,7 +177,7 @@ export default function CreateOutfitScreen() {
             />
           </View>
 
-          {/* Description */}
+          {/* Description / notes */}
           <View style={styles.field}>
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.notes')}</Text>
             <TextInput
@@ -184,6 +186,23 @@ export default function CreateOutfitScreen() {
               placeholderTextColor={`${colors.mutedForeground}70`}
               value={description}
               onChangeText={setDescription}
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+
+          {/* Character story — visible to other users */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Character Story</Text>
+            <Text style={[styles.storyHint, { color: `${colors.mutedForeground}80` }]}>
+              A moment or memory linked to this outfit — visible on your public profile
+            </Text>
+            <TextInput
+              style={[styles.storyInput, { color: colors.foreground, borderColor: colors.primary + '50', backgroundColor: colors.card }]}
+              placeholder="Write the story behind this outfit…"
+              placeholderTextColor={`${colors.mutedForeground}60`}
+              value={story}
+              onChangeText={setStory}
               multiline
               textAlignVertical="top"
             />
@@ -279,6 +298,8 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
   nameInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: 'Satoshi-Regular' },
   descInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22, minHeight: 90 },
+  storyHint: { fontSize: 12, fontFamily: 'Satoshi-Regular', marginBottom: 8, marginTop: -2, lineHeight: 17 },
+  storyInput: { borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22, minHeight: 120, fontStyle: 'italic' },
   tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tagChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   tagText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },

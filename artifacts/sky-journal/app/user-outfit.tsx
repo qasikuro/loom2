@@ -45,6 +45,7 @@ export default function UserOutfitScreen() {
   const params  = useLocalSearchParams<{
     outfitName:   string;
     outfitDesc:   string;
+    outfitStory:  string;
     outfitImage:  string;
     outfitTags:   string;
     outfitDate:   string;
@@ -175,6 +176,17 @@ export default function UserOutfitScreen() {
               <Text style={[styles.descLabel, { color: colors.primary }]}>{t('outfit.notesLabel')}</Text>
             </View>
             <Text style={[styles.descText, { color: colors.foreground }]}>{params.outfitDesc}</Text>
+          </View>
+        )}
+
+        {/* ── Character Story ───────────────────────────────────── */}
+        {!!params.outfitStory && (
+          <View style={[styles.storyCard, { backgroundColor: colors.card, borderColor: `${moodColor}30` }, SHADOW.xs]}>
+            <View style={styles.descHeader}>
+              <Icon name="book-open" size={14} color={moodColor} />
+              <Text style={[styles.descLabel, { color: moodColor }]}>Character Story</Text>
+            </View>
+            <Text style={[styles.storyText, { color: colors.foreground }]}>{params.outfitStory}</Text>
           </View>
         )}
 
@@ -328,9 +340,11 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   descCard:   { marginHorizontal: 16, marginTop: 14, borderRadius: 16, borderWidth: 1, padding: 16 },
+  storyCard:  { marginHorizontal: 16, marginTop: 10, borderRadius: 16, borderWidth: 1, padding: 16 },
   descHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   descLabel:  { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5, textTransform: 'uppercase' },
   descText:   { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22, fontStyle: 'italic' },
+  storyText:  { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 23 },
 
   dividerRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, marginVertical: 22 },
   dividerLine:  { flex: 1, height: StyleSheet.hairlineWidth },

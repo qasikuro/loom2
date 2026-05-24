@@ -344,6 +344,7 @@ export default function UserProfileScreen() {
                   params: {
                     outfitName:   profile.activeOutfit!.name,
                     outfitDesc:   profile.activeOutfit!.description ?? '',
+                    outfitStory:  (profile.activeOutfit as any).story ?? '',
                     outfitImage:  profile.activeOutfit!.imageUri ?? '',
                     outfitTags:   JSON.stringify(profile.activeOutfit!.tags),
                     outfitDate:   '',
@@ -428,6 +429,7 @@ export default function UserProfileScreen() {
                         params: {
                           outfitName:   outfit.name,
                           outfitDesc:   outfit.description ?? '',
+                          outfitStory:  (outfit as any).story ?? '',
                           outfitImage:  outfit.imageUri ?? '',
                           outfitTags:   JSON.stringify(outfit.tags),
                           outfitDate:   outfit.date,

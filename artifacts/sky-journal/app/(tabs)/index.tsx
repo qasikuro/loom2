@@ -22,6 +22,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Images } from '@/assets/images';
+import { Swipeable } from 'react-native-gesture-handler';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
@@ -102,7 +103,7 @@ export default function HomeScreen() {
   const {
     character, journalEntries, stories, rewards, dismissReward,
     outfits, activeOutfitId, setActiveOutfitId,
-    serverNotifications, markServerNotificationsRead,
+    serverNotifications, markServerNotificationsRead, deleteServerNotification,
     followingIds,
   } = useApp();
 
@@ -671,36 +672,48 @@ export default function HomeScreen() {
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
                 {serverNotifications.length > 0 && serverNotifications.map(n => (
-                  <TouchableOpacity
+                  <Swipeable
                     key={n.id}
-                    style={[styles.notifItem, {
-                      backgroundColor: 'rgba(120,86,255,0.07)',
-                      borderColor: 'rgba(120,86,255,0.22)',
-                    }]}
-                    onPress={() => {
-                      setShowNotifs(false);
-                      if (n.type === 'new_story') {
-                        router.push({ pathname: '/story/[id]', params: { id: n.refId, source: 'discover' } });
-                      }
-                    }}
-                    activeOpacity={0.82}
+                    renderRightActions={() => (
+                      <TouchableOpacity
+                        style={styles.swipeDelete}
+                        onPress={() => deleteServerNotification(n.id)}
+                      >
+                        <Icon name="trash-2" size={17} color="#fff" />
+                      </TouchableOpacity>
+                    )}
+                    overshootRight={false}
                   >
-                    <View style={[styles.notifIconWrap, { backgroundColor: `${colors.primary}28` }]}>
-                      <Icon
-                        name={n.type === 'new_story' ? 'book-open' : 'star'}
-                        size={16}
-                        color={colors.primary}
-                      />
-                    </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>
-                        {n.actorName}
-                      </Text>
-                      <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, color: colors.mutedForeground }}>
-                        {n.type === 'new_story' ? 'shared a new story' : 'added a new outfit'}{n.title ? `: "${n.title}"` : ''}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.notifItem, {
+                        backgroundColor: 'rgba(120,86,255,0.07)',
+                        borderColor: 'rgba(120,86,255,0.22)',
+                      }]}
+                      onPress={() => {
+                        setShowNotifs(false);
+                        if (n.type === 'new_story') {
+                          router.push({ pathname: '/story/[id]', params: { id: n.refId, source: 'discover' } });
+                        }
+                      }}
+                      activeOpacity={0.82}
+                    >
+                      <View style={[styles.notifIconWrap, { backgroundColor: `${colors.primary}28` }]}>
+                        <Icon
+                          name={n.type === 'new_story' ? 'book-open' : 'star'}
+                          size={16}
+                          color={colors.primary}
+                        />
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>
+                          {n.actorName}
+                        </Text>
+                        <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, color: colors.mutedForeground }}>
+                          {n.type === 'new_story' ? 'shared a new story' : 'added a new outfit'}{n.title ? `: "${n.title}"` : ''}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  </Swipeable>
                 ))}
                 {rewards.map(r => (
                   <View key={r.id} style={[styles.notifItem, {
@@ -1021,6 +1034,7 @@ const styles = StyleSheet.create({
   notifsEmpty:    { alignItems: 'center', paddingVertical: 40, gap: 12 },
   notifsEmptyText:{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.5)', fontStyle: 'italic' },
   notifItem:      { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
+  swipeDelete:    { width: 64, alignSelf: 'stretch', backgroundColor: '#C0392B', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginLeft: 6 },
   notifIconWrap:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   dismissBtn:     { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
 });

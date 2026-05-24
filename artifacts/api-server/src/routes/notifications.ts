@@ -45,4 +45,18 @@ router.put("/notifications/read-all", requireAuth, async (req, res) => {
   }
 });
 
+router.delete("/notifications/:id", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { id } = req.params;
+  try {
+    await db
+      .delete(notificationsTable)
+      .where(eq(notificationsTable.id, id));
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete notification");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
