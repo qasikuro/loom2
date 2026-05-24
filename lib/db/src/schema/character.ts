@@ -1,5 +1,10 @@
 import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
+export interface ProfileLink {
+  label: string;
+  url:   string;
+}
+
 export const characterTable = pgTable("character", {
   userId:         text("user_id").primaryKey(),
   username:       text("username").unique(),
@@ -10,6 +15,9 @@ export const characterTable = pgTable("character", {
   isPublic:       boolean("is_public").notNull().default(true),
   avatarUri:      text("avatar_uri"),
   activeOutfitId: text("active_outfit_id"),
+  birthday:       text("birthday"),
+  country:        text("country"),
+  links:          jsonb("links").$type<ProfileLink[]>().default([]),
   isAdmin:        boolean("is_admin").notNull().default(false),
   isBanned:       boolean("is_banned").notNull().default(false),
   galleryLimit:   integer("gallery_limit").notNull().default(200),

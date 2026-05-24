@@ -331,6 +331,50 @@ export default function CharacterScreen() {
   const [avatarUploading,  setAvatarUploading]  = useState(false);
   const [avatarError,      setAvatarError]      = useState<string | null>(null);
 
+  // Birthday / country / links
+  const [editingBirthday,  setEditingBirthday]  = useState(false);
+  const [editingCountry,   setEditingCountry]   = useState(false);
+  const [birthdayVal,      setBirthdayVal]      = useState(character.birthday ?? '');
+  const [countryVal,       setCountryVal]       = useState(character.country ?? '');
+  const [editingLinkIdx,   setEditingLinkIdx]   = useState<number | null>(null);
+  const [linkLabelVal,     setLinkLabelVal]     = useState('');
+  const [linkUrlVal,       setLinkUrlVal]       = useState('');
+
+  function saveBirthday() {
+    setCharacter({ ...character, birthday: birthdayVal.trim() || undefined });
+    setEditingBirthday(false);
+  }
+  function saveCountry() {
+    setCharacter({ ...character, country: countryVal.trim() || undefined });
+    setEditingCountry(false);
+  }
+  function openEditLink(idx: number) {
+    const links = character.links ?? [];
+    const link  = links[idx];
+    setLinkLabelVal(link?.label ?? '');
+    setLinkUrlVal(link?.url ?? '');
+    setEditingLinkIdx(idx);
+  }
+  function openAddLink() {
+    setLinkLabelVal('');
+    setLinkUrlVal('');
+    setEditingLinkIdx((character.links ?? []).length);
+  }
+  function saveLink() {
+    if (editingLinkIdx === null) return;
+    const label = linkLabelVal.trim();
+    const url   = linkUrlVal.trim();
+    if (!label || !url) { setEditingLinkIdx(null); return; }
+    const links = [...(character.links ?? [])];
+    links[editingLinkIdx] = { label, url };
+    setCharacter({ ...character, links });
+    setEditingLinkIdx(null);
+  }
+  function removeLink(idx: number) {
+    const links = (character.links ?? []).filter((_, i) => i !== idx);
+    setCharacter({ ...character, links });
+  }
+
   async function pickAvatar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) return;
@@ -579,6 +623,144 @@ export default function CharacterScreen() {
             <View style={styles.statItem}>
               <Text style={[styles.statNum, { color: '#6BA57A' }]}>{totalWitnessed}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('discover.witnessed')}</Text>
+            </View>
+          </View>
+
+          {/* ── About me card (birthday / country / links) ────── */}
+          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+            <View style={styles.sectionCardHeader}>
+              <View style={styles.sectionCardLeft}>
+                <View style={[styles.sectionCardIcon, { backgroundColor: `${colors.primary}20` }]}>
+                  <Icon name="user" size={15} color={colors.primary} />
+                </View>
+                <Text style={[styles.sectionCardTitle, { color: colors.foreground }]}>About Me</Text>
+              </View>
+            </View>
+
+            {/* Birthday */}
+            <View style={[styles.aboutRow, { borderTopColor: colors.border }]}>
+              <View style={[styles.aboutIconWrap, { backgroundColor: `${colors.primary}14` }]}>
+                <Icon name="gift" size={13} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.aboutLabel, { color: colors.mutedForeground }]}>Birthday</Text>
+                {editingBirthday ? (
+                  <TextInput
+                    style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
+                    value={birthdayVal}
+                    onChangeText={setBirthdayVal}
+                    placeholder="e.g. 1998-03-15 or March 15"
+                    placeholderTextColor={`${colors.mutedForeground}70`}
+                    autoFocus returnKeyType="done"
+                    onSubmitEditing={saveBirthday} onBlur={saveBirthday}
+                  />
+                ) : (
+                  <TouchableOpacity onPress={() => { setBirthdayVal(character.birthday ?? ''); setEditingBirthday(true); }} activeOpacity={0.7}>
+                    <Text style={[styles.aboutValue, { color: character.birthday ? colors.foreground : `${colors.mutedForeground}55` }]}>
+                      {character.birthday || 'Add birthday'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} />
+            </View>
+
+            {/* Country */}
+            <View style={[styles.aboutRow, { borderTopColor: colors.border, borderTopWidth: 0.75 }]}>
+              <View style={[styles.aboutIconWrap, { backgroundColor: `${colors.primary}14` }]}>
+                <Icon name="map-pin" size={13} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.aboutLabel, { color: colors.mutedForeground }]}>Country</Text>
+                {editingCountry ? (
+                  <TextInput
+                    style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
+                    value={countryVal}
+                    onChangeText={setCountryVal}
+                    placeholder="e.g. Japan"
+                    placeholderTextColor={`${colors.mutedForeground}70`}
+                    autoFocus returnKeyType="done"
+                    onSubmitEditing={saveCountry} onBlur={saveCountry}
+                  />
+                ) : (
+                  <TouchableOpacity onPress={() => { setCountryVal(character.country ?? ''); setEditingCountry(true); }} activeOpacity={0.7}>
+                    <Text style={[styles.aboutValue, { color: character.country ? colors.foreground : `${colors.mutedForeground}55` }]}>
+                      {character.country || 'Add country'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} />
+            </View>
+
+            {/* Links */}
+            <View style={[styles.aboutRow, { borderTopColor: colors.border, borderTopWidth: 0.75, flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[styles.aboutIconWrap, { backgroundColor: `${colors.primary}14` }]}>
+                  <Icon name="link" size={13} color={colors.primary} />
+                </View>
+                <Text style={[styles.aboutLabel, { color: colors.mutedForeground, flex: 1 }]}>Links</Text>
+                {(character.links ?? []).length < 6 && (
+                  <TouchableOpacity
+                    style={[styles.linkAddBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+                    onPress={openAddLink}
+                  >
+                    <Icon name="plus" size={11} color={colors.primary} />
+                    <Text style={[styles.linkAddText, { color: colors.primary }]}>Add</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {(character.links ?? []).map((link, idx) => (
+                <View key={idx} style={[styles.linkItemRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                  {editingLinkIdx === idx ? (
+                    <View style={{ flex: 1, gap: 5 }}>
+                      <TextInput
+                        style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                        value={linkLabelVal} onChangeText={setLinkLabelVal}
+                        placeholder="Label" placeholderTextColor={`${colors.mutedForeground}70`}
+                        returnKeyType="next"
+                      />
+                      <TextInput
+                        style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                        value={linkUrlVal} onChangeText={setLinkUrlVal}
+                        placeholder="https://..." placeholderTextColor={`${colors.mutedForeground}70`}
+                        autoCapitalize="none" keyboardType="url"
+                        returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
+                        autoFocus
+                      />
+                    </View>
+                  ) : (
+                    <>
+                      <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLink(idx)} activeOpacity={0.75}>
+                        <Text style={[styles.aboutValue, { color: colors.foreground }]}>{link.label}</Text>
+                        <Text style={[{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }]} numberOfLines={1}>{link.url}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => removeLink(idx)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                        <Icon name="x" size={13} color={`${colors.mutedForeground}70`} />
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              ))}
+              {editingLinkIdx === (character.links ?? []).length && (
+                <View style={[styles.linkItemRow, { backgroundColor: colors.muted, borderColor: colors.primary }]}>
+                  <View style={{ flex: 1, gap: 5 }}>
+                    <TextInput
+                      style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                      value={linkLabelVal} onChangeText={setLinkLabelVal}
+                      placeholder="Label" placeholderTextColor={`${colors.mutedForeground}70`}
+                      returnKeyType="next" autoFocus
+                    />
+                    <TextInput
+                      style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                      value={linkUrlVal} onChangeText={setLinkUrlVal}
+                      placeholder="https://..." placeholderTextColor={`${colors.mutedForeground}70`}
+                      autoCapitalize="none" keyboardType="url"
+                      returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
+                    />
+                  </View>
+                </View>
+              )}
             </View>
           </View>
 
@@ -1276,6 +1458,34 @@ const styles = StyleSheet.create({
   charTraitText:    { fontSize: 11, fontFamily: 'Satoshi-Medium' },
   deleteBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 11, borderRadius: 14, borderWidth: 1, marginTop: 4 },
   deleteBtnText:    { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+
+  // About me card
+  aboutRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingTop: 10, marginTop: 2,
+  },
+  aboutIconWrap: {
+    width: 30, height: 30, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  aboutLabel: { fontSize: 10, fontFamily: 'Satoshi-Medium', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 1 },
+  aboutValue: { fontSize: 14, fontFamily: 'Satoshi-Medium' },
+  aboutInput: {
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
+    borderWidth: 1.5, borderRadius: 9,
+    paddingHorizontal: 10, paddingVertical: 6,
+    marginTop: 2,
+  },
+  linkAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1,
+  },
+  linkAddText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  linkItemRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: 10, borderWidth: 0.75,
+    paddingHorizontal: 10, paddingVertical: 8,
+  },
 
   // Gallery
   galGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },

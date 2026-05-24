@@ -13,6 +13,11 @@ function safeImageUri(uri: string | null | undefined): string | null {
 
 const router: IRouter = Router();
 
+const ProfileLinkSchema = z.object({
+  label: z.string().max(50),
+  url:   z.string().max(300),
+});
+
 const CharacterInputSchema = z.object({
   name:           z.string().min(1).max(100),
   bio:            z.string().max(500).default(""),
@@ -22,6 +27,9 @@ const CharacterInputSchema = z.object({
   username:       z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
   avatarUri:      z.string().nullable().optional(),
   activeOutfitId: z.string().nullable().optional(),
+  birthday:       z.string().max(20).nullable().optional(),
+  country:        z.string().max(80).nullable().optional(),
+  links:          z.array(ProfileLinkSchema).max(6).optional().nullable(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {

@@ -65,6 +65,60 @@ router.get("/users/search", requireAuth, async (req, res) => {
   }
 });
 
+// ── Friends list (profiles of people I follow) ───────────────────────────────
+
+router.get("/friends", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const followingRows = await db
+      .select({ followingId: followsTable.followingId })
+      .from(followsTable)
+      .where(eq(followsTable.followerId, userId));
+
+    if (followingRows.length === 0) return res.json([]);
+
+    const followingIds = followingRows.map(r => r.followingId);
+
+    const profiles = await db
+      .select({
+        userId:    characterTable.userId,
+        name:      characterTable.name,
+        username:  characterTable.username,
+        bio:       characterTable.bio,
+        mood:      characterTable.mood,
+        traits:    characterTable.traits,
+        avatarUri: characterTable.avatarUri,
+        birthday:  characterTable.birthday,
+        country:   characterTable.country,
+        links:     characterTable.links,
+        isPublic:  characterTable.isPublic,
+      })
+      .from(characterTable)
+      .where(eq(characterTable.isBanned, false));
+
+    const filtered = profiles.filter(p => followingIds.includes(p.userId));
+
+    return res.json(
+      filtered.map(p => ({
+        userId:    p.userId,
+        name:      p.name,
+        username:  p.username ?? null,
+        bio:       p.bio,
+        mood:      p.mood,
+        traits:    Array.isArray(p.traits) ? p.traits : [],
+        avatarUri: safeDiscoverUri(p.avatarUri),
+        birthday:  p.birthday ?? null,
+        country:   p.country  ?? null,
+        links:     Array.isArray(p.links) ? p.links : [],
+        isPublic:  p.isPublic,
+      })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to get friends list");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Public user profile ───────────────────────────────────────────────────────
 
 router.get("/users/:userId", requireAuth, async (req, res) => {
@@ -83,6 +137,9 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         isPublic:       characterTable.isPublic,
         avatarUri:      characterTable.avatarUri,
         activeOutfitId: characterTable.activeOutfitId,
+        birthday:       characterTable.birthday,
+        country:        characterTable.country,
+        links:          characterTable.links,
       })
         .from(characterTable)
         .where(eq(characterTable.userId, targetId))
@@ -147,6 +204,9 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       avatarUri:     safeDiscoverUri(char.avatarUri),
       activeOutfitId: char.activeOutfitId ?? null,
       activeOutfit,
+      birthday:      (char as any).birthday  ?? null,
+      country:       (char as any).country   ?? null,
+      links:         Array.isArray((char as any).links) ? (char as any).links : [],
       isFollowing:   followingSet.has(targetId),
     });
   } catch (err) {

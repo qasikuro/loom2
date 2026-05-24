@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { FriendProfileSheet, type FriendSummary } from '@/components/FriendProfileSheet';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,10 +22,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Images } from '@/assets/images';
-import { useApp } from '@/context/AppContext';
+import { apiFetch, useApp } from '@/context/AppContext';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
+
+const FRIEND_MOOD_COLORS: Record<string, string> = {
+  Hopeful: '#6BA57A', Peaceful: '#5B9BB5', Lonely: '#5D7BA5',
+  Romantic: '#B86098', Chaotic: '#B85830', Dreamy: '#9B7AB5',
+  Soft: '#7B6BAA', Adventurous: '#3A9060',
+};
 
 const CATEGORIES = [
   {
@@ -104,6 +111,7 @@ export default function HomeScreen() {
     character, journalEntries, stories, rewards, dismissReward,
     outfits, activeOutfitId, setActiveOutfitId,
     serverNotifications, markServerNotificationsRead,
+    followingIds,
   } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -112,6 +120,11 @@ export default function HomeScreen() {
 
   const [showNotifs,       setShowNotifs]       = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
+
+  // Friends
+  const [friends,         setFriends]         = useState<FriendSummary[]>([]);
+  const [selectedFriend,  setSelectedFriend]  = useState<FriendSummary | null>(null);
+  const [friendSheetOpen, setFriendSheetOpen] = useState(false);
   const unreadServerCount = serverNotifications.filter(n => !n.isRead).length;
   const hasNotifs = rewards.length > 0 || unreadServerCount > 0;
 
@@ -236,6 +249,14 @@ export default function HomeScreen() {
       )
     ).start();
   }, []);
+
+  // Load friends whenever following list changes
+  useEffect(() => {
+    if (followingIds.length === 0) { setFriends([]); return; }
+    apiFetch<FriendSummary[]>('/friends')
+      .then(data => setFriends(data))
+      .catch(() => {});
+  }, [followingIds.length]);
 
   const heroFloatY = heroFloat.interpolate({
     inputRange: [0, 1],
@@ -439,6 +460,53 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
         </Animated.View>
+
+        {/* ── Friends section ──────────────────────────────── */}
+        {friends.length > 0 && (
+          <View style={styles.friendsSection}>
+            <Text style={[styles.friendsLabel, { color: colors.mutedForeground }]}>Friends</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.friendsRow}>
+              {friends.map(friend => {
+                const initial   = friend.name.charAt(0).toUpperCase();
+                const moodColor = FRIEND_MOOD_COLORS[friend.mood] ?? '#6B5B95';
+                return (
+                  <TouchableOpacity
+                    key={friend.userId}
+                    style={styles.friendBubbleWrap}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setSelectedFriend(friend);
+                      setFriendSheetOpen(true);
+                    }}
+                    activeOpacity={0.78}
+                  >
+                    <View style={[styles.friendBubble, { borderColor: `${moodColor}55` }]}>
+                      {friend.avatarUri ? (
+                        <Image
+                          source={{ uri: friend.avatarUri }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit="cover"
+                          cachePolicy="memory-disk"
+                        />
+                      ) : (
+                        <LinearGradient
+                          colors={[`${moodColor}60`, `${moodColor}25`]}
+                          style={StyleSheet.absoluteFill}
+                        />
+                      )}
+                      {!friend.avatarUri && (
+                        <Text style={[styles.friendBubbleInitial, { color: moodColor }]}>{initial}</Text>
+                      )}
+                    </View>
+                    <Text style={[styles.friendBubbleName, { color: colors.mutedForeground }]} numberOfLines={1}>
+                      {friend.username ? `@${friend.username}` : friend.name.split(' ')[0]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Section label */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('home.featuresBeingAdded')}</Text>
@@ -673,6 +741,13 @@ export default function HomeScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* ── Friend profile sheet ─────────────────────────────── */}
+      <FriendProfileSheet
+        friend={selectedFriend}
+        visible={friendSheetOpen}
+        onClose={() => { setFriendSheetOpen(false); }}
+      />
     </View>
   );
 }
@@ -811,6 +886,26 @@ const styles = StyleSheet.create({
   lockLabel: {
     fontSize: 13, fontFamily: 'Satoshi-Bold',
     color: 'rgba(220,210,255,0.80)', letterSpacing: 0.3,
+  },
+
+  // Friends row
+  friendsSection: { marginTop: 4, marginBottom: 2 },
+  friendsLabel: {
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+    textTransform: 'uppercase', letterSpacing: 0.9,
+    marginBottom: 10, paddingHorizontal: 0,
+  },
+  friendsRow: { gap: 12, paddingVertical: 2 },
+  friendBubbleWrap: { alignItems: 'center', gap: 5, width: 60 },
+  friendBubble: {
+    width: 52, height: 52, borderRadius: 26,
+    borderWidth: 2, overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  friendBubbleInitial: { fontSize: 20, fontFamily: 'Satoshi-Bold' },
+  friendBubbleName: {
+    fontSize: 10, fontFamily: 'Satoshi-Medium',
+    textAlign: 'center', maxWidth: 58,
   },
 
   // Modals

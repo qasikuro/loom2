@@ -62,6 +62,11 @@ export async function apiFetch<T>(
 
 // ── Models ────────────────────────────────────────────────────────────────────
 
+export interface ProfileLink {
+  label: string;
+  url:   string;
+}
+
 export interface Character {
   name:           string;
   bio:            string;
@@ -71,6 +76,9 @@ export interface Character {
   username?:      string;
   avatarUri?:     string;
   activeOutfitId?: string | null;
+  birthday?:      string;
+  country?:       string;
+  links?:         ProfileLink[];
 }
 
 export type BubbleStyle = 'rounded' | 'sharp' | 'oval';
@@ -275,6 +283,9 @@ function toAppCharacter(raw: any): Character {
     username:      raw.username      ?? undefined,
     avatarUri:     raw.avatarUri     ?? undefined,
     activeOutfitId: raw.activeOutfitId ?? raw.active_outfit_id ?? undefined,
+    birthday:      raw.birthday      ?? undefined,
+    country:       raw.country       ?? undefined,
+    links:         Array.isArray(raw.links) ? raw.links : undefined,
   };
 }
 
