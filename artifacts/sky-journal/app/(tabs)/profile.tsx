@@ -657,13 +657,8 @@ export default function CharacterScreen() {
           ) : null}
         </LinearGradient>
 
-        {/* ── Stats card (light lavender) ──────────────────────────── */}
+        {/* ── Stats card ──────────────────────────── */}
         <View style={[styles.statsLightCard, SHADOW.sm]}>
-          <View style={styles.stickersRow}>
-            <Text style={styles.stickerEmoji}>☁️</Text>
-            <Text style={styles.stickerEmoji}>⭐</Text>
-            <Text style={styles.stickerEmoji}>🐰</Text>
-          </View>
           <View style={styles.statsDataRow}>
             <TouchableOpacity style={styles.statLightItem} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.7}>
               <Text style={styles.statLightNum}>{stories.length}</Text>
@@ -688,8 +683,8 @@ export default function CharacterScreen() {
           <View style={[styles.sectionCard, { backgroundColor: '#1A1540', borderColor: 'rgba(155,120,255,0.18)' }, SHADOW.sm]}>
             <View style={styles.sectionCardHeader}>
               <View style={styles.sectionCardLeft}>
-                <View style={[styles.sectionCardIcon, { backgroundColor: 'rgba(120,86,255,0.14)' }]}>
-                  <Text style={{ fontSize: 18 }}>🐰</Text>
+                <View style={[styles.sectionCardIcon, { backgroundColor: 'rgba(155,120,255,0.16)' }]}>
+                  <Icon name="user" size={15} color="rgba(190,165,255,0.90)" />
                 </View>
                 <Text style={[styles.sectionCardTitle, { color: '#EDE8FF' }]}>About Me</Text>
               </View>
@@ -1366,22 +1361,22 @@ const styles = StyleSheet.create({
   profileHandle:{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.72)' },
   profileBio:   { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 17 },
 
-  // Stats light card
+  // Stats card
   statsLightCard: {
-    backgroundColor: '#E8E2F8',
-    borderRadius: 22,
+    backgroundColor: '#1A1540',
+    borderRadius: 18,
     marginHorizontal: 14,
     marginTop: 12,
-    paddingBottom: 16,
+    paddingVertical: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(155,120,255,0.16)',
     overflow: 'hidden',
   },
-  stickersRow:    { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 36, paddingTop: 14, paddingBottom: 6 },
-  stickerEmoji:   { fontSize: 30 },
-  statsDataRow:   { flexDirection: 'row', paddingHorizontal: 8 },
-  statLightItem:  { flex: 1, alignItems: 'center', gap: 3 },
-  statLightNum:   { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#1A1040', letterSpacing: -0.4 },
-  statLightLabel: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(50,20,90,0.65)', letterSpacing: 0.3 },
-  statLightDivider: { width: 1, backgroundColor: 'rgba(120,86,255,0.22)', marginVertical: 6 },
+  statsDataRow:     { flexDirection: 'row', paddingHorizontal: 8 },
+  statLightItem:    { flex: 1, alignItems: 'center', gap: 4 },
+  statLightNum:     { fontSize: 22, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.5 },
+  statLightLabel:   { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.55)', letterSpacing: 0.5, textTransform: 'uppercase' },
+  statLightDivider: { width: 1, backgroundColor: 'rgba(155,120,255,0.20)', marginVertical: 6 },
 
   // Trait chips scroll (used inside header)
   traitChipsScroll: { marginTop: 4, marginHorizontal: -20, marginBottom: 2 },
