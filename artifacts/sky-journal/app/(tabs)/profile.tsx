@@ -464,220 +464,220 @@ export default function CharacterScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
 
-        {/* ── Banner ──────────────────────────────────────────────── */}
-        <View style={[styles.banner, { height: topPad + 230 }]}>
-          <LinearGradient colors={['#0A0818', '#18083C', '#2C1462']} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
-          <View style={[styles.orbA, { backgroundColor: 'rgba(120,86,255,0.08)' }]} />
-          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.06)' }]} />
-          <View style={[styles.orbC, { backgroundColor: 'rgba(100,140,255,0.05)' }]} />
+        {/* ── Profile header ──────────────────────────────────────── */}
+        <LinearGradient
+          colors={['#100828', '#1C1048', '#281860']}
+          style={[styles.profileHeader, { paddingTop: topPad + 8 }]}
+          start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
+        >
+          {/* Floating sparkles */}
+          <Text style={[styles.deco, { top: topPad + 16, right: 28 }]}>✦</Text>
+          <Text style={[styles.decoSm, { top: topPad + 56, left: 22 }]}>✦</Text>
+          <Text style={[styles.decoXs, { top: topPad + 90, right: 60 }]}>✦</Text>
 
-          <View style={[styles.bannerTop, { paddingTop: topPad + 10 }]}>
-            <View style={[styles.bannerChip, { backgroundColor: `${colors.primary}30`, borderColor: `${colors.primary}40` }]}>
-              <Icon name="user" size={10} color={isDark ? 'rgba(220,210,255,0.9)' : colors.primary} />
-              <Text style={[styles.bannerLabel, { color: isDark ? 'rgba(220,210,255,0.9)' : colors.primary }]}>CHARACTER</Text>
-            </View>
+          {/* Top controls: vis toggle left, settings + bell right */}
+          <View style={styles.headerTopRow}>
             <TouchableOpacity
-              style={[styles.visToggle, {
-                backgroundColor: character.isPublic ? `${colors.primary}20` : colors.muted,
-                borderColor:     character.isPublic ? `${colors.primary}40` : colors.border,
+              style={[styles.visPill, {
+                backgroundColor: character.isPublic ? `${colors.primary}22` : 'rgba(255,255,255,0.08)',
+                borderColor: character.isPublic ? `${colors.primary}45` : 'rgba(255,255,255,0.14)',
               }]}
               onPress={toggleVisibility}
             >
-              <Icon name={character.isPublic ? 'globe' : 'lock'} size={12} color={colors.primary} />
-              <Text style={[styles.visToggleText, { color: colors.primary }]}>
+              <Icon name={character.isPublic ? 'globe' : 'lock'} size={11} color={character.isPublic ? colors.primary : 'rgba(200,184,232,0.7)'} />
+              <Text style={[styles.visPillText, { color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.7)' }]}>
                 {character.isPublic ? 'Public' : 'Private'}
               </Text>
             </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity style={styles.headerIconBtn}>
+              <Icon name="settings" size={14} color="rgba(200,184,232,0.7)" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.headerIconBtn, { marginLeft: 6 }]}>
+              <Icon name="bell" size={14} color="rgba(200,184,232,0.7)" />
+            </TouchableOpacity>
           </View>
 
-          {/* Avatar inside banner — centered, large */}
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 52 }}>
-            <View style={styles.avatarCenter}>
-              <Animated.View style={[
-                styles.avatarGlow,
-                { backgroundColor: colors.glowPurple },
-                { transform: [{ scale: glowScale }], opacity: glowOpacity },
-              ]} />
-              <View style={[styles.avatarRingOuter, { borderColor: colors.primary }]}>
-                <View style={[styles.avatarRingInner, { borderColor: `${colors.primary}40`, backgroundColor: colors.card }]}>
-                  <Image source={avatarSource} style={styles.avatarImg} contentFit="cover" />
-                </View>
+          {/* Profile row: avatar left + info right */}
+          <View style={styles.profileRow}>
+            <View style={styles.avatarWrap}>
+              <View style={[styles.avatarCircle, { borderColor: `${colors.primary}70` }]}>
+                <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
               </View>
               <TouchableOpacity
-                style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                style={[styles.avatarEditBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={pickAvatar}
                 activeOpacity={0.75}
               >
                 {avatarUploading
                   ? <ActivityIndicator size="small" color={colors.primary} />
-                  : <Icon name="camera" size={11} color={colors.primary} />
+                  : <Icon name="camera" size={10} color={colors.primary} />
                 }
               </TouchableOpacity>
             </View>
-            {avatarError ? (
-              <Text style={{ color: '#DC2626', fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'center', marginTop: 6 }}>
-                {avatarError}
-              </Text>
-            ) : null}
-          </View>
-        </View>
 
-        {/* ── Floating profile card ─────────────────────────────────── */}
-        <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.md]}>
-          {/* Name row */}
-          {editingName ? (
-            <View style={[styles.nameEditWrap, { borderBottomColor: colors.primary }]}>
-              <TextInput
-                style={[styles.nameEditInput, { color: colors.foreground }]}
-                value={nameVal} onChangeText={setNameVal}
-                autoFocus returnKeyType="done"
-                onSubmitEditing={saveName} onBlur={saveName}
-              />
-            </View>
-          ) : (
-            <TouchableOpacity style={styles.nameRow} onPress={() => setEditingName(true)}>
-              <Text style={[styles.name, { color: colors.foreground }]}>{character.name}</Text>
-              <View style={[styles.nameBadge, { backgroundColor: `${colors.gold}20`, borderColor: `${colors.gold}35` }]}>
-                <Text style={{ fontSize: 12 }}>✦</Text>
-              </View>
-              <View style={[styles.editHint, { backgroundColor: colors.muted }]}>
-                <Icon name="edit-2" size={11} color={colors.mutedForeground} />
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {/* @username */}
-          {editingUsername ? (
-            <View style={[styles.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: colors.muted }]}>
-              <Text style={[styles.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
-              <TextInput
-                style={[styles.usernameEditInput, { color: colors.foreground }]}
-                value={usernameVal}
-                onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
-                autoFocus autoCapitalize="none" autoCorrect={false}
-                returnKeyType="done" onSubmitEditing={saveUsername} onBlur={saveUsername}
-                placeholder="your_handle" placeholderTextColor={colors.mutedForeground}
-                maxLength={20}
-              />
-              {usernameChecking && <ActivityIndicator size="small" color={colors.primary} />}
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={styles.usernameRow}
-              onPress={() => { setUsernameVal(character.username ?? ''); setEditingUsername(true); setUsernameError(null); }}
-            >
-              {character.username ? (
-                <Text style={[styles.usernameText, { color: colors.primary }]}>@{character.username}</Text>
+            <View style={styles.profileInfo}>
+              {editingName ? (
+                <View style={[styles.nameEditWrap, { borderBottomColor: colors.primary }]}>
+                  <TextInput
+                    style={[styles.nameEditInput, { color: '#FFFFFF' }]}
+                    value={nameVal} onChangeText={setNameVal}
+                    autoFocus returnKeyType="done"
+                    onSubmitEditing={saveName} onBlur={saveName}
+                  />
+                </View>
               ) : (
-                <Text style={[styles.usernamePlaceholder, { color: `${colors.mutedForeground}70` }]}>{t('profile.setUsername')}</Text>
+                <TouchableOpacity style={styles.nameRow} onPress={() => setEditingName(true)}>
+                  <Text style={styles.profileName}>{character.name}</Text>
+                  <Icon name="edit-2" size={10} color="rgba(200,184,232,0.4)" style={{ marginLeft: 4 }} />
+                </TouchableOpacity>
               )}
-              <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginTop: 1 }} />
-            </TouchableOpacity>
-          )}
-          {usernameError && (
-            <Text style={[styles.usernameError, { color: colors.destructive }]}>{usernameError}</Text>
-          )}
 
-          {/* Bio */}
-          {editingBio ? (
-            <TextInput
-              style={[styles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
-              value={bioVal} onChangeText={setBioVal}
-              multiline autoFocus returnKeyType="done" onBlur={saveBio}
-            />
-          ) : (
-            <TouchableOpacity style={styles.bioRow} onPress={() => setEditingBio(true)}>
-              <Text style={[styles.bio, { color: character.bio ? colors.mutedForeground : `${colors.mutedForeground}60` }]}>
-                {character.bio || t('profile.tapBio')}
-              </Text>
-              <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} style={{ marginTop: 2 }} />
-            </TouchableOpacity>
-          )}
+              {editingUsername ? (
+                <View style={[styles.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                  <Text style={[styles.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
+                  <TextInput
+                    style={[styles.usernameEditInput, { color: '#FFFFFF' }]}
+                    value={usernameVal}
+                    onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
+                    autoFocus autoCapitalize="none" autoCorrect={false}
+                    returnKeyType="done" onSubmitEditing={saveUsername} onBlur={saveUsername}
+                    placeholder="your_handle" placeholderTextColor="rgba(200,184,232,0.4)"
+                    maxLength={20}
+                  />
+                  {usernameChecking && <ActivityIndicator size="small" color={colors.primary} />}
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.usernameRow}
+                  onPress={() => { setUsernameVal(character.username ?? ''); setEditingUsername(true); setUsernameError(null); }}
+                >
+                  {character.username ? (
+                    <Text style={styles.profileHandle}>@{character.username}</Text>
+                  ) : (
+                    <Text style={[styles.profileHandle, { color: 'rgba(200,184,232,0.38)', fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
+                  )}
+                  <Icon name="edit-2" size={9} color="rgba(200,184,232,0.35)" style={{ marginLeft: 3 }} />
+                </TouchableOpacity>
+              )}
+              {usernameError && (
+                <Text style={[styles.usernameError, { color: colors.destructive }]}>{usernameError}</Text>
+              )}
 
-          {/* Mood badge — separate row, tap to change */}
+              {editingBio ? (
+                <TextInput
+                  style={[styles.bioInput, { color: '#FFFFFF', borderColor: colors.primary, backgroundColor: 'rgba(255,255,255,0.08)' }]}
+                  value={bioVal} onChangeText={setBioVal}
+                  multiline autoFocus returnKeyType="done" onBlur={saveBio}
+                />
+              ) : (
+                <TouchableOpacity onPress={() => setEditingBio(true)} activeOpacity={0.75}>
+                  <Text style={[styles.profileBio, { color: character.bio ? 'rgba(200,184,232,0.78)' : 'rgba(200,184,232,0.32)' }]}>
+                    {character.bio || t('profile.tapBio')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* Mood badge */}
           <TouchableOpacity
             onPress={() => { Haptics.selectionAsync(); setShowMoodPicker(true); }}
             activeOpacity={0.75}
-            style={styles.moodRow}
+            style={[styles.moodRow, { marginTop: 12, marginBottom: 6 }]}
           >
             <MoodBadge mood={character.mood || 'Hopeful'} size="sm" />
-            <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginLeft: 4 }} />
+            <Icon name="edit-2" size={9} color="rgba(200,184,232,0.35)" style={{ marginLeft: 4 }} />
           </TouchableOpacity>
 
-          {/* Trait chips row */}
+          {/* Trait chips */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.traitChipsScroll} contentContainerStyle={styles.traitChipsRow}>
             {character.traits.map(tr => (
-              <View key={tr} style={[styles.traitChip, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}28` }]}>
-                <Text style={[styles.traitText, { color: colors.primary }]}>{tr}</Text>
+              <View key={tr} style={[styles.traitChip, { backgroundColor: 'rgba(120,86,255,0.18)', borderColor: 'rgba(120,86,255,0.38)' }]}>
+                <Text style={[styles.traitText, { color: 'rgba(210,195,255,0.92)' }]}>{tr}</Text>
+                <Text style={{ fontSize: 8, color: 'rgba(200,184,232,0.45)', marginLeft: 1 }}>✦</Text>
                 <TouchableOpacity
                   onPress={() => removeTrait(tr)}
                   hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                  style={[styles.traitRemove, { backgroundColor: `${colors.primary}18` }]}
+                  style={[styles.traitRemove, { backgroundColor: 'rgba(120,86,255,0.22)' }]}
                 >
-                  <Icon name="x" size={9} color={colors.primary} />
+                  <Icon name="x" size={9} color="rgba(200,184,232,0.7)" />
                 </TouchableOpacity>
               </View>
             ))}
             <TouchableOpacity
-              style={[styles.traitAddBtn, { borderColor: `${colors.primary}28`, backgroundColor: `${colors.primary}06` }]}
+              style={[styles.traitAddBtn, { borderColor: 'rgba(120,86,255,0.32)', backgroundColor: 'rgba(120,86,255,0.1)' }]}
               onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}
             >
-              <Icon name="plus" size={12} color={colors.primary} />
-              <Text style={[styles.traitAddText, { color: colors.primary }]}>{t('profile.addTrait')}</Text>
+              <Icon name="plus" size={12} color="rgba(200,184,232,0.7)" />
+              <Text style={[styles.traitAddText, { color: 'rgba(200,184,232,0.7)' }]}>{t('profile.addTrait')}</Text>
             </TouchableOpacity>
           </ScrollView>
 
-          {/* Trait add input (appears when addingTrait) */}
+          {/* Trait add input */}
           {addingTrait && (
-            <View style={[styles.traitAddWrap, { borderColor: colors.primary, backgroundColor: `${colors.primary}06`, marginTop: 8 }]}>
+            <View style={[styles.traitAddWrap, { borderColor: colors.primary, backgroundColor: 'rgba(120,86,255,0.1)', marginTop: 8 }]}>
               <TextInput
-                style={[styles.traitInput, { color: colors.foreground }]}
+                style={[styles.traitInput, { color: '#FFFFFF' }]}
                 value={newTrait}
                 onChangeText={tr => { setNewTrait(tr); setShowSuggestions(true); }}
                 placeholder={t('profile.traitPlaceholder')}
-                placeholderTextColor={colors.mutedForeground}
+                placeholderTextColor="rgba(200,184,232,0.4)"
                 autoFocus returnKeyType="done"
                 onSubmitEditing={() => addTrait(newTrait)}
                 onBlur={() => setTimeout(() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }, 200)}
               />
               <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
-                <Icon name="x" size={13} color={colors.mutedForeground} />
+                <Icon name="x" size={13} color="rgba(200,184,232,0.5)" />
               </TouchableOpacity>
             </View>
           )}
           {showSuggestions && suggestions.length > 0 && (
             <View style={styles.suggRow}>
-              <Text style={[styles.suggLabel, { color: colors.mutedForeground }]}>{t('profile.suggestions')}</Text>
+              <Text style={[styles.suggLabel, { color: 'rgba(200,184,232,0.55)' }]}>{t('profile.suggestions')}</Text>
               <View style={styles.suggChips}>
                 {suggestions.slice(0, 8).map(s => (
                   <TouchableOpacity
                     key={s}
-                    style={[styles.suggChip, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                    style={[styles.suggChip, { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.18)' }]}
                     onPress={() => addTrait(s)}
                   >
-                    <Icon name="plus" size={10} color={colors.mutedForeground} />
-                    <Text style={[styles.suggText, { color: colors.mutedForeground }]}>{s}</Text>
+                    <Icon name="plus" size={10} color="rgba(200,184,232,0.5)" />
+                    <Text style={[styles.suggText, { color: 'rgba(200,184,232,0.5)' }]}>{s}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
             </View>
           )}
 
-          {/* Stats row */}
-          <View style={[styles.profileCardStats, { borderTopColor: colors.border }]}>
-            <TouchableOpacity style={styles.statItem} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.7}>
-              <Text style={[styles.statNum, { color: colors.primary }]}>{stories.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('profile.stories')}</Text>
+          {avatarError ? (
+            <Text style={{ color: '#DC2626', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 6 }}>
+              {avatarError}
+            </Text>
+          ) : null}
+        </LinearGradient>
+
+        {/* ── Stats card (light lavender) ──────────────────────────── */}
+        <View style={[styles.statsLightCard, SHADOW.sm]}>
+          <View style={styles.stickersRow}>
+            <Text style={styles.stickerEmoji}>☁️</Text>
+            <Text style={styles.stickerEmoji}>⭐</Text>
+            <Text style={styles.stickerEmoji}>🐰</Text>
+          </View>
+          <View style={styles.statsDataRow}>
+            <TouchableOpacity style={styles.statLightItem} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.7}>
+              <Text style={styles.statLightNum}>{stories.length}</Text>
+              <Text style={styles.statLightLabel}>{t('profile.stories')}</Text>
             </TouchableOpacity>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: colors.gold }]}>{outfits.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('profile.outfits')}</Text>
+            <View style={styles.statLightDivider} />
+            <View style={styles.statLightItem}>
+              <Text style={styles.statLightNum}>{outfits.length}</Text>
+              <Text style={styles.statLightLabel}>{t('profile.outfits')}</Text>
             </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: '#6BA57A' }]}>{totalWitnessed}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('discover.witnessed')}</Text>
+            <View style={styles.statLightDivider} />
+            <View style={styles.statLightItem}>
+              <Text style={styles.statLightNum}>{totalWitnessed}</Text>
+              <Text style={styles.statLightLabel}>{t('discover.witnessed')}</Text>
             </View>
           </View>
         </View>
@@ -685,103 +685,103 @@ export default function CharacterScreen() {
         <View style={[styles.body, { paddingHorizontal: 16, paddingTop: 16 }]}>
 
           {/* ── About me card (birthday / country / links) ────── */}
-          <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+          <View style={[styles.sectionCard, { backgroundColor: '#EAE4FA', borderColor: 'rgba(150,120,220,0.22)' }, SHADOW.xs]}>
             <View style={styles.sectionCardHeader}>
               <View style={styles.sectionCardLeft}>
-                <View style={[styles.sectionCardIcon, { backgroundColor: `${colors.primary}20` }]}>
-                  <Icon name="user" size={15} color={colors.primary} />
+                <View style={[styles.sectionCardIcon, { backgroundColor: 'rgba(120,86,255,0.14)' }]}>
+                  <Text style={{ fontSize: 18 }}>🐰</Text>
                 </View>
-                <Text style={[styles.sectionCardTitle, { color: colors.foreground }]}>About Me</Text>
+                <Text style={[styles.sectionCardTitle, { color: '#1A1040' }]}>About Me</Text>
               </View>
             </View>
 
             {/* Birthday */}
-            <View style={[styles.aboutRow, { borderTopColor: colors.border }]}>
-              <View style={[styles.aboutIconWrap, { backgroundColor: `${colors.primary}14` }]}>
-                <Icon name="gift" size={13} color={colors.primary} />
+            <View style={[styles.aboutRow, { borderTopColor: 'rgba(120,86,255,0.14)' }]}>
+              <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(120,86,255,0.12)' }]}>
+                <Icon name="gift" size={13} color="#7856FF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.aboutLabel, { color: colors.mutedForeground }]}>Birthday</Text>
+                <Text style={[styles.aboutLabel, { color: 'rgba(60,30,100,0.6)' }]}>Birthday</Text>
                 {editingBirthday ? (
                   <TextInput
-                    style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
+                    style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.08)' }]}
                     value={birthdayVal}
                     onChangeText={setBirthdayVal}
                     placeholder="e.g. 1998-03-15 or March 15"
-                    placeholderTextColor={`${colors.mutedForeground}70`}
+                    placeholderTextColor="rgba(60,30,100,0.38)"
                     autoFocus returnKeyType="done"
                     onSubmitEditing={saveBirthday} onBlur={saveBirthday}
                   />
                 ) : (
                   <TouchableOpacity onPress={() => { setBirthdayVal(character.birthday ?? ''); setEditingBirthday(true); }} activeOpacity={0.7}>
-                    <Text style={[styles.aboutValue, { color: character.birthday ? colors.foreground : `${colors.mutedForeground}55` }]}>
+                    <Text style={[styles.aboutValue, { color: character.birthday ? '#1A1040' : 'rgba(60,30,100,0.42)' }]}>
                       {character.birthday || 'Add birthday'}
                     </Text>
                   </TouchableOpacity>
                 )}
               </View>
-              <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} />
+              <Icon name="edit-2" size={11} color="rgba(120,86,255,0.45)" />
             </View>
 
             {/* Country */}
-            <View style={[styles.aboutRow, { borderTopColor: colors.border, borderTopWidth: 0.75 }]}>
-              <View style={[styles.aboutIconWrap, { backgroundColor: `${colors.primary}14` }]}>
-                <Icon name="map-pin" size={13} color={colors.primary} />
+            <View style={[styles.aboutRow, { borderTopColor: 'rgba(120,86,255,0.14)', borderTopWidth: 0.75 }]}>
+              <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(120,86,255,0.12)' }]}>
+                <Icon name="map-pin" size={13} color="#7856FF" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.aboutLabel, { color: colors.mutedForeground }]}>Country</Text>
+                <Text style={[styles.aboutLabel, { color: 'rgba(60,30,100,0.6)' }]}>Country</Text>
                 {editingCountry ? (
                   <TextInput
-                    style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.muted }]}
+                    style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.08)' }]}
                     value={countryVal}
                     onChangeText={setCountryVal}
                     placeholder="e.g. Japan"
-                    placeholderTextColor={`${colors.mutedForeground}70`}
+                    placeholderTextColor="rgba(60,30,100,0.38)"
                     autoFocus returnKeyType="done"
                     onSubmitEditing={saveCountry} onBlur={saveCountry}
                   />
                 ) : (
                   <TouchableOpacity onPress={() => { setCountryVal(character.country ?? ''); setEditingCountry(true); }} activeOpacity={0.7}>
-                    <Text style={[styles.aboutValue, { color: character.country ? colors.foreground : `${colors.mutedForeground}55` }]}>
+                    <Text style={[styles.aboutValue, { color: character.country ? '#1A1040' : 'rgba(60,30,100,0.42)' }]}>
                       {character.country || 'Add country'}
                     </Text>
                   </TouchableOpacity>
                 )}
               </View>
-              <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} />
+              <Icon name="edit-2" size={11} color="rgba(120,86,255,0.45)" />
             </View>
 
             {/* Links */}
-            <View style={[styles.aboutRow, { borderTopColor: colors.border, borderTopWidth: 0.75, flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
+            <View style={[styles.aboutRow, { borderTopColor: 'rgba(120,86,255,0.14)', borderTopWidth: 0.75, flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={[styles.aboutIconWrap, { backgroundColor: `${colors.primary}14` }]}>
-                  <Icon name="link" size={13} color={colors.primary} />
+                <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(120,86,255,0.12)' }]}>
+                  <Icon name="link" size={13} color="#7856FF" />
                 </View>
-                <Text style={[styles.aboutLabel, { color: colors.mutedForeground, flex: 1 }]}>Links</Text>
+                <Text style={[styles.aboutLabel, { color: 'rgba(60,30,100,0.6)', flex: 1 }]}>Links</Text>
                 {(character.links ?? []).length < 6 && (
                   <TouchableOpacity
-                    style={[styles.linkAddBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+                    style={[styles.linkAddBtn, { backgroundColor: 'rgba(120,86,255,0.12)', borderColor: 'rgba(120,86,255,0.3)' }]}
                     onPress={openAddLink}
                   >
-                    <Icon name="plus" size={11} color={colors.primary} />
-                    <Text style={[styles.linkAddText, { color: colors.primary }]}>Add</Text>
+                    <Icon name="plus" size={11} color="#7856FF" />
+                    <Text style={[styles.linkAddText, { color: '#7856FF' }]}>Add</Text>
                   </TouchableOpacity>
                 )}
               </View>
               {(character.links ?? []).map((link, idx) => (
-                <View key={idx} style={[styles.linkItemRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                <View key={idx} style={[styles.linkItemRow, { backgroundColor: 'rgba(120,86,255,0.08)', borderColor: 'rgba(120,86,255,0.22)' }]}>
                   {editingLinkIdx === idx ? (
                     <View style={{ flex: 1, gap: 5 }}>
                       <TextInput
-                        style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                        style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
                         value={linkLabelVal} onChangeText={setLinkLabelVal}
-                        placeholder="Label" placeholderTextColor={`${colors.mutedForeground}70`}
+                        placeholder="Label" placeholderTextColor="rgba(60,30,100,0.38)"
                         returnKeyType="next"
                       />
                       <TextInput
-                        style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                        style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
                         value={linkUrlVal} onChangeText={setLinkUrlVal}
-                        placeholder="https://..." placeholderTextColor={`${colors.mutedForeground}70`}
+                        placeholder="https://..." placeholderTextColor="rgba(60,30,100,0.38)"
                         autoCapitalize="none" keyboardType="url"
                         returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
                         autoFocus
@@ -790,29 +790,29 @@ export default function CharacterScreen() {
                   ) : (
                     <>
                       <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLink(idx)} activeOpacity={0.75}>
-                        <Text style={[styles.aboutValue, { color: colors.foreground }]}>{link.label}</Text>
-                        <Text style={[{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }]} numberOfLines={1}>{link.url}</Text>
+                        <Text style={[styles.aboutValue, { color: '#1A1040' }]}>{link.label}</Text>
+                        <Text style={[{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(60,30,100,0.55)', marginTop: 1 }]} numberOfLines={1}>{link.url}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => removeLink(idx)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                        <Icon name="x" size={13} color={`${colors.mutedForeground}70`} />
+                        <Icon name="x" size={13} color="rgba(120,86,255,0.5)" />
                       </TouchableOpacity>
                     </>
                   )}
                 </View>
               ))}
               {editingLinkIdx === (character.links ?? []).length && (
-                <View style={[styles.linkItemRow, { backgroundColor: colors.muted, borderColor: colors.primary }]}>
+                <View style={[styles.linkItemRow, { backgroundColor: 'rgba(120,86,255,0.08)', borderColor: '#7856FF' }]}>
                   <View style={{ flex: 1, gap: 5 }}>
                     <TextInput
-                      style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                      style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
                       value={linkLabelVal} onChangeText={setLinkLabelVal}
-                      placeholder="Label" placeholderTextColor={`${colors.mutedForeground}70`}
+                      placeholder="Label" placeholderTextColor="rgba(60,30,100,0.38)"
                       returnKeyType="next" autoFocus
                     />
                     <TextInput
-                      style={[styles.aboutInput, { color: colors.foreground, borderColor: colors.primary, backgroundColor: colors.background }]}
+                      style={[styles.aboutInput, { color: '#1A1040', borderColor: '#7856FF', backgroundColor: 'rgba(120,86,255,0.06)' }]}
                       value={linkUrlVal} onChangeText={setLinkUrlVal}
-                      placeholder="https://..." placeholderTextColor={`${colors.mutedForeground}70`}
+                      placeholder="https://..." placeholderTextColor="rgba(60,30,100,0.38)"
                       autoCapitalize="none" keyboardType="url"
                       returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
                     />
@@ -824,8 +824,11 @@ export default function CharacterScreen() {
 
           {/* ── Current Outfit spotlight ──────────────────────────── */}
           {activeOutfit && (
-            <View style={[styles.spotlightCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}>
-              <Text style={[styles.spotlightLabel, { color: colors.mutedForeground }]}>Current Outfit</Text>
+            <View style={[styles.spotlightCard, { backgroundColor: '#EAE4FA', borderColor: 'rgba(150,120,220,0.22)' }, SHADOW.sm]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 2 }}>
+                <Text style={{ fontSize: 16 }}>🪡</Text>
+                <Text style={[styles.spotlightLabel, { color: 'rgba(60,30,100,0.65)', textTransform: 'none', letterSpacing: 0, fontSize: 13, fontFamily: 'Satoshi-Bold' }]}>Current Outfit</Text>
+              </View>
               <View style={styles.spotlightRow}>
                 {/* Left: outfit image */}
                 <TouchableOpacity
@@ -844,19 +847,19 @@ export default function CharacterScreen() {
                 </TouchableOpacity>
                 {/* Right: info */}
                 <View style={styles.spotlightInfo}>
-                  <Text style={[styles.spotlightAboutLabel, { color: `${colors.mutedForeground}80` }]}>About this look</Text>
-                  <Text style={[styles.spotlightDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
+                  <Text style={[styles.spotlightAboutLabel, { color: 'rgba(60,30,100,0.52)' }]}>About this look</Text>
+                  <Text style={[styles.spotlightDesc, { color: 'rgba(30,10,70,0.75)' }]} numberOfLines={3}>
                     {activeOutfit.description || activeOutfit.name}
                   </Text>
                   <View style={styles.spotlightTags}>
                     {(activeOutfit.tags ?? []).slice(0, 3).map(tag => (
-                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
-                        <Text style={[styles.spotlightTagText, { color: colors.primary }]}>{tag}</Text>
+                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: 'rgba(120,86,255,0.14)', borderColor: 'rgba(120,86,255,0.32)' }]}>
+                        <Text style={[styles.spotlightTagText, { color: '#7856FF' }]}>{tag}</Text>
                       </View>
                     ))}
                     {(activeOutfit.tags ?? []).length === 0 && (
-                      <View style={[styles.spotlightTag, { backgroundColor: `${colors.gold}14`, borderColor: `${colors.gold}28` }]}>
-                        <Text style={[styles.spotlightTagText, { color: colors.gold }]}>Displayed</Text>
+                      <View style={[styles.spotlightTag, { backgroundColor: 'rgba(232,184,48,0.14)', borderColor: 'rgba(232,184,48,0.32)' }]}>
+                        <Text style={[styles.spotlightTagText, { color: '#8B6A1A' }]}>Displayed</Text>
                       </View>
                     )}
                   </View>
@@ -1338,65 +1341,51 @@ export default function CharacterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  // Banner
-  banner:   { position: 'relative', overflow: 'hidden' },
-  orbA:     { position: 'absolute', width: 200, height: 200, borderRadius: 100, top: -50, right: -50 },
-  orbB:     { position: 'absolute', width: 140, height: 140, borderRadius: 70,  bottom: -20, left: -40 },
-  orbC:     { position: 'absolute', width: 80,  height: 80,  borderRadius: 40,  top: 30, left: '50%' },
-  bannerTop:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  bannerChip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, borderWidth: 1 },
-  bannerLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8 },
-  visToggle:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
-  visToggleText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  // Profile header (replaces banner + floating card)
+  profileHeader: { paddingHorizontal: 20, paddingBottom: 24, overflow: 'hidden' },
+  deco:   { position: 'absolute', fontSize: 13, color: 'rgba(200,184,232,0.42)', fontFamily: 'Satoshi-Bold' },
+  decoSm: { position: 'absolute', fontSize: 8,  color: 'rgba(200,184,232,0.28)', fontFamily: 'Satoshi-Bold' },
+  decoXs: { position: 'absolute', fontSize: 7,  color: 'rgba(200,184,232,0.20)', fontFamily: 'Satoshi-Bold' },
+  headerTopRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 18 },
+  headerIconBtn: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
+  visPill:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 16, borderWidth: 1 },
+  visPillText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
 
-  // Avatar
-  avatarSection: { alignItems: 'center', marginTop: -56, paddingBottom: 8 },
-  avatarCenter:  { position: 'relative', width: 128, height: 128, alignItems: 'center', justifyContent: 'center' },
-  avatarGlow:    { position: 'absolute', width: 128, height: 128, borderRadius: 64 },
-  avatarRingOuter: { width: 108, height: 108, borderRadius: 54, borderWidth: 2, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  avatarRingInner: { width: 100, height: 100, borderRadius: 50, borderWidth: 1.5, overflow: 'hidden' },
-  avatarImg:     { width: '100%', height: '100%' },
-  avatarEditBadge: { position: 'absolute', bottom: 4, right: 2, width: 24, height: 24, borderRadius: 7, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  sparkle:  { position: 'absolute', fontFamily: 'Satoshi-Bold' },
-  sparkleA: { fontSize: 14, top: 2,   right: -2  },
-  sparkleB: { fontSize: 10, bottom: 8, left: -2   },
-  sparkleC: { fontSize: 12, top: 18,  left: -8   },
+  // Profile row (avatar left + info right)
+  profileRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: 4 },
+  avatarWrap:   { position: 'relative', width: 82, height: 82 },
+  avatarCircle: { width: 82, height: 82, borderRadius: 41, borderWidth: 2.5, overflow: 'hidden' },
+  avatarEditBtn: { position: 'absolute', bottom: 1, right: 1, width: 22, height: 22, borderRadius: 7, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  profileInfo:  { flex: 1, paddingTop: 3, gap: 3 },
+  profileName:  { fontSize: 22, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.4, lineHeight: 27 },
+  profileHandle:{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.72)' },
+  profileBio:   { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 17 },
 
-  // Profile floating card
-  profileCard: {
-    marginTop: -44,
-    marginHorizontal: 14,
+  // Stats light card
+  statsLightCard: {
+    backgroundColor: '#E8E2F8',
     borderRadius: 22,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 0,
-    gap: 3,
+    marginHorizontal: 14,
+    marginTop: 12,
+    paddingBottom: 16,
+    overflow: 'hidden',
   },
-  nameBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  profileCardStats: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    marginHorizontal: -16,
-    marginTop: 10,
-    paddingVertical: 11,
-  },
-  traitChipsScroll: {
-    marginTop: 6,
-    marginHorizontal: -16,
-    marginBottom: 2,
-  },
-  traitChipsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    gap: 6,
-  },
+  stickersRow:    { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 36, paddingTop: 14, paddingBottom: 6 },
+  stickerEmoji:   { fontSize: 30 },
+  statsDataRow:   { flexDirection: 'row', paddingHorizontal: 8 },
+  statLightItem:  { flex: 1, alignItems: 'center', gap: 3 },
+  statLightNum:   { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#1A1040', letterSpacing: -0.4 },
+  statLightLabel: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(50,20,90,0.65)', letterSpacing: 0.3 },
+  statLightDivider: { width: 1, backgroundColor: 'rgba(120,86,255,0.22)', marginVertical: 6 },
+
+  // Trait chips scroll (used inside header)
+  traitChipsScroll: { marginTop: 4, marginHorizontal: -20, marginBottom: 2 },
+  traitChipsRow:    { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, gap: 6 },
 
   // Spotlight card (current outfit)
   spotlightCard: {
@@ -1422,7 +1411,7 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: 14,
     overflow: 'hidden',
-    backgroundColor: '#100D22',
+    backgroundColor: 'rgba(120,86,255,0.22)',
   },
   spotlightName: {
     fontSize: 11,
@@ -1638,8 +1627,8 @@ const styles = StyleSheet.create({
 
   // Traits
   traitsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  traitChip:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingLeft: 9, paddingRight: 4, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  traitText:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  traitChip:   { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 3, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  traitText:   { fontSize: 11, fontFamily: 'Satoshi-Medium' },
   traitRemove: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   traitAddWrap: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
   traitInput:  { fontSize: 12, fontFamily: 'Satoshi-Regular', minWidth: 80, maxWidth: 120 },

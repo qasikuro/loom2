@@ -182,14 +182,14 @@ export default function DiscoverScreen() {
                 style={[
                   styles.tabPill,
                   active
-                    ? { backgroundColor: 'rgba(120,86,255,0.28)', borderColor: 'rgba(120,86,255,0.55)' }
+                    ? { backgroundColor: 'rgba(255,130,170,0.22)', borderColor: 'rgba(255,130,170,0.55)' }
                     : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.14)' },
                 ]}
                 activeOpacity={0.75}
               >
                 <Text style={[
                   styles.tabText,
-                  { color: active ? '#C8B8F8' : 'rgba(200,184,232,0.55)' },
+                  { color: active ? '#FFB0CE' : 'rgba(200,184,232,0.55)' },
                 ]}>
                   {t(TAB_LABEL_KEYS[tab])}
                 </Text>
