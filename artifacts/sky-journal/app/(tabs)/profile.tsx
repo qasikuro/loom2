@@ -54,6 +54,37 @@ function fmtDate(iso: string) {
 
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
+// ── Social platforms ────────────────────────────────────────────────────────────
+interface SocialPlatform {
+  key:    string;
+  label:  string;
+  icon:   string;
+  color:  string;
+  prefix: string;
+  placeholder: string;
+}
+const SOCIAL_PLATFORMS: SocialPlatform[] = [
+  { key: 'instagram', label: 'Instagram', icon: '📸', color: '#E1306C', prefix: 'https://instagram.com/',       placeholder: 'your_handle' },
+  { key: 'tiktok',    label: 'TikTok',    icon: '🎵', color: '#010101', prefix: 'https://tiktok.com/@',        placeholder: 'yourhandle' },
+  { key: 'twitter',   label: 'X / Twitter', icon: '✕', color: '#1A8CD8', prefix: 'https://x.com/',            placeholder: 'yourhandle' },
+  { key: 'youtube',   label: 'YouTube',   icon: '▶',  color: '#FF0000', prefix: 'https://youtube.com/@',      placeholder: 'yourchannel' },
+  { key: 'pinterest', label: 'Pinterest', icon: '📌', color: '#E60023', prefix: 'https://pinterest.com/',      placeholder: 'yourprofile' },
+  { key: 'twitch',    label: 'Twitch',    icon: '🎮', color: '#9146FF', prefix: 'https://twitch.tv/',         placeholder: 'yourchannel' },
+  { key: 'spotify',   label: 'Spotify',   icon: '🎧', color: '#1DB954', prefix: 'https://open.spotify.com/user/', placeholder: 'userid' },
+  { key: 'snapchat',  label: 'Snapchat',  icon: '👻', color: '#FFCC00', prefix: 'https://snapchat.com/add/',  placeholder: 'yourhandle' },
+  { key: 'discord',   label: 'Discord',   icon: '💬', color: '#5865F2', prefix: 'https://discord.gg/',        placeholder: 'invite-code' },
+  { key: 'bereal',    label: 'BeReal',    icon: '📷', color: '#3D3D3D', prefix: 'https://bere.al/',           placeholder: 'yourhandle' },
+  { key: 'other',     label: 'Other',     icon: '🔗', color: '#6B5B95', prefix: '',                           placeholder: 'https://...' },
+];
+
+function getPlatform(key: string | undefined) {
+  return SOCIAL_PLATFORMS.find(p => p.key === key) ?? null;
+}
+function extractHandle(url: string, prefix: string): string {
+  if (!prefix || !url.startsWith(prefix)) return url;
+  return url.slice(prefix.length).replace(/^@/, '').replace(/\/$/, '');
+}
+
 const ATTRIBUTE_SUGGESTIONS = [
   'Dreamer', 'Curious', 'Kind', 'Loner', 'Brave', 'Gentle',
   'Wanderer', 'Silent', 'Joyful', 'Nostalgic', 'Hopeful', 'Mystic',
@@ -336,9 +367,13 @@ export default function CharacterScreen() {
   const [editingCountry,   setEditingCountry]   = useState(false);
   const [birthdayVal,      setBirthdayVal]      = useState(character.birthday ?? '');
   const [countryVal,       setCountryVal]       = useState(character.country ?? '');
-  const [editingLinkIdx,   setEditingLinkIdx]   = useState<number | null>(null);
-  const [linkLabelVal,     setLinkLabelVal]     = useState('');
-  const [linkUrlVal,       setLinkUrlVal]       = useState('');
+
+  // Social links state
+  const [linkMode,         setLinkMode]         = useState<'none' | 'picking' | 'entering'>('none');
+  const [linkPlatform,     setLinkPlatform]     = useState<SocialPlatform | null>(null);
+  const [linkHandle,       setLinkHandle]       = useState('');
+  const [linkOtherLabel,   setLinkOtherLabel]   = useState('');
+  const [linkEditIdx,      setLinkEditIdx]      = useState<number | null>(null);
 
   function saveBirthday() {
     setCharacter({ ...character, birthday: birthdayVal.trim() || undefined });
@@ -348,31 +383,56 @@ export default function CharacterScreen() {
     setCharacter({ ...character, country: countryVal.trim() || undefined });
     setEditingCountry(false);
   }
-  function openEditLink(idx: number) {
-    const links = character.links ?? [];
-    const link  = links[idx];
-    setLinkLabelVal(link?.label ?? '');
-    setLinkUrlVal(link?.url ?? '');
-    setEditingLinkIdx(idx);
-  }
   function openAddLink() {
-    setLinkLabelVal('');
-    setLinkUrlVal('');
-    setEditingLinkIdx((character.links ?? []).length);
+    setLinkEditIdx(null);
+    setLinkHandle('');
+    setLinkOtherLabel('');
+    setLinkPlatform(null);
+    setLinkMode('picking');
+  }
+  function openEditLink(idx: number) {
+    const link = (character.links ?? [])[idx];
+    if (!link) return;
+    const plat = getPlatform(link.platform) ?? SOCIAL_PLATFORMS.find(p => link.url.startsWith(p.prefix) && p.key !== 'other') ?? getPlatform('other')!;
+    const handle = extractHandle(link.url, plat.prefix);
+    setLinkEditIdx(idx);
+    setLinkPlatform(plat);
+    setLinkHandle(handle);
+    setLinkOtherLabel(plat.key === 'other' ? link.label : '');
+    setLinkMode('entering');
+  }
+  function selectPlatform(p: SocialPlatform) {
+    setLinkPlatform(p);
+    setLinkHandle('');
+    setLinkOtherLabel('');
+    setLinkMode('entering');
   }
   function saveLink() {
-    if (editingLinkIdx === null) return;
-    const label = linkLabelVal.trim();
-    const url   = linkUrlVal.trim();
-    if (!label || !url) { setEditingLinkIdx(null); return; }
+    if (!linkPlatform) return;
+    const handle = linkHandle.trim().replace(/^@/, '');
+    if (!handle) { cancelLink(); return; }
+    const url   = linkPlatform.key === 'other' ? handle : `${linkPlatform.prefix}${handle}`;
+    const label = linkPlatform.key === 'other' ? (linkOtherLabel.trim() || 'Link') : linkPlatform.label;
     const links = [...(character.links ?? [])];
-    links[editingLinkIdx] = { label, url };
+    const newLink = { label, url, platform: linkPlatform.key };
+    if (linkEditIdx !== null) {
+      links[linkEditIdx] = newLink;
+    } else {
+      links.push(newLink);
+    }
     setCharacter({ ...character, links });
-    setEditingLinkIdx(null);
+    cancelLink();
+  }
+  function cancelLink() {
+    setLinkMode('none');
+    setLinkPlatform(null);
+    setLinkHandle('');
+    setLinkEditIdx(null);
   }
   function removeLink(idx: number) {
     const links = (character.links ?? []).filter((_, i) => i !== idx);
     setCharacter({ ...character, links });
+    cancelLink();
   }
 
   async function pickAvatar() {
@@ -747,13 +807,15 @@ export default function CharacterScreen() {
             </View>
 
             {/* Links */}
-            <View style={[styles.aboutRow, { borderTopColor: 'rgba(155,120,255,0.15)', borderTopWidth: 0.75, flexDirection: 'column', alignItems: 'stretch', gap: 8 }]}>
+            <View style={[styles.aboutRow, { borderTopColor: 'rgba(155,120,255,0.15)', borderTopWidth: 0.75, flexDirection: 'column', alignItems: 'stretch', gap: 10 }]}>
+
+              {/* Row header */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={[styles.aboutIconWrap, { backgroundColor: 'rgba(155,120,255,0.18)' }]}>
                   <Icon name="link" size={13} color="rgba(190,160,255,0.90)" />
                 </View>
-                <Text style={[styles.aboutLabel, { color: 'rgba(200,180,255,0.55)', flex: 1 }]}>Links</Text>
-                {(character.links ?? []).length < 6 && (
+                <Text style={[styles.aboutLabel, { color: 'rgba(200,180,255,0.55)', flex: 1 }]}>Socials</Text>
+                {linkMode === 'none' && (character.links ?? []).length < 6 && (
                   <TouchableOpacity
                     style={[styles.linkAddBtn, { backgroundColor: 'rgba(155,120,255,0.16)', borderColor: 'rgba(155,120,255,0.36)' }]}
                     onPress={openAddLink}
@@ -762,55 +824,103 @@ export default function CharacterScreen() {
                     <Text style={[styles.linkAddText, { color: 'rgba(190,160,255,0.90)' }]}>Add</Text>
                   </TouchableOpacity>
                 )}
+                {linkMode !== 'none' && (
+                  <TouchableOpacity onPress={cancelLink} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.60)' }}>Cancel</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              {(character.links ?? []).map((link, idx) => (
-                <View key={idx} style={[styles.linkItemRow, { backgroundColor: 'rgba(155,120,255,0.10)', borderColor: 'rgba(155,120,255,0.24)' }]}>
-                  {editingLinkIdx === idx ? (
-                    <View style={{ flex: 1, gap: 5 }}>
-                      <TextInput
-                        style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
-                        value={linkLabelVal} onChangeText={setLinkLabelVal}
-                        placeholder="Label" placeholderTextColor="rgba(200,180,255,0.35)"
-                        returnKeyType="next"
-                      />
-                      <TextInput
-                        style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
-                        value={linkUrlVal} onChangeText={setLinkUrlVal}
-                        placeholder="https://..." placeholderTextColor="rgba(200,180,255,0.35)"
-                        autoCapitalize="none" keyboardType="url"
-                        returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
-                        autoFocus
-                      />
+
+              {/* Existing links */}
+              {(character.links ?? []).map((link, idx) => {
+                const plat = getPlatform(link.platform) ?? SOCIAL_PLATFORMS.find(p => link.url.startsWith(p.prefix) && p.key !== 'other');
+                const handle = plat ? extractHandle(link.url, plat.prefix) : link.url;
+                const isEditing = linkMode === 'entering' && linkEditIdx === idx;
+                return (
+                  <View key={idx} style={[styles.socialLinkRow, { borderColor: isEditing ? (plat?.color ?? 'rgba(155,120,255,0.55)') + '80' : 'rgba(155,120,255,0.18)' }]}>
+                    {/* Platform badge */}
+                    <View style={[styles.socialBadge, { backgroundColor: (plat?.color ?? '#6B5B95') + '22' }]}>
+                      <Text style={styles.socialIcon}>{plat?.icon ?? '🔗'}</Text>
                     </View>
-                  ) : (
-                    <>
-                      <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLink(idx)} activeOpacity={0.75}>
-                        <Text style={[styles.aboutValue, { color: '#EDE8FF' }]}>{link.label}</Text>
-                        <Text style={[{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.52)', marginTop: 1 }]} numberOfLines={1}>{link.url}</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => removeLink(idx)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                        <Icon name="x" size={13} color="rgba(180,150,255,0.55)" />
-                      </TouchableOpacity>
-                    </>
-                  )}
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLink(idx)} activeOpacity={0.75}>
+                      <Text style={styles.socialPlatformName}>{plat?.label ?? link.label}</Text>
+                      <Text style={styles.socialHandle} numberOfLines={1}>
+                        {plat && plat.key !== 'other' ? `@${handle}` : handle}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => removeLink(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Icon name="x" size={14} color="rgba(180,150,255,0.50)" />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+
+              {/* Platform picker grid */}
+              {linkMode === 'picking' && (
+                <View style={styles.platformGrid}>
+                  {SOCIAL_PLATFORMS.map(p => (
+                    <TouchableOpacity
+                      key={p.key}
+                      style={[styles.platformChip, { borderColor: p.color + '55' }]}
+                      onPress={() => selectPlatform(p)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={[styles.platformChipIcon, { backgroundColor: p.color + '22' }]}>
+                        <Text style={{ fontSize: 16 }}>{p.icon}</Text>
+                      </View>
+                      <Text style={styles.platformChipLabel}>{p.label}</Text>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              ))}
-              {editingLinkIdx === (character.links ?? []).length && (
-                <View style={[styles.linkItemRow, { backgroundColor: 'rgba(155,120,255,0.10)', borderColor: 'rgba(155,120,255,0.55)' }]}>
-                  <View style={{ flex: 1, gap: 5 }}>
+              )}
+
+              {/* Handle input */}
+              {linkMode === 'entering' && linkPlatform && (
+                <View style={[styles.handleInputCard, { borderColor: (linkPlatform.color) + '55' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <View style={[styles.socialBadge, { backgroundColor: linkPlatform.color + '22' }]}>
+                      <Text style={styles.socialIcon}>{linkPlatform.icon}</Text>
+                    </View>
+                    <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#EDE8FF' }}>{linkPlatform.label}</Text>
+                    {linkPlatform.key !== 'other' && (
+                      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.45)', flex: 1 }} numberOfLines={1}>
+                        {linkPlatform.prefix}
+                      </Text>
+                    )}
+                  </View>
+                  {linkPlatform.key === 'other' && (
                     <TextInput
-                      style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
-                      value={linkLabelVal} onChangeText={setLinkLabelVal}
-                      placeholder="Label" placeholderTextColor="rgba(200,180,255,0.35)"
-                      returnKeyType="next" autoFocus
+                      style={[styles.handleInput, { marginBottom: 6 }]}
+                      value={linkOtherLabel}
+                      onChangeText={setLinkOtherLabel}
+                      placeholder="Label (e.g. My Blog)"
+                      placeholderTextColor="rgba(200,180,255,0.35)"
+                      returnKeyType="next"
                     />
+                  )}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    {linkPlatform.key !== 'other' && (
+                      <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.55)' }}>@</Text>
+                    )}
                     <TextInput
-                      style={[styles.aboutInput, { color: '#EDE8FF', borderColor: 'rgba(155,120,255,0.55)', backgroundColor: 'rgba(155,120,255,0.08)' }]}
-                      value={linkUrlVal} onChangeText={setLinkUrlVal}
-                      placeholder="https://..." placeholderTextColor="rgba(200,180,255,0.35)"
-                      autoCapitalize="none" keyboardType="url"
-                      returnKeyType="done" onSubmitEditing={saveLink} onBlur={saveLink}
+                      style={[styles.handleInput, { flex: 1 }]}
+                      value={linkHandle}
+                      onChangeText={setLinkHandle}
+                      placeholder={linkPlatform.placeholder}
+                      placeholderTextColor="rgba(200,180,255,0.35)"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType={linkPlatform.key === 'other' ? 'url' : 'default'}
+                      returnKeyType="done"
+                      onSubmitEditing={saveLink}
+                      autoFocus
                     />
+                    <TouchableOpacity
+                      style={[styles.saveLinkBtn, { backgroundColor: linkPlatform.color + 'CC' }]}
+                      onPress={saveLink}
+                    >
+                      <Icon name="check" size={14} color="#fff" />
+                    </TouchableOpacity>
                   </View>
                 </View>
               )}
@@ -1712,6 +1822,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     borderRadius: 10, borderWidth: 0.75,
     paddingHorizontal: 10, paddingVertical: 8,
+  },
+
+  // Social links
+  socialLinkRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 12, borderWidth: 0.75,
+    backgroundColor: 'rgba(155,120,255,0.07)',
+    paddingHorizontal: 10, paddingVertical: 9,
+  },
+  socialBadge: {
+    width: 34, height: 34, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  socialIcon: { fontSize: 17, lineHeight: 20 },
+  socialPlatformName: {
+    fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', lineHeight: 16,
+  },
+  socialHandle: {
+    fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.55)', marginTop: 1,
+  },
+  platformGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+    paddingTop: 2,
+  },
+  platformChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    borderWidth: 1, borderRadius: 12,
+    backgroundColor: 'rgba(155,120,255,0.06)',
+    paddingHorizontal: 10, paddingVertical: 7,
+    minWidth: '43%', flexGrow: 1,
+  },
+  platformChipIcon: {
+    width: 28, height: 28, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  platformChipLabel: {
+    fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#EDE8FF',
+  },
+  handleInputCard: {
+    borderWidth: 1, borderRadius: 14,
+    backgroundColor: 'rgba(155,120,255,0.07)',
+    paddingHorizontal: 12, paddingVertical: 12,
+  },
+  handleInput: {
+    fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#EDE8FF',
+    backgroundColor: 'rgba(155,120,255,0.10)',
+    borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)',
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+  },
+  saveLinkBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
   },
 
   // Gallery

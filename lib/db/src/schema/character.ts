@@ -1,8 +1,9 @@
 import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export interface ProfileLink {
-  label: string;
-  url:   string;
+  label:     string;
+  url:       string;
+  platform?: string;
 }
 
 export const characterTable = pgTable("character", {
