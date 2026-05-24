@@ -465,7 +465,7 @@ export default function CharacterScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
 
         {/* ── Banner ──────────────────────────────────────────────── */}
-        <View style={[styles.banner, { height: topPad + 110 }]}>
+        <View style={[styles.banner, { height: topPad + 230 }]}>
           <LinearGradient colors={['#0A0818', '#18083C', '#2C1462']} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
           <View style={[styles.orbA, { backgroundColor: 'rgba(120,86,255,0.08)' }]} />
           <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.06)' }]} />
@@ -489,123 +489,179 @@ export default function CharacterScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Avatar inside banner — centered, large */}
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 52 }}>
+            <View style={styles.avatarCenter}>
+              <Animated.View style={[
+                styles.avatarGlow,
+                { backgroundColor: colors.glowPurple },
+                { transform: [{ scale: glowScale }], opacity: glowOpacity },
+              ]} />
+              <View style={[styles.avatarRingOuter, { borderColor: colors.primary }]}>
+                <View style={[styles.avatarRingInner, { borderColor: `${colors.primary}40`, backgroundColor: colors.card }]}>
+                  <Image source={avatarSource} style={styles.avatarImg} contentFit="cover" />
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                onPress={pickAvatar}
+                activeOpacity={0.75}
+              >
+                {avatarUploading
+                  ? <ActivityIndicator size="small" color={colors.primary} />
+                  : <Icon name="camera" size={11} color={colors.primary} />
+                }
+              </TouchableOpacity>
+            </View>
+            {avatarError ? (
+              <Text style={{ color: '#DC2626', fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'center', marginTop: 6 }}>
+                {avatarError}
+              </Text>
+            ) : null}
+          </View>
         </View>
 
-        {/* ── Avatar — centered, glowing ───────────────────────────── */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarCenter}>
-            {/* Animated outer glow */}
-            <Animated.View style={[
-              styles.avatarGlow,
-              { backgroundColor: colors.glowPurple },
-              { transform: [{ scale: glowScale }], opacity: glowOpacity },
-            ]} />
-            {/* Gradient ring */}
-            <View style={[styles.avatarRingOuter, { borderColor: colors.primary }]}>
-              <View style={[styles.avatarRingInner, { borderColor: `${colors.primary}40`, backgroundColor: colors.card }]}>
-                <Image source={avatarSource} style={styles.avatarImg} contentFit="cover" />
-              </View>
-            </View>
-            {/* Camera badge */}
-            <TouchableOpacity
-              style={[styles.avatarEditBadge, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
-              onPress={pickAvatar}
-              activeOpacity={0.75}
-            >
-              {avatarUploading
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <Icon name="camera" size={11} color={colors.primary} />
-              }
-            </TouchableOpacity>
-          </View>
-          {avatarError ? (
-            <Text style={{ color: '#DC2626', fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'center', marginTop: 6 }}>
-              {avatarError}
-            </Text>
-          ) : null}
-
-          {/* Name + username + bio — centered */}
-          <View style={styles.nameSection}>
-            {editingName ? (
-              <View style={[styles.nameEditWrap, { borderBottomColor: colors.primary }]}>
-                <TextInput
-                  style={[styles.nameEditInput, { color: colors.foreground }]}
-                  value={nameVal} onChangeText={setNameVal}
-                  autoFocus returnKeyType="done"
-                  onSubmitEditing={saveName} onBlur={saveName}
-                />
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.nameRow} onPress={() => setEditingName(true)}>
-                <Text style={[styles.name, { color: colors.foreground }]}>{character.name}</Text>
-                <View style={[styles.editHint, { backgroundColor: colors.muted }]}>
-                  <Icon name="edit-2" size={11} color={colors.mutedForeground} />
-                </View>
-              </TouchableOpacity>
-            )}
-
-            {editingUsername ? (
-              <View style={[styles.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: colors.muted }]}>
-                <Text style={[styles.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
-                <TextInput
-                  style={[styles.usernameEditInput, { color: colors.foreground }]}
-                  value={usernameVal}
-                  onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
-                  autoFocus autoCapitalize="none" autoCorrect={false}
-                  returnKeyType="done" onSubmitEditing={saveUsername} onBlur={saveUsername}
-                  placeholder="your_handle" placeholderTextColor={colors.mutedForeground}
-                  maxLength={20}
-                />
-                {usernameChecking && <ActivityIndicator size="small" color={colors.primary} />}
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.usernameRow}
-                onPress={() => { setUsernameVal(character.username ?? ''); setEditingUsername(true); setUsernameError(null); }}
-              >
-                {character.username ? (
-                  <Text style={[styles.usernameText, { color: colors.primary }]}>@{character.username}</Text>
-                ) : (
-                  <Text style={[styles.usernamePlaceholder, { color: `${colors.mutedForeground}70` }]}>{t('profile.setUsername')}</Text>
-                )}
-                <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginTop: 1 }} />
-              </TouchableOpacity>
-            )}
-            {usernameError && (
-              <Text style={[styles.usernameError, { color: colors.destructive }]}>{usernameError}</Text>
-            )}
-
-            {editingBio ? (
+        {/* ── Floating profile card ─────────────────────────────────── */}
+        <View style={[styles.profileCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.md]}>
+          {/* Name row */}
+          {editingName ? (
+            <View style={[styles.nameEditWrap, { borderBottomColor: colors.primary }]}>
               <TextInput
-                style={[styles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
-                value={bioVal} onChangeText={setBioVal}
-                multiline autoFocus returnKeyType="done" onBlur={saveBio}
+                style={[styles.nameEditInput, { color: colors.foreground }]}
+                value={nameVal} onChangeText={setNameVal}
+                autoFocus returnKeyType="done"
+                onSubmitEditing={saveName} onBlur={saveName}
               />
-            ) : (
-              <TouchableOpacity style={styles.bioRow} onPress={() => setEditingBio(true)}>
-                <Text style={[styles.bio, { color: character.bio ? colors.mutedForeground : `${colors.mutedForeground}60` }]}>
-                  {character.bio || t('profile.tapBio')}
-                </Text>
-                <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} style={{ marginTop: 2 }} />
-              </TouchableOpacity>
-            )}
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.nameRow} onPress={() => setEditingName(true)}>
+              <Text style={[styles.name, { color: colors.foreground }]}>{character.name}</Text>
+              <View style={[styles.nameBadge, { backgroundColor: `${colors.gold}20`, borderColor: `${colors.gold}35` }]}>
+                <Text style={{ fontSize: 12 }}>✦</Text>
+              </View>
+              <View style={[styles.editHint, { backgroundColor: colors.muted }]}>
+                <Icon name="edit-2" size={11} color={colors.mutedForeground} />
+              </View>
+            </TouchableOpacity>
+          )}
 
-            {/* Mood badge — tap to change */}
+          {/* @username */}
+          {editingUsername ? (
+            <View style={[styles.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: colors.muted }]}>
+              <Text style={[styles.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
+              <TextInput
+                style={[styles.usernameEditInput, { color: colors.foreground }]}
+                value={usernameVal}
+                onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
+                autoFocus autoCapitalize="none" autoCorrect={false}
+                returnKeyType="done" onSubmitEditing={saveUsername} onBlur={saveUsername}
+                placeholder="your_handle" placeholderTextColor={colors.mutedForeground}
+                maxLength={20}
+              />
+              {usernameChecking && <ActivityIndicator size="small" color={colors.primary} />}
+            </View>
+          ) : (
             <TouchableOpacity
-              style={styles.moodRow}
+              style={styles.usernameRow}
+              onPress={() => { setUsernameVal(character.username ?? ''); setEditingUsername(true); setUsernameError(null); }}
+            >
+              {character.username ? (
+                <Text style={[styles.usernameText, { color: colors.primary }]}>@{character.username}</Text>
+              ) : (
+                <Text style={[styles.usernamePlaceholder, { color: `${colors.mutedForeground}70` }]}>{t('profile.setUsername')}</Text>
+              )}
+              <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginTop: 1 }} />
+            </TouchableOpacity>
+          )}
+          {usernameError && (
+            <Text style={[styles.usernameError, { color: colors.destructive }]}>{usernameError}</Text>
+          )}
+
+          {/* Bio */}
+          {editingBio ? (
+            <TextInput
+              style={[styles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
+              value={bioVal} onChangeText={setBioVal}
+              multiline autoFocus returnKeyType="done" onBlur={saveBio}
+            />
+          ) : (
+            <TouchableOpacity style={styles.bioRow} onPress={() => setEditingBio(true)}>
+              <Text style={[styles.bio, { color: character.bio ? colors.mutedForeground : `${colors.mutedForeground}60` }]}>
+                {character.bio || t('profile.tapBio')}
+              </Text>
+              <Icon name="edit-2" size={11} color={`${colors.mutedForeground}55`} style={{ marginTop: 2 }} />
+            </TouchableOpacity>
+          )}
+
+          {/* Mood badge + trait chips in one horizontal scroll row */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.traitChipsScroll} contentContainerStyle={styles.traitChipsRow}>
+            <TouchableOpacity
               onPress={() => { Haptics.selectionAsync(); setShowMoodPicker(true); }}
               activeOpacity={0.75}
+              style={{ marginRight: 6 }}
             >
               <MoodBadge mood={character.mood || 'Hopeful'} />
-              <Icon name="edit-2" size={10} color={`${colors.mutedForeground}55`} style={{ marginLeft: 4, marginTop: 1 }} />
             </TouchableOpacity>
-          </View>
-        </View>
+            {character.traits.map(tr => (
+              <View key={tr} style={[styles.traitChip, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}28` }]}>
+                <Text style={[styles.traitText, { color: colors.primary }]}>{tr}</Text>
+                <TouchableOpacity
+                  onPress={() => removeTrait(tr)}
+                  hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+                  style={[styles.traitRemove, { backgroundColor: `${colors.primary}18` }]}
+                >
+                  <Icon name="x" size={9} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity
+              style={[styles.traitAddBtn, { borderColor: `${colors.primary}28`, backgroundColor: `${colors.primary}06` }]}
+              onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}
+            >
+              <Icon name="plus" size={12} color={colors.primary} />
+              <Text style={[styles.traitAddText, { color: colors.primary }]}>{t('profile.addTrait')}</Text>
+            </TouchableOpacity>
+          </ScrollView>
 
-        <View style={[styles.body, { paddingHorizontal: gridPad }]}>
+          {/* Trait add input (appears when addingTrait) */}
+          {addingTrait && (
+            <View style={[styles.traitAddWrap, { borderColor: colors.primary, backgroundColor: `${colors.primary}06`, marginTop: 8 }]}>
+              <TextInput
+                style={[styles.traitInput, { color: colors.foreground }]}
+                value={newTrait}
+                onChangeText={tr => { setNewTrait(tr); setShowSuggestions(true); }}
+                placeholder={t('profile.traitPlaceholder')}
+                placeholderTextColor={colors.mutedForeground}
+                autoFocus returnKeyType="done"
+                onSubmitEditing={() => addTrait(newTrait)}
+                onBlur={() => setTimeout(() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }, 200)}
+              />
+              <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
+                <Icon name="x" size={13} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+          )}
+          {showSuggestions && suggestions.length > 0 && (
+            <View style={styles.suggRow}>
+              <Text style={[styles.suggLabel, { color: colors.mutedForeground }]}>{t('profile.suggestions')}</Text>
+              <View style={styles.suggChips}>
+                {suggestions.slice(0, 8).map(s => (
+                  <TouchableOpacity
+                    key={s}
+                    style={[styles.suggChip, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                    onPress={() => addTrait(s)}
+                  >
+                    <Icon name="plus" size={10} color={colors.mutedForeground} />
+                    <Text style={[styles.suggText, { color: colors.mutedForeground }]}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
-          {/* ── Stats card ──────────────────────────────────────── */}
-          <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+          {/* Stats row */}
+          <View style={[styles.profileCardStats, { borderTopColor: colors.border }]}>
             <TouchableOpacity style={styles.statItem} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.7}>
               <Text style={[styles.statNum, { color: colors.primary }]}>{stories.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('profile.stories')}</Text>
@@ -621,6 +677,9 @@ export default function CharacterScreen() {
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('discover.witnessed')}</Text>
             </View>
           </View>
+        </View>
+
+        <View style={[styles.body, { paddingHorizontal: 16, paddingTop: 16 }]}>
 
           {/* ── About me card (birthday / country / links) ────── */}
           <View style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
@@ -760,108 +819,155 @@ export default function CharacterScreen() {
             </View>
           </View>
 
-          {/* ── My Stories card ──────────────────────────────── */}
-          <TouchableOpacity
-            style={[styles.sectionCard, { backgroundColor: colors.card, borderColor: `${colors.primary}28` }, SHADOW.sm]}
-            onPress={() => { Haptics.selectionAsync(); router.push('/my-stories' as any); }}
-            activeOpacity={0.86}
-          >
-            <View style={styles.sectionCardHeader}>
-              <View style={styles.sectionCardLeft}>
-                <View style={[styles.sectionCardIcon, { backgroundColor: `${colors.primary}20` }]}>
-                  <Icon name="book-open" size={15} color={colors.primary} />
-                </View>
-                <View>
-                  <Text style={[styles.sectionCardTitle, { color: colors.foreground }]}>{t('profile.myStories')}</Text>
-                  <Text style={[styles.sectionCardSub, { color: colors.mutedForeground }]}>
-                    {stories.length === 0 ? t('profile.writeFirstChapter') : stories.length === 1 ? t('profile.storyChapters', { n: 1 }) : t('profile.storyChaptersPlural', { n: stories.length })}
+          {/* ── Current Outfit spotlight ──────────────────────────── */}
+          {activeOutfit && (
+            <View style={[styles.spotlightCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}>
+              <Text style={[styles.spotlightLabel, { color: colors.mutedForeground }]}>Current Outfit</Text>
+              <View style={styles.spotlightRow}>
+                {/* Left: outfit image */}
+                <TouchableOpacity
+                  style={styles.spotlightImageWrap}
+                  onPress={() => openOutfit(activeOutfit.id)}
+                  activeOpacity={0.88}
+                >
+                  {activeOutfit.imageUri ? (
+                    <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  ) : (
+                    <LinearGradient colors={[`${colors.primary}55`, `${colors.primary}1A`]} style={StyleSheet.absoluteFill} />
+                  )}
+                  <LinearGradient colors={['transparent', 'rgba(8,6,22,0.85)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
+                    <Text style={styles.spotlightName} numberOfLines={2}>{activeOutfit.name}</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+                {/* Right: info */}
+                <View style={styles.spotlightInfo}>
+                  <Text style={[styles.spotlightAboutLabel, { color: `${colors.mutedForeground}80` }]}>About this look</Text>
+                  <Text style={[styles.spotlightDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
+                    {activeOutfit.description || activeOutfit.name}
                   </Text>
+                  <View style={styles.spotlightTags}>
+                    {(activeOutfit.tags ?? []).slice(0, 3).map(tag => (
+                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
+                        <Text style={[styles.spotlightTagText, { color: colors.primary }]}>{tag}</Text>
+                      </View>
+                    ))}
+                    {(activeOutfit.tags ?? []).length === 0 && (
+                      <View style={[styles.spotlightTag, { backgroundColor: `${colors.gold}14`, borderColor: `${colors.gold}28` }]}>
+                        <Text style={[styles.spotlightTagText, { color: colors.gold }]}>Displayed</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-              </View>
-              <View style={[styles.arrowCircle, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
-                <Icon name="arrow-right" size={14} color={colors.primary} />
               </View>
             </View>
-            {stories.length > 0 ? (
-              <View style={styles.thumbsRow}>
-                {stories.slice(0, 4).map((story, i) => {
-                  const cover      = getCover(story);
-                  const moodColor  = MOOD_COLORS[story.mood] ?? colors.primary;
+          )}
+
+          {/* ── Other Outfits horizontal row ─────────────────────── */}
+          {outfits.length > 0 && (
+            <View style={styles.hSection}>
+              <View style={styles.hSectionHeader}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
+                <TouchableOpacity onPress={() => router.push('/wardrobe' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={[styles.hSectionLink, { color: colors.primary }]}>View all ›</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
+                {outfits.slice(0, 8).map(outfit => {
+                  const isActive = outfit.id === activeOutfitId;
                   return (
-                    <View key={story.id} style={[styles.storyThumb, { marginLeft: i > 0 ? 8 : 0 }, i === 0 && { flex: 1.4 }]}>
+                    <TouchableOpacity
+                      key={outfit.id}
+                      style={[styles.hOutfitCard, { backgroundColor: colors.card, borderColor: isActive ? colors.primary : colors.border }]}
+                      onPress={() => openOutfit(outfit.id)}
+                      activeOpacity={0.85}
+                    >
+                      {outfit.imageUri ? (
+                        <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                      ) : (
+                        <LinearGradient colors={[`${colors.primary}50`, `${colors.primary}18`]} style={StyleSheet.absoluteFill} />
+                      )}
+                      <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
+                        <Text style={styles.hOutfitName} numberOfLines={2}>{outfit.name}</Text>
+                        {isActive && (
+                          <View style={[styles.hActivePill, { backgroundColor: colors.primary }]}>
+                            <Text style={styles.hActivePillText}>Worn</Text>
+                          </View>
+                        )}
+                      </LinearGradient>
+                      {(outfit.tags ?? []).length > 0 && (
+                        <View style={[styles.hRarityPill, { backgroundColor: 'rgba(8,6,22,0.75)', top: 7, left: 7 }]}>
+                          <Text style={[styles.hRarityText, { color: 'rgba(220,200,255,0.9)' }]}>{outfit.tags[0]}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={[styles.hAddCard, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}28` }]}
+                  onPress={() => router.push('/create-outfit' as any)}
+                  activeOpacity={0.8}
+                >
+                  <Icon name="plus" size={22} color={`${colors.primary}70`} />
+                  <Text style={[styles.hAddText, { color: `${colors.primary}70` }]}>Add</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          )}
+          {outfits.length === 0 && (
+            <TouchableOpacity
+              style={[styles.emptyOutfitCard, { borderColor: `${colors.primary}20`, backgroundColor: `${colors.primary}06` }]}
+              onPress={() => router.push('/create-outfit' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.emptyOutfitIcon, { backgroundColor: `${colors.primary}14` }]}>
+                <Icon name="wind" size={22} color={`${colors.primary}80`} />
+              </View>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={[styles.emptyOutfitTitle, { color: colors.foreground }]}>{t('profile.emptyOutfitTitle')}</Text>
+                <Text style={[styles.emptyOutfitSub, { color: colors.mutedForeground }]}>{t('profile.emptyOutfitSub')}</Text>
+              </View>
+              <Icon name="arrow-right" size={14} color={`${colors.primary}60`} />
+            </TouchableOpacity>
+          )}
+
+          {/* ── Stories horizontal row ───────────────────────────── */}
+          {stories.length > 0 && (
+            <View style={styles.hSection}>
+              <View style={styles.hSectionHeader}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('profile.stories')}</Text>
+                <TouchableOpacity onPress={() => router.push('/my-stories' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={[styles.hSectionLink, { color: colors.primary }]}>View all ›</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
+                {stories.slice(0, 8).map(story => {
+                  const cover     = getCover(story);
+                  const moodColor = MOOD_COLORS[story.mood] ?? colors.primary;
+                  return (
+                    <TouchableOpacity
+                      key={story.id}
+                      style={[styles.hStoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => router.push({ pathname: '/story/[id]', params: { id: story.id } } as any)}
+                      activeOpacity={0.88}
+                    >
                       {cover ? (
                         <Image source={cover} style={StyleSheet.absoluteFill} contentFit="cover" />
                       ) : (
                         <LinearGradient colors={[`${moodColor}55`, `${moodColor}18`]} style={StyleSheet.absoluteFill} />
                       )}
-                      <LinearGradient colors={['transparent', 'rgba(8,6,22,0.82)']} style={styles.thumbGrad} />
-                      <Text style={styles.thumbTitle} numberOfLines={2}>{story.chapterTitle}</Text>
-                    </View>
+                      <LinearGradient colors={['transparent', 'rgba(8,6,22,0.88)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
+                        <Text style={styles.hStoryTitle} numberOfLines={2}>{story.chapterTitle}</Text>
+                      </LinearGradient>
+                      <View style={[styles.hViewCount, { backgroundColor: 'rgba(8,6,22,0.65)' }]}>
+                        <Icon name="eye" size={10} color="rgba(220,200,255,0.85)" />
+                        <Text style={styles.hViewCountText}>{story.witnessedCount}</Text>
+                      </View>
+                    </TouchableOpacity>
                   );
                 })}
-                {stories.length > 4 && (
-                  <View style={[styles.thumbMore, { backgroundColor: `${colors.primary}14`, marginLeft: 8 }]}>
-                    <Text style={[styles.thumbMoreText, { color: colors.primary }]}>+{stories.length - 4}</Text>
-                  </View>
-                )}
-              </View>
-            ) : (
-              <View style={[styles.emptyHint, { borderColor: `${colors.primary}18` }]}>
-                <Icon name="star" size={20} color={`${colors.primary}40`} />
-                <Text style={[styles.emptyHintText, { color: colors.mutedForeground }]}>{t('profile.emptyStories')}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          {/* ── Outfit grid ───────────────────────────────────── */}
-          <View style={[styles.section, { borderTopColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
-                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>
-                  {outfits.length === 0 ? t('profile.logFirstOutfit') : outfits.length === 1 ? t('profile.outfitsTapView', { n: 1 }) : t('profile.outfitsTapViewPlural', { n: outfits.length })}
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.addBtn, { backgroundColor: colors.primary }]}
-                onPress={() => { Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
-              >
-                <Icon name="plus" size={13} color="#fff" />
-                <Text style={styles.addBtnText}>{t('profile.add')}</Text>
-              </TouchableOpacity>
+              </ScrollView>
             </View>
-
-            {outfits.length === 0 ? (
-              <TouchableOpacity
-                style={[styles.emptyOutfitCard, { borderColor: `${colors.primary}20`, backgroundColor: `${colors.primary}06` }]}
-                onPress={() => router.push('/create-outfit' as any)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.emptyOutfitIcon, { backgroundColor: `${colors.primary}14` }]}>
-                  <Icon name="wind" size={22} color={`${colors.primary}80`} />
-                </View>
-                <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={[styles.emptyOutfitTitle, { color: colors.foreground }]}>{t('profile.emptyOutfitTitle')}</Text>
-                  <Text style={[styles.emptyOutfitSub, { color: colors.mutedForeground }]}>
-                    {t('profile.emptyOutfitSub')}
-                  </Text>
-                </View>
-                <Icon name="arrow-right" size={14} color={`${colors.primary}60`} />
-              </TouchableOpacity>
-            ) : (
-              <View style={[styles.outfitGrid, { gap: gridGap }]}>
-                {outfits.map(outfit => (
-                  <OutfitGridCard
-                    key={outfit.id}
-                    outfit={outfit}
-                    isActive={outfit.id === activeOutfitId}
-                    cardW={cardW}
-                    onPress={() => openOutfit(outfit.id)}
-                  />
-                ))}
-              </View>
-            )}
-          </View>
+          )}
 
           {/* ── My Gallery ──────────────────────────────────────── */}
           <View style={[styles.section, { borderTopColor: colors.border }]}>
@@ -929,74 +1035,6 @@ export default function CharacterScreen() {
                     />
                   </TouchableOpacity>
                 ))}
-              </View>
-            )}
-          </View>
-
-          {/* ── Attributes ────────────────────────────────────── */}
-          <View style={[styles.section, { borderTopColor: colors.border }]}>
-            <View style={styles.sectionHeader}>
-              <View>
-                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{t('profile.traits')}</Text>
-                <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>{t('profile.defineCharacter')}</Text>
-              </View>
-            </View>
-
-            <View style={styles.traitsWrap}>
-              {character.traits.map(t => (
-                <View key={t} style={[styles.traitChip, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}28` }]}>
-                  <Text style={[styles.traitText, { color: colors.primary }]}>{t}</Text>
-                  <TouchableOpacity
-                    onPress={() => removeTrait(t)}
-                    hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                    style={[styles.traitRemove, { backgroundColor: `${colors.primary}18` }]}
-                  >
-                    <Icon name="x" size={9} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              {addingTrait ? (
-                <View style={[styles.traitAddWrap, { borderColor: colors.primary, backgroundColor: `${colors.primary}06` }]}>
-                  <TextInput
-                    style={[styles.traitInput, { color: colors.foreground }]}
-                    value={newTrait}
-                    onChangeText={t => { setNewTrait(t); setShowSuggestions(true); }}
-                    placeholder={t('profile.traitPlaceholder')}
-                    placeholderTextColor={colors.mutedForeground}
-                    autoFocus returnKeyType="done"
-                    onSubmitEditing={() => addTrait(newTrait)}
-                    onBlur={() => setTimeout(() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }, 200)}
-                  />
-                  <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
-                    <Icon name="x" size={13} color={colors.mutedForeground} />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={[styles.traitAddBtn, { borderColor: `${colors.primary}28`, backgroundColor: `${colors.primary}06` }]}
-                  onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}
-                >
-                  <Icon name="plus" size={12} color={colors.primary} />
-                  <Text style={[styles.traitAddText, { color: colors.primary }]}>{t('profile.addTrait')}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {showSuggestions && suggestions.length > 0 && (
-              <View style={styles.suggRow}>
-                <Text style={[styles.suggLabel, { color: colors.mutedForeground }]}>{t('profile.suggestions')}</Text>
-                <View style={styles.suggChips}>
-                  {suggestions.slice(0, 8).map(s => (
-                    <TouchableOpacity
-                      key={s}
-                      style={[styles.suggChip, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                      onPress={() => addTrait(s)}
-                    >
-                      <Icon name="plus" size={10} color={colors.mutedForeground} />
-                      <Text style={[styles.suggText, { color: colors.mutedForeground }]}>{s}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
               </View>
             )}
           </View>
@@ -1321,6 +1359,211 @@ const styles = StyleSheet.create({
   sparkleB: { fontSize: 10, bottom: 8, left: -2   },
   sparkleC: { fontSize: 12, top: 18,  left: -8   },
 
+  // Profile floating card
+  profileCard: {
+    marginTop: -48,
+    marginHorizontal: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    paddingBottom: 0,
+    gap: 6,
+  },
+  nameBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  profileCardStats: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    marginHorizontal: -20,
+    marginTop: 14,
+    paddingVertical: 14,
+  },
+  traitChipsScroll: {
+    marginTop: 8,
+    marginHorizontal: -20,
+    marginBottom: 4,
+  },
+  traitChipsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    gap: 6,
+  },
+
+  // Spotlight card (current outfit)
+  spotlightCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 14,
+    gap: 10,
+  },
+  spotlightLabel: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+  },
+  spotlightRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'stretch',
+  },
+  spotlightImageWrap: {
+    width: 120,
+    height: 140,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#100D22',
+  },
+  spotlightName: {
+    fontSize: 11,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,234,255,0.95)',
+    lineHeight: 14,
+  },
+  spotlightInfo: {
+    flex: 1,
+    gap: 6,
+    paddingTop: 2,
+  },
+  spotlightAboutLabel: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  spotlightDesc: {
+    fontSize: 13,
+    fontFamily: 'Satoshi-Regular',
+    fontStyle: 'italic',
+    lineHeight: 19,
+  },
+  spotlightTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
+    marginTop: 2,
+  },
+  spotlightTag: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 9,
+    borderWidth: 1,
+  },
+  spotlightTagText: {
+    fontSize: 11,
+    fontFamily: 'Satoshi-Medium',
+  },
+
+  // Horizontal section (outfits/stories rows)
+  hSection: {
+    marginBottom: 16,
+  },
+  hSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  hSectionTitle: {
+    fontSize: 15,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: -0.2,
+  },
+  hSectionLink: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Medium',
+  },
+  hScrollPad: {
+    paddingRight: 16,
+    gap: 10,
+  },
+  hOutfitCard: {
+    width: 100,
+    height: 130,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    position: 'relative',
+  },
+  hOutfitName: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,234,255,0.95)',
+    lineHeight: 13,
+  },
+  hActivePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginTop: 4,
+  },
+  hActivePillText: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+    color: '#fff',
+  },
+  hRarityPill: {
+    position: 'absolute',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  hRarityText: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+  },
+  hAddCard: {
+    width: 80,
+    height: 130,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  hAddText: {
+    fontSize: 11,
+    fontFamily: 'Satoshi-Medium',
+  },
+  hStoryCard: {
+    width: 110,
+    height: 150,
+    borderRadius: 14,
+    overflow: 'hidden',
+    borderWidth: 1,
+    position: 'relative',
+  },
+  hStoryTitle: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,234,255,0.95)',
+    lineHeight: 13,
+  },
+  hViewCount: {
+    position: 'absolute',
+    top: 7,
+    left: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  hViewCountText: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,200,255,0.9)',
+  },
+
   // Name / Bio
   nameSection:     { alignItems: 'center', gap: 5, paddingHorizontal: 24, marginTop: 10, marginBottom: 4 },
   nameRow:         { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -1341,7 +1584,7 @@ const styles = StyleSheet.create({
   moodRow:         { marginTop: 4 },
 
   // Body
-  body: {},
+  body: { paddingHorizontal: 16, paddingTop: 16 },
 
   // Stats
   statsCard:   { flexDirection: 'row', borderWidth: 1, borderRadius: 16, paddingVertical: 16, marginBottom: 12, marginTop: 14 },
