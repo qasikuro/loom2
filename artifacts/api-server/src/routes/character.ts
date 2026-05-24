@@ -63,8 +63,21 @@ router.put("/character", requireAuth, async (req, res) => {
   }
 
   try {
+    // Username is permanent once set — reject attempts to change it
+    const [existing] = await db
+      .select({ username: characterTable.username })
+      .from(characterTable)
+      .where(eq(characterTable.userId, userId))
+      .limit(1);
+
+    if (existing?.username && parsed.data.username !== existing.username) {
+      return res.status(409).json({ error: "Username cannot be changed once set" });
+    }
+
     const safeData = {
       ...parsed.data,
+      // If username already locked, always keep the existing one regardless of what was sent
+      username: existing?.username ?? parsed.data.username,
       avatarUri: safeImageUri(parsed.data.avatarUri),
       activeOutfitId: parsed.data.activeOutfitId ?? null,
     };

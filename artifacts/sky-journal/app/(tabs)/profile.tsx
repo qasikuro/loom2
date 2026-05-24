@@ -598,7 +598,13 @@ export default function CharacterScreen() {
                 </TouchableOpacity>
               )}
 
-              {editingUsername ? (
+              {character.username ? (
+                /* Username is permanent once set — show locked display */
+                <View style={styles.usernameRow}>
+                  <Text style={styles.profileHandle}>@{character.username}</Text>
+                  <Icon name="lock" size={9} color="rgba(200,184,232,0.35)" style={{ marginLeft: 4 }} />
+                </View>
+              ) : editingUsername ? (
                 <View style={[styles.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: 'rgba(255,255,255,0.08)' }]}>
                   <Text style={[styles.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
                   <TextInput
@@ -615,13 +621,9 @@ export default function CharacterScreen() {
               ) : (
                 <TouchableOpacity
                   style={styles.usernameRow}
-                  onPress={() => { setUsernameVal(character.username ?? ''); setEditingUsername(true); setUsernameError(null); }}
+                  onPress={() => { setUsernameVal(''); setEditingUsername(true); setUsernameError(null); }}
                 >
-                  {character.username ? (
-                    <Text style={styles.profileHandle}>@{character.username}</Text>
-                  ) : (
-                    <Text style={[styles.profileHandle, { color: 'rgba(200,184,232,0.38)', fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
-                  )}
+                  <Text style={[styles.profileHandle, { color: 'rgba(200,184,232,0.38)', fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
                   <Icon name="edit-2" size={9} color="rgba(200,184,232,0.35)" style={{ marginLeft: 3 }} />
                 </TouchableOpacity>
               )}
