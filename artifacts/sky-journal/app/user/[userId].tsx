@@ -77,11 +77,11 @@ interface PublicOutfit {
 }
 
 export default function UserProfileScreen() {
-  const { userId } = useLocalSearchParams<{ userId: string }>();
-  const colors    = useColors();
-  const { t } = useTranslation();
-  const insets    = useSafeAreaInsets();
-  const { userId: currentUserId } = useAuth();
+  const { userId }          = useLocalSearchParams<{ userId: string }>();
+  const colors              = useColors();
+  const { t }               = useTranslation();
+  const insets              = useSafeAreaInsets();
+  const { userId: meId }    = useAuth();
   const { followingIds, followUser, unfollowUser } = useApp();
 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
@@ -89,14 +89,17 @@ export default function UserProfileScreen() {
   const [outfits, setOutfits] = useState<PublicOutfit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
-  const [tab,     setTab]     = useState<'stories' | 'outfits'>('stories');
-  const [reportSheetVisible, setReportSheetVisible] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(18)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
+  const scaleAnim = useRef(new Animated.Value(0.97)).current;
 
   const isFollowing = followingIds.includes(userId ?? '');
-  const isSelf      = currentUserId === userId;
+  const isSelf      = meId === userId;
+
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 40;
 
   useEffect(() => {
     if (!userId) return;
@@ -112,11 +115,14 @@ export default function UserProfileScreen() {
         setOutfits(outs);
         Animated.parallel([
           Animated.timing(fadeAnim, {
-            toValue: 1, duration: 400,
+            toValue: 1, duration: 450,
             useNativeDriver: true, easing: Easing.out(Easing.quad),
           }),
           Animated.spring(slideAnim, {
-            toValue: 0, tension: 55, friction: 9, useNativeDriver: true,
+            toValue: 0, tension: 50, friction: 9, useNativeDriver: true,
+          }),
+          Animated.spring(scaleAnim, {
+            toValue: 1, tension: 55, friction: 9, useNativeDriver: true,
           }),
         ]).start();
       } catch {
@@ -130,17 +136,14 @@ export default function UserProfileScreen() {
   function handleFollow() {
     if (!profile) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (isFollowing) {
-      unfollowUser(profile.userId);
-    } else {
-      followUser(profile.userId);
-    }
+    if (isFollowing) unfollowUser(profile.userId);
+    else             followUser(profile.userId);
   }
 
-  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 40;
   const moodColor = MOOD_COLORS[profile?.mood ?? 'Hopeful'] ?? colors.primary;
   const initial   = (profile?.name ?? '?').charAt(0).toUpperCase();
+  const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
+  const isTopExplorer  = totalWitnessed >= 10 || stories.length >= 3;
 
   if (loading) {
     return (
@@ -158,10 +161,10 @@ export default function UserProfileScreen() {
           {error ?? 'Profile not found.'}
         </Text>
         <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+          style={[styles.backBtnErr, { backgroundColor: colors.card, borderColor: colors.border }]}
           onPress={() => router.back()}
         >
-          <Text style={[styles.backBtnText, { color: colors.primary }]}>{t('common.goBack')}</Text>
+          <Text style={[styles.backBtnErrText, { color: colors.primary }]}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -169,43 +172,53 @@ export default function UserProfileScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomPad }}
-      >
-        {/* ── Hero banner ─────────────────────────────────────── */}
-        <View style={[styles.banner, { height: topPad + 210 }]}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
+
+        {/* ── HERO BANNER ─────────────────────────────────────────── */}
+        <View style={[styles.banner, { height: topPad + 230 }]}>
           <LinearGradient
-            colors={['#2A1E5E', '#3B2C7A', '#4C3A90']}
+            colors={['#0A0818', '#1C0E4A', '#2C1462']}
             style={StyleSheet.absoluteFill}
             start={{ x: 0.1, y: 0 }}
             end={{ x: 0.9, y: 1 }}
           />
-          <View style={[styles.orbA, { backgroundColor: `${moodColor}20` }]} />
-          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.1)' }]} />
+          {/* Mood-tinted orbs */}
+          <View style={[styles.orbA, { backgroundColor: `${moodColor}22` }]} />
+          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.10)' }]} />
+          <View style={[styles.orbC, { backgroundColor: `${colors.primary}12` }]} />
 
           {/* Back button */}
           <TouchableOpacity
-            style={[styles.headerBack, { top: topPad + 10 }]}
+            style={[styles.topBtn, { top: topPad + 10, left: 16, backgroundColor: 'rgba(12,10,30,0.60)' }]}
             onPress={() => router.back()}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
-            <Icon name="arrow-left" size={18} color="rgba(220,210,255,0.9)" />
+            <Icon name="arrow-left" size={17} color="rgba(220,210,255,0.92)" />
           </TouchableOpacity>
-        </View>
 
-        {/* ── Profile body ─────────────────────────────────────── */}
-        <Animated.View
-          style={[
-            styles.body,
-            { backgroundColor: colors.background },
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
-        >
-          {/* Avatar overlapping the banner */}
-          <View style={styles.avatarArea}>
-            <View style={[styles.avatarRing, { borderColor: colors.background }]}>
-              <View style={[styles.avatarInner, { backgroundColor: `${moodColor}22` }]}>
+          {/* More / report button */}
+          <TouchableOpacity
+            style={[styles.topBtn, { top: topPad + 10, right: 16, backgroundColor: 'rgba(12,10,30,0.60)' }]}
+            onPress={() => setReportVisible(true)}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Icon name="more-horizontal" size={17} color="rgba(220,210,255,0.92)" />
+          </TouchableOpacity>
+
+          {/* Top Explorer badge */}
+          {isTopExplorer && (
+            <View style={[styles.explorerBadge, { top: topPad + 10, right: 60, backgroundColor: 'rgba(232,184,48,0.18)', borderColor: 'rgba(232,184,48,0.40)' }]}>
+              <Text style={{ fontSize: 12 }}>🏆</Text>
+              <Text style={[styles.explorerBadgeText, { color: '#E8B830' }]}>Top Explorer</Text>
+            </View>
+          )}
+
+          {/* Avatar centered in banner, floating at bottom */}
+          <View style={styles.avatarInBanner}>
+            {/* Glow ring */}
+            <View style={[styles.avatarGlowRing, { borderColor: `${moodColor}55`, backgroundColor: `${moodColor}12` }]} />
+            <View style={[styles.avatarRingOuter, { borderColor: moodColor }]}>
+              <View style={[styles.avatarRingInner, { borderColor: `${moodColor}40`, backgroundColor: colors.card }]}>
                 {profile.avatarUri ? (
                   <Image
                     source={{ uri: profile.avatarUri }}
@@ -219,55 +232,99 @@ export default function UserProfileScreen() {
               </View>
             </View>
           </View>
+        </View>
 
-          {/* Name, handle, bio */}
-          <View style={styles.nameSection}>
+        {/* ── FLOATING PROFILE CARD ───────────────────────────────── */}
+        <Animated.View
+          style={[
+            styles.profileCard,
+            { backgroundColor: colors.card, borderColor: colors.border },
+            SHADOW.md,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
+          ]}
+        >
+          {/* Name + badge */}
+          <View style={styles.nameRow}>
             <Text style={[styles.name, { color: colors.foreground }]}>{profile.name}</Text>
-            {profile.username ? (
-              <Text style={[styles.handle, { color: colors.primary }]}>@{profile.username}</Text>
-            ) : null}
-            {profile.bio ? (
-              <Text style={[styles.bio, { color: colors.mutedForeground }]}>{profile.bio}</Text>
-            ) : null}
+            <View style={[styles.nameBadge, { backgroundColor: `${colors.gold}20`, borderColor: `${colors.gold}35` }]}>
+              <Text style={{ fontSize: 12 }}>✦</Text>
+            </View>
+            {!isSelf && (
+              <TouchableOpacity
+                style={[
+                  styles.followPill,
+                  isFollowing
+                    ? { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}40` }
+                    : { backgroundColor: colors.primary, borderColor: colors.primary },
+                ]}
+                onPress={handleFollow}
+                activeOpacity={0.82}
+              >
+                <Text style={[styles.followPillText, { color: isFollowing ? colors.primary : '#fff' }]}>
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
 
-          {/* Traits */}
+          {/* @handle */}
+          {profile.username ? (
+            <Text style={[styles.handle, { color: colors.primary }]}>@{profile.username}</Text>
+          ) : null}
+
+          {/* Bio */}
+          {profile.bio ? (
+            <Text style={[styles.bio, { color: colors.mutedForeground }]} numberOfLines={3}>
+              {profile.bio}
+            </Text>
+          ) : null}
+
+          {/* Trait chips horizontal scroll */}
           {profile.traits.length > 0 && (
-            <View style={styles.traitsRow}>
-              {profile.traits.map(t => (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.traitsScroll}
+              contentContainerStyle={styles.traitsRow}
+            >
+              {profile.traits.map(tr => (
                 <View
-                  key={t}
+                  key={tr}
                   style={[styles.traitChip, { backgroundColor: `${moodColor}14`, borderColor: `${moodColor}30` }]}
                 >
-                  <Text style={[styles.traitText, { color: moodColor }]}>{t}</Text>
+                  <Text style={[styles.traitText, { color: moodColor }]}>{tr}</Text>
                 </View>
               ))}
+            </ScrollView>
+          )}
+
+          {/* Stats row */}
+          <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNum, { color: colors.primary }]}>{stories.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
             </View>
-          )}
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNum, { color: colors.gold }]}>{outfits.length}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Outfits</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNum, { color: '#6BA57A' }]}>{totalWitnessed}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Witnessed</Text>
+            </View>
+          </View>
+        </Animated.View>
 
-          {/* Follow / Unfollow button — hidden on own profile */}
-          {!isSelf && (
-            <TouchableOpacity
-              style={[
-                styles.followBtn,
-                isFollowing
-                  ? { backgroundColor: colors.card, borderColor: colors.border }
-                  : { backgroundColor: colors.primary, borderColor: colors.primary },
-              ]}
-              onPress={handleFollow}
-              activeOpacity={0.82}
-            >
-              <Icon
-                name={isFollowing ? 'user-check' : 'user-plus'}
-                size={15}
-                color={isFollowing ? colors.mutedForeground : '#fff'}
-              />
-              <Text style={[styles.followBtnText, { color: isFollowing ? colors.mutedForeground : '#fff' }]}>
-                {isFollowing ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
-          )}
-
+        {/* ── BODY ─────────────────────────────────────────────────── */}
+        <Animated.View
+          style={[
+            styles.body,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          {/* Following notification banner */}
           {!isSelf && isFollowing && (
             <View style={[styles.notifyBanner, { backgroundColor: `${moodColor}10`, borderColor: `${moodColor}28` }]}>
               <Icon name="bell" size={13} color={moodColor} />
@@ -277,21 +334,10 @@ export default function UserProfileScreen() {
             </View>
           )}
 
-          {!isSelf && (
-            <TouchableOpacity
-              style={styles.reportLink}
-              onPress={() => setReportSheetVisible(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Icon name="flag" size={11} color="rgba(180,100,100,0.6)" />
-              <Text style={styles.reportLinkText}>{t('discover.reportProfile')}</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* ── Active outfit spotlight ─────────────────────────── */}
+          {/* ── CURRENT OUTFIT spotlight ─────────────────────────── */}
           {profile.activeOutfit && (
             <TouchableOpacity
-              style={[styles.activeOutfitCard, { backgroundColor: colors.card, borderColor: `${moodColor}30` }, SHADOW.xs]}
+              style={[styles.spotlightCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}
               onPress={() => {
                 router.push({
                   pathname: '/user-outfit',
@@ -310,206 +356,210 @@ export default function UserProfileScreen() {
                   },
                 } as any);
               }}
-              activeOpacity={0.84}
+              activeOpacity={0.86}
             >
-              {profile.activeOutfit.imageUri ? (
-                <Image
-                  source={{ uri: profile.activeOutfit.imageUri }}
-                  style={styles.activeOutfitImg}
-                  contentFit="cover"
-                  cachePolicy="memory-disk"
-                />
-              ) : (
-                <LinearGradient
-                  colors={[`${moodColor}44`, `${moodColor}18`]}
-                  style={styles.activeOutfitImg}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                />
-              )}
-              <View style={styles.activeOutfitInfo}>
-                <View style={styles.activeOutfitLabel}>
-                  <Icon name="star" size={11} color={moodColor} />
-                  <Text style={[styles.activeOutfitLabelText, { color: moodColor }]}>Wearing now</Text>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Current Outfit</Text>
+              <View style={styles.spotlightRow}>
+                {/* Left: outfit image */}
+                <View style={[styles.spotlightImgWrap, { backgroundColor: `${moodColor}18` }]}>
+                  {profile.activeOutfit.imageUri ? (
+                    <Image
+                      source={{ uri: profile.activeOutfit.imageUri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={[`${moodColor}50`, `${moodColor}18`]}
+                      style={StyleSheet.absoluteFill}
+                    />
+                  )}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(8,6,22,0.85)']}
+                    style={[StyleSheet.absoluteFill, styles.spotlightImgGrad]}
+                  >
+                    <Text style={styles.spotlightImgName} numberOfLines={2}>{profile.activeOutfit.name}</Text>
+                  </LinearGradient>
                 </View>
-                <Text style={[styles.activeOutfitName, { color: colors.foreground }]} numberOfLines={1}>
-                  {profile.activeOutfit.name}
-                </Text>
-                {profile.activeOutfit.description ? (
-                  <Text style={[styles.activeOutfitDesc, { color: colors.mutedForeground }]} numberOfLines={2}>
-                    {profile.activeOutfit.description}
+                {/* Right: info */}
+                <View style={styles.spotlightInfo}>
+                  <Text style={[styles.spotlightAboutLabel, { color: `${colors.mutedForeground}88` }]}>About this look</Text>
+                  <Text style={[styles.spotlightDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
+                    {profile.activeOutfit.description || profile.activeOutfit.name}
                   </Text>
-                ) : null}
-                {profile.activeOutfit.tags.length > 0 && (
-                  <Text style={[styles.activeOutfitTags, { color: colors.mutedForeground }]} numberOfLines={1}>
-                    {profile.activeOutfit.tags.slice(0, 3).join(' · ')}
-                  </Text>
-                )}
+                  <View style={styles.spotlightTags}>
+                    {(profile.activeOutfit.tags ?? []).slice(0, 3).map(tag => (
+                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: `${moodColor}14`, borderColor: `${moodColor}28` }]}>
+                        <Text style={[styles.spotlightTagText, { color: moodColor }]}>{tag}</Text>
+                      </View>
+                    ))}
+                    {(profile.activeOutfit.tags ?? []).length === 0 && (
+                      <View style={[styles.spotlightTag, { backgroundColor: `${colors.gold}14`, borderColor: `${colors.gold}28` }]}>
+                        <Text style={[styles.spotlightTagText, { color: colors.gold }]}>Outfit</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
               </View>
-              <Icon name="chevron-right" size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           )}
 
-          {/* Tab switcher */}
-          <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
-            {(['stories', 'outfits'] as const).map(t => (
-              <TouchableOpacity
-                key={t}
-                style={[styles.tabBtn, tab === t && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
-                onPress={() => setTab(t)}
+          {/* ── OTHER OUTFITS horizontal row ──────────────────────── */}
+          {outfits.length > 0 && (
+            <View style={styles.hSection}>
+              <View style={styles.hSectionHeader}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Other Outfits</Text>
+                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{outfits.length}</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.hScrollContent}
               >
-                <Icon
-                  name={t === 'stories' ? 'book-open' : 'grid'}
-                  size={14}
-                  color={tab === t ? colors.primary : colors.mutedForeground}
-                />
-                <Text style={[styles.tabLabel, { color: tab === t ? colors.primary : colors.mutedForeground }]}>
-                  {t === 'stories' ? `Stories (${stories.length})` : `Outfits (${outfits.length})`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                {outfits.map(outfit => (
+                  <TouchableOpacity
+                    key={outfit.id}
+                    style={[styles.hOutfitCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      router.push({
+                        pathname: '/user-outfit',
+                        params: {
+                          outfitName:   outfit.name,
+                          outfitDesc:   outfit.description ?? '',
+                          outfitImage:  outfit.imageUri ?? '',
+                          outfitTags:   JSON.stringify(outfit.tags),
+                          outfitDate:   outfit.date,
+                          authorUserId: profile.userId,
+                          authorName:   profile.name,
+                          authorHandle: profile.username ?? '',
+                          authorBio:    profile.bio ?? '',
+                          authorMood:   profile.mood ?? '',
+                          authorTraits: JSON.stringify(profile.traits),
+                        },
+                      } as any);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    {outfit.imageUri ? (
+                      <Image
+                        source={{ uri: outfit.imageUri }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={[`${moodColor}50`, `${moodColor}18`]}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    )}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(8,6,22,0.90)']}
+                      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}
+                    >
+                      <Text style={styles.hOutfitName} numberOfLines={2}>{outfit.name}</Text>
+                    </LinearGradient>
+                    {outfit.tags.length > 0 && (
+                      <View style={[styles.hTagPill, { backgroundColor: 'rgba(8,6,22,0.72)' }]}>
+                        <Text style={styles.hTagPillText}>{outfit.tags[0]}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
-          {/* ── Stories list ───────────────────────────────── */}
-          {tab === 'stories' && (
-            <View style={styles.contentList}>
-              {stories.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Icon name="book-open" size={28} color={`${colors.primary}40`} />
-                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                    No public stories yet
-                  </Text>
-                </View>
-              ) : (
-                stories.map(story => {
-                  const mc = MOOD_COLORS[story.mood] ?? colors.primary;
+          {/* ── STORIES horizontal row ─────────────────────────────── */}
+          {stories.length > 0 && (
+            <View style={styles.hSection}>
+              <View style={styles.hSectionHeader}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Stories</Text>
+                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{stories.length}</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.hScrollContent}
+              >
+                {stories.map(story => {
+                  const mc         = MOOD_COLORS[story.mood] ?? colors.primary;
                   const firstPanel = story.panels[0];
                   return (
                     <TouchableOpacity
                       key={story.id}
-                      style={[styles.storyCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                      style={[styles.hStoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                       onPress={() => router.push({ pathname: '/story/[id]', params: { id: story.id, source: 'discover' } } as any)}
-                      activeOpacity={0.84}
+                      activeOpacity={0.86}
                     >
                       {firstPanel?.imageUri ? (
                         <Image
                           source={{ uri: firstPanel.imageUri }}
-                          style={styles.storyCover}
+                          style={StyleSheet.absoluteFill}
                           contentFit="cover"
                           cachePolicy="memory-disk"
                         />
                       ) : (
                         <LinearGradient
-                          colors={[`${mc}44`, `${mc}14`]}
-                          style={styles.storyCover}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
+                          colors={[`${mc}55`, `${mc}18`]}
+                          style={StyleSheet.absoluteFill}
                         />
                       )}
-                      <View style={styles.storyMeta}>
-                        <Text style={[styles.storyTitle, { color: colors.foreground }]} numberOfLines={1}>
-                          {story.chapterTitle}
-                        </Text>
-                        <Text style={[styles.storySnippet, { color: colors.mutedForeground }]} numberOfLines={2}>
-                          {firstPanel?.text ?? ''}
-                        </Text>
-                        <View style={styles.storyStats}>
-                          <View style={styles.statItem}>
-                            <Icon name="eye" size={11} color={colors.mutedForeground} />
-                            <Text style={[styles.statText, { color: colors.mutedForeground }]}>{story.witnessedCount}</Text>
+                      <LinearGradient
+                        colors={['transparent', 'rgba(8,6,22,0.88)']}
+                        style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}
+                      >
+                        <Text style={styles.hStoryTitle} numberOfLines={2}>{story.chapterTitle}</Text>
+                        <View style={styles.hStoryMeta}>
+                          <View style={styles.hStoryWitness}>
+                            <Icon name="eye" size={10} color="rgba(200,184,232,0.75)" />
+                            <Text style={styles.hStoryWitnessText}>{story.witnessedCount}</Text>
                           </View>
-                          <View style={[styles.moodPill, { backgroundColor: `${mc}14`, borderColor: `${mc}28` }]}>
-                            <Text style={[styles.moodPillText, { color: mc }]}>{story.mood}</Text>
+                          <View style={[styles.hMoodPill, { backgroundColor: `${mc}28` }]}>
+                            <Text style={[styles.hMoodPillText, { color: mc }]}>{story.mood}</Text>
                           </View>
-                          <Text style={[styles.statText, { color: colors.mutedForeground }]}>{fmtDate(story.date)}</Text>
                         </View>
-                      </View>
-                      <Icon name="chevron-right" size={16} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
+                      </LinearGradient>
                     </TouchableOpacity>
                   );
-                })
-              )}
+                })}
+              </ScrollView>
             </View>
           )}
 
-          {/* ── Outfits grid ───────────────────────────────── */}
-          {tab === 'outfits' && (
-            <View style={styles.contentList}>
-              {outfits.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Icon name="grid" size={28} color={`${colors.primary}40`} />
-                  <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                    No public outfits yet
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.outfitsGrid}>
-                  {outfits.map(outfit => (
-                    <TouchableOpacity
-                      key={outfit.id}
-                      style={[styles.outfitCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
-                      onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        router.push({
-                          pathname: '/user-outfit',
-                          params: {
-                            outfitName:   outfit.name,
-                            outfitDesc:   outfit.description ?? '',
-                            outfitImage:  outfit.imageUri ?? '',
-                            outfitTags:   JSON.stringify(outfit.tags),
-                            outfitDate:   outfit.date,
-                            authorUserId: profile.userId,
-                            authorName:   profile.name,
-                            authorHandle: profile.username ?? '',
-                            authorBio:    profile.bio ?? '',
-                            authorMood:   profile.mood ?? '',
-                            authorTraits: JSON.stringify(profile.traits),
-                          },
-                        } as any);
-                      }}
-                      activeOpacity={0.84}
-                    >
-                      {outfit.imageUri ? (
-                        <Image
-                          source={{ uri: outfit.imageUri }}
-                          style={styles.outfitImg}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                        />
-                      ) : (
-                        <LinearGradient
-                          colors={[`${moodColor}33`, `${moodColor}0a`]}
-                          style={styles.outfitImg}
-                        />
-                      )}
-                      <View style={styles.outfitMeta}>
-                        <Text style={[styles.outfitName, { color: colors.foreground }]} numberOfLines={1}>
-                          {outfit.name}
-                        </Text>
-                        {outfit.tags.length > 0 && (
-                          <Text style={[styles.outfitTags, { color: colors.mutedForeground }]} numberOfLines={1}>
-                            {outfit.tags.slice(0, 3).join(' · ')}
-                          </Text>
-                        )}
-                      </View>
-                      <View style={styles.outfitArrow}>
-                        <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+          {/* Empty state when both are empty */}
+          {stories.length === 0 && outfits.length === 0 && !profile.activeOutfit && (
+            <View style={[styles.emptyState, { borderColor: `${colors.primary}18` }]}>
+              <Icon name="star" size={28} color={`${colors.primary}40`} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                {profile.name} hasn't shared anything yet
+              </Text>
             </View>
           )}
+
+          {/* Report link */}
+          {!isSelf && (
+            <TouchableOpacity
+              style={styles.reportLink}
+              onPress={() => setReportVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="flag" size={11} color="rgba(180,100,100,0.55)" />
+              <Text style={styles.reportLinkText}>{t('discover.reportProfile')}</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
+
       </ScrollView>
 
       <ReportSheet
-        visible={reportSheetVisible}
+        visible={reportVisible}
         targetType="user"
         targetId={userId ?? ''}
         targetLabel={profile?.name}
-        onClose={() => setReportSheetVisible(false)}
+        onClose={() => setReportVisible(false)}
       />
     </View>
   );
@@ -518,107 +568,215 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   root:   { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 },
+  errorText: { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center' },
+  backBtnErr: {
+    paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12,
+    borderWidth: 1, marginTop: 4,
+  },
+  backBtnErrText: { fontSize: 14, fontFamily: 'Satoshi-Medium' },
 
-  banner:    { width: '100%', overflow: 'hidden', position: 'relative' },
-  orbA:      { position: 'absolute', top: 30, left: -40, width: 180, height: 180, borderRadius: 90 },
-  orbB:      { position: 'absolute', bottom: -20, right: -30, width: 140, height: 140, borderRadius: 70 },
-  headerBack: {
-    position: 'absolute', left: 16,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(14,12,36,0.55)',
+  // ── Banner
+  banner: { width: '100%', overflow: 'hidden', position: 'relative' },
+  orbA:   { position: 'absolute', top: 20, left: -50, width: 200, height: 200, borderRadius: 100 },
+  orbB:   { position: 'absolute', bottom: 30, right: -40, width: 160, height: 160, borderRadius: 80 },
+  orbC:   { position: 'absolute', top: 60, right: 40, width: 100, height: 100, borderRadius: 50 },
+
+  topBtn: {
+    position: 'absolute',
+    width: 38, height: 38, borderRadius: 19,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.14)',
+  },
+  explorerBadge: {
+    position: 'absolute',
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1,
+  },
+  explorerBadgeText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+
+  // Avatar inside banner
+  avatarInBanner: {
+    position: 'absolute',
+    bottom: 40, left: 0, right: 0,
+    alignItems: 'center',
+  },
+  avatarGlowRing: {
+    position: 'absolute',
+    width: 130, height: 130, borderRadius: 65,
+    borderWidth: 1,
+  },
+  avatarRingOuter: {
+    width: 108, height: 108, borderRadius: 54,
+    borderWidth: 2,
     alignItems: 'center', justifyContent: 'center',
   },
-
-  body: { marginTop: -28, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 16 },
-
-  avatarArea:  { alignItems: 'center', marginTop: -44, marginBottom: 14 },
-  avatarRing:  { borderWidth: 4, borderRadius: 50, padding: 0 },
-  avatarInner: {
-    width: 80, height: 80, borderRadius: 40,
+  avatarRingInner: {
+    width: 100, height: 100, borderRadius: 50,
+    borderWidth: 1,
+    overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarInitial: { fontSize: 30, fontFamily: 'Satoshi-Bold' },
+  avatarInitial: { fontSize: 34, fontFamily: 'Satoshi-Bold' },
 
-  nameSection: { alignItems: 'center', marginBottom: 12, gap: 4 },
-  name:        { fontSize: 20, fontFamily: 'Satoshi-Bold' },
-  handle:      { fontSize: 14, fontFamily: 'Satoshi-Medium' },
-  bio:         { fontSize: 13, fontFamily: 'Satoshi-Regular', textAlign: 'center', lineHeight: 20, opacity: 0.8, marginTop: 4, paddingHorizontal: 12 },
-
-  traitsRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 16 },
-  traitChip:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
-  traitText:  { fontSize: 12, fontFamily: 'Satoshi-Bold' },
-
-  followBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 28, paddingVertical: 11,
-    borderRadius: 24, borderWidth: 1,
-    alignSelf: 'center', marginBottom: 10,
+  // ── Floating profile card
+  profileCard: {
+    marginTop: -48,
+    marginHorizontal: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    padding: 20,
+    paddingBottom: 0,
+    gap: 4,
   },
-  followBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  name: { fontSize: 22, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
+  nameBadge: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 10, borderWidth: 1,
+  },
+  followPill: {
+    marginLeft: 'auto',
+    paddingHorizontal: 16, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1,
+  },
+  followPillText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+
+  handle: { fontSize: 14, fontFamily: 'Satoshi-Medium', marginTop: 2 },
+  bio: {
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
+    fontStyle: 'italic', lineHeight: 19,
+    marginTop: 4,
+  },
+
+  traitsScroll: { marginTop: 10, marginHorizontal: -20 },
+  traitsRow:    { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 20, paddingBottom: 4 },
+  traitChip: {
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1,
+  },
+  traitText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+
+  statsRow: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    marginHorizontal: -20,
+    marginTop: 14,
+    paddingVertical: 14,
+  },
+  statItem: { flex: 1, alignItems: 'center', gap: 2 },
+  statNum:  { fontSize: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  statLabel: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  statDivider: { width: 1, marginVertical: 4 },
+
+  // ── Body
+  body: { paddingHorizontal: 16, paddingTop: 14, gap: 14 },
 
   notifyBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    marginBottom: 16, marginHorizontal: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    padding: 13, borderRadius: 16, borderWidth: 1,
   },
-  notifyText: { fontSize: 12, fontFamily: 'Satoshi-Regular', flex: 1, lineHeight: 18 },
+  notifyText: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 18 },
+
+  // Spotlight card (current outfit)
+  spotlightCard: {
+    borderRadius: 20, borderWidth: 1, padding: 14,
+  },
+  sectionLabel: {
+    fontSize: 10, fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.4, textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+  spotlightRow: { flexDirection: 'row', gap: 12, alignItems: 'stretch' },
+  spotlightImgWrap: {
+    width: 120, height: 144,
+    borderRadius: 14, overflow: 'hidden',
+  },
+  spotlightImgGrad: { justifyContent: 'flex-end', padding: 8 },
+  spotlightImgName: {
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,234,255,0.95)', lineHeight: 14,
+  },
+  spotlightInfo: { flex: 1, gap: 6, paddingTop: 2 },
+  spotlightAboutLabel: {
+    fontSize: 9, fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.2, textTransform: 'uppercase',
+  },
+  spotlightDesc: {
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
+    fontStyle: 'italic', lineHeight: 19,
+  },
+  spotlightTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  spotlightTag: {
+    paddingHorizontal: 9, paddingVertical: 3,
+    borderRadius: 9, borderWidth: 1,
+  },
+  spotlightTagText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+
+  // Horizontal sections
+  hSection: { gap: 10 },
+  hSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  hSectionTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  hSectionCount: { fontSize: 12, fontFamily: 'Satoshi-Regular' },
+  hScrollContent: { gap: 10, paddingRight: 16 },
+
+  hOutfitCard: {
+    width: 100, height: 130,
+    borderRadius: 14, overflow: 'hidden', borderWidth: 1,
+    position: 'relative',
+  },
+  hOutfitName: {
+    fontSize: 10, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,234,255,0.95)', lineHeight: 13,
+  },
+  hTagPill: {
+    position: 'absolute', top: 7, left: 7,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+  },
+  hTagPillText: {
+    fontSize: 9, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,200,255,0.9)',
+  },
+
+  hStoryCard: {
+    width: 130, height: 168,
+    borderRadius: 14, overflow: 'hidden', borderWidth: 1,
+    position: 'relative',
+  },
+  hStoryTitle: {
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,234,255,0.95)', lineHeight: 14,
+    marginBottom: 5,
+  },
+  hStoryMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  hStoryWitness: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  hStoryWitnessText: {
+    fontSize: 10, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(200,184,232,0.8)',
+  },
+  hMoodPill: {
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+  },
+  hMoodPillText: { fontSize: 9, fontFamily: 'Satoshi-Bold' },
+
+  emptyState: {
+    alignItems: 'center', gap: 10,
+    paddingVertical: 40, borderRadius: 16,
+    borderWidth: 1, borderStyle: 'dashed',
+  },
+  emptyText: { fontSize: 13, fontFamily: 'Satoshi-Regular', textAlign: 'center' },
 
   reportLink: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'center', marginBottom: 14,
-    paddingHorizontal: 10, paddingVertical: 6,
+    alignSelf: 'center', paddingVertical: 4, marginTop: 8,
   },
   reportLinkText: {
-    fontSize: 11, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(180,100,100,0.6)', fontStyle: 'italic',
+    fontSize: 12, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(180,100,100,0.55)',
   },
-
-  tabRow:     { flexDirection: 'row', borderBottomWidth: 1, marginBottom: 16, marginTop: 6 },
-  tabBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  tabLabel:   { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-
-  contentList: { gap: 10, paddingBottom: 8 },
-
-  storyCard: {
-    flexDirection: 'row', alignItems: 'center', borderRadius: 14,
-    borderWidth: 1, padding: 12, gap: 12,
-  },
-  storyCover:   { width: 64, height: 72, borderRadius: 10 },
-  storyMeta:    { flex: 1, gap: 4 },
-  storyTitle:   { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  storySnippet: { fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, opacity: 0.8 },
-  storyStats:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  statItem:     { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  statText:     { fontSize: 11, fontFamily: 'Satoshi-Regular' },
-  moodPill:     { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, borderWidth: 1 },
-  moodPillText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
-
-  outfitsGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  outfitCard:   { width: '47.5%', borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
-  outfitImg:    { width: '100%', height: 120 },
-  outfitMeta:   { padding: 10, gap: 3 },
-  outfitName:   { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-  outfitTags:   { fontSize: 11, fontFamily: 'Satoshi-Regular', opacity: 0.7 },
-  outfitArrow:  { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.22)' },
-
-  activeOutfitCard: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: 16, borderWidth: 1,
-    padding: 12, gap: 12, marginBottom: 16,
-  },
-  activeOutfitImg:  { width: 72, height: 80, borderRadius: 12 },
-  activeOutfitInfo: { flex: 1, gap: 3 },
-  activeOutfitLabel: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
-  activeOutfitLabelText: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4 },
-  activeOutfitName: { fontSize: 15, fontFamily: 'Satoshi-Bold' },
-  activeOutfitDesc: { fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, opacity: 0.8 },
-  activeOutfitTags: { fontSize: 11, fontFamily: 'Satoshi-Regular', opacity: 0.65 },
-
-  emptyState: { alignItems: 'center', paddingVertical: 40, gap: 10 },
-  emptyText:  { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center' },
-
-  errorText:    { fontSize: 15, fontFamily: 'Satoshi-Regular', textAlign: 'center', marginTop: 8 },
-  backBtn:      { paddingHorizontal: 24, paddingVertical: 10, borderRadius: 20, borderWidth: 1, marginTop: 4 },
-  backBtnText:  { fontSize: 14, fontFamily: 'Satoshi-Bold' },
 });
