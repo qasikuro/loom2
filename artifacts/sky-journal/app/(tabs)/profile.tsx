@@ -98,6 +98,182 @@ const MOOD_COLORS: Record<string, string> = {
   Adventurous: '#3A9060',
 };
 
+// ── Mood aura palette map ──────────────────────────────────────────────────────
+type AuraData = {
+  gradient: [string, string, string];
+  overlay:  [string, string, string];
+  accent:   string;
+  particle: string;
+  speed:    number;
+  count:    number;
+};
+const MOOD_AURA: Record<string, AuraData> = {
+  Hopeful:     { gradient: ['#131A0E','#1A2614','#20301A'], overlay: ['#1C2A16','#243020','#2A3826'], accent: '#C8A84B', particle: '✦', speed: 3800, count: 6  },
+  Peaceful:    { gradient: ['#0C1A24','#10202E','#162838'], overlay: ['#122232','#18283A','#1E2E42'], accent: '#78A8C8', particle: '✧', speed: 5200, count: 5  },
+  Lonely:      { gradient: ['#0C0C1E','#101226','#141830'], overlay: ['#14162C','#181C34','#1C2238'], accent: '#7090C0', particle: '·', speed: 7000, count: 4  },
+  Dreamy:      { gradient: ['#120A2A','#1A1240','#221852'], overlay: ['#1C1640','#241E52','#2A2460'], accent: '#B89AE8', particle: '⋆', speed: 5500, count: 8  },
+  Romantic:    { gradient: ['#1C0A12','#260E1E','#30142A'], overlay: ['#261430','#301A3A','#381E44'], accent: '#D878B0', particle: '◦', speed: 4200, count: 6  },
+  Soft:        { gradient: ['#140A1E','#1C102E','#22163A'], overlay: ['#1E1438','#261A44','#2C204C'], accent: '#C8A0D8', particle: '○', speed: 6000, count: 5  },
+  Chaotic:     { gradient: ['#1C0804','#280C06','#34100A'], overlay: ['#281008','#341408','#3E180C'], accent: '#E8784A', particle: '✸', speed: 1800, count: 10 },
+  Joyful:      { gradient: ['#081408','#0E1E0E','#16281A'], overlay: ['#102014','#181E10','#1C2A1A'], accent: '#70C888', particle: '★', speed: 3000, count: 7  },
+  Adventurous: { gradient: ['#0A160A','#101C0E','#162416'], overlay: ['#142018','#1A2818','#202E22'], accent: '#6AC888', particle: '↑', speed: 2500, count: 8  },
+  Grateful:    { gradient: ['#1A0C18','#221020','#2A162C'], overlay: ['#221430','#2C1A38','#321E40'], accent: '#D878B0', particle: '✿', speed: 4500, count: 6  },
+};
+const DEFAULT_AURA: AuraData = {
+  gradient: ['#1D1A2E','#272450','#2E2A58'],
+  overlay:  ['#22203A','#2C2A5A','#342E62'],
+  accent: '#9B78E8', particle: '✦', speed: 4500, count: 6,
+};
+const PARTICLE_XS    = [0.08, 0.22, 0.36, 0.50, 0.64, 0.76, 0.86, 0.94, 0.14, 0.58];
+const PARTICLE_SIZES = [11,   7,    13,   9,    8,    12,   7,    14,   10,   8];
+
+// ── Mood orbs inline picker ────────────────────────────────────────────────────
+const MOOD_ORBS = [
+  { key: 'Hopeful',  accent: '#C8A84B' }, { key: 'Peaceful', accent: '#78A8C8' },
+  { key: 'Dreamy',   accent: '#B89AE8' }, { key: 'Lonely',   accent: '#7090C0' },
+  { key: 'Soft',     accent: '#C8A0D8' }, { key: 'Romantic', accent: '#D878B0' },
+  { key: 'Chaotic',  accent: '#E8784A' }, { key: 'Joyful',   accent: '#70C888' },
+];
+function MoodOrbPicker({ currentMood, onSelect }: { currentMood: string; onSelect: (m: string) => void }) {
+  const scales = useRef(MOOD_ORBS.map(() => new Animated.Value(1))).current;
+  function select(key: string, idx: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.sequence([
+      Animated.spring(scales[idx], { toValue: 1.4, tension: 300, friction: 5, useNativeDriver: true }),
+      Animated.spring(scales[idx], { toValue: 1,   tension: 180, friction: 6, useNativeDriver: true }),
+    ]).start();
+    onSelect(key);
+  }
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 2, flexWrap: 'wrap' }}>
+      <Text style={{ fontSize: 9, color: 'rgba(200,184,232,0.40)', fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, marginRight: 1 }}>
+        VIBE
+      </Text>
+      {MOOD_ORBS.map(({ key, accent }, idx) => {
+        const sel = currentMood === key;
+        return (
+          <Animated.View key={key} style={{ transform: [{ scale: scales[idx] }] }}>
+            <TouchableOpacity
+              style={{
+                width: sel ? 26 : 20, height: sel ? 26 : 20, borderRadius: 13,
+                backgroundColor: accent, opacity: sel ? 1 : 0.30,
+                borderWidth: sel ? 2 : 0, borderColor: 'rgba(255,255,255,0.80)',
+              }}
+              onPress={() => select(key, idx)}
+              activeOpacity={0.75}
+            />
+          </Animated.View>
+        );
+      })}
+      <Text style={{ fontSize: 11, color: 'rgba(200,184,232,0.65)', fontFamily: 'Satoshi-Medium', marginLeft: 2, fontStyle: 'italic' }}>
+        {currentMood}
+      </Text>
+    </View>
+  );
+}
+
+// ── Breathing avatar ring ──────────────────────────────────────────────────────
+function BreathingAvatarRing({ mood }: { mood: string }) {
+  const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const breathe = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(breathe, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(breathe, { toValue: 0, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [breathe]);
+  const scale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
+  const opacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.18, 0.80, 0.18] });
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{
+        position: 'absolute', top: -7, left: -7, right: -7, bottom: -7,
+        borderRadius: 48, borderWidth: 2.5, borderColor: aura.accent,
+        transform: [{ scale }], opacity,
+      }}
+    />
+  );
+}
+
+// ── Character aura header ──────────────────────────────────────────────────────
+function CharacterAuraHeader({ mood, paddingTop, children }: {
+  mood: string; paddingTop: number; children: React.ReactNode;
+}) {
+  const aura   = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const { width: screenW } = useWindowDimensions();
+  const breatheAnim   = useRef(new Animated.Value(0)).current;
+  const particleAnims = useRef(
+    PARTICLE_XS.map(() => ({ y: new Animated.Value(0), op: new Animated.Value(0) }))
+  ).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(breatheAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(breatheAnim, { toValue: 0, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [breatheAnim]);
+
+  useEffect(() => {
+    const H = 280;
+    const loops = particleAnims.slice(0, aura.count).map((p, i) => {
+      p.y.setValue(-(i * (H / aura.count)));
+      p.op.setValue(0);
+      const loop = Animated.loop(Animated.sequence([
+        Animated.delay(i * (aura.speed / aura.count)),
+        Animated.parallel([
+          Animated.timing(p.y,  { toValue: -H - 20, duration: aura.speed * 1.5, easing: Easing.linear, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.timing(p.op, { toValue: 0.70, duration: aura.speed * 0.18, useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0.70, duration: aura.speed * 0.64, useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0,    duration: aura.speed * 0.18, useNativeDriver: true }),
+          ]),
+        ]),
+        Animated.parallel([
+          Animated.timing(p.y,  { toValue: 0, duration: 0, useNativeDriver: true }),
+          Animated.timing(p.op, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      ]));
+      loop.start();
+      return loop;
+    });
+    return () => loops.forEach(l => l.stop());
+  }, [mood]);
+
+  const overlayOpacity = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] });
+
+  return (
+    <View style={[styles.profileHeader, { paddingTop, overflow: 'hidden' }]}>
+      <LinearGradient colors={aura.gradient} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: overlayOpacity }]} pointerEvents="none">
+        <LinearGradient colors={aura.overlay} style={StyleSheet.absoluteFill} start={{ x: 0.9, y: 0 }} end={{ x: 0.1, y: 1 }} />
+      </Animated.View>
+      {particleAnims.slice(0, aura.count).map((p, i) => (
+        <Animated.Text
+          key={i}
+          pointerEvents="none"
+          style={{
+            position: 'absolute', bottom: 28,
+            left: PARTICLE_XS[i % PARTICLE_XS.length] * screenW,
+            fontSize: PARTICLE_SIZES[i % PARTICLE_SIZES.length],
+            color: aura.accent, opacity: p.op,
+            transform: [{ translateY: p.y }],
+          }}
+        >
+          {aura.particle}
+        </Animated.Text>
+      ))}
+      {children}
+    </View>
+  );
+}
+
 // ── Outfit grid card (individual, animated) ────────────────────────────────────
 
 function OutfitGridCard({
@@ -530,15 +706,7 @@ export default function CharacterScreen() {
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: bottomPad }}>
 
         {/* ── Profile header ──────────────────────────────────────── */}
-        <LinearGradient
-          colors={['#1D1A2E', '#272450', '#2E2A58']}
-          style={[styles.profileHeader, { paddingTop: topPad + 8 }]}
-          start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
-        >
-          {/* Floating sparkles */}
-          <Text style={[styles.deco, { top: topPad + 16, right: 28 }]}>✦</Text>
-          <Text style={[styles.decoSm, { top: topPad + 56, left: 22 }]}>✦</Text>
-          <Text style={[styles.decoXs, { top: topPad + 90, right: 60 }]}>✦</Text>
+        <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 8}>
 
           {/* Top controls: vis toggle left, settings + bell right */}
           <View style={styles.headerTopRow}>
@@ -569,6 +737,7 @@ export default function CharacterScreen() {
               <View style={[styles.avatarCircle, { borderColor: `${colors.primary}70` }]}>
                 <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
               </View>
+              <BreathingAvatarRing mood={character.mood || 'Dreamy'} />
               <TouchableOpacity
                 style={[styles.avatarEditBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={pickAvatar}
@@ -647,15 +816,14 @@ export default function CharacterScreen() {
             </View>
           </View>
 
-          {/* Mood badge */}
-          <TouchableOpacity
-            onPress={() => { Haptics.selectionAsync(); setShowMoodPicker(true); }}
-            activeOpacity={0.75}
-            style={[styles.moodRow, { marginTop: 12, marginBottom: 6 }]}
-          >
-            <MoodBadge mood={character.mood || 'Hopeful'} size="sm" />
-            <Icon name="edit-2" size={9} color="rgba(200,184,232,0.35)" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
+          {/* Inline mood orb picker */}
+          <MoodOrbPicker
+            currentMood={character.mood || 'Dreamy'}
+            onSelect={m => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setCharacter({ ...character, mood: m });
+            }}
+          />
 
           {/* Trait chips */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.traitChipsScroll} contentContainerStyle={styles.traitChipsRow}>
@@ -722,7 +890,7 @@ export default function CharacterScreen() {
               {avatarError}
             </Text>
           ) : null}
-        </LinearGradient>
+        </CharacterAuraHeader>
 
         {/* ── Stats card ──────────────────────────── */}
         <View style={[styles.statsLightCard, SHADOW.sm]}>
