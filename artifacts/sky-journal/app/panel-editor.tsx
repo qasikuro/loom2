@@ -3,7 +3,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
@@ -29,6 +29,7 @@ import type { BubbleStyle, PanelOverlay, StoryPanel } from '@/context/AppContext
 import { persistImageUri } from '@/utils/persistImage';
 import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
+import { ImageSourceSheet } from '@/components/ImageSourceSheet';
 
 const { width: SW } = Dimensions.get('window');
 const GAP      = 3;
@@ -266,8 +267,27 @@ export default function PanelEditorScreen() {
   const [canvasW,     setCanvasW]     = useState(SW - 36);
   const [pendingUri,    setPendingUri]    = useState<string | null>(null);
   const [pendingIdx,    setPendingIdx]    = useState<number>(0);
-  const [uploadingSet,  setUploadingSet]  = useState<Set<number>>(new Set());
-  const [uploadError,   setUploadError]   = useState<string | null>(null);
+  const [uploadingSet,   setUploadingSet]   = useState<Set<number>>(new Set());
+  const [uploadError,    setUploadError]    = useState<string | null>(null);
+  const [showSheet,      setShowSheet]      = useState(false);
+  const [sheetTargetIdx, setSheetTargetIdx] = useState(0);
+  const uploadPulse = useRef(new Animated.Value(1)).current;
+  const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
+
+  useEffect(() => {
+    if (uploadingSet.size > 0) {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(uploadPulse, { toValue: 0.45, duration: 560, useNativeDriver: true }),
+          Animated.timing(uploadPulse, { toValue: 1,    duration: 560, useNativeDriver: true }),
+        ])
+      );
+      anim.start();
+      return () => anim.stop();
+    } else {
+      uploadPulse.setValue(1);
+    }
+  }, [uploadingSet.size]);
 
   const sizeHoldRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -470,6 +490,44 @@ export default function PanelEditorScreen() {
     router.back();
   }
 
+  // ── Image source sheet helpers ─────────────────────────────────────────────
+
+  function openImageSheet(idx: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSheetTargetIdx(idx);
+    setShowSheet(true);
+  }
+
+  async function handleSheetCamera() {
+    setShowSheet(false);
+    const idx = sheetTargetIdx;
+    try {
+      if (!cameraPermission?.granted) {
+        const perm = await requestCameraPermission();
+        if (!perm.granted) return;
+      }
+      const res = await ImagePicker.launchCameraAsync({
+        mediaTypes:    ['images'],
+        allowsEditing: false,
+        quality:       1,
+      });
+      if (res.canceled || !res.assets[0]) return;
+      setPendingIdx(idx);
+      setPendingUri(res.assets[0].uri);
+    } catch { /* camera unavailable on web */ }
+  }
+
+  function handleSheetLibrary() {
+    setShowSheet(false);
+    pickPanelImage(sheetTargetIdx);
+  }
+
+  function handleSheetRemove() {
+    setShowSheet(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    updatePanel(sheetTargetIdx, { imageUri: undefined, bgPreset: undefined });
+  }
+
   const selOverlay = getSelOverlay();
   const rowH       = getPanelH(currentLayout, CANVAS_H);
 
@@ -540,7 +598,7 @@ export default function PanelEditorScreen() {
                         onPress={() => {
                           if (isActive && selId) { setSelId(null); return; }
                           switchActive(pIdx);
-                          if (!bg) pickPanelImage(pIdx);
+                          if (!bg) openImageSheet(pIdx);
                         }}
                       >
                         <View style={[
@@ -566,16 +624,17 @@ export default function PanelEditorScreen() {
 
                           {/* Camera change — active only */}
                           {isActive && bg && (
-                            <TouchableOpacity style={styles.changeBtn} onPress={() => pickPanelImage(pIdx)}>
+                            <TouchableOpacity style={styles.changeBtn} onPress={() => openImageSheet(pIdx)}>
                               <Icon name="camera" size={12} color="rgba(235,228,255,0.9)" />
                             </TouchableOpacity>
                           )}
 
                           {/* Upload spinner overlay */}
                           {uploadingSet.has(pIdx) && (
-                            <View style={styles.uploadOverlay}>
-                              <ActivityIndicator color="#fff" size="small" />
-                            </View>
+                            <Animated.View style={[styles.uploadOverlay, { opacity: uploadPulse }]}>
+                              <ActivityIndicator color="rgba(200,184,232,0.9)" size="large" />
+                              <Text style={styles.uploadOverlayText}>Saving…</Text>
+                            </Animated.View>
                           )}
 
                           {/* Draggable overlays (active panel) */}
@@ -863,6 +922,15 @@ export default function PanelEditorScreen() {
         </View>
       </ScrollView>
 
+      <ImageSourceSheet
+        visible={showSheet}
+        hasPhoto={!!(panels[sheetTargetIdx]?.imageUri)}
+        onCamera={handleSheetCamera}
+        onLibrary={handleSheetLibrary}
+        onRemove={handleSheetRemove}
+        onCancel={() => setShowSheet(false)}
+      />
+
       {pendingUri && (
         <CropImageModal
           visible
@@ -922,7 +990,8 @@ const styles = StyleSheet.create({
   emptyHint:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5 },
   emptyHintText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.35)' },
   dimOverlay:    { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,6,22,0.22)' },
-  uploadOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center', zIndex: 30 },
+  uploadOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.62)', alignItems: 'center', justifyContent: 'center', zIndex: 30, gap: 8 },
+  uploadOverlayText: { color: 'rgba(200,184,232,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium' },
   changeBtn: {
     position: 'absolute', top: 7, right: 7,
     width: 26, height: 26, borderRadius: 13,

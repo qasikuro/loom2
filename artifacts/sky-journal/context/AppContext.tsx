@@ -63,8 +63,9 @@ export async function apiFetch<T>(
 // ── Models ────────────────────────────────────────────────────────────────────
 
 export interface ProfileLink {
-  label: string;
-  url:   string;
+  label:     string;
+  url:       string;
+  platform?: string;
 }
 
 export interface Character {
@@ -197,7 +198,7 @@ export interface ServerNotification {
   id:        string;
   actorId:   string;
   actorName: string;
-  type:      'new_story' | 'new_outfit';
+  type:      'new_story' | 'new_outfit' | 'witness' | 'save';
   refId:     string;
   title:     string;
   isRead:    boolean;
@@ -560,7 +561,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           id:        r.id,
           actorId:   r.actorId,
           actorName: r.actorName,
-          type:      r.type as 'new_story' | 'new_outfit',
+          type:      r.type as ServerNotification['type'],
           refId:     r.refId,
           title:     r.title,
           isRead:    r.isRead,

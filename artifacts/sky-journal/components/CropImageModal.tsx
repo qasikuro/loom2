@@ -28,16 +28,22 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 
 export interface CropImageModalProps {
-  visible:  boolean;
-  uri:      string;
-  onDone:   (croppedUri: string) => void;
-  onCancel: () => void;
+  visible:      boolean;
+  uri:          string;
+  aspectRatio?: number;
+  onDone:       (croppedUri: string) => void;
+  onCancel:     () => void;
 }
 
-const PANEL_RATIO = 3 / 4;   // width / height — matches MangaPanelEditor imageArea
 const PRIMARY     = '#6B5B95';
 const CORNER_LEN  = 22;
 const CORNER_W    = 3;
+
+const RATIO_OPTS = [
+  { label: '3 : 4', value: 3 / 4 },
+  { label: '1 : 1', value: 1     },
+  { label: '4 : 3', value: 4 / 3 },
+] as const;
 
 function touchDist(touches: any[]): number {
   const dx = touches[0].pageX - touches[1].pageX;
@@ -48,7 +54,7 @@ function touchDist(touches: any[]): number {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function CropImageModal({
-  visible, uri, onDone, onCancel,
+  visible, uri, aspectRatio, onDone, onCancel,
 }: CropImageModalProps) {
   const insets                       = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -56,6 +62,7 @@ export default function CropImageModal({
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [canvasH, setCanvasH]         = useState(0);
   const [applying, setApplying]       = useState(false);
+  const [ratio, setRatio]             = useState(aspectRatio ?? 3 / 4);
 
   // Mutable refs for transform (gesture handlers read/write these directly)
   const scaleRef = useRef(1);
@@ -69,7 +76,7 @@ export default function CropImageModal({
   // ── Frame geometry ────────────────────────────────────────────────────────
 
   const frameW = screenW - 32;               // 16 px padding each side
-  const frameH = frameW / PANEL_RATIO;
+  const frameH = frameW / ratio;
 
   // Vertical centre of the frame within the canvas
   const frameTop = Math.max(16, (canvasH - frameH) / 2);
@@ -215,6 +222,16 @@ export default function CropImageModal({
     }
   }
 
+  // ── Ratio change ─────────────────────────────────────────────────────────
+
+  function changeRatio(newRatio: number) {
+    setRatio(newRatio);
+    scaleRef.current = 1;
+    txRef.current    = 0;
+    tyRef.current    = 0;
+    bump();
+  }
+
   // ── Layout constants ──────────────────────────────────────────────────────
 
   const topInset    = Platform.OS === 'web' ? 48 : insets.top;
@@ -250,6 +267,25 @@ export default function CropImageModal({
               <Icon name="minus" size={15} color="rgba(255,255,255,0.85)" />
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* ── Aspect ratio strip ── */}
+        <View style={styles.ratioStrip}>
+          {RATIO_OPTS.map(opt => {
+            const active = Math.abs(ratio - opt.value) < 0.01;
+            return (
+              <TouchableOpacity
+                key={opt.label}
+                style={[styles.ratioBtn, active && styles.ratioBtnActive]}
+                onPress={() => changeRatio(opt.value)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[styles.ratioBtnText, active && styles.ratioBtnTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* ── Canvas (gesture area + frame) ── */}
@@ -405,6 +441,24 @@ const styles = StyleSheet.create({
   gridLine:     { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.18)' },
   loadingCenter:{ flex: 1, alignItems: 'center', justifyContent: 'center' },
 
+  ratioStrip: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    gap: 8, paddingVertical: 10, backgroundColor: '#08060F',
+  },
+  ratioBtn: {
+    paddingHorizontal: 16, paddingVertical: 7, borderRadius: 18,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  ratioBtnActive: {
+    backgroundColor: 'rgba(107,91,149,0.28)',
+    borderColor: 'rgba(107,91,149,0.65)',
+  },
+  ratioBtnText: {
+    color: 'rgba(255,255,255,0.42)', fontSize: 13,
+    fontFamily: 'Satoshi-Bold', letterSpacing: 0.3,
+  },
+  ratioBtnTextActive: { color: PRIMARY },
   bottomBar:    {
     flexDirection: 'row', gap: 10,
     paddingHorizontal: 16, paddingTop: 14,

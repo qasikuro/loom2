@@ -1,15 +1,18 @@
 import { Icon } from '@/components/Icon';
 import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
+import { ImageSourceSheet } from '@/components/ImageSourceSheet';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri } from '@/utils/persistImage';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   Platform,
   StyleSheet,
   Text,
@@ -68,6 +71,9 @@ export default function CreateOutfitScreen() {
   const [isPublic, setIsPublic]       = useState(params.editIsPublic !== 'false');
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  const [showSheet, setShowSheet]     = useState(false);
+  const uploadProgress                = useRef(new Animated.Value(0)).current;
+  const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
 
   useEffect(() => {
     if (isEditing) {
@@ -92,15 +98,45 @@ export default function CreateOutfitScreen() {
     }
   }
 
+  async function handleSheetCamera() {
+    setShowSheet(false);
+    try {
+      if (!cameraPermission?.granted) {
+        const perm = await requestCameraPermission();
+        if (!perm.granted) return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'], allowsEditing: false, quality: 1,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setPendingUri(result.assets[0].uri);
+      }
+    } catch { /* camera unavailable on web */ }
+  }
+
+  function handleSheetLibrary() {
+    setShowSheet(false);
+    pickImage();
+  }
+
   async function handleCropDone(croppedUri: string) {
     setPendingUri(null);
     setUploading(true);
+    uploadProgress.setValue(0);
+    Animated.timing(uploadProgress, {
+      toValue: 0.85, duration: 2400,
+      easing: Easing.out(Easing.quad), useNativeDriver: false,
+    }).start();
     try {
       const persisted = await persistImageUri(croppedUri);
       if (persisted) {
+        Animated.timing(uploadProgress, {
+          toValue: 1, duration: 300, useNativeDriver: false,
+        }).start(() => setTimeout(() => uploadProgress.setValue(0), 500));
         setImageUri(persisted);
         setError(null);
       } else {
+        uploadProgress.setValue(0);
         setError('Photo upload failed — check your connection and try again.');
       }
     } finally {
@@ -175,14 +211,25 @@ export default function CreateOutfitScreen() {
               borderColor: imageUri ? 'transparent' : error && !imageUri ? '#DC2626' : colors.border,
               borderWidth: error && !imageUri ? 2 : 1.5,
             }]}
-            onPress={pickImage}
+            onPress={() => !uploading && setShowSheet(true)}
             activeOpacity={0.8}
             disabled={uploading}
           >
             {uploading ? (
               <View style={styles.imagePlaceholder}>
-                <ActivityIndicator color={colors.primary} size="large" />
-                <Text style={[styles.imagePlaceholderSub, { color: colors.mutedForeground }]}>{tr('outfit.uploading')}</Text>
+                <View style={[styles.cameraCircle, { backgroundColor: 'rgba(107,91,149,0.18)' }]}>
+                  <ActivityIndicator color="#C8B8E8" size="large" />
+                </View>
+                <Text style={[styles.imagePlaceholderTitle, { color: 'rgba(200,184,232,0.72)', fontSize: 14 }]}>
+                  Uploading…
+                </Text>
+                <View style={styles.uploadBarTrack}>
+                  <Animated.View
+                    style={[styles.uploadBarFill, {
+                      width: uploadProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                    }]}
+                  />
+                </View>
               </View>
             ) : imageUri ? (
               <>
@@ -304,7 +351,15 @@ export default function CreateOutfitScreen() {
         </KeyboardAwareScrollView>
       </View>
 
-      {/* Crop modal — full screen, rendered outside the scroll so it sits on top */}
+      <ImageSourceSheet
+        visible={showSheet}
+        hasPhoto={!!imageUri}
+        onCamera={handleSheetCamera}
+        onLibrary={handleSheetLibrary}
+        onRemove={() => { setShowSheet(false); setImageUri(undefined); }}
+        onCancel={() => setShowSheet(false)}
+      />
+
       {pendingUri && (
         <CropImageModal
           visible
@@ -333,6 +388,12 @@ const styles = StyleSheet.create({
   changeChipText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   cameraCircle: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
+  uploadBarTrack: {
+    width: '60%', height: 3, borderRadius: 2,
+    backgroundColor: 'rgba(200,184,232,0.12)',
+    overflow: 'hidden', marginTop: 8,
+  },
+  uploadBarFill: { height: '100%', borderRadius: 2, backgroundColor: '#8B7AB5' },
   imagePlaceholderTitle: { fontSize: 15, fontFamily: 'Satoshi-Medium' },
   imagePlaceholderSub: { fontSize: 12, fontFamily: 'Satoshi-Regular' },
   field: { marginBottom: 20 },

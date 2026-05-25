@@ -179,10 +179,6 @@ function ClassicTabLayout() {
           marginTop:     Platform.OS === 'android' ? -2 : 0,
         },
 
-        tabBarActiveLabelStyle: {
-          fontFamily: 'Satoshi-Bold',
-          color: '#D0B4FF',
-        },
 
         tabBarIconStyle: {
           marginTop: Platform.OS === 'android' ? 2 : 4,
