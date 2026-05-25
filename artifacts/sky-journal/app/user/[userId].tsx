@@ -15,6 +15,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -23,6 +24,282 @@ import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import { ReportSheet } from '@/components/ReportSheet';
+
+// ── Mood aura data ────────────────────────────────────────────────────────────
+type AuraData = {
+  gradient:  [string, string, string];
+  accent:    string;
+  particle:  string;
+  speed:     number;
+  count:     number;
+  orbs:      [string, string, string];
+};
+const MOOD_AURA: Record<string, AuraData> = {
+  Hopeful:     { gradient: ['#101808','#182414','#1E2E18'], accent: '#C8A84B', particle: '✦', speed: 3800, count: 6,  orbs: ['#C8A84B22','#A09030','#C8A84B11'] },
+  Peaceful:    { gradient: ['#080E18','#0E1820','#14222C'], accent: '#78A8C8', particle: '✧', speed: 5200, count: 5,  orbs: ['#78A8C822','#5080A0','#78A8C811'] },
+  Lonely:      { gradient: ['#06061A','#0C0E24','#10142C'], accent: '#7090C0', particle: '·', speed: 7000, count: 4,  orbs: ['#7090C018','#506090','#7090C00E'] },
+  Dreamy:      { gradient: ['#0A0620','#140E38','#1A1248'], accent: '#B89AE8', particle: '⋆', speed: 5500, count: 8,  orbs: ['#B89AE822','#8060C0','#B89AE811'] },
+  Romantic:    { gradient: ['#12060C','#1C0A18','#24102A'], accent: '#D878B0', particle: '◦', speed: 4200, count: 6,  orbs: ['#D878B022','#A05090','#D878B011'] },
+  Soft:        { gradient: ['#0E0816','#16102C','#1C1438'], accent: '#C8A0D8', particle: '○', speed: 6000, count: 5,  orbs: ['#C8A0D820','#9070B0','#C8A0D810'] },
+  Chaotic:     { gradient: ['#140402','#200806','#2C0E08'], accent: '#E8784A', particle: '✸', speed: 1800, count: 10, orbs: ['#E8784A22','#C05020','#E8784A11'] },
+  Joyful:      { gradient: ['#060E06','#0E180E','#142018'], accent: '#70C888', particle: '★', speed: 3000, count: 7,  orbs: ['#70C88822','#40A060','#70C88811'] },
+  Adventurous: { gradient: ['#080E08','#10180C','#182014'], accent: '#6AC888', particle: '↑', speed: 2500, count: 8,  orbs: ['#6AC88822','#408040','#6AC88811'] },
+  Grateful:    { gradient: ['#120A10','#1C1018','#241420'], accent: '#D878B0', particle: '✿', speed: 4500, count: 6,  orbs: ['#D878B020','#A05890','#D878B010'] },
+  Nostalgic:   { gradient: ['#120A06','#1E1008','#280E0A'], accent: '#D4A05A', particle: '◇', speed: 5000, count: 5,  orbs: ['#D4A05A20','#A07030','#D4A05A10'] },
+  Melancholy:  { gradient: ['#060A14','#0A1020','#10182C'], accent: '#5D7BA5', particle: '◦', speed: 6500, count: 4,  orbs: ['#5D7BA518','#3A5080','#5D7BA50E'] },
+};
+const DEFAULT_AURA: AuraData = {
+  gradient: ['#0E0C20','#181448','#201C52'],
+  accent:   '#9B78E8',
+  particle: '✦',
+  speed:    4500,
+  count:    6,
+  orbs:     ['#9B78E820','#6040C0','#9B78E810'],
+};
+
+const PARTICLE_XS    = [0.08, 0.19, 0.33, 0.47, 0.60, 0.72, 0.85, 0.93, 0.15, 0.55];
+const PARTICLE_SIZES = [14,   10,   18,   12,   16,   9,    20,   11,   13,   15];
+
+// ── Animated banner effects ───────────────────────────────────────────────────
+function AuraBanner({
+  mood,
+  bannerH,
+  children,
+}: {
+  mood: string;
+  bannerH: number;
+  children: React.ReactNode;
+}) {
+  const aura = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const { width: W } = useWindowDimensions();
+
+  // Orb breath animation
+  const breathe = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(breathe, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [breathe]);
+
+  // Secondary drift
+  const drift = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(drift, { toValue: 1, duration: 6000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(drift, { toValue: 0, duration: 6000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [drift]);
+
+  // Particles
+  const particleAnims = useRef(
+    PARTICLE_XS.map(() => ({ y: new Animated.Value(0), op: new Animated.Value(0) }))
+  ).current;
+
+  useEffect(() => {
+    const H = bannerH + 40;
+    const loops = particleAnims.slice(0, aura.count).map((p, i) => {
+      p.y.setValue(-(i * (H / aura.count)));
+      p.op.setValue(0);
+      const loop = Animated.loop(Animated.sequence([
+        Animated.delay(i * (aura.speed / aura.count)),
+        Animated.parallel([
+          Animated.timing(p.y,  { toValue: -H - 20, duration: aura.speed * 1.6, easing: Easing.linear, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.timing(p.op, { toValue: 0.65, duration: aura.speed * 0.18, useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0.65, duration: aura.speed * 0.64, useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0,    duration: aura.speed * 0.18, useNativeDriver: true }),
+          ]),
+        ]),
+        Animated.parallel([
+          Animated.timing(p.y,  { toValue: 0, duration: 0, useNativeDriver: true }),
+          Animated.timing(p.op, { toValue: 0, duration: 0, useNativeDriver: true }),
+        ]),
+      ]));
+      loop.start();
+      return loop;
+    });
+    return () => loops.forEach(l => l.stop());
+  }, [mood, bannerH]);
+
+  const orbAScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] });
+  const orbAOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.18, 0.42, 0.18] });
+  const orbBScale   = drift.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1.18] });
+  const orbBOpacity = drift.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.10, 0.28, 0.10] });
+  const orbBX       = drift.interpolate({ inputRange: [0, 1], outputRange: [0, 20] });
+  const orbCOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.30, 0.12] });
+  const orbCX       = drift.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
+
+  return (
+    <View style={[styles.banner, { height: bannerH, overflow: 'hidden' }]}>
+      {/* Mood gradient base */}
+      <LinearGradient
+        colors={aura.gradient}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.1, y: 0 }}
+        end={{ x: 0.9, y: 1 }}
+      />
+
+      {/* Animated orb A — large, left, breathes */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: 10, left: -60,
+          width: W * 0.70, height: W * 0.70, borderRadius: W * 0.35,
+          backgroundColor: aura.orbs[0],
+          transform: [{ scale: orbAScale }],
+          opacity: orbAOpacity,
+        }}
+      />
+
+      {/* Animated orb B — mid, right, drifts */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', bottom: 20, right: -30,
+          width: W * 0.55, height: W * 0.55, borderRadius: W * 0.275,
+          backgroundColor: aura.orbs[1] + '30',
+          transform: [{ scale: orbBScale }, { translateX: orbBX }],
+          opacity: orbBOpacity,
+        }}
+      />
+
+      {/* Animated orb C — small, top right, drifts opposite */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: 40, right: 30,
+          width: 110, height: 110, borderRadius: 55,
+          backgroundColor: aura.orbs[2],
+          transform: [{ translateX: orbCX }],
+          opacity: orbCOpacity,
+        }}
+      />
+
+      {/* Floating particles */}
+      {particleAnims.slice(0, aura.count).map((p, i) => (
+        <Animated.Text
+          key={i}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            bottom: 20,
+            left: PARTICLE_XS[i % PARTICLE_XS.length] * W,
+            fontSize: PARTICLE_SIZES[i % PARTICLE_SIZES.length],
+            color: aura.accent,
+            opacity: p.op,
+            transform: [{ translateY: p.y }],
+          }}
+        >
+          {aura.particle}
+        </Animated.Text>
+      ))}
+
+      {children}
+    </View>
+  );
+}
+
+// ── Animated avatar ring ──────────────────────────────────────────────────────
+function AnimatedAvatarRing({ mood, profile }: { mood: string; profile: PublicProfile }) {
+  const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const breathe = useRef(new Animated.Value(0)).current;
+  const rotate  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const breatheLoop = Animated.loop(Animated.sequence([
+      Animated.timing(breathe, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    breatheLoop.start();
+    return () => breatheLoop.stop();
+  }, [breathe]);
+
+  useEffect(() => {
+    const rotateLoop = Animated.loop(
+      Animated.timing(rotate, { toValue: 1, duration: 12000, easing: Easing.linear, useNativeDriver: true })
+    );
+    rotateLoop.start();
+    return () => rotateLoop.stop();
+  }, [rotate]);
+
+  const ringScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.10] });
+  const ringOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.30, 0.85, 0.30] });
+  const haloOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.38, 0.12] });
+  const haloScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.20] });
+  const spin        = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  const avatarSource = profile.avatarUri ? { uri: profile.avatarUri } : null;
+  const initial = (profile.name ?? '?').charAt(0).toUpperCase();
+
+  return (
+    <View style={styles.avatarInBanner}>
+      {/* Outer halo pulse */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: 148, height: 148, borderRadius: 74,
+          backgroundColor: aura.accent + '18',
+          transform: [{ scale: haloScale }],
+          opacity: haloOpacity,
+        }}
+      />
+      {/* Rotating dashed ring */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: 128, height: 128, borderRadius: 64,
+          borderWidth: 1.5,
+          borderColor: aura.accent + 'AA',
+          borderStyle: 'dashed',
+          transform: [{ rotate: spin }],
+        }}
+      />
+      {/* Breathing solid ring */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          width: 118, height: 118, borderRadius: 59,
+          borderWidth: 2,
+          borderColor: aura.accent,
+          transform: [{ scale: ringScale }],
+          opacity: ringOpacity,
+        }}
+      />
+      {/* Avatar circle */}
+      <View style={[styles.avatarCircle, { borderColor: aura.accent + '80' }]}>
+        {avatarSource ? (
+          <Image
+            source={avatarSource}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        ) : (
+          <Text style={[styles.avatarInitial, { color: aura.accent }]}>{initial}</Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ── Mood chip ─────────────────────────────────────────────────────────────────
+function MoodChip({ mood }: { mood: string }) {
+  const aura = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  return (
+    <View style={[styles.moodChip, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}>
+      <View style={[styles.moodDot, { backgroundColor: aura.accent }]} />
+      <Text style={[styles.moodChipText, { color: aura.accent }]}>{mood}</Text>
+    </View>
+  );
+}
 
 const MOOD_COLORS: Record<string, string> = {
   Peaceful: '#8B7AB5', Joyful: '#D4A849', Melancholy: '#5D7BA5',
@@ -100,6 +377,7 @@ export default function UserProfileScreen() {
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 40;
+  const bannerH   = topPad + 230;
 
   useEffect(() => {
     if (!userId) return;
@@ -140,8 +418,9 @@ export default function UserProfileScreen() {
     else             followUser(profile.userId);
   }
 
-  const moodColor = MOOD_COLORS[profile?.mood ?? 'Hopeful'] ?? colors.primary;
-  const initial   = (profile?.name ?? '?').charAt(0).toUpperCase();
+  const mood           = profile?.mood ?? 'Dreamy';
+  const aura           = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const moodColor      = MOOD_COLORS[mood] ?? aura.accent;
   const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
   const isTopExplorer  = totalWitnessed >= 10 || stories.length >= 3;
 
@@ -174,22 +453,11 @@ export default function UserProfileScreen() {
     <View style={[styles.root, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
 
-        {/* ── HERO BANNER ─────────────────────────────────────────── */}
-        <View style={[styles.banner, { height: topPad + 230 }]}>
-          <LinearGradient
-            colors={['#0A0818', '#1C0E4A', '#2C1462']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 0.9, y: 1 }}
-          />
-          {/* Mood-tinted orbs */}
-          <View style={[styles.orbA, { backgroundColor: `${moodColor}22` }]} />
-          <View style={[styles.orbB, { backgroundColor: 'rgba(200,168,75,0.10)' }]} />
-          <View style={[styles.orbC, { backgroundColor: `${colors.primary}12` }]} />
-
+        {/* ── ANIMATED AURA BANNER ────────────────────────────────── */}
+        <AuraBanner mood={mood} bannerH={bannerH}>
           {/* Back button */}
           <TouchableOpacity
-            style={[styles.topBtn, { top: topPad + 10, left: 16, backgroundColor: 'rgba(12,10,30,0.60)' }]}
+            style={[styles.topBtn, { top: topPad + 10, left: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}
             onPress={() => router.back()}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
@@ -198,7 +466,7 @@ export default function UserProfileScreen() {
 
           {/* More / report button */}
           <TouchableOpacity
-            style={[styles.topBtn, { top: topPad + 10, right: 16, backgroundColor: 'rgba(12,10,30,0.60)' }]}
+            style={[styles.topBtn, { top: topPad + 10, right: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}
             onPress={() => setReportVisible(true)}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
@@ -207,32 +475,25 @@ export default function UserProfileScreen() {
 
           {/* Top Explorer badge */}
           {isTopExplorer && (
-            <View style={[styles.explorerBadge, { top: topPad + 10, right: 60, backgroundColor: 'rgba(232,184,48,0.18)', borderColor: 'rgba(232,184,48,0.40)' }]}>
+            <View style={[styles.explorerBadge, {
+              top: topPad + 10,
+              right: isSelf ? 60 : 62,
+              backgroundColor: 'rgba(232,184,48,0.18)',
+              borderColor: 'rgba(232,184,48,0.40)',
+            }]}>
               <Text style={{ fontSize: 12 }}>🏆</Text>
               <Text style={[styles.explorerBadgeText, { color: '#E8B830' }]}>Top Explorer</Text>
             </View>
           )}
 
-          {/* Avatar centered in banner, floating at bottom */}
-          <View style={styles.avatarInBanner}>
-            {/* Glow ring */}
-            <View style={[styles.avatarGlowRing, { borderColor: `${moodColor}55`, backgroundColor: `${moodColor}12` }]} />
-            <View style={[styles.avatarRingOuter, { borderColor: moodColor }]}>
-              <View style={[styles.avatarRingInner, { borderColor: `${moodColor}40`, backgroundColor: colors.card }]}>
-                {profile.avatarUri ? (
-                  <Image
-                    source={{ uri: profile.avatarUri }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                  />
-                ) : (
-                  <Text style={[styles.avatarInitial, { color: moodColor }]}>{initial}</Text>
-                )}
-              </View>
-            </View>
+          {/* Mood label floating in banner */}
+          <View style={[styles.moodFloat, { top: topPad + 14 }]}>
+            <MoodChip mood={mood} />
           </View>
-        </View>
+
+          {/* Avatar with animated aura rings */}
+          <AnimatedAvatarRing mood={mood} profile={profile} />
+        </AuraBanner>
 
         {/* ── FLOATING PROFILE CARD ───────────────────────────────── */}
         <Animated.View
@@ -246,8 +507,8 @@ export default function UserProfileScreen() {
           {/* Name + badge */}
           <View style={styles.nameRow}>
             <Text style={[styles.name, { color: colors.foreground }]}>{profile.name}</Text>
-            <View style={[styles.nameBadge, { backgroundColor: `${colors.gold}20`, borderColor: `${colors.gold}35` }]}>
-              <Text style={{ fontSize: 12 }}>✦</Text>
+            <View style={[styles.nameBadge, { backgroundColor: aura.accent + '20', borderColor: aura.accent + '40' }]}>
+              <Text style={{ fontSize: 12 }}>{aura.particle}</Text>
             </View>
             {!isSelf && (
               <TouchableOpacity
@@ -269,7 +530,7 @@ export default function UserProfileScreen() {
 
           {/* @handle */}
           {profile.username ? (
-            <Text style={[styles.handle, { color: colors.primary }]}>@{profile.username}</Text>
+            <Text style={[styles.handle, { color: aura.accent }]}>@{profile.username}</Text>
           ) : null}
 
           {/* Bio */}
@@ -290,9 +551,9 @@ export default function UserProfileScreen() {
               {profile.traits.map(tr => (
                 <View
                   key={tr}
-                  style={[styles.traitChip, { backgroundColor: `${moodColor}14`, borderColor: `${moodColor}30` }]}
+                  style={[styles.traitChip, { backgroundColor: aura.accent + '14', borderColor: aura.accent + '30' }]}
                 >
-                  <Text style={[styles.traitText, { color: moodColor }]}>{tr}</Text>
+                  <Text style={[styles.traitText, { color: aura.accent }]}>{tr}</Text>
                 </View>
               ))}
             </ScrollView>
@@ -301,7 +562,7 @@ export default function UserProfileScreen() {
           {/* Stats row */}
           <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: colors.primary }]}>{stories.length}</Text>
+              <Text style={[styles.statNum, { color: aura.accent }]}>{stories.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -326,9 +587,9 @@ export default function UserProfileScreen() {
         >
           {/* Following notification banner */}
           {!isSelf && isFollowing && (
-            <View style={[styles.notifyBanner, { backgroundColor: `${moodColor}10`, borderColor: `${moodColor}28` }]}>
-              <Icon name="bell" size={13} color={moodColor} />
-              <Text style={[styles.notifyText, { color: moodColor }]}>
+            <View style={[styles.notifyBanner, { backgroundColor: aura.accent + '10', borderColor: aura.accent + '28' }]}>
+              <Icon name="bell" size={13} color={aura.accent} />
+              <Text style={[styles.notifyText, { color: aura.accent }]}>
                 You'll see new posts from {profile.name} in your Discover feed
               </Text>
             </View>
@@ -362,7 +623,7 @@ export default function UserProfileScreen() {
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Current Outfit</Text>
               <View style={styles.spotlightRow}>
                 {/* Left: outfit image */}
-                <View style={[styles.spotlightImgWrap, { backgroundColor: `${moodColor}18` }]}>
+                <View style={[styles.spotlightImgWrap, { backgroundColor: aura.accent + '18' }]}>
                   {profile.activeOutfit.imageUri ? (
                     <Image
                       source={{ uri: profile.activeOutfit.imageUri }}
@@ -372,7 +633,7 @@ export default function UserProfileScreen() {
                     />
                   ) : (
                     <LinearGradient
-                      colors={[`${moodColor}50`, `${moodColor}18`]}
+                      colors={[aura.accent + '50', aura.accent + '18']}
                       style={StyleSheet.absoluteFill}
                     />
                   )}
@@ -385,18 +646,18 @@ export default function UserProfileScreen() {
                 </View>
                 {/* Right: info */}
                 <View style={styles.spotlightInfo}>
-                  <Text style={[styles.spotlightAboutLabel, { color: `${colors.mutedForeground}88` }]}>About this look</Text>
+                  <Text style={[styles.spotlightAboutLabel, { color: colors.mutedForeground + '88' }]}>About this look</Text>
                   <Text style={[styles.spotlightDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
                     {profile.activeOutfit.description || profile.activeOutfit.name}
                   </Text>
                   <View style={styles.spotlightTags}>
                     {(profile.activeOutfit.tags ?? []).slice(0, 3).map(tag => (
-                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: `${moodColor}14`, borderColor: `${moodColor}28` }]}>
-                        <Text style={[styles.spotlightTagText, { color: moodColor }]}>{tag}</Text>
+                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: aura.accent + '14', borderColor: aura.accent + '28' }]}>
+                        <Text style={[styles.spotlightTagText, { color: aura.accent }]}>{tag}</Text>
                       </View>
                     ))}
                     {(profile.activeOutfit.tags ?? []).length === 0 && (
-                      <View style={[styles.spotlightTag, { backgroundColor: `${colors.gold}14`, borderColor: `${colors.gold}28` }]}>
+                      <View style={[styles.spotlightTag, { backgroundColor: colors.gold + '14', borderColor: colors.gold + '28' }]}>
                         <Text style={[styles.spotlightTagText, { color: colors.gold }]}>Outfit</Text>
                       </View>
                     )}
@@ -453,7 +714,7 @@ export default function UserProfileScreen() {
                       />
                     ) : (
                       <LinearGradient
-                        colors={[`${moodColor}50`, `${moodColor}18`]}
+                        colors={[aura.accent + '50', aura.accent + '18']}
                         style={StyleSheet.absoluteFill}
                       />
                     )}
@@ -487,7 +748,7 @@ export default function UserProfileScreen() {
                 contentContainerStyle={styles.hScrollContent}
               >
                 {stories.map(story => {
-                  const mc         = MOOD_COLORS[story.mood] ?? colors.primary;
+                  const mc         = MOOD_COLORS[story.mood] ?? aura.accent;
                   const firstPanel = story.panels[0];
                   return (
                     <TouchableOpacity
@@ -505,7 +766,7 @@ export default function UserProfileScreen() {
                         />
                       ) : (
                         <LinearGradient
-                          colors={[`${mc}55`, `${mc}18`]}
+                          colors={[mc + '55', mc + '18']}
                           style={StyleSheet.absoluteFill}
                         />
                       )}
@@ -519,7 +780,7 @@ export default function UserProfileScreen() {
                             <Icon name="eye" size={10} color="rgba(200,184,232,0.75)" />
                             <Text style={styles.hStoryWitnessText}>{story.witnessedCount}</Text>
                           </View>
-                          <View style={[styles.hMoodPill, { backgroundColor: `${mc}28` }]}>
+                          <View style={[styles.hMoodPill, { backgroundColor: mc + '28' }]}>
                             <Text style={[styles.hMoodPillText, { color: mc }]}>{story.mood}</Text>
                           </View>
                         </View>
@@ -533,8 +794,8 @@ export default function UserProfileScreen() {
 
           {/* Empty state when both are empty */}
           {stories.length === 0 && outfits.length === 0 && !profile.activeOutfit && (
-            <View style={[styles.emptyState, { borderColor: `${colors.primary}18` }]}>
-              <Icon name="star" size={28} color={`${colors.primary}40`} />
+            <View style={[styles.emptyState, { borderColor: aura.accent + '18' }]}>
+              <Text style={{ fontSize: 24 }}>{aura.particle}</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 {profile.name} hasn't shared anything yet
               </Text>
@@ -578,10 +839,7 @@ const styles = StyleSheet.create({
   backBtnErrText: { fontSize: 14, fontFamily: 'Satoshi-Medium' },
 
   // ── Banner
-  banner: { width: '100%', overflow: 'hidden', position: 'relative' },
-  orbA:   { position: 'absolute', top: 20, left: -50, width: 200, height: 200, borderRadius: 100 },
-  orbB:   { position: 'absolute', bottom: 30, right: -40, width: 160, height: 160, borderRadius: 80 },
-  orbC:   { position: 'absolute', top: 60, right: 40, width: 100, height: 100, borderRadius: 50 },
+  banner: { width: '100%', position: 'relative' },
 
   topBtn: {
     position: 'absolute',
@@ -597,27 +855,32 @@ const styles = StyleSheet.create({
   },
   explorerBadgeText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
 
+  // Mood chip floating in banner
+  moodFloat: {
+    position: 'absolute',
+    left: 0, right: 0,
+    alignItems: 'center',
+  },
+  moodChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1,
+  },
+  moodDot: { width: 7, height: 7, borderRadius: 3.5 },
+  moodChipText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+
   // Avatar inside banner
   avatarInBanner: {
     position: 'absolute',
-    bottom: 40, left: 0, right: 0,
+    bottom: 32, left: 0, right: 0,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  avatarGlowRing: {
-    position: 'absolute',
-    width: 130, height: 130, borderRadius: 65,
-    borderWidth: 1,
-  },
-  avatarRingOuter: {
-    width: 108, height: 108, borderRadius: 54,
-    borderWidth: 2,
+  avatarCircle: {
+    width: 104, height: 104, borderRadius: 52,
+    borderWidth: 2.5, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
-  },
-  avatarRingInner: {
-    width: 100, height: 100, borderRadius: 50,
-    borderWidth: 1,
-    overflow: 'hidden',
-    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: '#1A1630',
   },
   avatarInitial: { fontSize: 34, fontFamily: 'Satoshi-Bold' },
 
