@@ -235,6 +235,7 @@ interface AppContextValue {
   deleteGalleryPhoto: (id: string) => void;
 
   discoverPosts:  DiscoverPost[];
+  savedStoryIds:  ReadonlySet<string>;
   toggleSavePost: (id: string) => void;
 
   followingIds:  string[];
@@ -920,7 +921,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       journalEntries, addJournalEntry, deleteJournalEntry,
       outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
-      discoverPosts, toggleSavePost,
+      discoverPosts, savedStoryIds, toggleSavePost,
       followingIds, followUser, unfollowUser,
       rewards, dismissReward,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,

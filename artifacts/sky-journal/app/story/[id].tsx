@@ -241,7 +241,7 @@ export default function StoryScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
-  const { stories, discoverPosts, toggleSavePost, deleteStory } = useApp();
+  const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory } = useApp();
 
   const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
@@ -259,7 +259,7 @@ export default function StoryScreen() {
   const mood       = story?.mood         ?? post?.mood         ?? 'Peaceful';
   const authorName = post?.authorName    ?? t('common.you');
   const chapterNum = post?.chapterNumber ?? 1;
-  const isSaved    = post?.saved         ?? false;
+  const isSaved    = savedStoryIds.has(id ?? '');
 
   const witnessedCount = ((story?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0));
   const savedCount     = story?.savedCount ?? post?.savedCount ?? 0;
@@ -306,10 +306,9 @@ export default function StoryScreen() {
   }
 
   function handleSave() {
-    if (post) {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      toggleSavePost(post.id);
-    }
+    if (!id) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    toggleSavePost(id);
   }
 
   function handleDelete() {
@@ -446,15 +445,13 @@ export default function StoryScreen() {
         </View>
 
         <View style={styles.actionRow}>
-          {!!post && (
-            <TouchableOpacity
-              style={[styles.actionBtn, { backgroundColor: isSaved ? 'rgba(139,122,181,0.25)' : 'rgba(255,255,255,0.08)', borderColor: isSaved ? '#8B7AB5' : 'rgba(255,255,255,0.18)' }]}
-              onPress={handleSave}
-            >
-              <Icon name="bookmark" size={15} color={isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)'} />
-              <Text style={[styles.actionBtnText, { color: isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)' }]}>{isSaved ? t('discover.saved') : t('discover.save')}</Text>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity
+            style={[styles.actionBtn, { backgroundColor: isSaved ? 'rgba(139,122,181,0.25)' : 'rgba(255,255,255,0.08)', borderColor: isSaved ? '#8B7AB5' : 'rgba(255,255,255,0.18)' }]}
+            onPress={handleSave}
+          >
+            <Icon name="bookmark" size={15} color={isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)'} />
+            <Text style={[styles.actionBtnText, { color: isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)' }]}>{isSaved ? t('discover.saved') : t('discover.save')}</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.witnessBtn, { backgroundColor: witnessed ? 'rgba(200,168,75,0.2)' : 'rgba(139,122,181,0.25)', borderColor: witnessed ? 'rgba(200,168,75,0.55)' : 'rgba(139,122,181,0.55)' }]}
