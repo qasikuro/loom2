@@ -769,7 +769,12 @@ export default function CharacterScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* ── Profile header (no scroll) ───────────────────────────── */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottomPad + 40 }}
+        scrollEventThrottle={16}
+      >
+      {/* ── Profile header ───────────────────────────────────────── */}
       <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 8}>
 
           {/* Top controls: vis toggle left, settings + bell right */}
@@ -956,28 +961,26 @@ export default function CharacterScreen() {
           ) : null}
         </CharacterAuraHeader>
 
-        {/* ── Stats card ──────────────────────────── */}
-        <View style={[styles.statsLightCard, SHADOW.sm]}>
-          <View style={styles.statsDataRow}>
-            <TouchableOpacity style={styles.statLightItem} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.7}>
-              <Text style={styles.statLightNum}>{stories.length}</Text>
-              <Text style={styles.statLightLabel}>{t('profile.stories')}</Text>
-            </TouchableOpacity>
-            <View style={styles.statLightDivider} />
-            <View style={styles.statLightItem}>
-              <Text style={styles.statLightNum}>{outfits.length}</Text>
-              <Text style={styles.statLightLabel}>{t('profile.outfits')}</Text>
-            </View>
-            <View style={styles.statLightDivider} />
-            <View style={styles.statLightItem}>
-              <Text style={styles.statLightNum}>{totalWitnessed}</Text>
-              <Text style={styles.statLightLabel}>{t('discover.witnessed')}</Text>
-            </View>
+        {/* ── Stats row ────────────────────────────────────────── */}
+        <View style={styles.statsRow}>
+          <TouchableOpacity style={styles.statPill} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.75}>
+            <Text style={styles.statPillNum}>{stories.length}</Text>
+            <Text style={styles.statPillLabel}>Stories</Text>
+          </TouchableOpacity>
+          <View style={styles.statPillDot} />
+          <View style={styles.statPill}>
+            <Text style={styles.statPillNum}>{outfits.length}</Text>
+            <Text style={styles.statPillLabel}>Outfits</Text>
+          </View>
+          <View style={styles.statPillDot} />
+          <View style={styles.statPill}>
+            <Text style={styles.statPillNum}>{totalWitnessed}</Text>
+            <Text style={styles.statPillLabel}>Witnessed</Text>
           </View>
         </View>
 
-        {/* ── Compact content (flex, no outer scroll) ─────────── */}
-        <View style={{ flex: 1, paddingHorizontal: 16, paddingTop: 10, paddingBottom: bottomPad }}>
+        {/* ── Content ─────────────────────────────────────────── */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
 
           {/* Current outfit compact card */}
           {activeOutfit && (
@@ -1010,12 +1013,25 @@ export default function CharacterScreen() {
             </TouchableOpacity>
           )}
 
-          {/* ── My Wardrobe ──────────────────────────────────── */}
+          {/* ── Wardrobe ─────────────────────────────────────── */}
           <View style={styles.hSection}>
             <View style={styles.hSectionHeader}>
-              <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
-              <TouchableOpacity onPress={() => router.push('/wardrobe' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={[styles.hSectionLink, { color: colors.primary }]}>View all ›</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
+                {outfits.length > 0 && (
+                  <View style={[styles.hCountPill, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
+                    <Text style={[styles.hCountPillText, { color: colors.primary }]}>{outfits.length}</Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                style={[styles.hSectionAddBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+                onPress={() => router.push('/create-outfit' as any)}
+                activeOpacity={0.75}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="plus" size={13} color={colors.primary} />
+                <Text style={[styles.hSectionAddText, { color: colors.primary }]}>New outfit</Text>
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
@@ -1051,64 +1067,84 @@ export default function CharacterScreen() {
                   </TouchableOpacity>
                 );
               })}
-              <TouchableOpacity
-                style={[styles.hAddCard, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}28` }]}
-                onPress={() => router.push('/create-outfit' as any)}
-                activeOpacity={0.8}
-              >
-                <Icon name="plus" size={22} color={`${colors.primary}70`} />
-                <Text style={[styles.hAddText, { color: `${colors.primary}70` }]}>Add</Text>
-              </TouchableOpacity>
             </ScrollView>
           </View>
 
-          {/* ── My Gallery ───────────────────────────────────── */}
+          {/* ── Gallery ──────────────────────────────────────── */}
           <View style={styles.hSection}>
             <View style={styles.hSectionHeader}>
-              <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>My Gallery</Text>
-              <TouchableOpacity hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Text style={[styles.hSectionLink, { color: colors.primary }]}>View all ({gallery.length}) ›</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
-              {gallery.slice(0, 8).map(photo => (
-                <TouchableOpacity
-                  key={photo.id}
-                  style={styles.hGalleryThumb}
-                  onPress={() => openPhoto(photo)}
-                  activeOpacity={0.88}
-                >
-                  <Image
-                    source={{ uri: photo.imageUri }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                  />
-                </TouchableOpacity>
-              ))}
-              {gallery.length === 0 && (
-                <View style={[styles.hGalleryThumb, { backgroundColor: `${colors.primary}0A`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: `${colors.primary}28`, borderRadius: 12 }]}>
-                  <Icon name="image" size={20} color={`${colors.primary}50`} />
-                </View>
-              )}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Gallery</Text>
+                {gallery.length > 0 && (
+                  <View style={[styles.hCountPill, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
+                    <Text style={[styles.hCountPillText, { color: colors.primary }]}>{gallery.length}</Text>
+                  </View>
+                )}
+              </View>
               <TouchableOpacity
-                style={[styles.hAddCard, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}28`, height: 100, width: 72 }]}
+                style={[styles.hSectionAddBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
                 onPress={handleAddGalleryPhoto}
-                activeOpacity={0.8}
+                activeOpacity={0.75}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 {galleryUploading
                   ? <ActivityIndicator size="small" color={colors.primary} />
-                  : <Icon name="plus" size={22} color={`${colors.primary}70`} />
+                  : <Icon name="plus" size={13} color={colors.primary} />
                 }
-                <Text style={[styles.hAddText, { color: `${colors.primary}70` }]}>Add</Text>
+                <Text style={[styles.hSectionAddText, { color: colors.primary }]}>Add photo</Text>
               </TouchableOpacity>
-            </ScrollView>
+            </View>
+
+            {gallery.length === 0 ? (
+              <View style={styles.galEmptyRow}>
+                {[0, 1, 2].map(i => (
+                  <View
+                    key={i}
+                    style={[styles.galEmptyTile, {
+                      backgroundColor: `${colors.primary}${i === 1 ? '0A' : '06'}`,
+                      borderColor: `${colors.primary}${i === 1 ? '22' : '14'}`,
+                      opacity: i === 1 ? 1 : 0.55,
+                    }]}
+                  >
+                    {i === 1 && (
+                      <>
+                        <View style={[styles.galEmptyIcon, { backgroundColor: `${colors.primary}14` }]}>
+                          <Icon name="image" size={18} color={`${colors.primary}70`} />
+                        </View>
+                        <Text style={[styles.galEmptyLabel, { color: `${colors.primary}60` }]}>Your gallery{'\n'}starts here</Text>
+                      </>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
+                {gallery.slice(0, 8).map(photo => (
+                  <TouchableOpacity
+                    key={photo.id}
+                    style={styles.hGalleryThumb}
+                    onPress={() => openPhoto(photo)}
+                    activeOpacity={0.88}
+                  >
+                    <Image
+                      source={{ uri: photo.imageUri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
             {galleryError && (
-              <Text style={[styles.galError, { color: colors.destructive }]}>{galleryError}</Text>
+              <Text style={[styles.galError, { color: colors.destructive, marginTop: 6 }]}>{galleryError}</Text>
             )}
           </View>
 
         </View>
+
+      </ScrollView>
 
       {/* ── Drawer backdrop ─────────────────────────────────────── */}
       {drawerOpen && (
@@ -1661,22 +1697,19 @@ const styles = StyleSheet.create({
   profileHandle:{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.72)' },
   profileBio:   { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 17 },
 
-  // Stats card
-  statsLightCard: {
-    backgroundColor: '#27243E',
-    borderRadius: 18,
-    marginHorizontal: 14,
-    marginTop: 12,
-    paddingVertical: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(155,120,255,0.13)',
-    overflow: 'hidden',
+  // Stats row (inline, no card)
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    gap: 0,
   },
-  statsDataRow:     { flexDirection: 'row', paddingHorizontal: 8 },
-  statLightItem:    { flex: 1, alignItems: 'center', gap: 4 },
-  statLightNum:     { fontSize: 22, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.5 },
-  statLightLabel:   { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.55)', letterSpacing: 0.5, textTransform: 'uppercase' },
-  statLightDivider: { width: 1, backgroundColor: 'rgba(155,120,255,0.20)', marginVertical: 6 },
+  statPill: { flex: 1, alignItems: 'center', gap: 3 },
+  statPillNum: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.5 },
+  statPillLabel: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.50)', letterSpacing: 0.4, textTransform: 'uppercase' },
+  statPillDot: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(155,120,255,0.30)', marginHorizontal: 4 },
 
   // Trait chips scroll (used inside header)
   traitChipsScroll: { marginTop: 4, marginHorizontal: -20, marginBottom: 2 },
@@ -1750,22 +1783,36 @@ const styles = StyleSheet.create({
 
   // Horizontal section (outfits/stories rows)
   hSection: {
-    marginBottom: 16,
+    marginBottom: 24,
   },
   hSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   hSectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: 'Satoshi-Bold',
-    letterSpacing: -0.2,
+    letterSpacing: 0.1,
   },
   hSectionLink: {
     fontSize: 12,
     fontFamily: 'Satoshi-Medium',
+  },
+  hSectionAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5,
+    borderWidth: 1,
+  },
+  hSectionAddText: {
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+  },
+  hCountPill: {
+    borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1,
+  },
+  hCountPillText: {
+    fontSize: 10, fontFamily: 'Satoshi-Bold',
   },
   hScrollPad: {
     paddingRight: 16,
@@ -2083,6 +2130,23 @@ const styles = StyleSheet.create({
   galModalBody:    { paddingVertical: 16, gap: 10 },
   galModalDate:    { fontSize: 12, fontFamily: 'Satoshi-Regular' },
   galModalCaption: { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 21 },
+
+  // Gallery 3-tile empty state
+  galEmptyRow: {
+    flexDirection: 'row', gap: 8,
+  },
+  galEmptyTile: {
+    flex: 1, height: 110, borderRadius: 14, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  galEmptyIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  galEmptyLabel: {
+    fontSize: 11, fontFamily: 'Satoshi-Regular',
+    textAlign: 'center', lineHeight: 16,
+  },
 
   // Compact outfit card (main profile page)
   compactOutfitCard: {
