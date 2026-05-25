@@ -89,10 +89,35 @@ const HEADER_STARS = [
   { t: 10, l: 180, s: 1.5 },
 ] as const;
 
-// Gold sparkle accents on the hero — 2 max
-const SPARKLES = [
-  { t: 20, l: 28,  s: 4, o: 0.40 },
-  { t: 55, r: 32,  s: 3, o: 0.30 },
+// Mood → hero background aurora palette
+const MOOD_AURORA: Record<string, [string, string, string, string]> = {
+  Hopeful:     ['#D0C848', '#EEE878', '#C8B840', '#F8F098'],
+  Peaceful:    ['#60B0D8', '#88C8EC', '#5098C0', '#B0D8F0'],
+  Dreamy:      ['#B098D8', '#CAB8EC', '#9888C8', '#E0D0F8'],
+  Lonely:      ['#7888B8', '#9090C0', '#6878A8', '#B0B8D0'],
+  Romantic:    ['#D870A8', '#F090C4', '#C86098', '#F8C0D8'],
+  Soft:        ['#C098D0', '#D8B0E4', '#B088C0', '#EACEF4'],
+  Chaotic:     ['#E07848', '#F09868', '#D06838', '#F8B890'],
+  Joyful:      ['#60C080', '#80D898', '#50B070', '#B0E8C0'],
+  Adventurous: ['#58A868', '#78C088', '#489858', '#A8D8B0'],
+  Grateful:    ['#C070A0', '#DC90B8', '#B06090', '#F0C0D8'],
+};
+const DEFAULT_AURORA: [string, string, string, string] = ['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8'];
+
+// Burst: 8 directions + particle sizes
+const BURST_DIRS  = Array.from({ length: 8 }, (_, i) => (i * 45 * Math.PI) / 180);
+const BURST_SIZES = [7, 4, 9, 5, 8, 4, 7, 5];
+
+// Expanded ambient sparkles — 8 positions, mix of gold + mood-tinted
+const AMBIENT_SPARKLES = [
+  { t: 14, l: 22,  s: 4,   o: 0.55, gold: true  },
+  { t: 30, r: 28,  s: 3,   o: 0.38, gold: true  },
+  { t: 52, l: 48,  s: 3,   o: 0.42, gold: false },
+  { t: 18, r: 70,  s: 4.5, o: 0.30, gold: false },
+  { t: 72, r: 22,  s: 2.5, o: 0.48, gold: true  },
+  { t: 44, l: 16,  s: 3.5, o: 0.32, gold: false },
+  { t: 82, l: 58,  s: 4,   o: 0.40, gold: true  },
+  { t: 62, r: 50,  s: 3,   o: 0.34, gold: false },
 ] as const;
 
 export default function HomeScreen() {
@@ -133,8 +158,20 @@ export default function HomeScreen() {
   // Star twinkle – each header star pulses at a different rhythm
   const starAnims = useRef(HEADER_STARS.map(() => new Animated.Value(0.28))).current;
 
-  // Gold sparkle shimmer
-  const sparkleAnims = useRef(SPARKLES.map(sp => new Animated.Value(sp.o))).current;
+  // Ambient sparkle shimmer (8 positions)
+  const sparkleAnims = useRef(AMBIENT_SPARKLES.map(sp => new Animated.Value(sp.o))).current;
+
+  // Aurora drift animations (two independent orbs)
+  const auroraAnim1 = useRef(new Animated.Value(0)).current;
+  const auroraAnim2 = useRef(new Animated.Value(0)).current;
+
+  // Burst particles on character tap
+  const burstAnims = useRef(
+    BURST_DIRS.map(() => ({ x: new Animated.Value(0), y: new Animated.Value(0), op: new Animated.Value(0), sc: new Animated.Value(0) }))
+  ).current;
+
+  // Character tap scale bounce
+  const heroTapScale = useRef(new Animated.Value(1)).current;
 
   // Hero character float
   const heroFloat = useRef(new Animated.Value(0)).current;
@@ -173,25 +210,31 @@ export default function HomeScreen() {
       setTimeout(() => loop.start(), i * 320);
     });
 
-    // Sparkle shimmer loops
+    // Ambient sparkle shimmer loops (8 sparkles, each with unique rhythm)
     sparkleAnims.forEach((anim, i) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 0.9,
-            duration: 1400 + i * 200,
-            useNativeDriver: true,
-            easing: Easing.inOut(Easing.sin),
-          }),
-          Animated.timing(anim, {
-            toValue: 0.1,
-            duration: 1200 + i * 180,
-            useNativeDriver: true,
-            easing: Easing.inOut(Easing.sin),
-          }),
-        ])
-      ).start();
+      const hiVal = 0.75 + (i % 3) * 0.10;
+      const loVal = 0.08 + (i % 2) * 0.06;
+      setTimeout(() => {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(anim, { toValue: hiVal, duration: 1200 + i * 220, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+            Animated.timing(anim, { toValue: loVal, duration: 1000 + i * 190, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+          ])
+        ).start();
+      }, i * 280);
     });
+
+    // Aurora drift loops
+    Animated.loop(Animated.sequence([
+      Animated.timing(auroraAnim1, { toValue: 1, duration: 4400, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(auroraAnim1, { toValue: 0, duration: 4400, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+    ])).start();
+    setTimeout(() => {
+      Animated.loop(Animated.sequence([
+        Animated.timing(auroraAnim2, { toValue: 1, duration: 5800, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(auroraAnim2, { toValue: 0, duration: 5800, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])).start();
+    }, 1600);
 
     // Hero float — gentle sine wave
     Animated.loop(
@@ -251,10 +294,44 @@ export default function HomeScreen() {
       .catch(() => {});
   }, [followingIds.length]);
 
-  const heroFloatY = heroFloat.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -9],
-  });
+  const heroFloatY = heroFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -9] });
+
+  // Aurora interpolations
+  const aurora1X  = auroraAnim1.interpolate({ inputRange: [0, 1], outputRange: [0,  38] });
+  const aurora1Y  = auroraAnim1.interpolate({ inputRange: [0, 1], outputRange: [0,  20] });
+  const aurora1Op = auroraAnim1.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.28, 0.54, 0.28] });
+  const aurora2X  = auroraAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -30] });
+  const aurora2Y  = auroraAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
+  const aurora2Op = auroraAnim2.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.22, 0.48, 0.22] });
+
+  // Burst interaction
+  function triggerHeroBurst() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    // Scale bounce
+    Animated.sequence([
+      Animated.timing(heroTapScale, { toValue: 1.07, duration: 75, useNativeDriver: true }),
+      Animated.spring(heroTapScale, { toValue: 1, tension: 200, friction: 7, useNativeDriver: true }),
+    ]).start();
+    // Reset + fire burst
+    burstAnims.forEach(p => { p.x.setValue(0); p.y.setValue(0); p.op.setValue(0); p.sc.setValue(0); });
+    Animated.parallel(
+      burstAnims.map((p, i) => {
+        const dist = 42 + (i % 3) * 18;
+        return Animated.sequence([
+          Animated.parallel([
+            Animated.timing(p.op, { toValue: 1,   duration: 55, useNativeDriver: true }),
+            Animated.timing(p.sc, { toValue: 1.2, duration: 55, useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.timing(p.x,  { toValue: Math.cos(BURST_DIRS[i]) * dist, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(p.y,  { toValue: Math.sin(BURST_DIRS[i]) * dist, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0,   duration: 500, useNativeDriver: true }),
+            Animated.timing(p.sc, { toValue: 2.2, duration: 500, useNativeDriver: true }),
+          ]),
+        ]);
+      })
+    ).start();
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -347,77 +424,119 @@ export default function HomeScreen() {
         </View>
 
         {/* ── Character Hero ─────────────────────────────────── */}
-        <View style={[styles.charHero, { height: Math.round(screenW * 0.54) }]}>
-          {/* Background gradient */}
-          <LinearGradient
-            colors={['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          />
+        {(() => {
+          const heroH  = Math.round(screenW * 0.54);
+          const aurora = MOOD_AURORA[character.mood || ''] ?? DEFAULT_AURORA;
+          const burstOriginX = screenW / 2 - 4;
+          const burstOriginY = heroH / 2 - 4;
+          return (
+            <View style={[styles.charHero, { height: heroH }]}>
+              {/* Mood-reactive base gradient */}
+              <LinearGradient
+                colors={[aurora[0], aurora[1], aurora[2], aurora[3]]}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              />
 
-          {/* Floating character image */}
-          <Animated.View
-            style={[StyleSheet.absoluteFill, { transform: [{ translateY: heroFloatY }] }]}
-          >
-            {activeOutfit?.imageUri
-              ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
-              : <Image source={Images.character_default} style={StyleSheet.absoluteFill} contentFit="contain" />
-            }
-          </Animated.View>
+              {/* Aurora orb 1 — drifts right + down */}
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute', top: -50, left: -50,
+                  width: 210, height: 210, borderRadius: 105,
+                  backgroundColor: aurora[0],
+                  opacity: aurora1Op,
+                  transform: [{ translateX: aurora1X }, { translateY: aurora1Y }],
+                }}
+              />
+              {/* Aurora orb 2 — drifts left + up */}
+              <Animated.View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute', bottom: -40, right: -40,
+                  width: 180, height: 180, borderRadius: 90,
+                  backgroundColor: aurora[2],
+                  opacity: aurora2Op,
+                  transform: [{ translateX: aurora2X }, { translateY: aurora2Y }],
+                }}
+              />
 
-          {/* Gradient overlays */}
-          <LinearGradient
-            colors={['rgba(18,16,42,0.5)', 'transparent']}
-            style={styles.charHeroTopOverlay}
-            pointerEvents="none"
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(15,13,30,0.95)']}
-            style={styles.charHeroOverlay}
-            pointerEvents="none"
-          />
+              {/* Floating + tappable character */}
+              <Animated.View
+                style={[StyleSheet.absoluteFill, { transform: [{ translateY: heroFloatY }, { scale: heroTapScale }] }]}
+              >
+                <Pressable style={StyleSheet.absoluteFill} onPress={triggerHeroBurst}>
+                  {activeOutfit?.imageUri
+                    ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
+                    : <Image source={Images.character_default} style={StyleSheet.absoluteFill} contentFit="contain" />
+                  }
+                </Pressable>
+              </Animated.View>
 
-          {/* Animated gold sparkle dots */}
-          {(SPARKLES as ReadonlyArray<{ t: number; s: number; o: number; l?: number; r?: number }>).map((sp, i) => (
-            <Animated.View
-              key={i}
-              style={{
-                position: 'absolute',
-                top: sp.t,
-                left:  (sp as any).l,
-                right: (sp as any).r,
-                width: sp.s, height: sp.s, borderRadius: sp.s,
-                backgroundColor: '#C8A84B',
-                opacity: sparkleAnims[i],
-              }}
-            />
-          ))}
+              {/* Gradient overlays */}
+              <LinearGradient colors={['rgba(18,16,42,0.45)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
+              <LinearGradient colors={['transparent', 'rgba(15,13,30,0.95)']} style={styles.charHeroOverlay} pointerEvents="none" />
 
-          {/* Label */}
-          <View style={styles.charHeroLabel}>
-            <Text style={styles.charHeroLabelText}>{t('home.mySkykid')}</Text>
-            {activeOutfit && (
-              <View style={styles.outfitNamePill}>
-                <Icon name="star" size={9} color="rgba(200,168,75,0.9)" />
-                <Text style={styles.outfitNameText} numberOfLines={1}>{activeOutfit.name}</Text>
+              {/* 8 ambient sparkle dots */}
+              {(AMBIENT_SPARKLES as ReadonlyArray<{ t: number; s: number; o: number; gold: boolean; l?: number; r?: number }>).map((sp, i) => (
+                <Animated.View
+                  key={i}
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    top: sp.t,
+                    left:  (sp as any).l,
+                    right: (sp as any).r,
+                    width: sp.s, height: sp.s, borderRadius: sp.s,
+                    backgroundColor: sp.gold ? '#C8A84B' : aurora[1],
+                    opacity: sparkleAnims[i],
+                  }}
+                />
+              ))}
+
+              {/* Burst particles — fired on character tap */}
+              {burstAnims.map((p, i) => (
+                <Animated.View
+                  key={`burst${i}`}
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: burstOriginX,
+                    top:  burstOriginY,
+                    width:  BURST_SIZES[i],
+                    height: BURST_SIZES[i],
+                    borderRadius: BURST_SIZES[i],
+                    backgroundColor: i % 2 === 0 ? '#C8A84B' : aurora[0],
+                    opacity: p.op,
+                    transform: [{ translateX: p.x }, { translateY: p.y }, { scale: p.sc }],
+                  }}
+                />
+              ))}
+
+              {/* Label */}
+              <View style={styles.charHeroLabel}>
+                <Text style={styles.charHeroLabelText}>{t('home.mySkykid')}</Text>
+                {activeOutfit && (
+                  <View style={styles.outfitNamePill}>
+                    <Icon name="star" size={9} color="rgba(200,168,75,0.9)" />
+                    <Text style={styles.outfitNameText} numberOfLines={1}>{activeOutfit.name}</Text>
+                  </View>
+                )}
               </View>
-            )}
-          </View>
 
-          {/* Change outfit button */}
-          {outfits.length > 0 && (
-            <TouchableOpacity
-              style={styles.changeOutfitBtn}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setShowOutfitPicker(true);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Icon name="refresh-cw" size={14} color="rgba(200,184,232,0.9)" />
-            </TouchableOpacity>
-          )}
-        </View>
+              {/* Change outfit button */}
+              {outfits.length > 0 && (
+                <TouchableOpacity
+                  style={styles.changeOutfitBtn}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfitPicker(true); }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Icon name="refresh-cw" size={14} color="rgba(200,184,232,0.9)" />
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
       </LinearGradient>
 
       {/* ── Scrollable content ──────────────────────────────── */}
