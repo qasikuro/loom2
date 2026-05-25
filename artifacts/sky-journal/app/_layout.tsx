@@ -9,8 +9,6 @@ import { Redirect, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
-import * as Notifications from 'expo-notifications';
-import Constants from 'expo-constants';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -20,13 +18,19 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge:  false,
-  } as Notifications.NotificationBehavior),
-});
+// Configure foreground notification display — wrapped in try/catch because
+// expo-notifications remote push support is removed from Expo Go (SDK 53+).
+try {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Notifications = require('expo-notifications');
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge:  false,
+    }),
+  });
+} catch { /* silently skip in Expo Go */ }
 
 function ThemedRoot({ children }: { children: React.ReactNode }) {
   const { isDark } = useTheme();
@@ -60,8 +64,13 @@ function AuthTokenBridge() {
       if (Platform.OS !== 'web') {
         (async () => {
           try {
+            // Dynamic require so Expo Go doesn't crash on import
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const Notifications = require('expo-notifications');
+            // eslint-disable-next-line @typescript-eslint/no-var-requires
+            const Constants = require('expo-constants').default;
             const perms = await Notifications.requestPermissionsAsync();
-            const granted = (perms as any).granted ?? (perms as any).ios?.status === 1;
+            const granted = perms.granted ?? perms.ios?.status === 1;
             if (!granted) return;
             const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
             if (!projectId) return;
@@ -75,7 +84,7 @@ function AuthTokenBridge() {
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
               body:    JSON.stringify({ pushToken: tokenData.data }),
             });
-          } catch { /* push token registration is optional */ }
+          } catch { /* push token registration requires a dev/prod build — silently skip in Expo Go */ }
         })();
       }
     }
