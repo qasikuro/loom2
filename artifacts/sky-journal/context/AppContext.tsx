@@ -408,8 +408,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })),
   [discoverFeedRaw, savedStoryIds, followingIds]);
 
-  const stateRef = useRef({ journalEntries, stories, outfits, character });
+  const stateRef     = useRef({ journalEntries, stories, outfits, character });
   useEffect(() => { stateRef.current = { journalEntries, stories, outfits, character }; });
+
+  // Guards against concurrent loads and ensures skeletons only flash on true cold start
+  const isLoadingRef = useRef(false);
+  const dataReadyRef = useRef(false);
 
   // ── Load active outfit id from AsyncStorage ────────────────────────────────
 
@@ -423,6 +427,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // On mount: restore from cache immediately so the UI isn't blank
   useEffect(() => { loadFromCache(); }, []);
+
+  // Polls until Clerk returns a non-null token, up to maxMs.
+  // Replaces the old "fire all requests → all 401 → wait 1500 ms → retry" pattern.
+  async function waitForToken(maxMs = 6000): Promise<string | null> {
+    const deadline = Date.now() + maxMs;
+    while (Date.now() < deadline) {
+      const t = await _getToken();
+      if (t) return t;
+      await new Promise<void>(r => setTimeout(r, 100));
+    }
+    return null;
+  }
 
   async function loadFromCache() {
     try {
@@ -443,6 +459,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (f)  setFollowingIds(JSON.parse(f));
       if (sv) { try { setSavedStoryIds(new Set(JSON.parse(sv))); } catch { /* ignore */ } }
     } catch { /* use defaults */ } finally {
+      dataReadyRef.current = true;
       setIsLoading(false);
     }
   }
@@ -474,40 +491,51 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setServerNotifications([]);
     setSavedStoryIds(new Set());
     setApiOnline(false);
+    // Reset load guards so the next sign-in can trigger a full reload
+    dataReadyRef.current = false;
+    isLoadingRef.current = false;
   }, []);
 
-  // Called by AuthTokenBridge once a valid Clerk token is available
+  // Called by AuthTokenBridge once a valid Clerk token is available.
+  // Uses waitForToken() to avoid the old "fire all → 401 ×6 → wait 1500ms → retry" race.
   async function loadData() {
-    setIsLoading(true);
+    // Prevent two concurrent loads (e.g. rapid sign-out / sign-in)
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
+
+    // Only show the skeleton spinner on a true cold start (no cache data yet).
+    // Returning users see their cached content while the API refreshes silently.
+    if (!dataReadyRef.current) setIsLoading(true);
 
     try {
-      // Each core call has its own .catch so one failure doesn't wipe the others.
-      const [charRaw, entriesRaw, storiesRaw, outfitsRaw, galleryRaw, usageRaw] = await Promise.all([
+      // Block until Clerk has a valid token — avoids all the wasted 401 round trips.
+      const token = await waitForToken(6000);
+      if (!token) {
+        // Offline or auth failure — show cached data and bail out.
+        if (!dataReadyRef.current) await loadFromCache();
+        setApiOnline(false);
+        return;
+      }
+
+      // Fire EVERYTHING in one parallel batch: core + social + notifications.
+      // Previously social was a second sequential wave, doubling the wait for Discover.
+      const [
+        charRaw, entriesRaw, storiesRaw, outfitsRaw,
+        galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw,
+      ] = await Promise.all([
         apiFetch<any>('/character').catch(() => null),
         apiFetch<any[]>('/journal-entries').catch(() => null),
         apiFetch<any[]>('/stories').catch(() => null),
         apiFetch<any[]>('/outfits').catch(() => null),
         apiFetch<any[]>('/gallery').catch(() => []),
         apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
+        apiFetch<any[]>('/discover').catch(() => []),
+        apiFetch<string[]>('/follows/following').catch(() => []),
+        apiFetch<any[]>('/notifications').catch(() => []),
       ]);
 
-      // If every core fetch failed, the Clerk token may not be ready yet
-      // (common race condition right after sign-in). Wait 1.5 s and try once more
-      // before falling back to the local cache.
-      if (!charRaw && !entriesRaw && !storiesRaw && !outfitsRaw) {
-        await new Promise(r => setTimeout(r, 1500));
-        const token = await _getToken();
-        if (token) {
-          // Token is now available — retry the full load recursively.
-          return loadData();
-        }
-        // Still no token (offline / genuine auth failure) — use cached data.
-        await loadFromCache();
-        setApiOnline(false);
-        return;
-      }
-
-      const char    = charRaw ? toAppCharacter(charRaw) : DEFAULT_CHARACTER;
+      // Process core data
+      const char    = charRaw    ? toAppCharacter(charRaw)    : DEFAULT_CHARACTER;
       const entries = (entriesRaw  ?? []).map(toAppJournalEntry);
       const stors   = (storiesRaw  ?? []).map(toAppStory);
       const outs    = (outfitsRaw  ?? []).map(toAppOutfit);
@@ -518,17 +546,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         createdAt: r.createdAt,
       }));
 
+      // Process social data
+      const feed    = (discoverRaw  ?? []).map(toRawDiscoverPost);
+      const follows = followingRaw ?? [];
+
+      // Process notifications
+      const notifs = (notifRaw ?? []).map((r: any): ServerNotification => ({
+        id:        r.id,
+        actorId:   r.actorId,
+        actorName: r.actorName,
+        type:      r.type as ServerNotification['type'],
+        refId:     r.refId,
+        title:     r.title,
+        isRead:    r.isRead,
+        createdAt: r.createdAt,
+      }));
+
+      // Commit all state at once — single React render pass
       setCharacterState(char);
       setJournalEntries(entries);
       setStories(stors);
       setOutfits(outs);
       setGallery(gal);
       setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
+      setDiscoverFeedRaw(feed);
+      setFollowingIds(follows);
+      setServerNotifications(notifs);
       setApiOnline(true);
 
       // Restore active outfit across sessions.
-      // Prefer the saved outfit ID if it still exists in this user's outfit list;
-      // otherwise fall back to the most-recent outfit so the home screen is never blank.
       if (outs.length > 0) {
         const savedId = await AsyncStorage.getItem('active_outfit_v1');
         const validId = savedId && outs.some(o => o.id === savedId) ? savedId : outs[0].id;
@@ -541,21 +587,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (raw) { try { setSavedStoryIds(new Set(JSON.parse(raw))); } catch { /* ignore */ } }
       }).catch(() => null);
 
+      // Persist all fresh data to cache in parallel
       await Promise.allSettled([
         AsyncStorage.setItem('character_v2',  JSON.stringify(char)),
         AsyncStorage.setItem('journal_v2',    JSON.stringify(entries)),
         AsyncStorage.setItem('stories_v1',    JSON.stringify(stors)),
         AsyncStorage.setItem('outfits_v1',    JSON.stringify(outs)),
+        AsyncStorage.setItem('discover_v1',   JSON.stringify(feed)),
+        AsyncStorage.setItem('following_v1',  JSON.stringify(follows)),
       ]);
-
-      // Load social and notification data in the background
-      loadSocialData();
-      loadNotificationsData();
     } catch {
       // Unexpected error — restore from cache rather than leaving a blank screen.
-      await loadFromCache();
+      if (!dataReadyRef.current) await loadFromCache();
       setApiOnline(false);
     } finally {
+      dataReadyRef.current  = true;
+      isLoadingRef.current  = false;
       setIsLoading(false);
     }
   }

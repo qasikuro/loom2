@@ -27,6 +27,7 @@ import { persistImageUri } from '@/utils/persistImage';
 
 import { Images } from '@/assets/images';
 import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/context/AppContext';
+import { SkeletonProfileCard } from '@/components/Skeleton';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
@@ -442,7 +443,7 @@ export default function CharacterScreen() {
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
-          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto } = useApp();
+          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading } = useApp();
   const moodAccent = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
   const { signOut } = useAuth();
   const { user }    = useUser();
@@ -1131,7 +1132,16 @@ export default function CharacterScreen() {
         {/* ── Content ─────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
 
+          {/* ── Skeleton: shown only on cold first load ─────── */}
+          {isLoading && character.name === 'Sky Child' && (
+            <>
+              <SkeletonProfileCard />
+              <SkeletonProfileCard />
+            </>
+          )}
+
           {/* ── About Me ──────────────────────────────────────── */}
+          {(!isLoading || character.name !== 'Sky Child') && (
           <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
             {/* Header row */}
             <View style={styles.aboutCardHeader}>
@@ -1337,6 +1347,7 @@ export default function CharacterScreen() {
               </View>
             )}
           </View>
+          )}
 
           {/* Current outfit compact card */}
           {activeOutfit && (

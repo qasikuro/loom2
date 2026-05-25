@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Images } from '@/assets/images';
 import { Swipeable } from 'react-native-gesture-handler';
 import { apiFetch, useApp } from '@/context/AppContext';
+import { SkeletonBox } from '@/components/Skeleton';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
@@ -139,7 +140,7 @@ export default function HomeScreen() {
     character, journalEntries, stories, rewards, dismissReward,
     outfits, activeOutfitId, setActiveOutfitId,
     serverNotifications, markServerNotificationsRead, deleteServerNotification,
-    followingIds,
+    followingIds, isLoading,
   } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -590,7 +591,17 @@ export default function HomeScreen() {
         {/* ── Friends section ──────────────────────────────── */}
         <View style={styles.friendsSection}>
           <Text style={[styles.friendsLabel, { color: colors.mutedForeground }]}>Friends</Text>
-          {friends.length === 0 ? (
+          {isLoading && friends.length === 0 ? (
+            /* Skeleton friend bubbles while API loads */
+            <View style={{ flexDirection: 'row', gap: 16, paddingVertical: 4 }}>
+              {[0, 1, 2, 3].map(i => (
+                <View key={i} style={{ alignItems: 'center', gap: 6 }}>
+                  <SkeletonBox width={52} height={52} borderRadius={26} />
+                  <SkeletonBox width={40} height={10} borderRadius={5} />
+                </View>
+              ))}
+            </View>
+          ) : friends.length === 0 ? (
             <TouchableOpacity
               style={[styles.friendsEmptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => router.push('/(tabs)/discover')}

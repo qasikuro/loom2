@@ -87,6 +87,49 @@ export function SkeletonDiscoverCard({ style }: { style?: ViewStyle }) {
   );
 }
 
+export function SkeletonProfileCard() {
+  const colors = useColors();
+  return (
+    <View style={[sk.profileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={sk.profileAvatarRow}>
+        <SkeletonBox width={68} height={68} borderRadius={34} />
+        <View style={{ flex: 1, gap: 10 }}>
+          <SkeletonBox width="55%" height={17} />
+          <SkeletonBox width="36%" height={12} />
+        </View>
+      </View>
+      <View style={sk.profileMetaRow}>
+        <SkeletonBox width={86} height={28} borderRadius={14} />
+        <SkeletonBox width={116} height={28} borderRadius={14} />
+      </View>
+      <View style={{ gap: 7, marginTop: 2 }}>
+        <SkeletonBox height={12} />
+        <SkeletonBox height={12} width="76%" />
+      </View>
+      <View style={sk.profileTraitsRow}>
+        <SkeletonBox width={62} height={26} borderRadius={13} />
+        <SkeletonBox width={78} height={26} borderRadius={13} />
+        <SkeletonBox width={52} height={26} borderRadius={13} />
+        <SkeletonBox width={70} height={26} borderRadius={13} />
+      </View>
+      <View style={[sk.profileStats, { borderTopColor: colors.border }]}>
+        <View style={{ alignItems: 'center', gap: 5 }}>
+          <SkeletonBox width={36} height={18} borderRadius={6} />
+          <SkeletonBox width={50} height={10} borderRadius={5} />
+        </View>
+        <View style={{ alignItems: 'center', gap: 5 }}>
+          <SkeletonBox width={36} height={18} borderRadius={6} />
+          <SkeletonBox width={50} height={10} borderRadius={5} />
+        </View>
+        <View style={{ alignItems: 'center', gap: 5 }}>
+          <SkeletonBox width={36} height={18} borderRadius={6} />
+          <SkeletonBox width={50} height={10} borderRadius={5} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 const sk = StyleSheet.create({
   card: {
     borderRadius: 16, borderWidth: 1, padding: 15,
@@ -100,5 +143,16 @@ const sk = StyleSheet.create({
   discoverFooter: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 12, paddingVertical: 10, gap: 12,
+  },
+  profileCard: {
+    borderRadius: 22, borderWidth: 1, padding: 18,
+    gap: 14, marginBottom: 14,
+  },
+  profileAvatarRow:  { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  profileMetaRow:    { flexDirection: 'row', gap: 8 },
+  profileTraitsRow:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  profileStats: {
+    flexDirection: 'row', justifyContent: 'space-around',
+    paddingTop: 14, borderTopWidth: 1,
   },
 });
