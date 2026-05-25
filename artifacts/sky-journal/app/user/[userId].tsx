@@ -24,6 +24,7 @@ import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import { ReportSheet } from '@/components/ReportSheet';
+import { WeatherWidget } from '@/components/WeatherWidget';
 
 // ── Mood aura data ────────────────────────────────────────────────────────────
 type AuraData = {
@@ -336,6 +337,8 @@ interface PublicProfile {
   traits:        string[];
   mood:          string;
   role:          string | null;
+  timezone:      string | null;
+  country:       string | null;
   avatarUri:     string | null;
   activeOutfitId: string | null;
   activeOutfit:  ActiveOutfit | null;
@@ -431,6 +434,7 @@ export default function UserProfileScreen() {
   const aura           = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const moodColor      = MOOD_COLORS[mood] ?? aura.accent;
   const userRole       = profile ? ROLES.find(r => r.key === profile.role) : undefined;
+  const weatherQuery   = profile?.country ?? null;
   const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
   const isTopExplorer  = totalWitnessed >= 10 || stories.length >= 3;
 
@@ -549,6 +553,16 @@ export default function UserProfileScreen() {
               <Text style={{ fontSize: 13 }}>{userRole.emoji}</Text>
               <Text style={[styles.roleBadgeText, { color: userRole.color }]}>{userRole.key}</Text>
             </View>
+          )}
+
+          {/* Weather + local time */}
+          {weatherQuery && (
+            <WeatherWidget
+              query={weatherQuery}
+              timezone={profile.timezone}
+              accentColor={aura.accent}
+              compact
+            />
           )}
 
           {/* Bio */}

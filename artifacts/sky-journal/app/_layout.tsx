@@ -8,7 +8,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -17,6 +19,14 @@ import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge:  false,
+  } as Notifications.NotificationBehavior),
+});
 
 function ThemedRoot({ children }: { children: React.ReactNode }) {
   const { isDark } = useTheme();
@@ -47,6 +57,27 @@ function AuthTokenBridge() {
     });
     if (isSignedIn && prevSignedIn.current !== true) {
       reloadData();
+      if (Platform.OS !== 'web') {
+        (async () => {
+          try {
+            const perms = await Notifications.requestPermissionsAsync();
+            const granted = (perms as any).granted ?? (perms as any).ios?.status === 1;
+            if (!granted) return;
+            const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+            if (!projectId) return;
+            const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+            const authToken = await getToken();
+            if (!authToken) return;
+            const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | null;
+            if (!apiUrl) return;
+            await fetch(`${apiUrl}/character`, {
+              method:  'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+              body:    JSON.stringify({ pushToken: tokenData.data }),
+            });
+          } catch { /* push token registration is optional */ }
+        })();
+      }
     }
     if (!isSignedIn && prevSignedIn.current === true) {
       setAuthTokenGetter(async () => null);

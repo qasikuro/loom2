@@ -15,6 +15,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     package: "com.skyjournal.app",
     versionCode: 1,
   },
+  plugins: [
+    ...(Array.isArray(config.plugins) ? config.plugins : []),
+    ['expo-notifications', {
+      icon:  './assets/images/logo.jpg',
+      color: '#9B78E8',
+      sounds: [],
+    }],
+  ],
   extra: {
     ...config.extra,
     eas: {

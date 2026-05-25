@@ -31,6 +31,9 @@ import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import { useTranslation } from 'react-i18next';
+import * as Location from 'expo-location';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { WeatherWidget } from '@/components/WeatherWidget';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -440,6 +443,7 @@ export default function CharacterScreen() {
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
           gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto } = useApp();
+  const moodAccent = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
   const { signOut } = useAuth();
   const { user }    = useUser();
 
@@ -572,6 +576,92 @@ export default function CharacterScreen() {
       setActiveOutfitId(selectedOutfit.id);
     }
   }
+
+  // ── Weather & ping state ───────────────────────────────────────────────────
+  const [weatherQuery,    setWeatherQuery]    = useState<string | null>(null);
+  const [pingState,       setPingState]       = useState<'idle'|'sending'|'sent'|'cooldown'>('idle');
+  const [pingCooldownEnd, setPingCooldownEnd] = useState<number | null>(null);
+  const [cooldownText,    setCooldownText]    = useState('');
+  const bellAnim = useRef(new Animated.Value(0)).current;
+
+  const PING_KEY      = 'ping_cooldown_v1';
+  const PING_COOLDOWN = 60 * 60 * 1000;
+
+  function shakeBell() {
+    Animated.sequence([
+      Animated.timing(bellAnim, { toValue:  1, duration: 70, useNativeDriver: true }),
+      Animated.timing(bellAnim, { toValue: -1, duration: 70, useNativeDriver: true }),
+      Animated.timing(bellAnim, { toValue:  1, duration: 70, useNativeDriver: true }),
+      Animated.timing(bellAnim, { toValue:  0, duration: 70, useNativeDriver: true }),
+    ]).start();
+  }
+
+  async function handlePing() {
+    shakeBell();
+    setPingState('sending');
+    try {
+      await apiFetch<{ sent: number }>('/notify/ping-friends', { method: 'POST' });
+      const now = Date.now();
+      await AsyncStorage.setItem(PING_KEY, String(now));
+      setPingCooldownEnd(now + PING_COOLDOWN);
+      setPingState('sent');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeout(() => setPingState('cooldown'), 3000);
+    } catch {
+      setPingState('idle');
+    }
+  }
+
+  useEffect(() => {
+    AsyncStorage.getItem(PING_KEY).then(stored => {
+      if (!stored) return;
+      const last = parseInt(stored, 10);
+      const end  = last + PING_COOLDOWN;
+      if (Date.now() < end) { setPingCooldownEnd(end); setPingState('cooldown'); }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!pingCooldownEnd) return;
+    const tick = () => {
+      const ms = pingCooldownEnd - Date.now();
+      if (ms <= 0) { setPingState('idle'); setPingCooldownEnd(null); setCooldownText(''); return; }
+      const m = Math.ceil(ms / 60000);
+      const h = Math.floor(m / 60);
+      setCooldownText(h > 0 ? `${h}h ${m % 60}m` : `${m}m`);
+    };
+    tick();
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, [pingCooldownEnd]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      if (character.country) setWeatherQuery(character.country);
+      return;
+    }
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          if (character.country) setWeatherQuery(character.country);
+          return;
+        }
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        setWeatherQuery(`${loc.coords.latitude.toFixed(2)},${loc.coords.longitude.toFixed(2)}`);
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (tz) {
+          apiFetch('/character', {
+            method:  'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ timezone: tz }),
+          }).catch(() => null);
+        }
+      } catch {
+        if (character.country) setWeatherQuery(character.country);
+      }
+    })();
+  }, []);
 
   // ── Profile editing state ──────────────────────────────────────────────────
   const [confirmingSignOut,   setConfirmingSignOut]   = useState(false);
@@ -981,6 +1071,60 @@ export default function CharacterScreen() {
           <View style={styles.statPill}>
             <Text style={styles.statPillNum}>{totalWitnessed}</Text>
             <Text style={styles.statPillLabel}>Witnessed</Text>
+          </View>
+        </View>
+
+        {/* ── Weather strip ─────────────────────────────────────── */}
+        {weatherQuery ? (
+          <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
+            <WeatherWidget query={weatherQuery} accentColor={moodAccent} />
+          </View>
+        ) : null}
+
+        {/* ── Ping friends ──────────────────────────────────────── */}
+        <View style={{ paddingHorizontal: 16, marginTop: 10 }}>
+          <View style={[styles.pingCard, { backgroundColor: colors.card, borderColor: `${moodAccent}30` }, SHADOW.xs]}>
+            <View style={styles.pingLeft}>
+              <View style={[styles.pingIconWrap, { backgroundColor: `${moodAccent}15` }]}>
+                <Animated.View
+                  style={{ transform: [{ rotate: bellAnim.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-15deg', '0deg', '15deg'] }) }] }}
+                >
+                  <Icon name="bell" size={18} color={moodAccent} />
+                </Animated.View>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.pingTitle, { color: colors.foreground }]}>
+                  {pingState === 'sent' ? 'Friends summoned ✦' : 'Ping your sky friends'}
+                </Text>
+                <Text style={[styles.pingSub, { color: colors.mutedForeground }]}>
+                  {pingState === 'cooldown'
+                    ? `Next signal in ${cooldownText}`
+                    : pingState === 'sent'
+                    ? 'Your constellation has been called'
+                    : 'Gently call your friends online'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.pingBtn,
+                { backgroundColor: `${moodAccent}18`, borderColor: `${moodAccent}45` },
+                (pingState === 'sending' || pingState === 'cooldown') && { opacity: 0.45 },
+              ]}
+              onPress={handlePing}
+              disabled={pingState === 'sending' || pingState === 'cooldown'}
+              activeOpacity={0.7}
+            >
+              {pingState === 'sending' ? (
+                <ActivityIndicator size={14} color={moodAccent} />
+              ) : (
+                <Text style={[styles.pingBtnText, { color: moodAccent }]}>
+                  {pingState === 'sent'       ? '✦ Sent'
+                   : pingState === 'cooldown' ? '⏳ Wait'
+                   : '✦ Signal'}
+                </Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -2356,6 +2500,20 @@ const styles = StyleSheet.create({
   roleChipLabel: { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
   roleChipHint:  { fontSize: 10, fontFamily: 'Satoshi-Regular' },
   roleSelDot: { width: 5, height: 5, borderRadius: 2.5, marginLeft: 2 },
+
+  pingCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 14, borderRadius: 16, borderWidth: 1,
+  },
+  pingLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pingIconWrap: {
+    width: 40, height: 40, borderRadius: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  pingTitle:   { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  pingSub:     { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  pingBtn:     { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1.5 },
+  pingBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   // Horizontal section empty state card
   hEmptyCard: {

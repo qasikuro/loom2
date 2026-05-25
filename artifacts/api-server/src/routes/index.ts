@@ -8,6 +8,7 @@ import galleryRouter from "./gallery";
 import uploadRouter from "./upload";
 import socialRouter from "./social";
 import notificationsRouter from "./notifications";
+import weatherRouter from "./weather";
 import reportsRouter from "./reports";
 import adminRouter from "./admin";
 
@@ -22,6 +23,7 @@ router.use(galleryRouter);
 router.use(uploadRouter);
 router.use(socialRouter);
 router.use(notificationsRouter);
+router.use(weatherRouter);
 router.use(reportsRouter);
 router.use(adminRouter);
 

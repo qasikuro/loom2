@@ -31,6 +31,8 @@ const CharacterInputSchema = z.object({
   country:        z.string().max(80).nullable().optional(),
   links:          z.array(ProfileLinkSchema).max(6).optional().nullable(),
   role:           z.enum(['Collector', 'Trader', 'Veteran', 'Uber', 'Solo']).nullable().optional(),
+  timezone:       z.string().max(100).nullable().optional(),
+  pushToken:      z.string().max(500).nullable().optional(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {

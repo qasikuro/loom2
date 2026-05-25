@@ -19,6 +19,8 @@ export const characterTable = pgTable("character", {
   birthday:       text("birthday"),
   country:        text("country"),
   role:           text("role"),
+  timezone:       text("timezone"),
+  pushToken:      text("push_token"),
   links:          jsonb("links").$type<ProfileLink[]>().default([]),
   isAdmin:        boolean("is_admin").notNull().default(false),
   isBanned:       boolean("is_banned").notNull().default(false),

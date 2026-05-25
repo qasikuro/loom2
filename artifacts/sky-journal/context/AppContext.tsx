@@ -80,6 +80,8 @@ export interface Character {
   birthday?:      string;
   country?:       string;
   role?:          string;
+  timezone?:      string;
+  pushToken?:     string;
   links?:         ProfileLink[];
 }
 
@@ -294,6 +296,8 @@ function toAppCharacter(raw: any): Character {
     birthday:      raw.birthday      ?? undefined,
     country:       raw.country       ?? undefined,
     role:          raw.role          ?? undefined,
+    timezone:      raw.timezone      ?? undefined,
+    pushToken:     raw.pushToken     ?? raw.push_token ?? undefined,
     links:         Array.isArray(raw.links) ? raw.links : undefined,
   };
 }
@@ -674,6 +678,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         birthday:       c.birthday       ?? null,
         country:        c.country        ?? null,
         role:           c.role           ?? null,
+        timezone:       c.timezone       ?? null,
+        pushToken:      c.pushToken      ?? null,
         links:          c.links          ?? null,
       }),
     }).catch(() => null);
