@@ -246,11 +246,11 @@ function CharacterAuraHeader({ mood, paddingTop, children }: {
     return () => loops.forEach(l => l.stop());
   }, [mood]);
 
-  const glowOpacity    = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.18, 0.52, 0.18] });
-  const glowScale      = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0.70, 1.28] });
-  const glow2Opacity   = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.10, 0.36, 0.10] });
-  const cornerOpacity  = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.22, 0.60, 0.22] });
-  const corner2Opacity = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.14, 0.44, 0.14] });
+  const glowOpacity    = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] });
+  const glowScale      = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0.80, 1.18] });
+  const glow2Opacity   = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.03, 0.12, 0.03] });
+  const cornerOpacity  = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.08, 0.22, 0.08] });
+  const corner2Opacity = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.05, 0.15, 0.05] });
 
   return (
     <View style={[styles.profileHeader, { paddingTop, overflow: 'hidden' }]}>
@@ -1166,6 +1166,88 @@ export default function CharacterScreen() {
             </TouchableOpacity>
           )}
 
+          {/* ── My Stories ───────────────────────────────────── */}
+          <View style={styles.hSection}>
+            <View style={styles.hSectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>My Stories</Text>
+                {stories.length > 0 && (
+                  <View style={[styles.hCountPill, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
+                    <Text style={[styles.hCountPillText, { color: colors.primary }]}>{stories.length}</Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                style={[styles.hSectionAddBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+                onPress={() => router.push('/my-stories' as any)}
+                activeOpacity={0.75}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name="book-open" size={12} color={colors.primary} />
+                <Text style={[styles.hSectionAddText, { color: colors.primary }]}>See all</Text>
+              </TouchableOpacity>
+            </View>
+            {stories.length === 0 ? (
+              <TouchableOpacity
+                style={[styles.hEmptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]}
+                onPress={() => router.push('/(tabs)/create' as any)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.hEmptyIconWrap, { backgroundColor: `${colors.primary}14` }]}>
+                  <Icon name="book-open" size={20} color={`${colors.primary}70`} />
+                </View>
+                <Text style={[styles.hEmptyTitle, { color: colors.foreground }]}>No chapters yet</Text>
+                <Text style={[styles.hEmptySubtitle, { color: colors.mutedForeground }]}>Tap to write your first sky chapter</Text>
+              </TouchableOpacity>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
+                {stories.slice(0, 8).map(story => {
+                  const cover = getCover(story);
+                  return (
+                    <TouchableOpacity
+                      key={story.id}
+                      style={[styles.hStoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      onPress={() => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as any); }}
+                      activeOpacity={0.85}
+                    >
+                      {cover ? (
+                        <Image source={cover} style={StyleSheet.absoluteFill} contentFit="cover" />
+                      ) : (
+                        <LinearGradient colors={['#2E2260', '#1A1040']} style={StyleSheet.absoluteFill}>
+                          <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
+                            <Icon name="star" size={18} color="rgba(200,184,232,0.25)" />
+                          </View>
+                        </LinearGradient>
+                      )}
+                      <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
+                        <Text style={styles.hStoryTitle} numberOfLines={2}>{story.chapterTitle}</Text>
+                        {story.witnessedCount > 0 && (
+                          <View style={[styles.hViewCount, { backgroundColor: 'rgba(8,6,22,0.60)' }]}>
+                            <Icon name="eye" size={9} color="rgba(220,200,255,0.85)" />
+                            <Text style={styles.hViewCountText}>{story.witnessedCount}</Text>
+                          </View>
+                        )}
+                      </LinearGradient>
+                      {!story.isPublic && (
+                        <View style={{ position: 'absolute', top: 7, right: 7, backgroundColor: 'rgba(8,6,22,0.65)', borderRadius: 6, padding: 3 }}>
+                          <Icon name="lock" size={9} color="rgba(200,184,232,0.7)" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity
+                  style={[styles.hAddCard, { borderColor: `${colors.primary}28`, backgroundColor: `${colors.primary}08` }]}
+                  onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/create' as any); }}
+                  activeOpacity={0.75}
+                >
+                  <Icon name="plus" size={18} color={`${colors.primary}70`} />
+                  <Text style={[styles.hAddText, { color: `${colors.primary}70` }]}>New</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            )}
+          </View>
+
           {/* ── Wardrobe ─────────────────────────────────────── */}
           <View style={styles.hSection}>
             <View style={styles.hSectionHeader}>
@@ -1187,40 +1269,54 @@ export default function CharacterScreen() {
                 <Text style={[styles.hSectionAddText, { color: colors.primary }]}>New outfit</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
-              {outfits.slice(0, 8).map(outfit => {
-                const isActive = outfit.id === activeOutfitId;
-                return (
-                  <TouchableOpacity
-                    key={outfit.id}
-                    style={[styles.hOutfitCard, { backgroundColor: colors.card, borderColor: isActive ? colors.primary : colors.border }]}
-                    onPress={() => openOutfit(outfit.id)}
-                    activeOpacity={0.85}
-                  >
-                    {outfit.imageUri ? (
-                      <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                    ) : (
-                      <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center' }]}>
-                        <Icon name="camera" size={22} color={`${colors.primary}50`} />
-                      </View>
-                    )}
-                    <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
-                      <Text style={styles.hOutfitName} numberOfLines={2}>{outfit.name}</Text>
-                      {isActive && (
-                        <View style={[styles.hActivePill, { backgroundColor: colors.primary }]}>
-                          <Text style={styles.hActivePillText}>Worn</Text>
+            {outfits.length === 0 ? (
+              <TouchableOpacity
+                style={[styles.hEmptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]}
+                onPress={() => router.push('/create-outfit' as any)}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.hEmptyIconWrap, { backgroundColor: `${colors.primary}14` }]}>
+                  <Icon name="camera" size={20} color={`${colors.primary}70`} />
+                </View>
+                <Text style={[styles.hEmptyTitle, { color: colors.foreground }]}>No outfits yet</Text>
+                <Text style={[styles.hEmptySubtitle, { color: colors.mutedForeground }]}>Log your first sky look</Text>
+              </TouchableOpacity>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
+                {outfits.slice(0, 8).map(outfit => {
+                  const isActive = outfit.id === activeOutfitId;
+                  return (
+                    <TouchableOpacity
+                      key={outfit.id}
+                      style={[styles.hOutfitCard, { backgroundColor: colors.card, borderColor: isActive ? colors.primary : colors.border }]}
+                      onPress={() => openOutfit(outfit.id)}
+                      activeOpacity={0.85}
+                    >
+                      {outfit.imageUri ? (
+                        <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                      ) : (
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center' }]}>
+                          <Icon name="camera" size={22} color={`${colors.primary}50`} />
                         </View>
                       )}
-                    </LinearGradient>
-                    {(outfit.tags ?? []).length > 0 && (
-                      <View style={[styles.hRarityPill, { backgroundColor: 'rgba(8,6,22,0.75)', top: 7, left: 7 }]}>
-                        <Text style={[styles.hRarityText, { color: 'rgba(220,200,255,0.9)' }]}>{outfit.tags[0]}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                      <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
+                        <Text style={styles.hOutfitName} numberOfLines={2}>{outfit.name}</Text>
+                        {isActive && (
+                          <View style={[styles.hActivePill, { backgroundColor: colors.primary }]}>
+                            <Text style={styles.hActivePillText}>Worn</Text>
+                          </View>
+                        )}
+                      </LinearGradient>
+                      {(outfit.tags ?? []).length > 0 && (
+                        <View style={[styles.hRarityPill, { backgroundColor: 'rgba(8,6,22,0.75)', top: 7, left: 7 }]}>
+                          <Text style={[styles.hRarityText, { color: 'rgba(220,200,255,0.9)' }]}>{outfit.tags[0]}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
           </View>
 
           {/* ── Gallery ──────────────────────────────────────── */}
@@ -1249,27 +1345,17 @@ export default function CharacterScreen() {
             </View>
 
             {gallery.length === 0 ? (
-              <View style={styles.galEmptyRow}>
-                {[0, 1, 2].map(i => (
-                  <View
-                    key={i}
-                    style={[styles.galEmptyTile, {
-                      backgroundColor: `${colors.primary}${i === 1 ? '0A' : '06'}`,
-                      borderColor: `${colors.primary}${i === 1 ? '22' : '14'}`,
-                      opacity: i === 1 ? 1 : 0.55,
-                    }]}
-                  >
-                    {i === 1 && (
-                      <>
-                        <View style={[styles.galEmptyIcon, { backgroundColor: `${colors.primary}14` }]}>
-                          <Icon name="image" size={18} color={`${colors.primary}70`} />
-                        </View>
-                        <Text style={[styles.galEmptyLabel, { color: `${colors.primary}60` }]}>Your gallery{'\n'}starts here</Text>
-                      </>
-                    )}
-                  </View>
-                ))}
-              </View>
+              <TouchableOpacity
+                style={[styles.hEmptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]}
+                onPress={handleAddGalleryPhoto}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.hEmptyIconWrap, { backgroundColor: `${colors.primary}14` }]}>
+                  <Icon name="image" size={20} color={`${colors.primary}70`} />
+                </View>
+                <Text style={[styles.hEmptyTitle, { color: colors.foreground }]}>No photos yet</Text>
+                <Text style={[styles.hEmptySubtitle, { color: colors.mutedForeground }]}>Tap to add your first sky memory</Text>
+              </TouchableOpacity>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
                 {gallery.slice(0, 8).map(photo => (
@@ -2203,21 +2289,23 @@ const styles = StyleSheet.create({
   aboutLinkName: { fontSize: 13, fontFamily: 'Satoshi-Bold', lineHeight: 18 },
   aboutLinkHandle: { fontSize: 11, fontFamily: 'Satoshi-Regular', lineHeight: 16 },
 
-  // Gallery 3-tile empty state
-  galEmptyRow: {
-    flexDirection: 'row', gap: 8,
+  // Horizontal section empty state card
+  hEmptyCard: {
+    borderRadius: 16, borderWidth: 1,
+    paddingVertical: 22, paddingHorizontal: 20,
+    alignItems: 'center', gap: 8,
   },
-  galEmptyTile: {
-    flex: 1, height: 110, borderRadius: 14, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center', gap: 8,
-  },
-  galEmptyIcon: {
-    width: 36, height: 36, borderRadius: 10,
+  hEmptyIconWrap: {
+    width: 44, height: 44, borderRadius: 14,
     alignItems: 'center', justifyContent: 'center',
+    marginBottom: 2,
   },
-  galEmptyLabel: {
-    fontSize: 11, fontFamily: 'Satoshi-Regular',
-    textAlign: 'center', lineHeight: 16,
+  hEmptyTitle: {
+    fontSize: 14, fontFamily: 'Satoshi-Bold', textAlign: 'center',
+  },
+  hEmptySubtitle: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular', textAlign: 'center',
+    fontStyle: 'italic', lineHeight: 17,
   },
 
   // Compact outfit card (main profile page)
