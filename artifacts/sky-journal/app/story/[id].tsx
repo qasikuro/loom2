@@ -241,7 +241,7 @@ export default function StoryScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
-  const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory } = useApp();
+  const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory } = useApp();
 
   const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
@@ -311,6 +311,12 @@ export default function StoryScreen() {
     toggleSavePost(id);
   }
 
+  function handleToggleVisibility() {
+    if (!id || !story) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    updateStory(id, { isPublic: !story.isPublic });
+  }
+
   function handleDelete() {
     if (confirmingDelete) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
@@ -345,6 +351,17 @@ export default function StoryScreen() {
           <TouchableOpacity style={[styles.backBtn, { top: topPad + 12 }]} onPress={() => router.back()}>
             <Icon name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
+
+          {/* Visibility toggle */}
+          {isOwnStory && !confirmingDelete && (
+            <TouchableOpacity
+              style={[styles.visibilityBtn, { top: topPad + 12, backgroundColor: story?.isPublic ? 'rgba(120,200,160,0.25)' : 'rgba(0,0,0,0.35)' }]}
+              onPress={handleToggleVisibility}
+              activeOpacity={0.78}
+            >
+              <Icon name={story?.isPublic ? 'globe' : 'lock'} size={15} color={story?.isPublic ? '#78C8A0' : 'rgba(200,184,232,0.9)'} />
+            </TouchableOpacity>
+          )}
 
           {/* Edit */}
           {isOwnStory && !confirmingDelete && (
@@ -398,6 +415,14 @@ export default function StoryScreen() {
                 <Icon name="layers" size={11} color="rgba(255,255,255,0.8)" />
                 <Text style={styles.infoBadgeText}>{renderPages.length === 1 ? t('discover.infoBadge', { panels: totalPanelCount, pages: renderPages.length }) : t('discover.infoBadgePlural', { panels: totalPanelCount, pages: renderPages.length })}</Text>
               </View>
+              {isOwnStory && (
+                <View style={[styles.infoBadge, story?.isPublic ? styles.infoBadgePublic : styles.infoBadgePrivate]}>
+                  <Icon name={story?.isPublic ? 'globe' : 'lock'} size={11} color={story?.isPublic ? '#78C8A0' : 'rgba(200,184,232,0.8)'} />
+                  <Text style={[styles.infoBadgeText, { color: story?.isPublic ? '#78C8A0' : 'rgba(200,184,232,0.8)' }]}>
+                    {story?.isPublic ? t('common.public') : t('common.private')}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -488,12 +513,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderColor: 'rgba(255,255,255,0.22)',
   },
+  infoBadgePublic:  { backgroundColor: 'rgba(120,200,160,0.18)', borderColor: 'rgba(120,200,160,0.40)' },
+  infoBadgePrivate: { backgroundColor: 'rgba(200,184,232,0.12)', borderColor: 'rgba(200,184,232,0.28)' },
   infoBadgeText: { color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Regular' },
 
   backBtn: {
     position: 'absolute', left: 16,
     width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  visibilityBtn: {
+    position: 'absolute', right: 120,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },
   editBtn: {

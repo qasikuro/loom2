@@ -338,6 +338,42 @@ export default function CreateScreen() {
           </View>
         </View>
 
+        {/* ── Visibility (always visible) ───────────────────────── */}
+        <View style={[styles.visibilityBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.visibilityLeft}>
+            <Icon name={isPublic ? 'globe' : 'lock'} size={14} color={isPublic ? '#78C8A0' : colors.mutedForeground} />
+            <View>
+              <Text style={[styles.visibilityTitle, { color: colors.foreground }]}>
+                {isPublic ? tr('common.public') : tr('common.private')}
+              </Text>
+              <Text style={[styles.visibilitySub, { color: colors.mutedForeground }]}>
+                {isPublic ? tr('create.visibilityPublicHint') : tr('create.visibilityPrivateHint')}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.privRow}>
+            {(['Public', 'Private'] as const).map(opt => {
+              const active = opt === 'Public' ? isPublic : !isPublic;
+              return (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.privBtn, {
+                    backgroundColor: active ? (opt === 'Public' ? 'rgba(120,200,160,0.16)' : `${colors.primary}18`) : colors.muted,
+                    borderColor:     active ? (opt === 'Public' ? 'rgba(120,200,160,0.40)' : `${colors.primary}45`) : colors.border,
+                    borderWidth:     active ? 1.5 : 1,
+                  }]}
+                  onPress={() => { setIsPublic(opt === 'Public'); Haptics.selectionAsync(); }}
+                >
+                  <Icon name={opt === 'Public' ? 'globe' : 'lock'} size={12} color={active ? (opt === 'Public' ? '#78C8A0' : colors.primary) : colors.mutedForeground} />
+                  <Text style={[styles.chipText, { color: active ? (opt === 'Public' ? '#78C8A0' : colors.primary) : colors.mutedForeground }]}>
+                    {opt === 'Public' ? tr('common.public') : tr('common.private')}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {/* ── Settings (expandable) ─────────────────────────────── */}
         {showMeta && (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -376,27 +412,6 @@ export default function CreateScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>{tr('common.visibility')}</Text>
-            <View style={styles.privRow}>
-              {(['Public', 'Private'] as const).map(opt => {
-                const active = opt === 'Public' ? isPublic : !isPublic;
-                return (
-                  <TouchableOpacity
-                    key={opt}
-                    style={[styles.privBtn, {
-                      backgroundColor: active ? `${colors.primary}18` : colors.muted,
-                      borderColor:     active ? `${colors.primary}45` : colors.border,
-                      borderWidth:     active ? 1.5 : 1,
-                    }]}
-                    onPress={() => setIsPublic(opt === 'Public')}
-                  >
-                    <Icon name={opt === 'Public' ? 'globe' : 'lock'} size={13} color={active ? colors.primary : colors.mutedForeground} />
-                    <Text style={[styles.chipText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt === 'Public' ? tr('common.public') : tr('common.private')}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
           </View>
         )}
 
@@ -587,11 +602,20 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
-  privRow: { flexDirection: 'row', gap: 10 },
+  visibilityBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10,
+    marginBottom: 12, gap: 12,
+  },
+  visibilityLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  visibilityTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  visibilitySub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 1 },
+
+  privRow: { flexDirection: 'row', gap: 8 },
   privBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 6,
-    paddingHorizontal: 14, height: 36, borderRadius: 18,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 5,
+    paddingHorizontal: 11, height: 32, borderRadius: 16,
   },
 
   sectionHeader: {

@@ -65,6 +65,7 @@ const en = {
     publish: 'Publish Story', publishShort: 'Publish',
     makePublic: 'Public story', makePrivate: 'Private story',
     publicDesc: 'Visible in Discover', privateDesc: 'Only you can see this',
+    visibilityPublicHint: 'Visible in Discover', visibilityPrivateHint: 'Only you can see this',
     tapToEdit: 'Tap to edit this page', noContent: 'No text yet',
     editPanel: 'Edit Panel', noPanelToEdit: 'No panel to edit.',
     tapToAddPhoto: 'Tap to add photo', stickers: 'STICKERS',
