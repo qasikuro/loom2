@@ -824,11 +824,24 @@ export default function HomeScreen() {
                       }}
                       activeOpacity={0.82}
                     >
-                      <View style={[styles.notifIconWrap, { backgroundColor: `${colors.primary}28` }]}>
+                      <View style={[styles.notifIconWrap, {
+                        backgroundColor:
+                          n.type === 'witness' ? 'rgba(200,168,75,0.18)' :
+                          n.type === 'save'    ? 'rgba(139,122,181,0.22)' :
+                          `${colors.primary}28`,
+                      }]}>
                         <Icon
-                          name={n.type === 'new_story' ? 'book-open' : 'star'}
+                          name={
+                            n.type === 'witness'   ? 'eye' :
+                            n.type === 'save'      ? 'bookmark' :
+                            n.type === 'new_story' ? 'book-open' : 'star'
+                          }
                           size={16}
-                          color={colors.primary}
+                          color={
+                            n.type === 'witness' ? '#C8A84B' :
+                            n.type === 'save'    ? '#8B7AB5' :
+                            colors.primary
+                          }
                         />
                       </View>
                       <View style={{ flex: 1, gap: 2 }}>
@@ -836,7 +849,10 @@ export default function HomeScreen() {
                           {n.actorName}
                         </Text>
                         <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, color: colors.mutedForeground }}>
-                          {n.type === 'new_story' ? 'shared a new story' : 'added a new outfit'}{n.title ? `: "${n.title}"` : ''}
+                          {n.type === 'witness'   ? 'witnessed your story' :
+                           n.type === 'save'      ? 'saved your story' :
+                           n.type === 'new_story' ? 'shared a new story' :
+                           'added a new outfit'}{n.title ? `: "${n.title}"` : ''}
                         </Text>
                       </View>
                     </TouchableOpacity>

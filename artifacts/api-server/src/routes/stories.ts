@@ -118,6 +118,34 @@ router.post("/stories", requireAuth, async (req, res) => {
   }
 });
 
+async function notifyAuthor(
+  actorId:      string,
+  authorId:     string,
+  storyId:      string,
+  chapterTitle: string,
+  type:         "witness" | "save",
+  req:          any,
+) {
+  try {
+    const actorRows = await db
+      .select({ name: characterTable.name })
+      .from(characterTable)
+      .where(eq(characterTable.userId, actorId))
+      .limit(1);
+    const actorName = actorRows[0]?.name ?? "A sky child";
+    await db.insert(notificationsTable).values({
+      userId:    authorId,
+      actorId,
+      actorName,
+      type,
+      refId:     storyId,
+      title:     chapterTitle,
+    });
+  } catch (err) {
+    req.log.error({ err }, `Failed to send ${type} notification`);
+  }
+}
+
 async function fanOutStoryNotification(
   userId: string,
   storyId: string,
@@ -247,23 +275,64 @@ router.delete("/stories/:id", requireAuth, async (req, res) => {
 
 router.post("/stories/:id/witness", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
+  const actorId = getUserId(req);
   try {
-    // Allow witnessing any public story from a public profile
     const [updated] = await db
       .update(storiesTable)
       .set({ witnessedCount: sql`${storiesTable.witnessedCount} + 1` })
-      .where(
-        and(
-          eq(storiesTable.id, storyId),
-          eq(storiesTable.isPublic, true),
-        ),
-      )
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });
+
+    // Notify the story author (fire-and-forget, skip if own story)
+    if (updated.userId !== actorId) {
+      notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "witness", req).catch(() => null);
+    }
+
     return res.json(serializeStory(updated));
   } catch (err) {
     req.log.error({ err }, "Failed to witness story");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/stories/:id/save", requireAuth, async (req, res) => {
+  const storyId = String(req.params.id);
+  const actorId = getUserId(req);
+  try {
+    const [updated] = await db
+      .update(storiesTable)
+      .set({ savedCount: sql`${storiesTable.savedCount} + 1` })
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "Not found" });
+
+    if (updated.userId !== actorId) {
+      notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "save", req).catch(() => null);
+    }
+
+    return res.json({ savedCount: updated.savedCount });
+  } catch (err) {
+    req.log.error({ err }, "Failed to save story");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/stories/:id/save", requireAuth, async (req, res) => {
+  const storyId = String(req.params.id);
+  try {
+    const [updated] = await db
+      .update(storiesTable)
+      .set({ savedCount: sql`GREATEST(${storiesTable.savedCount} - 1, 0)` })
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "Not found" });
+    return res.json({ savedCount: updated.savedCount });
+  } catch (err) {
+    req.log.error({ err }, "Failed to unsave story");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

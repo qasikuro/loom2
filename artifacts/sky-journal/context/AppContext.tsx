@@ -862,9 +862,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleSavePost = useCallback((id: string) => {
     setSavedStoryIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      const next    = new Set(prev);
+      const wasSaved = next.has(id);
+      if (wasSaved) next.delete(id); else next.add(id);
       AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
+      apiFetch(`/stories/${id}/save`, { method: wasSaved ? 'DELETE' : 'POST' }).catch(() => null);
       return next;
     });
   }, []);

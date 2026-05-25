@@ -3,9 +3,11 @@ import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
+  Animated,
+  Easing,
   Platform,
   ScrollView,
   StyleSheet,
@@ -245,8 +247,13 @@ export default function StoryScreen() {
 
   const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
+  const [savedOffset,      setSavedOffset]      = useState(0);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Witness button bounce animation
+  const witnessScale = useRef(new Animated.Value(1)).current;
+  const witnessGlow  = useRef(new Animated.Value(0)).current;
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
@@ -262,7 +269,7 @@ export default function StoryScreen() {
   const isSaved    = savedStoryIds.has(id ?? '');
 
   const witnessedCount = ((story?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0));
-  const savedCount     = story?.savedCount ?? post?.savedCount ?? 0;
+  const savedCount     = (story?.savedCount ?? post?.savedCount ?? 0) + savedOffset;
 
   function toCellPanel(p: any): CellPanel {
     return {
@@ -298,16 +305,26 @@ export default function StoryScreen() {
   const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
 
   function handleWitness() {
-    if (!witnessed) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setWitnessed(true);
-      apiFetch(`/stories/${id}/witness`, { method: 'POST' }).catch(() => null);
-    }
+    if (witnessed) return;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setWitnessed(true);
+    // Bounce + glow animation
+    Animated.sequence([
+      Animated.spring(witnessScale, { toValue: 1.28, useNativeDriver: true, tension: 200, friction: 5 }),
+      Animated.spring(witnessScale, { toValue: 1,    useNativeDriver: true, tension: 180, friction: 8 }),
+    ]).start();
+    Animated.sequence([
+      Animated.timing(witnessGlow, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(witnessGlow, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
+    ]).start();
+    apiFetch(`/stories/${id}/witness`, { method: 'POST' }).catch(() => null);
   }
 
   function handleSave() {
     if (!id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const willBeSaved = !savedStoryIds.has(id);
+    setSavedOffset(prev => prev + (willBeSaved ? 1 : -1));
     toggleSavePost(id);
   }
 
@@ -395,9 +412,22 @@ export default function StoryScreen() {
           {/* Hero meta */}
           <View style={styles.heroOverlay}>
             <View style={styles.heroMeta}>
-              <View style={[styles.heroAvatar, { backgroundColor: `rgba(139,122,181,0.5)` }]}>
-                <Text style={styles.heroAvatarText}>{authorName.charAt(0)}</Text>
-              </View>
+              <TouchableOpacity
+                onPress={() => post?.authorUserId && router.push({ pathname: '/user/[userId]', params: { userId: post.authorUserId } } as any)}
+                activeOpacity={post?.authorUserId ? 0.78 : 1}
+                style={styles.heroAvatarBtn}
+              >
+                {post?.authorAvatarUri ? (
+                  <Image
+                    source={{ uri: post.authorAvatarUri }}
+                    style={[StyleSheet.absoluteFill, { borderRadius: 17 }]}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <Text style={styles.heroAvatarText}>{authorName.charAt(0)}</Text>
+                )}
+              </TouchableOpacity>
               <View>
                 <Text style={styles.heroAuthor}>{authorName}</Text>
                 <Text style={styles.heroChapter}>{t('discover.chapter')} {chapterNum}</Text>
@@ -447,15 +477,28 @@ export default function StoryScreen() {
 
         {/* ── End card ───────────────────────────────────── */}
         <View style={[styles.endCard, { backgroundColor: 'rgba(139,122,181,0.12)', borderColor: 'rgba(139,122,181,0.25)' }]}>
-          <Icon name="star" size={22} color="#C8A84B" />
+          <Text style={{ fontSize: 26 }}>✦</Text>
           <Text style={styles.endTitle}>{t('discover.endOfChapter', { n: chapterNum })}</Text>
           <Text style={styles.endSub}>{post ? t('discover.byAuthor', { name: authorName }) : t('discover.yourStory')}</Text>
           <View style={styles.endStats}>
-            <Icon name="eye"      size={14} color="rgba(200,184,232,0.6)" />
-            <Text style={styles.endStatText}>{t('discover.witnessedCount', { n: witnessedCount })}</Text>
-            <Icon name="bookmark" size={14} color="rgba(200,184,232,0.6)" style={{ marginLeft: 12 }} />
-            <Text style={styles.endStatText}>{t('discover.savedCount', { n: savedCount })}</Text>
+            <Icon name="eye"      size={14} color={witnessed ? '#C8A84B' : 'rgba(200,184,232,0.6)'} />
+            <Text style={[styles.endStatText, witnessed && { color: '#C8A84B' }]}>{witnessedCount}</Text>
+            <View style={styles.endStatDot} />
+            <Icon name="bookmark" size={14} color={isSaved ? '#8B7AB5' : 'rgba(200,184,232,0.6)'} />
+            <Text style={[styles.endStatText, isSaved && { color: '#8B7AB5' }]}>{savedCount}</Text>
           </View>
+          {/* Follow author CTA for discover posts */}
+          {post?.authorUserId && (
+            <TouchableOpacity
+              style={styles.endViewProfile}
+              onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: post.authorUserId } } as any)}
+              activeOpacity={0.82}
+            >
+              <Icon name="user" size={13} color="rgba(200,184,232,0.85)" />
+              <Text style={styles.endViewProfileText}>View {authorName}'s profile</Text>
+              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.45)" />
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 
@@ -478,15 +521,22 @@ export default function StoryScreen() {
             <Text style={[styles.actionBtnText, { color: isSaved ? '#8B7AB5' : 'rgba(240,234,248,0.75)' }]}>{isSaved ? t('discover.saved') : t('discover.save')}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.witnessBtn, { backgroundColor: witnessed ? 'rgba(200,168,75,0.2)' : 'rgba(139,122,181,0.25)', borderColor: witnessed ? 'rgba(200,168,75,0.55)' : 'rgba(139,122,181,0.55)' }]}
-            onPress={handleWitness}
-          >
-            <Icon name="eye" size={15} color={witnessed ? '#C8A84B' : '#C8B8E8'} />
-            <Text style={[styles.actionBtnText, { color: witnessed ? '#C8A84B' : '#C8B8E8' }]}>
-              {witnessed ? t('discover.witnessedBadge') : t('discover.witness')}
-            </Text>
-          </TouchableOpacity>
+          <Animated.View style={{ transform: [{ scale: witnessScale }] }}>
+            <TouchableOpacity
+              style={[styles.witnessBtn, {
+                backgroundColor: witnessed ? 'rgba(200,168,75,0.22)' : 'rgba(139,122,181,0.25)',
+                borderColor:     witnessed ? 'rgba(200,168,75,0.65)' : 'rgba(139,122,181,0.55)',
+              }]}
+              onPress={handleWitness}
+              activeOpacity={witnessed ? 1 : 0.78}
+            >
+              <Animated.View style={{ opacity: witnessGlow.interpolate({ inputRange: [0,1], outputRange: [0, 1] }), position: 'absolute', top: -8, left: -8, right: -8, bottom: -8, borderRadius: 28, backgroundColor: 'rgba(200,168,75,0.18)' }} pointerEvents="none" />
+              <Icon name="eye" size={15} color={witnessed ? '#C8A84B' : '#C8B8E8'} />
+              <Text style={[styles.actionBtnText, { color: witnessed ? '#C8A84B' : '#C8B8E8' }]}>
+                {witnessed ? t('discover.witnessedBadge') : t('discover.witness')}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </View>
     </View>
@@ -499,7 +549,7 @@ const styles = StyleSheet.create({
   hero:     { width: '100%', position: 'relative', overflow: 'hidden' },
   heroOverlay: { position: 'absolute', bottom: 22, left: 20, right: 20, gap: 10 },
   heroMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  heroAvatar: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  heroAvatarBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(139,122,181,0.5)', overflow: 'hidden' },
   heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Satoshi-Bold' },
   heroAuthor:  { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Satoshi-Bold' },
   heroChapter: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Satoshi-Regular' },
@@ -595,6 +645,15 @@ const styles = StyleSheet.create({
   endSub:   { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.7)' },
   endStats: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
   endStatText: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.6)' },
+  endStatDot:  { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(200,184,232,0.3)', marginHorizontal: 4 },
+  endViewProfile: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    marginTop: 12, paddingHorizontal: 16, paddingVertical: 9,
+    borderRadius: 18, borderWidth: 1,
+    borderColor: 'rgba(200,184,232,0.22)',
+    backgroundColor: 'rgba(200,184,232,0.08)',
+  },
+  endViewProfileText: { fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.85)', flex: 1 },
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
