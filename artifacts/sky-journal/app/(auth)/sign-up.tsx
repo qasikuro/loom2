@@ -1,13 +1,16 @@
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
-import { useSignUp } from '@clerk/expo';
+import { useSignUp, useSSO } from '@clerk/expo';
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
 import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -20,23 +23,30 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type SignupMode = 'withPassword' | 'noPassword';
+WebBrowser.maybeCompleteAuthSession();
+
+function useWarmUpBrowser() {
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    void WebBrowser.warmUpAsync();
+    return () => { void WebBrowser.coolDownAsync(); };
+  }, []);
+}
 
 export default function SignUpScreen() {
-  const { t } = useTranslation();
+  useWarmUpBrowser();
   const { signUp, errors, fetchStatus } = useSignUp();
+  const { startSSOFlow } = useSSO();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [signupMode, setSignupMode]         = useState<SignupMode>('withPassword');
-  const [email, setEmail]                   = useState('');
-  const [password, setPassword]             = useState('');
-  const [showPassword, setShowPassword]     = useState(false);
-  const [code, setCode]                     = useState('');
-  const [catchError, setCatchError]         = useState('');
-  const [emailCodeSent, setEmailCodeSent]   = useState(false);
-  const [codeSentMsg, setCodeSentMsg]       = useState('');
-  const [focusedField, setFocusedField]     = useState<string | null>(null);
+  const [email, setEmail]               = useState('');
+  const [password, setPassword]         = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [code, setCode]                 = useState('');
+  const [catchError, setCatchError]     = useState('');
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const isLoading = fetchStatus === 'fetching';
 
@@ -46,31 +56,49 @@ export default function SignUpScreen() {
     signUp.unverifiedFields.includes('email_address') &&
     (signUp?.missingFields?.length ?? 0) === 0;
 
-  function switchMode(mode: SignupMode) {
-    setSignupMode(mode);
+  // entrance animation
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(32)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 540, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 540, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  const handleGoogleSignUp = useCallback(async () => {
+    setGoogleLoading(true);
     setCatchError('');
-    setCode('');
-    setEmailCodeSent(false);
-    setCodeSentMsg('');
-  }
+    try {
+      const { createdSessionId, setActive } = await startSSOFlow({
+        strategy: 'oauth_google',
+        redirectUrl: AuthSession.makeRedirectUri(),
+      });
+      if (createdSessionId && setActive) {
+        await setActive({
+          session: createdSessionId,
+          navigate: ({ session }) => {
+            if (session?.currentTask) return;
+            router.replace('/(tabs)' as Href);
+          },
+        });
+      }
+    } catch (err: any) {
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Google sign-in failed.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [startSSOFlow, router]);
 
   async function handleSignUp() {
     if (!signUp) return;
     setCatchError('');
     try {
       const { error } = await signUp.password({ emailAddress: email.trim(), password });
-      if (error) {
-        setCatchError(error.longMessage ?? error.message ?? 'Could not create account.');
-        return;
-      }
+      if (error) { setCatchError(error.longMessage ?? error.message ?? 'Could not create account.'); return; }
       await signUp.verifications.sendEmailCode();
     } catch (err: any) {
-      setCatchError(
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        'Could not create account. Please check your connection and try again.'
-      );
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Could not create account.');
     }
   }
 
@@ -81,125 +109,77 @@ export default function SignUpScreen() {
       await signUp.verifications.verifyEmailCode({ code: code.trim() });
       if (signUp.status === 'complete') {
         await signUp.finalize({
-          navigate: ({ session }) => {
-            if (session?.currentTask) return;
-            router.replace('/(tabs)' as Href);
-          },
+          navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); },
         });
       } else {
-        setCatchError(t('auth.verifyFailed'));
+        setCatchError('Verification failed. Please try again.');
       }
     } catch (err: any) {
-      setCatchError(
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        t('auth.verifyFailed')
-      );
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Verification failed.');
     }
   }
 
-  async function handleSendEmailCodeSignUp() {
-    if (!signUp) { setCatchError(t('auth.clerkNotReady')); return; }
-    if (!email.trim()) { setCatchError(t('auth.enterEmailFirst')); return; }
-    setCatchError('');
-    setCodeSentMsg('');
-    try {
-      await signUp.create({ emailAddress: email.trim() });
-      await signUp.verifications.sendEmailCode();
-      setEmailCodeSent(true);
-      setCodeSentMsg(t('auth.codeSent'));
-    } catch (err: any) {
-      setCatchError(
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        t('auth.emailCodeFailed')
-      );
-    }
-  }
+  const fieldError = catchError || errors?.fields?.emailAddress?.message || errors?.fields?.password?.message || errors?.fields?.code?.message || '';
 
-  async function handleVerifyEmailCodeSignUp() {
-    if (!signUp) return;
-    setCatchError('');
-    try {
-      await signUp.verifications.verifyEmailCode({ code: code.trim() });
-      if (signUp.status === 'complete') {
-        await signUp.finalize({
-          navigate: ({ session }) => {
-            if (session?.currentTask) return;
-            router.replace('/(tabs)' as Href);
-          },
-        });
-      } else {
-        setCatchError(t('auth.verifyFailed'));
-      }
-    } catch (err: any) {
-      setCatchError(
-        err?.errors?.[0]?.longMessage ||
-        err?.errors?.[0]?.message ||
-        err?.message ||
-        t('auth.verifyFailed')
-      );
-    }
-  }
-
-  const fieldError =
-    catchError ||
-    errors?.fields?.emailAddress?.message ||
-    errors?.fields?.password?.message ||
-    errors?.fields?.code?.message ||
-    '';
-
-  // ── Verification screen ───────────────────────────────────────────────────
+  // ── Email verification screen ─────────────────────────────────────────────
   if (needsVerification) {
     return (
       <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
-        <View style={[styles.container, { paddingTop: insets.top + 48, paddingBottom: insets.bottom + 32 }]}>
-          <View style={styles.logoWrap}>
-            <Image source={Images.logo} style={styles.logo} contentFit="contain" />
-          </View>
-          <Text style={styles.title}>{t('auth.checkEmail')}</Text>
-          <Text style={styles.subtitle}>{t('auth.codeSentTo', { email })}</Text>
+        <Animated.View style={[{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={[styles.container, { paddingTop: insets.top + 56, paddingBottom: insets.bottom + 40, flex: 1 }]}>
+            {/* icon */}
+            <View style={styles.verifyIconWrap}>
+              <Text style={styles.verifyIconEmoji}>✉️</Text>
+            </View>
 
-          <View style={styles.fieldGroup}>
-            <Text style={styles.fieldLabel}>{t('auth.verificationCode')}</Text>
-            <View style={[styles.inputBox, focusedField === 'code' && styles.inputBoxFocused]}>
+            <Text style={styles.title}>Check your email</Text>
+            <Text style={styles.subtitle}>
+              We sent a 6-digit code to{'\n'}
+              <Text style={{ color: 'rgba(200,184,232,0.85)', fontFamily: 'Satoshi-Bold' }}>{email}</Text>
+            </Text>
+
+            {/* OTP input row */}
+            <View style={[styles.inputBox, focusedField === 'code' && styles.inputBoxFocused, { marginTop: 8 }]}>
               <TextInput
-                style={styles.inputText}
+                style={[styles.inputText, { textAlign: 'center', letterSpacing: 8, fontSize: 22 }]}
                 value={code}
                 onChangeText={v => { setCode(v); setCatchError(''); }}
                 onFocus={() => setFocusedField('code')}
                 onBlur={() => setFocusedField(null)}
                 keyboardType="number-pad"
-                placeholder={t('auth.enterCode')}
-                placeholderTextColor="rgba(200,184,232,0.35)"
+                placeholder="000000"
+                placeholderTextColor="rgba(200,184,232,0.25)"
+                maxLength={6}
                 autoFocus
                 autoComplete="one-time-code"
               />
             </View>
+
+            {!!fieldError && <Text style={[styles.errorText, { marginTop: 10 }]}>{fieldError}</Text>}
+
+            <TouchableOpacity
+              style={[styles.primaryBtn, { marginTop: 16 }, (!code.trim() || isLoading) && styles.primaryBtnDisabled]}
+              onPress={handleVerify}
+              disabled={!code.trim() || isLoading}
+            >
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Verify & enter</Text>}
+            </TouchableOpacity>
+
+            <Text style={styles.verifyNote}>This is a one-time step — you'll stay signed in after this.</Text>
+
+            <View style={styles.verifyFooter}>
+              <TouchableOpacity onPress={() => signUp!.verifications.sendEmailCode()}>
+                <Text style={styles.footerLink}>Resend code</Text>
+              </TouchableOpacity>
+              <Text style={styles.footerText}> · </Text>
+              <TouchableOpacity onPress={() => { signUp!.reset(); setCode(''); setCatchError(''); }}>
+                <Text style={styles.footerLink}>Start over</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View nativeID="clerk-captcha" />
           </View>
-
-          {!!fieldError && <Text style={styles.errorText}>{fieldError}</Text>}
-
-          <TouchableOpacity
-            style={[styles.primaryBtn, (!code || isLoading) && styles.primaryBtnDisabled]}
-            onPress={handleVerify}
-            disabled={!code || isLoading}
-          >
-            {isLoading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.primaryBtnText}>{t('auth.verifyEnter')}</Text>
-            }
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.ghostBtn} onPress={() => signUp.verifications.sendEmailCode()}>
-            <Text style={styles.ghostBtnText}>{t('auth.resendCode')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ghostBtn} onPress={() => { signUp.reset(); setCode(''); setCatchError(''); }}>
-            <Text style={styles.ghostBtnText}>{t('auth.startOver')}</Text>
-          </TouchableOpacity>
-        </View>
+        </Animated.View>
       </LinearGradient>
     );
   }
@@ -207,44 +187,75 @@ export default function SignUpScreen() {
   // ── Main sign-up screen ───────────────────────────────────────────────────
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
+
+      {/* decorative stars */}
+      <Text style={[styles.star, { top: '10%', right: '10%', fontSize: 9  }]}>✦</Text>
+      <Text style={[styles.star, { top: '25%', left: '6%',  fontSize: 7  }]}>✦</Text>
+      <Text style={[styles.star, { top: '55%', right: '5%', fontSize: 6  }]}>✦</Text>
+      <Text style={[styles.star, { top: '72%', left: '9%',  fontSize: 10 }]}>✦</Text>
+
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 40 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.logoWrap}>
-            <Image source={Images.logo} style={styles.logo} contentFit="contain" />
-          </View>
-
-          <Text style={styles.title}>{t('auth.beginJourney')}</Text>
-          <Text style={styles.subtitle}>{t('auth.signUpSub')}</Text>
-
-          <View style={styles.form}>
-            {/* Email */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>{t('auth.email')}</Text>
-              <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
-                <TextInput
-                  style={styles.inputText}
-                  value={email}
-                  onChangeText={v => { setEmail(v); setCatchError(''); setEmailCodeSent(false); setCodeSentMsg(''); }}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  placeholder={t('auth.emailPlaceholder')}
-                  placeholderTextColor="rgba(200,184,232,0.35)"
-                  autoComplete="email"
-                  returnKeyType="next"
-                />
-              </View>
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+            {/* Logo */}
+            <View style={styles.logoWrap}>
+              <Image source={Images.logo} style={styles.logo} contentFit="contain" />
             </View>
 
-            {/* Password (withPassword mode) */}
-            {signupMode === 'withPassword' && (
+            <Text style={styles.title}>Begin your journey</Text>
+            <Text style={styles.subtitle}>Create your Sky Journal account</Text>
+
+            {/* ── Google button ──────────────────── */}
+            <TouchableOpacity
+              style={styles.googleBtn}
+              onPress={handleGoogleSignUp}
+              disabled={googleLoading || isLoading}
+              activeOpacity={0.88}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color="#3C3C3C" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.googleLogo}>G</Text>
+                  <Text style={styles.googleBtnText}>Continue with Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* ── Divider ────────────────────────── */}
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or sign up with email</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* ── Form ───────────────────────────── */}
+            <View style={styles.form}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
+                  <TextInput
+                    style={styles.inputText}
+                    value={email}
+                    onChangeText={v => { setEmail(v); setCatchError(''); }}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    placeholder="your@email.com"
+                    placeholderTextColor="rgba(200,184,232,0.35)"
+                    autoComplete="email"
+                    returnKeyType="next"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Password</Text>
                 <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
                   <TextInput
                     style={[styles.inputText, { paddingRight: 52 }]}
@@ -253,111 +264,44 @@ export default function SignUpScreen() {
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     secureTextEntry={!showPassword}
-                    placeholder={t('auth.passwordCreatePlaceholder')}
+                    placeholder="At least 8 characters"
                     placeholderTextColor="rgba(200,184,232,0.35)"
                     autoComplete="new-password"
                     returnKeyType="done"
+                    onSubmitEditing={handleSignUp}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(p => !p)}>
-                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={18} color={focusedField === 'password' ? 'rgba(200,184,232,0.8)' : 'rgba(200,184,232,0.4)'} />
+                    <Icon name={showPassword ? 'eye-off' : 'eye'} size={18}
+                      color={focusedField === 'password' ? 'rgba(200,184,232,0.8)' : 'rgba(200,184,232,0.4)'} />
                   </TouchableOpacity>
                 </View>
               </View>
-            )}
 
-            {/* OTP code (noPassword mode, after send) */}
-            {signupMode === 'noPassword' && emailCodeSent && (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t('auth.verificationCode')}</Text>
-                <View style={[styles.inputBox, focusedField === 'code' && styles.inputBoxFocused]}>
-                  <TextInput
-                    style={styles.inputText}
-                    value={code}
-                    onChangeText={v => { setCode(v); setCatchError(''); }}
-                    onFocus={() => setFocusedField('code')}
-                    onBlur={() => setFocusedField(null)}
-                    keyboardType="number-pad"
-                    placeholder={t('auth.enterCode')}
-                    placeholderTextColor="rgba(200,184,232,0.35)"
-                    autoFocus
-                    autoComplete="one-time-code"
-                  />
-                </View>
-                {!!codeSentMsg && <Text style={styles.successText}>{codeSentMsg}</Text>}
-              </View>
-            )}
+              {!!fieldError && <Text style={styles.errorText}>{fieldError}</Text>}
 
-            {!!fieldError && <Text style={styles.errorText}>{fieldError}</Text>}
+              <TouchableOpacity
+                style={[styles.primaryBtn, (!email || !password || isLoading) && styles.primaryBtnDisabled]}
+                onPress={handleSignUp}
+                disabled={!email || !password || isLoading}
+              >
+                {isLoading
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={styles.primaryBtnText}>Create account</Text>
+                }
+              </TouchableOpacity>
 
-            {/* CTA buttons */}
-            {signupMode === 'withPassword' && (
-              <>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, (!email || !password || isLoading) && styles.primaryBtnDisabled]}
-                  onPress={handleSignUp}
-                  disabled={!email || !password || isLoading}
-                >
-                  {isLoading
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.primaryBtnText}>{t('auth.createAccountBtn')}</Text>
-                  }
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('noPassword')}>
-                  <Text style={styles.switchLinkText}>{t('auth.noPasswordTab')} →</Text>
-                </TouchableOpacity>
-              </>
-            )}
+              <View nativeID="clerk-captcha" />
+            </View>
 
-            {signupMode === 'noPassword' && !emailCodeSent && (
-              <>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, (!email.trim() || isLoading) && styles.primaryBtnDisabled]}
-                  onPress={handleSendEmailCodeSignUp}
-                  disabled={!email.trim() || isLoading}
-                >
-                  {isLoading
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.primaryBtnText}>{t('auth.sendCode')}</Text>
-                  }
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.switchLink} onPress={() => switchMode('withPassword')}>
-                  <Text style={styles.switchLinkText}>{t('auth.withPasswordTab')} →</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            {signupMode === 'noPassword' && emailCodeSent && (
-              <>
-                <TouchableOpacity
-                  style={[styles.primaryBtn, (!code.trim() || isLoading) && styles.primaryBtnDisabled]}
-                  onPress={handleVerifyEmailCodeSignUp}
-                  disabled={!code.trim() || isLoading}
-                >
-                  {isLoading
-                    ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.primaryBtnText}>{t('auth.verifyEnter')}</Text>
-                  }
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.ghostBtn} onPress={handleSendEmailCodeSignUp}>
-                  <Text style={styles.ghostBtnText}>{t('auth.resendCode')}</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            <View nativeID="clerk-captcha" />
-          </View>
-
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t('auth.alreadyHave')}</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          <Link href={'/(auth)/sign-in' as any} asChild>
-            <Pressable style={styles.outlineBtn}>
-              <Text style={styles.outlineBtnText}>{t('auth.signIn')}</Text>
-            </Pressable>
-          </Link>
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>Already have an account?</Text>
+              <Link href={'/(auth)/sign-in' as any} asChild>
+                <Pressable hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Text style={styles.footerLink}>Sign in</Text>
+                </Pressable>
+              </Link>
+            </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -366,139 +310,73 @@ export default function SignUpScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  container: { paddingHorizontal: 24, alignItems: 'stretch' },
+  star: { position: 'absolute', color: 'rgba(200,184,232,0.18)', fontFamily: 'Satoshi-Regular' },
+  container: { paddingHorizontal: 28, alignItems: 'stretch' },
 
-  logoWrap: { alignItems: 'center', marginBottom: 12 },
-  logo: { width: 130, height: 130 },
+  logoWrap: { alignItems: 'center', marginBottom: 10 },
+  logo: { width: 110, height: 110 },
 
   title: {
-    fontSize: 28,
-    fontFamily: 'Satoshi-Bold',
-    color: '#F0ECFF',
-    textAlign: 'center',
-    letterSpacing: -0.6,
-    marginBottom: 6,
+    fontSize: 30, fontFamily: 'Satoshi-Bold', color: '#F0ECFF',
+    textAlign: 'center', letterSpacing: -0.8, marginBottom: 6,
   },
   subtitle: {
-    fontSize: 14,
-    fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.55)',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 28,
+    fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)',
+    textAlign: 'center', lineHeight: 20, marginBottom: 32,
   },
 
-  form: { gap: 16 },
+  googleBtn: {
+    height: 56, borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
+    shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 14, shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  googleLogo: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#4285F4', lineHeight: 24 },
+  googleBtnText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#1F1F1F', letterSpacing: 0.1 },
 
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 22 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(107,91,149,0.22)' },
+  dividerText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.32)', textAlign: 'center' },
+
+  form: { gap: 14 },
   fieldGroup: { gap: 6 },
-  fieldLabel: {
-    fontSize: 13,
-    fontFamily: 'Satoshi-Medium',
-    color: 'rgba(200,184,232,0.7)',
-    marginLeft: 2,
-  },
+  fieldLabel: { fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.65)', marginLeft: 2 },
   inputBox: {
-    height: 56,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(107,91,149,0.3)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
+    height: 56, borderRadius: 12, borderWidth: 1.5,
+    borderColor: 'rgba(107,91,149,0.28)', backgroundColor: 'rgba(255,255,255,0.04)',
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16,
   },
-  inputBoxFocused: {
-    borderColor: 'rgba(180,160,240,0.75)',
-    backgroundColor: 'rgba(255,255,255,0.07)',
-  },
-  inputText: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: 'Satoshi-Regular',
-    color: '#F0ECFF',
-    letterSpacing: 0.1,
-  },
-  eyeBtn: {
-    position: 'absolute',
-    right: 14,
-    padding: 6,
-  },
+  inputBoxFocused: { borderColor: 'rgba(180,160,240,0.75)', backgroundColor: 'rgba(255,255,255,0.07)' },
+  inputText: { flex: 1, fontSize: 16, fontFamily: 'Satoshi-Regular', color: '#F0ECFF', letterSpacing: 0.1 },
+  eyeBtn: { position: 'absolute', right: 14, padding: 6 },
 
-  successText: {
-    fontSize: 12,
-    fontFamily: 'Satoshi-Regular',
-    color: '#6DD68E',
-    marginLeft: 2,
-    marginTop: 2,
-  },
   errorText: {
-    fontSize: 13,
-    fontFamily: 'Satoshi-Regular',
-    color: '#E06C75',
-    textAlign: 'center',
-    backgroundColor: 'rgba(224,108,117,0.1)',
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginTop: 4,
+    fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#E06C75',
+    textAlign: 'center', backgroundColor: 'rgba(224,108,117,0.10)',
+    borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14,
   },
 
   primaryBtn: {
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: '#6B5B95',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 6,
+    height: 56, borderRadius: 14, backgroundColor: '#6B5B95',
+    alignItems: 'center', justifyContent: 'center', marginTop: 4,
   },
-  primaryBtnDisabled: { opacity: 0.4 },
-  primaryBtnText: {
-    fontSize: 16,
-    fontFamily: 'Satoshi-Bold',
-    color: '#fff',
-    letterSpacing: 0.2,
-  },
+  primaryBtnDisabled: { opacity: 0.38 },
+  primaryBtnText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: 0.2 },
 
-  switchLink: { alignItems: 'center', paddingVertical: 6 },
-  switchLinkText: {
-    fontSize: 13,
-    fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.4)',
-  },
+  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 28 },
+  footerText: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)' },
+  footerLink: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(180,160,240,0.85)' },
 
-  ghostBtn: { alignItems: 'center', paddingVertical: 8 },
-  ghostBtnText: {
-    fontSize: 14,
-    fontFamily: 'Satoshi-Medium',
-    color: 'rgba(200,184,232,0.55)',
+  // Verification screen
+  verifyIconWrap: {
+    width: 80, height: 80, borderRadius: 24, backgroundColor: 'rgba(107,91,149,0.18)',
+    alignSelf: 'center', alignItems: 'center', justifyContent: 'center', marginBottom: 20,
   },
-
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginVertical: 24,
+  verifyIconEmoji: { fontSize: 36 },
+  verifyNote: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)',
+    textAlign: 'center', marginTop: 14, lineHeight: 18, paddingHorizontal: 12,
   },
-  dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(107,91,149,0.25)' },
-  dividerText: {
-    fontSize: 12,
-    fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.4)',
-  },
-
-  outlineBtn: {
-    height: 56,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: 'rgba(107,91,149,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(107,91,149,0.08)',
-  },
-  outlineBtnText: {
-    fontSize: 15,
-    fontFamily: 'Satoshi-Bold',
-    color: 'rgba(200,184,232,0.85)',
-    letterSpacing: 0.2,
-  },
+  verifyFooter: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 24 },
 });
