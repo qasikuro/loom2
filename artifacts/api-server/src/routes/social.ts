@@ -1,5 +1,5 @@
 import { db, characterTable, storiesTable, followsTable, outfitsTable } from "@workspace/db";
-import { and, desc, eq, ilike, ne, or } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 
@@ -79,7 +79,7 @@ router.get("/friends", requireAuth, async (req, res) => {
 
     const followingIds = followingRows.map(r => r.followingId);
 
-    const profiles = await db
+    const filtered = await db
       .select({
         userId:    characterTable.userId,
         name:      characterTable.name,
@@ -94,9 +94,12 @@ router.get("/friends", requireAuth, async (req, res) => {
         isPublic:  characterTable.isPublic,
       })
       .from(characterTable)
-      .where(eq(characterTable.isBanned, false));
-
-    const filtered = profiles.filter(p => followingIds.includes(p.userId));
+      .where(
+        and(
+          inArray(characterTable.userId, followingIds),
+          eq(characterTable.isBanned, false),
+        ),
+      );
 
     return res.json(
       filtered.map(p => ({

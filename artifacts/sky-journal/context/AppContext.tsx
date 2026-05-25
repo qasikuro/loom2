@@ -209,6 +209,17 @@ export interface ServerNotification {
   createdAt: string;
 }
 
+export interface FriendSummary {
+  userId:    string;
+  name:      string;
+  username?: string | null;
+  bio:       string;
+  mood:      string;
+  traits:    string[];
+  avatarUri?: string | null;
+  isPublic:  boolean;
+}
+
 // ── Context value ─────────────────────────────────────────────────────────────
 
 interface AppContextValue {
@@ -219,7 +230,7 @@ interface AppContextValue {
   setCharacter: (c: Character) => void;
 
   stories:      Story[];
-  addStory:     (s: Story) => void;
+  addStory:     (s: Story) => Promise<boolean>;
   updateStory:  (id: string, updates: Partial<Omit<Story, 'id'>>) => void;
   deleteStory:  (id: string) => void;
 
@@ -243,6 +254,7 @@ interface AppContextValue {
   savedStoryIds:  ReadonlySet<string>;
   toggleSavePost: (id: string) => void;
 
+  friends:       FriendSummary[];
   followingIds:  string[];
   followUser:    (targetUserId: string) => void;
   unfollowUser:  (targetUserId: string) => void;
@@ -398,6 +410,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
+  const [friends, setFriends]                         = useState<FriendSummary[]>([]);
   const [serverNotifications, setServerNotifications] = useState<ServerNotification[]>([]);
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
@@ -521,7 +534,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Previously social was a second sequential wave, doubling the wait for Discover.
       const [
         charRaw, entriesRaw, storiesRaw, outfitsRaw,
-        galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw,
+        galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw,
       ] = await Promise.all([
         apiFetch<any>('/character').catch(() => null),
         apiFetch<any[]>('/journal-entries').catch(() => null),
@@ -532,6 +545,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<any[]>('/discover').catch(() => []),
         apiFetch<string[]>('/follows/following').catch(() => []),
         apiFetch<any[]>('/notifications').catch(() => []),
+        apiFetch<FriendSummary[]>('/friends').catch(() => []),
       ]);
 
       // Process core data
@@ -571,6 +585,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
       setDiscoverFeedRaw(feed);
       setFollowingIds(follows);
+      setFriends(friendsRaw ?? []);
       setServerNotifications(notifs);
       setApiOnline(true);
 
@@ -625,11 +640,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch { /* silently skip */ }
   }
 
+  async function fetchFriends() {
+    try {
+      const data = await apiFetch<FriendSummary[]>('/friends');
+      setFriends(data ?? []);
+    } catch { /* silently skip */ }
+  }
+
   async function loadSocialData() {
     try {
-      const [discoverRaw, followingRaw] = await Promise.all([
+      const [discoverRaw, followingRaw, friendsRaw] = await Promise.all([
         apiFetch<any[]>('/discover').catch(() => []),
         apiFetch<string[]>('/follows/following').catch(() => []),
+        apiFetch<FriendSummary[]>('/friends').catch(() => []),
       ]);
 
       const feed    = (discoverRaw  ?? []).map(toRawDiscoverPost);
@@ -637,6 +660,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setDiscoverFeedRaw(feed);
       setFollowingIds(follows);
+      setFriends(friendsRaw ?? []);
 
       await Promise.allSettled([
         AsyncStorage.setItem('discover_v1',  JSON.stringify(feed)),
@@ -765,10 +789,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Stories ────────────────────────────────────────────────────────────────
 
-  const addStory = useCallback((story: Story) => {
+  const addStory = useCallback(async (story: Story): Promise<boolean> => {
+    // Optimistic local update
     setStories(prev => {
       const updated = [story, ...prev.filter(s => s.id !== story.id)];
-      // Strip imageUri (can be large base64 on web) before caching to AsyncStorage
       const slim = updated.map(s => ({
         ...s,
         panels: s.panels.map(p => ({ ...p, imageUri: undefined })),
@@ -776,23 +800,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
       return updated;
     });
-    apiFetch('/stories', {
-      method: 'POST',
-      body:   JSON.stringify({
-        id:            story.id,
-        date:          story.date,
-        chapterTitle:  story.chapterTitle,
-        description:   story.description ?? '',
-        panels:        story.panels,
-        mood:          story.mood,
-        location:      story.location,
-        isPublic:      story.isPublic,
-        pageLayoutKey: story.pageLayoutKey ?? null,
-        pages:         story.pages ?? null,
-      }),
-    })
-      .then(() => loadSocialData())
-      .catch(() => null);
+
+    try {
+      await apiFetch('/stories', {
+        method: 'POST',
+        body:   JSON.stringify({
+          id:            story.id,
+          date:          story.date,
+          chapterTitle:  story.chapterTitle,
+          description:   story.description ?? '',
+          panels:        story.panels,
+          mood:          story.mood,
+          location:      story.location,
+          isPublic:      story.isPublic,
+          pageLayoutKey: story.pageLayoutKey ?? null,
+          pages:         story.pages ?? null,
+        }),
+      });
+      loadSocialData();
+      return true;
+    } catch {
+      // Revert optimistic update so it doesn't linger
+      setStories(prev => {
+        const reverted = prev.filter(s => s.id !== story.id);
+        const slim = reverted.map(s => ({
+          ...s,
+          panels: s.panels.map(p => ({ ...p, imageUri: undefined })),
+        }));
+        AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
+        return reverted;
+      });
+      return false;
+    }
   }, []);
 
   const updateStory = useCallback((id: string, updates: Partial<Omit<Story, 'id'>>) => {
@@ -935,17 +974,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setFollowingIds(prev =>
       prev.includes(targetUserId) ? prev : [...prev, targetUserId],
     );
-    apiFetch(`/follows/${targetUserId}`, { method: 'POST' }).catch(() => {
-      setFollowingIds(prev => prev.filter(id => id !== targetUserId));
-    });
+    apiFetch(`/follows/${targetUserId}`, { method: 'POST' })
+      .then(() => fetchFriends())
+      .catch(() => {
+        setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+      });
   }, []);
 
   const unfollowUser = useCallback((targetUserId: string) => {
     setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+    setFriends(prev => prev.filter(f => f.userId !== targetUserId));
     apiFetch(`/follows/${targetUserId}`, { method: 'DELETE' }).catch(() => {
       setFollowingIds(prev =>
         prev.includes(targetUserId) ? prev : [...prev, targetUserId],
       );
+      fetchFriends();
     });
   }, []);
 
@@ -982,7 +1025,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
       discoverPosts, savedStoryIds, toggleSavePost,
-      followingIds, followUser, unfollowUser,
+      friends, followingIds, followUser, unfollowUser,
       rewards, dismissReward,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
       reloadData,

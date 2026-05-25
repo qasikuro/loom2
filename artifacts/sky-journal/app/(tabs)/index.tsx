@@ -22,22 +22,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Images } from '@/assets/images';
 import { Swipeable } from 'react-native-gesture-handler';
-import { apiFetch, useApp } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import { SkeletonBox } from '@/components/Skeleton';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 
-interface FriendSummary {
-  userId:    string;
-  name:      string;
-  username?: string | null;
-  bio:       string;
-  mood:      string;
-  traits:    string[];
-  avatarUri?: string | null;
-  isPublic:  boolean;
-}
 
 const FRIEND_MOOD_COLORS: Record<string, string> = {
   Hopeful: '#6BA57A', Peaceful: '#5B9BB5', Lonely: '#5D7BA5',
@@ -140,7 +130,7 @@ export default function HomeScreen() {
     character, journalEntries, stories, rewards, dismissReward,
     outfits, activeOutfitId, setActiveOutfitId,
     serverNotifications, markServerNotificationsRead, deleteServerNotification,
-    followingIds, isLoading,
+    followingIds, friends, isLoading,
   } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -150,8 +140,6 @@ export default function HomeScreen() {
   const [showNotifs,       setShowNotifs]       = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
 
-  // Friends
-  const [friends,         setFriends]         = useState<FriendSummary[]>([]);
 
   const unreadServerCount = serverNotifications.filter(n => !n.isRead).length;
   const hasNotifs = rewards.length > 0 || unreadServerCount > 0;
@@ -296,13 +284,6 @@ export default function HomeScreen() {
     ).start();
   }, []);
 
-  // Load friends whenever following list changes
-  useEffect(() => {
-    if (followingIds.length === 0) { setFriends([]); return; }
-    apiFetch<FriendSummary[]>('/friends')
-      .then(data => setFriends(data))
-      .catch(() => {});
-  }, [followingIds.length]);
 
   const heroFloatY = heroFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -9] });
 

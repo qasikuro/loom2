@@ -203,7 +203,7 @@ export default function CreateScreen() {
 
   // ── Publish ─────────────────────────────────────────────────────────────
 
-  function handlePublish() {
+  async function handlePublish() {
     if (!title.trim()) { setError(tr('create.needTitle')); return; }
     const filledPages = pages
       .map(p => ({
@@ -232,7 +232,7 @@ export default function CreateScreen() {
       setPosting(false);
       router.replace('/(tabs)/create' as any);
     } else {
-      addStory({
+      const ok = await addStory({
         id:             crypto.randomUUID(),
         date:           new Date().toISOString(),
         chapterTitle:   title.trim(),
@@ -247,6 +247,10 @@ export default function CreateScreen() {
         pages:          filledPages,
       });
       setPosting(false);
+      if (!ok) {
+        setError(tr('create.saveFailed') || 'Story couldn\'t be saved — check your connection and try again');
+        return;
+      }
       setTitle('');
       setDesc('');
       setPages([makePage()]);
