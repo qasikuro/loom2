@@ -15,6 +15,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,20 +34,47 @@ const MOODS = [
   { label: 'Joyful',   icon: 'smile'   as const, color: '#60A878' },
 ];
 
-const PROMPTS = [
-  'What stayed with you today?',
-  'Something small that mattered...',
-  'A feeling too real to forget.',
-  'If the sky could speak today, what would it say?',
-  'What made your heart lighter — or heavier?',
-  'One moment you want to remember.',
-];
-
 const TYPE_CFG = {
   diary:  { title: 'Journal',      icon: 'feather' as const, accent: '#6B5B95', label: 'Diary Entry',   placeholder: 'Write freely...' },
   friend: { title: 'Friend Log',   icon: 'users'   as const, accent: '#4A6898', label: 'Friend Memory', placeholder: 'What happened with them...' },
   moment: { title: 'Quick Moment', icon: 'moon'    as const, accent: '#5848A8', label: 'Moment',        placeholder: 'Capture this feeling...' },
 };
+
+function startOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
+function addDays(d: Date, n: number): Date {
+  const out = new Date(d);
+  out.setDate(out.getDate() + n);
+  return out;
+}
+
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() &&
+         a.getMonth()    === b.getMonth()    &&
+         a.getDate()     === b.getDate();
+}
+
+function formatFull(d: Date) {
+  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+function formatShort(d: Date) {
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+const QUICK_OFFSETS = [
+  { label: 'Today',       offset: 0 },
+  { label: 'Yesterday',   offset: -1 },
+  { label: '2 days ago',  offset: -2 },
+  { label: '3 days ago',  offset: -3 },
+  { label: '4 days ago',  offset: -4 },
+  { label: '5 days ago',  offset: -5 },
+  { label: '6 days ago',  offset: -6 },
+];
 
 export default function CreateJournalEntryScreen() {
   const colors  = useColors();
@@ -63,14 +91,18 @@ export default function CreateJournalEntryScreen() {
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
 
-  const [text,       setText]       = useState('');
-  const [friendName, setFriendName] = useState('');
-  const [mood,       setMood]       = useState('Peaceful');
-  const [imageUri,   setImageUri]   = useState<string | undefined>();
-  const [saving,        setSaving]        = useState(false);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [error,         setError]         = useState<string | null>(null);
-  const [fontSize,   setFontSize]   = useState(16);
+  const today = startOfDay(new Date());
+
+  const [text,            setText]            = useState('');
+  const [friendName,      setFriendName]      = useState('');
+  const [mood,            setMood]            = useState('Peaceful');
+  const [imageUri,        setImageUri]        = useState<string | undefined>();
+  const [saving,          setSaving]          = useState(false);
+  const [uploadingImage,  setUploadingImage]  = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
+  const [fontSize,        setFontSize]        = useState(16);
+  const [entryDate,       setEntryDate]       = useState<Date>(today);
+  const [showDatePicker,  setShowDatePicker]  = useState(false);
 
   const MIN_FONT = 12, MAX_FONT = 28;
   const sizeRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -91,8 +123,19 @@ export default function CreateJournalEntryScreen() {
     if (sizeRef.current) { clearInterval(sizeRef.current); sizeRef.current = null; }
   }
 
-  const today     = new Date();
-  const dateLabel = today.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  function nudgeDate(delta: number) {
+    const next = addDays(entryDate, delta);
+    if (next > today) return;
+    Haptics.selectionAsync();
+    setEntryDate(next);
+  }
+
+  function pickQuickDate(offset: number) {
+    Haptics.selectionAsync();
+    setEntryDate(addDays(today, offset));
+    setShowDatePicker(false);
+  }
+
   const dayPrompt = tr(`journal.prompts_${today.getDate() % 6}` as any);
 
   async function pickImage() {
@@ -127,7 +170,7 @@ export default function CreateJournalEntryScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     addJournalEntry({
       id:         crypto.randomUUID(),
-      date:       new Date().toISOString(),
+      date:       entryDate.toISOString(),
       type:       entryType,
       text:       text.trim(),
       mood,
@@ -138,7 +181,13 @@ export default function CreateJournalEntryScreen() {
     router.back();
   }
 
-  const currentMood = MOODS.find(m => m.label === mood);
+  const isToday     = isSameDay(entryDate, today);
+  const isYesterday = isSameDay(entryDate, addDays(today, -1));
+  const dateLabel   = isToday
+    ? formatFull(entryDate)
+    : isYesterday
+      ? `Yesterday · ${formatShort(entryDate)}`
+      : formatFull(entryDate);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -186,8 +235,79 @@ export default function CreateJournalEntryScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
       >
-        {/* Date */}
-        <Text style={[styles.dateLabel, { color: colors.mutedForeground }]}>{dateLabel}</Text>
+        {/* ── Date picker row ─────────────────────────────────── */}
+        <View style={styles.dateRow}>
+          {/* Prev day */}
+          <TouchableOpacity
+            style={[styles.dateArrow, { opacity: 1 }]}
+            onPress={() => nudgeDate(-1)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 4 }}
+          >
+            <Icon name="chevron-left" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+
+          {/* Date label — tap to open picker */}
+          <TouchableOpacity
+            style={styles.dateLabelBtn}
+            onPress={() => { Haptics.selectionAsync(); setShowDatePicker(v => !v); }}
+          >
+            <Icon name="calendar" size={12} color={`${cfg.accent}90`} />
+            <Text style={[styles.dateLabel, { color: isToday ? colors.mutedForeground : cfg.accent }]}>
+              {dateLabel}
+            </Text>
+            <Icon
+              name={showDatePicker ? 'chevron-up' : 'chevron-down'}
+              size={12}
+              color={`${cfg.accent}70`}
+            />
+          </TouchableOpacity>
+
+          {/* Next day — disabled if already today */}
+          <TouchableOpacity
+            style={[styles.dateArrow, { opacity: isToday ? 0.25 : 1 }]}
+            onPress={() => nudgeDate(+1)}
+            disabled={isToday}
+            hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
+          >
+            <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick-pick chips */}
+        {showDatePicker && (
+          <View style={[styles.quickPicker, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.quickPickerLabel, { color: `${colors.mutedForeground}80` }]}>
+              PICK A DAY
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickChips}>
+              {QUICK_OFFSETS.map(({ label, offset }) => {
+                const d   = addDays(today, offset);
+                const sel = isSameDay(entryDate, d);
+                return (
+                  <TouchableOpacity
+                    key={offset}
+                    style={[
+                      styles.quickChip,
+                      {
+                        backgroundColor: sel ? `${cfg.accent}20` : `${colors.muted}`,
+                        borderColor:     sel ? `${cfg.accent}60` : colors.border,
+                        borderWidth:     sel ? 1.5 : 1,
+                      },
+                    ]}
+                    onPress={() => pickQuickDate(offset)}
+                  >
+                    <Text style={[styles.quickChipTop, { color: sel ? cfg.accent : colors.foreground }]}>
+                      {label}
+                    </Text>
+                    <Text style={[styles.quickChipSub, { color: colors.mutedForeground }]}>
+                      {formatShort(d)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
         {/* Friend name input (friend type only) */}
         {entryType === 'friend' && (
@@ -327,41 +447,53 @@ export default function CreateJournalEntryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1 },
-  headerGrad:     { position: 'absolute', top: 0, left: 0, right: 0 },
-  header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
-  iconBtn:        { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  headerCenter:   { alignItems: 'center', gap: 4 },
-  headerTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  headerTitle:    { fontSize: 17, fontFamily: 'Satoshi-Bold' },
-  privatePill:    { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  privatePillText:{ fontSize: 10, fontFamily: 'Satoshi-Medium' },
-  saveBtn:        { paddingHorizontal: 22, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
-  saveBtnText:    { fontSize: 15, fontFamily: 'Satoshi-Bold' },
-  scroll:         { paddingHorizontal: 18, paddingTop: 4, gap: 0 },
-  dateLabel:      { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', marginBottom: 10 },
-  friendRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 },
-  friendInput:    { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Regular' },
-  promptCard:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 },
-  promptText:     { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 19 },
-  textArea:       { borderWidth: 1, borderRadius: 14, padding: 16, fontFamily: 'Satoshi-Regular', minHeight: 180, marginBottom: 0 },
-  sizeBar:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 22, paddingVertical: 2, paddingHorizontal: 4, marginTop: 10, marginBottom: 6, alignSelf: 'center' },
-  sizeSideBtn:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18 },
-  sizeASmall:     { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  sizeALarge:     { fontSize: 18, fontFamily: 'Satoshi-Bold' },
-  sizeCurrent:    { fontSize: 13, fontFamily: 'Satoshi-Bold', minWidth: 28, textAlign: 'center' },
-  charCount:      { fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'right', marginBottom: 14 },
+  container:       { flex: 1 },
+  headerGrad:      { position: 'absolute', top: 0, left: 0, right: 0 },
+  header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
+  iconBtn:         { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  headerCenter:    { alignItems: 'center', gap: 4 },
+  headerTitleRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  headerTitle:     { fontSize: 17, fontFamily: 'Satoshi-Bold' },
+  privatePill:     { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  privatePillText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
+  saveBtn:         { paddingHorizontal: 22, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText:     { fontSize: 15, fontFamily: 'Satoshi-Bold' },
+  scroll:          { paddingHorizontal: 18, paddingTop: 4, gap: 0 },
+
+  dateRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10, gap: 4 },
+  dateArrow:       { padding: 6 },
+  dateLabelBtn:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  dateLabel:       { fontSize: 13, fontFamily: 'Satoshi-Medium', fontStyle: 'italic' },
+
+  quickPicker:     { borderWidth: 1, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 14 },
+  quickPickerLabel:{ fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, marginBottom: 10 },
+  quickChips:      { flexDirection: 'row', gap: 8, paddingRight: 4 },
+  quickChip:       { alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12, minWidth: 90 },
+  quickChipTop:    { fontSize: 12, fontFamily: 'Satoshi-Bold', marginBottom: 2 },
+  quickChipSub:    { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+
+  friendRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 },
+  friendInput:     { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Regular' },
+  promptCard:      { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 },
+  promptText:      { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 19 },
+  textArea:        { borderWidth: 1, borderRadius: 14, padding: 16, fontFamily: 'Satoshi-Regular', minHeight: 180, marginBottom: 0 },
+  sizeBar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 22, paddingVertical: 2, paddingHorizontal: 4, marginTop: 10, marginBottom: 6, alignSelf: 'center' },
+  sizeSideBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18 },
+  sizeASmall:      { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  sizeALarge:      { fontSize: 18, fontFamily: 'Satoshi-Bold' },
+  sizeCurrent:     { fontSize: 13, fontFamily: 'Satoshi-Bold', minWidth: 28, textAlign: 'center' },
+  charCount:       { fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'right', marginBottom: 14 },
   imagePreviewWrap:{ width: '100%', borderRadius: 14, overflow: 'hidden', marginBottom: 14, position: 'relative' },
-  imagePreview:   { width: '100%', height: 200 },
-  removeImg:      { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  addImageBtn:    { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, padding: 14, marginBottom: 18 },
-  addImageText:   { fontSize: 14, fontFamily: 'Satoshi-Regular' },
-  sectionLabel:   { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
-  moodGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
-  moodChip:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
-  moodChipText:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
-  privateNote:    { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
-  privateNoteText:{ flex: 1, fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 18, fontStyle: 'italic' },
-  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
-  errorText: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  imagePreview:    { width: '100%', height: 200 },
+  removeImg:       { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  addImageBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, padding: 14, marginBottom: 18 },
+  addImageText:    { fontSize: 14, fontFamily: 'Satoshi-Regular' },
+  sectionLabel:    { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
+  moodGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
+  moodChip:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+  moodChipText:    { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  privateNote:     { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
+  privateNoteText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 18, fontStyle: 'italic' },
+  errorBanner:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
+  errorText:       { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Medium' },
 });
