@@ -598,14 +598,14 @@ export default function CharacterScreen() {
 
   // ── Settings drawer ────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const drawerX = useRef(new Animated.Value(-screenW * 0.82)).current;
+  const drawerX = useRef(new Animated.Value(screenW * 0.82)).current;
 
   function openDrawer() {
     setDrawerOpen(true);
     Animated.spring(drawerX, { toValue: 0, useNativeDriver: true, tension: 60, friction: 12 }).start();
   }
   function closeDrawer() {
-    Animated.timing(drawerX, { toValue: -screenW * 0.82, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setDrawerOpen(false));
+    Animated.timing(drawerX, { toValue: screenW * 0.82, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setDrawerOpen(false));
   }
 
   // Birthday / country / links
@@ -795,9 +795,6 @@ export default function CharacterScreen() {
             <TouchableOpacity style={styles.headerIconBtn} onPress={openDrawer}>
               <Icon name="settings" size={14} color="rgba(200,184,232,0.7)" />
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.headerIconBtn, { marginLeft: 6 }]}>
-              <Icon name="bell" size={14} color="rgba(200,184,232,0.7)" />
-            </TouchableOpacity>
           </View>
 
           {/* Profile row: avatar left + info right */}
@@ -982,6 +979,162 @@ export default function CharacterScreen() {
         {/* ── Content ─────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
 
+          {/* ── About Me ──────────────────────────────────────── */}
+          <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+            {/* Header row */}
+            <View style={styles.aboutCardHeader}>
+              <View style={[styles.aboutCardIcon, { backgroundColor: `${colors.primary}14` }]}>
+                <Icon name="user" size={14} color={colors.primary} />
+              </View>
+              <Text style={[styles.aboutCardTitle, { color: colors.foreground }]}>About Me</Text>
+            </View>
+
+            {/* Birthday */}
+            <TouchableOpacity
+              style={[styles.aboutRow, { borderTopColor: colors.border }]}
+              onPress={() => { setBirthdayVal(character.birthday ?? ''); setEditingBirthday(true); }}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.aboutRowLeft]}>
+                <Text style={[styles.aboutRowLabel, { color: colors.mutedForeground }]}>BIRTHDAY</Text>
+                {editingBirthday ? (
+                  <TextInput
+                    style={[styles.aboutRowInput, { color: colors.foreground, borderColor: colors.primary }]}
+                    value={birthdayVal} onChangeText={setBirthdayVal}
+                    autoFocus returnKeyType="done"
+                    onSubmitEditing={saveBirthday} onBlur={saveBirthday}
+                    placeholder="e.g. 17 April"
+                    placeholderTextColor={`${colors.mutedForeground}70`}
+                  />
+                ) : (
+                  <Text style={[styles.aboutRowVal, { color: character.birthday ? colors.foreground : colors.mutedForeground }]}>
+                    {character.birthday || 'Add birthday'}
+                  </Text>
+                )}
+              </View>
+              {!editingBirthday && <Icon name="edit-2" size={12} color={`${colors.primary}55`} />}
+            </TouchableOpacity>
+
+            {/* Country */}
+            <TouchableOpacity
+              style={[styles.aboutRow, { borderTopColor: colors.border }]}
+              onPress={() => { setCountryVal(character.country ?? ''); setEditingCountry(true); }}
+              activeOpacity={0.75}
+            >
+              <View style={styles.aboutRowLeft}>
+                <Text style={[styles.aboutRowLabel, { color: colors.mutedForeground }]}>COUNTRY</Text>
+                {editingCountry ? (
+                  <TextInput
+                    style={[styles.aboutRowInput, { color: colors.foreground, borderColor: colors.primary }]}
+                    value={countryVal} onChangeText={setCountryVal}
+                    autoFocus returnKeyType="done"
+                    onSubmitEditing={saveCountry} onBlur={saveCountry}
+                    placeholder="Where are you from?"
+                    placeholderTextColor={`${colors.mutedForeground}70`}
+                  />
+                ) : (
+                  <Text style={[styles.aboutRowVal, { color: character.country ? colors.foreground : colors.mutedForeground }]}>
+                    {character.country || 'Add location'}
+                  </Text>
+                )}
+              </View>
+              {!editingCountry && <Icon name="edit-2" size={12} color={`${colors.primary}55`} />}
+            </TouchableOpacity>
+
+            {/* Socials header */}
+            <View style={[styles.aboutRow, { borderTopColor: colors.border }]}>
+              <Text style={[styles.aboutRowLabel, { color: colors.mutedForeground, flex: 1 }]}>SOCIALS</Text>
+              <TouchableOpacity
+                style={[styles.aboutAddBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+                onPress={openAddLink}
+                activeOpacity={0.75}
+              >
+                <Icon name="plus" size={11} color={colors.primary} />
+                <Text style={[styles.aboutAddBtnText, { color: colors.primary }]}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Social links */}
+            {(character.links ?? []).map((link, idx) => {
+              const plat = getPlatform((link as any).platform);
+              return (
+                <View key={idx} style={[styles.aboutLinkRow, { borderTopColor: colors.border }]}>
+                  <View style={[styles.aboutLinkIcon, { backgroundColor: `${plat?.color ?? colors.primary}22` }]}>
+                    <Text style={{ fontSize: 16 }}>{plat?.icon ?? '🔗'}</Text>
+                  </View>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLink(idx)} activeOpacity={0.75}>
+                    <Text style={[styles.aboutLinkName, { color: colors.foreground }]}>{link.label}</Text>
+                    <Text style={[styles.aboutLinkHandle, { color: colors.mutedForeground }]}>
+                      @{extractHandle(link.url, plat?.prefix ?? '')}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => removeLink(idx)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                    <Icon name="x" size={13} color={`${colors.mutedForeground}70`} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+
+            {/* Link picker / entry inline */}
+            {linkMode === 'picking' && (
+              <View style={[styles.aboutRow, { borderTopColor: colors.border, flexWrap: 'wrap', gap: 8 }]}>
+                {SOCIAL_PLATFORMS.map(p => (
+                  <TouchableOpacity
+                    key={p.key}
+                    style={[styles.platformChip, { borderColor: `${colors.border}`, backgroundColor: `${colors.primary}08` }]}
+                    onPress={() => selectPlatform(p)}
+                  >
+                    <View style={[styles.platformChipIcon, { backgroundColor: p.color + '22' }]}>
+                      <Text style={styles.socialIcon}>{p.icon}</Text>
+                    </View>
+                    <Text style={[styles.platformChipLabel, { color: colors.foreground }]}>{p.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {linkMode === 'entering' && linkPlatform && (
+              <View style={[styles.aboutRow, { borderTopColor: colors.border, flexDirection: 'column', alignItems: 'stretch', gap: 10 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={[styles.socialBadge, { backgroundColor: linkPlatform.color + '22' }]}>
+                    <Text style={styles.socialIcon}>{linkPlatform.icon}</Text>
+                  </View>
+                  <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>{linkPlatform.label}</Text>
+                  <TouchableOpacity onPress={cancelLink} style={{ marginLeft: 'auto' }} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                    <Icon name="x" size={14} color={`${colors.mutedForeground}80`} />
+                  </TouchableOpacity>
+                </View>
+                {linkPlatform.key === 'other' && (
+                  <TextInput
+                    style={[styles.handleInput, { marginBottom: 4, color: colors.foreground, borderColor: `${colors.primary}50`, backgroundColor: `${colors.primary}08` }]}
+                    value={linkOtherLabel} onChangeText={setLinkOtherLabel}
+                    placeholder="Label (e.g. My Blog)"
+                    placeholderTextColor={`${colors.mutedForeground}70`}
+                    returnKeyType="next"
+                  />
+                )}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {linkPlatform.key !== 'other' && (
+                    <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: colors.mutedForeground }}>@</Text>
+                  )}
+                  <TextInput
+                    style={[styles.handleInput, { flex: 1, color: colors.foreground, borderColor: `${colors.primary}50`, backgroundColor: `${colors.primary}08` }]}
+                    value={linkHandle} onChangeText={setLinkHandle}
+                    placeholder={linkPlatform.placeholder}
+                    placeholderTextColor={`${colors.mutedForeground}70`}
+                    autoCapitalize="none" autoCorrect={false}
+                    returnKeyType="done" onSubmitEditing={saveLink} autoFocus
+                  />
+                  <TouchableOpacity
+                    style={[styles.saveLinkBtn, { backgroundColor: linkPlatform.color + 'CC' }]}
+                    onPress={saveLink}
+                  >
+                    <Icon name="check" size={14} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+
           {/* Current outfit compact card */}
           {activeOutfit && (
             <TouchableOpacity
@@ -1154,7 +1307,7 @@ export default function CharacterScreen() {
         />
       )}
 
-      {/* ── Settings drawer (slides from left) ──────────────────── */}
+      {/* ── Settings drawer (slides from right) ─────────────────── */}
       <Animated.View
         style={[
           styles.settingsDrawer,
@@ -1179,33 +1332,21 @@ export default function CharacterScreen() {
           {/* ACCOUNT */}
           <Text style={styles.drawerSectionLabel}>ACCOUNT</Text>
           <View style={styles.drawerGroup}>
-            <TouchableOpacity style={styles.drawerItem} activeOpacity={0.7}>
-              <View style={styles.drawerItemIcon}><Icon name="user" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={styles.drawerItemLabel}>My Profile</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
-            </TouchableOpacity>
-            <View style={styles.drawerDivider} />
             <TouchableOpacity style={styles.drawerItem} onPress={toggleVisibility} activeOpacity={0.7}>
               <View style={styles.drawerItemIcon}><Icon name="lock" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={styles.drawerItemLabel}>Privacy</Text>
-              <View style={{ marginLeft: 'auto', backgroundColor: character.isPublic ? 'rgba(107,91,149,0.22)' : 'rgba(255,255,255,0.07)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.55)' }}>
+              <Text style={[styles.drawerItemLabel, { flex: 1 }]}>Privacy</Text>
+              <View style={{ backgroundColor: character.isPublic ? 'rgba(107,91,149,0.30)' : 'rgba(255,255,255,0.08)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: character.isPublic ? 'rgba(107,91,149,0.45)' : 'rgba(255,255,255,0.12)' }}>
+                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.55)' }}>
                   {character.isPublic ? 'Public' : 'Private'}
                 </Text>
               </View>
             </TouchableOpacity>
-            <View style={styles.drawerDivider} />
-            <TouchableOpacity style={styles.drawerItem} activeOpacity={0.7}>
-              <View style={styles.drawerItemIcon}><Icon name="bell" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={styles.drawerItemLabel}>Notifications</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
-            </TouchableOpacity>
-            <View style={styles.drawerDivider} />
-            <View style={styles.drawerItem}>
-              <View style={styles.drawerItemIcon}><Icon name="sun" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={[styles.drawerItemLabel, { flex: 1 }]}>Appearance</Text>
-              <ThemeToggle />
-            </View>
+          </View>
+
+          {/* APPEARANCE */}
+          <Text style={styles.drawerSectionLabel}>APPEARANCE</Text>
+          <View style={[styles.drawerGroup, { paddingVertical: 4, paddingHorizontal: 8 }]}>
+            <ThemeToggle />
           </View>
 
           {/* MY ACCOUNT */}
@@ -1239,113 +1380,6 @@ export default function CharacterScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-
-          {/* SOCIALS */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, marginBottom: 8, paddingHorizontal: 16 }}>
-            <Text style={[styles.drawerSectionLabel, { marginTop: 0, marginBottom: 0 }]}>SOCIALS</Text>
-            <View style={{ flex: 1 }} />
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(107,91,149,0.18)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}
-              onPress={openAddLink}
-              activeOpacity={0.75}
-            >
-              <Icon name="plus" size={12} color={colors.primary} />
-              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: colors.primary }}>Add</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.drawerGroup}>
-            {(character.links ?? []).length === 0 ? (
-              <View style={[styles.drawerItem, { opacity: 0.45 }]}>
-                <Text style={[styles.drawerItemLabel, { fontStyle: 'italic' }]}>No social links yet</Text>
-              </View>
-            ) : (
-              (character.links ?? []).map((link, idx) => {
-                const plat = getPlatform((link as any).platform);
-                return (
-                  <React.Fragment key={idx}>
-                    {idx > 0 && <View style={styles.drawerDivider} />}
-                    <TouchableOpacity style={styles.drawerItem} onPress={() => openEditLink(idx)} activeOpacity={0.7}>
-                      <View style={styles.drawerItemIcon}>
-                        <Text style={{ fontSize: 15 }}>{plat?.icon ?? '🔗'}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.drawerItemLabel}>{link.label}</Text>
-                        <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', marginTop: 1 }}>
-                          @{extractHandle(link.url, plat?.prefix ?? '')}
-                        </Text>
-                      </View>
-                      <TouchableOpacity onPress={() => removeLink(idx)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                        <Icon name="x" size={14} color="rgba(200,184,232,0.4)" />
-                      </TouchableOpacity>
-                    </TouchableOpacity>
-                  </React.Fragment>
-                );
-              })
-            )}
-          </View>
-
-          {/* Link picker / entry shown inline in drawer */}
-          {linkMode === 'picking' && (
-            <View style={[styles.drawerGroup, { marginTop: 8 }]}>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, padding: 10 }}>
-                {SOCIAL_PLATFORMS.map(p => (
-                  <TouchableOpacity
-                    key={p.key}
-                    style={[styles.platformChip, { borderColor: 'rgba(155,120,255,0.20)', backgroundColor: 'rgba(155,120,255,0.07)', minWidth: '40%' }]}
-                    onPress={() => selectPlatform(p)}
-                  >
-                    <View style={[styles.platformChipIcon, { backgroundColor: p.color + '22' }]}>
-                      <Text style={styles.socialIcon}>{p.icon}</Text>
-                    </View>
-                    <Text style={styles.platformChipLabel}>{p.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-          {linkMode === 'entering' && linkPlatform && (
-            <View style={[styles.handleInputCard, { margin: 16, borderColor: linkPlatform.color + '55' }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <View style={[styles.socialBadge, { backgroundColor: linkPlatform.color + '22' }]}>
-                  <Text style={styles.socialIcon}>{linkPlatform.icon}</Text>
-                </View>
-                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#EDE8FF' }}>{linkPlatform.label}</Text>
-              </View>
-              {linkPlatform.key === 'other' && (
-                <TextInput
-                  style={[styles.handleInput, { marginBottom: 6 }]}
-                  value={linkOtherLabel}
-                  onChangeText={setLinkOtherLabel}
-                  placeholder="Label (e.g. My Blog)"
-                  placeholderTextColor="rgba(200,180,255,0.35)"
-                  returnKeyType="next"
-                />
-              )}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                {linkPlatform.key !== 'other' && (
-                  <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.55)' }}>@</Text>
-                )}
-                <TextInput
-                  style={[styles.handleInput, { flex: 1 }]}
-                  value={linkHandle}
-                  onChangeText={setLinkHandle}
-                  placeholder={linkPlatform.placeholder}
-                  placeholderTextColor="rgba(200,180,255,0.35)"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={saveLink}
-                  autoFocus
-                />
-                <TouchableOpacity
-                  style={[styles.saveLinkBtn, { backgroundColor: linkPlatform.color + 'CC' }]}
-                  onPress={saveLink}
-                >
-                  <Icon name="check" size={14} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
           {/* SUPPORT */}
           <Text style={styles.drawerSectionLabel}>SUPPORT</Text>
@@ -2037,11 +2071,6 @@ const styles = StyleSheet.create({
   deleteBtn:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 11, borderRadius: 14, borderWidth: 1, marginTop: 4 },
   deleteBtnText:    { fontSize: 14, fontFamily: 'Satoshi-Bold' },
 
-  // About me card
-  aboutRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingTop: 10, marginTop: 2,
-  },
   aboutIconWrap: {
     width: 30, height: 30, borderRadius: 9,
     alignItems: 'center', justifyContent: 'center',
@@ -2131,6 +2160,49 @@ const styles = StyleSheet.create({
   galModalDate:    { fontSize: 12, fontFamily: 'Satoshi-Regular' },
   galModalCaption: { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 21 },
 
+  // About Me card
+  aboutCard: {
+    borderRadius: 18, borderWidth: 1,
+    marginBottom: 20, overflow: 'hidden',
+  },
+  aboutCardHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  aboutCardIcon: {
+    width: 28, height: 28, borderRadius: 8,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  aboutCardTitle: {
+    fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1,
+  },
+  aboutRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 13, gap: 10,
+  },
+  aboutRowLeft: { flex: 1, gap: 3 },
+  aboutRowLabel: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, textTransform: 'uppercase' },
+  aboutRowVal: { fontSize: 14, fontFamily: 'Satoshi-Medium', lineHeight: 20 },
+  aboutRowInput: {
+    fontSize: 14, fontFamily: 'Satoshi-Medium',
+    borderBottomWidth: 1, paddingVertical: 2, paddingHorizontal: 0,
+  },
+  aboutAddBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1,
+  },
+  aboutAddBtnText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  aboutLinkRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 12, gap: 12,
+  },
+  aboutLinkIcon: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  aboutLinkName: { fontSize: 13, fontFamily: 'Satoshi-Bold', lineHeight: 18 },
+  aboutLinkHandle: { fontSize: 11, fontFamily: 'Satoshi-Regular', lineHeight: 16 },
+
   // Gallery 3-tile empty state
   galEmptyRow: {
     flexDirection: 'row', gap: 8,
@@ -2168,9 +2240,9 @@ const styles = StyleSheet.create({
 
   // Settings drawer
   settingsDrawer: {
-    position: 'absolute', top: 0, left: 0, bottom: 0,
+    position: 'absolute', top: 0, right: 0, bottom: 0,
     zIndex: 30, shadowColor: '#000', shadowOpacity: 0.5,
-    shadowOffset: { width: 8, height: 0 }, shadowRadius: 24, elevation: 20,
+    shadowOffset: { width: -8, height: 0 }, shadowRadius: 24, elevation: 20,
   },
   drawerHeader: {
     alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20,
