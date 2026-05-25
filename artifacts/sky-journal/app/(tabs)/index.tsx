@@ -1,5 +1,4 @@
 import { Icon } from '@/components/Icon';
-import { FriendProfileSheet, type FriendSummary } from '@/components/FriendProfileSheet';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +26,17 @@ import { apiFetch, useApp } from '@/context/AppContext';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
+
+interface FriendSummary {
+  userId:    string;
+  name:      string;
+  username?: string | null;
+  bio:       string;
+  mood:      string;
+  traits:    string[];
+  avatarUri?: string | null;
+  isPublic:  boolean;
+}
 
 const FRIEND_MOOD_COLORS: Record<string, string> = {
   Hopeful: '#6BA57A', Peaceful: '#5B9BB5', Lonely: '#5D7BA5',
@@ -141,8 +151,7 @@ export default function HomeScreen() {
 
   // Friends
   const [friends,         setFriends]         = useState<FriendSummary[]>([]);
-  const [selectedFriend,  setSelectedFriend]  = useState<FriendSummary | null>(null);
-  const [friendSheetOpen, setFriendSheetOpen] = useState(false);
+
   const unreadServerCount = serverNotifications.filter(n => !n.isRead).length;
   const hasNotifs = rewards.length > 0 || unreadServerCount > 0;
 
@@ -607,8 +616,7 @@ export default function HomeScreen() {
                     style={styles.friendBubbleWrap}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedFriend(friend);
-                      setFriendSheetOpen(true);
+                      router.push({ pathname: '/user/[userId]', params: { userId: friend.userId } } as any);
                     }}
                     activeOpacity={0.78}
                   >
@@ -893,12 +901,6 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Friend profile sheet ─────────────────────────────── */}
-      <FriendProfileSheet
-        friend={selectedFriend}
-        visible={friendSheetOpen}
-        onClose={() => { setFriendSheetOpen(false); }}
-      />
     </View>
   );
 }
