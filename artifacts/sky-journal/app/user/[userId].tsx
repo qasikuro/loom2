@@ -57,6 +57,14 @@ const DEFAULT_AURA: AuraData = {
   orbs:     ['#9B78E820','#6040C0','#9B78E810'],
 };
 
+const ROLES = [
+  { key: 'Collector', emoji: '🎁', color: '#C8A84B' },
+  { key: 'Trader',    emoji: '🤝', color: '#78A8C8' },
+  { key: 'Veteran',   emoji: '⭐', color: '#D4956A' },
+  { key: 'Uber',      emoji: '👑', color: '#9B78E8' },
+  { key: 'Solo',      emoji: '🌙', color: '#6080C0' },
+];
+
 const PARTICLE_XS    = [0.08, 0.19, 0.33, 0.47, 0.60, 0.72, 0.85, 0.93, 0.15, 0.55];
 const PARTICLE_SIZES = [14,   10,   18,   12,   16,   9,    20,   11,   13,   15];
 
@@ -327,6 +335,7 @@ interface PublicProfile {
   bio:           string;
   traits:        string[];
   mood:          string;
+  role:          string | null;
   avatarUri:     string | null;
   activeOutfitId: string | null;
   activeOutfit:  ActiveOutfit | null;
@@ -421,6 +430,7 @@ export default function UserProfileScreen() {
   const mood           = profile?.mood ?? 'Dreamy';
   const aura           = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const moodColor      = MOOD_COLORS[mood] ?? aura.accent;
+  const userRole       = profile ? ROLES.find(r => r.key === profile.role) : undefined;
   const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
   const isTopExplorer  = totalWitnessed >= 10 || stories.length >= 3;
 
@@ -532,6 +542,14 @@ export default function UserProfileScreen() {
           {profile.username ? (
             <Text style={[styles.handle, { color: aura.accent }]}>@{profile.username}</Text>
           ) : null}
+
+          {/* Role badge */}
+          {userRole && (
+            <View style={[styles.roleBadge, { backgroundColor: userRole.color + '20', borderColor: userRole.color + '45' }]}>
+              <Text style={{ fontSize: 13 }}>{userRole.emoji}</Text>
+              <Text style={[styles.roleBadgeText, { color: userRole.color }]}>{userRole.key}</Text>
+            </View>
+          )}
 
           {/* Bio */}
           {profile.bio ? (
@@ -861,6 +879,14 @@ const styles = StyleSheet.create({
     left: 0, right: 0,
     alignItems: 'center',
   },
+  roleBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 11, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1.5, marginTop: 6,
+  },
+  roleBadgeText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+
   moodChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 5,

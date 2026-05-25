@@ -91,6 +91,14 @@ const ATTRIBUTE_SUGGESTIONS = [
   'Observer', 'Poet', 'Seeker', 'Free Spirit',
 ];
 
+const ROLES = [
+  { key: 'Collector', emoji: '🎁', color: '#C8A84B', hint: 'Gathers moments & items' },
+  { key: 'Trader',    emoji: '🤝', color: '#78A8C8', hint: 'Connects & exchanges' },
+  { key: 'Veteran',   emoji: '⭐', color: '#D4956A', hint: 'Long-time wanderer' },
+  { key: 'Uber',      emoji: '👑', color: '#9B78E8', hint: 'Sky legend' },
+  { key: 'Solo',      emoji: '🌙', color: '#6080C0', hint: 'Lone spirit' },
+] as const;
+
 const MOOD_COLORS: Record<string, string> = {
   Peaceful: '#5B9BB5', Joyful: '#D4A849', Melancholy: '#5D7BA5',
   Nostalgic: '#A5785D', Hopeful: '#6BA57A', Dreamy: '#9B7AB5',
@@ -1040,6 +1048,57 @@ export default function CharacterScreen() {
               </View>
               {!editingCountry && <Icon name="edit-2" size={12} color={`${colors.primary}55`} />}
             </TouchableOpacity>
+
+            {/* Role */}
+            <View style={[styles.aboutRow, { borderTopColor: colors.border, flexDirection: 'column', alignItems: 'flex-start', gap: 10, paddingVertical: 14 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <Text style={[styles.aboutRowLabel, { color: colors.mutedForeground }]}>ROLE</Text>
+                {character.role && (
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: `${colors.mutedForeground}80` }}>
+                    shown on your profile
+                  </Text>
+                )}
+              </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {ROLES.map(r => {
+                  const sel = character.role === r.key;
+                  return (
+                    <TouchableOpacity
+                      key={r.key}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setCharacter({ ...character, role: sel ? undefined : r.key });
+                      }}
+                      style={[
+                        styles.roleChip,
+                        sel
+                          ? { backgroundColor: r.color + '22', borderColor: r.color + '70' }
+                          : { borderColor: colors.border },
+                      ]}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={{ fontSize: 14 }}>{r.emoji}</Text>
+                      <View style={{ gap: 1 }}>
+                        <Text style={[styles.roleChipLabel, { color: sel ? r.color : colors.foreground }]}>
+                          {r.key}
+                        </Text>
+                        {sel && (
+                          <Text style={[styles.roleChipHint, { color: r.color + 'AA' }]}>
+                            {r.hint}
+                          </Text>
+                        )}
+                      </View>
+                      {sel && <View style={[styles.roleSelDot, { backgroundColor: r.color }]} />}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {!character.role && (
+                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: `${colors.mutedForeground}60` }}>
+                  Optional — tap a role to display it on your profile
+                </Text>
+              )}
+            </View>
 
             {/* Socials header */}
             <View style={[styles.aboutRow, { borderTopColor: colors.border }]}>
@@ -2288,6 +2347,15 @@ const styles = StyleSheet.create({
   },
   aboutLinkName: { fontSize: 13, fontFamily: 'Satoshi-Bold', lineHeight: 18 },
   aboutLinkHandle: { fontSize: 11, fontFamily: 'Satoshi-Regular', lineHeight: 16 },
+
+  roleChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderRadius: 20, borderWidth: 1.5,
+  },
+  roleChipLabel: { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
+  roleChipHint:  { fontSize: 10, fontFamily: 'Satoshi-Regular' },
+  roleSelDot: { width: 5, height: 5, borderRadius: 2.5, marginLeft: 2 },
 
   // Horizontal section empty state card
   hEmptyCard: {

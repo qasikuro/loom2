@@ -139,6 +139,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         activeOutfitId: characterTable.activeOutfitId,
         birthday:       characterTable.birthday,
         country:        characterTable.country,
+        role:           characterTable.role,
         links:          characterTable.links,
       })
         .from(characterTable)
@@ -208,6 +209,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       activeOutfit,
       birthday:      (char as any).birthday  ?? null,
       country:       (char as any).country   ?? null,
+      role:          char.role               ?? null,
       links:         Array.isArray((char as any).links) ? (char as any).links : [],
       isFollowing:   followingSet.has(targetId),
     });

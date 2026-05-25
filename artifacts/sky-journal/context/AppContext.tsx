@@ -79,6 +79,7 @@ export interface Character {
   activeOutfitId?: string | null;
   birthday?:      string;
   country?:       string;
+  role?:          string;
   links?:         ProfileLink[];
 }
 
@@ -292,6 +293,7 @@ function toAppCharacter(raw: any): Character {
     activeOutfitId: raw.activeOutfitId ?? raw.active_outfit_id ?? undefined,
     birthday:      raw.birthday      ?? undefined,
     country:       raw.country       ?? undefined,
+    role:          raw.role          ?? undefined,
     links:         Array.isArray(raw.links) ? raw.links : undefined,
   };
 }
@@ -671,6 +673,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         activeOutfitId: c.activeOutfitId ?? null,
         birthday:       c.birthday       ?? null,
         country:        c.country        ?? null,
+        role:           c.role           ?? null,
         links:          c.links          ?? null,
       }),
     }).catch(() => null);
