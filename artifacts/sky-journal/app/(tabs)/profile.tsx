@@ -134,10 +134,10 @@ function OutfitGridCard({
         {outfit.imageUri ? (
           <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
         ) : (
-          <LinearGradient
-            colors={[`${colors.primary}55`, `${colors.primary}18`]}
-            style={StyleSheet.absoluteFill}
-          />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 4 }]}>
+            <Icon name="camera" size={20} color={`${colors.primary}55`} />
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: `${colors.primary}55` }}>Add photo</Text>
+          </View>
         )}
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.72)']}
@@ -951,7 +951,10 @@ export default function CharacterScreen() {
                   {activeOutfit.imageUri ? (
                     <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
                   ) : (
-                    <LinearGradient colors={[`${colors.primary}55`, `${colors.primary}1A`]} style={StyleSheet.absoluteFill} />
+                    <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 6 }]}>
+                      <Icon name="camera" size={26} color={`${colors.primary}50`} />
+                      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: `${colors.primary}60`, textAlign: 'center' }}>Tap to add{'\n'}a photo</Text>
+                    </View>
                   )}
                   <LinearGradient colors={['transparent', 'rgba(8,6,22,0.85)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
                     <Text style={styles.spotlightName} numberOfLines={2}>{activeOutfit.name}</Text>
@@ -1002,7 +1005,10 @@ export default function CharacterScreen() {
                       {outfit.imageUri ? (
                         <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
                       ) : (
-                        <LinearGradient colors={[`${colors.primary}50`, `${colors.primary}18`]} style={StyleSheet.absoluteFill} />
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 4 }]}>
+                          <Icon name="camera" size={22} color={`${colors.primary}50`} />
+                          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: `${colors.primary}60` }}>Add photo</Text>
+                        </View>
                       )}
                       <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
                         <Text style={styles.hOutfitName} numberOfLines={2}>{outfit.name}</Text>
@@ -1219,12 +1225,13 @@ export default function CharacterScreen() {
                     {selectedOutfit.imageUri ? (
                       <Image source={{ uri: selectedOutfit.imageUri }} style={styles.modalImage} contentFit="contain" />
                     ) : (
-                      <LinearGradient
-                        colors={[`${colors.primary}55`, `${colors.primary}1A`]}
-                        style={styles.modalImage}
-                      >
-                        <Icon name="wind" size={42} color={`${colors.primary}60`} />
-                      </LinearGradient>
+                      <View style={[styles.modalImage, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 10 }]}>
+                        <Icon name="camera" size={36} color={`${colors.primary}50`} />
+                        <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: `${colors.primary}70`, textAlign: 'center', lineHeight: 20 }}>
+                          No photo yet{'\n'}
+                          <Text style={{ fontFamily: 'Satoshi-Regular', fontSize: 12, opacity: 0.7 }}>Tap "Edit outfit" below to add one</Text>
+                        </Text>
+                      </View>
                     )}
                     {selectedOutfit.id === activeOutfitId && (
                       <View style={[styles.modalActivePill, { backgroundColor: colors.primary }]}>

@@ -115,6 +115,7 @@ export default function CreateOutfitScreen() {
 
   function handleSave() {
     if (!name.trim()) { setError(tr('outfit.needName')); return; }
+    if (!imageUri)    { setError('Add a photo — every outfit deserves to be seen ✦'); return; }
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -171,7 +172,8 @@ export default function CreateOutfitScreen() {
           <TouchableOpacity
             style={[styles.imagePicker, {
               backgroundColor: imageUri ? 'transparent' : colors.muted,
-              borderColor: imageUri ? 'transparent' : colors.border,
+              borderColor: imageUri ? 'transparent' : error && !imageUri ? '#DC2626' : colors.border,
+              borderWidth: error && !imageUri ? 2 : 1.5,
             }]}
             onPress={pickImage}
             activeOpacity={0.8}
