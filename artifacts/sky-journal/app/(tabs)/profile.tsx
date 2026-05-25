@@ -124,8 +124,8 @@ const DEFAULT_AURA: AuraData = {
   overlay:  ['#22203A','#2C2A5A','#342E62'],
   accent: '#9B78E8', particle: '✦', speed: 4500, count: 6,
 };
-const PARTICLE_XS    = [0.08, 0.22, 0.36, 0.50, 0.64, 0.76, 0.86, 0.94, 0.14, 0.58];
-const PARTICLE_SIZES = [11,   7,    13,   9,    8,    12,   7,    14,   10,   8];
+const PARTICLE_XS    = [0.07, 0.20, 0.34, 0.50, 0.63, 0.76, 0.87, 0.94, 0.13, 0.57];
+const PARTICLE_SIZES = [16,   11,   20,   14,   12,   18,   10,   22,   15,   13];
 
 // ── Mood orbs inline picker ────────────────────────────────────────────────────
 const MOOD_ORBS = [
@@ -246,14 +246,68 @@ function CharacterAuraHeader({ mood, paddingTop, children }: {
     return () => loops.forEach(l => l.stop());
   }, [mood]);
 
-  const overlayOpacity = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 0.55] });
+  const glowOpacity    = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.18, 0.52, 0.18] });
+  const glowScale      = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0.70, 1.28] });
+  const glow2Opacity   = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.10, 0.36, 0.10] });
+  const cornerOpacity  = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.22, 0.60, 0.22] });
+  const corner2Opacity = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.14, 0.44, 0.14] });
 
   return (
     <View style={[styles.profileHeader, { paddingTop, overflow: 'hidden' }]}>
+      {/* Dark atmospheric base */}
       <LinearGradient colors={aura.gradient} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
-      <Animated.View style={[StyleSheet.absoluteFill, { opacity: overlayOpacity }]} pointerEvents="none">
-        <LinearGradient colors={aura.overlay} style={StyleSheet.absoluteFill} start={{ x: 0.9, y: 0 }} end={{ x: 0.1, y: 1 }} />
-      </Animated.View>
+
+      {/* Outer soft halo (larger, lower opacity) */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: paddingTop * 0.1,
+          left: -screenW * 0.1,
+          width: screenW * 1.2,
+          height: screenW * 1.2,
+          borderRadius: screenW * 0.6,
+          backgroundColor: aura.accent,
+          opacity: glow2Opacity,
+          transform: [{ scale: glowScale }],
+        }}
+      />
+      {/* Inner bright core glow */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute',
+          top: paddingTop * 0.4,
+          left: screenW * 0.15,
+          width: screenW * 0.70,
+          height: screenW * 0.70,
+          borderRadius: screenW * 0.35,
+          backgroundColor: aura.accent,
+          opacity: glowOpacity,
+          transform: [{ scale: glowScale }],
+        }}
+      />
+      {/* Top-right accent corner */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: -40, right: -40,
+          width: 180, height: 180, borderRadius: 90,
+          backgroundColor: aura.accent,
+          opacity: cornerOpacity,
+        }}
+      />
+      {/* Bottom-left counter-glow */}
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', bottom: -30, left: -30,
+          width: 130, height: 130, borderRadius: 65,
+          backgroundColor: aura.accent,
+          opacity: corner2Opacity,
+        }}
+      />
+
       {particleAnims.slice(0, aura.count).map((p, i) => (
         <Animated.Text
           key={i}
