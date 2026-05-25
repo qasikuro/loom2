@@ -88,11 +88,12 @@ function getGradient(mood: string): [string, string, string] {
 // ── Single cell renderer ──────────────────────────────────────────────────────
 
 interface CellPanel {
-  imageUri?:   string;
-  bgPreset?:   string;
-  text:        string;
-  bubbleText?: string;
-  overlays?:   PanelOverlay[];
+  imageUri?:        string;
+  bgPreset?:        string;
+  text:             string;
+  bubbleText?:      string;
+  overlays?:        PanelOverlay[];
+  imageAspectRatio?: number;   // width/height — stored at crop time
 }
 
 function PanelCell({
@@ -100,11 +101,13 @@ function PanelCell({
   cellW,
   cellH,
   gradient,
+  onRatioDetected,
 }: {
-  panel:    CellPanel | undefined;
-  cellW:    number;
-  cellH:    number;
-  gradient: [string, string, string];
+  panel:              CellPanel | undefined;
+  cellW:              number;
+  cellH:              number;
+  gradient:           [string, string, string];
+  onRatioDetected?:   (ratio: number) => void;
 }) {
   if (!panel) {
     return (
@@ -114,11 +117,25 @@ function PanelCell({
 
   const imgSrc    = getPanelImageSource(panel.imageUri, panel.bgPreset);
   const hasBubble = panel.bubbleText?.trim();
+  // "cover" only when we know the exact ratio (cell is pre-sized to match).
+  // "contain" shows the full image without cropping for old panels that lack a stored ratio.
+  const fit       = panel.imageAspectRatio ? 'cover' : 'contain';
 
   return (
     <View style={[styles.cell, { width: cellW, height: cellH }]}>
       {imgSrc ? (
-        <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+        <Image
+          source={imgSrc}
+          style={StyleSheet.absoluteFill}
+          contentFit={fit}
+          cachePolicy="memory-disk"
+          onLoad={e => {
+            const { width, height } = e.source;
+            if (width && height && !panel.imageAspectRatio && onRatioDetected) {
+              onRatioDetected(width / height);
+            }
+          }}
+        />
       ) : (
         <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 0.8, y: 1 }} />
       )}
@@ -179,6 +196,11 @@ function PanelCell({
 }
 
 // ── Manga page renderer ───────────────────────────────────────────────────────
+// Row heights are computed from each panel's stored imageAspectRatio.
+// For panels that don't have a stored ratio (older stories), height falls back
+// to a sensible portrait default, and the image uses contentFit="contain" so
+// nothing is ever clipped.  Once an image loads, its intrinsic ratio is
+// detected via onLoad and the row re-renders at the correct height.
 
 function MangaPage({
   panels,
@@ -195,38 +217,70 @@ function MangaPage({
   totalPages: number;
   screenW:    number;
 }) {
-  const pageH   = screenW * 1.33;
-  const numRows = layout.rows.length;
-  const rowH    = (pageH - (numRows - 1) * GUTTER) / numRows;
+  // Detected ratios for panels that lack a stored imageAspectRatio.
+  // Key: `${rowIndex}_${colIndex}` → width/height ratio
+  const [detectedRatios, setDetectedRatios] = useState<Record<string, number>>({});
 
+  // Pre-compute row data (panel slices per row) so we can reference them safely.
   let cellIdx = 0;
+  const rowData = layout.rows.map(cols => {
+    const rowPanels = cols.map(() => panels[cellIdx++]);
+    return { cols, rowPanels };
+  });
+
+  // Compute the height for a single row given the panels it contains.
+  function rowHeight(ri: number, cols: number[], rowPanels: (CellPanel | undefined)[]): number {
+    const totalFlex = cols.reduce((a, b) => a + b, 0);
+    let maxH = 0;
+    cols.forEach((flex, ci) => {
+      const cellW = (screenW - (cols.length - 1) * GUTTER) * (flex / totalFlex);
+      const ratio =
+        rowPanels[ci]?.imageAspectRatio ??
+        detectedRatios[`${ri}_${ci}`];
+      if (ratio && ratio > 0) {
+        maxH = Math.max(maxH, cellW / ratio);
+      }
+    });
+    if (maxH === 0) {
+      // Fallback: portrait 3:4 based on the first cell's width
+      const firstFlex  = cols[0];
+      const firstCellW = (screenW - (cols.length - 1) * GUTTER) * (firstFlex / totalFlex);
+      maxH = Math.round(firstCellW * (4 / 3));
+    }
+    return Math.round(maxH);
+  }
 
   return (
-    <View style={[styles.page, { height: pageH }]}>
-      {layout.rows.map((cols, ri) => {
+    <View style={styles.page}>
+      {rowData.map(({ cols, rowPanels }, ri) => {
         const totalFlex = cols.reduce((a, b) => a + b, 0);
-        const rowCells  = cols.map((flex, ci) => {
-          const idx   = cellIdx++;
-          const cellW = (screenW - (cols.length - 1) * GUTTER) * (flex / totalFlex);
-          return (
-            <View key={ci} style={{ width: cellW, height: rowH }}>
-              <PanelCell
-                panel={panels[idx]}
-                cellW={cellW}
-                cellH={rowH}
-                gradient={gradient}
-              />
-            </View>
-          );
-        });
+        const rH = rowHeight(ri, cols, rowPanels);
         return (
-          <View key={ri} style={[styles.pageRow, { height: rowH, marginTop: ri > 0 ? GUTTER : 0 }]}>
-            {rowCells}
+          <View key={ri} style={[styles.pageRow, { height: rH, marginTop: ri > 0 ? GUTTER : 0 }]}>
+            {cols.map((flex, ci) => {
+              const cellW = (screenW - (cols.length - 1) * GUTTER) * (flex / totalFlex);
+              return (
+                <View key={ci} style={{ width: cellW, height: rH }}>
+                  <PanelCell
+                    panel={rowPanels[ci]}
+                    cellW={cellW}
+                    cellH={rH}
+                    gradient={gradient}
+                    onRatioDetected={
+                      rowPanels[ci]?.imageAspectRatio
+                        ? undefined
+                        : ratio => setDetectedRatios(prev => ({
+                            ...prev, [`${ri}_${ci}`]: ratio,
+                          }))
+                    }
+                  />
+                </View>
+              );
+            })}
           </View>
         );
       })}
 
-      {/* Page number */}
       {totalPages > 1 && (
         <View style={styles.pageNumBadge}>
           <Text style={styles.pageNumText}>{pageNum} / {totalPages}</Text>
@@ -273,11 +327,12 @@ export default function StoryScreen() {
 
   function toCellPanel(p: any): CellPanel {
     return {
-      imageUri:   p.imageUri,
-      bgPreset:   p.bgPreset,
-      text:       p.text ?? '',
-      bubbleText: p.bubbleText,
-      overlays:   p.overlays,
+      imageUri:         p.imageUri,
+      bgPreset:         p.bgPreset,
+      text:             p.text ?? '',
+      bubbleText:       p.bubbleText,
+      overlays:         p.overlays,
+      imageAspectRatio: p.imageAspectRatio,
     };
   }
 

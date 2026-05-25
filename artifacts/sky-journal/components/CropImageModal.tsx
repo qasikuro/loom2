@@ -31,7 +31,7 @@ export interface CropImageModalProps {
   visible:      boolean;
   uri:          string;
   aspectRatio?: number;
-  onDone:       (croppedUri: string) => void;
+  onDone:       (croppedUri: string, aspectRatio: number) => void;
   onCancel:     () => void;
 }
 
@@ -187,7 +187,7 @@ export default function CropImageModal({
   // ── Apply crop ────────────────────────────────────────────────────────────
 
   async function applyCrop() {
-    if (!naturalSize) { onDone(uri); return; }
+    if (!naturalSize) { onDone(uri, ratio); return; }
     setApplying(true);
     try {
       const totalScale = baseScale * scaleRef.current;
@@ -214,9 +214,9 @@ export default function CropImageModal({
         actions,
         { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
       );
-      onDone(result.uri);
+      onDone(result.uri, ratio);
     } catch {
-      onDone(uri);
+      onDone(uri, ratio);
     } finally {
       setApplying(false);
     }
@@ -344,7 +344,7 @@ export default function CropImageModal({
         <View style={[styles.bottomBar, { paddingBottom: bottomInset + 12 }]}>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.10)' }]}
-            onPress={() => onDone(uri)}
+            onPress={() => onDone(uri, ratio)}
             disabled={applying}
           >
             <Icon name="image" size={14} color="rgba(255,255,255,0.7)" />

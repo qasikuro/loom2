@@ -119,7 +119,7 @@ export default function CreateOutfitScreen() {
     pickImage();
   }
 
-  async function handleCropDone(croppedUri: string) {
+  async function handleCropDone(croppedUri: string, _aspectRatio?: number) {
     setPendingUri(null);
     setUploading(true);
     uploadProgress.setValue(0);

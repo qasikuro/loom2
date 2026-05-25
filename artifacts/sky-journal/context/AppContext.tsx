@@ -97,12 +97,13 @@ export interface PanelOverlay {
 }
 
 export interface StoryPanel {
-  id:          string;
-  imageUri?:   string;
-  bgPreset?:   string;       // 'bg1' | 'bg2' | 'bg3' | 'char'
-  text:        string;       // narration / caption text (legacy)
-  bubbleText?: string;       // legacy speech-bubble text
-  overlays?:   PanelOverlay[];
+  id:               string;
+  imageUri?:        string;
+  bgPreset?:        string;       // 'bg1' | 'bg2' | 'bg3' | 'char'
+  text:             string;       // narration / caption text (legacy)
+  bubbleText?:      string;       // legacy speech-bubble text
+  overlays?:        PanelOverlay[];
+  imageAspectRatio?: number;      // width/height — set from CropImageModal at save time
 }
 
 export interface StoryPage {

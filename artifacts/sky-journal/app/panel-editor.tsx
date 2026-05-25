@@ -381,14 +381,14 @@ export default function PanelEditorScreen() {
     });
   }
 
-  async function handleCropDone(croppedUri: string) {
+  async function handleCropDone(croppedUri: string, aspectRatio: number) {
     const idx = pendingIdx;
     setPendingUri(null);
     setUploadingSet(new Set([idx]));
     try {
       const uri = await persistImageUri(croppedUri);
       if (uri) {
-        updatePanel(idx, { imageUri: uri, bgPreset: undefined });
+        updatePanel(idx, { imageUri: uri, bgPreset: undefined, imageAspectRatio: aspectRatio });
       } else {
         setUploadError('Photo upload failed — check your connection and try again.');
       }
