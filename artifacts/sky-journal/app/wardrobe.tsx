@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { useApp, type Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -234,13 +235,7 @@ export default function WardrobeScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 14 }]}>
-        <TouchableOpacity
-          style={styles.headerBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
-        </TouchableOpacity>
+        <BackButton style={styles.headerBtn} color="rgba(235,228,255,0.9)" size={20} />
 
         <Text style={styles.headerTitle}>{t('profile.wardrobeTitle')}</Text>
 

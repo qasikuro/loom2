@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
@@ -186,9 +187,7 @@ export default function CreateOutfitScreen() {
         <LinearGradient colors={['#E8E0F4', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
 
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-          <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
-            <Icon name="x" size={18} color={colors.foreground} />
-          </TouchableOpacity>
+          <BackButton style={[styles.iconBtn, { backgroundColor: colors.muted }]} iconName="x" size={18} color={colors.foreground} />
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')}</Text>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}

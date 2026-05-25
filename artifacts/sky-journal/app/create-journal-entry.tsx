@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
@@ -198,12 +199,12 @@ export default function CreateJournalEntryScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <TouchableOpacity
+        <BackButton
           style={[styles.iconBtn, { backgroundColor: colors.muted }]}
-          onPress={() => router.back()}
-        >
-          <Icon name="x" size={18} color={colors.foreground} />
-        </TouchableOpacity>
+          iconName="x"
+          size={18}
+          color={colors.foreground}
+        />
 
         <View style={styles.headerCenter}>
           <View style={styles.headerTitleRow}>

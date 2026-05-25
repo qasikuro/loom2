@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -79,9 +80,7 @@ export default function CreateFriendLogScreen() {
       <LinearGradient colors={['#D8EAF8', '#EEF4F8', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
 
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <TouchableOpacity style={[styles.iconBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
-          <Icon name="x" size={18} color={colors.foreground} />
-        </TouchableOpacity>
+        <BackButton style={[styles.iconBtn, { backgroundColor: colors.muted }]} iconName="x" size={18} color={colors.foreground} />
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🤝</Text>
           <Text style={[styles.headerTitle, { color: '#3A78B8' }]}>{t('journal.friendEncounterTitle')}</Text>

@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -549,13 +550,12 @@ export default function PanelEditorScreen() {
       {/* Header */}
       <LinearGradient colors={['#1A1640', '#1E1A48']} style={[styles.headerGrad, { height: topPad + 58 }]} />
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <TouchableOpacity
+        <BackButton
           style={styles.headerBtn}
+          color="rgba(235,228,255,0.9)"
+          size={20}
           onPress={() => { DraftStore.discard(); router.back(); }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
-        </TouchableOpacity>
+        />
         <Text style={styles.headerTitle}>{t('create.editPanel')}</Text>
         <TouchableOpacity
           style={[styles.saveBtn, uploadingSet.size > 0 && { opacity: 0.4 }]}

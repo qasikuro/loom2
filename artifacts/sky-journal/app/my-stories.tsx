@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
@@ -177,13 +178,7 @@ export default function MyStoriesScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
-        </TouchableOpacity>
+        <BackButton style={styles.backBtn} color="rgba(235,228,255,0.9)" size={20} />
         <Text style={styles.headerTitle}>{tr('profile.myStoriesTitle')}</Text>
         <TouchableOpacity
           style={styles.addBtn}

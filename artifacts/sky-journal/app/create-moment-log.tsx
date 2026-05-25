@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -85,9 +86,7 @@ export default function CreateMomentLogScreen() {
       ))}
 
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-        <TouchableOpacity style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.09)' }]} onPress={() => router.back()}>
-          <Icon name="x" size={18} color="rgba(240,234,248,0.75)" />
-        </TouchableOpacity>
+        <BackButton style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.09)' }]} iconName="x" size={18} color="rgba(240,234,248,0.75)" />
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🌙</Text>
           <Text style={styles.headerTitle}>{t('journal.quickMomentTitle')}</Text>

@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { MoodBadge } from '@/components/MoodBadge';
 import { SHADOW } from '@/constants/colors';
@@ -54,9 +55,7 @@ export default function JournalEntryScreen() {
   if (!entry) {
     return (
       <View style={[s.root, { backgroundColor: colors.background, paddingTop: topPad }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-          <Icon name="arrow-left" size={20} color={colors.foreground} />
-        </TouchableOpacity>
+        <BackButton style={s.backBtn} color={colors.foreground} size={20} />
         <View style={s.notFound}>
           <Icon name="book-open" size={36} color={colors.mutedForeground} />
           <Text style={[s.notFoundText, { color: colors.mutedForeground }]}>{t('discover.entryNotFound')}</Text>
@@ -78,13 +77,7 @@ export default function JournalEntryScreen() {
         style={[s.header, { paddingTop: topPad + 8 }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       >
-        <TouchableOpacity
-          style={s.backBtn}
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Icon name="arrow-left" size={20} color="rgba(220,210,255,0.9)" />
-        </TouchableOpacity>
+        <BackButton style={s.backBtn} color="rgba(220,210,255,0.9)" size={20} />
 
         <View style={s.headerCenter}>
           {/* Type badge */}

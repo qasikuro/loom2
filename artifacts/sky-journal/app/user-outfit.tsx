@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
@@ -100,9 +101,7 @@ export default function UserOutfitScreen() {
           { paddingTop: topPad, backgroundColor: colors.background, borderBottomColor: colors.border, opacity: headerOpacity },
         ]}
       >
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <Icon name="arrow-left" size={20} color={colors.foreground} />
-        </TouchableOpacity>
+        <BackButton color={colors.foreground} size={20} />
         <Text style={[styles.stickyTitle, { color: colors.foreground }]} numberOfLines={1}>
           {params.outfitName}
         </Text>

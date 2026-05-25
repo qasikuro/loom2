@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
@@ -420,9 +421,7 @@ export default function StoryScreen() {
           />
 
           {/* Back */}
-          <TouchableOpacity style={[styles.backBtn, { top: topPad + 12 }]} onPress={() => router.back()}>
-            <Icon name="arrow-left" size={20} color="#fff" />
-          </TouchableOpacity>
+          <BackButton style={[styles.backBtn, { top: topPad + 12 }]} color="#fff" size={20} />
 
           {/* Visibility toggle */}
           {isOwnStory && !confirmingDelete && (
