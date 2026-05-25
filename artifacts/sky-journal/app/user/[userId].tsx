@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -321,6 +322,32 @@ function fmtDate(iso: string) {
   return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
+interface ProfileLink {
+  label:     string;
+  url:       string;
+  platform?: string;
+}
+
+function fmtBirthday(bd: string): string {
+  try {
+    const d = new Date(bd);
+    if (isNaN(d.getTime())) return bd;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch { return bd; }
+}
+
+function platformEmoji(p?: string): string {
+  const lc = p?.toLowerCase() ?? '';
+  if (lc.includes('discord'))                            return '🎮';
+  if (lc.includes('instagram'))                          return '📷';
+  if (lc.includes('twitter') || lc.includes('x.com'))   return '𝕏';
+  if (lc.includes('youtube'))                            return '📺';
+  if (lc.includes('tiktok'))                             return '🎵';
+  if (lc.includes('twitch'))                             return '💜';
+  if (lc.includes('github'))                             return '🐙';
+  return '🔗';
+}
+
 interface ActiveOutfit {
   id:          string;
   name:        string;
@@ -330,19 +357,21 @@ interface ActiveOutfit {
 }
 
 interface PublicProfile {
-  userId:        string;
-  name:          string;
-  username:      string | null;
-  bio:           string;
-  traits:        string[];
-  mood:          string;
-  role:          string | null;
-  timezone:      string | null;
-  country:       string | null;
-  avatarUri:     string | null;
+  userId:         string;
+  name:           string;
+  username:       string | null;
+  bio:            string;
+  traits:         string[];
+  mood:           string;
+  role:           string | null;
+  timezone:       string | null;
+  country:        string | null;
+  birthday:       string | null;
+  links:          ProfileLink[];
+  avatarUri:      string | null;
   activeOutfitId: string | null;
-  activeOutfit:  ActiveOutfit | null;
-  isFollowing:   boolean;
+  activeOutfit:   ActiveOutfit | null;
+  isFollowing:    boolean;
 }
 
 interface PublicStory {
@@ -547,27 +576,27 @@ export default function UserProfileScreen() {
             <Text style={[styles.handle, { color: aura.accent }]}>@{profile.username}</Text>
           ) : null}
 
-          {/* Role badge */}
-          {userRole && (
-            <View style={[styles.roleBadge, { backgroundColor: userRole.color + '20', borderColor: userRole.color + '45' }]}>
-              <Text style={{ fontSize: 13 }}>{userRole.emoji}</Text>
-              <Text style={[styles.roleBadgeText, { color: userRole.color }]}>{userRole.key}</Text>
+          {/* ── Meta row: role + weather/time ─────────────────── */}
+          {(userRole || profile.timezone || weatherQuery) ? (
+            <View style={styles.metaRow}>
+              {userRole ? (
+                <View style={[styles.roleBadge, { backgroundColor: userRole.color + '20', borderColor: userRole.color + '45' }]}>
+                  <Text style={{ fontSize: 13 }}>{userRole.emoji}</Text>
+                  <Text style={[styles.roleBadgeText, { color: userRole.color }]}>{userRole.key}</Text>
+                </View>
+              ) : null}
+              <WeatherWidget
+                query={weatherQuery}
+                timezone={profile.timezone}
+                accentColor={aura.accent}
+                compact
+              />
             </View>
-          )}
-
-          {/* Weather + local time */}
-          {weatherQuery && (
-            <WeatherWidget
-              query={weatherQuery}
-              timezone={profile.timezone}
-              accentColor={aura.accent}
-              compact
-            />
-          )}
+          ) : null}
 
           {/* Bio */}
           {profile.bio ? (
-            <Text style={[styles.bio, { color: colors.mutedForeground }]} numberOfLines={3}>
+            <Text style={[styles.bio, { color: colors.mutedForeground }]} numberOfLines={5}>
               {profile.bio}
             </Text>
           ) : null}
@@ -590,6 +619,51 @@ export default function UserProfileScreen() {
               ))}
             </ScrollView>
           )}
+
+          {/* ── Details row: country + birthday ───────────────── */}
+          {(profile.country || profile.birthday) ? (
+            <View style={styles.detailsRow}>
+              {profile.country ? (
+                <View style={[styles.detailPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Text style={styles.detailPillEmoji}>📍</Text>
+                  <Text style={[styles.detailPillText, { color: colors.mutedForeground }]}>{profile.country}</Text>
+                </View>
+              ) : null}
+              {profile.birthday ? (
+                <View style={[styles.detailPill, { backgroundColor: aura.accent + '12', borderColor: aura.accent + '32' }]}>
+                  <Text style={styles.detailPillEmoji}>🎂</Text>
+                  <Text style={[styles.detailPillText, { color: aura.accent }]}>{fmtBirthday(profile.birthday)}</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
+
+          {/* ── Social links ───────────────────────────────────── */}
+          {profile.links && profile.links.length > 0 ? (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.linksRow}
+            >
+              {profile.links.map((link, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.linkPill, { backgroundColor: aura.accent + '10', borderColor: aura.accent + '35' }]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    Linking.openURL(link.url).catch(() => null);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={{ fontSize: 12 }}>{platformEmoji(link.platform)}</Text>
+                  <Text style={[styles.linkPillText, { color: aura.accent }]} numberOfLines={1}>
+                    {link.label}
+                  </Text>
+                  <Icon name="external-link" size={9} color={aura.accent + '80'} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          ) : null}
 
           {/* Stats row */}
           <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
@@ -966,6 +1040,29 @@ const styles = StyleSheet.create({
     borderRadius: 16, borderWidth: 1,
   },
   traitText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+
+  metaRow: {
+    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7, marginTop: 5,
+  },
+  detailsRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6,
+  },
+  detailPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 9, paddingVertical: 5,
+    borderRadius: 12, borderWidth: 1,
+  },
+  detailPillEmoji: { fontSize: 12 },
+  detailPillText:  { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  linksRow: {
+    flexDirection: 'row', gap: 7, paddingRight: 4, marginTop: 4,
+  },
+  linkPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 14, borderWidth: 1,
+  },
+  linkPillText: { fontSize: 12, fontFamily: 'Satoshi-Medium', maxWidth: 100 },
 
   statsRow: {
     flexDirection: 'row',

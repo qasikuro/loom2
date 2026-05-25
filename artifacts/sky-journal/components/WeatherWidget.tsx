@@ -36,24 +36,24 @@ export function WeatherWidget({ query, timezone, accentColor, compact }: Props) 
   const accent = accentColor ?? '#9B78E8';
 
   if (compact) {
-    if (!data && !loading) return null;
+    // Hide only when there's truly nothing to show
+    if (!data && !loading && !time) return null;
     return (
       <View style={[styles.compactPill, { backgroundColor: accent + '14', borderColor: accent + '28' }]}>
-        {loading ? (
-          <ActivityIndicator size={10} color={accent} />
-        ) : data ? (
+        {loading && <ActivityIndicator size={10} color={accent} />}
+        {!loading && data && (
           <>
             <Text style={styles.compactEmoji}>{data.emoji}</Text>
             <Text style={[styles.compactTemp, { color: accent }]}>{data.tempC}°</Text>
             <Text style={[styles.compactCond, { color: colors.mutedForeground }]} numberOfLines={1}>
               {data.conditionText}
             </Text>
-            {time ? (
-              <>
-                <View style={[styles.sep, { backgroundColor: colors.border }]} />
-                <Text style={[styles.compactTime, { color: colors.mutedForeground }]}>🕐 {time}</Text>
-              </>
-            ) : null}
+          </>
+        )}
+        {!loading && time ? (
+          <>
+            {data ? <View style={[styles.sep, { backgroundColor: colors.border }]} /> : null}
+            <Text style={[styles.compactTime, { color: colors.mutedForeground }]}>🕐 {time}</Text>
           </>
         ) : null}
       </View>
