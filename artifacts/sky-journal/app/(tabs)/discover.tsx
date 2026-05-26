@@ -28,15 +28,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_W = Dimensions.get('window').width;
 
-const TABS = ['For You', 'New', 'Vibes', 'Guides', 'People'] as const;
+const TABS = ['Stories', 'Guides', 'Vibes', 'People'] as const;
 type TabType = (typeof TABS)[number];
 
-const TAB_LABEL_KEYS: Record<TabType, string> = {
-  'For You': 'discover.forYou',
-  'New':     'discover.new',
-  'Vibes':   'discover.vibes',
-  'Guides':  'discover.guides',
-  'People':  'discover.people',
+const TAB_ICONS: Record<TabType, string> = {
+  Stories: '✦',
+  Guides:  '★',
+  Vibes:   '◈',
+  People:  '◉',
 };
 
 const GUIDE_TOPICS = [
@@ -104,7 +103,8 @@ export default function DiscoverScreen() {
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading } = useApp();
 
-  const [activeTab,     setActiveTab]     = useState<TabType>('For You');
+  const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
+  const [storiesSort,   setStoriesSort]   = useState<'for-you' | 'new'>('for-you');
   const [selectedVibe,  setSelectedVibe]  = useState<string | null>(null);
   const [peopleQuery,   setPeopleQuery]   = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
@@ -210,17 +210,15 @@ export default function DiscoverScreen() {
     else followUser(g.userId);
   }
 
-  const newPosts  = [...discoverPosts].sort((a, b) =>
+  const sortedByNew = [...discoverPosts].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
   const vibePosts = selectedVibe
     ? discoverPosts.filter(p => p.vibe === selectedVibe || p.mood === selectedVibe)
     : discoverPosts;
-  const activePosts =
-    activeTab === 'For You' ? discoverPosts :
-    activeTab === 'New'     ? newPosts      : vibePosts;
+  const activePosts = storiesSort === 'new' ? sortedByNew : discoverPosts;
 
-  const CARD_W = (SCREEN_W - 48) / 2;  // 2 columns with 16px padding each side + 16px gap
+  const CARD_W = (SCREEN_W - 48) / 2;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -244,15 +242,20 @@ export default function DiscoverScreen() {
           </View>
           <TouchableOpacity
             style={styles.usersBtn}
-            onPress={() => selectTab('People')}
+            onPress={() => router.push('/messages' as any)}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="users" size={18} color="rgba(200,184,232,0.85)" />
+            <Icon name="message-circle" size={18} color="rgba(200,184,232,0.85)" />
           </TouchableOpacity>
         </View>
 
-        {/* Tab pills row */}
-        <View style={styles.tabsRow}>
+        {/* Tab pills row — horizontal scroll so tabs never clip on narrow screens */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsRow}
+          style={{ flexGrow: 0 }}
+        >
           {TABS.map(tab => {
             const active = activeTab === tab;
             return (
@@ -262,32 +265,53 @@ export default function DiscoverScreen() {
                 style={[
                   styles.tabPill,
                   active
-                    ? { backgroundColor: 'rgba(255,130,170,0.22)', borderColor: 'rgba(255,130,170,0.55)' }
+                    ? { backgroundColor: 'rgba(155,120,232,0.22)', borderColor: 'rgba(155,120,232,0.60)' }
                     : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.14)' },
                 ]}
                 activeOpacity={0.75}
               >
+                <Text style={[styles.tabIcon, { color: active ? '#C8B0FF' : 'rgba(200,184,232,0.40)' }]}>
+                  {TAB_ICONS[tab]}
+                </Text>
                 <Text style={[
                   styles.tabText,
-                  { color: active ? '#FFB0CE' : 'rgba(200,184,232,0.55)' },
+                  { color: active ? '#C8B0FF' : 'rgba(200,184,232,0.55)' },
                 ]}>
-                  {t(TAB_LABEL_KEYS[tab])}
+                  {tab}
                 </Text>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </LinearGradient>
 
       {/* Thin separator */}
       <View style={[styles.sep, { backgroundColor: colors.border }]} />
 
-      {/* ── For You / New ──────────────────────────────────── */}
-      {(activeTab === 'For You' || activeTab === 'New') && (
+      {/* ── Stories ────────────────────────────────────────── */}
+      {activeTab === 'Stories' && (
         <FlatList
-          key={activeTab}
+          key="stories"
           data={activePosts}
           keyExtractor={item => item.id}
+          ListHeaderComponent={
+            <View style={styles.storiesSortRow}>
+              <TouchableOpacity
+                style={[styles.sortChip, storiesSort === 'for-you' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
+                onPress={() => { setStoriesSort('for-you'); Haptics.selectionAsync(); }}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.sortChipText, { color: storiesSort === 'for-you' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>✦ For You</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortChip, storiesSort === 'new' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
+                onPress={() => { setStoriesSort('new'); Haptics.selectionAsync(); }}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.sortChipText, { color: storiesSort === 'new' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>◎ New</Text>
+              </TouchableOpacity>
+            </View>
+          }
           renderItem={({ item, index }) => (
             <DiscoverCard
               post={item}
@@ -317,7 +341,7 @@ export default function DiscoverScreen() {
               </View>
             ) : (
               <EmptyFeed
-                tab={activeTab}
+                tab="Stories"
                 colors={colors}
                 onCreatePress={() => router.push('/(tabs)/create')}
               />
@@ -808,13 +832,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingBottom: 14,
+    paddingRight: 24,
     gap: 8,
+    alignItems: 'center',
   },
   tabPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     paddingHorizontal: 15, paddingVertical: 8,
     borderRadius: 22, borderWidth: 1,
   },
-  tabText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  tabIcon: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  tabText: { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+
+  // Stories sort toggle
+  storiesSortRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 0,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
+  sortChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(200,184,232,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+  sortChipText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
 
   sep: { height: StyleSheet.hairlineWidth },
 
