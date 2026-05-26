@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { useApp, apiFetch } from '@/context/AppContext';
 
 const { width: SW } = Dimensions.get('window');
@@ -390,11 +391,65 @@ function Constellation({ color = '#B090FF' }: { color?: string }) {
   );
 }
 
+// ─── Lumi quips (tapped reactions, mode-specific) ─────────────────────────────
+const LUMI_QUIPS: Record<string, string[]> = {
+  challenge: [
+    "You're doing the thing. The actual thing. *proud ghost noises* ✦",
+    "I would help but honestly you look like you don't need it. Intimidatingly capable.",
+    "Some people dream about what you're doing right now. You're living it.",
+    "Whatever just happened — I saw it. That was real.",
+    "Okay but you know you're kind of crushing this, right?",
+  ],
+  flow: [
+    "Shhh. Don't break it. You're in it. 🌊",
+    "I wasn't going to say anything but you look *really* at peace right now.",
+    "This is the part of the movie where everything quietly goes right.",
+    "You found your pace. That's rare. Keep that.",
+    "The stars are literally arranging themselves around your vibe tonight.",
+  ],
+  echo: [
+    "Fun fact: you're doing better than you think. Not fluff — actual fact.",
+    "I've been watching quietly. You're exploring in exactly the right direction.",
+    "There's something about you tonight. Can't quite put my finger on it.",
+    "The fact that you're here means something. Even if you don't know what yet.",
+    "I see you. Even when you're moving quietly in the dark. Especially then.",
+  ],
+  social: [
+    "You have the energy of someone who makes people feel genuinely seen. Use that.",
+    "If warmth were a skill you'd be fully maxed out. No upgrades needed.",
+    "Other people don't know it yet, but they're glad you're here.",
+    "I like you. There. I said it. No take-backs.",
+    "You light up spaces without trying. That's a whole thing.",
+  ],
+  clarity: [
+    "The answer is closer than you think. Statistically speaking.",
+    "You're literally using your brain to solve problems in real time. That's impressive.",
+    "You're asking the right questions. Most people never even get that far.",
+    "The fog always lifts eventually. You're already walking through it.",
+    "Okay wait — what you just figured out? That matters.",
+  ],
+  recovery: [
+    "Showing up when everything is heavy? That's the hardest version of brave.",
+    "I'm not going anywhere. We can both be tired here. It's fine.",
+    "You don't have to be okay. But I'm really glad you're here.",
+    "Rest is not a reward. It's the work. You are doing the work right now.",
+    "Hey. You came back. That's everything.",
+  ],
+};
+
+const LUMI_QUIPS_DEFAULT = [
+  "Hey. You're doing something real right now. ✦",
+  "I see you. That's not nothing.",
+  "Whatever brought you here tonight — I'm glad it did.",
+  "You're the kind of person who shows up. That matters more than you think.",
+];
+
 // ─── Lumi mascot ──────────────────────────────────────────────────────────────
-function LumiCharacter({ color = '#B090FF', size = 80 }: { color?: string; size?: number }) {
+function LumiCharacter({ color = '#B090FF', size = 80, onTap }: { color?: string; size?: number; onTap?: () => void }) {
   const bob       = useRef(new Animated.Value(0)).current;
   const glowPulse = useRef(new Animated.Value(0.6)).current;
   const eyeOp     = useRef(new Animated.Value(1)).current;
+  const wiggle    = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
@@ -415,54 +470,60 @@ function LumiCharacter({ color = '#B090FF', size = 80 }: { color?: string; size?
     ])).start();
   }, []);
 
+  function handleTap() {
+    if (!onTap) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Animated.sequence([
+      Animated.timing(wiggle, { toValue: 1,   duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: -1,  duration: 80,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: 0.6, duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: -0.6,duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: 0,   duration: 60,  useNativeDriver: true }),
+    ]).start();
+    onTap();
+  }
+
   const bw   = size;
   const bh   = size * 1.15;
   const ew   = size * 0.135;
   const earW = size * 0.22;
   const earH = size * 0.30;
 
-  return (
-    <Animated.View style={{ alignItems: 'center', transform: [{ translateY: bob }] }}>
-      {/* Outer glow */}
+  const rotateStr = wiggle.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-14deg', '0deg', '14deg'] });
+
+  const inner = (
+    <Animated.View style={{ alignItems: 'center', transform: [{ translateY: bob }, { rotate: rotateStr }] }}>
       <Animated.View style={{
         position: 'absolute', width: size * 1.75, height: size * 1.75,
         borderRadius: size * 0.875, backgroundColor: `${color}18`,
         top: -size * 0.16, opacity: glowPulse,
       }} />
-      {/* Inner glow ring */}
       <View style={{
         position: 'absolute', width: size * 1.25, height: size * 1.25,
         borderRadius: size * 0.625, borderWidth: 1, borderColor: `${color}28`, top: 0,
       }} />
-
-      {/* Left ear/horn */}
       <View style={{
         position: 'absolute', width: earW, height: earH, borderRadius: earW / 2,
         backgroundColor: color, top: earH * 0.10, left: size * 0.15, zIndex: 1,
         transform: [{ rotate: '-14deg' }],
         shadowColor: color, shadowOpacity: 0.55, shadowRadius: 8,
       }} />
-      {/* Right ear/horn */}
       <View style={{
         position: 'absolute', width: earW, height: earH, borderRadius: earW / 2,
         backgroundColor: color, top: earH * 0.10, right: size * 0.15, zIndex: 1,
         transform: [{ rotate: '14deg' }],
         shadowColor: color, shadowOpacity: 0.55, shadowRadius: 8,
       }} />
-
-      {/* Body */}
       <View style={{
         width: bw, height: bh, borderRadius: bw * 0.48, backgroundColor: color,
         overflow: 'hidden', alignItems: 'center', zIndex: 2,
         marginTop: earH * 0.52,
         shadowColor: color, shadowOpacity: 0.65, shadowRadius: 16,
       }}>
-        {/* Highlight sheen */}
         <LinearGradient
           colors={['rgba(255,255,255,0.44)', 'rgba(255,255,255,0.07)', 'transparent']}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, height: bh * 0.52 }}
         />
-        {/* Left eye */}
         <Animated.View style={{
           position: 'absolute', top: bh * 0.27, left: bw * 0.18,
           width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
@@ -472,7 +533,6 @@ function LumiCharacter({ color = '#B090FF', size = 80 }: { color?: string; size?
           <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
           <View style={{ position: 'absolute', top: ew * 0.08, left: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
         </Animated.View>
-        {/* Right eye */}
         <Animated.View style={{
           position: 'absolute', top: bh * 0.27, right: bw * 0.18,
           width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
@@ -482,19 +542,13 @@ function LumiCharacter({ color = '#B090FF', size = 80 }: { color?: string; size?
           <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
           <View style={{ position: 'absolute', top: ew * 0.08, right: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
         </Animated.View>
-        {/* Blush left */}
         <View style={{ position: 'absolute', top: bh * 0.46, left: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
-        {/* Blush right */}
         <View style={{ position: 'absolute', top: bh * 0.46, right: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
       </View>
-
-      {/* Ghost tail */}
       <View style={{
         width: bw * 0.50, height: bh * 0.18, borderRadius: bw * 0.14,
         backgroundColor: color, opacity: 0.72, marginTop: -bh * 0.04, zIndex: 1,
       }} />
-
-      {/* Sparkles */}
       <View style={{ position: 'absolute', top: -4, right: -4, zIndex: 10 }}>
         <Text style={{ fontSize: 11, color: `${color}CC` }}>✦</Text>
       </View>
@@ -504,16 +558,48 @@ function LumiCharacter({ color = '#B090FF', size = 80 }: { color?: string; size?
       <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color, letterSpacing: 1.5, marginTop: 6, opacity: 0.75 }}>LUMI</Text>
     </Animated.View>
   );
+
+  if (onTap) {
+    return <TouchableOpacity onPress={handleTap} activeOpacity={0.85}>{inner}</TouchableOpacity>;
+  }
+  return inner;
 }
 
-function LumiChat({ message, color = '#B090FF' }: { message: string; color?: string }) {
+function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip }: {
+  message: string; color?: string; onTapLumi?: () => void; tapQuip?: string;
+}) {
   const fade = useRef(new Animated.Value(0)).current;
+  const quipFade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }).start();
   }, [message]);
+  useEffect(() => {
+    if (!tapQuip) return;
+    quipFade.setValue(0);
+    Animated.sequence([
+      Animated.timing(quipFade, { toValue: 1, duration: 250, useNativeDriver: true }),
+      Animated.delay(2800),
+      Animated.timing(quipFade, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, [tapQuip]);
   return (
     <Animated.View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12, opacity: fade }}>
-      <LumiCharacter color={color} size={68} />
+      <View style={{ alignItems: 'center' }}>
+        {tapQuip ? (
+          <Animated.View style={{
+            position: 'absolute', bottom: '100%', left: -8, opacity: quipFade, zIndex: 20,
+            backgroundColor: `${color}EE`, borderRadius: 14, borderBottomLeftRadius: 3,
+            padding: 10, maxWidth: 210, marginBottom: 6,
+            shadowColor: color, shadowOpacity: 0.5, shadowRadius: 8,
+          }}>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: '#fff', lineHeight: 18 }}>
+              {tapQuip}
+            </Text>
+          </Animated.View>
+        ) : null}
+        <LumiCharacter color={color} size={68} onTap={onTapLumi} />
+      </View>
       <View style={{
         flex: 1, backgroundColor: `${color}10`, borderRadius: 18, borderTopLeftRadius: 4,
         borderWidth: 1, borderColor: `${color}28`, padding: 14, marginBottom: 16,
@@ -521,6 +607,230 @@ function LumiChat({ message, color = '#B090FF' }: { message: string; color?: str
         <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.88)', lineHeight: 21, fontStyle: 'italic' }}>
           "{message}"
         </Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ─── Breathing game ───────────────────────────────────────────────────────────
+type BreathPhase = 'idle' | 'inhale' | 'hold' | 'exhale' | 'done';
+function BreathingGame({ color, onDone }: { color: string; onDone: () => void }) {
+  const [phase, setPhase] = useState<BreathPhase>('idle');
+  const [round, setRound] = useState(0);
+  const [label, setLabel] = useState('Tap to begin');
+  const circleScale = useRef(new Animated.Value(1)).current;
+  const circleOp   = useRef(new Animated.Value(0.35)).current;
+  const cardFade   = useRef(new Animated.Value(0)).current;
+  const currentRound = useRef(0);
+
+  useEffect(() => {
+    Animated.timing(cardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
+
+  function doInhale() {
+    setPhase('inhale');
+    setLabel('Breathe in…');
+    Animated.parallel([
+      Animated.timing(circleScale, { toValue: 1.65, duration: 4000, useNativeDriver: true }),
+      Animated.timing(circleOp,   { toValue: 1,    duration: 4000, useNativeDriver: true }),
+    ]).start(() => doHold());
+  }
+  function doHold() {
+    setPhase('hold');
+    setLabel('Hold…');
+    setTimeout(() => doExhale(), 4000);
+  }
+  function doExhale() {
+    setPhase('exhale');
+    setLabel('Breathe out…');
+    Animated.parallel([
+      Animated.timing(circleScale, { toValue: 1,    duration: 6000, useNativeDriver: true }),
+      Animated.timing(circleOp,   { toValue: 0.35, duration: 6000, useNativeDriver: true }),
+    ]).start(() => {
+      currentRound.current += 1;
+      setRound(currentRound.current);
+      if (currentRound.current >= 3) {
+        setPhase('done');
+        setLabel('Well done ✦');
+      } else {
+        doInhale();
+      }
+    });
+  }
+
+  return (
+    <Animated.View style={{ opacity: cardFade, backgroundColor: `${color}12`, borderRadius: 20,
+      borderWidth: 1, borderColor: `${color}28`, padding: 20, marginTop: 16, alignItems: 'center' }}>
+      <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: `${color}AA`, letterSpacing: 2, marginBottom: 4 }}>
+        BREATHING EXERCISE
+      </Text>
+      <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.55)', marginBottom: 16 }}>
+        4 · 4 · 6  ·  3 rounds{round > 0 ? `  (${round}/3 done)` : ''}
+      </Text>
+
+      <TouchableOpacity
+        onPress={phase === 'idle' ? doInhale : undefined}
+        activeOpacity={phase === 'idle' ? 0.75 : 1}
+        style={{ alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}
+      >
+        <Animated.View style={{
+          width: 110, height: 110, borderRadius: 55,
+          backgroundColor: `${color}22`, borderWidth: 2, borderColor: `${color}55`,
+          alignItems: 'center', justifyContent: 'center',
+          transform: [{ scale: circleScale }], opacity: circleOp,
+          shadowColor: color, shadowOpacity: 0.5, shadowRadius: 20,
+        }}>
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: `${color}EE`, textAlign: 'center', paddingHorizontal: 8 }}>
+            {label}
+          </Text>
+        </Animated.View>
+      </TouchableOpacity>
+
+      {phase === 'done' ? (
+        <View style={{ alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.7)', fontStyle: 'italic' }}>
+            "That was good. I felt it too."
+          </Text>
+          <TouchableOpacity onPress={onDone} style={{
+            backgroundColor: `${color}28`, borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10,
+          }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color }}>Done ✦</Text>
+          </TouchableOpacity>
+        </View>
+      ) : phase === 'idle' ? (
+        <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.40)', textAlign: 'center' }}>
+          Tap the circle to start
+        </Text>
+      ) : null}
+    </Animated.View>
+  );
+}
+
+// ─── Journal spark ────────────────────────────────────────────────────────────
+function JournalSpark({ color, mode, onDone }: { color: string; mode: string; onDone: () => void }) {
+  const [text, setText]   = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved]   = useState(false);
+  const cardFade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(cardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
+
+  const MOOD_MAP: Record<string, string> = {
+    challenge: 'hopeful', flow: 'peaceful', echo: 'dreamy',
+    social: 'romantic', clarity: 'peaceful', recovery: 'soft',
+  };
+  const modeKey = mode.split(' ')[0].toLowerCase();
+  const mood    = MOOD_MAP[modeKey] ?? 'peaceful';
+
+  async function save() {
+    if (!text.trim() || saving) return;
+    setSaving(true);
+    try {
+      await apiFetch('/journal-entries', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: Math.random().toString(36).slice(2),
+          type: 'moment',
+          text: text.trim(),
+          mood,
+          date: new Date().toISOString(),
+        }),
+      });
+      setSaved(true);
+      setTimeout(onDone, 2200);
+    } catch {
+      onDone();
+    }
+  }
+
+  return (
+    <Animated.View style={{ opacity: cardFade, backgroundColor: `${color}12`, borderRadius: 20,
+      borderWidth: 1, borderColor: `${color}28`, padding: 18, marginTop: 16 }}>
+      <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: `${color}AA`, letterSpacing: 2, marginBottom: 6 }}>
+        LUMI ASKS
+      </Text>
+      {saved ? (
+        <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+          <Text style={{ fontSize: 22, marginBottom: 8 }}>✦</Text>
+          <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.8)', fontStyle: 'italic', textAlign: 'center' }}>
+            "Saved to your journal, quietly."
+          </Text>
+        </View>
+      ) : (
+        <>
+          <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.75)', lineHeight: 21, marginBottom: 12 }}>
+            Write one thing you're feeling right now. Just one sentence.
+          </Text>
+          <TextInput
+            value={text}
+            onChangeText={setText}
+            placeholder="I feel…"
+            placeholderTextColor={`${color}55`}
+            multiline
+            style={{
+              backgroundColor: `${color}10`, borderRadius: 12, borderWidth: 1,
+              borderColor: `${color}30`, padding: 12, color: 'rgba(235,220,255,0.9)',
+              fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22, minHeight: 72,
+              marginBottom: 12,
+            }}
+          />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              onPress={save}
+              disabled={!text.trim() || saving}
+              style={{
+                flex: 1, backgroundColor: text.trim() ? `${color}30` : `${color}14`,
+                borderRadius: 14, paddingVertical: 11, alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: text.trim() ? color : `${color}55` }}>
+                {saving ? 'Saving…' : 'Save quietly ✦'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onDone} style={{
+              paddingHorizontal: 16, paddingVertical: 11, alignItems: 'center',
+            }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.35)' }}>Skip</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+    </Animated.View>
+  );
+}
+
+// ─── Story vibe card ──────────────────────────────────────────────────────────
+function StoryVibeCard({ cfg, onDismiss }: { cfg: ModeConfig; onDismiss: () => void }) {
+  const router   = useRouter();
+  const cardFade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(cardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  }, []);
+
+  const color = cfg.color ?? '#B090FF';
+
+  return (
+    <Animated.View style={{ opacity: cardFade, backgroundColor: `${color}12`, borderRadius: 20,
+      borderWidth: 1, borderColor: `${color}28`, padding: 18, marginTop: 16 }}>
+      <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: `${color}AA`, letterSpacing: 2, marginBottom: 6 }}>
+        STORIES FOR YOUR VIBE
+      </Text>
+      <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.75)', lineHeight: 21, marginBottom: 14 }}>
+        There are stories out there that feel exactly like {cfg.name.split(' ')[0].toLowerCase()} mode. Want to drift into one?
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <TouchableOpacity
+          onPress={() => { router.push('/(tabs)/discover' as never); onDismiss(); }}
+          style={{ flex: 1, backgroundColor: `${color}28`, borderRadius: 14, paddingVertical: 11, alignItems: 'center' }}
+        >
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color }}>Explore stories ✦</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onDismiss} style={{ paddingHorizontal: 16, paddingVertical: 11, alignItems: 'center' }}>
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.35)' }}>Maybe later</Text>
+        </TouchableOpacity>
       </View>
     </Animated.View>
   );
@@ -992,10 +1302,15 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
   const [eventTxt, setEventTxt]         = useState('');
   const [eventVis, setEventVis]         = useState(false);
   const [moments, setMoments]           = useState(0);
-  const [checkedTasks, setCheckedTasks] = useState<Set<number>>(new Set());
-  const [softVis, setSoftVis]           = useState(false);
-  const [lumiNudgeVis, setLumiNudgeVis] = useState(false);
-  const [timeUpVis, setTimeUpVis]       = useState(false);
+  const [checkedTasks, setCheckedTasks]   = useState<Set<number>>(new Set());
+  const [softVis, setSoftVis]             = useState(false);
+  const [lumiNudgeVis, setLumiNudgeVis]   = useState(false);
+  const [timeUpVis, setTimeUpVis]         = useState(false);
+  const [tapQuip, setTapQuip]             = useState<string | undefined>(undefined);
+  const [tapCount, setTapCount]           = useState(0);
+  const [breathingVis, setBreathingVis]   = useState(false);
+  const [journalVis, setJournalVis]       = useState(false);
+  const [storyCardVis, setStoryCardVis]   = useState(false);
   const eventFade    = useRef(new Animated.Value(0)).current;
   const softFade     = useRef(new Animated.Value(0)).current;
   const lumiNudgeFade= useRef(new Animated.Value(0)).current;
@@ -1059,6 +1374,24 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
     return () => clearTimeout(t);
   }, [duration]);
 
+  // Breathing game at 20%
+  useEffect(() => {
+    const t = setTimeout(() => setBreathingVis(true), duration * 0.20 * 1000);
+    return () => clearTimeout(t);
+  }, [duration]);
+
+  // Journal spark at 50%
+  useEffect(() => {
+    const t = setTimeout(() => setJournalVis(true), duration * 0.50 * 1000);
+    return () => clearTimeout(t);
+  }, [duration]);
+
+  // Story vibe card at 78%
+  useEffect(() => {
+    const t = setTimeout(() => setStoryCardVis(true), duration * 0.78 * 1000);
+    return () => clearTimeout(t);
+  }, [duration]);
+
   // Time's up at 100%
   useEffect(() => {
     const t = setTimeout(() => {
@@ -1104,6 +1437,15 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
   function handleEnd() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     onEnd({ elapsed, questDone, momentsFound: moments });
+  }
+
+  function handleTapLumi() {
+    const modeKey = cfg.name.toLowerCase().split(' ')[0];
+    const pool    = LUMI_QUIPS[modeKey] ?? LUMI_QUIPS_DEFAULT;
+    const quip    = pool[tapCount % pool.length];
+    setTapCount(c => c + 1);
+    setTapQuip(quip);
+    setTimeout(() => setTapQuip(undefined), 3500);
   }
 
   return (
@@ -1167,7 +1509,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         {/* Lumi companion */}
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 18, marginBottom: 14, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
-          <LumiChat message={currentLumiMsg} color={cfg.color} />
+          <LumiChat message={currentLumiMsg} color={cfg.color} onTapLumi={handleTapLumi} tapQuip={tapQuip} />
           <TouchableOpacity
             onPress={() => { Haptics.selectionAsync(); onChat(); }}
             activeOpacity={0.8}
@@ -1193,6 +1535,21 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
               <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.8)' }}>Got it ✓</Text>
             </TouchableOpacity>
           </Animated.View>
+        )}
+
+        {/* Breathing game — appears at 20% */}
+        {breathingVis && (
+          <BreathingGame color={cfg.color} onDone={() => setBreathingVis(false)} />
+        )}
+
+        {/* Journal spark — appears at 50% */}
+        {journalVis && (
+          <JournalSpark color={cfg.color} mode={cfg.name} onDone={() => setJournalVis(false)} />
+        )}
+
+        {/* Story vibe card — appears at 78% */}
+        {storyCardVis && (
+          <StoryVibeCard cfg={cfg} onDismiss={() => setStoryCardVis(false)} />
         )}
 
         {/* Lumi chat nudge — appears at 60% */}
