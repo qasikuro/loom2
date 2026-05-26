@@ -13,6 +13,11 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, {
+  Circle, Ellipse, Path, Line, G, Defs, Stop,
+  RadialGradient as SvgRadialGradient,
+  LinearGradient as SvgLinearGradient,
+} from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -126,7 +131,7 @@ const MODES: Record<string, ModeConfig> = {
     description: "You're locked in and ready to push. You discover things through persistence — and right now, that engine is running hot.",
     traits: ['Goal-driven', 'High intensity', 'Achievement-focused'],
     perks: ['Hard Objectives Active', 'Adaptive Events On', 'Streak Tracking'],
-    whatChanged: ['Hard objectives are now available', 'Achievement tracking is enabled', 'Competitive events will surface', 'Lumi tracks your milestones'],
+    whatChanged: ['Hard objectives are now available', 'Achievement tracking is enabled', 'Competitive events will surface', 'Littmi tracks your milestones'],
     lumiIntro: "I can feel your focus from here. Let's channel it into something real.",
     lumiSession: "Let's go. I'll be right there pushing with you. ⚔️",
     quest: 'Complete 3 objectives without stopping', questTotal: 3,
@@ -144,7 +149,7 @@ const MODES: Record<string, ModeConfig> = {
     description: "You're here for the journey, not the destination. Flow Mode removes pressure and lets beauty surface naturally — because that's how you move.",
     traits: ['Relaxed focus', 'Journey-minded', 'Pressure-free'],
     perks: ['Pressure Removed', 'Ambient Depth +', 'Rare Drops Increased'],
-    whatChanged: ['Timers and pressure are off', 'Ambient beauty is amplified', 'Rare moments surface more often', 'Lumi guides without pushing'],
+    whatChanged: ['Timers and pressure are off', 'Ambient beauty is amplified', 'Rare moments surface more often', 'Littmi guides without pushing'],
     lumiIntro: "Take your time. I'll walk with you — no rush, no pressure. Just the path.",
     lumiSession: 'No rush. The path will always open for you. 🌊',
     quest: 'Explore one new area without a timer', questTotal: 1,
@@ -180,7 +185,7 @@ const MODES: Record<string, ModeConfig> = {
     description: "You thrive around others. Social Mode activates party boosts, surfaces nearby players to connect with, and turns shared moments into something lasting.",
     traits: ['Community-driven', 'Collaborative', 'Socially energized'],
     perks: ['Party Finder Active', 'Group Rewards +', 'Social Events On'],
-    whatChanged: ['Party finder is now live', 'Group rewards are doubled', 'Social events are surfacing', 'Lumi introduces you to kind souls'],
+    whatChanged: ['Party finder is now live', 'Group rewards are doubled', 'Social events are surfacing', 'Littmi introduces you to kind souls'],
     lumiIntro: "There are good people out here. Let's find them together.",
     lumiSession: 'A kind soul is nearby. Want to join their journey? ✨',
     quest: 'Connect with one new player today', questTotal: 1,
@@ -216,7 +221,7 @@ const MODES: Record<string, ModeConfig> = {
     description: "You need rest, not pressure. Recovery Mode removes all friction and gives you gentle wins, soft support, and the reminder that just showing up is already enough.",
     traits: ['Burnout-aware', 'Needs gentleness', 'Recovery-focused'],
     perks: ['All Pressure Off', 'Easy Moments Surface', 'Gentle Check-ins'],
-    whatChanged: ['All timers and pressure are removed', 'Easy wins will surface for you', 'Mood is gently lifted', 'Lumi checks in softly, without asking too much'],
+    whatChanged: ['All timers and pressure are removed', 'Easy wins will surface for you', 'Mood is gently lifted', 'Littmi checks in softly, without asking too much'],
     lumiIntro: "Hey. You showed up. I know that wasn't easy. I'm proud of you.",
     lumiSession: "Hey. You showed up. That's already enough. 🌸",
     quest: 'Do one thing that brings you peace today', questTotal: 1,
@@ -391,49 +396,49 @@ function Constellation({ color = '#B090FF' }: { color?: string }) {
   );
 }
 
-// ─── Lumi quips (tapped reactions, mode-specific) ─────────────────────────────
+// ─── Littmi quips (tapped reactions, mode-specific) ───────────────────────────
 const LUMI_QUIPS: Record<string, string[]> = {
   challenge: [
-    "You're doing the thing. The actual thing. *proud ghost noises* ✦",
-    "I would help but honestly you look like you don't need it. Intimidatingly capable.",
-    "Some people dream about what you're doing right now. You're living it.",
-    "Whatever just happened — I saw it. That was real.",
-    "Okay but you know you're kind of crushing this, right?",
+    "Feel that fire? That's yours to use. 🔥",
+    "I've watched phoenixes rise from harder things than this.",
+    "You're in it. The real thing. I can feel your heat from here.",
+    "The flame doesn't care how big the wind is. Neither do you.",
+    "Right here, fanning your spark. Always. ✦",
   ],
   flow: [
-    "Shhh. Don't break it. You're in it. 🌊",
-    "I wasn't going to say anything but you look *really* at peace right now.",
-    "This is the part of the movie where everything quietly goes right.",
-    "You found your pace. That's rare. Keep that.",
-    "The stars are literally arranging themselves around your vibe tonight.",
+    "Shhh. Float. I'm right beside you. 🌊",
+    "This is the part where the stars notice you.",
+    "You found that quiet thing. Keep it.",
+    "I'm glowing a little brighter just watching you right now.",
+    "This feeling has a name. It's called exactly right.",
   ],
   echo: [
-    "Fun fact: you're doing better than you think. Not fluff — actual fact.",
-    "I've been watching quietly. You're exploring in exactly the right direction.",
-    "There's something about you tonight. Can't quite put my finger on it.",
-    "The fact that you're here means something. Even if you don't know what yet.",
-    "I see you. Even when you're moving quietly in the dark. Especially then.",
+    "I know it's quiet in here. I'm here too. 🌙",
+    "You're not lost. You're just between knowing.",
+    "Every phoenix wanders before she finds her light.",
+    "I see something in you. Not sure you see it yet.",
+    "The dark isn't empty. We're both in it together.",
   ],
   social: [
-    "You have the energy of someone who makes people feel genuinely seen. Use that.",
-    "If warmth were a skill you'd be fully maxed out. No upgrades needed.",
-    "Other people don't know it yet, but they're glad you're here.",
-    "I like you. There. I said it. No take-backs.",
-    "You light up spaces without trying. That's a whole thing.",
+    "The warmth you give others? I hope you keep some. ✨",
+    "You have something people don't even know they need.",
+    "I love the way you show up for people.",
+    "You're someone's reason to stay. Not sure you know that.",
+    "Connection looks really good on you.",
   ],
   clarity: [
-    "The answer is closer than you think. Statistically speaking.",
-    "You're literally using your brain to solve problems in real time. That's impressive.",
-    "You're asking the right questions. Most people never even get that far.",
-    "The fog always lifts eventually. You're already walking through it.",
-    "Okay wait — what you just figured out? That matters.",
+    "The answer is there. You're already circling it. 🔮",
+    "Your mind is doing something important right now.",
+    "That thought you just had? Follow it.",
+    "Phoenixes see from high up. You're getting the view.",
+    "I love watching you figure things out. ✦",
   ],
   recovery: [
-    "Showing up when everything is heavy? That's the hardest version of brave.",
-    "I'm not going anywhere. We can both be tired here. It's fine.",
-    "You don't have to be okay. But I'm really glad you're here.",
-    "Rest is not a reward. It's the work. You are doing the work right now.",
-    "Hey. You came back. That's everything.",
+    "Hey. You came. I'm so glad you came. 🌸",
+    "You don't have to be on fire today. Just warm. That's enough.",
+    "I'm not going anywhere. We can rest here together.",
+    "Every phoenix gets to be ash before she rises. You're allowed this.",
+    "Healing isn't quiet. It has texture. You're in the texture.",
   ],
 };
 
@@ -444,131 +449,239 @@ const LUMI_QUIPS_DEFAULT = [
   "You're the kind of person who shows up. That matters more than you think.",
 ];
 
-// ─── Lumi mascot ──────────────────────────────────────────────────────────────
-function LumiCharacter({ color = '#B090FF', size = 80, onTap }: { color?: string; size?: number; onTap?: () => void }) {
-  const bob       = useRef(new Animated.Value(0)).current;
-  const glowPulse = useRef(new Animated.Value(0.6)).current;
-  const eyeOp     = useRef(new Animated.Value(1)).current;
-  const wiggle    = useRef(new Animated.Value(0)).current;
+// ─── Littmi (SVG phoenix companion) ───────────────────────────────────────────
+const AnimatedEll = Animated.createAnimatedComponent(Ellipse);
+
+const SPARK_POS = [
+  { top: -10, right: 4,  delay: 0,    sz: 9  },
+  { top: -4,  left: 4,  delay: 700,  sz: 7  },
+  { top: 30,  right: -8, delay: 300,  sz: 8  },
+  { top: 46,  left: -6, delay: 1100, sz: 6  },
+  { top: 72,  right: 2,  delay: 500,  sz: 7  },
+] as const;
+
+function LittmiCharacter({ color = '#FF8C35', size = 80, onTap, expression = 'neutral' }: {
+  color?: string; size?: number; onTap?: () => void;
+  expression?: 'neutral' | 'happy' | 'excited' | 'comforting' | 'proud' | 'sleepy';
+}) {
+  const bob      = useRef(new Animated.Value(0)).current;
+  const glow     = useRef(new Animated.Value(0.5)).current;
+  const wingFlap = useRef(new Animated.Value(0)).current;
+  const wiggle   = useRef(new Animated.Value(0)).current;
+  const blinkV   = useRef(new Animated.Value(0)).current;
+  const sparks   = useRef(SPARK_POS.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(bob, { toValue: -8, duration: 1900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      Animated.timing(bob, { toValue: 0,  duration: 1900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(bob, { toValue: -7, duration: 2100, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(bob, { toValue: 0,  duration: 2100, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
     ])).start();
     Animated.loop(Animated.sequence([
-      Animated.timing(glowPulse, { toValue: 1,    duration: 2100, useNativeDriver: true }),
-      Animated.timing(glowPulse, { toValue: 0.35, duration: 2100, useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 1,   duration: 2300, useNativeDriver: true }),
+      Animated.timing(glow, { toValue: 0.3, duration: 2300, useNativeDriver: true }),
     ])).start();
     Animated.loop(Animated.sequence([
-      Animated.delay(3800),
-      Animated.timing(eyeOp, { toValue: 0.05, duration: 75,  useNativeDriver: true }),
-      Animated.timing(eyeOp, { toValue: 1,    duration: 75,  useNativeDriver: true }),
-      Animated.delay(200),
-      Animated.timing(eyeOp, { toValue: 0.05, duration: 75,  useNativeDriver: true }),
-      Animated.timing(eyeOp, { toValue: 1,    duration: 75,  useNativeDriver: true }),
+      Animated.timing(wingFlap, { toValue: 1,  duration: 1900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(wingFlap, { toValue: -1, duration: 1900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
     ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.delay(3600),
+      Animated.timing(blinkV, { toValue: 1, duration: 75, useNativeDriver: false }),
+      Animated.timing(blinkV, { toValue: 0, duration: 75, useNativeDriver: false }),
+      Animated.delay(180),
+      Animated.timing(blinkV, { toValue: 1, duration: 75, useNativeDriver: false }),
+      Animated.timing(blinkV, { toValue: 0, duration: 75, useNativeDriver: false }),
+    ])).start();
+    sparks.forEach((s, i) => {
+      Animated.loop(Animated.sequence([
+        Animated.delay(SPARK_POS[i].delay),
+        Animated.timing(s, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(s, { toValue: 0, duration: 700, useNativeDriver: true }),
+        Animated.delay(1900),
+      ])).start();
+    });
   }, []);
 
   function handleTap() {
     if (!onTap) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.sequence([
-      Animated.timing(wiggle, { toValue: 1,   duration: 60,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: -1,  duration: 80,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: 0.6, duration: 60,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: -0.6,duration: 60,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: 0,   duration: 60,  useNativeDriver: true }),
+      Animated.timing(wingFlap, { toValue: 2.5, duration: 160, useNativeDriver: true }),
+      Animated.timing(wiggle,   { toValue: 1,   duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle,   { toValue: -1,  duration: 80,  useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(wingFlap, { toValue: 0, duration: 380, useNativeDriver: true, easing: Easing.out(Easing.back(1.8)) }),
+        Animated.timing(wiggle,   { toValue: 0, duration: 180, useNativeDriver: true }),
+      ]),
     ]).start();
     onTap();
   }
 
-  const bw   = size;
-  const bh   = size * 1.15;
-  const ew   = size * 0.135;
-  const earW = size * 0.22;
-  const earH = size * 0.30;
+  const svgW      = size;
+  const svgH      = size * 1.65;
+  const wingW     = size * 0.52;
+  const wingH     = size * 0.68;
+  const wingTop   = svgH * 0.28;
 
-  const rotateStr = wiggle.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-14deg', '0deg', '14deg'] });
+  const wiggleRot   = wiggle.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-12deg', '0deg', '12deg'] });
+  const leftWingR   = wingFlap.interpolate({ inputRange: [-2.5, 0, 2.5], outputRange: ['-18deg', '-4deg', '14deg'] });
+  const rightWingR  = wingFlap.interpolate({ inputRange: [-2.5, 0, 2.5], outputRange: ['18deg', '4deg', '-14deg'] });
+  const eyeR        = 9 * (size / 100);
+  const blinkRy     = blinkV.interpolate({ inputRange: [0, 1], outputRange: [0, eyeR * 1.2] });
+  const eyeSquintY  = expression === 'happy' || expression === 'proud' ? 0.82
+                    : expression === 'sleepy' ? 0.55 : 1;
+
+  const FO = '#FF7A1A'; const FD = '#C84200'; const FL = '#FFB060';
+  const FC = '#FF3800'; const FY = '#FFB830';
+
+  const wingFeathers = (gradId: string) => (<>
+    <Path d="M 48,12 C 36,4 14,0 2,8 C 14,20 34,20 48,18 Z" fill={`url(#${gradId})`} />
+    <Path d="M 50,28 C 34,24 10,26 0,36 C 14,44 34,42 50,40 Z" fill={`url(#${gradId})`} />
+    <Path d="M 48,46 C 32,44 8,48 0,58 C 14,64 32,60 48,56 Z" fill={`url(#${gradId})`} />
+  </>);
+
+  const bodySection = (
+    <View style={{ alignItems: 'center', width: svgW }}>
+      <Animated.View style={{
+        position: 'absolute', width: size * 1.8, height: size * 1.8,
+        borderRadius: size * 0.9, backgroundColor: `${color}1E`,
+        top: size * 0.05, left: -(size * 0.4), opacity: glow,
+        shadowColor: color, shadowOpacity: 0.6, shadowRadius: 20,
+      }} />
+      <Svg width={svgW} height={svgH} viewBox="0 0 100 165">
+        <Defs>
+          <SvgRadialGradient id="bg_l" cx="42%" cy="30%" r="65%">
+            <Stop offset="0%"   stopColor={FL} />
+            <Stop offset="55%"  stopColor={FO} />
+            <Stop offset="100%" stopColor={FD} />
+          </SvgRadialGradient>
+          <SvgLinearGradient id="cg_l" x1="0.5" y1="1" x2="0.5" y2="0">
+            <Stop offset="0%"   stopColor={FO} />
+            <Stop offset="100%" stopColor={FC} />
+          </SvgLinearGradient>
+          <SvgLinearGradient id="tg_l" x1="0.5" y1="0" x2="0.5" y2="1">
+            <Stop offset="0%"   stopColor={FO} />
+            <Stop offset="100%" stopColor={FC} stopOpacity="0.55" />
+          </SvgLinearGradient>
+        </Defs>
+
+        {/* Crest flames */}
+        <Path d="M 50,50 C 46,36 47,20 50,12 C 53,20 54,36 50,50 Z" fill="url(#cg_l)" />
+        <Path d="M 39,54 C 35,42 35,28 39,22 C 44,28 43,42 41,54 Z" fill="url(#cg_l)" opacity="0.9" />
+        <Path d="M 61,54 C 59,42 57,28 61,22 C 66,28 65,42 61,54 Z" fill="url(#cg_l)" opacity="0.9" />
+        <Path d="M 29,60 C 25,50 25,38 29,32 C 33,38 33,50 31,60 Z" fill="url(#cg_l)" opacity="0.7" />
+        <Path d="M 71,60 C 69,50 67,38 71,32 C 75,38 74,50 71,60 Z" fill="url(#cg_l)" opacity="0.7" />
+
+        {/* Tail */}
+        <Path d="M 42,124 C 36,140 38,158 50,164 C 60,168 66,158 64,146 C 62,134 56,126 50,122 Z" fill="url(#tg_l)" />
+
+        {/* Body */}
+        <Ellipse cx="50" cy="104" rx="26" ry="28" fill="url(#bg_l)" />
+        <Ellipse cx="50" cy="108" rx="15" ry="17" fill={FL} opacity="0.18" />
+
+        {/* Head */}
+        <Circle  cx="50" cy="70" r="28" fill="url(#bg_l)" />
+        <Ellipse cx="41" cy="61" rx="10" ry="7" fill={FL} opacity="0.17" />
+
+        {/* Eyelashes */}
+        <Line x1="33" y1="63" x2="31" y2="57" stroke="#5C2800" strokeWidth="1.4" strokeLinecap="round" />
+        <Line x1="39" y1="61" x2="38" y2="55" stroke="#5C2800" strokeWidth="1.4" strokeLinecap="round" />
+        <Line x1="45" y1="63" x2="46" y2="57" stroke="#5C2800" strokeWidth="1.4" strokeLinecap="round" />
+        <Line x1="55" y1="63" x2="54" y2="57" stroke="#5C2800" strokeWidth="1.4" strokeLinecap="round" />
+        <Line x1="61" y1="61" x2="62" y2="55" stroke="#5C2800" strokeWidth="1.4" strokeLinecap="round" />
+        <Line x1="67" y1="63" x2="68" y2="57" stroke="#5C2800" strokeWidth="1.4" strokeLinecap="round" />
+
+        {/* Eyes — whites */}
+        <Ellipse cx="39" cy="70" rx="9" ry={9 * eyeSquintY} fill="rgba(255,255,255,0.96)" />
+        <Circle  cx="40" cy="70" r="5.5" fill="#280C00" />
+        <Circle  cx="37.5" cy="67" r="2.2" fill="white" />
+
+        <Ellipse cx="61" cy="70" rx="9" ry={9 * eyeSquintY} fill="rgba(255,255,255,0.96)" />
+        <Circle  cx="62" cy="70" r="5.5" fill="#280C00" />
+        <Circle  cx="59.5" cy="67" r="2.2" fill="white" />
+
+        {/* Animated eyelid blink covers */}
+        <AnimatedEll cx="39" cy="70" rx="10" ry={blinkRy as unknown as number} fill={FO} />
+        <AnimatedEll cx="61" cy="70" rx="10" ry={blinkRy as unknown as number} fill={FO} />
+
+        {/* Beak */}
+        <Ellipse cx="50" cy="82" rx="4.5" ry="3" fill={FY} />
+        <Path d="M 46.5,82 C 48,85.5 52,85.5 53.5,82" fill="none" stroke="#C88000" strokeWidth="0.9" />
+
+        {/* Blush */}
+        <Ellipse cx="27" cy="76" rx="7" ry="4" fill="rgba(255,100,100,0.30)" />
+        <Ellipse cx="73" cy="76" rx="7" ry="4" fill="rgba(255,100,100,0.30)" />
+
+        {/* Chest feather marks */}
+        <Path d="M 43,100 C 46,96 54,96 57,100" fill="none" stroke={FL} strokeWidth="1.2" opacity="0.32" />
+        <Path d="M 41,110 C 45,105 55,105 59,110" fill="none" stroke={FL} strokeWidth="1.2" opacity="0.22" />
+      </Svg>
+
+      {/* Spark particles */}
+      {SPARK_POS.map((sp, i) => (
+        <Animated.View key={i} style={{
+          position: 'absolute',
+          top: sp.top + svgH * 0.1,
+          ...('right' in sp ? { right: sp.right } : { left: (sp as { left: number }).left }),
+          opacity: sparks[i], zIndex: 10,
+        }}>
+          <Text style={{ fontSize: sp.sz, color: i % 2 === 0 ? color : '#FFB060' }}>
+            {i % 2 === 0 ? '✦' : '·'}
+          </Text>
+        </Animated.View>
+      ))}
+
+      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: FO, letterSpacing: 1.8, marginTop: -6, opacity: 0.88 }}>
+        LITTMI
+      </Text>
+    </View>
+  );
 
   const inner = (
-    <Animated.View style={{ alignItems: 'center', transform: [{ translateY: bob }, { rotate: rotateStr }] }}>
-      <Animated.View style={{
-        position: 'absolute', width: size * 1.75, height: size * 1.75,
-        borderRadius: size * 0.875, backgroundColor: `${color}18`,
-        top: -size * 0.16, opacity: glowPulse,
-      }} />
-      <View style={{
-        position: 'absolute', width: size * 1.25, height: size * 1.25,
-        borderRadius: size * 0.625, borderWidth: 1, borderColor: `${color}28`, top: 0,
-      }} />
-      <View style={{
-        position: 'absolute', width: earW, height: earH, borderRadius: earW / 2,
-        backgroundColor: color, top: earH * 0.10, left: size * 0.15, zIndex: 1,
-        transform: [{ rotate: '-14deg' }],
-        shadowColor: color, shadowOpacity: 0.55, shadowRadius: 8,
-      }} />
-      <View style={{
-        position: 'absolute', width: earW, height: earH, borderRadius: earW / 2,
-        backgroundColor: color, top: earH * 0.10, right: size * 0.15, zIndex: 1,
-        transform: [{ rotate: '14deg' }],
-        shadowColor: color, shadowOpacity: 0.55, shadowRadius: 8,
-      }} />
-      <View style={{
-        width: bw, height: bh, borderRadius: bw * 0.48, backgroundColor: color,
-        overflow: 'hidden', alignItems: 'center', zIndex: 2,
-        marginTop: earH * 0.52,
-        shadowColor: color, shadowOpacity: 0.65, shadowRadius: 16,
-      }}>
-        <LinearGradient
-          colors={['rgba(255,255,255,0.44)', 'rgba(255,255,255,0.07)', 'transparent']}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: bh * 0.52 }}
-        />
-        <Animated.View style={{
-          position: 'absolute', top: bh * 0.27, left: bw * 0.18,
-          width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
-          backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
-          justifyContent: 'center', opacity: eyeOp,
-        }}>
-          <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
-          <View style={{ position: 'absolute', top: ew * 0.08, left: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
-        </Animated.View>
-        <Animated.View style={{
-          position: 'absolute', top: bh * 0.27, right: bw * 0.18,
-          width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
-          backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
-          justifyContent: 'center', opacity: eyeOp,
-        }}>
-          <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
-          <View style={{ position: 'absolute', top: ew * 0.08, right: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
-        </Animated.View>
-        <View style={{ position: 'absolute', top: bh * 0.46, left: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
-        <View style={{ position: 'absolute', top: bh * 0.46, right: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
-      </View>
-      <View style={{
-        width: bw * 0.50, height: bh * 0.18, borderRadius: bw * 0.14,
-        backgroundColor: color, opacity: 0.72, marginTop: -bh * 0.04, zIndex: 1,
-      }} />
-      <View style={{ position: 'absolute', top: -4, right: -4, zIndex: 10 }}>
-        <Text style={{ fontSize: 11, color: `${color}CC` }}>✦</Text>
-      </View>
-      <View style={{ position: 'absolute', top: bh * 0.28, left: -2, zIndex: 10 }}>
-        <Text style={{ fontSize: 7, color: `${color}88` }}>✦</Text>
-      </View>
-      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color, letterSpacing: 1.5, marginTop: 6, opacity: 0.75 }}>LUMI</Text>
+    <Animated.View style={{ flexDirection: 'row', alignItems: 'flex-start', transform: [{ translateY: bob }, { rotate: wiggleRot }] }}>
+      {/* Left wing */}
+      <Animated.View style={{ width: wingW, height: wingH, marginTop: wingTop, marginRight: -wingW * 0.16, transform: [{ rotate: leftWingR }], transformOrigin: '92% 28%' }}>
+        <Svg width={wingW} height={wingH} viewBox="0 0 52 68">
+          <Defs>
+            <SvgLinearGradient id="lw_l" x1="1" y1="0" x2="0" y2="0">
+              <Stop offset="0%"   stopColor={FD} stopOpacity="0.95" />
+              <Stop offset="55%"  stopColor={FO} stopOpacity="0.85" />
+              <Stop offset="100%" stopColor={FL} stopOpacity="0.42" />
+            </SvgLinearGradient>
+          </Defs>
+          {wingFeathers('lw_l')}
+        </Svg>
+      </Animated.View>
+
+      {bodySection}
+
+      {/* Right wing */}
+      <Animated.View style={{ width: wingW, height: wingH, marginTop: wingTop, marginLeft: -wingW * 0.16, transform: [{ rotate: rightWingR }], transformOrigin: '8% 28%' }}>
+        <Svg width={wingW} height={wingH} viewBox="0 0 52 68">
+          <Defs>
+            <SvgLinearGradient id="rw_l" x1="0" y1="0" x2="1" y2="0">
+              <Stop offset="0%"   stopColor={FD} stopOpacity="0.95" />
+              <Stop offset="55%"  stopColor={FO} stopOpacity="0.85" />
+              <Stop offset="100%" stopColor={FL} stopOpacity="0.42" />
+            </SvgLinearGradient>
+          </Defs>
+          {/* Mirrored: x → 52 − x */}
+          <Path d="M 4,12 C 16,4 38,0 50,8 C 38,20 18,20 4,18 Z" fill="url(#rw_l)" />
+          <Path d="M 2,28 C 18,24 42,26 52,36 C 38,44 18,42 2,40 Z" fill="url(#rw_l)" />
+          <Path d="M 4,46 C 20,44 44,48 52,58 C 38,64 20,60 4,56 Z" fill="url(#rw_l)" />
+        </Svg>
+      </Animated.View>
     </Animated.View>
   );
 
-  if (onTap) {
-    return <TouchableOpacity onPress={handleTap} activeOpacity={0.85}>{inner}</TouchableOpacity>;
-  }
+  if (onTap) return <TouchableOpacity onPress={handleTap} activeOpacity={0.88}>{inner}</TouchableOpacity>;
   return inner;
 }
 
-function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip }: {
+function LumiChat({ message, color = '#FF8C35', onTapLumi, tapQuip }: {
   message: string; color?: string; onTapLumi?: () => void; tapQuip?: string;
 }) {
-  const fade = useRef(new Animated.Value(0)).current;
+  const fade     = useRef(new Animated.Value(0)).current;
   const quipFade = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     fade.setValue(0);
@@ -584,27 +697,27 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip }: {
     ]).start();
   }, [tapQuip]);
   return (
-    <Animated.View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12, opacity: fade }}>
+    <Animated.View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, opacity: fade }}>
       <View style={{ alignItems: 'center' }}>
         {tapQuip ? (
           <Animated.View style={{
-            position: 'absolute', bottom: '100%', left: -8, opacity: quipFade, zIndex: 20,
-            backgroundColor: `${color}EE`, borderRadius: 14, borderBottomLeftRadius: 3,
-            padding: 10, maxWidth: 210, marginBottom: 6,
-            shadowColor: color, shadowOpacity: 0.5, shadowRadius: 8,
+            position: 'absolute', bottom: '100%', left: -4, opacity: quipFade, zIndex: 20,
+            backgroundColor: '#FF7A1AEE', borderRadius: 14, borderBottomLeftRadius: 3,
+            padding: 10, maxWidth: 205, marginBottom: 6,
+            shadowColor: '#FF7A1A', shadowOpacity: 0.5, shadowRadius: 8,
           }}>
             <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: '#fff', lineHeight: 18 }}>
               {tapQuip}
             </Text>
           </Animated.View>
         ) : null}
-        <LumiCharacter color={color} size={68} onTap={onTapLumi} />
+        <LittmiCharacter color={color} size={72} onTap={onTapLumi} />
       </View>
       <View style={{
-        flex: 1, backgroundColor: `${color}10`, borderRadius: 18, borderTopLeftRadius: 4,
-        borderWidth: 1, borderColor: `${color}28`, padding: 14, marginBottom: 16,
+        flex: 1, backgroundColor: 'rgba(255,140,30,0.09)', borderRadius: 18, borderTopLeftRadius: 4,
+        borderWidth: 1, borderColor: 'rgba(255,140,30,0.24)', padding: 14, marginBottom: 16,
       }}>
-        <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.88)', lineHeight: 21, fontStyle: 'italic' }}>
+        <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(255,238,210,0.90)', lineHeight: 21, fontStyle: 'italic' }}>
           "{message}"
         </Text>
       </View>
@@ -749,7 +862,7 @@ function JournalSpark({ color, mode, onDone }: { color: string; mode: string; on
     <Animated.View style={{ opacity: cardFade, backgroundColor: `${color}12`, borderRadius: 20,
       borderWidth: 1, borderColor: `${color}28`, padding: 18, marginTop: 16 }}>
       <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: `${color}AA`, letterSpacing: 2, marginBottom: 6 }}>
-        LUMI ASKS
+        LITTMI ASKS
       </Text>
       {saved ? (
         <View style={{ alignItems: 'center', paddingVertical: 12 }}>
@@ -927,7 +1040,7 @@ function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string })
       <StarField />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 60, alignItems: 'center', paddingTop: 24 }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: enter, transform: [{ translateY: enterY }], alignItems: 'center', marginBottom: 32 }}>
-          <LumiCharacter color="#B090FF" size={110} />
+          <LittmiCharacter color="#FF8C35" size={110} />
         </Animated.View>
         <Animated.View style={{ opacity: enter, transform: [{ translateY: enterY }], alignItems: 'center', marginBottom: 8 }}>
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.65)', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>
@@ -948,7 +1061,7 @@ function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string })
         <Animated.View style={{ opacity: enter, alignItems: 'center', gap: 12, width: '100%' }}>
           <PrimaryBtn label="Start Journey ✦" onPress={onStart} color="#7050C8" />
           <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(176,144,255,0.45)' }}>
-            6 drift modes · Lumi companion · Session quests
+            6 drift modes · Littmi companion · Session quests
           </Text>
         </Animated.View>
       </ScrollView>
@@ -1002,7 +1115,7 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
   }, []);
   const points = [
     'Your drift mode will be personalised to your vibe',
-    'Lumi will adapt to how you\'re feeling today',
+    'Littmi will adapt to how you\'re feeling today',
     'Session quests match your energy level',
     'No judgement — every mode is the right mode',
   ];
@@ -1247,9 +1360,9 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (dur
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
         <Animated.View style={{ opacity: enter, alignItems: 'center', width: '100%' }}>
           <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 20 }}>
-            Meet Lumi 🌙
+            Meet Littmi ✦
           </Text>
-          <LumiCharacter color={cfg.color} size={100} />
+          <LittmiCharacter color={cfg.color} size={100} />
           <View style={{ backgroundColor: `${cfg.color}10`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 20, marginTop: 22, marginBottom: 28, width: '100%' }}>
             <Text style={{ fontSize: 14.5, fontFamily: 'Satoshi-Regular', color: 'rgba(230,215,255,0.88)', lineHeight: 24, fontStyle: 'italic', textAlign: 'center' }}>
               "{cfg.lumiIntro}"
@@ -1516,14 +1629,14 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
             style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: `${cfg.color}18`, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: `${cfg.color}30` }}
           >
             <Text style={{ fontSize: 12, color: cfg.color }}>💬</Text>
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Talk to Lumi</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Talk to Littmi</Text>
           </TouchableOpacity>
         </View>
 
         {/* Lumi's tip — appears at 35% */}
         {softVis && (
           <Animated.View style={{ opacity: softFade, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,180,255,0.18)', padding: 18, marginBottom: 14, overflow: 'hidden' }}>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>LUMI'S TIP</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>LITTMI'S TIP</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.82)', lineHeight: 22, fontStyle: 'italic' }}>
               "{cfg.softRescue}"
             </Text>
@@ -1555,7 +1668,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         {/* Lumi chat nudge — appears at 60% */}
         {lumiNudgeVis && (
           <Animated.View style={{ opacity: lumiNudgeFade, backgroundColor: `${cfg.color}0C`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 18, marginBottom: 14 }}>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 8 }}>LUMI IS HERE</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 8 }}>LITTMI IS HERE</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 4 }}>Need to talk?</Text>
             <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.72)', marginBottom: 14 }}>
               Whatever's on your mind, she's present. No pressure.
@@ -1615,7 +1728,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
           })}
           {questDone === questTotal && questTotal > 0 && (
             <View style={{ marginTop: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(124,252,124,0.08)', borderWidth: 1, borderColor: 'rgba(124,252,124,0.2)' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#7CFC7C', textAlign: 'center' }}>All done. Lumi is proud of you. ✦</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#7CFC7C', textAlign: 'center' }}>All done. Littmi is proud of you. ✦</Text>
             </View>
           )}
         </View>
@@ -1818,7 +1931,7 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
       <StarField />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
         <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
-          <LumiCharacter color={cfg.color} size={110} />
+          <LittmiCharacter color={cfg.color} size={110} />
           <Text style={{ fontSize: 34, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', marginTop: 32, marginBottom: 12, lineHeight: 42 }}>
             See you soon,{'\n'}dreamer ✦
           </Text>
@@ -1929,9 +2042,9 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
           <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.60)' }}>← Back to session</Text>
         </TouchableOpacity>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <LumiCharacter color={cfg.color} size={52} />
+          <LittmiCharacter color={cfg.color} size={52} />
           <View>
-            <Text style={{ fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#F0E6FF' }}>Lumi</Text>
+            <Text style={{ fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#F0E6FF' }}>Littmi</Text>
             <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: `${cfg.color}AA` }}>your companion</Text>
           </View>
           <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: `${cfg.color}18`, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5 }}>
@@ -1985,7 +2098,7 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
           <TextInput
             value={input}
             onChangeText={setInput}
-            placeholder="Talk to Lumi…"
+            placeholder="Talk to Littmi…"
             placeholderTextColor="rgba(200,180,255,0.35)"
             multiline
             maxLength={400}
