@@ -43,6 +43,9 @@ interface GuideProfile {
   followerCount:     number;
   avatarUri:         string | null;
   mood:              string;
+  traits:            string[];
+  role:              string | null;
+  country:           string | null;
   isFollowing:       boolean;
   isAvailableNow:    boolean;
 }
@@ -210,10 +213,24 @@ export default function GuideProfileScreen() {
             </Text>
           </View>
 
+          {/* Mood badge */}
+          <View style={[styles.moodBadge, { backgroundColor: 'rgba(200,184,232,0.10)', borderColor: 'rgba(200,184,232,0.22)' }]}>
+            <Text style={styles.moodBadgeText}>{guide.mood}</Text>
+          </View>
+
           {/* Star rating */}
-          <View style={{ marginTop: 10 }}>
+          <View style={{ marginTop: 8 }}>
             <StarRating rating={guide.peaceRating} />
           </View>
+
+          {/* Role + country */}
+          {(guide.role || guide.country) && (
+            <View style={styles.heroMeta}>
+              {guide.role    && <Text style={styles.heroMetaText}>{guide.role}</Text>}
+              {guide.role && guide.country && <Text style={styles.heroMetaSep}>·</Text>}
+              {guide.country && <Text style={styles.heroMetaText}>{guide.country}</Text>}
+            </View>
+          )}
         </View>
       </LinearGradient>
 
@@ -316,6 +333,25 @@ export default function GuideProfileScreen() {
                 <Text style={[styles.cardTitle, { color: colors.foreground }]}>About</Text>
               </View>
               <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>{guide.bio}</Text>
+            </View>
+          )}
+
+          {/* ── Traits ────────────────────────────────────── */}
+          {guide.traits.length > 0 && (
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: 'rgba(200,168,75,0.14)' }]}>
+                  <Icon name="heart" size={14} color="#C8A84B" />
+                </View>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Traits</Text>
+              </View>
+              <View style={styles.topicWrap}>
+                {guide.traits.map(trait => (
+                  <View key={trait} style={[styles.traitChip, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}28` }]}>
+                    <Text style={[styles.traitText, { color: colors.foreground }]}>{trait}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
 
@@ -509,4 +545,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   messageBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+
+  // Mood badge in hero
+  moodBadge: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1, marginTop: 8,
+  },
+  moodBadgeText: {
+    fontSize: 12, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,210,255,0.85)', letterSpacing: 0.2,
+  },
+
+  // Role + country in hero
+  heroMeta: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
+  },
+  heroMetaText: {
+    fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.55)',
+  },
+  heroMetaSep: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.30)',
+  },
+
+  // Trait chips
+  traitChip: {
+    paddingHorizontal: 11, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1,
+  },
+  traitText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 });

@@ -1,5 +1,5 @@
 import { db, messagesTable, characterTable } from "@workspace/db";
-import { and, eq, or, desc, asc } from "drizzle-orm";
+import { and, eq, or, desc, asc, inArray } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { z } from "zod";
@@ -47,16 +47,15 @@ router.get("/messages", requireAuth, async (req, res) => {
           .where(eq(characterTable.userId, partnerArr[0])) // quick — refine below
       : [];
 
-    // Actually fetch all partners
+    // Fetch only the specific partners
     const charMap = new Map<string, { name: string; username: string | null; avatarUri: string | null }>();
     if (partnerArr.length > 0) {
       const charRows = await db
         .select({ userId: characterTable.userId, name: characterTable.name, username: characterTable.username, avatarUri: characterTable.avatarUri })
-        .from(characterTable);
+        .from(characterTable)
+        .where(inArray(characterTable.userId, partnerArr));
       for (const c of charRows) {
-        if (partnerIds.has(c.userId)) {
-          charMap.set(c.userId, { name: c.name, username: c.username ?? null, avatarUri: c.avatarUri ?? null });
-        }
+        charMap.set(c.userId, { name: c.name, username: c.username ?? null, avatarUri: c.avatarUri ?? null });
       }
     }
 

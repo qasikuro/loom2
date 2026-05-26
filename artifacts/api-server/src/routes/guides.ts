@@ -50,6 +50,9 @@ function serializeGuide(
     followerCount,
     avatarUri:         safeDiscoverUri(row.avatarUri),
     mood:              row.mood,
+    traits:            Array.isArray(row.traits) ? row.traits as string[] : [],
+    role:              row.role   ?? null,
+    country:           row.country ?? null,
     isFollowing,
     isAvailableNow:    isAvailableNow(avail),
   };
