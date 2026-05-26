@@ -5,7 +5,7 @@ import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -81,6 +81,16 @@ export default function MessagesScreen() {
   }, [userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh every 8 s while the screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      const interval = setInterval(() => {
+        load().catch(() => null);
+      }, 8000);
+      return () => clearInterval(interval);
+    }, [load]),
+  );
 
   // Scroll to bottom whenever messages change
   useEffect(() => {

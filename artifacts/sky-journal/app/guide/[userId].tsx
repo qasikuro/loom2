@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { useAuth } from '@clerk/expo';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
@@ -71,16 +72,16 @@ function StarRating({ rating }: { rating: number }) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <Icon
-          key={i}
-          name={i < full ? 'star' : half && i === full ? 'star' : 'star'}
-          size={14}
-          color={i < full || (half && i === full) ? '#C8A84B' : 'rgba(200,168,75,0.22)'}
-        />
-      ))}
-      <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', marginLeft: 4 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+      {Array.from({ length: 5 }, (_, i) => {
+        const filled = i < full || (half && i === full);
+        return (
+          <Text key={i} style={{ fontSize: 18, color: filled ? '#C8A84B' : 'rgba(200,168,75,0.25)', lineHeight: 22 }}>
+            {filled ? '★' : '☆'}
+          </Text>
+        );
+      })}
+      <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', marginLeft: 6 }}>
         {rating.toFixed(1)}
       </Text>
     </View>
@@ -91,7 +92,9 @@ export default function GuideProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const colors     = useColors();
   const insets     = useSafeAreaInsets();
+  const { userId: myUserId } = useAuth();
   const { followingIds, followUser, unfollowUser } = useApp();
+  const isOwnProfile = !!myUserId && myUserId === userId;
 
   const [guide,   setGuide]   = useState<GuideProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -341,31 +344,53 @@ export default function GuideProfileScreen() {
 
           {/* ── CTA buttons ───────────────────────────────── */}
           <View style={styles.ctaRow}>
-            <TouchableOpacity
-              style={[
-                styles.followBtn,
-                isFollowing
-                  ? { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}40` }
-                  : { backgroundColor: colors.primary, borderColor: colors.primary },
-                SHADOW.sm,
-              ]}
-              onPress={handleFollow}
-              activeOpacity={0.85}
-            >
-              <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={15} color={isFollowing ? colors.primary : '#fff'} />
-              <Text style={[styles.followBtnText, { color: isFollowing ? colors.primary : '#fff' }]}>
-                {isFollowing ? 'Following' : 'Follow Guide'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.messageBtn, { backgroundColor: 'rgba(120,70,255,0.14)', borderColor: 'rgba(120,70,255,0.35)' }, SHADOW.sm]}
-              onPress={handleMessage}
-              activeOpacity={0.85}
-            >
-              <Icon name="message-circle" size={15} color="#9878D8" />
-              <Text style={[styles.messageBtnText, { color: '#9878D8' }]}>Message</Text>
-            </TouchableOpacity>
+            {isOwnProfile ? (
+              <>
+                <TouchableOpacity
+                  style={[styles.followBtn, { backgroundColor: colors.primary }, SHADOW.sm]}
+                  onPress={() => router.push('/(tabs)/profile')}
+                  activeOpacity={0.85}
+                >
+                  <Icon name="user" size={15} color="#fff" />
+                  <Text style={styles.followBtnText}>My Profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.messageBtn, SHADOW.sm]}
+                  onPress={() => router.push('/(tabs)/profile')}
+                  activeOpacity={0.85}
+                >
+                  <Icon name="edit-2" size={15} color="#9878D8" />
+                  <Text style={[styles.messageBtnText, { color: '#9878D8' }]}>Edit Guide</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.followBtn,
+                    isFollowing
+                      ? { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}40` }
+                      : { backgroundColor: colors.primary, borderColor: colors.primary },
+                    SHADOW.sm,
+                  ]}
+                  onPress={handleFollow}
+                  activeOpacity={0.85}
+                >
+                  <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={15} color={isFollowing ? colors.primary : '#fff'} />
+                  <Text style={[styles.followBtnText, { color: isFollowing ? colors.primary : '#fff' }]}>
+                    {isFollowing ? 'Following' : 'Follow Guide'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.messageBtn, SHADOW.sm]}
+                  onPress={handleMessage}
+                  activeOpacity={0.85}
+                >
+                  <Icon name="message-circle" size={15} color="#9878D8" />
+                  <Text style={[styles.messageBtnText, { color: '#9878D8' }]}>Message</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
         </Animated.View>
