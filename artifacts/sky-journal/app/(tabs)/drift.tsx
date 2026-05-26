@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useApp } from '@/context/AppContext';
+import { useApp, apiFetch } from '@/context/AppContext';
 
 const { width: SW } = Dimensions.get('window');
 
@@ -87,13 +87,27 @@ const QUESTIONS = [
 ];
 
 // ─── Mode config ──────────────────────────────────────────────────────────────
+// ─── AI plan (from /api/drift/analyze) ───────────────────────────────────────
+interface DriftQuest { title: string; description: string; type: string; }
+interface DriftPlan {
+  mode: string; archetype: string; confidence: number;
+  intention: string;
+  lumiIntro: string; lumiMessages: string[];
+  quests: DriftQuest[];
+  softRescue: string; reflection: string;
+  evolution: [string, string, string]; stability: number;
+}
+
 interface ModeConfig {
   name: string; archetype: string; symbol: string; color: string;
   gradient: readonly [string, string, string]; bg: readonly [string, string];
   tagline: string; description: string; traits: string[];
   perks: string[]; whatChanged: string[];
   lumiIntro: string; lumiSession: string;
+  lumiMessages?: string[];
+  intention?: string;
   quest: string; questTotal: number;
+  quests?: DriftQuest[];
   events: string[]; softRescue: string;
   reflection: string;
   evolution: [string, string, string];
@@ -778,9 +792,16 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
           <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.65)', marginTop: 4, letterSpacing: 0.5 }}>
             {cfg.symbol}  {cfg.archetype}
           </Text>
+          {cfg.intention ? (
+            <View style={{ marginTop: 18, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 16, backgroundColor: `${cfg.color}14`, borderWidth: 1, borderColor: `${cfg.color}30` }}>
+              <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(230,215,255,0.85)', textAlign: 'center', fontStyle: 'italic', lineHeight: 22 }}>
+                {cfg.intention}
+              </Text>
+            </View>
+          ) : null}
         </Animated.View>
 
-        <Animated.View style={{ opacity: enter, width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 22, marginBottom: 20 }}>
+        <Animated.View style={{ opacity: enter, width: SW - 56, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 22, marginBottom: 20 }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.85)', lineHeight: 25, marginBottom: 20 }}>
             {cfg.description}
@@ -945,7 +966,9 @@ function SessionScreen({ cfg, sessionStart, onEnd, onGuides }: {
   const softFade  = useRef(new Animated.Value(0)).current;
   const socialFade= useRef(new Animated.Value(0)).current;
 
-  const lumiMessages = [cfg.lumiSession, '✦ You\'re doing great. Keep going.', 'I\'m watching the stars with you.', 'This moment is yours. Breathe.'];
+  const lumiMessages = cfg.lumiMessages?.length
+    ? cfg.lumiMessages
+    : [cfg.lumiSession, '✦ You\'re doing great. Keep going.', 'I\'m watching the stars with you.', 'This moment is yours. Breathe.'];
 
   useEffect(() => {
     const id = setInterval(() => setElapsed(s => s + 1), 1000);
@@ -1434,6 +1457,7 @@ export default function DriftScreen() {
   const [answers,      setAnswers]      = useState<Record<string, string>>({});
   const [mode,         setMode]         = useState<string | null>(null);
   const [confidence,   setConfidence]   = useState(75);
+  const [driftPlan,    setDriftPlan]    = useState<DriftPlan | null>(null);
   const [sessionStart, setSessionStart] = useState<number | null>(null);
   const [result,       setResult]       = useState<SessionResult>({ elapsed: 0, questDone: 0, momentsFound: 0 });
 
@@ -1486,13 +1510,31 @@ export default function DriftScreen() {
     }, 320);
   }
 
-  function handleBeginAnalysis() {
-    const detected = detectMode(answers);
-    const conf     = calcConfidence(answers);
-    setMode(detected);
-    setConfidence(conf);
+  async function handleBeginAnalysis() {
     go('analyzing');
-    setTimeout(() => go('vibe_reveal'), 3400);
+
+    const [plan] = await Promise.all([
+      apiFetch<DriftPlan>('/drift/analyze', {
+        method: 'POST',
+        body: JSON.stringify({
+          answers,
+          characterName: character?.name,
+          characterMood: character?.mood,
+        }),
+      }).catch(() => null as DriftPlan | null),
+      new Promise<void>(resolve => setTimeout(resolve, 4200)),
+    ]);
+
+    if (plan && MODES[plan.mode]) {
+      setDriftPlan(plan);
+      setMode(plan.mode);
+      setConfidence(plan.confidence);
+    } else {
+      setMode(detectMode(answers));
+      setConfidence(calcConfidence(answers));
+    }
+
+    go('vibe_reveal');
   }
 
   function handleStartSession() {
@@ -1512,13 +1554,28 @@ export default function DriftScreen() {
     setQuestionIdx(0);
     setAnswers({});
     setMode(null);
+    setDriftPlan(null);
     setSessionStart(null);
     setResult({ elapsed: 0, questDone: 0, momentsFound: 0 });
     AsyncStorage.removeItem('drift_session_v1').catch(() => {});
     go('welcome');
   }
 
-  const cfg = mode ? MODES[mode] : null;
+  const cfg: ModeConfig | null = mode && MODES[mode] ? {
+    ...MODES[mode],
+    ...(driftPlan ? {
+      archetype:    driftPlan.archetype,
+      intention:    driftPlan.intention,
+      lumiIntro:    driftPlan.lumiIntro,
+      lumiMessages: driftPlan.lumiMessages,
+      quest:        driftPlan.quests[0]?.title ?? MODES[mode].quest,
+      quests:       driftPlan.quests,
+      softRescue:   driftPlan.softRescue,
+      reflection:   driftPlan.reflection,
+      evolution:    driftPlan.evolution,
+      stability:    driftPlan.stability,
+    } : {}),
+  } : null;
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
