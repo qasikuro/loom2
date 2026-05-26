@@ -214,19 +214,15 @@ export default function GuideProfileScreen() {
             </Text>
           </View>
 
-          {/* Star rating */}
-          <View style={{ marginTop: 10 }}>
-            <StarRating rating={guide.peaceRating} />
-          </View>
         </View>
       </LinearGradient>
 
       {/* ── Stats row ────────────────────────────────────────── */}
       <Animated.View style={[styles.statsRow, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
         {[
-          { value: guide.followerCount,   label: 'Followers'  },
-          { value: guide.dreamersGuided,  label: 'Dreamers'   },
-          { value: guide.peaceRating.toFixed(1), label: 'Peace'  },
+          { value: guide.followerCount,        label: 'Followers' },
+          { value: guide.guideTopics.length,   label: 'Topics'    },
+          { value: avail ? avail.days.length : 0, label: 'Days/wk' },
         ].map((s, i) => (
           <View key={i} style={styles.statItem}>
             <Text style={[styles.statValue, { color: colors.foreground }]}>{s.value}</Text>

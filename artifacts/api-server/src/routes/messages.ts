@@ -1,5 +1,5 @@
 import { db, messagesTable, characterTable } from "@workspace/db";
-import { and, eq, or, desc, asc, inArray } from "drizzle-orm";
+import { and, eq, or, desc, asc, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { z } from "zod";
@@ -38,16 +38,8 @@ router.get("/messages", requireAuth, async (req, res) => {
       }
     }
 
-    // Fetch partner names
+    // Fetch partner character info in one query
     const partnerArr = Array.from(partnerIds);
-    const chars = partnerArr.length > 0
-      ? await db
-          .select({ userId: characterTable.userId, name: characterTable.name, username: characterTable.username, avatarUri: characterTable.avatarUri })
-          .from(characterTable)
-          .where(eq(characterTable.userId, partnerArr[0])) // quick — refine below
-      : [];
-
-    // Fetch only the specific partners
     const charMap = new Map<string, { name: string; username: string | null; avatarUri: string | null }>();
     if (partnerArr.length > 0) {
       const charRows = await db
@@ -133,10 +125,30 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
   }
 
   try {
+    // Check if this is the first message in this thread (before inserting)
+    const existing = await db
+      .select({ id: messagesTable.id })
+      .from(messagesTable)
+      .where(
+        or(
+          and(eq(messagesTable.fromUserId, fromId), eq(messagesTable.toUserId, toId)),
+          and(eq(messagesTable.fromUserId, toId),   eq(messagesTable.toUserId, fromId)),
+        ),
+      )
+      .limit(1);
+
     const [msg] = await db
       .insert(messagesTable)
       .values({ fromUserId: fromId, toUserId: toId, content: parsed.data.content })
       .returning();
+
+    // First contact with a guide → increment their dreamersGuided counter
+    if (existing.length === 0) {
+      await db
+        .update(characterTable)
+        .set({ dreamersGuided: sql`${characterTable.dreamersGuided} + 1` })
+        .where(and(eq(characterTable.userId, toId), eq(characterTable.isGuide, true)));
+    }
 
     return res.status(201).json({
       id:         msg.id,

@@ -4,7 +4,7 @@ import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React from 'react';
 import { Image } from 'expo-image';
 import {
   Dimensions,
@@ -156,8 +156,6 @@ export default function MyStoriesScreen() {
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const botPad = Platform.OS === 'web' ? 20 : insets.bottom + 16;
 
-  const [tab, setTab] = useState<'mine' | 'shared'>('mine');
-
   const sorted = [...stories].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
@@ -188,46 +186,19 @@ export default function MyStoriesScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tab bar */}
-      <View style={[styles.tabBar, { backgroundColor: `${colors.card}CC`, borderColor: colors.border }]}>
-        {(['mine', 'shared'] as const).map(t => (
-          <TouchableOpacity
-            key={t}
-            style={[
-              styles.tabBtn,
-              tab === t && { backgroundColor: colors.primary },
-            ]}
-            onPress={() => { Haptics.selectionAsync(); setTab(t); }}
-            activeOpacity={0.8}
-          >
-            <Text style={[
-              styles.tabBtnText,
-              { color: tab === t ? '#fff' : colors.mutedForeground },
-              tab === t && { fontFamily: 'Satoshi-Bold' },
-            ]}>
-              {t === 'mine' ? tr('profile.myStoriesTitle') : tr('profile.sharedWithMe')}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
       {/* Story grid */}
-      {tab === 'mine' ? (
-        sorted.length === 0 ? (
-          <EmptyState tab="mine" colors={colors} />
-        ) : (
-          <FlatList
-            data={sorted}
-            keyExtractor={s => s.id}
-            renderItem={renderItem}
-            numColumns={2}
-            contentContainerStyle={[styles.grid, { paddingBottom: botPad }]}
-            columnWrapperStyle={styles.row}
-            showsVerticalScrollIndicator={false}
-          />
-        )
+      {sorted.length === 0 ? (
+        <EmptyState tab="mine" colors={colors} />
       ) : (
-        <EmptyState tab="shared" colors={colors} />
+        <FlatList
+          data={sorted}
+          keyExtractor={s => s.id}
+          renderItem={renderItem}
+          numColumns={2}
+          contentContainerStyle={[styles.grid, { paddingBottom: botPad }]}
+          columnWrapperStyle={styles.row}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </View>
   );
