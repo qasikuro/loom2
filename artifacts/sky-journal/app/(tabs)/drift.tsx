@@ -916,10 +916,17 @@ function ModePerksScreen({ cfg, onGotIt }: { cfg: ModeConfig; onGotIt: () => voi
   );
 }
 
-function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: () => void }) {
+const DURATIONS = [
+  { label: 'Quick',  mins: 5,  desc: '5 min · small and focused' },
+  { label: 'Steady', mins: 15, desc: '15 min · a real moment' },
+  { label: 'Deep',   mins: 30, desc: '30 min · full presence' },
+];
+
+function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (durationSecs: number) => void }) {
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
+  const [selectedMins, setSelectedMins] = useState(15);
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 800, delay: 150, useNativeDriver: true }).start();
   }, []);
@@ -928,20 +935,39 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: () =
       <LinearGradient colors={cfg.gradient} style={StyleSheet.absoluteFill} />
       <StarField />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
-        <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
+        <Animated.View style={{ opacity: enter, alignItems: 'center', width: '100%' }}>
           <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 20 }}>
             Meet Lumi 🌙
           </Text>
-          <LumiCharacter color={cfg.color} size={110} />
-          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.55)', marginTop: 16, letterSpacing: 0.5, textAlign: 'center' }}>
-            Your companion for this journey.
-          </Text>
-          <View style={{ backgroundColor: `${cfg.color}10`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 22, marginTop: 28, marginBottom: 40, width: '100%' }}>
-            <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(230,215,255,0.88)', lineHeight: 24, fontStyle: 'italic', textAlign: 'center' }}>
+          <LumiCharacter color={cfg.color} size={100} />
+          <View style={{ backgroundColor: `${cfg.color}10`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 20, marginTop: 22, marginBottom: 28, width: '100%' }}>
+            <Text style={{ fontSize: 14.5, fontFamily: 'Satoshi-Regular', color: 'rgba(230,215,255,0.88)', lineHeight: 24, fontStyle: 'italic', textAlign: 'center' }}>
               "{cfg.lumiIntro}"
             </Text>
           </View>
-          <PrimaryBtn label="Continue" onPress={onContinue} color={cfg.color} />
+
+          {/* Duration picker */}
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.50)', letterSpacing: 1.5, marginBottom: 14 }}>HOW LONG?</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 32, width: '100%' }}>
+            {DURATIONS.map(d => {
+              const sel = selectedMins === d.mins;
+              return (
+                <TouchableOpacity
+                  key={d.mins}
+                  onPress={() => { Haptics.selectionAsync(); setSelectedMins(d.mins); }}
+                  activeOpacity={0.8}
+                  style={{ flex: 1, paddingVertical: 14, borderRadius: 18, borderWidth: 1.5,
+                    borderColor: sel ? cfg.color : 'rgba(200,180,255,0.18)',
+                    backgroundColor: sel ? `${cfg.color}20` : 'rgba(255,255,255,0.03)',
+                    alignItems: 'center', gap: 4 }}
+                >
+                  <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: sel ? cfg.color : 'rgba(200,180,255,0.55)' }}>{d.label}</Text>
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: sel ? `${cfg.color}AA` : 'rgba(180,160,255,0.38)', textAlign: 'center' }}>{d.desc}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <PrimaryBtn label={`Begin · ${selectedMins} min`} onPress={() => onContinue(selectedMins * 60)} color={cfg.color} />
         </Animated.View>
       </View>
     </View>
@@ -953,47 +979,95 @@ const QUEST_TYPE_ICONS: Record<string, string> = {
   connection: '🤝', challenge: '⚔️', rest: '🌙',
 };
 
-function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
-  cfg: ModeConfig; sessionStart: number;
+function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
+  cfg: ModeConfig; sessionStart: number; duration: number;
   onEnd: (r: SessionResult) => void;
   onChat: () => void;
 }) {
   const insets    = useSafeAreaInsets();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const btmPad    = Platform.OS === 'web' ? 80 : insets.bottom + 20;
-  const [elapsed, setElapsed]     = useState(Math.floor((Date.now() - sessionStart) / 1000));
-  const [lumiIdx, setLumiIdx]     = useState(0);
-  const [eventTxt, setEventTxt]   = useState('');
-  const [eventVis, setEventVis]   = useState(false);
-  const [moments, setMoments]     = useState(0);
+  const [elapsed, setElapsed]           = useState(Math.floor((Date.now() - sessionStart) / 1000));
+  const [lumiIdx, setLumiIdx]           = useState(0);
+  const [eventTxt, setEventTxt]         = useState('');
+  const [eventVis, setEventVis]         = useState(false);
+  const [moments, setMoments]           = useState(0);
   const [checkedTasks, setCheckedTasks] = useState<Set<number>>(new Set());
-  const [softVis, setSoftVis]     = useState(false);
+  const [softVis, setSoftVis]           = useState(false);
   const [lumiNudgeVis, setLumiNudgeVis] = useState(false);
+  const [timeUpVis, setTimeUpVis]       = useState(false);
   const eventFade    = useRef(new Animated.Value(0)).current;
   const softFade     = useRef(new Animated.Value(0)).current;
   const lumiNudgeFade= useRef(new Animated.Value(0)).current;
+  const timeUpFade   = useRef(new Animated.Value(0)).current;
 
-  // Resolve quest tasks: AI quests → mode fallback → generic
+  const remaining = Math.max(0, duration - elapsed);
+  const progress  = Math.min(1, elapsed / duration);
+  // Phase: 0–30% = settling, 30–65% = flowing, 65–85% = deepening, 85–100% = winding down
+  const phase = progress < 0.3 ? 0 : progress < 0.65 ? 1 : progress < 0.85 ? 2 : 3;
+
   const tasks: DriftQuest[] = cfg.quests?.length
     ? cfg.quests
     : FALLBACK_QUESTS[cfg.name.toLowerCase().split(' ')[0]] ?? FALLBACK_QUESTS.echo;
 
-  const questDone = checkedTasks.size;
+  const questDone  = checkedTasks.size;
   const questTotal = tasks.length;
 
-  const lumiMessages = cfg.lumiMessages?.length
+  // Phase-aware Lumi messages — early pool, mid pool, deep pool, wind-down pool
+  const allLumiMsgs = cfg.lumiMessages?.length
     ? cfg.lumiMessages
-    : [cfg.lumiSession, 'You\'re doing great. Keep going.', 'I\'m watching the stars with you.', 'This moment is yours. Breathe.'];
+    : [cfg.lumiSession, 'You\'re doing great.', 'I\'m watching the stars with you.', 'This moment is yours.', 'Still here with you.'];
+
+  // Spread 5 messages across 4 phases; cycle within current phase's message
+  const phaseMsg = allLumiMsgs[Math.min(phase, allLumiMsgs.length - 1)];
+  const windDownMsgs = [
+    'You\'re almost at the end. Let that feel like something.',
+    'This is the part where you take a breath and look back.',
+    'Nearly there. You showed up. That matters.',
+  ];
+  const currentLumiMsg = phase === 3
+    ? windDownMsgs[lumiIdx % windDownMsgs.length]
+    : allLumiMsgs[Math.min(lumiIdx, allLumiMsgs.length - 1)];
 
   useEffect(() => {
     const id = setInterval(() => setElapsed(s => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
+  // Advance Lumi message ~every 2 min (relative to duration)
   useEffect(() => {
-    const id = setInterval(() => setLumiIdx(i => (i + 1) % lumiMessages.length), 32000);
+    const interval = Math.max(60000, (duration * 1000) / (allLumiMsgs.length + 1));
+    const id = setInterval(() => setLumiIdx(i => i + 1), interval);
     return () => clearInterval(id);
-  }, []);
+  }, [duration]);
+
+  // Soft tip at 35% of session
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSoftVis(true);
+      Animated.timing(softFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    }, duration * 0.35 * 1000);
+    return () => clearTimeout(t);
+  }, [duration]);
+
+  // Lumi nudge at 60% of session
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setLumiNudgeVis(true);
+      Animated.timing(lumiNudgeFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+    }, duration * 0.6 * 1000);
+    return () => clearTimeout(t);
+  }, [duration]);
+
+  // Time's up at 100%
+  useEffect(() => {
+    const t = setTimeout(() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setTimeUpVis(true);
+      Animated.timing(timeUpFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+    }, duration * 1000);
+    return () => clearTimeout(t);
+  }, [duration]);
 
   const showEvent = () => {
     const evts = cfg.events;
@@ -1003,35 +1077,20 @@ function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
     eventFade.setValue(0);
     Animated.sequence([
       Animated.timing(eventFade, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.delay(5000),
+      Animated.delay(4000),
       Animated.timing(eventFade, { toValue: 0, duration: 400, useNativeDriver: true }),
     ]).start(() => setEventVis(false));
   };
 
   useEffect(() => {
-    const first = setTimeout(showEvent, 6000);
-    const repeat = setInterval(showEvent, 35000);
+    const first = setTimeout(showEvent, Math.min(20000, duration * 0.15 * 1000));
+    const repeat = setInterval(showEvent, Math.min(90000, duration * 0.4 * 1000));
     return () => { clearTimeout(first); clearInterval(repeat); };
-  }, []);
+  }, [duration]);
 
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setSoftVis(true);
-      Animated.timing(softFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    }, 15000);
-    return () => clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setLumiNudgeVis(true);
-      Animated.timing(lumiNudgeFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    }, 28000);
-    return () => clearTimeout(t);
-  }, []);
-
-  const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
-  const ss = String(elapsed % 60).padStart(2, '0');
+  // Countdown display
+  const remMm = String(Math.floor(remaining / 60)).padStart(2, '0');
+  const remSs = String(remaining % 60).padStart(2, '0');
 
   function toggleTask(idx: number) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -1064,22 +1123,51 @@ function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
       )}
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: btmPad + 20 }} showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+
+        {/* Header — countdown + progress ring */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <View>
             <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.6)', letterSpacing: 0.5, marginBottom: 4 }}>{cfg.symbol} {cfg.name}</Text>
-            <Text style={{ fontSize: 44, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', letterSpacing: -2 }}>{mm}:{ss}</Text>
+            <Text style={{ fontSize: 44, fontFamily: 'Satoshi-Bold', color: phase === 3 ? '#FFD86F' : '#F0E6FF', letterSpacing: -2 }}>
+              {remMm}:{remSs}
+            </Text>
+            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.45)', marginTop: 2 }}>
+              {phase === 0 ? 'settling in…' : phase === 1 ? 'in the flow' : phase === 2 ? 'going deeper' : 'winding down ✦'}
+            </Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: `${cfg.color}40`, backgroundColor: `${cfg.color}14`, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 }}>
-            <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: cfg.color }} />
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Active</Text>
+          <View style={{ alignItems: 'center', gap: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: `${cfg.color}40`, backgroundColor: `${cfg.color}14`, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 }}>
+              <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: cfg.color }} />
+              <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Active</Text>
+            </View>
+            {/* Mini progress arc as bar */}
+            <View style={{ width: 80, height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
+              <View style={{ height: 4, width: `${progress * 100}%`, borderRadius: 2, backgroundColor: phase === 3 ? '#FFD86F' : cfg.color }} />
+            </View>
           </View>
         </View>
+
+        {/* Time's up prompt */}
+        {timeUpVis && (
+          <Animated.View style={{ opacity: timeUpFade, backgroundColor: `${cfg.color}14`, borderRadius: 22, borderWidth: 1.5, borderColor: cfg.color, padding: 20, marginBottom: 16 }}>
+            <Text style={{ fontSize: 16, fontFamily: 'Satoshi-Bold', color: cfg.color, marginBottom: 6 }}>✦ Time's up, {cfg.archetype.replace('The ', '')}.</Text>
+            <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.82)', lineHeight: 22, marginBottom: 16 }}>
+              You showed up and stayed. That's the whole thing. Ready to close this session?
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: cfg.color, borderRadius: 16, paddingVertical: 12, alignItems: 'center' }}
+              onPress={handleEnd}
+              activeOpacity={0.85}
+            >
+              <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' }}>Close session</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* Lumi companion */}
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 18, marginBottom: 14, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
-          <LumiChat message={lumiMessages[lumiIdx]} color={cfg.color} />
+          <LumiChat message={currentLumiMsg} color={cfg.color} />
           <TouchableOpacity
             onPress={() => { Haptics.selectionAsync(); onChat(); }}
             activeOpacity={0.8}
@@ -1090,7 +1178,7 @@ function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
           </TouchableOpacity>
         </View>
 
-        {/* Soft Rescue — AI-generated tip */}
+        {/* Lumi's tip — appears at 35% */}
         {softVis && (
           <Animated.View style={{ opacity: softFade, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,180,255,0.18)', padding: 18, marginBottom: 14, overflow: 'hidden' }}>
             <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>LUMI'S TIP</Text>
@@ -1107,13 +1195,13 @@ function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
           </Animated.View>
         )}
 
-        {/* Lumi chat nudge — appears after ~28 min */}
+        {/* Lumi chat nudge — appears at 60% */}
         {lumiNudgeVis && (
           <Animated.View style={{ opacity: lumiNudgeFade, backgroundColor: `${cfg.color}0C`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 18, marginBottom: 14 }}>
             <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 8 }}>LUMI IS HERE</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 4 }}>Need to talk?</Text>
             <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.72)', marginBottom: 14 }}>
-              Lumi's listening. Whatever's on your mind — she's present.
+              Whatever's on your mind, she's present. No pressure.
             </Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
@@ -1134,28 +1222,24 @@ function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
           </Animated.View>
         )}
 
-        {/* Quest tasks — real, checkable, psychology-based */}
+        {/* Session tasks */}
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 20, marginBottom: 14, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
             <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5 }}>SESSION TASKS</Text>
             <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: questDone === questTotal ? '#7CFC7C' : cfg.color }}>{questDone}/{questTotal}</Text>
           </View>
-          {/* Progress bar */}
           <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 18 }}>
-            <Animated.View style={{ height: 4, width: `${(questDone / questTotal) * 100}%`, borderRadius: 2, backgroundColor: questDone === questTotal ? '#7CFC7C' : cfg.color }} />
+            <View style={{ height: 4, width: `${(questDone / questTotal) * 100}%`, borderRadius: 2, backgroundColor: questDone === questTotal ? '#7CFC7C' : cfg.color }} />
           </View>
-          {/* Task rows */}
           {tasks.map((task, i) => {
             const done = checkedTasks.has(i);
             return (
               <TouchableOpacity key={i} onPress={() => toggleTask(i)} activeOpacity={0.8}
                 style={{ flexDirection: 'row', gap: 14, marginBottom: i < tasks.length - 1 ? 16 : 0, alignItems: 'flex-start' }}>
-                {/* Checkbox */}
                 <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: done ? cfg.color : 'rgba(200,180,255,0.25)', backgroundColor: done ? cfg.color : 'transparent', alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 }}>
                   {done && <Text style={{ fontSize: 12, color: '#fff', fontWeight: '700' }}>✓</Text>}
                 </View>
-                {/* Task content */}
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                     <Text style={{ fontSize: 12 }}>{QUEST_TYPE_ICONS[task.type] ?? '✦'}</Text>
@@ -1174,7 +1258,7 @@ function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
           })}
           {questDone === questTotal && questTotal > 0 && (
             <View style={{ marginTop: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(124,252,124,0.08)', borderWidth: 1, borderColor: 'rgba(124,252,124,0.2)' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#7CFC7C', textAlign: 'center' }}>All tasks done. Lumi is proud of you. ✦</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#7CFC7C', textAlign: 'center' }}>All done. Lumi is proud of you. ✦</Text>
             </View>
           )}
         </View>
@@ -1191,13 +1275,15 @@ function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
           ))}
         </View>
 
-        <TouchableOpacity
-          style={{ borderWidth: 1, borderColor: `${cfg.color}40`, borderRadius: 24, paddingVertical: 16, alignItems: 'center' }}
-          onPress={handleEnd}
-          activeOpacity={0.78}
-        >
-          <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: cfg.color }}>End Session</Text>
-        </TouchableOpacity>
+        {!timeUpVis && (
+          <TouchableOpacity
+            style={{ borderWidth: 1, borderColor: `${cfg.color}35`, borderRadius: 24, paddingVertical: 16, alignItems: 'center' }}
+            onPress={handleEnd}
+            activeOpacity={0.78}
+          >
+            <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: `${cfg.color}99` }}>End early</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -1571,14 +1657,15 @@ export default function DriftScreen() {
   const { character } = useApp();
   const displayName   = character?.name && character.name !== 'Sky Child' ? character.name : 'Drift Mode';
 
-  const [step,         setStep]         = useState<FlowStep>('welcome');
-  const [questionIdx,  setQuestionIdx]  = useState(0);
-  const [answers,      setAnswers]      = useState<Record<string, string>>({});
-  const [mode,         setMode]         = useState<string | null>(null);
-  const [confidence,   setConfidence]   = useState(75);
-  const [driftPlan,    setDriftPlan]    = useState<DriftPlan | null>(null);
-  const [sessionStart, setSessionStart] = useState<number | null>(null);
-  const [result,       setResult]       = useState<SessionResult>({ elapsed: 0, questDone: 0, momentsFound: 0 });
+  const [step,            setStep]           = useState<FlowStep>('welcome');
+  const [questionIdx,     setQuestionIdx]    = useState(0);
+  const [answers,         setAnswers]        = useState<Record<string, string>>({});
+  const [mode,            setMode]           = useState<string | null>(null);
+  const [confidence,      setConfidence]     = useState(75);
+  const [driftPlan,       setDriftPlan]      = useState<DriftPlan | null>(null);
+  const [sessionStart,    setSessionStart]   = useState<number | null>(null);
+  const [sessionDuration, setSessionDuration]= useState(900); // default 15 min
+  const [result,          setResult]         = useState<SessionResult>({ elapsed: 0, questDone: 0, momentsFound: 0 });
 
   const fadeAnim  = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -1608,6 +1695,7 @@ export default function DriftScreen() {
           setMode(d.mode);
           setAnswers(d.answers ?? {});
           setSessionStart(d.sessionStart);
+          if (d.duration) setSessionDuration(d.duration);
           setStep('session');
         } else {
           AsyncStorage.removeItem('drift_session_v1');
@@ -1656,10 +1744,11 @@ export default function DriftScreen() {
     go('vibe_reveal');
   }
 
-  function handleStartSession() {
+  function handleStartSession(durationSecs: number) {
     const start = Date.now();
     setSessionStart(start);
-    AsyncStorage.setItem('drift_session_v1', JSON.stringify({ mode, answers, sessionStart: start })).catch(() => {});
+    setSessionDuration(durationSecs);
+    AsyncStorage.setItem('drift_session_v1', JSON.stringify({ mode, answers, sessionStart: start, duration: durationSecs })).catch(() => {});
     go('session');
   }
 
@@ -1675,6 +1764,7 @@ export default function DriftScreen() {
     setMode(null);
     setDriftPlan(null);
     setSessionStart(null);
+    setSessionDuration(900);
     setResult({ elapsed: 0, questDone: 0, momentsFound: 0 });
     AsyncStorage.removeItem('drift_session_v1').catch(() => {});
     go('welcome');
@@ -1706,7 +1796,7 @@ export default function DriftScreen() {
       {step === 'mode_cinematic'  && cfg && <ModeCinematicScreen cfg={cfg} onEnter={() => go('mode_perks')} />}
       {step === 'mode_perks'      && cfg && <ModePerksScreen     cfg={cfg} onGotIt={() => go('meet_lumi')} />}
       {step === 'meet_lumi'       && cfg && <MeetLumiScreen      cfg={cfg} onContinue={handleStartSession} />}
-      {step === 'session'         && cfg && <SessionScreen       cfg={cfg} sessionStart={sessionStart ?? Date.now()} onEnd={handleEndSession} onChat={() => go('lumi_chat')} />}
+      {step === 'session'         && cfg && <SessionScreen       cfg={cfg} sessionStart={sessionStart ?? Date.now()} duration={sessionDuration} onEnd={handleEndSession} onChat={() => go('lumi_chat')} />}
       {step === 'lumi_chat'       && cfg && <LumiChatScreen      cfg={cfg} characterName={displayName} intention={cfg.intention} onBack={() => go('session')} />}
       {step === 'summary'         && cfg && <SummaryScreen       cfg={cfg} result={result} onReflect={() => go('reflection')} />}
       {step === 'reflection'      && cfg && <ReflectionScreen    cfg={cfg} onContinue={() => go('break_prompt')} />}
