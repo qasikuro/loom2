@@ -711,18 +711,23 @@ export default function UserProfileScreen() {
                 router.push({
                   pathname: '/user-outfit',
                   params: {
-                    outfitName:   profile.activeOutfit!.name,
-                    outfitDesc:   profile.activeOutfit!.description ?? '',
-                    outfitStory:  profile.activeOutfit!.story ?? '',
-                    outfitImage:  profile.activeOutfit!.imageUri ?? '',
-                    outfitTags:   JSON.stringify(profile.activeOutfit!.tags),
-                    outfitDate:   '',
-                    authorUserId: profile.userId,
-                    authorName:   profile.name,
-                    authorHandle: profile.username ?? '',
-                    authorBio:    profile.bio ?? '',
-                    authorMood:   profile.mood ?? '',
-                    authorTraits: JSON.stringify(profile.traits),
+                    outfitName:     profile.activeOutfit!.name,
+                    outfitDesc:     profile.activeOutfit!.description ?? '',
+                    outfitStory:    profile.activeOutfit!.story ?? '',
+                    outfitImage:    profile.activeOutfit!.imageUri ?? '',
+                    outfitTags:     JSON.stringify(profile.activeOutfit!.tags),
+                    outfitDate:     '',
+                    authorUserId:   profile.userId,
+                    authorName:     profile.name,
+                    authorHandle:   profile.username ?? '',
+                    authorBio:      profile.bio ?? '',
+                    authorMood:     profile.mood ?? '',
+                    authorTraits:   JSON.stringify(profile.traits),
+                    allOutfitsJson: JSON.stringify([
+                      { name: profile.activeOutfit!.name, description: profile.activeOutfit!.description ?? '', story: profile.activeOutfit!.story ?? '', imageUri: profile.activeOutfit!.imageUri ?? '', tags: profile.activeOutfit!.tags, date: '' },
+                      ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, date: o.date })),
+                    ]),
+                    initialIndex:   '0',
                   },
                 } as any);
               }}
@@ -787,27 +792,33 @@ export default function UserProfileScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.hScrollContent}
               >
-                {outfits.map(outfit => (
+                {outfits.map((outfit, oIdx) => (
                   <TouchableOpacity
                     key={outfit.id}
                     style={[styles.hOutfitCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      const _allList = [
+                        ...(profile.activeOutfit ? [{ name: profile.activeOutfit.name, description: profile.activeOutfit.description ?? '', story: profile.activeOutfit.story ?? '', imageUri: profile.activeOutfit.imageUri ?? '', tags: profile.activeOutfit.tags, date: '' }] : []),
+                        ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, date: o.date })),
+                      ];
                       router.push({
                         pathname: '/user-outfit',
                         params: {
-                          outfitName:   outfit.name,
-                          outfitDesc:   outfit.description ?? '',
-                          outfitStory:  outfit.story ?? '',
-                          outfitImage:  outfit.imageUri ?? '',
-                          outfitTags:   JSON.stringify(outfit.tags),
-                          outfitDate:   outfit.date,
-                          authorUserId: profile.userId,
-                          authorName:   profile.name,
-                          authorHandle: profile.username ?? '',
-                          authorBio:    profile.bio ?? '',
-                          authorMood:   profile.mood ?? '',
-                          authorTraits: JSON.stringify(profile.traits),
+                          outfitName:     outfit.name,
+                          outfitDesc:     outfit.description ?? '',
+                          outfitStory:    outfit.story ?? '',
+                          outfitImage:    outfit.imageUri ?? '',
+                          outfitTags:     JSON.stringify(outfit.tags),
+                          outfitDate:     outfit.date,
+                          authorUserId:   profile.userId,
+                          authorName:     profile.name,
+                          authorHandle:   profile.username ?? '',
+                          authorBio:      profile.bio ?? '',
+                          authorMood:     profile.mood ?? '',
+                          authorTraits:   JSON.stringify(profile.traits),
+                          allOutfitsJson: JSON.stringify(_allList),
+                          initialIndex:   String(profile.activeOutfit ? oIdx + 1 : oIdx),
                         },
                       } as any);
                     }}

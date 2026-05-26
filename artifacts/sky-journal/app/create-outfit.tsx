@@ -38,6 +38,17 @@ const VIBE_TAGS = [
   { label: 'Ethereal',  color: '#78C8C8' },
 ];
 
+const VIBES = [
+  { id: 'romantic',    label: 'Romantic',    symbol: '♡', color: '#FF89B0', desc: 'Hearts drift above your look' },
+  { id: 'happy',       label: 'Happy',       symbol: '✦', color: '#FFD86F', desc: 'Sparkles burst around you' },
+  { id: 'dark',        label: 'Dark',        symbol: '◉', color: '#9070C8', desc: 'Shadows drift and linger' },
+  { id: 'mythical',    label: 'Mythical',    symbol: '✧', color: '#B090FF', desc: 'Constellation stars appear' },
+  { id: 'dreamy',      label: 'Dreamy',      symbol: '○', color: '#80C8FF', desc: 'Soft orbs float through' },
+  { id: 'ethereal',    label: 'Ethereal',    symbol: '◇', color: '#50EED0', desc: 'Light wisps shimmer' },
+  { id: 'cozy',        label: 'Cozy',        symbol: '·', color: '#FFB840', desc: 'Warm embers glow' },
+  { id: 'adventurous', label: 'Adventurous', symbol: '◈', color: '#60D888', desc: 'Wind-caught symbols drift' },
+];
+
 export default function CreateOutfitScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -66,8 +77,19 @@ export default function CreateOutfitScreen() {
   const [pendingUri, setPendingUri]   = useState<string | null>(null);
   const [uploading, setUploading]     = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>(() => {
-    try { return params.editTags ? JSON.parse(params.editTags) : []; }
+    try {
+      const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+      return all.filter(t => !t.startsWith('vibe:'));
+    }
     catch { return []; }
+  });
+  const [selectedVibe, setSelectedVibe] = useState<string | null>(() => {
+    try {
+      const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+      const vt = all.find(t => t.startsWith('vibe:'));
+      return vt ? vt.slice(5) : null;
+    }
+    catch { return null; }
   });
   const [isPublic, setIsPublic]       = useState(params.editIsPublic !== 'false');
   const [saving, setSaving]           = useState(false);
@@ -82,7 +104,12 @@ export default function CreateOutfitScreen() {
       setDescription(params.editDescription ?? '');
       setStory(params.editStory ?? '');
       setImageUri(params.editImageUri || undefined);
-      try { setSelectedTags(params.editTags ? JSON.parse(params.editTags) : []); } catch { setSelectedTags([]); }
+      try {
+        const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+        setSelectedTags(all.filter(t => !t.startsWith('vibe:')));
+        const vt = all.find(t => t.startsWith('vibe:'));
+        setSelectedVibe(vt ? vt.slice(5) : null);
+      } catch { setSelectedTags([]); setSelectedVibe(null); }
       setIsPublic(params.editIsPublic !== 'false');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -156,13 +183,17 @@ export default function CreateOutfitScreen() {
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const allTags = [
+      ...selectedTags,
+      ...(selectedVibe ? [`vibe:${selectedVibe}`] : []),
+    ];
     if (isEditing && editId) {
       updateOutfit(editId, {
         name:        name.trim(),
         description: description.trim(),
         story:       story.trim(),
         imageUri,
-        tags:        selectedTags,
+        tags:        allTags,
         isPublic,
       });
     } else {
@@ -173,7 +204,7 @@ export default function CreateOutfitScreen() {
         description: description.trim(),
         story:       story.trim(),
         imageUri,
-        tags:        selectedTags,
+        tags:        allTags,
         isPublic,
       });
     }
@@ -295,7 +326,7 @@ export default function CreateOutfitScreen() {
             />
           </View>
 
-          {/* Tags */}
+          {/* Style Tags */}
           <View style={styles.field}>
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.vibeTags')}</Text>
             <View style={styles.tagsGrid}>
@@ -311,6 +342,45 @@ export default function CreateOutfitScreen() {
                     onPress={() => toggleTag(t.label)}
                   >
                     <Text style={[styles.tagText, { color: t.color }]}>{t.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Vibe Animation */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Vibe Animation</Text>
+            <Text style={[styles.vibeHint, { color: `${colors.mutedForeground}80` }]}>
+              Choose an animated effect that plays over your outfit when others view it
+            </Text>
+            <View style={styles.vibeGrid}>
+              {VIBES.map(v => {
+                const active = selectedVibe === v.id;
+                return (
+                  <TouchableOpacity
+                    key={v.id}
+                    style={[styles.vibeChip, {
+                      backgroundColor: active ? `${v.color}20` : `${v.color}0A`,
+                      borderColor:     active ? `${v.color}70` : `${v.color}20`,
+                      borderWidth:     active ? 2 : 1,
+                    }]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setSelectedVibe(prev => prev === v.id ? null : v.id);
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.vibeSymbol, { color: v.color }]}>{v.symbol}</Text>
+                    <View style={styles.vibeTextWrap}>
+                      <Text style={[styles.vibeLabel, { color: active ? v.color : colors.foreground }]}>{v.label}</Text>
+                      <Text style={[styles.vibeDesc,  { color: `${colors.mutedForeground}80` }]} numberOfLines={1}>{v.desc}</Text>
+                    </View>
+                    {active && (
+                      <View style={[styles.vibeCheck, { backgroundColor: v.color }]}>
+                        <Text style={styles.vibeCheckMark}>✓</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -404,6 +474,22 @@ const styles = StyleSheet.create({
   tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tagChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
   tagText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+
+  vibeHint: { fontSize: 12, fontFamily: 'Satoshi-Regular', marginBottom: 12, marginTop: -4, lineHeight: 17 },
+  vibeGrid: { gap: 8 },
+  vibeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16,
+  },
+  vibeSymbol:  { fontSize: 22, width: 28, textAlign: 'center' },
+  vibeTextWrap:{ flex: 1, gap: 2 },
+  vibeLabel:   { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  vibeDesc:    { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  vibeCheck: {
+    width: 22, height: 22, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  vibeCheckMark: { fontSize: 12, color: '#fff', fontFamily: 'Satoshi-Bold' },
   privacyRow: { flexDirection: 'row', gap: 10 },
   privBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
   privText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },

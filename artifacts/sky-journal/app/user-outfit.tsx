@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { VibeOverlay } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -8,13 +9,14 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Animated,
   Dimensions,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -60,77 +62,114 @@ function fmtDate(iso: string) {
   } catch { return ''; }
 }
 
+interface SlimOutfit {
+  name:        string;
+  description: string;
+  story:       string;
+  imageUri:    string;
+  tags:        string[];
+  date:        string;
+}
+
+function extractVibe(tags: string[]): string | null {
+  const tag = tags.find(t => t.startsWith('vibe:'));
+  return tag ? tag.slice(5) : null;
+}
+
+function visibleTags(tags: string[]): string[] {
+  return tags.filter(t => !t.startsWith('vibe:'));
+}
+
 export default function UserOutfitScreen() {
   const colors  = useColors();
   const { t }   = useTranslation();
   const insets  = useSafeAreaInsets();
   const { followingIds, followUser, unfollowUser } = useApp();
-  const params  = useLocalSearchParams<{
-    outfitName:   string;
-    outfitDesc:   string;
-    outfitStory:  string;
-    outfitImage:  string;
-    outfitTags:   string;
-    outfitDate:   string;
-    authorUserId: string;
-    authorName:   string;
-    authorHandle: string;
-    authorBio:    string;
-    authorMood:   string;
-    authorTraits: string;
+  const scrollRef = useRef<ScrollView>(null);
+
+  const params = useLocalSearchParams<{
+    outfitName:     string;
+    outfitDesc:     string;
+    outfitStory:    string;
+    outfitImage:    string;
+    outfitTags:     string;
+    outfitDate:     string;
+    authorUserId:   string;
+    authorName:     string;
+    authorHandle:   string;
+    authorBio:      string;
+    authorMood:     string;
+    authorTraits:   string;
+    allOutfitsJson: string;
+    initialIndex:   string;
   }>();
 
-  const tags: string[]   = params.outfitTags   ? JSON.parse(params.outfitTags)   : [];
-  const traits: string[] = params.authorTraits ? JSON.parse(params.authorTraits) : [];
-  const moodColor = MOOD_COLORS[params.authorMood ?? ''] ?? colors.primary;
-  const darkBg    = MOOD_DARK_BG[params.authorMood ?? ''] ?? (['#100828', '#1C1040', '#281850'] as const);
+  const allOutfits: SlimOutfit[] = (() => {
+    try {
+      if (params.allOutfitsJson) return JSON.parse(params.allOutfitsJson) as SlimOutfit[];
+    } catch {}
+    return [{
+      name:        params.outfitName   ?? '',
+      description: params.outfitDesc   ?? '',
+      story:       params.outfitStory  ?? '',
+      imageUri:    params.outfitImage  ?? '',
+      tags:        params.outfitTags   ? (JSON.parse(params.outfitTags) as string[]) : [],
+      date:        params.outfitDate   ?? '',
+    }];
+  })();
+
+  const [currentIdx, setCurrentIdx] = useState(() => {
+    const i = parseInt(params.initialIndex ?? '0', 10);
+    return isNaN(i) ? 0 : Math.max(0, Math.min(i, allOutfits.length - 1));
+  });
+
+  const transitionAnim = useRef(new Animated.Value(1)).current;
+
+  const outfit     = allOutfits[currentIdx] ?? allOutfits[0];
+  const vibe       = extractVibe(outfit?.tags ?? []);
+  const tags       = visibleTags(outfit?.tags ?? []);
+  const traits     = params.authorTraits ? (JSON.parse(params.authorTraits) as string[]) : [];
+  const moodColor  = MOOD_COLORS[params.authorMood ?? ''] ?? colors.primary;
+  const darkBg     = MOOD_DARK_BG[params.authorMood ?? ''] ?? (['#100828', '#1C1040', '#281850'] as const);
   const isFollowing = followingIds.includes(params.authorUserId ?? '');
-  const initial = (params.authorName ?? '?').charAt(0).toUpperCase();
+  const initial    = (params.authorName ?? '?').charAt(0).toUpperCase();
+  const total      = allOutfits.length;
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 24;
+  const bottomPad = Platform.OS === 'web' ? 80 : insets.bottom + 24;
 
-  const [reportSheetVisible, setReportSheetVisible] = useState(false);
-  const [appreciated, setAppreciated]               = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
+  const [appreciated, setAppreciated]     = useState(false);
 
-  // ── Scroll-driven animations ────────────────────────────────
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollY      = useRef(new Animated.Value(0)).current;
+  const entryAnim    = useRef(new Animated.Value(0)).current;
+  const hintY        = useRef(new Animated.Value(0)).current;
+  const admireScale  = useRef(new Animated.Value(0)).current;
+  const admireOpacity = useRef(new Animated.Value(0)).current;
 
   const stickyOpacity = scrollY.interpolate({
     inputRange: [SCREEN_H * 0.72, SCREEN_H * 0.88],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
+    outputRange: [0, 1], extrapolate: 'clamp',
   });
-
   const imageParallax = scrollY.interpolate({
     inputRange: [0, SCREEN_H],
-    outputRange: [0, -SCREEN_H * 0.22],
-    extrapolate: 'clamp',
+    outputRange: [0, -SCREEN_H * 0.22], extrapolate: 'clamp',
   });
-
   const imagePullScale = scrollY.interpolate({
     inputRange: [-SCREEN_H * 0.2, 0],
-    outputRange: [1.22, 1],
-    extrapolate: 'clamp',
+    outputRange: [1.22, 1], extrapolate: 'clamp',
   });
-
   const heroFade = scrollY.interpolate({
     inputRange: [0, SCREEN_H * 0.32],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
+    outputRange: [1, 0], extrapolate: 'clamp',
   });
 
-  // ── Mount entrance animation ────────────────────────────────
-  const entryAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(entryAnim, {
       toValue: 1, duration: 950, delay: 250, useNativeDriver: true,
     }).start();
   }, []);
-  const entryY = entryAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] });
 
-  // ── Scroll-hint bounce ──────────────────────────────────────
-  const hintY = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -140,10 +179,9 @@ export default function UserOutfitScreen() {
     ).start();
   }, []);
 
-  // ── Double-tap to Admire ────────────────────────────────────
-  const lastTapRef      = useRef(0);
-  const admireScale     = useRef(new Animated.Value(0)).current;
-  const admireOpacity   = useRef(new Animated.Value(0)).current;
+  const entryY = entryAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] });
+
+  const lastTapRef = useRef(0);
 
   function handleTap() {
     const now = Date.now();
@@ -154,20 +192,28 @@ export default function UserOutfitScreen() {
         admireScale.setValue(0.25);
         admireOpacity.setValue(1);
         Animated.parallel([
-          Animated.spring(admireScale, {
-            toValue: 1, friction: 4, tension: 60, useNativeDriver: true,
-          }),
+          Animated.spring(admireScale,   { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }),
           Animated.sequence([
             Animated.delay(520),
-            Animated.timing(admireOpacity, {
-              toValue: 0, duration: 480, useNativeDriver: true,
-            }),
+            Animated.timing(admireOpacity, { toValue: 0, duration: 480, useNativeDriver: true }),
           ]),
         ]).start();
       }
     }
     lastTapRef.current = now;
   }
+
+  const navigateTo = useCallback((newIdx: number) => {
+    if (newIdx < 0 || newIdx >= total) return;
+    Haptics.selectionAsync();
+    Animated.timing(transitionAnim, { toValue: 0, duration: 160, useNativeDriver: true })
+      .start(() => {
+        setCurrentIdx(newIdx);
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+        setAppreciated(false);
+        Animated.timing(transitionAnim, { toValue: 1, duration: 240, useNativeDriver: true }).start();
+      });
+  }, [total, transitionAnim]);
 
   function handleFollow() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -178,14 +224,14 @@ export default function UserOutfitScreen() {
   return (
     <View style={styles.root}>
 
-      {/* ── Floating back pill — always on top ──────────────── */}
+      {/* ── Floating back pill ───────────────────────────────── */}
       <BackButton
         style={[styles.floatingBack, { top: topPad + 10 }]}
         color="#fff"
         size={18}
       />
 
-      {/* ── Sticky mini-header — fades in after hero ────────── */}
+      {/* ── Sticky mini-header ───────────────────────────────── */}
       <Animated.View
         style={[
           styles.stickyHeader,
@@ -195,13 +241,14 @@ export default function UserOutfitScreen() {
       >
         <View style={{ width: 44 }} />
         <Text style={[styles.stickyTitle, { color: colors.foreground }]} numberOfLines={1}>
-          {params.outfitName}
+          {outfit?.name}
         </Text>
         <View style={{ width: 44 }} />
       </Animated.View>
 
-      {/* ── Main scroll ─────────────────────────────────────── */}
+      {/* ── Main scroll ──────────────────────────────────────── */}
       <Animated.ScrollView
+        ref={scrollRef as any}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -211,22 +258,21 @@ export default function UserOutfitScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad }}
         bounces
       >
-
         {/* ════════════════════════════════════════════════════
-            HERO — the entire first screen is the outfit
+            HERO
             ════════════════════════════════════════════════════ */}
         <Pressable style={[styles.hero, { height: SCREEN_H }]} onPress={handleTap}>
 
-          {/* Full-bleed image with parallax */}
+          {/* Full-bleed image with parallax — wrapped in transition fade */}
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { transform: [{ translateY: imageParallax }, { scale: imagePullScale }] },
+              { opacity: transitionAnim, transform: [{ translateY: imageParallax }, { scale: imagePullScale }] },
             ]}
           >
-            {params.outfitImage ? (
+            {outfit?.imageUri ? (
               <Image
-                source={{ uri: params.outfitImage }}
+                source={{ uri: outfit.imageUri }}
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
               />
@@ -240,23 +286,26 @@ export default function UserOutfitScreen() {
             )}
           </Animated.View>
 
-          {/* Top vignette — protects the back button */}
+          {/* Vibe animation overlay */}
+          {vibe ? <VibeOverlay vibe={vibe} /> : null}
+
+          {/* Top vignette */}
           <LinearGradient
             colors={['rgba(0,0,0,0.60)', 'rgba(0,0,0,0.22)', 'transparent']}
             style={styles.topVignette}
             pointerEvents="none"
           />
 
-          {/* Bottom vignette — editorial text backdrop */}
+          {/* Bottom vignette */}
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.48)', 'rgba(0,0,0,0.91)']}
             style={styles.bottomVignette}
             pointerEvents="none"
           />
 
-          {/* Hero text — name + tags + date (entry + scroll fade) */}
+          {/* Hero text — fades with transition */}
           <Animated.View
-            style={[styles.heroContent, { opacity: heroFade }]}
+            style={[styles.heroContent, { opacity: Animated.multiply(heroFade, transitionAnim) }]}
             pointerEvents="none"
           >
             {tags.length > 0 && (
@@ -273,13 +322,13 @@ export default function UserOutfitScreen() {
               style={[styles.heroName, { transform: [{ translateY: entryY }] }]}
               numberOfLines={3}
             >
-              {params.outfitName}
+              {outfit?.name}
             </Animated.Text>
 
-            {params.outfitDate ? (
+            {outfit?.date ? (
               <Animated.View style={[styles.datePill, { transform: [{ translateY: entryY }] }]}>
                 <Icon name="calendar" size={10} color="rgba(240,228,200,0.78)" />
-                <Text style={styles.datePillText}>{fmtDate(params.outfitDate)}</Text>
+                <Text style={styles.datePillText}>{fmtDate(outfit.date)}</Text>
               </Animated.View>
             ) : null}
           </Animated.View>
@@ -296,19 +345,59 @@ export default function UserOutfitScreen() {
             <Text style={styles.scrollHintText}>pull to reveal</Text>
           </Animated.View>
 
+          {/* Gallery navigation — shown when multiple outfits */}
+          {total > 1 && (
+            <View style={[styles.navRow, { bottom: bottomPad + 64 }]}>
+              <TouchableOpacity
+                style={[styles.navBtn, currentIdx === 0 && styles.navBtnDisabled]}
+                onPress={() => navigateTo(currentIdx - 1)}
+                disabled={currentIdx === 0}
+                activeOpacity={0.75}
+              >
+                <Icon name="chevron-left" size={18} color="#fff" />
+              </TouchableOpacity>
+
+              <View style={styles.counterPill}>
+                <Text style={styles.counterText}>{currentIdx + 1} / {total}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.navBtn, currentIdx === total - 1 && styles.navBtnDisabled]}
+                onPress={() => navigateTo(currentIdx + 1)}
+                disabled={currentIdx === total - 1}
+                activeOpacity={0.75}
+              >
+                <Icon name="chevron-right" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Dot indicators */}
+          {total > 1 && total <= 12 && (
+            <View style={[styles.dotsRow, { bottom: bottomPad + 50 }]} pointerEvents="none">
+              {allOutfits.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.dot,
+                    i === currentIdx ? styles.dotActive : styles.dotInactive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+
         </Pressable>
 
         {/* ════════════════════════════════════════════════════
-            DETAILS — scrolls up from beneath the hero
+            DETAILS
             ════════════════════════════════════════════════════ */}
         <View style={[styles.details, { backgroundColor: colors.background }]}>
 
-          {/* Mood accent line */}
           <View style={[styles.moodBar, { backgroundColor: `${moodColor}55` }]} />
 
-          {/* ── Character card ─────────────────────────────── */}
+          {/* Character card */}
           <View style={[styles.charCard, { backgroundColor: colors.card, borderColor: `${moodColor}28` }, SHADOW.sm]}>
-
             <LinearGradient
               colors={[`${moodColor}16`, 'transparent']}
               style={StyleSheet.absoluteFill}
@@ -358,7 +447,7 @@ export default function UserOutfitScreen() {
                   styles.followBtn,
                   isFollowing
                     ? { backgroundColor: colors.muted, borderColor: colors.border }
-                    : { backgroundColor: moodColor, borderColor: moodColor },
+                    : { backgroundColor: moodColor,    borderColor: moodColor },
                 ]}
                 onPress={handleFollow}
                 activeOpacity={0.82}
@@ -389,7 +478,7 @@ export default function UserOutfitScreen() {
 
               <TouchableOpacity
                 style={[styles.reportBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                onPress={() => setReportSheetVisible(true)}
+                onPress={() => setReportVisible(true)}
                 activeOpacity={0.82}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -398,8 +487,8 @@ export default function UserOutfitScreen() {
             </View>
           </View>
 
-          {/* ── Notes ──────────────────────────────────────── */}
-          {!!params.outfitDesc && (
+          {/* Notes */}
+          {!!outfit?.description && (
             <View style={[styles.contentCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
               <View style={styles.cardLabel}>
                 <View style={[styles.cardDot, { backgroundColor: moodColor }]} />
@@ -408,23 +497,23 @@ export default function UserOutfitScreen() {
                 </Text>
               </View>
               <Text style={[styles.notesText, { color: colors.foreground }]}>
-                "{params.outfitDesc}"
+                "{outfit.description}"
               </Text>
             </View>
           )}
 
-          {/* ── Character story ─────────────────────────────── */}
-          {!!params.outfitStory && (
+          {/* Character story */}
+          {!!outfit?.story && (
             <View style={[styles.contentCard, { backgroundColor: colors.card, borderColor: `${moodColor}28` }, SHADOW.xs]}>
               <View style={styles.cardLabel}>
                 <View style={[styles.cardDot, { backgroundColor: moodColor }]} />
                 <Text style={[styles.cardLabelText, { color: moodColor }]}>Character Story</Text>
               </View>
-              <Text style={[styles.storyText, { color: colors.foreground }]}>{params.outfitStory}</Text>
+              <Text style={[styles.storyText, { color: colors.foreground }]}>{outfit.story}</Text>
             </View>
           )}
 
-          {/* ── Admired badge ───────────────────────────────── */}
+          {/* Admired badge */}
           {appreciated && (
             <View style={styles.admiredRow}>
               <Text style={[styles.admiredText, { color: moodColor }]}>✦ you admired this look</Text>
@@ -434,7 +523,7 @@ export default function UserOutfitScreen() {
         </View>
       </Animated.ScrollView>
 
-      {/* ── Admire burst (double-tap star) ──────────────────── */}
+      {/* Admire burst */}
       <Animated.View
         style={[styles.admireBurst, { opacity: admireOpacity, transform: [{ scale: admireScale }] }]}
         pointerEvents="none"
@@ -443,11 +532,11 @@ export default function UserOutfitScreen() {
       </Animated.View>
 
       <ReportSheet
-        visible={reportSheetVisible}
+        visible={reportVisible}
         targetType="outfit"
         targetId={params.authorUserId ?? ''}
         targetLabel={`${params.authorName ?? 'this user'}'s outfit`}
-        onClose={() => setReportSheetVisible(false)}
+        onClose={() => setReportVisible(false)}
       />
     </View>
   );
@@ -471,7 +560,6 @@ const styles = StyleSheet.create({
   },
   stickyTitle: { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
 
-  // ── Hero ────────────────────────────────────────────────────
   hero:          { width: '100%', overflow: 'hidden', backgroundColor: '#08060F' },
   topVignette:   { position: 'absolute', top: 0, left: 0, right: 0, height: 200 },
   bottomVignette:{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 380 },
@@ -509,6 +597,37 @@ const styles = StyleSheet.create({
     fontSize: 9, fontFamily: 'Satoshi-Medium', color: 'rgba(255,255,255,0.45)',
     letterSpacing: 2, textTransform: 'uppercase',
   },
+
+  // ── Gallery navigation ───────────────────────────────────────
+  navRow: {
+    position: 'absolute', left: 0, right: 0,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'center', gap: 20,
+  },
+  navBtn: {
+    width: 44, height: 44, borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  navBtnDisabled: { opacity: 0.30 },
+  counterPill: {
+    backgroundColor: 'rgba(0,0,0,0.50)',
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)',
+    minWidth: 56, alignItems: 'center',
+  },
+  counterText: {
+    fontSize: 12, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(255,255,255,0.82)', letterSpacing: 0.5,
+  },
+  dotsRow: {
+    position: 'absolute', left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'center', gap: 6,
+  },
+  dot: { width: 6, height: 6, borderRadius: 3 },
+  dotActive: { backgroundColor: 'rgba(255,255,255,0.9)', width: 16 },
+  dotInactive: { backgroundColor: 'rgba(255,255,255,0.30)' },
 
   // ── Details ─────────────────────────────────────────────────
   details:  { paddingTop: 26 },
@@ -548,14 +667,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12, borderRadius: 26, borderWidth: 1,
   },
   followBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-
   profileBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 6,
     paddingVertical: 12, borderRadius: 26, borderWidth: 1,
   },
   profileBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-
   reportBtn: {
     width: 44, height: 44, borderRadius: 22,
     borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -567,22 +684,13 @@ const styles = StyleSheet.create({
   },
   cardLabel:     { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   cardDot:       { width: 6, height: 6, borderRadius: 3 },
-  cardLabelText: {
-    fontSize: 10, fontFamily: 'Satoshi-Bold',
-    letterSpacing: 1.4, textTransform: 'uppercase',
-  },
-  notesText: {
-    fontSize: 15, fontFamily: 'Satoshi-Regular',
-    lineHeight: 25, fontStyle: 'italic',
-  },
-  storyText: {
-    fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 23,
-  },
+  cardLabelText: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, textTransform: 'uppercase' },
+  notesText:     { fontSize: 15, fontFamily: 'Satoshi-Regular', lineHeight: 25, fontStyle: 'italic' },
+  storyText:     { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 23 },
 
   admiredRow: { alignItems: 'center', paddingVertical: 22 },
   admiredText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.6 },
 
-  // ── Admire burst ────────────────────────────────────────────
   admireBurst: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center', justifyContent: 'center', zIndex: 90,
