@@ -1,52 +1,51 @@
 /**
  * POST /api/upload
  *
- * Accepts a base64-encoded image, compresses it with WhatsApp-style adaptive
- * quality targeting ≤ 200 KB, then stores it in GCS.
+ * Accepts images via two transports:
+ *   • multipart/form-data  — field name "file" (native Expo FileSystem.uploadAsync)
+ *   • application/json     — { data: base64string, ext: string } (web fallback)
  *
- * Compression strategy (mirrors WhatsApp's published approach):
- *   1. Auto-rotate and strip EXIF metadata.
+ * Compresses with WhatsApp-style adaptive quality targeting ≤ 200 KB:
+ *   1. Auto-rotate + strip EXIF.
  *   2. Resize to max 1600 px on the longest edge (no upscaling).
- *   3. Start at JPEG quality 82 (mozjpeg encoder).
- *   4. If the result is still > 200 KB, retry at quality 68.
- *   5. If still > 200 KB, retry at quality 52.
- *   6. Never go below quality 40 — visible artefacts below that threshold.
- *   7. PNG images that have true alpha are kept as PNG (palette-quantised).
- *      Everything else becomes JPEG regardless of input format.
+ *   3. JPEG quality ladder: 82 → 68 → 52 (stop as soon as ≤ 200 KB).
+ *   4. PNG with true alpha: palette-quantise instead of JPEG.
  */
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod";
 import sharp from "sharp";
+import multer from "multer";
 import { requireAuth } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
 
-const BUCKET_ID   = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
-const MAX_DIM     = 1600;           // px – longest edge (WhatsApp standard)
-const SIZE_TARGET = 200 * 1024;     // 200 KB target
-const QUALITY_STEPS = [82, 68, 52]; // quality ladder – stop as soon as ≤ 200 KB
+const BUCKET_ID     = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
+const MAX_DIM       = 1600;
+const SIZE_TARGET   = 200 * 1024;
+const QUALITY_STEPS = [82, 68, 52];
 
-const UploadSchema = z.object({
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits:  { fileSize: 50 * 1024 * 1024 },
+});
+
+const JsonUploadSchema = z.object({
   data: z.string().min(1),
   ext:  z.string().regex(/^[a-z0-9]+$/).default("jpg"),
 });
 
 const router: IRouter = Router();
 
-router.post("/upload", requireAuth, async (req, res) => {
+async function processAndSave(
+  req: Request,
+  res: Response,
+  incoming: Buffer,
+): Promise<Response> {
   if (!BUCKET_ID) {
     req.log.error("DEFAULT_OBJECT_STORAGE_BUCKET_ID is not set");
     return res.status(503).json({ error: "Storage not configured" });
   }
 
-  const parsed = UploadSchema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
-  }
-
   try {
-    const raw      = parsed.data.data.replace(/^data:[^;]+;base64,/, "");
-    const incoming = Buffer.from(raw, "base64");
-
     const meta     = await sharp(incoming).metadata();
     const hasAlpha = !!(meta.hasAlpha && meta.channels && meta.channels >= 4);
 
@@ -55,7 +54,6 @@ router.post("/upload", requireAuth, async (req, res) => {
     let contentType: string;
 
     if (hasAlpha) {
-      // True-transparency PNG: resize + palette quantise (no quality ladder needed)
       compressed = await sharp(incoming)
         .rotate()
         .resize(MAX_DIM, MAX_DIM, { fit: "inside", withoutEnlargement: true })
@@ -64,11 +62,10 @@ router.post("/upload", requireAuth, async (req, res) => {
       ext         = "png";
       contentType = "image/png";
     } else {
-      // Adaptive-quality JPEG — step down quality until under SIZE_TARGET
-      compressed = Buffer.alloc(0); // satisfies TS; overwritten in loop
+      compressed = Buffer.alloc(0);
       for (const quality of QUALITY_STEPS) {
         compressed = await sharp(incoming)
-          .rotate()                // auto-rotate (strips EXIF as a side-effect)
+          .rotate()
           .resize(MAX_DIM, MAX_DIM, { fit: "inside", withoutEnlargement: true })
           .jpeg({ quality, mozjpeg: true })
           .toBuffer();
@@ -87,7 +84,7 @@ router.post("/upload", requireAuth, async (req, res) => {
         compressedKb: Math.round(compressed.byteLength / 1024),
         ratio:        `${Math.round(compressed.byteLength / incoming.byteLength * 100)}%`,
       },
-      "Image compressed (WhatsApp-style adaptive quality)",
+      "Image compressed and saved",
     );
 
     const file = objectStorageClient.bucket(BUCKET_ID).file(`images/${fname}`);
@@ -98,6 +95,40 @@ router.post("/upload", requireAuth, async (req, res) => {
     req.log.error({ err }, "Failed to process / save uploaded image");
     return res.status(500).json({ error: "Internal server error" });
   }
-});
+}
+
+router.post(
+  "/upload",
+  requireAuth,
+  (req, res, next) => {
+    const ct = req.headers["content-type"] ?? "";
+    if (ct.startsWith("multipart/")) {
+      upload.single("file")(req as any, res as any, next);
+    } else {
+      next();
+    }
+  },
+  async (req: Request, res: Response) => {
+    if (!BUCKET_ID) {
+      req.log.error("DEFAULT_OBJECT_STORAGE_BUCKET_ID is not set");
+      return res.status(503).json({ error: "Storage not configured" });
+    }
+
+    const multipartFile = (req as any).file as { buffer: Buffer } | undefined;
+
+    if (multipartFile) {
+      return processAndSave(req, res, multipartFile.buffer);
+    }
+
+    const parsed = JsonUploadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+    }
+
+    const raw      = parsed.data.data.replace(/^data:[^;]+;base64,/, "");
+    const incoming = Buffer.from(raw, "base64");
+    return processAndSave(req, res, incoming);
+  },
+);
 
 export default router;

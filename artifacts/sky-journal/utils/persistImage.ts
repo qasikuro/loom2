@@ -4,17 +4,12 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { getAuthToken } from '@/context/AppContext';
 
-const MAX_DIM = 1600;
+const MAX_DIM = 1200;
 
 function resolveApiBase(): string {
   const extra  = (Constants.expoConfig as any)?.extra;
   const envUrl = extra?.apiUrl as string | null | undefined;
   return envUrl ?? '/api';
-}
-
-function extFromUri(uri: string): string {
-  const raw = uri.split('?')[0].split('.').pop() ?? 'jpg';
-  return raw.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
 }
 
 /**
@@ -27,7 +22,7 @@ async function resizeIfNeeded(uri: string): Promise<string> {
     const result = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: MAX_DIM } }],
-      { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
+      { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
     );
     return result.uri;
   } catch {
@@ -35,28 +30,71 @@ async function resizeIfNeeded(uri: string): Promise<string> {
   }
 }
 
-async function uploadToServer(base64Data: string, ext: string): Promise<string | null> {
+/**
+ * Native upload using Expo FileSystem.uploadAsync (binary multipart).
+ * Much more reliable than fetch + base64 on Android/iOS:
+ *   - Uses the native HTTP client (no JS memory pressure from base64)
+ *   - 25% smaller payload (binary vs base64)
+ *   - Works regardless of JS heap size
+ */
+async function uploadNative(fileUri: string): Promise<string | null> {
   try {
     const apiBase = resolveApiBase();
-    const token = await getAuthToken();
+    const token   = await getAuthToken();
     if (!token) {
       console.error('[persistImage] No auth token — upload skipped');
       return null;
     }
-    const res = await fetch(`${apiBase}/upload`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ data: base64Data, ext }),
+
+    const result = await FileSystem.uploadAsync(`${apiBase}/upload`, fileUri, {
+      httpMethod:  'POST',
+      uploadType:  FileSystem.FileSystemUploadType.MULTIPART,
+      fieldName:   'file',
+      mimeType:    'image/jpeg',
+      headers:     { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as { error?: string };
-      console.error('[persistImage] Upload failed — server returned', res.status, body?.error ?? '');
+
+    if (result.status >= 200 && result.status < 300) {
+      const json    = JSON.parse(result.body) as { path: string };
+      const domain  = apiBase.replace(/\/api$/, '');
+      return `${domain}${json.path}`;
+    }
+
+    let errMsg = '';
+    try { errMsg = (JSON.parse(result.body) as { error?: string }).error ?? ''; } catch { /* ignore */ }
+    console.error('[persistImage] Upload failed —', result.status, errMsg);
+    return null;
+  } catch (err) {
+    console.error('[persistImage] Upload error:', err);
+    return null;
+  }
+}
+
+/**
+ * Web upload: blob: / data: URI → JSON body with base64.
+ */
+async function uploadWeb(base64Data: string, ext: string): Promise<string | null> {
+  try {
+    const apiBase = resolveApiBase();
+    const token   = await getAuthToken();
+    if (!token) {
+      console.error('[persistImage] No auth token — upload skipped');
       return null;
     }
-    const json = await res.json() as { path: string };
+
+    const res = await fetch(`${apiBase}/upload`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body:    JSON.stringify({ data: base64Data, ext }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      console.error('[persistImage] Upload failed —', res.status, body?.error ?? '');
+      return null;
+    }
+
+    const json   = await res.json() as { path: string };
     const domain = apiBase.replace(/\/api$/, '');
     return `${domain}${json.path}`;
   } catch (err) {
@@ -68,15 +106,17 @@ async function uploadToServer(base64Data: string, ext: string): Promise<string |
 /**
  * Uploads a local/blob/data URI to the server and returns the permanent https URL.
  * Returns null if the upload fails — callers must handle null and show an error.
- * Never stores local file:// paths (they are device-specific and invisible to others).
  *
- * Native file:// URIs are automatically resized to ≤1600 px before upload so
- * full-resolution camera photos don't produce oversized payloads.
+ * Native (Android/iOS):
+ *   Resize to ≤1200 px → upload as binary multipart (no base64 overhead).
+ *
+ * Web:
+ *   blob: → convert to base64 data URI → JSON upload.
+ *   data: → JSON upload directly.
  */
 export async function persistImageUri(uri: string): Promise<string | null> {
   if (!uri) return null;
 
-  // Already a remote URL — nothing to do
   if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
 
   if (Platform.OS === 'web') {
@@ -91,8 +131,8 @@ export async function persistImageUri(uri: string): Promise<string | null> {
           reader.readAsDataURL(blob);
         });
         const ext       = (dataUrl.match(/data:[^/]+\/([a-z0-9]+);/) ?? [])[1] ?? 'jpg';
-        const serverUrl = await uploadToServer(dataUrl, ext);
-        return serverUrl ?? dataUrl; // keep data: on web as display fallback
+        const serverUrl = await uploadWeb(dataUrl, ext);
+        return serverUrl ?? dataUrl;
       } catch (err) {
         console.error('[persistImage] blob: conversion failed:', err);
         return null;
@@ -101,29 +141,22 @@ export async function persistImageUri(uri: string): Promise<string | null> {
 
     if (uri.startsWith('data:')) {
       const ext       = (uri.match(/data:[^/]+\/([a-z0-9]+);/) ?? [])[1] ?? 'jpg';
-      const serverUrl = await uploadToServer(uri, ext);
-      return serverUrl ?? uri; // keep data: on web as display fallback
+      const serverUrl = await uploadWeb(uri, ext);
+      return serverUrl ?? uri;
     }
 
     return null;
   }
 
-  // Native (iOS / Android):
-  // Resize to ≤1600 px first so the base64 payload stays manageable, then
-  // read as base64 and upload. Never fall back to local file:// paths because
-  // they are device-specific and invisible to other users.
   try {
     const resized = await resizeIfNeeded(uri);
-    const base64  = await FileSystem.readAsStringAsync(resized, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    const serverUrl = await uploadToServer(base64, 'jpeg');
-    if (serverUrl) return serverUrl;
+    const result  = await uploadNative(resized);
+    if (result) return result;
 
-    console.error('[persistImage] GCS upload returned null for', uri);
+    console.error('[persistImage] Upload returned null for', uri);
     return null;
   } catch (err) {
-    console.error('[persistImage] readAsStringAsync failed for', uri, ':', err);
+    console.error('[persistImage] Unexpected error for', uri, ':', err);
     return null;
   }
 }
