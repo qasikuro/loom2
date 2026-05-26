@@ -23,7 +23,7 @@ type FlowStep =
   | 'welcome' | 'survey' | 'allset'
   | 'analyzing' | 'vibe_reveal'
   | 'mode_cinematic' | 'mode_perks' | 'meet_lumi'
-  | 'session'
+  | 'session' | 'guides'
   | 'summary' | 'reflection' | 'break_prompt' | 'farewell';
 
 type SessionResult = { elapsed: number; questDone: number; momentsFound: number };
@@ -375,36 +375,117 @@ function Constellation({ color = '#B090FF' }: { color?: string }) {
 }
 
 // ─── Lumi mascot ──────────────────────────────────────────────────────────────
-function LumiHero({ color = '#B090FF', large = false }: { color?: string; large?: boolean }) {
-  const bob  = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0.5)).current;
-  const size = large ? 110 : 72;
+function LumiCharacter({ color = '#B090FF', size = 80 }: { color?: string; size?: number }) {
+  const bob       = useRef(new Animated.Value(0)).current;
+  const glowPulse = useRef(new Animated.Value(0.6)).current;
+  const eyeOp     = useRef(new Animated.Value(1)).current;
+
   useEffect(() => {
     Animated.loop(Animated.sequence([
-      Animated.timing(bob,  { toValue: -10, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      Animated.timing(bob,  { toValue:   0, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(bob, { toValue: -8, duration: 1900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(bob, { toValue: 0,  duration: 1900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
     ])).start();
     Animated.loop(Animated.sequence([
-      Animated.timing(glow, { toValue: 1,   duration: 1600, useNativeDriver: true }),
-      Animated.timing(glow, { toValue: 0.3, duration: 1600, useNativeDriver: true }),
+      Animated.timing(glowPulse, { toValue: 1,    duration: 2100, useNativeDriver: true }),
+      Animated.timing(glowPulse, { toValue: 0.35, duration: 2100, useNativeDriver: true }),
+    ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.delay(3800),
+      Animated.timing(eyeOp, { toValue: 0.05, duration: 75,  useNativeDriver: true }),
+      Animated.timing(eyeOp, { toValue: 1,    duration: 75,  useNativeDriver: true }),
+      Animated.delay(200),
+      Animated.timing(eyeOp, { toValue: 0.05, duration: 75,  useNativeDriver: true }),
+      Animated.timing(eyeOp, { toValue: 1,    duration: 75,  useNativeDriver: true }),
     ])).start();
   }, []);
+
+  const bw   = size;
+  const bh   = size * 1.15;
+  const ew   = size * 0.135;
+  const earW = size * 0.22;
+  const earH = size * 0.30;
+
   return (
     <Animated.View style={{ alignItems: 'center', transform: [{ translateY: bob }] }}>
+      {/* Outer glow */}
       <Animated.View style={{
-        position: 'absolute', width: size + 40, height: size + 40,
-        borderRadius: (size + 40) / 2, backgroundColor: `${color}20`, opacity: glow,
-        top: -20, left: -20,
+        position: 'absolute', width: size * 1.75, height: size * 1.75,
+        borderRadius: size * 0.875, backgroundColor: `${color}18`,
+        top: -size * 0.16, opacity: glowPulse,
       }} />
+      {/* Inner glow ring */}
       <View style={{
-        width: size, height: size, borderRadius: size / 2,
-        borderWidth: 1.5, borderColor: `${color}55`,
-        alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
+        position: 'absolute', width: size * 1.25, height: size * 1.25,
+        borderRadius: size * 0.625, borderWidth: 1, borderColor: `${color}28`, top: 0,
+      }} />
+
+      {/* Left ear/horn */}
+      <View style={{
+        position: 'absolute', width: earW, height: earH, borderRadius: earW / 2,
+        backgroundColor: color, top: earH * 0.10, left: size * 0.15, zIndex: 1,
+        transform: [{ rotate: '-14deg' }],
+        shadowColor: color, shadowOpacity: 0.55, shadowRadius: 8,
+      }} />
+      {/* Right ear/horn */}
+      <View style={{
+        position: 'absolute', width: earW, height: earH, borderRadius: earW / 2,
+        backgroundColor: color, top: earH * 0.10, right: size * 0.15, zIndex: 1,
+        transform: [{ rotate: '14deg' }],
+        shadowColor: color, shadowOpacity: 0.55, shadowRadius: 8,
+      }} />
+
+      {/* Body */}
+      <View style={{
+        width: bw, height: bh, borderRadius: bw * 0.48, backgroundColor: color,
+        overflow: 'hidden', alignItems: 'center', zIndex: 2,
+        marginTop: earH * 0.52,
+        shadowColor: color, shadowOpacity: 0.65, shadowRadius: 16,
       }}>
-        <LinearGradient colors={[`${color}40`, `${color}15`, 'transparent']} style={StyleSheet.absoluteFill} />
-        <Text style={{ fontSize: large ? 44 : 30 }}>✦</Text>
+        {/* Highlight sheen */}
+        <LinearGradient
+          colors={['rgba(255,255,255,0.44)', 'rgba(255,255,255,0.07)', 'transparent']}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, height: bh * 0.52 }}
+        />
+        {/* Left eye */}
+        <Animated.View style={{
+          position: 'absolute', top: bh * 0.27, left: bw * 0.18,
+          width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
+          backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
+          justifyContent: 'center', opacity: eyeOp,
+        }}>
+          <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
+          <View style={{ position: 'absolute', top: ew * 0.08, left: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
+        </Animated.View>
+        {/* Right eye */}
+        <Animated.View style={{
+          position: 'absolute', top: bh * 0.27, right: bw * 0.18,
+          width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
+          backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
+          justifyContent: 'center', opacity: eyeOp,
+        }}>
+          <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
+          <View style={{ position: 'absolute', top: ew * 0.08, right: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
+        </Animated.View>
+        {/* Blush left */}
+        <View style={{ position: 'absolute', top: bh * 0.46, left: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
+        {/* Blush right */}
+        <View style={{ position: 'absolute', top: bh * 0.46, right: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
       </View>
-      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color, letterSpacing: 1.5, marginTop: 6, opacity: 0.8 }}>LUMI</Text>
+
+      {/* Ghost tail */}
+      <View style={{
+        width: bw * 0.50, height: bh * 0.18, borderRadius: bw * 0.14,
+        backgroundColor: color, opacity: 0.72, marginTop: -bh * 0.04, zIndex: 1,
+      }} />
+
+      {/* Sparkles */}
+      <View style={{ position: 'absolute', top: -4, right: -4, zIndex: 10 }}>
+        <Text style={{ fontSize: 11, color: `${color}CC` }}>✦</Text>
+      </View>
+      <View style={{ position: 'absolute', top: bh * 0.28, left: -2, zIndex: 10 }}>
+        <Text style={{ fontSize: 7, color: `${color}88` }}>✦</Text>
+      </View>
+      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color, letterSpacing: 1.5, marginTop: 6, opacity: 0.75 }}>LUMI</Text>
     </Animated.View>
   );
 }
@@ -415,11 +496,11 @@ function LumiChat({ message, color = '#B090FF' }: { message: string; color?: str
     Animated.timing(fade, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }).start();
   }, [message]);
   return (
-    <Animated.View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, opacity: fade }}>
-      <LumiHero color={color} />
+    <Animated.View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12, opacity: fade }}>
+      <LumiCharacter color={color} size={68} />
       <View style={{
         flex: 1, backgroundColor: `${color}10`, borderRadius: 18, borderTopLeftRadius: 4,
-        borderWidth: 1, borderColor: `${color}28`, padding: 14, marginTop: 4,
+        borderWidth: 1, borderColor: `${color}28`, padding: 14, marginBottom: 16,
       }}>
         <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.88)', lineHeight: 21, fontStyle: 'italic' }}>
           "{message}"
@@ -520,7 +601,7 @@ function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string })
       <StarField />
       <ScrollView contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 60, alignItems: 'center', paddingTop: 24 }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: enter, transform: [{ translateY: enterY }], alignItems: 'center', marginBottom: 32 }}>
-          <LumiHero large />
+          <LumiCharacter color="#B090FF" size={110} />
         </Animated.View>
         <Animated.View style={{ opacity: enter, transform: [{ translateY: enterY }], alignItems: 'center', marginBottom: 8 }}>
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.65)', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>
@@ -610,11 +691,11 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
           <Text style={{ fontSize: 16, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.70)', textAlign: 'center', lineHeight: 26, marginBottom: 36 }}>
             We'll personalise your journey just for you.
           </Text>
-          <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(176,144,255,0.14)', padding: 22, marginBottom: 36 }}>
+          <View style={{ width: SW - 56, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(176,144,255,0.20)', padding: 22, marginBottom: 36 }}>
             {points.map((p, i) => (
-              <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: i < points.length - 1 ? 16 : 0 }}>
-                <Text style={{ fontSize: 14, color: 'rgba(176,144,255,0.7)', marginTop: 1 }}>✦</Text>
-                <Text style={{ flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.80)', lineHeight: 22 }}>{p}</Text>
+              <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: i < points.length - 1 ? 18 : 0 }}>
+                <Text style={{ fontSize: 14, color: '#B090FF', marginTop: 2 }}>✦</Text>
+                <Text style={{ flex: 1, fontSize: 14, color: '#EDE4FF', lineHeight: 22 }}>{p}</Text>
               </View>
             ))}
           </View>
@@ -828,7 +909,7 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: () =
           <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 20 }}>
             Meet Lumi 🌙
           </Text>
-          <LumiHero color={cfg.color} large />
+          <LumiCharacter color={cfg.color} size={110} />
           <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.55)', marginTop: 16, letterSpacing: 0.5, textAlign: 'center' }}>
             Your companion for this journey.
           </Text>
@@ -844,9 +925,10 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: () =
   );
 }
 
-function SessionScreen({ cfg, sessionStart, onEnd }: {
+function SessionScreen({ cfg, sessionStart, onEnd, onGuides }: {
   cfg: ModeConfig; sessionStart: number;
   onEnd: (r: SessionResult) => void;
+  onGuides: () => void;
 }) {
   const insets    = useSafeAreaInsets();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -987,7 +1069,7 @@ function SessionScreen({ cfg, sessionStart, onEnd }: {
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 16, backgroundColor: cfg.color, alignItems: 'center' }}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setSocialVis(false); }}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setSocialVis(false); onGuides(); }}
                 activeOpacity={0.85}
               >
                 <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#fff' }}>Accept</Text>
@@ -1214,7 +1296,7 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
       <StarField />
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
         <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
-          <LumiHero color={cfg.color} large />
+          <LumiCharacter color={cfg.color} size={110} />
           <Text style={{ fontSize: 34, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', marginTop: 32, marginBottom: 12, lineHeight: 42 }}>
             See you soon,{'\n'}dreamer ✦
           </Text>
@@ -1224,6 +1306,118 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
           <PrimaryBtn label="Home" onPress={onHome} color={cfg.color} />
         </Animated.View>
       </View>
+    </View>
+  );
+}
+
+// ─── Guides data ─────────────────────────────────────────────────────────────
+const GUIDES = [
+  { id: 'wanderer', em: '🌙', name: 'The Night Wanderer', role: 'Explorer',  color: '#B090FF',
+    desc: 'Knows every hidden path and forgotten corner. Travels without maps or plans.',
+    perks: ['Hidden paths', 'Discovery +40%'] },
+  { id: 'seer',     em: '🔮', name: 'The Crystal Seer',   role: 'Visionary', color: '#FFD86F',
+    desc: 'Sees further than most. Offers direction when the way forward is unclear.',
+    perks: ['Smart guidance', 'Priority paths'] },
+  { id: 'lantern',  em: '🏮', name: 'The Gentle Lantern', role: 'Companion', color: '#6BC5FF',
+    desc: 'Walks at your pace, no matter how slow. Always nearby when you need light.',
+    perks: ['Calm presence', 'Never rushes you'] },
+  { id: 'spark',    em: '🔥', name: 'The Ember Spark',    role: 'Motivator', color: '#FF9070',
+    desc: 'Burns bright and steady. Perfect when you need a push forward.',
+    perks: ['Motivation boost', 'Achievement help'] },
+];
+
+function GuidesScreen({ cfg, onBack }: { cfg: ModeConfig; onBack: () => void }) {
+  const insets = useSafeAreaInsets();
+  const topPad = Platform.OS === 'web' ? 48 : insets.top;
+  const btmPad = Platform.OS === 'web' ? 80 : insets.bottom + 20;
+  const [joined, setJoined] = useState<string | null>(null);
+  const enter = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(enter, { toValue: 1, duration: 600, delay: 80, useNativeDriver: true }).start();
+  }, []);
+
+  function handleJoin(guideId: string) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setJoined(guideId);
+    setTimeout(() => onBack(), 1800);
+  }
+
+  return (
+    <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
+      <LinearGradient colors={cfg.gradient} style={StyleSheet.absoluteFill} />
+      <StarField />
+      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: btmPad + 20, paddingTop: 16 }} showsVerticalScrollIndicator={false}>
+        <Animated.View style={{ opacity: enter }}>
+
+          {/* Back */}
+          <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={{ marginBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.60)' }}>← Back to session</Text>
+          </TouchableOpacity>
+
+          {/* Header */}
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.50)', letterSpacing: 1.5, marginBottom: 10 }}>KIND SOULS NEARBY</Text>
+          <Text style={{ fontSize: 26, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', lineHeight: 34, marginBottom: 8 }}>
+            Guides available{'\n'}for your journey.
+          </Text>
+          <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.58)', lineHeight: 22, marginBottom: 28 }}>
+            These wanderers are passing through. Any one of them will walk beside you.
+          </Text>
+
+          {/* Guide cards */}
+          {GUIDES.map(guide => (
+            <View key={guide.id} style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${guide.color}28`, padding: 20, marginBottom: 14, overflow: 'hidden' }}>
+              <LinearGradient colors={[`${guide.color}14`, 'transparent']} style={StyleSheet.absoluteFill} />
+
+              {/* Guide identity row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 }}>
+                <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: `${guide.color}20`, borderWidth: 1.5, borderColor: `${guide.color}50`, alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 26 }}>{guide.em}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 2 }}>{guide.name}</Text>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: guide.color, letterSpacing: 0.8 }}>{guide.role.toUpperCase()}</Text>
+                </View>
+              </View>
+
+              {/* Description */}
+              <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(215,200,255,0.78)', lineHeight: 22, marginBottom: 14 }}>
+                {guide.desc}
+              </Text>
+
+              {/* Perk chips */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                {guide.perks.map(p => (
+                  <View key={p} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: `${guide.color}16`, borderWidth: 1, borderColor: `${guide.color}32` }}>
+                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: guide.color }}>✦ {p}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Join button */}
+              {joined === guide.id ? (
+                <View style={{ paddingVertical: 13, borderRadius: 16, backgroundColor: `${guide.color}28`, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: guide.color }}>Joined! Returning to session…</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={{ paddingVertical: 13, borderRadius: 16, backgroundColor: joined ? `${guide.color}40` : guide.color, alignItems: 'center' }}
+                  onPress={() => !joined && handleJoin(guide.id)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff', opacity: joined ? 0.5 : 1 }}>Join Journey</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+
+          {/* Maybe later */}
+          <TouchableOpacity onPress={onBack} style={{ paddingVertical: 18, alignItems: 'center' }} activeOpacity={0.7}>
+            <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.50)' }}>Maybe later</Text>
+          </TouchableOpacity>
+
+        </Animated.View>
+      </ScrollView>
     </View>
   );
 }
@@ -1336,7 +1530,8 @@ export default function DriftScreen() {
       {step === 'mode_cinematic'  && cfg && <ModeCinematicScreen cfg={cfg} onEnter={() => go('mode_perks')} />}
       {step === 'mode_perks'      && cfg && <ModePerksScreen     cfg={cfg} onGotIt={() => go('meet_lumi')} />}
       {step === 'meet_lumi'       && cfg && <MeetLumiScreen      cfg={cfg} onContinue={handleStartSession} />}
-      {step === 'session'         && cfg && <SessionScreen       cfg={cfg} sessionStart={sessionStart ?? Date.now()} onEnd={handleEndSession} />}
+      {step === 'session'         && cfg && <SessionScreen       cfg={cfg} sessionStart={sessionStart ?? Date.now()} onEnd={handleEndSession} onGuides={() => go('guides')} />}
+      {step === 'guides'          && cfg && <GuidesScreen        cfg={cfg} onBack={() => go('session')} />}
       {step === 'summary'         && cfg && <SummaryScreen       cfg={cfg} result={result} onReflect={() => go('reflection')} />}
       {step === 'reflection'      && cfg && <ReflectionScreen    cfg={cfg} onContinue={() => go('break_prompt')} />}
       {step === 'break_prompt'    && cfg && <BreakPromptScreen   cfg={cfg} onBreak={() => go('farewell')} onContinue={handleRestart} />}
