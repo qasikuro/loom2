@@ -1514,7 +1514,7 @@ export default function CharacterScreen() {
 
                   {/* ── Guide bio ── */}
                   <View style={styles.guideSection}>
-                    <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>GUIDE INTRODUCTION</Text>
+                    <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>✦ Guide introduction</Text>
                     {editingGuideBio ? (
                       <View style={{ gap: 10 }}>
                         <TextInput
@@ -1558,7 +1558,7 @@ export default function CharacterScreen() {
 
                   {/* ── Topics ── */}
                   <View style={styles.guideSection}>
-                    <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>TOPICS I SUPPORT</Text>
+                    <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>◎ Topics I support</Text>
                     <View style={styles.guideTopicsWrap}>
                       {GUIDE_TOPICS.map(topic => {
                         const selected = (character.guideTopics ?? []).includes(topic);
@@ -1592,7 +1592,7 @@ export default function CharacterScreen() {
 
                   {/* ── Availability ── */}
                   <View style={styles.guideSection}>
-                    <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>AVAILABILITY</Text>
+                    <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>⏱ When I'm available</Text>
                     <View style={styles.guideDayRow}>
                       {DAY_LABELS_G.map((d, i) => (
                         <TouchableOpacity
@@ -2663,7 +2663,7 @@ const styles = StyleSheet.create({
   guideHeroRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  guideHeroTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  guideHeroTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
   guideHeroIconWrap: {
     width: 30, height: 30, borderRadius: 9,
     alignItems: 'center', justifyContent: 'center',
@@ -2694,7 +2694,7 @@ const styles = StyleSheet.create({
   guideDivider: { height: 1 },
   guideSection: { paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
   guideSectionLabel: {
-    fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.5, textTransform: 'uppercase',
+    fontSize: 12, fontFamily: 'Satoshi-Medium',
   },
   guideBioTouchable: {
     borderRadius: 12, borderWidth: 1, padding: 12, minHeight: 60, justifyContent: 'center',

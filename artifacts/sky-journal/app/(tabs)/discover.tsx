@@ -997,10 +997,10 @@ const styles = StyleSheet.create({
   personHandle:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   personBio:      { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 16 },
   followBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 13, height: 34,
-    borderRadius: 17, borderWidth: 1.5,
-    flexShrink: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingHorizontal: 14, height: 36,
+    borderRadius: 18, borderWidth: 1.5,
+    flexShrink: 0, minWidth: 88,
   },
   followBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 

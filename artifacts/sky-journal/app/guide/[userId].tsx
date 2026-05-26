@@ -200,37 +200,21 @@ export default function GuideProfileScreen() {
             <Text style={styles.heroHandle}>@{guide.username}</Text>
           )}
 
-          {/* Availability badge */}
-          <View style={[
-            styles.availBadge,
-            guide.isAvailableNow
-              ? { backgroundColor: 'rgba(80,200,130,0.18)', borderColor: 'rgba(80,200,130,0.40)' }
-              : { backgroundColor: 'rgba(150,150,180,0.14)', borderColor: 'rgba(150,150,180,0.30)' },
-          ]}>
+          {/* Compact meta strip — availability · mood · role · country */}
+          <View style={styles.heroMetaStrip}>
             <View style={[styles.availDotSmall, { backgroundColor: guide.isAvailableNow ? '#60D890' : '#909098' }]} />
-            <Text style={[styles.availBadgeText, { color: guide.isAvailableNow ? '#70E8A0' : '#A0A0B0' }]}>
-              {guide.isAvailableNow ? 'Available Now' : 'Offline'}
+            <Text style={styles.heroMetaStripText}>
+              {guide.isAvailableNow ? 'Available' : 'Offline'}
+              {guide.mood   ? `  ·  ${guide.mood}`    : ''}
+              {guide.role    ? `  ·  ${guide.role}`    : ''}
+              {guide.country ? `  ·  ${guide.country}` : ''}
             </Text>
           </View>
 
-          {/* Mood badge */}
-          <View style={[styles.moodBadge, { backgroundColor: 'rgba(200,184,232,0.10)', borderColor: 'rgba(200,184,232,0.22)' }]}>
-            <Text style={styles.moodBadgeText}>{guide.mood}</Text>
-          </View>
-
           {/* Star rating */}
-          <View style={{ marginTop: 8 }}>
+          <View style={{ marginTop: 10 }}>
             <StarRating rating={guide.peaceRating} />
           </View>
-
-          {/* Role + country */}
-          {(guide.role || guide.country) && (
-            <View style={styles.heroMeta}>
-              {guide.role    && <Text style={styles.heroMetaText}>{guide.role}</Text>}
-              {guide.role && guide.country && <Text style={styles.heroMetaSep}>·</Text>}
-              {guide.country && <Text style={styles.heroMetaText}>{guide.country}</Text>}
-            </View>
-          )}
         </View>
       </LinearGradient>
 
@@ -442,18 +426,27 @@ const styles = StyleSheet.create({
     color: 'rgba(200,184,232,0.55)',
     marginBottom: 10,
   },
-  availBadge: {
+  availDotSmall: { width: 7, height: 7, borderRadius: 4, flexShrink: 0 },
+
+  // Compact meta strip (availability · mood · role · country)
+  heroMetaStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
+    marginTop: 10,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 20,
+    backgroundColor: 'rgba(200,184,232,0.08)',
     borderWidth: 1,
-    marginTop: 4,
+    borderColor: 'rgba(200,184,232,0.14)',
   },
-  availDotSmall: { width: 7, height: 7, borderRadius: 4 },
-  availBadgeText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  heroMetaStripText: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Medium',
+    color: 'rgba(210,200,255,0.65)',
+    letterSpacing: 0.1,
+  },
 
   // Stats
   statsRow: {
@@ -529,44 +522,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1,
+    paddingVertical: 15,
+    borderRadius: 18,
+    borderWidth: 0,
   },
-  followBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  followBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
   messageBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    paddingVertical: 14,
-    borderRadius: 16,
-    borderWidth: 1,
+    paddingVertical: 15,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: 'rgba(152,120,216,0.55)',
+    backgroundColor: 'rgba(120,70,255,0.12)',
   },
   messageBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-
-  // Mood badge in hero
-  moodBadge: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 12, paddingVertical: 5,
-    borderRadius: 20, borderWidth: 1, marginTop: 8,
-  },
-  moodBadgeText: {
-    fontSize: 12, fontFamily: 'Satoshi-Bold',
-    color: 'rgba(220,210,255,0.85)', letterSpacing: 0.2,
-  },
-
-  // Role + country in hero
-  heroMeta: {
-    flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8,
-  },
-  heroMetaText: {
-    fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.55)',
-  },
-  heroMetaSep: {
-    fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.30)',
-  },
 
   // Trait chips
   traitChip: {
