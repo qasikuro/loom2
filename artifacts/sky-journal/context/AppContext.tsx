@@ -16,11 +16,18 @@ const API_BASE = resolveApiBase();
 
 // ── Resolve a possibly-relative API image path to an absolute URI ─────────────
 // Stored paths look like "/api/images/<file>". On native Expo there is no
-// implicit base, so we must prefix API_BASE. HTTPS / data / blob URIs pass through.
+// implicit base, so we must prefix the domain root. HTTPS / data / blob URIs
+// pass through unchanged.
+//
+// IMPORTANT: API_BASE ends in "/api" (e.g. "https://domain/api") but stored
+// paths already start with "/api/images/…". Strip the trailing "/api" from the
+// base before concatenating to avoid the double-prefix bug.
 function resolveUri(uri: string | null | undefined): string | undefined {
   if (!uri) return undefined;
-  if (uri.startsWith('/')) return `${API_BASE}${uri}`;
-  return uri;
+  if (/^https?:/.test(uri) || uri.startsWith('data:') || uri.startsWith('blob:')) return uri;
+  // Strip trailing /api so "/api/images/…" paths are not doubled.
+  const domainBase = API_BASE.replace(/\/api$/, '');
+  return `${domainBase}${uri}`;
 }
 
 // ── Auth token getter (injected from Clerk context in _layout) ────────────────
