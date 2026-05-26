@@ -484,13 +484,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { loadFromCache(); }, []);
 
   // Polls until Clerk returns a non-null token, up to maxMs.
-  // Replaces the old "fire all requests → all 401 → wait 1500 ms → retry" pattern.
-  async function waitForToken(maxMs = 6000): Promise<string | null> {
+  // Uses exponential backoff (0 → 50 → 150 → 350 → 500ms) so the common
+  // case (token ready immediately after sign-in) returns in the first iteration.
+  async function waitForToken(maxMs = 4000): Promise<string | null> {
     const deadline = Date.now() + maxMs;
+    let delay = 0;
     while (Date.now() < deadline) {
+      if (delay > 0) await new Promise<void>(r => setTimeout(r, delay));
       const t = await _getToken();
       if (t) return t;
-      await new Promise<void>(r => setTimeout(r, 100));
+      // Exponential backoff capped at 500 ms
+      delay = delay === 0 ? 50 : Math.min(delay * 2 + 50, 500);
     }
     return null;
   }

@@ -45,6 +45,7 @@ export const api = {
   getReports:    (status: string, offset = 0) => apiFetch<{ reports: Report[]; total: number }>(`/admin/reports?status=${status}&offset=${offset}&limit=50`),
   resolveReport: (id: string, status: "resolved" | "dismissed") => apiFetch(`/admin/reports/${id}/resolve`, { method: "PUT", body: JSON.stringify({ status }) }),
   deleteReport:  (id: string) => apiFetch(`/admin/reports/${id}`, { method: "DELETE" }),
+  getStickers:   (offset = 0) => apiFetch<{ stickers: AdminSticker[]; total: number }>(`/admin/stickers?offset=${offset}`),
 };
 
 export interface Stats {
@@ -55,6 +56,21 @@ export interface Stats {
   totalOutfits: number;
   pendingReports: number;
   recentSignups: number;
+  totalJournals: number;
+  totalStickers: number;
+}
+
+export interface AdminSticker {
+  id:           string;
+  fromUserId:   string;
+  fromName:     string;
+  fromUsername: string | null;
+  toUserId:     string;
+  toName:       string;
+  toUsername:   string | null;
+  storyId:      string;
+  stickerType:  string;
+  createdAt:    string;
 }
 
 export interface AdminUser {

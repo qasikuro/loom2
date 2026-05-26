@@ -6,9 +6,10 @@ import {
   reportsTable,
   journalEntriesTable,
   followsTable,
+  stickerReactionsTable,
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, count, desc, eq, gte, ilike, lte, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 import { clerkClient } from "@clerk/express";
 
@@ -68,6 +69,8 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
       [{ totalOutfits }],
       [{ pendingReports }],
       [{ recentSignups }],
+      [{ totalJournals }],
+      [{ totalStickers }],
     ] = await Promise.all([
       db.select({ totalUsers: count() }).from(characterTable),
       db.select({ bannedUsers: count() }).from(characterTable).where(eq(characterTable.isBanned, true)),
@@ -76,6 +79,8 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
       db.select({ totalOutfits: count() }).from(outfitsTable),
       db.select({ pendingReports: count() }).from(reportsTable).where(eq(reportsTable.status, "pending")),
       db.select({ recentSignups: count() }).from(characterTable).where(gte(characterTable.updatedAt, thirtyDaysAgo)),
+      db.select({ totalJournals: count() }).from(journalEntriesTable),
+      db.select({ totalStickers: count() }).from(stickerReactionsTable),
     ]);
 
     return res.json({
@@ -86,6 +91,8 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
       totalOutfits,
       pendingReports,
       recentSignups,
+      totalJournals,
+      totalStickers,
     });
   } catch (err) {
     req.log.error({ err }, "Admin stats failed");
@@ -542,6 +549,52 @@ router.put("/admin/users/:id/gallery-limit", requireAdmin, async (req: Request, 
     return res.json({ ok: true, limit });
   } catch (err) {
     req.log.error({ err }, "Admin set gallery limit failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Sticker activity ──────────────────────────────────────────────────────────
+router.get("/admin/stickers", requireAdmin, async (req: Request, res: Response) => {
+  const offset = Math.max(0, parseInt(String(req.query.offset ?? "0")));
+  const limit  = 50;
+  try {
+    const rows = await db
+      .select()
+      .from(stickerReactionsTable)
+      .orderBy(desc(stickerReactionsTable.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [[{ total }]] = await Promise.all([
+      db.select({ total: count() }).from(stickerReactionsTable),
+    ]);
+
+    const userIds = [...new Set([...rows.map(r => r.fromUserId), ...rows.map(r => r.toUserId)])];
+    const chars = userIds.length > 0
+      ? await db
+          .select({ userId: characterTable.userId, name: characterTable.name, username: characterTable.username })
+          .from(characterTable)
+          .where(inArray(characterTable.userId, userIds))
+      : [];
+    const charMap = Object.fromEntries(chars.map(c => [c.userId, c]));
+
+    return res.json({
+      stickers: rows.map(r => ({
+        id:           r.id,
+        fromUserId:   r.fromUserId,
+        fromName:     charMap[r.fromUserId]?.name     ?? "Unknown",
+        fromUsername: charMap[r.fromUserId]?.username ?? null,
+        toUserId:     r.toUserId,
+        toName:       charMap[r.toUserId]?.name     ?? "Unknown",
+        toUsername:   charMap[r.toUserId]?.username ?? null,
+        storyId:      r.storyId,
+        stickerType:  r.stickerType,
+        createdAt:    r.createdAt.toISOString(),
+      })),
+      total,
+    });
+  } catch (err) {
+    req.log.error({ err }, "Admin stickers failed");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

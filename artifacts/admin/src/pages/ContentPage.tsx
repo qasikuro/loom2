@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { api, type ContentItem, type StoryPanel } from "../api";
+import { api, type AdminSticker, type ContentItem, type StoryPanel } from "../api";
 import UserDetailDrawer from "../components/UserDetailDrawer";
 
 export default function ContentPage() {
@@ -19,6 +19,29 @@ export default function ContentPage() {
   const [toast, setToast]   = useState("");
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [preview, setPreview] = useState<ContentItem | null>(null);
+
+  const [showStickers, setShowStickers]         = useState(false);
+  const [stickers, setStickers]                 = useState<AdminSticker[]>([]);
+  const [stickerTotal, setStickerTotal]         = useState(0);
+  const [stickerOffset, setStickerOffset]       = useState(0);
+  const [stickerLoading, setStickerLoading]     = useState(false);
+
+  const loadStickers = useCallback(async (off: number) => {
+    setStickerLoading(true);
+    try {
+      const data = await api.getStickers(off);
+      setStickers(data.stickers);
+      setStickerTotal(data.total);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setStickerLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showStickers) loadStickers(stickerOffset);
+  }, [showStickers, stickerOffset]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
@@ -71,8 +94,14 @@ export default function ContentPage() {
   };
 
   const switchType = (t: "stories" | "outfits") => {
+    setShowStickers(false);
     setContentType(t);
     setOffset(0);
+  };
+
+  const switchToStickers = () => {
+    setShowStickers(true);
+    setStickerOffset(0);
   };
 
   const clearFilters = () => {
@@ -103,52 +132,129 @@ export default function ContentPage() {
         <div className="flex gap-2">
           <button
             onClick={() => switchType("stories")}
-            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${contentType === "stories" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
+            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${!showStickers && contentType === "stories" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
           >Stories</button>
           <button
             onClick={() => switchType("outfits")}
-            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${contentType === "outfits" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
+            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${!showStickers && contentType === "outfits" ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
           >Outfits</button>
+          <button
+            onClick={switchToStickers}
+            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${showStickers ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
+          >💌 Stickers</button>
         </div>
 
-        {/* Author search */}
-        <input
-          type="search"
-          placeholder="Filter by author name or @username…"
-          className="border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring w-64"
-          value={authorSearch}
-          onChange={e => onAuthorChange(e.target.value)}
-        />
+        {/* Author search — hidden on stickers tab */}
+        {!showStickers && (
+          <input
+            type="search"
+            placeholder="Filter by author name or @username…"
+            className="border rounded-lg px-3 py-2 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring w-64"
+            value={authorSearch}
+            onChange={e => onAuthorChange(e.target.value)}
+          />
+        )}
 
-        {/* Date range */}
-        <div className="flex items-center gap-1.5">
-          <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
-          <input
-            type="date"
-            className="border rounded-lg px-2 py-1.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-            value={dateFrom}
-            onChange={e => { setDateFrom(e.target.value); setOffset(0); }}
-          />
-          <label className="text-xs text-muted-foreground">to</label>
-          <input
-            type="date"
-            className="border rounded-lg px-2 py-1.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
-            value={dateTo}
-            onChange={e => { setDateTo(e.target.value); setOffset(0); }}
-          />
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="px-2 py-1.5 text-xs rounded-lg border hover:bg-muted transition-colors text-muted-foreground"
-              title="Clear all filters"
-            >✕ Clear</button>
-          )}
-        </div>
+        {/* Date range — hidden on stickers tab */}
+        {!showStickers && (
+          <div className="flex items-center gap-1.5">
+            <label className="text-xs text-muted-foreground whitespace-nowrap">From</label>
+            <input
+              type="date"
+              className="border rounded-lg px-2 py-1.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+              value={dateFrom}
+              onChange={e => { setDateFrom(e.target.value); setOffset(0); }}
+            />
+            <label className="text-xs text-muted-foreground">to</label>
+            <input
+              type="date"
+              className="border rounded-lg px-2 py-1.5 text-sm bg-card focus:outline-none focus:ring-2 focus:ring-ring"
+              value={dateTo}
+              onChange={e => { setDateTo(e.target.value); setOffset(0); }}
+            />
+            {hasFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-2 py-1.5 text-xs rounded-lg border hover:bg-muted transition-colors text-muted-foreground"
+                title="Clear all filters"
+              >✕ Clear</button>
+            )}
+          </div>
+        )}
       </div>
 
       {error && <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</div>}
 
-      <div className="bg-card rounded-xl border overflow-hidden">
+      {/* ── Sticker activity table ───────────────────────────────────────────── */}
+      {showStickers && (
+        <div className="bg-card rounded-xl border overflow-hidden">
+          <div className="px-4 py-3 border-b bg-muted/20 flex items-center justify-between">
+            <span className="text-sm font-medium">{stickerTotal.toLocaleString()} sticker reactions sent</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Sent by</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">To author</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Story ID</th>
+                  <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stickerLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={i} className="border-b">
+                      <td colSpan={5} className="px-4 py-3">
+                        <div className="h-4 bg-muted rounded animate-pulse w-full" />
+                      </td>
+                    </tr>
+                  ))
+                ) : stickers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">No stickers sent yet.</td>
+                  </tr>
+                ) : stickers.map(s => (
+                  <tr key={s.id} className="border-b hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 capitalize">{s.stickerType}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{s.fromName}</div>
+                      {s.fromUsername && <div className="text-xs text-muted-foreground">@{s.fromUsername}</div>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium">{s.toName}</div>
+                      {s.toUsername && <div className="text-xs text-muted-foreground">@{s.toUsername}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
+                      <span title={s.storyId}>{s.storyId.slice(0, 8)}…</span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(s.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {stickerTotal > 50 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-muted/20">
+              <span className="text-sm text-muted-foreground">{stickerOffset + 1}–{Math.min(stickerOffset + 50, stickerTotal)} of {stickerTotal}</span>
+              <div className="flex gap-2">
+                <button onClick={() => setStickerOffset(Math.max(0, stickerOffset - 50))} disabled={stickerOffset === 0}
+                  className="px-3 py-1 text-sm border rounded-md disabled:opacity-40 hover:bg-muted">← Prev</button>
+                <button onClick={() => setStickerOffset(stickerOffset + 50)} disabled={stickerOffset + 50 >= stickerTotal}
+                  className="px-3 py-1 text-sm border rounded-md disabled:opacity-40 hover:bg-muted">Next →</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Stories / Outfits table ─────────────────────────────────────────── */}
+      {!showStickers && <div className="bg-card rounded-xl border overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted/20 flex items-center justify-between">
           <span className="text-sm font-medium">
             {total.toLocaleString()} {contentType}
@@ -282,7 +388,7 @@ export default function ContentPage() {
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Content Preview Modal ───────────────────────────────────────────── */}
       {preview && (

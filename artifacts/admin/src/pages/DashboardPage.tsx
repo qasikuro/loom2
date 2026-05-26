@@ -8,6 +8,8 @@ const cards = (s: Stats) => [
   { label: "Admin Accounts",   value: s.adminUsers,      color: "text-purple-600",bg: "bg-purple-50" },
   { label: "Total Stories",    value: s.totalStories,    color: "text-indigo-600",bg: "bg-indigo-50" },
   { label: "Total Outfits",    value: s.totalOutfits,    color: "text-pink-600",  bg: "bg-pink-50" },
+  { label: "Journal Entries",  value: s.totalJournals,   color: "text-teal-600",  bg: "bg-teal-50" },
+  { label: "Vibe Stickers",    value: s.totalStickers,   color: "text-violet-600",bg: "bg-violet-50" },
   { label: "Pending Reports",  value: s.pendingReports,  color: s.pendingReports > 0 ? "text-orange-600" : "text-gray-600", bg: s.pendingReports > 0 ? "bg-orange-50" : "bg-gray-50" },
 ];
 
