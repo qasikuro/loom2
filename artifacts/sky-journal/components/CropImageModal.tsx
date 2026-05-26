@@ -212,7 +212,7 @@ export default function CropImageModal({
       const result = await ImageManipulator.manipulateAsync(
         uri,
         actions,
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+        { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
       );
       onDone(result.uri, ratio);
     } catch {

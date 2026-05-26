@@ -352,6 +352,7 @@ interface ActiveOutfit {
   id:          string;
   name:        string;
   description: string;
+  story:       string;
   imageUri:    string | null;
   tags:        string[];
 }
@@ -389,6 +390,7 @@ interface PublicOutfit {
   id:          string;
   name:        string;
   description: string;
+  story:       string;
   imageUri:    string | null;
   tags:        string[];
   date:        string;
@@ -711,7 +713,7 @@ export default function UserProfileScreen() {
                   params: {
                     outfitName:   profile.activeOutfit!.name,
                     outfitDesc:   profile.activeOutfit!.description ?? '',
-                    outfitStory:  (profile.activeOutfit as any).story ?? '',
+                    outfitStory:  profile.activeOutfit!.story ?? '',
                     outfitImage:  profile.activeOutfit!.imageUri ?? '',
                     outfitTags:   JSON.stringify(profile.activeOutfit!.tags),
                     outfitDate:   '',
@@ -796,7 +798,7 @@ export default function UserProfileScreen() {
                         params: {
                           outfitName:   outfit.name,
                           outfitDesc:   outfit.description ?? '',
-                          outfitStory:  (outfit as any).story ?? '',
+                          outfitStory:  outfit.story ?? '',
                           outfitImage:  outfit.imageUri ?? '',
                           outfitTags:   JSON.stringify(outfit.tags),
                           outfitDate:   outfit.date,

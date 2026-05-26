@@ -27,7 +27,7 @@ async function resizeIfNeeded(uri: string): Promise<string> {
     const result = await ImageManipulator.manipulateAsync(
       uri,
       [{ resize: { width: MAX_DIM } }],
-      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+      { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
     );
     return result.uri;
   } catch {

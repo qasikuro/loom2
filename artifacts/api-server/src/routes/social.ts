@@ -338,6 +338,7 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
       id:          r.id,
       name:        r.name,
       description: r.description,
+      story:       r.story ?? '',
       imageUri:    safeImageUri(r.imageUri),
       tags:        r.tags,
       date:        r.date.toISOString(),
