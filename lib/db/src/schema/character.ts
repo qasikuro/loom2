@@ -1,4 +1,4 @@
-import { boolean, integer, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, jsonb, pgTable, real, text, timestamp } from "drizzle-orm/pg-core";
 
 export interface ProfileLink {
   label:     string;
@@ -22,10 +22,17 @@ export const characterTable = pgTable("character", {
   timezone:       text("timezone"),
   pushToken:      text("push_token"),
   links:          jsonb("links").$type<ProfileLink[]>().default([]),
-  isAdmin:        boolean("is_admin").notNull().default(false),
-  isBanned:       boolean("is_banned").notNull().default(false),
-  galleryLimit:   integer("gallery_limit").notNull().default(200),
-  updatedAt:      timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  isAdmin:           boolean("is_admin").notNull().default(false),
+  isBanned:          boolean("is_banned").notNull().default(false),
+  galleryLimit:      integer("gallery_limit").notNull().default(200),
+  // ── Constellation Guides ─────────────────────────────────────────────────
+  isGuide:           boolean("is_guide").notNull().default(false),
+  guideBio:          text("guide_bio").notNull().default(""),
+  guideTopics:       jsonb("guide_topics").$type<string[]>().notNull().default([]),
+  guideAvailability: jsonb("guide_availability").$type<{ days: number[]; timeFrom: string; timeTo: string } | null>().default(null),
+  peaceRating:       real("peace_rating").notNull().default(5.0),
+  dreamersGuided:    integer("dreamers_guided").notNull().default(0),
+  updatedAt:         timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Character      = typeof characterTable.$inferSelect;

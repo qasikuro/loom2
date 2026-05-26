@@ -68,21 +68,49 @@ export interface ProfileLink {
   platform?: string;
 }
 
+export interface GuideAvailability {
+  days:     number[];  // 0 = Sun … 6 = Sat
+  timeFrom: string;   // "HH:MM" 24-h
+  timeTo:   string;   // "HH:MM" 24-h
+}
+
+export interface GuideProfile {
+  userId:            string;
+  name:              string;
+  username:          string | null;
+  bio:               string;
+  guideBio:          string;
+  guideTopics:       string[];
+  guideAvailability: GuideAvailability | null;
+  peaceRating:       number;
+  dreamersGuided:    number;
+  followerCount:     number;
+  avatarUri:         string | null;
+  mood:              string;
+  isFollowing:       boolean;
+  isAvailableNow:    boolean;
+}
+
 export interface Character {
-  name:           string;
-  bio:            string;
-  mood:           string;
-  traits:         string[];
-  isPublic:       boolean;
-  username?:      string;
-  avatarUri?:     string;
-  activeOutfitId?: string | null;
-  birthday?:      string;
-  country?:       string;
-  role?:          string;
-  timezone?:      string;
-  pushToken?:     string;
-  links?:         ProfileLink[];
+  name:              string;
+  bio:               string;
+  mood:              string;
+  traits:            string[];
+  isPublic:          boolean;
+  username?:         string;
+  avatarUri?:        string;
+  activeOutfitId?:   string | null;
+  birthday?:         string;
+  country?:          string;
+  role?:             string;
+  timezone?:         string;
+  pushToken?:        string;
+  links?:            ProfileLink[];
+  // Constellation Guides
+  isGuide?:          boolean;
+  guideBio?:         string;
+  guideTopics?:      string[];
+  guideAvailability?: GuideAvailability | null;
 }
 
 export type BubbleStyle = 'rounded' | 'sharp' | 'oval';
@@ -258,6 +286,7 @@ interface AppContextValue {
   followingIds:  string[];
   followUser:    (targetUserId: string) => void;
   unfollowUser:  (targetUserId: string) => void;
+  myGuides:      GuideProfile[];
 
   rewards:       Reward[];
   dismissReward: (id: string) => void;
@@ -297,20 +326,24 @@ function relativeTimeDiscover(dateStr: string): string {
 
 function toAppCharacter(raw: any): Character {
   return {
-    name:          raw.name          ?? DEFAULT_CHARACTER.name,
-    bio:           raw.bio           ?? DEFAULT_CHARACTER.bio,
-    mood:          raw.mood          ?? DEFAULT_CHARACTER.mood,
-    traits:        Array.isArray(raw.traits) ? raw.traits : [],
-    isPublic:      raw.isPublic      ?? raw.is_public      ?? true,
-    username:      raw.username      ?? undefined,
-    avatarUri:     raw.avatarUri     ?? undefined,
-    activeOutfitId: raw.activeOutfitId ?? raw.active_outfit_id ?? undefined,
-    birthday:      raw.birthday      ?? undefined,
-    country:       raw.country       ?? undefined,
-    role:          raw.role          ?? undefined,
-    timezone:      raw.timezone      ?? undefined,
-    pushToken:     raw.pushToken     ?? raw.push_token ?? undefined,
-    links:         Array.isArray(raw.links) ? raw.links : undefined,
+    name:              raw.name          ?? DEFAULT_CHARACTER.name,
+    bio:               raw.bio           ?? DEFAULT_CHARACTER.bio,
+    mood:              raw.mood          ?? DEFAULT_CHARACTER.mood,
+    traits:            Array.isArray(raw.traits) ? raw.traits : [],
+    isPublic:          raw.isPublic      ?? raw.is_public      ?? true,
+    username:          raw.username      ?? undefined,
+    avatarUri:         raw.avatarUri     ?? undefined,
+    activeOutfitId:    raw.activeOutfitId ?? raw.active_outfit_id ?? undefined,
+    birthday:          raw.birthday      ?? undefined,
+    country:           raw.country       ?? undefined,
+    role:              raw.role          ?? undefined,
+    timezone:          raw.timezone      ?? undefined,
+    pushToken:         raw.pushToken     ?? raw.push_token ?? undefined,
+    links:             Array.isArray(raw.links) ? raw.links : undefined,
+    isGuide:           raw.isGuide          ?? false,
+    guideBio:          raw.guideBio         ?? '',
+    guideTopics:       Array.isArray(raw.guideTopics) ? raw.guideTopics : [],
+    guideAvailability: raw.guideAvailability ?? null,
   };
 }
 
@@ -412,6 +445,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
   const [friends, setFriends]                         = useState<FriendSummary[]>([]);
   const [serverNotifications, setServerNotifications] = useState<ServerNotification[]>([]);
+  const [myGuides, setMyGuides]                       = useState<GuideProfile[]>([]);
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
     discoverFeedRaw.map(p => ({
@@ -534,7 +568,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Previously social was a second sequential wave, doubling the wait for Discover.
       const [
         charRaw, entriesRaw, storiesRaw, outfitsRaw,
-        galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw,
+        galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw, guidesRaw,
       ] = await Promise.all([
         apiFetch<any>('/character').catch(() => null),
         apiFetch<any[]>('/journal-entries').catch(() => null),
@@ -546,6 +580,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<string[]>('/follows/following').catch(() => []),
         apiFetch<any[]>('/notifications').catch(() => []),
         apiFetch<FriendSummary[]>('/friends').catch(() => []),
+        apiFetch<GuideProfile[]>('/guides?following=true').catch(() => []),
       ]);
 
       // Process core data
@@ -561,8 +596,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
 
       // Process social data
-      const feed    = (discoverRaw  ?? []).map(toRawDiscoverPost);
+      const feed   = (discoverRaw  ?? []).map(toRawDiscoverPost);
       const follows = followingRaw ?? [];
+      const guides  = (guidesRaw   ?? []) as GuideProfile[];
 
       // Process notifications
       const notifs = (notifRaw ?? []).map((r: any): ServerNotification => ({
@@ -587,6 +623,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setFollowingIds(follows);
       setFriends(friendsRaw ?? []);
       setServerNotifications(notifs);
+      setMyGuides(guides);
       setApiOnline(true);
 
       // Restore active outfit across sessions.
@@ -738,20 +775,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     apiFetch('/character', {
       method: 'PUT',
       body:   JSON.stringify({
-        name:           c.name,
-        bio:            c.bio,
-        mood:           c.mood,
-        traits:         c.traits,
-        isPublic:       c.isPublic,
-        username:       c.username       ?? null,
-        avatarUri:      c.avatarUri      ?? null,
-        activeOutfitId: c.activeOutfitId ?? null,
-        birthday:       c.birthday       ?? null,
-        country:        c.country        ?? null,
-        role:           c.role           ?? null,
-        timezone:       c.timezone       ?? null,
-        pushToken:      c.pushToken      ?? null,
-        links:          c.links          ?? null,
+        name:              c.name,
+        bio:               c.bio,
+        mood:              c.mood,
+        traits:            c.traits,
+        isPublic:          c.isPublic,
+        username:          c.username          ?? null,
+        avatarUri:         c.avatarUri         ?? null,
+        activeOutfitId:    c.activeOutfitId    ?? null,
+        birthday:          c.birthday          ?? null,
+        country:           c.country           ?? null,
+        role:              c.role              ?? null,
+        timezone:          c.timezone          ?? null,
+        pushToken:         c.pushToken         ?? null,
+        links:             c.links             ?? null,
+        isGuide:           c.isGuide           ?? false,
+        guideBio:          c.guideBio          ?? '',
+        guideTopics:       c.guideTopics       ?? [],
+        guideAvailability: c.guideAvailability ?? null,
       }),
     }).catch(() => null);
   }, []);
@@ -1025,7 +1066,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
       discoverPosts, savedStoryIds, toggleSavePost,
-      friends, followingIds, followUser, unfollowUser,
+      friends, followingIds, followUser, unfollowUser, myGuides,
       rewards, dismissReward,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
       reloadData,

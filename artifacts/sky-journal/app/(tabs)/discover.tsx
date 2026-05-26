@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -28,14 +28,36 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_W = Dimensions.get('window').width;
 
-const TABS = ['For You', 'New', 'Vibes', 'People'] as const;
+const TABS = ['For You', 'New', 'Vibes', 'Guides', 'People'] as const;
 type TabType = (typeof TABS)[number];
 
 const TAB_LABEL_KEYS: Record<TabType, string> = {
   'For You': 'discover.forYou',
   'New':     'discover.new',
   'Vibes':   'discover.vibes',
+  'Guides':  'discover.guides',
   'People':  'discover.people',
+};
+
+const GUIDE_TOPICS = [
+  'Anxiety & Stress', 'Motivation', 'Self Growth', 'Relationships',
+  'Loneliness', 'Creativity', 'Spirituality', 'Mental Health',
+  'Dreams & Goals', 'Grief', 'Social Skills', 'Mindfulness',
+];
+
+const TOPIC_COLORS: Record<string, string> = {
+  'Anxiety & Stress': '#E87898',
+  'Motivation':       '#E8A850',
+  'Self Growth':      '#68C890',
+  'Relationships':    '#D878B0',
+  'Loneliness':       '#7890C8',
+  'Creativity':       '#B878E8',
+  'Spirituality':     '#C8A84B',
+  'Mental Health':    '#78B8D8',
+  'Dreams & Goals':   '#9878D8',
+  'Grief':            '#8890A8',
+  'Social Skills':    '#78C8A8',
+  'Mindfulness':      '#68B8B0',
 };
 
 const VIBES = [
@@ -59,6 +81,23 @@ interface UserSearchResult {
   isFollowing: boolean;
 }
 
+interface GuideResult {
+  userId:            string;
+  name:              string;
+  username:          string | null;
+  bio:               string;
+  guideBio:          string;
+  guideTopics:       string[];
+  guideAvailability: { days: number[]; timeFrom: string; timeTo: string } | null;
+  peaceRating:       number;
+  dreamersGuided:    number;
+  followerCount:     number;
+  avatarUri:         string | null;
+  mood:              string;
+  isFollowing:       boolean;
+  isAvailableNow:    boolean;
+}
+
 export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
@@ -73,8 +112,14 @@ export default function DiscoverScreen() {
   const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const [refreshing,    setRefreshing]    = useState(false);
+  const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
+  const [guidesLoading, setGuidesLoading] = useState(false);
+  const [guidesError,   setGuidesError]   = useState<string | null>(null);
+  const [guideTopicFilter, setGuideTopicFilter] = useState<string | null>(null);
+  const [guideAvailNow,    setGuideAvailNow]    = useState(false);
   const searchTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchRef   = useRef<number>(0);
+  const guidesLoaded   = useRef(false);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
@@ -129,6 +174,40 @@ export default function DiscoverScreen() {
     );
     if (nowFollowing) unfollowUser(item.userId);
     else followUser(item.userId);
+  }
+
+  async function loadGuides(topic: string | null = guideTopicFilter, availNow: boolean = guideAvailNow) {
+    setGuidesLoading(true);
+    setGuidesError(null);
+    try {
+      let qs = '';
+      if (topic)    qs += `topic=${encodeURIComponent(topic)}&`;
+      if (availNow) qs += 'available_now=true&';
+      const data = await apiFetch<GuideResult[]>(`/guides?${qs}`);
+      setGuidesData(data ?? []);
+    } catch {
+      setGuidesError('Could not load guides. Pull to refresh.');
+    } finally {
+      setGuidesLoading(false);
+    }
+  }
+
+  // Load guides the first time the Guides tab is opened
+  useEffect(() => {
+    if (activeTab === 'Guides' && !guidesLoaded.current) {
+      guidesLoaded.current = true;
+      loadGuides();
+    }
+  }, [activeTab]);
+
+  function handleGuideFollow(g: GuideResult) {
+    Haptics.selectionAsync();
+    const nowFollowing = followingIds.includes(g.userId) || g.isFollowing;
+    setGuidesData(prev =>
+      prev.map(r => r.userId === g.userId ? { ...r, isFollowing: !nowFollowing } : r),
+    );
+    if (nowFollowing) unfollowUser(g.userId);
+    else followUser(g.userId);
   }
 
   const newPosts  = [...discoverPosts].sort((a, b) =>
@@ -330,6 +409,167 @@ export default function DiscoverScreen() {
         targetId={reportTargetId ?? ''}
         onClose={() => setReportTargetId(null)}
       />
+
+      {/* ── Guides ─────────────────────────────────────────── */}
+      {activeTab === 'Guides' && (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[{ paddingBottom: bottomPad }]}
+        >
+          {/* Header banner */}
+          <LinearGradient
+            colors={['rgba(80,40,180,0.28)', 'rgba(60,120,240,0.14)', 'transparent']}
+            style={styles.guideBanner}
+          >
+            <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(100,60,220,0.18)', top: -40, right: -20, pointerEvents: 'none' }} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <Icon name="star" size={16} color="#C8A84B" />
+              <Text style={styles.guideBannerTitle}>Constellation Guides</Text>
+            </View>
+            <Text style={styles.guideBannerSub}>
+              Wanderers who light the path — find a guide who resonates with your sky journey
+            </Text>
+          </LinearGradient>
+
+          {/* Topic filter chips */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.guideTopicRow}>
+            <TouchableOpacity
+              style={[styles.guideTopicChip, !guideTopicFilter && { backgroundColor: 'rgba(155,120,232,0.22)', borderColor: 'rgba(155,120,232,0.55)' }, !guideTopicFilter ? {} : { borderColor: 'rgba(200,184,232,0.18)' }]}
+              onPress={() => { setGuideTopicFilter(null); loadGuides(null, guideAvailNow); Haptics.selectionAsync(); }}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.guideTopicText, { color: guideTopicFilter ? 'rgba(200,184,232,0.55)' : '#C8B8E8' }]}>All Topics</Text>
+            </TouchableOpacity>
+            {GUIDE_TOPICS.map(t => {
+              const active = guideTopicFilter === t;
+              const col    = TOPIC_COLORS[t] ?? '#9878D8';
+              return (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.guideTopicChip, active ? { backgroundColor: `${col}22`, borderColor: `${col}55` } : { borderColor: 'rgba(200,184,232,0.14)' }]}
+                  onPress={() => { const next = active ? null : t; setGuideTopicFilter(next); loadGuides(next, guideAvailNow); Haptics.selectionAsync(); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.guideTopicText, { color: active ? col : 'rgba(200,184,232,0.55)' }]}>{t}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Available now toggle */}
+          <TouchableOpacity
+            style={[styles.guideAvailToggle, guideAvailNow ? { backgroundColor: 'rgba(80,200,130,0.14)', borderColor: 'rgba(80,200,130,0.40)' } : { borderColor: 'rgba(200,184,232,0.14)' }]}
+            onPress={() => { const next = !guideAvailNow; setGuideAvailNow(next); loadGuides(guideTopicFilter, next); Haptics.selectionAsync(); }}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.availDot, { backgroundColor: guideAvailNow ? '#60D890' : '#808090' }]} />
+            <Text style={[styles.guideAvailText, { color: guideAvailNow ? '#70E8A0' : 'rgba(200,184,232,0.55)' }]}>
+              {guideAvailNow ? 'Available Now' : 'All Guides'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Error */}
+          {!!guidesError && (
+            <View style={{ marginHorizontal: 16, marginBottom: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(180,60,60,0.12)', borderWidth: 1, borderColor: 'rgba(180,60,60,0.25)' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#E06C75', textAlign: 'center' }}>{guidesError}</Text>
+            </View>
+          )}
+
+          {/* Loading */}
+          {guidesLoading ? (
+            <ActivityIndicator color="rgba(155,120,232,0.7)" style={{ marginTop: 40 }} />
+          ) : guidesData.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <View style={[styles.emptyIconBox, { backgroundColor: 'rgba(155,120,232,0.12)' }]}>
+                <Icon name="star" size={30} color="rgba(155,120,232,0.6)" />
+              </View>
+              <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>No guides yet</Text>
+              <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
+                {guideTopicFilter
+                  ? `No guides for "${guideTopicFilter}" yet — check another topic`
+                  : 'Be the first to become a Constellation Guide on your profile'}
+              </Text>
+            </View>
+          ) : (
+            <View style={{ paddingHorizontal: 16, gap: 12, paddingTop: 8 }}>
+              {guidesData.map(g => {
+                const isFollowing = followingIds.includes(g.userId) || g.isFollowing;
+                return (
+                  <TouchableOpacity
+                    key={g.userId}
+                    style={styles.guideCard}
+                    onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: g.userId } } as any)}
+                    activeOpacity={0.88}
+                  >
+                    {/* Avatar */}
+                    <View style={styles.guideCardAvatar}>
+                      {g.avatarUri ? (
+                        <Image source={{ uri: g.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                      ) : (
+                        <LinearGradient colors={['rgba(120,70,255,0.55)', 'rgba(60,140,240,0.40)']} style={StyleSheet.absoluteFill} />
+                      )}
+                      {!g.avatarUri && (
+                        <Text style={styles.guideCardInitial}>{g.name.charAt(0).toUpperCase()}</Text>
+                      )}
+                      <View style={[styles.guideCardAvailDot, { backgroundColor: g.isAvailableNow ? '#60D890' : '#808090' }]} />
+                    </View>
+
+                    {/* Info */}
+                    <View style={{ flex: 1, gap: 4 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.guideCardName} numberOfLines={1}>{g.name}</Text>
+                        {g.isAvailableNow && (
+                          <View style={styles.guideNowBadge}>
+                            <Text style={styles.guideNowText}>Now</Text>
+                          </View>
+                        )}
+                      </View>
+                      {g.username && (
+                        <Text style={styles.guideCardHandle}>@{g.username}</Text>
+                      )}
+                      {!!g.guideBio && (
+                        <Text style={styles.guideCardBio} numberOfLines={2}>{g.guideBio}</Text>
+                      )}
+                      {g.guideTopics.length > 0 && (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
+                          {g.guideTopics.slice(0, 3).map(topic => {
+                            const col = TOPIC_COLORS[topic] ?? '#9878D8';
+                            return (
+                              <View key={topic} style={[styles.guideTagPill, { backgroundColor: `${col}16`, borderColor: `${col}30` }]}>
+                                <Text style={[styles.guideTagText, { color: col }]}>{topic}</Text>
+                              </View>
+                            );
+                          })}
+                          {g.guideTopics.length > 3 && (
+                            <Text style={styles.guideTagMore}>+{g.guideTopics.length - 3}</Text>
+                          )}
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Follow button */}
+                    <TouchableOpacity
+                      style={[
+                        styles.followBtn,
+                        isFollowing
+                          ? { backgroundColor: 'rgba(155,120,232,0.14)', borderColor: 'rgba(155,120,232,0.35)' }
+                          : { backgroundColor: 'rgba(155,120,232,0.85)', borderColor: 'rgba(155,120,232,0.85)' },
+                      ]}
+                      onPress={() => handleGuideFollow(g)}
+                      activeOpacity={0.8}
+                    >
+                      <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={13} color={isFollowing ? '#C8B0FF' : '#fff'} />
+                      <Text style={[styles.followBtnText, { color: isFollowing ? '#C8B0FF' : '#fff' }]}>
+                        {isFollowing ? 'Following' : 'Follow'}
+                      </Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       {/* ── People ─────────────────────────────────────────── */}
       {activeTab === 'People' && (
@@ -621,6 +861,108 @@ const styles = StyleSheet.create({
     borderRadius: 24, borderWidth: 1, marginBottom: 8,
   },
   backText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+
+  // Guides
+  guideBanner: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 18,
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  guideBannerTitle: {
+    fontSize: 17,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,210,255,0.95)',
+    letterSpacing: -0.3,
+  },
+  guideBannerSub: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.55)',
+    marginTop: 4,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  guideTopicRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 7,
+    flexDirection: 'row',
+  },
+  guideTopicChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    backgroundColor: 'rgba(200,184,232,0.06)',
+  },
+  guideTopicText: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: 0.1,
+  },
+  guideAvailToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 7,
+  },
+  availDot: { width: 8, height: 8, borderRadius: 4 },
+  guideAvailText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  guideCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    backgroundColor: 'rgba(30,20,60,0.65)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(155,120,232,0.18)',
+    padding: 14,
+  },
+  guideCardAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(120,70,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  guideCardInitial: {
+    fontSize: 22,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,210,255,0.9)',
+  },
+  guideCardAvailDot: {
+    position: 'absolute',
+    bottom: 3,
+    right: 3,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(12,8,32,0.9)',
+  },
+  guideCardName:   { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
+  guideCardHandle: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(155,120,232,0.70)' },
+  guideCardBio:    { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', lineHeight: 17 },
+  guideNowBadge: {
+    paddingHorizontal: 7, paddingVertical: 2,
+    borderRadius: 8, backgroundColor: 'rgba(80,200,130,0.18)',
+    borderWidth: 1, borderColor: 'rgba(80,200,130,0.40)',
+  },
+  guideNowText: { fontSize: 9, fontFamily: 'Satoshi-Bold', color: '#70E8A0' },
+  guideTagPill:  { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
+  guideTagText:  { fontSize: 10, fontFamily: 'Satoshi-Medium' },
+  guideTagMore:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', alignSelf: 'center' },
 
   // People
   peopleRoot: { flex: 1 },

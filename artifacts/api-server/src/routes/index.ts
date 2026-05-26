@@ -11,6 +11,8 @@ import notificationsRouter from "./notifications";
 import weatherRouter from "./weather";
 import reportsRouter from "./reports";
 import adminRouter from "./admin";
+import guidesRouter from "./guides";
+import messagesRouter from "./messages";
 
 const router: IRouter = Router();
 
@@ -26,5 +28,7 @@ router.use(notificationsRouter);
 router.use(weatherRouter);
 router.use(reportsRouter);
 router.use(adminRouter);
+router.use(guidesRouter);
+router.use(messagesRouter);
 
 export default router;

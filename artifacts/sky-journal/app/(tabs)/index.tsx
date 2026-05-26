@@ -130,7 +130,7 @@ export default function HomeScreen() {
     character, journalEntries, stories, rewards, dismissReward,
     outfits, activeOutfitId, setActiveOutfitId,
     serverNotifications, markServerNotificationsRead, deleteServerNotification,
-    followingIds, friends, isLoading,
+    followingIds, friends, isLoading, myGuides,
   } = useApp();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -640,6 +640,72 @@ export default function HomeScreen() {
           )}
         </View>
 
+        {/* ── Your Constellation Guide widget ──────────────── */}
+        {myGuides.length > 0 && (() => {
+          const guide = myGuides[0];
+          return (
+            <TouchableOpacity
+              style={[styles.guideWidget, SHADOW.sm]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: '/guide/[userId]', params: { userId: guide.userId } } as any);
+              }}
+              activeOpacity={0.88}
+            >
+              <LinearGradient
+                colors={['rgba(60,30,140,0.72)', 'rgba(20,12,60,0.82)']}
+                style={StyleSheet.absoluteFill}
+              />
+              {/* Nebula accent */}
+              <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(120,70,255,0.18)', top: -20, right: 20, pointerEvents: 'none' }} />
+              {/* Badge */}
+              <View style={styles.guideWidgetBadge}>
+                <Icon name="star" size={10} color="#C8A84B" />
+                <Text style={styles.guideWidgetBadgeText}>Your Guide</Text>
+              </View>
+              <View style={styles.guideWidgetRow}>
+                {/* Avatar */}
+                <View style={styles.guideWidgetAvatar}>
+                  {guide.avatarUri ? (
+                    <Image source={{ uri: guide.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                  ) : (
+                    <LinearGradient colors={['rgba(120,70,255,0.60)', 'rgba(60,140,240,0.45)']} style={StyleSheet.absoluteFill} />
+                  )}
+                  {!guide.avatarUri && (
+                    <Text style={styles.guideWidgetInitial}>{guide.name.charAt(0).toUpperCase()}</Text>
+                  )}
+                  <View style={[styles.guideWidgetDot, { backgroundColor: guide.isAvailableNow ? '#60D890' : '#606070' }]} />
+                </View>
+                {/* Info */}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.guideWidgetName}>{guide.name}</Text>
+                  {guide.username && <Text style={styles.guideWidgetHandle}>@{guide.username}</Text>}
+                  <Text style={styles.guideWidgetStatus}>
+                    {guide.isAvailableNow ? '✦ Available Now' : '✦ Offline'}
+                  </Text>
+                  {guide.guideTopics.length > 0 && (
+                    <Text style={styles.guideWidgetTopics} numberOfLines={1}>
+                      {guide.guideTopics.slice(0, 3).join(' · ')}
+                    </Text>
+                  )}
+                </View>
+                {/* Message CTA */}
+                <TouchableOpacity
+                  style={styles.guideWidgetMsgBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.push({ pathname: '/messages/[userId]', params: { userId: guide.userId, name: guide.name } } as any);
+                  }}
+                  activeOpacity={0.85}
+                >
+                  <Icon name="message-circle" size={14} color="rgba(220,210,255,0.90)" />
+                  <Text style={styles.guideWidgetMsgText}>Message</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          );
+        })()}
+
         {/* Section label */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('home.featuresBeingAdded')}</Text>
 
@@ -1043,6 +1109,79 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
+  // Your Guide widget
+  guideWidget: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(120,70,255,0.30)',
+    overflow: 'hidden',
+    paddingTop: 10,
+    paddingBottom: 14,
+    paddingHorizontal: 14,
+  },
+  guideWidgetBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 10,
+  },
+  guideWidgetBadgeText: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+    color: '#C8A84B',
+    letterSpacing: 1.3,
+    textTransform: 'uppercase',
+  },
+  guideWidgetRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  guideWidgetAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(120,70,255,0.30)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  guideWidgetInitial: {
+    fontSize: 22,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,210,255,0.9)',
+  },
+  guideWidgetDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 11,
+    height: 11,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: 'rgba(12,8,36,0.95)',
+  },
+  guideWidgetName:   { fontSize: 14, fontFamily: 'Satoshi-Bold',    color: 'rgba(220,210,255,0.96)' },
+  guideWidgetHandle: { fontSize: 11, fontFamily: 'Satoshi-Medium',  color: 'rgba(155,120,232,0.65)', marginBottom: 2 },
+  guideWidgetStatus: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', fontStyle: 'italic' },
+  guideWidgetTopics: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', marginTop: 3 },
+  guideWidgetMsgBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: 'rgba(120,70,255,0.22)',
+    borderWidth: 1,
+    borderColor: 'rgba(120,70,255,0.40)',
+    alignSelf: 'center',
+  },
+  guideWidgetMsgText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(210,195,255,0.85)' },
+
   lockedOverlay: {
     borderRadius: 20,
     alignItems: 'flex-end',

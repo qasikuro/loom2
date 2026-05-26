@@ -103,6 +103,19 @@ const ROLES = [
   { key: 'Solo',      emoji: '🌙', color: '#6080C0', hint: 'Lone spirit' },
 ] as const;
 
+const GUIDE_TOPICS = [
+  'Anxiety & Stress', 'Motivation', 'Self Growth', 'Relationships',
+  'Loneliness', 'Creativity', 'Spirituality', 'Mental Health',
+  'Dreams & Goals', 'Grief', 'Social Skills', 'Mindfulness',
+];
+const GUIDE_TOPIC_COLORS: Record<string, string> = {
+  'Anxiety & Stress': '#E87898', 'Motivation': '#E8A850', 'Self Growth': '#68C890',
+  'Relationships': '#D878B0', 'Loneliness': '#7890C8', 'Creativity': '#B878E8',
+  'Spirituality': '#C8A84B', 'Mental Health': '#78B8D8', 'Dreams & Goals': '#9878D8',
+  'Grief': '#8890A8', 'Social Skills': '#78C8A8', 'Mindfulness': '#68B8B0',
+};
+const DAY_LABELS_G = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 const MOOD_COLORS: Record<string, string> = {
   Peaceful: '#5B9BB5', Joyful: '#D4A849', Melancholy: '#5D7BA5',
   Nostalgic: '#A5785D', Hopeful: '#6BA57A', Dreamy: '#9B7AB5',
@@ -720,6 +733,20 @@ export default function CharacterScreen() {
   const [linkOtherLabel,   setLinkOtherLabel]   = useState('');
   const [linkEditIdx,      setLinkEditIdx]      = useState<number | null>(null);
 
+  // ── Guide Mode state ───────────────────────────────────────────────────────
+  const [editingGuideBio,  setEditingGuideBio]  = useState(false);
+  const [guideBioVal,      setGuideBioVal]      = useState(character.guideBio ?? '');
+  const [guideAvailDays,   setGuideAvailDays]   = useState<number[]>(
+    character.guideAvailability?.days ?? []
+  );
+  const [guideTimeFrom,    setGuideTimeFrom]    = useState(
+    character.guideAvailability?.timeFrom ?? '20:00'
+  );
+  const [guideTimeTo,      setGuideTimeTo]      = useState(
+    character.guideAvailability?.timeTo ?? '23:00'
+  );
+  const [editingGuideTime, setEditingGuideTime] = useState(false);
+
   function saveBirthday() {
     setCharacter({ ...character, birthday: birthdayVal.trim() || undefined });
     setEditingBirthday(false);
@@ -727,6 +754,32 @@ export default function CharacterScreen() {
   function saveCountry() {
     setCharacter({ ...character, country: countryVal.trim() || undefined });
     setEditingCountry(false);
+  }
+  function saveGuideBio() {
+    setCharacter({ ...character, guideBio: guideBioVal.trim() });
+    setEditingGuideBio(false);
+  }
+  function toggleGuideDay(day: number) {
+    const next = guideAvailDays.includes(day)
+      ? guideAvailDays.filter(d => d !== day)
+      : [...guideAvailDays, day].sort((a, b) => a - b);
+    setGuideAvailDays(next);
+    setCharacter({
+      ...character,
+      guideAvailability: next.length > 0
+        ? { days: next, timeFrom: guideTimeFrom, timeTo: guideTimeTo }
+        : null,
+    });
+    Haptics.selectionAsync();
+  }
+  function saveGuideTime() {
+    setEditingGuideTime(false);
+    if (guideAvailDays.length > 0) {
+      setCharacter({
+        ...character,
+        guideAvailability: { days: guideAvailDays, timeFrom: guideTimeFrom, timeTo: guideTimeTo },
+      });
+    }
   }
   function openAddLink() {
     setLinkEditIdx(null);
@@ -1379,6 +1432,193 @@ export default function CharacterScreen() {
               <Icon name="chevron-right" size={14} color="rgba(155,120,255,0.45)" />
             </TouchableOpacity>
           )}
+
+          {/* ── Constellation Guide Mode ─────────────────────── */}
+          <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border, marginTop: 12 }, SHADOW.xs]}>
+            {/* Header */}
+            <View style={styles.aboutCardHeader}>
+              <View style={[styles.aboutCardIcon, { backgroundColor: 'rgba(120,70,255,0.14)' }]}>
+                <Icon name="star" size={14} color="#9878D8" />
+              </View>
+              <Text style={[styles.aboutCardTitle, { color: colors.foreground }]}>Constellation Guide</Text>
+              {/* Toggle */}
+              <TouchableOpacity
+                style={[
+                  styles.guideToggle,
+                  character.isGuide
+                    ? { backgroundColor: 'rgba(120,70,255,0.22)', borderColor: 'rgba(120,70,255,0.55)' }
+                    : { backgroundColor: 'transparent', borderColor: colors.border },
+                ]}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setCharacter({ ...character, isGuide: !character.isGuide });
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.guideToggleText, { color: character.isGuide ? '#C8B0FF' : colors.mutedForeground }]}>
+                  {character.isGuide ? 'Guide Mode ON' : 'Become a Guide'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {character.isGuide ? (
+              <View style={{ gap: 16 }}>
+                <Text style={[styles.guideIntroCopy, { color: colors.mutedForeground }]}>
+                  You're visible in Discover as a Constellation Guide. Wanderers can follow you and send messages.
+                </Text>
+
+                {/* Guide bio */}
+                <View>
+                  <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>Guide Introduction</Text>
+                  {editingGuideBio ? (
+                    <View style={{ gap: 8 }}>
+                      <TextInput
+                        style={[styles.guideTextArea, { color: colors.foreground, backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}28` }]}
+                        value={guideBioVal}
+                        onChangeText={setGuideBioVal}
+                        multiline
+                        placeholder="Tell wanderers how you can help them navigate the sky…"
+                        placeholderTextColor={colors.mutedForeground}
+                        autoFocus
+                        maxLength={400}
+                      />
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
+                        <TouchableOpacity onPress={() => { setGuideBioVal(character.guideBio ?? ''); setEditingGuideBio(false); }} style={[styles.guideSaveBtn, { borderColor: colors.border, backgroundColor: 'transparent' }]}>
+                          <Text style={[styles.guideSaveBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={saveGuideBio} style={[styles.guideSaveBtn, { borderColor: colors.primary, backgroundColor: colors.primary }]}>
+                          <Text style={[styles.guideSaveBtnText, { color: '#fff' }]}>Save</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <TouchableOpacity onPress={() => { setGuideBioVal(character.guideBio ?? ''); setEditingGuideBio(true); }} activeOpacity={0.75}>
+                      <Text style={[styles.guideBioText, { color: character.guideBio ? colors.foreground : colors.mutedForeground }]}>
+                        {character.guideBio || 'Tap to add a guide introduction…'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Topics */}
+                <View>
+                  <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>Topics I Support</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                    {GUIDE_TOPICS.map(topic => {
+                      const selected = (character.guideTopics ?? []).includes(topic);
+                      const col = GUIDE_TOPIC_COLORS[topic] ?? colors.primary;
+                      return (
+                        <TouchableOpacity
+                          key={topic}
+                          style={[
+                            styles.guideTopicChip,
+                            selected
+                              ? { backgroundColor: `${col}20`, borderColor: `${col}60` }
+                              : { backgroundColor: 'transparent', borderColor: colors.border },
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            const topics = (character.guideTopics ?? []);
+                            const next = selected
+                              ? topics.filter(t => t !== topic)
+                              : [...topics, topic];
+                            setCharacter({ ...character, guideTopics: next });
+                          }}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.guideTopicChipText, { color: selected ? col : colors.mutedForeground }]}>{topic}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* Availability */}
+                <View>
+                  <Text style={[styles.guideSectionLabel, { color: colors.mutedForeground }]}>Availability</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginTop: 8 }}>
+                    {DAY_LABELS_G.map((d, i) => (
+                      <TouchableOpacity
+                        key={d}
+                        style={[
+                          styles.guideDayPill,
+                          guideAvailDays.includes(i)
+                            ? { backgroundColor: 'rgba(80,200,130,0.20)', borderColor: 'rgba(80,200,130,0.55)' }
+                            : { backgroundColor: 'transparent', borderColor: colors.border },
+                        ]}
+                        onPress={() => toggleGuideDay(i)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={[styles.guideDayText, { color: guideAvailDays.includes(i) ? '#70E8A0' : colors.mutedForeground }]}>{d}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  {/* Time picker */}
+                  {editingGuideTime ? (
+                    <View style={{ gap: 8, marginTop: 10 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground }}>From</Text>
+                        <TextInput
+                          style={[styles.guideTimeInput, { color: colors.foreground, borderColor: colors.border }]}
+                          value={guideTimeFrom}
+                          onChangeText={setGuideTimeFrom}
+                          placeholder="20:00"
+                          placeholderTextColor={colors.mutedForeground}
+                          keyboardType="numeric"
+                          maxLength={5}
+                        />
+                        <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground }}>To</Text>
+                        <TextInput
+                          style={[styles.guideTimeInput, { color: colors.foreground, borderColor: colors.border }]}
+                          value={guideTimeTo}
+                          onChangeText={setGuideTimeTo}
+                          placeholder="23:00"
+                          placeholderTextColor={colors.mutedForeground}
+                          keyboardType="numeric"
+                          maxLength={5}
+                        />
+                      </View>
+                      <TouchableOpacity onPress={saveGuideTime} style={[styles.guideSaveBtn, { alignSelf: 'flex-end', borderColor: colors.primary, backgroundColor: colors.primary }]}>
+                        <Text style={[styles.guideSaveBtnText, { color: '#fff' }]}>Save Time</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.guideTimePill, { borderColor: colors.border, backgroundColor: `${colors.primary}08` }]}
+                      onPress={() => setEditingGuideTime(true)}
+                      activeOpacity={0.75}
+                    >
+                      <Icon name="clock" size={12} color={colors.primary} />
+                      <Text style={[styles.guideTimePillText, { color: colors.foreground }]}>
+                        {character.guideAvailability
+                          ? `${character.guideAvailability.timeFrom} – ${character.guideAvailability.timeTo}`
+                          : 'Set hours'}
+                      </Text>
+                      <Icon name="edit-2" size={11} color={colors.mutedForeground} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* View profile button */}
+                {character.username && (
+                  <TouchableOpacity
+                    style={[styles.guideViewBtn, { borderColor: `${colors.primary}35`, backgroundColor: `${colors.primary}10` }]}
+                    onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: 'me' } } as any)}
+                    activeOpacity={0.8}
+                  >
+                    <Icon name="eye" size={13} color={colors.primary} />
+                    <Text style={[styles.guideViewBtnText, { color: colors.primary }]}>Preview my Guide Profile</Text>
+                    <Icon name="chevron-right" size={13} color={`${colors.primary}70`} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <Text style={[styles.guideIntroCopy, { color: colors.mutedForeground }]}>
+                Enable Guide Mode to appear in the Constellation Guides tab and support other sky wanderers.
+              </Text>
+            )}
+          </View>
 
           {/* ── My Stories ───────────────────────────────────── */}
           <View style={styles.hSection}>
@@ -2315,6 +2555,63 @@ const styles = StyleSheet.create({
   suggChips:   { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   suggChip:    { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1 },
   suggText:    { fontSize: 12, fontFamily: 'Satoshi-Regular' },
+
+  // Guide Mode styles
+  guideToggle: {
+    marginLeft: 'auto',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  guideToggleText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  guideIntroCopy:  { fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 20, fontStyle: 'italic' },
+  guideSectionLabel: {
+    fontSize: 10, fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.2, textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+  guideTextArea: {
+    borderWidth: 1, borderRadius: 12,
+    padding: 12, minHeight: 90,
+    fontSize: 14, fontFamily: 'Satoshi-Regular',
+    textAlignVertical: 'top', lineHeight: 21,
+  },
+  guideSaveBtn: {
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 12, borderWidth: 1,
+  },
+  guideSaveBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  guideBioText: { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 21, paddingVertical: 4 },
+  guideTopicChip: {
+    paddingHorizontal: 11, paddingVertical: 6,
+    borderRadius: 16, borderWidth: 1,
+  },
+  guideTopicChipText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  guideDayPill: {
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 10, borderWidth: 1,
+  },
+  guideDayText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  guideTimeInput: {
+    borderWidth: 1, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 7,
+    fontSize: 14, fontFamily: 'Satoshi-Regular',
+    width: 70, textAlign: 'center',
+  },
+  guideTimePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderRadius: 12,
+    paddingHorizontal: 12, paddingVertical: 9,
+    marginTop: 8, alignSelf: 'flex-start',
+  },
+  guideTimePillText: { fontSize: 13, fontFamily: 'Satoshi-Regular' },
+  guideViewBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 14, borderWidth: 1,
+  },
+  guideViewBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold', flex: 1 },
 
   // Theme toggle
   themeToggleRow: { flexDirection: 'row', borderRadius: 14, borderWidth: 1, padding: 4, gap: 4, marginBottom: 4 },

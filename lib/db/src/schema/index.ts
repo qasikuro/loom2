@@ -2,6 +2,7 @@ export * from "./character";
 export * from "./follows";
 export * from "./gallery";
 export * from "./journal-entries";
+export * from "./messages";
 export * from "./stories";
 export * from "./outfits";
 export * from "./notifications";

@@ -18,21 +18,32 @@ const ProfileLinkSchema = z.object({
   url:   z.string().max(300),
 });
 
+const GuideAvailabilitySchema = z.object({
+  days:     z.array(z.number().int().min(0).max(6)).max(7),
+  timeFrom: z.string().regex(/^\d{1,2}:\d{2}$/),
+  timeTo:   z.string().regex(/^\d{1,2}:\d{2}$/),
+}).nullable().optional();
+
 const CharacterInputSchema = z.object({
-  name:           z.string().min(1).max(100),
-  bio:            z.string().max(500).default(""),
-  mood:           z.string().max(100).default("Hopeful"),
-  traits:         z.array(z.string()).default([]),
-  isPublic:       z.boolean().default(true),
-  username:       z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
-  avatarUri:      z.string().nullable().optional(),
-  activeOutfitId: z.string().nullable().optional(),
-  birthday:       z.string().max(20).nullable().optional(),
-  country:        z.string().max(80).nullable().optional(),
-  links:          z.array(ProfileLinkSchema).max(6).optional().nullable(),
-  role:           z.enum(['Collector', 'Trader', 'Veteran', 'Uber', 'Solo']).nullable().optional(),
-  timezone:       z.string().max(100).nullable().optional(),
-  pushToken:      z.string().max(500).nullable().optional(),
+  name:              z.string().min(1).max(100),
+  bio:               z.string().max(500).default(""),
+  mood:              z.string().max(100).default("Hopeful"),
+  traits:            z.array(z.string()).default([]),
+  isPublic:          z.boolean().default(true),
+  username:          z.string().regex(/^[a-z0-9_]{3,20}$/).optional().nullable(),
+  avatarUri:         z.string().nullable().optional(),
+  activeOutfitId:    z.string().nullable().optional(),
+  birthday:          z.string().max(20).nullable().optional(),
+  country:           z.string().max(80).nullable().optional(),
+  links:             z.array(ProfileLinkSchema).max(6).optional().nullable(),
+  role:              z.enum(['Collector', 'Trader', 'Veteran', 'Uber', 'Solo']).nullable().optional(),
+  timezone:          z.string().max(100).nullable().optional(),
+  pushToken:         z.string().max(500).nullable().optional(),
+  // Constellation Guides fields
+  isGuide:           z.boolean().optional(),
+  guideBio:          z.string().max(1000).optional(),
+  guideTopics:       z.array(z.string().max(80)).max(12).optional(),
+  guideAvailability: GuideAvailabilitySchema,
 });
 
 router.get("/character", requireAuth, async (req, res) => {
@@ -80,9 +91,12 @@ router.put("/character", requireAuth, async (req, res) => {
     const safeData = {
       ...parsed.data,
       // If username already locked, always keep the existing one regardless of what was sent
-      username: existing?.username ?? parsed.data.username,
-      avatarUri: safeImageUri(parsed.data.avatarUri),
-      activeOutfitId: parsed.data.activeOutfitId ?? null,
+      username:          existing?.username ?? parsed.data.username,
+      avatarUri:         safeImageUri(parsed.data.avatarUri),
+      activeOutfitId:    parsed.data.activeOutfitId    ?? null,
+      guideBio:          parsed.data.guideBio          ?? undefined,
+      guideTopics:       parsed.data.guideTopics       ?? undefined,
+      guideAvailability: parsed.data.guideAvailability ?? undefined,
     };
     const [updated] = await db
       .insert(characterTable)
