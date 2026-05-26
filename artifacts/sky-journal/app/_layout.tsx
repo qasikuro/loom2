@@ -17,6 +17,8 @@ import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { SoundProvider } from '@/context/SoundContext';
+import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
 
 // Configure foreground notification display — wrapped in try/catch because
 // expo-notifications remote push support is removed from Expo Go (SDK 53+).
@@ -98,6 +100,27 @@ function AuthTokenBridge() {
   return null;
 }
 
+function AppOverlays() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const checkedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || checkedRef.current) return;
+    checkedRef.current = true;
+    hasCompletedOnboarding().then(done => {
+      if (!done) setShowOnboarding(true);
+    });
+  }, [isLoaded, isSignedIn]);
+
+  function handleComplete() {
+    setShowOnboarding(false);
+    markOnboardingDone();
+  }
+
+  return <OnboardingOverlay visible={showOnboarding} onComplete={handleComplete} />;
+}
+
 function AuthNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
@@ -152,10 +175,12 @@ export default function RootLayout() {
               <SafeAreaProvider>
                 <ErrorBoundary>
                   <QueryClientProvider client={queryClient}>
-                    <AppProvider>
-                      <AuthTokenBridge />
-                      <AuthNavigator />
-                      <GestureHandlerRootView style={{ flex: 1 }}>
+                    <SoundProvider>
+                      <AppProvider>
+                        <AuthTokenBridge />
+                        <AuthNavigator />
+                        <AppOverlays />
+                        <GestureHandlerRootView style={{ flex: 1 }}>
                         <KeyboardProvider>
                           <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="(auth)" />
@@ -203,7 +228,8 @@ export default function RootLayout() {
                           </Stack>
                         </KeyboardProvider>
                       </GestureHandlerRootView>
-                    </AppProvider>
+                      </AppProvider>
+                    </SoundProvider>
                   </QueryClientProvider>
                 </ErrorBoundary>
               </SafeAreaProvider>

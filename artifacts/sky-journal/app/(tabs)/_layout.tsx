@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/hooks/useColors';
 import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
+import { useSound } from '@/context/SoundContext';
 
 const BAR_HEIGHT = 66;
 const BTN_SIZE   = 56;
@@ -145,6 +146,7 @@ function ClassicTabLayout() {
   const insets = useSafeAreaInsets();
   const isWeb  = Platform.OS === 'web';
   const { t }  = useTranslation();
+  const { playSound } = useSound();
 
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 10);
 
@@ -187,6 +189,7 @@ function ClassicTabLayout() {
     >
       <Tabs.Screen
         name="index"
+        listeners={{ tabPress: () => playSound('navigate') }}
         options={{
           title: t('nav.home'),
           tabBarIcon: ({ color, focused }) => (
@@ -196,6 +199,7 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="log"
+        listeners={{ tabPress: () => playSound('navigate') }}
         options={{
           title: t('nav.journal'),
           tabBarIcon: ({ color, focused }) => (
@@ -205,6 +209,7 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="create"
+        listeners={{ tabPress: () => playSound('chime') }}
         options={{
           title: '',
           tabBarLabel: () => null,
@@ -214,6 +219,7 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="discover"
+        listeners={{ tabPress: () => playSound('navigate') }}
         options={{
           title: t('nav.discover'),
           tabBarIcon: ({ color, focused }) => (
@@ -227,6 +233,7 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="profile"
+        listeners={{ tabPress: () => playSound('navigate') }}
         options={{
           title: t('nav.profile'),
           tabBarIcon: ({ color, focused }) => (

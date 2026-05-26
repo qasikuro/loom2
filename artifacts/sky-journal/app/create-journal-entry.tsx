@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp, type JournalEntryType } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useSound } from '@/context/SoundContext';
 
 const MOODS = [
   { label: 'Hopeful',  icon: 'sun'     as const, color: '#C8A84B' },
@@ -79,6 +80,7 @@ const QUICK_OFFSETS = [
 
 export default function CreateJournalEntryScreen() {
   const colors  = useColors();
+  const { playSound } = useSound();
   const insets  = useSafeAreaInsets();
   const { t: tr } = useTranslation();
   const { addJournalEntry } = useApp();
@@ -169,6 +171,7 @@ export default function CreateJournalEntryScreen() {
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    playSound('save');
     addJournalEntry({
       id:         crypto.randomUUID(),
       date:       entryDate.toISOString(),

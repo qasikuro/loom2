@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Images } from '@/assets/images';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useApp } from '@/context/AppContext';
+import { useSound } from '@/context/SoundContext';
 import { SkeletonBox } from '@/components/Skeleton';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
@@ -132,6 +133,7 @@ export default function HomeScreen() {
     serverNotifications, markServerNotificationsRead, deleteServerNotification,
     followingIds, friends, isLoading, myGuides,
   } = useApp();
+  const { playSound } = useSound();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   // Tab bar height (64) + safe area + breathing room
@@ -298,6 +300,7 @@ export default function HomeScreen() {
   // Burst interaction
   function triggerHeroBurst() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    playSound('star');
     // Scale bounce
     Animated.sequence([
       Animated.timing(heroTapScale, { toValue: 1.07, duration: 75, useNativeDriver: true }),
@@ -709,7 +712,7 @@ export default function HomeScreen() {
         {/* ── Drift Mode entry card ─────────────────────────── */}
         <TouchableOpacity
           style={[styles.driftCard, SHADOW.sm]}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/drift'); }}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('whoosh'); router.push('/(tabs)/drift'); }}
           activeOpacity={0.88}
         >
           <LinearGradient

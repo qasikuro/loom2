@@ -27,6 +27,7 @@ import { persistImageUri } from '@/utils/persistImage';
 
 import { Images } from '@/assets/images';
 import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/context/AppContext';
+import { useSound } from '@/context/SoundContext';
 import { SkeletonProfileCard } from '@/components/Skeleton';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
@@ -405,6 +406,38 @@ function OutfitGridCard({
         )}
         <Text style={styles.outfitGridName} numberOfLines={1}>{outfit.name}</Text>
       </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
+// ── Sound toggle ────────────────────────────────────────────────────────────────
+
+function SoundToggle() {
+  const { soundEnabled, setSoundEnabled } = useSound();
+  const colors = useColors();
+
+  return (
+    <TouchableOpacity
+      style={styles.drawerItem}
+      onPress={() => { Haptics.selectionAsync(); setSoundEnabled(!soundEnabled); }}
+      activeOpacity={0.75}
+    >
+      <View style={styles.drawerItemIcon}>
+        <Icon name={soundEnabled ? 'volume-2' : 'volume-x'} size={15} color="rgba(200,184,232,0.75)" />
+      </View>
+      <Text style={[styles.drawerItemLabel, { flex: 1 }]}>Animation Sounds</Text>
+      <View style={[
+        styles.soundPill,
+        soundEnabled ? styles.soundPillOn : styles.soundPillOff,
+      ]}>
+        <View style={[
+          styles.soundKnob,
+          {
+            backgroundColor: soundEnabled ? '#A080F8' : 'rgba(200,184,232,0.35)',
+            transform: [{ translateX: soundEnabled ? 16 : 0 }],
+          },
+        ]} />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -1983,6 +2016,12 @@ export default function CharacterScreen() {
             <ThemeToggle />
           </View>
 
+          {/* SOUND */}
+          <Text style={styles.drawerSectionLabel}>SOUND</Text>
+          <View style={styles.drawerGroup}>
+            <SoundToggle />
+          </View>
+
           {/* MY ACCOUNT */}
           <Text style={styles.drawerSectionLabel}>MY ACCOUNT</Text>
           <View style={styles.drawerGroup}>
@@ -3079,4 +3118,11 @@ const styles = StyleSheet.create({
     fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.30)',
     textAlign: 'center', marginTop: 28, marginBottom: 8,
   },
+  soundPill: {
+    width: 36, height: 20, borderRadius: 10, borderWidth: 1,
+    justifyContent: 'center', paddingHorizontal: 2,
+  },
+  soundPillOn:  { backgroundColor: 'rgba(120,70,255,0.22)', borderColor: 'rgba(120,70,255,0.55)' },
+  soundPillOff: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(200,184,232,0.20)' },
+  soundKnob:    { width: 14, height: 14, borderRadius: 7 },
 });
