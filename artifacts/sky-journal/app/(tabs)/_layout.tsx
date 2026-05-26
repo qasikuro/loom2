@@ -222,6 +222,15 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
+        name="drift"
+        options={{
+          title: 'Drift',
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon name="sky-compass" color={color} focused={focused} primaryColor={colors.primary} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: t('nav.profile'),

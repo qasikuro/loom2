@@ -1,0 +1,148 @@
+Build a production-grade, AAA-quality mobile-first app called “Drift Mode.” This is not a prototype. It should feel like a shipped consumer product with premium design, strong architecture, polished motion, and cohesive user experience across the full flow.
+
+The product is a cosmic, emotionally intelligent journey app that guides users from onboarding survey to mode detection, personalized in-session experiences, and end-of-session reflection. The tone is warm, magical, respectful, and deeply polished. The design should look and feel like a high-end consumer app from a top studio.
+
+Visual direction:
+- Dark celestial theme with indigo, violet, midnight blue, soft gold accents
+- Premium gradients, glassmorphism, soft glows, layered depth, subtle particles
+- Smooth transitions, elegant motion, refined spacing, strong typography
+- Cute companion mascots, but tasteful and not childish
+- AAA-level UI polish: every screen must feel finished, intentional, and cohesive
+
+Core product principle:
+- Fully transparent and opt-in
+- Never hide data collection
+- Tell users clearly that responses are used to personalize their experience
+- No deceptive UX
+- Make the app feel magical, but trustworthy
+
+Build the full user flow:
+
+1) Welcome / Entry
+- Hero screen with premium artwork, animated stars, and strong CTA
+- Title: “Welcome to Drift Mode”
+- Subtitle explaining this is a quick vibe check to personalize the experience
+- Buttons: Start Journey, Log in / Continue
+- The entry screen must feel like a real product landing experience, not a mockup
+
+2) Discovery / Vibe Survey
+- Multi-step, high-polish survey with progress indicator
+- Animated card selection, tactile feedback, smooth transitions
+- Questions:
+  - What kind of player session are you in today?
+  - How deep did you go recently?
+  - How often do you reopen the game?
+  - Who do you usually play with?
+  - What keeps pulling you back?
+  - How would you describe your current energy?
+- Use elegant copy and tasteful humor
+- Include accessibility support, clear labels, keyboard support, and responsive layout
+
+3) Vibe Analysis
+- After the survey, animate a “reading your constellation” or “analyzing your vibe” sequence
+- Return a personalized mode result with:
+  - Mode name
+  - Short explanation
+  - Key traits
+  - Recommended support style
+  - Primary CTA to activate
+- Modes to support:
+  - Challenge Mode
+  - Flow Mode
+  - Echo Mode
+  - Social Mode
+  - Clarity Mode
+  - Recovery Mode
+- Include one or more archetypes such as Lone Wanderer, Burnout Drift, Locked In, Social Hunter, etc.
+- The explanation must be warm, non-judgmental, and motivating
+
+4) Mode Activation
+- Show a cinematic activation screen with the chosen mode
+- Include “what changes in this mode,” “what’s different,” and companion support
+- Add a primary button to enter the mode
+- Include a polished perks panel
+- Examples:
+  - Challenge Mode: boosted focus, hard objectives, achievement push
+  - Flow Mode: calm pacing, reduced pressure, relaxed ambience
+  - Echo Mode: guidance, discovery boost, companion support
+  - Social Mode: group support, friend prompts, community boosts
+  - Clarity Mode: smart suggestions, quest guidance, progress clarity
+  - Recovery Mode: burnout relief, easy wins, mood uplift
+
+5) In-Session Experience
+- The app should react to the selected mode with context-aware content
+- Show:
+  - adaptive world events
+  - soft rescue hints
+  - session quests
+  - companion interaction
+  - social rescue
+  - mode perks
+- Example content:
+  - “A hidden path appears”
+  - “The old guide whispers a hint”
+  - “Today’s Quest: Explore 3 hidden places”
+  - “Lumi says: I’m here with you”
+  - “A kind soul is nearby”
+  - “+20% Discovery XP”
+  - “Calm music enabled”
+- This screen should feel like a premium live service experience, not a static dashboard
+
+6) Quest and Progress Layer
+- Include a robust quest system with progress bars, rewards, streaks, milestones, and mode bonuses
+- Make progress satisfying and readable
+- Use polished microinteractions for completion, level-up, and reward states
+
+7) End-of-Session Reflection
+- Show a beautiful session summary
+- Include:
+  - what happened this session
+  - what the user accomplished
+  - rewards earned
+  - journey progress update
+  - a soft break prompt
+  - a return later option
+- Tone should be encouraging and emotionally intelligent, never guilt-based
+
+8) Mode Library
+- Add a mode collection screen showing all modes as premium cards
+- Each card should include:
+  - icon/mascot
+  - short description
+  - benefits
+  - status: active / locked / new
+- Make this feel collectible and meaningful
+
+9) Companion System
+- Build a companion character system with one mascot persona, “Lumi,” that adapts based on the user’s mode
+- Lumi should appear across screens with subtle reactions, support messages, and mood-aware presence
+
+10) App Shell and Navigation
+- Create a polished bottom navigation or persistent app shell
+- Include Home, Journal, Quest, Discover, Profile, and Mode areas
+- Keep navigation clean, elegant, and consistent with the theme
+
+Technical requirements:
+- Use React with a modern production setup
+- Prefer Next.js or a similarly robust architecture if appropriate
+- Write clean, modular, maintainable code
+- Use reusable components and a well-structured design system
+- Include real state management for the flow
+- Mock data is fine for now, but structure everything so it can scale to backend integration
+- Use local persistence for user progress if possible
+- Make the app responsive for mobile and desktop
+- Add strong accessibility support
+- Ensure performance, smooth animation, and polished loading states
+- Add error states, empty states, and fallback states so the app feels complete
+- Use TypeScript if available
+
+Engineering quality bar:
+- This should feel like a real app product, not a demo
+- Organize code as if it will be handed to a product team
+- Include clear naming, component boundaries, and scalable architecture
+- Add a theme system and consistent spacing scale
+- Make the UI visually consistent across all screens
+- No placeholder-looking sections, no rough edges, no unfinished layouts
+
+Deliverable:
+A complete, high-fidelity, AAA-quality app experience for Drift Mode with the full user flow connected end-to-end, visually premium, emotionally intelligent, and production-ready in feel.
