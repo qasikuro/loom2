@@ -14,6 +14,7 @@ import adminRouter from "./admin";
 import guidesRouter from "./guides";
 import messagesRouter from "./messages";
 import driftRouter from "./drift";
+import stickersRouter from "./stickers";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(adminRouter);
 router.use(guidesRouter);
 router.use(messagesRouter);
 router.use(driftRouter);
+router.use(stickersRouter);
 
 export default router;

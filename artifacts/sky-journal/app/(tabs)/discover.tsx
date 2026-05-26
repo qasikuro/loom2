@@ -3,6 +3,7 @@ import { DiscoverCard } from '@/components/DiscoverCard';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { ReportSheet } from '@/components/ReportSheet';
 import { apiFetch, useApp } from '@/context/AppContext';
+import type { StickerType } from '@/components/VibeStickerPicker';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
@@ -112,6 +113,7 @@ export default function DiscoverScreen() {
   const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const [refreshing,    setRefreshing]    = useState(false);
+  const [stickerCounts, setStickerCounts] = useState<Record<string, { type: string; count: number }[]>>({});
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
@@ -164,6 +166,27 @@ export default function DiscoverScreen() {
         setPeopleLoading(false);
       }
     }, 400);
+  }
+
+  async function handleSendSticker(storyId: string, stickerType: StickerType) {
+    // Optimistic update
+    setStickerCounts(prev => {
+      const existing = prev[storyId] ?? [];
+      const idx = existing.findIndex(s => s.type === stickerType);
+      if (idx >= 0) {
+        const updated = existing.map((s, i) => i === idx ? { ...s, count: s.count + 1 } : s);
+        return { ...prev, [storyId]: updated };
+      }
+      return { ...prev, [storyId]: [...existing, { type: stickerType, count: 1 }] };
+    });
+    // Fire-and-forget API call
+    try {
+      await apiFetch('/stickers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storyId, stickerType }),
+      });
+    } catch { /* silent — optimistic already applied */ }
   }
 
   function handleToggleFollow(item: UserSearchResult) {
@@ -320,6 +343,8 @@ export default function DiscoverScreen() {
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
               onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
+              onSticker={(type) => handleSendSticker(item.id, type)}
+              stickerCounts={stickerCounts[item.id] ?? []}
             />
           )}
           contentContainerStyle={[styles.listPad, { paddingBottom: bottomPad }]}
