@@ -444,12 +444,27 @@ const LUMI_QUIPS_DEFAULT = [
   "You're the kind of person who shows up. That matters more than you think.",
 ];
 
+// ─── Lumi emotion system ──────────────────────────────────────────────────────
+type LumiEmotion = 'neutral' | 'happy' | 'focused' | 'proud' | 'sleepy' | 'excited';
+const EMOTION_EYE_SCALE: Record<LumiEmotion, number> = {
+  neutral: 1.0, happy: 0.38, focused: 0.60, proud: 0.44, sleepy: 0.13, excited: 1.12,
+};
+const EMOTION_BLUSH: Record<LumiEmotion, number> = {
+  neutral: 0.38, happy: 0.78, focused: 0.08, proud: 0.56, sleepy: 0.12, excited: 0.92,
+};
+const PHASE_EMOTIONS: LumiEmotion[] = ['neutral', 'focused', 'focused', 'proud'];
+
 // ─── Lumi mascot ──────────────────────────────────────────────────────────────
-function LumiCharacter({ color = '#B090FF', size = 80, onTap }: { color?: string; size?: number; onTap?: () => void }) {
-  const bob       = useRef(new Animated.Value(0)).current;
-  const glowPulse = useRef(new Animated.Value(0.6)).current;
-  const eyeOp     = useRef(new Animated.Value(1)).current;
-  const wiggle    = useRef(new Animated.Value(0)).current;
+function LumiCharacter({ color = '#B090FF', size = 80, onTap, emotion = 'neutral' }: {
+  color?: string; size?: number; onTap?: () => void; emotion?: LumiEmotion;
+}) {
+  const bob        = useRef(new Animated.Value(0)).current;
+  const glowPulse  = useRef(new Animated.Value(0.6)).current;
+  const eyeOp      = useRef(new Animated.Value(1)).current;
+  const wiggle     = useRef(new Animated.Value(0)).current;
+  const eyeScaleY  = useRef(new Animated.Value(1)).current;
+  const blushOp    = useRef(new Animated.Value(0.38)).current;
+  const bodyBounce = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.loop(Animated.sequence([
@@ -470,15 +485,32 @@ function LumiCharacter({ color = '#B090FF', size = 80, onTap }: { color?: string
     ])).start();
   }, []);
 
+  // Animate face to new emotion
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(eyeScaleY, {
+        toValue: EMOTION_EYE_SCALE[emotion], useNativeDriver: true,
+        bounciness: (emotion === 'happy' || emotion === 'excited') ? 16 : 3,
+      }),
+      Animated.timing(blushOp, { toValue: EMOTION_BLUSH[emotion], duration: 380, useNativeDriver: true }),
+    ]).start();
+    if (emotion === 'excited' || emotion === 'happy') {
+      Animated.sequence([
+        Animated.timing(bodyBounce, { toValue: -10, duration: 140, useNativeDriver: true }),
+        Animated.spring(bodyBounce,  { toValue: 0,   useNativeDriver: true, bounciness: 12 }),
+      ]).start();
+    }
+  }, [emotion]);
+
   function handleTap() {
     if (!onTap) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Animated.sequence([
-      Animated.timing(wiggle, { toValue: 1,   duration: 60,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: -1,  duration: 80,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: 0.6, duration: 60,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: -0.6,duration: 60,  useNativeDriver: true }),
-      Animated.timing(wiggle, { toValue: 0,   duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: 1,    duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: -1,   duration: 80,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: 0.6,  duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: -0.6, duration: 60,  useNativeDriver: true }),
+      Animated.timing(wiggle, { toValue: 0,    duration: 60,  useNativeDriver: true }),
     ]).start();
     onTap();
   }
@@ -492,7 +524,7 @@ function LumiCharacter({ color = '#B090FF', size = 80, onTap }: { color?: string
   const rotateStr = wiggle.interpolate({ inputRange: [-1, 0, 1], outputRange: ['-14deg', '0deg', '14deg'] });
 
   const inner = (
-    <Animated.View style={{ alignItems: 'center', transform: [{ translateY: bob }, { rotate: rotateStr }] }}>
+    <Animated.View style={{ alignItems: 'center', transform: [{ translateY: bob }, { translateY: bodyBounce }, { rotate: rotateStr }] }}>
       <Animated.View style={{
         position: 'absolute', width: size * 1.75, height: size * 1.75,
         borderRadius: size * 0.875, backgroundColor: `${color}18`,
@@ -524,26 +556,41 @@ function LumiCharacter({ color = '#B090FF', size = 80, onTap }: { color?: string
           colors={['rgba(255,255,255,0.44)', 'rgba(255,255,255,0.07)', 'transparent']}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, height: bh * 0.52 }}
         />
-        <Animated.View style={{
-          position: 'absolute', top: bh * 0.27, left: bw * 0.18,
-          width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
-          backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
-          justifyContent: 'center', opacity: eyeOp,
-        }}>
-          <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
-          <View style={{ position: 'absolute', top: ew * 0.08, left: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
+        {/* Left eye with emotion scaleY */}
+        <Animated.View style={{ position: 'absolute', top: bh * 0.27, left: bw * 0.18, transform: [{ scaleY: eyeScaleY }] }}>
+          <Animated.View style={{
+            width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
+            backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
+            justifyContent: 'center', opacity: eyeOp,
+          }}>
+            <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
+            <View style={{ position: 'absolute', top: ew * 0.08, left: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
+          </Animated.View>
         </Animated.View>
-        <Animated.View style={{
-          position: 'absolute', top: bh * 0.27, right: bw * 0.18,
-          width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
-          backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
-          justifyContent: 'center', opacity: eyeOp,
-        }}>
-          <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
-          <View style={{ position: 'absolute', top: ew * 0.08, right: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
+        {/* Right eye with emotion scaleY */}
+        <Animated.View style={{ position: 'absolute', top: bh * 0.27, right: bw * 0.18, transform: [{ scaleY: eyeScaleY }] }}>
+          <Animated.View style={{
+            width: ew * 1.65, height: ew * 1.65, borderRadius: ew * 0.82,
+            backgroundColor: 'rgba(255,255,255,0.96)', alignItems: 'center',
+            justifyContent: 'center', opacity: eyeOp,
+          }}>
+            <View style={{ width: ew * 0.80, height: ew * 0.80, borderRadius: ew * 0.40, backgroundColor: 'rgba(50,15,130,0.92)' }} />
+            <View style={{ position: 'absolute', top: ew * 0.08, right: ew * 0.08, width: ew * 0.34, height: ew * 0.34, borderRadius: ew * 0.17, backgroundColor: 'rgba(255,255,255,0.92)' }} />
+          </Animated.View>
         </Animated.View>
-        <View style={{ position: 'absolute', top: bh * 0.46, left: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
-        <View style={{ position: 'absolute', top: bh * 0.46, right: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,0.38)' }} />
+        {/* Animated blush — intensity driven by emotion */}
+        <Animated.View style={{ position: 'absolute', top: bh * 0.46, left: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,1)', opacity: blushOp }} />
+        <Animated.View style={{ position: 'absolute', top: bh * 0.46, right: bw * 0.09, width: bw * 0.22, height: bh * 0.10, borderRadius: bw * 0.11, backgroundColor: 'rgba(255,150,195,1)', opacity: blushOp }} />
+        {/* Mouth — shape changes with emotion */}
+        {(emotion === 'happy' || emotion === 'proud' || emotion === 'excited') ? (
+          <View style={{ position: 'absolute', top: bh * 0.61, alignSelf: 'center', overflow: 'hidden', width: bw * 0.30, height: bw * 0.16 }}>
+            <View style={{ width: bw * 0.30, height: bw * 0.30, borderRadius: bw * 0.15, borderWidth: 2.5, borderColor: 'rgba(40,10,110,0.55)' }} />
+          </View>
+        ) : emotion === 'sleepy' ? (
+          <View style={{ position: 'absolute', top: bh * 0.63, alignSelf: 'center', width: bw * 0.18, height: 2.5, borderRadius: 1.5, backgroundColor: 'rgba(40,10,110,0.35)' }} />
+        ) : (
+          <View style={{ position: 'absolute', top: bh * 0.64, alignSelf: 'center', width: bw * 0.07, height: bw * 0.07, borderRadius: bw * 0.035, backgroundColor: 'rgba(40,10,110,0.28)' }} />
+        )}
       </View>
       <View style={{
         width: bw * 0.50, height: bh * 0.18, borderRadius: bw * 0.14,
@@ -565,15 +612,19 @@ function LumiCharacter({ color = '#B090FF', size = 80, onTap }: { color?: string
   return inner;
 }
 
-function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip }: {
+function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip, emotion = 'neutral', whisper }: {
   message: string; color?: string; onTapLumi?: () => void; tapQuip?: string;
+  emotion?: LumiEmotion; whisper?: string;
 }) {
-  const fade = useRef(new Animated.Value(0)).current;
-  const quipFade = useRef(new Animated.Value(0)).current;
+  const msgFade     = useRef(new Animated.Value(0)).current;
+  const quipFade    = useRef(new Animated.Value(0)).current;
+  const whisperFade = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
-    fade.setValue(0);
-    Animated.timing(fade, { toValue: 1, duration: 500, delay: 200, useNativeDriver: true }).start();
+    msgFade.setValue(0);
+    Animated.timing(msgFade, { toValue: 1, duration: 600, delay: 150, useNativeDriver: true }).start();
   }, [message]);
+
   useEffect(() => {
     if (!tapQuip) return;
     quipFade.setValue(0);
@@ -583,32 +634,62 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip }: {
       Animated.timing(quipFade, { toValue: 0, duration: 400, useNativeDriver: true }),
     ]).start();
   }, [tapQuip]);
+
+  useEffect(() => {
+    if (!whisper) return;
+    whisperFade.setValue(0);
+    Animated.sequence([
+      Animated.timing(whisperFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.delay(2800),
+      Animated.timing(whisperFade, { toValue: 0, duration: 700, useNativeDriver: true }),
+    ]).start();
+  }, [whisper]);
+
   return (
-    <Animated.View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12, opacity: fade }}>
-      <View style={{ alignItems: 'center' }}>
+    <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 6 }}>
+      {/* Lumi hero — centered, large */}
+      <View style={{ alignItems: 'center', marginBottom: 18 }}>
+        {/* Whisper — ambient floating text */}
+        {whisper ? (
+          <Animated.View style={{ marginBottom: 10, opacity: whisperFade }}>
+            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: `${color}BB`, fontStyle: 'italic', textAlign: 'center', letterSpacing: 0.4 }}>
+              {whisper} ✦
+            </Text>
+          </Animated.View>
+        ) : null}
+
+        {/* Tap quip speech bubble */}
         {tapQuip ? (
           <Animated.View style={{
-            position: 'absolute', bottom: '100%', left: -8, opacity: quipFade, zIndex: 20,
-            backgroundColor: `${color}EE`, borderRadius: 14, borderBottomLeftRadius: 3,
-            padding: 10, maxWidth: 210, marginBottom: 6,
-            shadowColor: color, shadowOpacity: 0.5, shadowRadius: 8,
+            marginBottom: 10, opacity: quipFade,
+            backgroundColor: `${color}F0`, borderRadius: 16, borderBottomLeftRadius: 4,
+            paddingHorizontal: 14, paddingVertical: 10, maxWidth: SW - 80,
+            shadowColor: color, shadowOpacity: 0.55, shadowRadius: 10,
           }}>
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: '#fff', lineHeight: 18 }}>
+            <Text style={{ fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: '#fff', lineHeight: 20, textAlign: 'center' }}>
               {tapQuip}
             </Text>
           </Animated.View>
         ) : null}
-        <LumiCharacter color={color} size={68} onTap={onTapLumi} />
+
+        <LumiCharacter color={color} size={96} onTap={onTapLumi} emotion={emotion} />
       </View>
-      <View style={{
-        flex: 1, backgroundColor: `${color}10`, borderRadius: 18, borderTopLeftRadius: 4,
-        borderWidth: 1, borderColor: `${color}28`, padding: 14, marginBottom: 16,
+
+      {/* Phase message — centered, italic */}
+      <Animated.Text style={{
+        fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.88)',
+        lineHeight: 22, fontStyle: 'italic', textAlign: 'center',
+        opacity: msgFade, paddingHorizontal: 12,
       }}>
-        <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.88)', lineHeight: 21, fontStyle: 'italic' }}>
-          "{message}"
+        "{message}"
+      </Animated.Text>
+
+      {onTapLumi && (
+        <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: `${color}44`, marginTop: 10, letterSpacing: 0.8 }}>
+          TAP LUMI TO TALK
         </Text>
-      </View>
-    </Animated.View>
+      )}
+    </View>
   );
 }
 
@@ -1311,6 +1392,8 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
   const [breathingVis, setBreathingVis]   = useState(false);
   const [journalVis, setJournalVis]       = useState(false);
   const [storyCardVis, setStoryCardVis]   = useState(false);
+  const [lumiEmotion, setLumiEmotion]     = useState<LumiEmotion>('neutral');
+  const [whisper, setWhisper]             = useState<string | undefined>(undefined);
   const eventFade    = useRef(new Animated.Value(0)).current;
   const softFade     = useRef(new Animated.Value(0)).current;
   const lumiNudgeFade= useRef(new Animated.Value(0)).current;
@@ -1374,6 +1457,28 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
     return () => clearTimeout(t);
   }, [duration]);
 
+  // Phase → emotion
+  useEffect(() => { setLumiEmotion(PHASE_EMOTIONS[phase]); }, [phase]);
+
+  // Ambient whispers
+  useEffect(() => {
+    const pool = [
+      'still watching', 'you\'re doing it', 'I see you',
+      'right here with you', 'breathe', 'this moment is real',
+      'not going anywhere', 'you\'re still here', 'something is shifting',
+      'stay with it', 'I\'m proud of you', 'keep going',
+    ];
+    let idx = 0;
+    function fire() {
+      setWhisper(pool[idx % pool.length]);
+      idx++;
+      setTimeout(() => setWhisper(undefined), 4200);
+    }
+    const first  = setTimeout(fire, Math.min(40000, duration * 0.12 * 1000));
+    const repeat = setInterval(fire,  Math.min(140000, duration * 0.20 * 1000));
+    return () => { clearTimeout(first); clearInterval(repeat); };
+  }, [duration]);
+
   // Breathing game at 20%
   useEffect(() => {
     const t = setTimeout(() => setBreathingVis(true), duration * 0.20 * 1000);
@@ -1429,7 +1534,12 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setCheckedTasks(prev => {
       const next = new Set(prev);
+      const isChecking = !next.has(idx);
       if (next.has(idx)) next.delete(idx); else next.add(idx);
+      if (isChecking) {
+        setLumiEmotion('happy');
+        setTimeout(() => setLumiEmotion(PHASE_EMOTIONS[phase]), 2200);
+      }
       return next;
     });
   }
@@ -1445,7 +1555,11 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
     const quip    = pool[tapCount % pool.length];
     setTapCount(c => c + 1);
     setTapQuip(quip);
-    setTimeout(() => setTapQuip(undefined), 3500);
+    setLumiEmotion('excited');
+    setTimeout(() => {
+      setTapQuip(undefined);
+      setLumiEmotion(PHASE_EMOTIONS[phase]);
+    }, 3500);
   }
 
   return (
@@ -1509,7 +1623,11 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         {/* Lumi companion */}
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 18, marginBottom: 14, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
-          <LumiChat message={currentLumiMsg} color={cfg.color} onTapLumi={handleTapLumi} tapQuip={tapQuip} />
+          <LumiChat
+            message={currentLumiMsg} color={cfg.color}
+            onTapLumi={handleTapLumi} tapQuip={tapQuip}
+            emotion={lumiEmotion} whisper={whisper}
+          />
           <TouchableOpacity
             onPress={() => { Haptics.selectionAsync(); onChat(); }}
             activeOpacity={0.8}
@@ -1539,12 +1657,20 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
 
         {/* Breathing game — appears at 20% */}
         {breathingVis && (
-          <BreathingGame color={cfg.color} onDone={() => setBreathingVis(false)} />
+          <BreathingGame color={cfg.color} onDone={() => {
+            setLumiEmotion('proud');
+            setTimeout(() => setLumiEmotion(PHASE_EMOTIONS[phase]), 3000);
+            setBreathingVis(false);
+          }} />
         )}
 
         {/* Journal spark — appears at 50% */}
         {journalVis && (
-          <JournalSpark color={cfg.color} mode={cfg.name} onDone={() => setJournalVis(false)} />
+          <JournalSpark color={cfg.color} mode={cfg.name} onDone={() => {
+            setLumiEmotion('happy');
+            setTimeout(() => setLumiEmotion(PHASE_EMOTIONS[phase]), 2200);
+            setJournalVis(false);
+          }} />
         )}
 
         {/* Story vibe card — appears at 78% */}
