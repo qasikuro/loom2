@@ -706,6 +706,56 @@ export default function HomeScreen() {
           );
         })()}
 
+        {/* ── Drift Mode entry card ─────────────────────────── */}
+        <TouchableOpacity
+          style={[styles.driftCard, SHADOW.sm]}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/drift'); }}
+          activeOpacity={0.88}
+        >
+          <LinearGradient
+            colors={['#180A40', '#2C1462', '#180A40']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Glow orb */}
+          <View style={{ position: 'absolute', right: -18, top: -18, width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(130,60,255,0.16)', pointerEvents: 'none' }} />
+          {/* Stars */}
+          <View style={{ position: 'absolute', top: 12, right: 28, width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#C0A0FF', opacity: 0.7, pointerEvents: 'none' }} />
+          <View style={{ position: 'absolute', top: 28, right: 66, width: 2, height: 2, borderRadius: 1, backgroundColor: '#C8A84B', opacity: 0.55, pointerEvents: 'none' }} />
+          <View style={{ position: 'absolute', bottom: 18, right: 40, width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: '#C0A0FF', opacity: 0.45, pointerEvents: 'none' }} />
+          <View style={{ position: 'absolute', top: 10, left: 130, width: 2, height: 2, borderRadius: 1, backgroundColor: '#F0EAFF', opacity: 0.35, pointerEvents: 'none' }} />
+
+          {/* Badge row */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#A07AEF' }} />
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#A07AEF', letterSpacing: 1.6, textTransform: 'uppercase' }}>Drift Mode</Text>
+          </View>
+
+          {/* Content row */}
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 19, fontFamily: 'Satoshi-Bold', color: '#EDE6FF', letterSpacing: -0.4, lineHeight: 25, marginBottom: 7 }}>
+                Begin your drift
+              </Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(192,168,255,0.62)', lineHeight: 19 }}>
+                A quiet space with Lumi. Breathing, reflection, and soft focus — entirely at your pace.
+              </Text>
+            </View>
+            {/* Lumi orb */}
+            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(110,55,220,0.24)', borderWidth: 1, borderColor: 'rgba(140,80,255,0.32)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 24, color: '#C0A0FF' }}>✦</Text>
+            </View>
+          </View>
+
+          {/* CTA pill */}
+          <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: 'rgba(110,55,220,0.28)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(140,80,255,0.42)' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#B898F8' }}>Enter Drift</Text>
+              <Icon name="arrow-right" size={13} color="#B898F8" />
+            </View>
+          </View>
+        </TouchableOpacity>
+
         {/* Section label */}
         <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('home.featuresBeingAdded')}</Text>
 
@@ -1181,6 +1231,15 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   guideWidgetMsgText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(210,195,255,0.85)' },
+
+  driftCard: {
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: 'rgba(140,80,255,0.22)',
+    overflow: 'hidden',
+    padding: 20,
+    marginBottom: 20,
+  },
 
   lockedOverlay: {
     borderRadius: 20,
