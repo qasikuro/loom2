@@ -3,10 +3,12 @@ import {
   Animated,
   Dimensions,
   Easing,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -23,7 +25,7 @@ type FlowStep =
   | 'welcome' | 'survey' | 'allset'
   | 'analyzing' | 'vibe_reveal'
   | 'mode_cinematic' | 'mode_perks' | 'meet_lumi'
-  | 'session' | 'guides'
+  | 'session' | 'lumi_chat'
   | 'summary' | 'reflection' | 'break_prompt' | 'farewell';
 
 type SessionResult = { elapsed: number; questDone: number; momentsFound: number };
@@ -946,10 +948,15 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: () =
   );
 }
 
-function SessionScreen({ cfg, sessionStart, onEnd, onGuides }: {
+const QUEST_TYPE_ICONS: Record<string, string> = {
+  discovery: '🔍', mindful: '🌿', creation: '✏️',
+  connection: '🤝', challenge: '⚔️', rest: '🌙',
+};
+
+function SessionScreen({ cfg, sessionStart, onEnd, onChat }: {
   cfg: ModeConfig; sessionStart: number;
   onEnd: (r: SessionResult) => void;
-  onGuides: () => void;
+  onChat: () => void;
 }) {
   const insets    = useSafeAreaInsets();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -959,26 +966,29 @@ function SessionScreen({ cfg, sessionStart, onEnd, onGuides }: {
   const [eventTxt, setEventTxt]   = useState('');
   const [eventVis, setEventVis]   = useState(false);
   const [moments, setMoments]     = useState(0);
-  const [questDone, setQuestDone] = useState(0);
+  const [checkedTasks, setCheckedTasks] = useState<Set<number>>(new Set());
   const [softVis, setSoftVis]     = useState(false);
-  const [socialVis, setSocialVis] = useState(false);
-  const eventFade = useRef(new Animated.Value(0)).current;
-  const softFade  = useRef(new Animated.Value(0)).current;
-  const socialFade= useRef(new Animated.Value(0)).current;
+  const [lumiNudgeVis, setLumiNudgeVis] = useState(false);
+  const eventFade    = useRef(new Animated.Value(0)).current;
+  const softFade     = useRef(new Animated.Value(0)).current;
+  const lumiNudgeFade= useRef(new Animated.Value(0)).current;
+
+  // Resolve quest tasks: AI quests → mode fallback → generic
+  const tasks: DriftQuest[] = cfg.quests?.length
+    ? cfg.quests
+    : FALLBACK_QUESTS[cfg.name.toLowerCase().split(' ')[0]] ?? FALLBACK_QUESTS.echo;
+
+  const questDone = checkedTasks.size;
+  const questTotal = tasks.length;
 
   const lumiMessages = cfg.lumiMessages?.length
     ? cfg.lumiMessages
-    : [cfg.lumiSession, '✦ You\'re doing great. Keep going.', 'I\'m watching the stars with you.', 'This moment is yours. Breathe.'];
+    : [cfg.lumiSession, 'You\'re doing great. Keep going.', 'I\'m watching the stars with you.', 'This moment is yours. Breathe.'];
 
   useEffect(() => {
     const id = setInterval(() => setElapsed(s => s + 1), 1000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    const mins = Math.floor(elapsed / 60);
-    setQuestDone(Math.min(cfg.questTotal, mins >= 8 ? cfg.questTotal : mins >= 5 ? Math.max(cfg.questTotal - 1, 1) : mins >= 2 ? 1 : 0));
-  }, [elapsed]);
 
   useEffect(() => {
     const id = setInterval(() => setLumiIdx(i => (i + 1) % lumiMessages.length), 32000);
@@ -1014,14 +1024,23 @@ function SessionScreen({ cfg, sessionStart, onEnd, onGuides }: {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      setSocialVis(true);
-      Animated.timing(socialFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
-    }, 25000);
+      setLumiNudgeVis(true);
+      Animated.timing(lumiNudgeFade, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    }, 28000);
     return () => clearTimeout(t);
   }, []);
 
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
   const ss = String(elapsed % 60).padStart(2, '0');
+
+  function toggleTask(idx: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setCheckedTasks(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  }
 
   function handleEnd() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -1061,13 +1080,20 @@ function SessionScreen({ cfg, sessionStart, onEnd, onGuides }: {
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 18, marginBottom: 14, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
           <LumiChat message={lumiMessages[lumiIdx]} color={cfg.color} />
+          <TouchableOpacity
+            onPress={() => { Haptics.selectionAsync(); onChat(); }}
+            activeOpacity={0.8}
+            style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: `${cfg.color}18`, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: `${cfg.color}30` }}
+          >
+            <Text style={{ fontSize: 12, color: cfg.color }}>💬</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Talk to Lumi</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Soft Rescue */}
+        {/* Soft Rescue — AI-generated tip */}
         {softVis && (
           <Animated.View style={{ opacity: softFade, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,180,255,0.18)', padding: 18, marginBottom: 14, overflow: 'hidden' }}>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>SOFT RESCUE</Text>
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', marginBottom: 8 }}>Help when you need it, not when you don't.</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>LUMI'S TIP</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.82)', lineHeight: 22, fontStyle: 'italic' }}>
               "{cfg.softRescue}"
             </Text>
@@ -1076,51 +1102,81 @@ function SessionScreen({ cfg, sessionStart, onEnd, onGuides }: {
               onPress={() => { Haptics.selectionAsync(); setSoftVis(false); }}
               activeOpacity={0.8}
             >
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.8)' }}>Thanks!</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.8)' }}>Got it ✓</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
 
-        {/* Social Rescue */}
-        {socialVis && (
-          <Animated.View style={{ opacity: socialFade, backgroundColor: `${cfg.color}0C`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 18, marginBottom: 14 }}>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>SOCIAL RESCUE</Text>
-            <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 6 }}>A kind soul is nearby!</Text>
-            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.72)', marginBottom: 16 }}>
-              You're not alone for long. Join their journey?
+        {/* Lumi chat nudge — appears after ~28 min */}
+        {lumiNudgeVis && (
+          <Animated.View style={{ opacity: lumiNudgeFade, backgroundColor: `${cfg.color}0C`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 18, marginBottom: 14 }}>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 8 }}>LUMI IS HERE</Text>
+            <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 4 }}>Need to talk?</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.72)', marginBottom: 14 }}>
+              Lumi's listening. Whatever's on your mind — she's present.
             </Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 16, backgroundColor: cfg.color, alignItems: 'center' }}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setSocialVis(false); onGuides(); }}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setLumiNudgeVis(false); onChat(); }}
                 activeOpacity={0.85}
               >
-                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#fff' }}>Accept</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#fff' }}>Open chat</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: `${cfg.color}35`, alignItems: 'center' }}
-                onPress={() => { Haptics.selectionAsync(); setSocialVis(false); }}
+                onPress={() => { Haptics.selectionAsync(); setLumiNudgeVis(false); }}
                 activeOpacity={0.8}
               >
-                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: `${cfg.color}CC` }}>Maybe later</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: `${cfg.color}CC` }}>I'm good</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
         )}
 
-        {/* Quest */}
+        {/* Quest tasks — real, checkable, psychology-based */}
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 20, marginBottom: 14, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>TODAY'S QUEST</Text>
-          <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EEE4FF', lineHeight: 23, marginBottom: 14 }}>{cfg.quest}</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <View style={{ height: 6, flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', marginRight: 12 }}>
-              <View style={{ height: 6, width: `${(questDone / cfg.questTotal) * 100}%`, borderRadius: 3, backgroundColor: cfg.color }} />
-            </View>
-            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: cfg.color, minWidth: 36, textAlign: 'right' }}>
-              {questDone}/{cfg.questTotal}
-            </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5 }}>SESSION TASKS</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: questDone === questTotal ? '#7CFC7C' : cfg.color }}>{questDone}/{questTotal}</Text>
           </View>
+          {/* Progress bar */}
+          <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 18 }}>
+            <Animated.View style={{ height: 4, width: `${(questDone / questTotal) * 100}%`, borderRadius: 2, backgroundColor: questDone === questTotal ? '#7CFC7C' : cfg.color }} />
+          </View>
+          {/* Task rows */}
+          {tasks.map((task, i) => {
+            const done = checkedTasks.has(i);
+            return (
+              <TouchableOpacity key={i} onPress={() => toggleTask(i)} activeOpacity={0.8}
+                style={{ flexDirection: 'row', gap: 14, marginBottom: i < tasks.length - 1 ? 16 : 0, alignItems: 'flex-start' }}>
+                {/* Checkbox */}
+                <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: done ? cfg.color : 'rgba(200,180,255,0.25)', backgroundColor: done ? cfg.color : 'transparent', alignItems: 'center', justifyContent: 'center', marginTop: 1, flexShrink: 0 }}>
+                  {done && <Text style={{ fontSize: 12, color: '#fff', fontWeight: '700' }}>✓</Text>}
+                </View>
+                {/* Task content */}
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 12 }}>{QUEST_TYPE_ICONS[task.type] ?? '✦'}</Text>
+                    <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: done ? 'rgba(200,180,255,0.45)' : '#EEE4FF', textDecorationLine: done ? 'line-through' : 'none', flex: 1, lineHeight: 20 }}>
+                      {task.title}
+                    </Text>
+                  </View>
+                  {!done && (
+                    <Text style={{ fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.60)', lineHeight: 19 }}>
+                      {task.description}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+          {questDone === questTotal && questTotal > 0 && (
+            <View style={{ marginTop: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(124,252,124,0.08)', borderWidth: 1, borderColor: 'rgba(124,252,124,0.2)' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#7CFC7C', textAlign: 'center' }}>All tasks done. Lumi is proud of you. ✦</Text>
+            </View>
+          )}
         </View>
 
         {/* Mode Perks */}
@@ -1333,115 +1389,178 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
   );
 }
 
-// ─── Guides data ─────────────────────────────────────────────────────────────
-const GUIDES = [
-  { id: 'wanderer', em: '🌙', name: 'The Night Wanderer', role: 'Explorer',  color: '#B090FF',
-    desc: 'Knows every hidden path and forgotten corner. Travels without maps or plans.',
-    perks: ['Hidden paths', 'Discovery +40%'] },
-  { id: 'seer',     em: '🔮', name: 'The Crystal Seer',   role: 'Visionary', color: '#FFD86F',
-    desc: 'Sees further than most. Offers direction when the way forward is unclear.',
-    perks: ['Smart guidance', 'Priority paths'] },
-  { id: 'lantern',  em: '🏮', name: 'The Gentle Lantern', role: 'Companion', color: '#6BC5FF',
-    desc: 'Walks at your pace, no matter how slow. Always nearby when you need light.',
-    perks: ['Calm presence', 'Never rushes you'] },
-  { id: 'spark',    em: '🔥', name: 'The Ember Spark',    role: 'Motivator', color: '#FF9070',
-    desc: 'Burns bright and steady. Perfect when you need a push forward.',
-    perks: ['Motivation boost', 'Achievement help'] },
-];
+// ─── Fallback quest tasks (when AI plan not available) ────────────────────────
+const FALLBACK_QUESTS: Record<string, DriftQuest[]> = {
+  challenge: [
+    { title: 'Set one clear goal for this session', description: 'Write it down or say it aloud. What\'s the one thing you want to finish tonight?', type: 'challenge' },
+    { title: '5-breath reset between tasks', description: 'When you switch tasks, pause. Five slow breaths. Reset your focus before the next thing.', type: 'mindful' },
+    { title: 'Log one obstacle you solved', description: 'What got in your way today, and how did you handle it? Name it.', type: 'creation' },
+  ],
+  flow: [
+    { title: 'Pick one thing and stay with it', description: 'No switching for 15 minutes. Just this one thing. Let yourself sink in.', type: 'challenge' },
+    { title: 'Remove one distraction from your space', description: 'Silence a notification. Close a tab. Create one small quiet.', type: 'mindful' },
+    { title: 'Notice the moment you enter flow', description: 'When it happens — that absorbed, effortless feeling — write one word about it.', type: 'discovery' },
+  ],
+  echo: [
+    { title: 'Find something most people overlook', description: 'A detail, a sound, a path no one seems to take. Look for it intentionally.', type: 'discovery' },
+    { title: '60 seconds of complete stillness', description: 'Stop. Just breathe and let the world exist around you for one full minute.', type: 'mindful' },
+    { title: 'Capture one moment worth keeping', description: 'Something you\'d want to remember from tonight. A screenshot, a word, a feeling.', type: 'creation' },
+  ],
+  social: [
+    { title: 'Say something kind to someone', description: 'One genuine message to another person — a player, a friend, anyone in your world.', type: 'connection' },
+    { title: 'Do something alongside someone', description: 'A quest, a walk, anything. Just be present with another person for a moment.', type: 'connection' },
+    { title: 'Write what you value about your circle', description: 'One sentence about someone who makes your experience better. Just notice it.', type: 'creation' },
+  ],
+  clarity: [
+    { title: 'Write your biggest open question', description: 'The thing you\'re still figuring out. Get it out of your head and somewhere real.', type: 'creation' },
+    { title: 'Make one small decision you\'ve been sitting on', description: 'Decide now, even if imperfectly. Movement beats perfection.', type: 'challenge' },
+    { title: 'Name three things you know for certain', description: 'Ground yourself. What\'s solid right now? What\'s actually true?', type: 'mindful' },
+  ],
+  recovery: [
+    { title: 'Let yourself do nothing for 5 minutes', description: 'No goals. No productivity. Just exist. This is the whole task — you\'re already doing it.', type: 'rest' },
+    { title: 'Write one thing you\'re releasing today', description: 'Something you\'ve been carrying. Set it down just for now. It\'ll be there later if you need it.', type: 'creation' },
+    { title: 'Find one thing that feels okay', description: 'Not great — just okay. Small. Real. It exists somewhere. Find it.', type: 'mindful' },
+  ],
+};
 
-function GuidesScreen({ cfg, onBack }: { cfg: ModeConfig; onBack: () => void }) {
-  const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 48 : insets.top;
-  const btmPad = Platform.OS === 'web' ? 80 : insets.bottom + 20;
-  const [joined, setJoined] = useState<string | null>(null);
+// ─── Chat message types ───────────────────────────────────────────────────────
+type ChatMsg = { role: 'user' | 'assistant'; content: string };
+
+function LumiChatScreen({ cfg, characterName, intention, onBack }: {
+  cfg: ModeConfig; characterName: string; intention?: string; onBack: () => void;
+}) {
+  const insets  = useSafeAreaInsets();
+  const topPad  = Platform.OS === 'web' ? 48 : insets.top;
+  const btmPad  = Platform.OS === 'web' ? 80 : insets.bottom;
+  const scrollRef = useRef<ScrollView>(null);
+
+  const [messages, setMessages] = useState<ChatMsg[]>([
+    { role: 'assistant', content: cfg.lumiIntro || "I'm here. What's on your mind?" },
+  ]);
+  const [input,   setInput]   = useState('');
+  const [loading, setLoading] = useState(false);
   const enter = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(enter, { toValue: 1, duration: 600, delay: 80, useNativeDriver: true }).start();
+    Animated.timing(enter, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   }, []);
 
-  function handleJoin(guideId: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setJoined(guideId);
-    setTimeout(() => onBack(), 1800);
+  useEffect(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+  }, [messages]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || loading) return;
+    Haptics.selectionAsync();
+    const next: ChatMsg[] = [...messages, { role: 'user', content: text }];
+    setMessages(next);
+    setInput('');
+    setLoading(true);
+    try {
+      const history = next.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+      const res = await apiFetch<{ reply: string }>('/drift/chat', {
+        method: 'POST',
+        body: JSON.stringify({ message: text, mode: cfg.name, characterName, intention, history }),
+      });
+      setMessages(prev => [...prev, { role: 'assistant', content: res.reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', content: "I'm still here. Sometimes the signal drifts a little." }]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
-    <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
+    <KeyboardAvoidingView
+      style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
+    >
       <LinearGradient colors={cfg.gradient} style={StyleSheet.absoluteFill} />
       <StarField />
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: btmPad + 20, paddingTop: 16 }} showsVerticalScrollIndicator={false}>
-        <Animated.View style={{ opacity: enter }}>
 
-          {/* Back */}
-          <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={{ marginBottom: 20, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.60)' }}>← Back to session</Text>
-          </TouchableOpacity>
+      {/* Header */}
+      <Animated.View style={{ opacity: enter, paddingHorizontal: 20, paddingBottom: 16 }}>
+        <TouchableOpacity onPress={onBack} activeOpacity={0.7} style={{ marginBottom: 14 }}>
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.60)' }}>← Back to session</Text>
+        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <LumiCharacter color={cfg.color} size={52} />
+          <View>
+            <Text style={{ fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#F0E6FF' }}>Lumi</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: `${cfg.color}AA` }}>your companion</Text>
+          </View>
+          <View style={{ marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: `${cfg.color}18`, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 5 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: cfg.color }} />
+            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Present</Text>
+          </View>
+        </View>
+      </Animated.View>
 
-          {/* Header */}
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.50)', letterSpacing: 1.5, marginBottom: 10 }}>KIND SOULS NEARBY</Text>
-          <Text style={{ fontSize: 26, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', lineHeight: 34, marginBottom: 8 }}>
-            Guides available{'\n'}for your journey.
-          </Text>
-          <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.58)', lineHeight: 22, marginBottom: 28 }}>
-            These wanderers are passing through. Any one of them will walk beside you.
-          </Text>
-
-          {/* Guide cards */}
-          {GUIDES.map(guide => (
-            <View key={guide.id} style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${guide.color}28`, padding: 20, marginBottom: 14, overflow: 'hidden' }}>
-              <LinearGradient colors={[`${guide.color}14`, 'transparent']} style={StyleSheet.absoluteFill} />
-
-              {/* Guide identity row */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 12 }}>
-                <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: `${guide.color}20`, borderWidth: 1.5, borderColor: `${guide.color}50`, alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 26 }}>{guide.em}</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 2 }}>{guide.name}</Text>
-                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: guide.color, letterSpacing: 0.8 }}>{guide.role.toUpperCase()}</Text>
-                </View>
+      {/* Messages */}
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 12 }}
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1 }}
+      >
+        {messages.map((m, i) => (
+          <View key={i} style={{ flexDirection: 'row', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start', alignItems: 'flex-end', gap: 8 }}>
+            {m.role === 'assistant' && (
+              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: `${cfg.color}28`, borderWidth: 1, borderColor: `${cfg.color}50`, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 14 }}>✦</Text>
               </View>
-
-              {/* Description */}
-              <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(215,200,255,0.78)', lineHeight: 22, marginBottom: 14 }}>
-                {guide.desc}
+            )}
+            <View style={[
+              { maxWidth: SW * 0.75, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12 },
+              m.role === 'user'
+                ? { backgroundColor: `${cfg.color}30`, borderWidth: 1, borderColor: `${cfg.color}50`, borderBottomRightRadius: 4 }
+                : { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(200,180,255,0.15)', borderBottomLeftRadius: 4 },
+            ]}>
+              <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: m.role === 'user' ? '#F0E6FF' : 'rgba(225,210,255,0.90)', lineHeight: 22, fontStyle: m.role === 'assistant' ? 'italic' : 'normal' }}>
+                {m.content}
               </Text>
-
-              {/* Perk chips */}
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-                {guide.perks.map(p => (
-                  <View key={p} style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: `${guide.color}16`, borderWidth: 1, borderColor: `${guide.color}32` }}>
-                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: guide.color }}>✦ {p}</Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Join button */}
-              {joined === guide.id ? (
-                <View style={{ paddingVertical: 13, borderRadius: 16, backgroundColor: `${guide.color}28`, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: guide.color }}>Joined! Returning to session…</Text>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={{ paddingVertical: 13, borderRadius: 16, backgroundColor: joined ? `${guide.color}40` : guide.color, alignItems: 'center' }}
-                  onPress={() => !joined && handleJoin(guide.id)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff', opacity: joined ? 0.5 : 1 }}>Join Journey</Text>
-                </TouchableOpacity>
-              )}
             </View>
-          ))}
-
-          {/* Maybe later */}
-          <TouchableOpacity onPress={onBack} style={{ paddingVertical: 18, alignItems: 'center' }} activeOpacity={0.7}>
-            <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.50)' }}>Maybe later</Text>
-          </TouchableOpacity>
-
-        </Animated.View>
+          </View>
+        ))}
+        {loading && (
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: `${cfg.color}28`, borderWidth: 1, borderColor: `${cfg.color}50`, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 14 }}>✦</Text>
+            </View>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 18, borderBottomLeftRadius: 4, paddingHorizontal: 18, paddingVertical: 14 }}>
+              <Text style={{ fontSize: 18, color: `${cfg.color}CC`, letterSpacing: 3 }}>···</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
-    </View>
+
+      {/* Input */}
+      <View style={{ paddingHorizontal: 16, paddingBottom: Math.max(btmPad, 12) + 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(200,180,255,0.10)' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 10, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}25`, paddingLeft: 16, paddingRight: 6, paddingVertical: 6 }}>
+          <TextInput
+            value={input}
+            onChangeText={setInput}
+            placeholder="Talk to Lumi…"
+            placeholderTextColor="rgba(200,180,255,0.35)"
+            multiline
+            maxLength={400}
+            style={{ flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular', color: '#F0E6FF', minHeight: 36, maxHeight: 100, paddingTop: Platform.OS === 'ios' ? 8 : 4 }}
+            onSubmitEditing={send}
+            blurOnSubmit={false}
+          />
+          <TouchableOpacity
+            onPress={send}
+            disabled={!input.trim() || loading}
+            activeOpacity={0.8}
+            style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: input.trim() && !loading ? cfg.color : `${cfg.color}30`, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Text style={{ fontSize: 15, color: input.trim() && !loading ? '#fff' : `${cfg.color}60` }}>↑</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -1587,8 +1706,8 @@ export default function DriftScreen() {
       {step === 'mode_cinematic'  && cfg && <ModeCinematicScreen cfg={cfg} onEnter={() => go('mode_perks')} />}
       {step === 'mode_perks'      && cfg && <ModePerksScreen     cfg={cfg} onGotIt={() => go('meet_lumi')} />}
       {step === 'meet_lumi'       && cfg && <MeetLumiScreen      cfg={cfg} onContinue={handleStartSession} />}
-      {step === 'session'         && cfg && <SessionScreen       cfg={cfg} sessionStart={sessionStart ?? Date.now()} onEnd={handleEndSession} onGuides={() => go('guides')} />}
-      {step === 'guides'          && cfg && <GuidesScreen        cfg={cfg} onBack={() => go('session')} />}
+      {step === 'session'         && cfg && <SessionScreen       cfg={cfg} sessionStart={sessionStart ?? Date.now()} onEnd={handleEndSession} onChat={() => go('lumi_chat')} />}
+      {step === 'lumi_chat'       && cfg && <LumiChatScreen      cfg={cfg} characterName={displayName} intention={cfg.intention} onBack={() => go('session')} />}
       {step === 'summary'         && cfg && <SummaryScreen       cfg={cfg} result={result} onReflect={() => go('reflection')} />}
       {step === 'reflection'      && cfg && <ReflectionScreen    cfg={cfg} onContinue={() => go('break_prompt')} />}
       {step === 'break_prompt'    && cfg && <BreakPromptScreen   cfg={cfg} onBreak={() => go('farewell')} onContinue={handleRestart} />}

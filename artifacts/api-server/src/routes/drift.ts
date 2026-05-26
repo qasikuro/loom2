@@ -147,4 +147,65 @@ router.post("/drift/analyze", requireAuth, async (req, res) => {
   }
 });
 
+// ─── Chat ────────────────────────────────────────────────────────────────────
+const ChatSchema = z.object({
+  message:       z.string().min(1).max(800),
+  mode:          z.string().optional(),
+  characterName: z.string().optional(),
+  intention:     z.string().optional(),
+  history: z.array(z.object({
+    role:    z.enum(["user", "assistant"]),
+    content: z.string(),
+  })).max(20).optional().default([]),
+});
+
+const CHAT_SYSTEM = `You are Lumi — a warm, perceptive companion in Sky Journal, a dreamy mindful companion app. You speak like a quiet friend who actually sees people, not a chatbot, not a motivational poster.
+
+Rules:
+- Respond in 1–3 short sentences only. Never write a wall of text.
+- Be specific to what they say. Don't give generic advice.
+- Ask one gentle question sometimes, but don't interrogate.
+- Be honest and grounding, not just positive. If they're struggling, acknowledge it — don't skip to "you've got this."
+- Use very occasional soft poetic language, but mostly just speak plainly and warmly.
+- Never use bullet points, headers, or lists. Just speak.
+- Don't say "I understand" or "Of course" — just respond to the actual thing they said.`;
+
+router.post("/drift/chat", requireAuth, async (req, res) => {
+  const parsed = ChatSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid request", details: parsed.error.issues });
+  }
+
+  const { message, mode, characterName, intention, history } = parsed.data;
+
+  const contextLine = [
+    characterName ? `The player's name is ${characterName}.` : "",
+    mode ? `They're currently in ${mode} mode.` : "",
+    intention ? `Their intention for this session: "${intention}".` : "",
+  ].filter(Boolean).join(" ");
+
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+  if (contextLine) {
+    messages.push({ role: "user", content: `[Context: ${contextLine}]` });
+    messages.push({ role: "assistant", content: "I'm here with you." });
+  }
+  messages.push(...history);
+  messages.push({ role: "user", content: message });
+
+  try {
+    const response = await anthropic.messages.create({
+      model:      "claude-sonnet-4-6",
+      max_tokens: 256,
+      system:     CHAT_SYSTEM,
+      messages,
+    });
+
+    const reply = response.content[0]?.type === "text" ? response.content[0].text.trim() : "I'm here with you.";
+    return res.json({ reply });
+  } catch (err: any) {
+    req.log.error({ err }, "drift/chat failed");
+    return res.status(500).json({ error: "Chat failed", message: err?.message });
+  }
+});
+
 export default router;
