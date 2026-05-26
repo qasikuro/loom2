@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { height: SCREEN_H } = Dimensions.get('window');
+const { width: SW, height: SCREEN_H } = Dimensions.get('window');
 
 const MOOD_COLORS: Record<string, string> = {
   Peaceful:    '#8B7AB5',
@@ -54,6 +54,17 @@ const MOOD_DARK_BG: Record<string, readonly [string, string, string]> = {
   Lonely:      ['#080E18', '#101A28', '#182438'],
 };
 
+const VIBE_LABELS: Record<string, { symbol: string; label: string; color: string }> = {
+  romantic:    { symbol: '♡', label: 'Romantic',    color: '#FF89B0' },
+  happy:       { symbol: '✦', label: 'Happy',       color: '#FFD86F' },
+  dark:        { symbol: '◉', label: 'Dark',        color: '#9070C8' },
+  mythical:    { symbol: '✧', label: 'Mythical',    color: '#B090FF' },
+  dreamy:      { symbol: '○', label: 'Dreamy',      color: '#80C8FF' },
+  ethereal:    { symbol: '◇', label: 'Ethereal',    color: '#50EED0' },
+  cozy:        { symbol: '·', label: 'Cozy',        color: '#FFB840' },
+  adventurous: { symbol: '◈', label: 'Adventurous', color: '#60D888' },
+};
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(iso: string) {
   try {
@@ -61,6 +72,8 @@ function fmtDate(iso: string) {
     return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   } catch { return ''; }
 }
+
+function rnd(a: number, b: number) { return a + Math.random() * (b - a); }
 
 interface SlimOutfit {
   name:        string;
@@ -80,10 +93,19 @@ function visibleTags(tags: string[]): string[] {
   return tags.filter(t => !t.startsWith('vibe:'));
 }
 
+// ── Ken Burns targets ────────────────────────────────────────────────────────
+const KB_TARGETS = [
+  { scale: 1.07, x: -10, y: -6 },
+  { scale: 1.05, x:  8,  y: -10 },
+  { scale: 1.09, x: -6,  y:  5 },
+  { scale: 1.06, x:  10, y:  8 },
+  { scale: 1.08, x:  0,  y: -8 },
+];
+
 export default function UserOutfitScreen() {
-  const colors  = useColors();
-  const { t }   = useTranslation();
-  const insets  = useSafeAreaInsets();
+  const colors    = useColors();
+  const { t }     = useTranslation();
+  const insets    = useSafeAreaInsets();
   const { followingIds, followUser, unfollowUser } = useApp();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -104,17 +126,18 @@ export default function UserOutfitScreen() {
     initialIndex:   string;
   }>();
 
+  // ── Gallery data ─────────────────────────────────────────────────────────
   const allOutfits: SlimOutfit[] = (() => {
     try {
       if (params.allOutfitsJson) return JSON.parse(params.allOutfitsJson) as SlimOutfit[];
     } catch {}
     return [{
-      name:        params.outfitName   ?? '',
-      description: params.outfitDesc   ?? '',
-      story:       params.outfitStory  ?? '',
-      imageUri:    params.outfitImage  ?? '',
-      tags:        params.outfitTags   ? (JSON.parse(params.outfitTags) as string[]) : [],
-      date:        params.outfitDate   ?? '',
+      name:        params.outfitName  ?? '',
+      description: params.outfitDesc  ?? '',
+      story:       params.outfitStory ?? '',
+      imageUri:    params.outfitImage ?? '',
+      tags:        params.outfitTags  ? (JSON.parse(params.outfitTags) as string[]) : [],
+      date:        params.outfitDate  ?? '',
     }];
   })();
 
@@ -123,10 +146,33 @@ export default function UserOutfitScreen() {
     return isNaN(i) ? 0 : Math.max(0, Math.min(i, allOutfits.length - 1));
   });
 
+  // ── Scroll / entry animations ────────────────────────────────────────────
+  const scrollY       = useRef(new Animated.Value(0)).current;
+  const entryAnim     = useRef(new Animated.Value(0)).current;
+  const hintY         = useRef(new Animated.Value(0)).current;
+  const admireScale   = useRef(new Animated.Value(0)).current;
+  const admireOpacity = useRef(new Animated.Value(0)).current;
   const transitionAnim = useRef(new Animated.Value(1)).current;
+
+  // ── Cinematic: Ken Burns (slow camera drift) ─────────────────────────────
+  const kbScale = useRef(new Animated.Value(1.0)).current;
+  const kbX     = useRef(new Animated.Value(0)).current;
+  const kbY     = useRef(new Animated.Value(0)).current;
+  const kbAnim  = useRef<Animated.CompositeAnimation | null>(null);
+
+  // ── Cinematic: Studio light sweep ───────────────────────────────────────
+  const sweepX    = useRef(new Animated.Value(-SW * 0.4)).current;
+  const sweepAnim = useRef<Animated.CompositeAnimation | null>(null);
+
+  // ── Cinematic: Ambient color pulse ──────────────────────────────────────
+  const ambientPulse = useRef(new Animated.Value(0.08)).current;
+
+  // ── Cinematic: Live dot blink ────────────────────────────────────────────
+  const liveDot = useRef(new Animated.Value(1)).current;
 
   const outfit     = allOutfits[currentIdx] ?? allOutfits[0];
   const vibe       = extractVibe(outfit?.tags ?? []);
+  const vibeInfo   = vibe ? VIBE_LABELS[vibe] : null;
   const tags       = visibleTags(outfit?.tags ?? []);
   const traits     = params.authorTraits ? (JSON.parse(params.authorTraits) as string[]) : [];
   const moodColor  = MOOD_COLORS[params.authorMood ?? ''] ?? colors.primary;
@@ -141,12 +187,7 @@ export default function UserOutfitScreen() {
   const [reportVisible, setReportVisible] = useState(false);
   const [appreciated, setAppreciated]     = useState(false);
 
-  const scrollY      = useRef(new Animated.Value(0)).current;
-  const entryAnim    = useRef(new Animated.Value(0)).current;
-  const hintY        = useRef(new Animated.Value(0)).current;
-  const admireScale  = useRef(new Animated.Value(0)).current;
-  const admireOpacity = useRef(new Animated.Value(0)).current;
-
+  // Scroll-derived animations
   const stickyOpacity = scrollY.interpolate({
     inputRange: [SCREEN_H * 0.72, SCREEN_H * 0.88],
     outputRange: [0, 1], extrapolate: 'clamp',
@@ -163,57 +204,121 @@ export default function UserOutfitScreen() {
     inputRange: [0, SCREEN_H * 0.32],
     outputRange: [1, 0], extrapolate: 'clamp',
   });
+  const entryY = entryAnim.interpolate({ inputRange: [0, 1], outputRange: [55, 0] });
 
+  // Entry
   useEffect(() => {
     Animated.timing(entryAnim, {
-      toValue: 1, duration: 950, delay: 250, useNativeDriver: true,
+      toValue: 1, duration: 1000, delay: 300, useNativeDriver: true,
     }).start();
   }, []);
 
+  // Scroll hint bob
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
-        Animated.timing(hintY, { toValue: -9,  duration: 760, useNativeDriver: true }),
-        Animated.timing(hintY, { toValue: 0,   duration: 760, useNativeDriver: true }),
+        Animated.timing(hintY, { toValue: -9,  duration: 800, useNativeDriver: true }),
+        Animated.timing(hintY, { toValue: 0,   duration: 800, useNativeDriver: true }),
       ])
     ).start();
   }, []);
 
-  const entryY = entryAnim.interpolate({ inputRange: [0, 1], outputRange: [50, 0] });
+  // Ken Burns — restart each time currentIdx changes so each photo gets fresh movement
+  useEffect(() => {
+    kbAnim.current?.stop();
+    let isMounted = true;
+    let targetIdx = Math.floor(Math.random() * KB_TARGETS.length);
 
-  const lastTapRef = useRef(0);
+    const step = () => {
+      if (!isMounted) return;
+      const t = KB_TARGETS[targetIdx % KB_TARGETS.length];
+      targetIdx++;
+      const dur = rnd(7000, 11000);
+      kbAnim.current = Animated.parallel([
+        Animated.timing(kbScale, { toValue: t.scale, duration: dur, useNativeDriver: true }),
+        Animated.timing(kbX,     { toValue: t.x,     duration: dur, useNativeDriver: true }),
+        Animated.timing(kbY,     { toValue: t.y,     duration: dur, useNativeDriver: true }),
+      ]);
+      kbAnim.current.start(({ finished }) => { if (finished && isMounted) step(); });
+    };
+    // Reset to natural start
+    kbScale.setValue(1.0);
+    kbX.setValue(0);
+    kbY.setValue(0);
+    step();
+    return () => { isMounted = false; kbAnim.current?.stop(); };
+  }, [currentIdx]);
 
-  function handleTap() {
-    const now = Date.now();
-    if (now - lastTapRef.current < 340) {
-      if (!appreciated) {
-        setAppreciated(true);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        admireScale.setValue(0.25);
-        admireOpacity.setValue(1);
-        Animated.parallel([
-          Animated.spring(admireScale,   { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }),
-          Animated.sequence([
-            Animated.delay(520),
-            Animated.timing(admireOpacity, { toValue: 0, duration: 480, useNativeDriver: true }),
-          ]),
-        ]).start();
-      }
-    }
-    lastTapRef.current = now;
-  }
+  // Studio light sweep
+  useEffect(() => {
+    let isMounted = true;
+    const doSweep = () => {
+      if (!isMounted) return;
+      sweepX.setValue(-SW * 0.5);
+      sweepAnim.current = Animated.sequence([
+        Animated.delay(rnd(3500, 7000)),
+        Animated.timing(sweepX, { toValue: SW * 1.5, duration: rnd(1800, 2800), useNativeDriver: true }),
+      ]);
+      sweepAnim.current.start(({ finished }) => { if (finished && isMounted) doSweep(); });
+    };
+    doSweep();
+    return () => { isMounted = false; sweepAnim.current?.stop(); };
+  }, []);
 
+  // Ambient color pulse
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(ambientPulse, { toValue: 0.55, duration: 2600, useNativeDriver: true }),
+        Animated.timing(ambientPulse, { toValue: 0.08, duration: 2600, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  // Live dot blink
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(liveDot, { toValue: 0.15, duration: 680, useNativeDriver: true }),
+        Animated.timing(liveDot, { toValue: 1.0,  duration: 680, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
+
+  // Gallery navigation
   const navigateTo = useCallback((newIdx: number) => {
     if (newIdx < 0 || newIdx >= total) return;
     Haptics.selectionAsync();
     Animated.timing(transitionAnim, { toValue: 0, duration: 160, useNativeDriver: true })
       .start(() => {
         setCurrentIdx(newIdx);
-        scrollRef.current?.scrollTo({ y: 0, animated: false });
         setAppreciated(false);
-        Animated.timing(transitionAnim, { toValue: 1, duration: 240, useNativeDriver: true }).start();
+        scrollRef.current?.scrollTo({ y: 0, animated: false });
+        Animated.timing(transitionAnim, { toValue: 1, duration: 260, useNativeDriver: true }).start();
       });
   }, [total, transitionAnim]);
+
+  // Double-tap to admire
+  const lastTapRef = useRef(0);
+  function handleTap() {
+    const now = Date.now();
+    if (now - lastTapRef.current < 340) {
+      if (!appreciated) {
+        setAppreciated(true);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        admireScale.setValue(0.2);
+        admireOpacity.setValue(1);
+        Animated.parallel([
+          Animated.spring(admireScale,    { toValue: 1, friction: 4, tension: 60, useNativeDriver: true }),
+          Animated.sequence([
+            Animated.delay(540),
+            Animated.timing(admireOpacity, { toValue: 0, duration: 500, useNativeDriver: true }),
+          ]),
+        ]).start();
+      }
+    }
+    lastTapRef.current = now;
+  }
 
   function handleFollow() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -224,14 +329,14 @@ export default function UserOutfitScreen() {
   return (
     <View style={styles.root}>
 
-      {/* ── Floating back pill ───────────────────────────────── */}
+      {/* ── Back button ──────────────────────────────────── */}
       <BackButton
         style={[styles.floatingBack, { top: topPad + 10 }]}
         color="#fff"
         size={18}
       />
 
-      {/* ── Sticky mini-header ───────────────────────────────── */}
+      {/* ── Sticky header ────────────────────────────────── */}
       <Animated.View
         style={[
           styles.stickyHeader,
@@ -246,7 +351,7 @@ export default function UserOutfitScreen() {
         <View style={{ width: 44 }} />
       </Animated.View>
 
-      {/* ── Main scroll ──────────────────────────────────────── */}
+      {/* ── Main scroll ──────────────────────────────────── */}
       <Animated.ScrollView
         ref={scrollRef as any}
         showsVerticalScrollIndicator={false}
@@ -258,16 +363,26 @@ export default function UserOutfitScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad }}
         bounces
       >
-        {/* ════════════════════════════════════════════════════
+
+        {/* ══════════════════════════════════════════════════
             HERO
-            ════════════════════════════════════════════════════ */}
+            ══════════════════════════════════════════════════ */}
         <Pressable style={[styles.hero, { height: SCREEN_H }]} onPress={handleTap}>
 
-          {/* Full-bleed image with parallax — wrapped in transition fade */}
+          {/* ── Photo with Ken Burns parallax ── */}
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              { opacity: transitionAnim, transform: [{ translateY: imageParallax }, { scale: imagePullScale }] },
+              {
+                opacity: transitionAnim,
+                transform: [
+                  { translateY: imageParallax },
+                  { scale:      imagePullScale },
+                  { scale:      kbScale },
+                  { translateX: kbX },
+                  { translateY: kbY },
+                ],
+              },
             ]}
           >
             {outfit?.imageUri ? (
@@ -286,24 +401,70 @@ export default function UserOutfitScreen() {
             )}
           </Animated.View>
 
-          {/* Vibe animation overlay */}
+          {/* ── Ambient color pulse glow ── */}
+          <Animated.View
+            style={[styles.ambientGlow, { opacity: ambientPulse }]}
+            pointerEvents="none"
+          >
+            <LinearGradient
+              colors={[`${moodColor}00`, `${moodColor}55`, `${moodColor}00`]}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0.5, y: 0.85 }}
+              end={{ x: 0.5, y: 0.0 }}
+            />
+          </Animated.View>
+
+          {/* ── Vibe particles ── */}
           {vibe ? <VibeOverlay vibe={vibe} /> : null}
 
-          {/* Top vignette */}
+          {/* ── Studio light sweep ── */}
+          <Animated.View
+            style={[styles.sweepStrip, { transform: [{ translateX: sweepX }] }]}
+            pointerEvents="none"
+          >
+            <LinearGradient
+              colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.13)', 'rgba(255,255,255,0.22)', 'rgba(255,255,255,0.13)', 'rgba(255,255,255,0)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
+
+          {/* ── Top vignette ── */}
           <LinearGradient
-            colors={['rgba(0,0,0,0.60)', 'rgba(0,0,0,0.22)', 'transparent']}
+            colors={['rgba(0,0,0,0.65)', 'rgba(0,0,0,0.20)', 'transparent']}
             style={styles.topVignette}
             pointerEvents="none"
           />
 
-          {/* Bottom vignette */}
+          {/* ── Bottom vignette ── */}
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.48)', 'rgba(0,0,0,0.91)']}
+            colors={['transparent', 'rgba(0,0,0,0.52)', 'rgba(0,0,0,0.93)']}
             style={styles.bottomVignette}
             pointerEvents="none"
           />
 
-          {/* Hero text — fades with transition */}
+          {/* ── "Modeling Now" live pill ── */}
+          <Animated.View
+            style={[styles.livePill, { top: topPad + 12, opacity: heroFade }]}
+            pointerEvents="none"
+          >
+            <Animated.View style={[styles.liveDot, { opacity: liveDot, backgroundColor: moodColor }]} />
+            <Text style={[styles.liveText, { color: moodColor }]}>Modeling Now</Text>
+          </Animated.View>
+
+          {/* ── Vibe badge (top-right corner) ── */}
+          {vibeInfo && (
+            <Animated.View
+              style={[styles.vibeBadge, { top: topPad + 12, opacity: heroFade }]}
+              pointerEvents="none"
+            >
+              <Text style={[styles.vibeBadgeSymbol, { color: vibeInfo.color }]}>{vibeInfo.symbol}</Text>
+              <Text style={[styles.vibeBadgeLabel, { color: vibeInfo.color }]}>{vibeInfo.label}</Text>
+            </Animated.View>
+          )}
+
+          {/* ── Hero text content ── */}
           <Animated.View
             style={[styles.heroContent, { opacity: Animated.multiply(heroFade, transitionAnim) }]}
             pointerEvents="none"
@@ -333,7 +494,7 @@ export default function UserOutfitScreen() {
             ) : null}
           </Animated.View>
 
-          {/* Scroll hint */}
+          {/* ── Scroll hint ── */}
           <Animated.View
             style={[
               styles.scrollHint,
@@ -345,14 +506,14 @@ export default function UserOutfitScreen() {
             <Text style={styles.scrollHintText}>pull to reveal</Text>
           </Animated.View>
 
-          {/* Gallery navigation — shown when multiple outfits */}
+          {/* ── Gallery nav (multiple outfits) ── */}
           {total > 1 && (
-            <View style={[styles.navRow, { bottom: bottomPad + 64 }]}>
+            <View style={[styles.navRow, { bottom: bottomPad + 62 }]}>
               <TouchableOpacity
                 style={[styles.navBtn, currentIdx === 0 && styles.navBtnDisabled]}
                 onPress={() => navigateTo(currentIdx - 1)}
                 disabled={currentIdx === 0}
-                activeOpacity={0.75}
+                activeOpacity={0.78}
               >
                 <Icon name="chevron-left" size={18} color="#fff" />
               </TouchableOpacity>
@@ -365,23 +526,20 @@ export default function UserOutfitScreen() {
                 style={[styles.navBtn, currentIdx === total - 1 && styles.navBtnDisabled]}
                 onPress={() => navigateTo(currentIdx + 1)}
                 disabled={currentIdx === total - 1}
-                activeOpacity={0.75}
+                activeOpacity={0.78}
               >
                 <Icon name="chevron-right" size={18} color="#fff" />
               </TouchableOpacity>
             </View>
           )}
 
-          {/* Dot indicators */}
+          {/* ── Dot indicators ── */}
           {total > 1 && total <= 12 && (
-            <View style={[styles.dotsRow, { bottom: bottomPad + 50 }]} pointerEvents="none">
+            <View style={[styles.dotsRow, { bottom: bottomPad + 48 }]} pointerEvents="none">
               {allOutfits.map((_, i) => (
                 <View
                   key={i}
-                  style={[
-                    styles.dot,
-                    i === currentIdx ? styles.dotActive : styles.dotInactive,
-                  ]}
+                  style={[styles.dot, i === currentIdx ? styles.dotActive : styles.dotInactive]}
                 />
               ))}
             </View>
@@ -389,14 +547,14 @@ export default function UserOutfitScreen() {
 
         </Pressable>
 
-        {/* ════════════════════════════════════════════════════
+        {/* ══════════════════════════════════════════════════
             DETAILS
-            ════════════════════════════════════════════════════ */}
+            ══════════════════════════════════════════════════ */}
         <View style={[styles.details, { backgroundColor: colors.background }]}>
 
           <View style={[styles.moodBar, { backgroundColor: `${moodColor}55` }]} />
 
-          {/* Character card */}
+          {/* Author card */}
           <View style={[styles.charCard, { backgroundColor: colors.card, borderColor: `${moodColor}28` }, SHADOW.sm]}>
             <LinearGradient
               colors={[`${moodColor}16`, 'transparent']}
@@ -561,9 +719,48 @@ const styles = StyleSheet.create({
   stickyTitle: { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
 
   hero:          { width: '100%', overflow: 'hidden', backgroundColor: '#08060F' },
-  topVignette:   { position: 'absolute', top: 0, left: 0, right: 0, height: 200 },
-  bottomVignette:{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 380 },
+  topVignette:   { position: 'absolute', top: 0,    left: 0, right: 0, height: 220 },
+  bottomVignette:{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 400 },
 
+  // ── Cinematic layers ────────────────────────────────────────────────────
+  ambientGlow: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: '70%',
+  },
+  sweepStrip: {
+    position: 'absolute',
+    top: 0, bottom: 0,
+    width: 130,
+    left: 0,
+  },
+
+  // ── Live pill ───────────────────────────────────────────────────────────
+  livePill: {
+    position: 'absolute', left: 60,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(8,6,15,0.58)',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
+  },
+  liveDot: {
+    width: 7, height: 7, borderRadius: 4,
+  },
+  liveText: {
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+    letterSpacing: 0.5,
+  },
+
+  // ── Vibe badge ──────────────────────────────────────────────────────────
+  vibeBadge: {
+    position: 'absolute', right: 16,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(8,6,15,0.58)',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
+  },
+  vibeBadgeSymbol: { fontSize: 13 },
+  vibeBadgeLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4 },
+
+  // ── Hero content ────────────────────────────────────────────────────────
   heroContent: {
     position: 'absolute', bottom: 90, left: 0, right: 0, paddingHorizontal: 22,
   },
@@ -577,9 +774,9 @@ const styles = StyleSheet.create({
   heroName: {
     fontSize: 40, fontFamily: 'Satoshi-Bold', color: '#fff',
     letterSpacing: -1.2, lineHeight: 46,
-    textShadowColor: 'rgba(0,0,0,0.75)',
+    textShadowColor: 'rgba(0,0,0,0.80)',
     textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 14,
+    textShadowRadius: 18,
   },
   datePill: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12,
@@ -598,11 +795,11 @@ const styles = StyleSheet.create({
     letterSpacing: 2, textTransform: 'uppercase',
   },
 
-  // ── Gallery navigation ───────────────────────────────────────
+  // ── Gallery nav ─────────────────────────────────────────────────────────
   navRow: {
     position: 'absolute', left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 20,
+    justifyContent: 'center', gap: 18,
   },
   navBtn: {
     width: 44, height: 44, borderRadius: 22,
@@ -610,7 +807,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center', justifyContent: 'center',
   },
-  navBtnDisabled: { opacity: 0.30 },
+  navBtnDisabled: { opacity: 0.28 },
   counterPill: {
     backgroundColor: 'rgba(0,0,0,0.50)',
     borderRadius: 14, paddingHorizontal: 14, paddingVertical: 6,
@@ -629,7 +826,7 @@ const styles = StyleSheet.create({
   dotActive: { backgroundColor: 'rgba(255,255,255,0.9)', width: 16 },
   dotInactive: { backgroundColor: 'rgba(255,255,255,0.30)' },
 
-  // ── Details ─────────────────────────────────────────────────
+  // ── Details ─────────────────────────────────────────────────────────────
   details:  { paddingTop: 26 },
   moodBar:  { height: 3, marginHorizontal: 44, borderRadius: 2, marginBottom: 24 },
 
@@ -650,7 +847,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 11, paddingVertical: 5,
     borderRadius: 14, borderWidth: 1, flexShrink: 0,
   },
-  moodPillText:  { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  moodPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   charBio: {
     fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 20,
     fontStyle: 'italic', marginBottom: 12, opacity: 0.82,
@@ -659,7 +856,7 @@ const styles = StyleSheet.create({
   traitChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
   traitText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   charDivider: { height: StyleSheet.hairlineWidth, marginBottom: 14 },
-  charActions: { flexDirection: 'row', gap: 10 },
+  charActions:  { flexDirection: 'row', gap: 10 },
 
   followBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center',
