@@ -6,19 +6,27 @@ import { requireAuth, getUserId } from "../middleware/auth";
 const router: IRouter = Router();
 
 export interface GuideAvailability {
-  days:     number[];
-  timeFrom: string;
-  timeTo:   string;
+  days:      number[];
+  timeFrom:  string;
+  timeTo:    string;
+  timezone?: string; // IANA timezone e.g. "Asia/Singapore"
 }
 
 function isAvailableNow(avail: GuideAvailability | null | undefined): boolean {
   if (!avail) return false;
-  const now  = new Date();
-  const day  = now.getDay();
+  const tz  = avail.timezone ?? "UTC";
+  // Convert server time to guide's local timezone
+  let nowLocal: Date;
+  try {
+    nowLocal = new Date(new Date().toLocaleString("en-US", { timeZone: tz }));
+  } catch {
+    nowLocal = new Date(); // fallback to server time if tz is invalid
+  }
+  const day = nowLocal.getDay();
   if (!avail.days.includes(day)) return false;
+  const cur  = nowLocal.getHours() * 60 + nowLocal.getMinutes();
   const [fH, fM] = avail.timeFrom.split(":").map(Number);
   const [tH, tM] = avail.timeTo.split(":").map(Number);
-  const cur  = now.getHours() * 60 + now.getMinutes();
   const from = fH * 60 + fM;
   const to   = tH * 60 + tM;
   if (to < from) return cur >= from || cur <= to; // overnight range

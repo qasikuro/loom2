@@ -767,7 +767,7 @@ export default function CharacterScreen() {
     setCharacter({
       ...character,
       guideAvailability: next.length > 0
-        ? { days: next, timeFrom: guideTimeFrom, timeTo: guideTimeTo }
+        ? { days: next, timeFrom: guideTimeFrom, timeTo: guideTimeTo, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }
         : null,
     });
     Haptics.selectionAsync();
@@ -777,7 +777,7 @@ export default function CharacterScreen() {
     if (guideAvailDays.length > 0) {
       setCharacter({
         ...character,
-        guideAvailability: { days: guideAvailDays, timeFrom: guideTimeFrom, timeTo: guideTimeTo },
+        guideAvailability: { days: guideAvailDays, timeFrom: guideTimeFrom, timeTo: guideTimeTo, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
       });
     }
   }
@@ -1956,6 +1956,16 @@ export default function CharacterScreen() {
           {/* ACCOUNT */}
           <Text style={styles.drawerSectionLabel}>ACCOUNT</Text>
           <View style={styles.drawerGroup}>
+            <TouchableOpacity
+              style={styles.drawerItem}
+              onPress={() => { closeDrawer(); setTimeout(() => router.push('/messages' as any), 260); }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.drawerItemIcon}><Icon name="message-circle" size={15} color="rgba(200,184,232,0.75)" /></View>
+              <Text style={[styles.drawerItemLabel, { flex: 1 }]}>Messages</Text>
+              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+            </TouchableOpacity>
+            <View style={styles.drawerDivider} />
             <TouchableOpacity style={styles.drawerItem} onPress={toggleVisibility} activeOpacity={0.7}>
               <View style={styles.drawerItemIcon}><Icon name="lock" size={15} color="rgba(200,184,232,0.75)" /></View>
               <Text style={[styles.drawerItemLabel, { flex: 1 }]}>Privacy</Text>

@@ -19,6 +19,7 @@ const ProfileLinkSchema = z.object({
 });
 
 const GuideAvailabilitySchema = z.object({
+  timezone: z.string().optional(),
   days:     z.array(z.number().int().min(0).max(6)).max(7),
   timeFrom: z.string().regex(/^\d{1,2}:\d{2}$/),
   timeTo:   z.string().regex(/^\d{1,2}:\d{2}$/),

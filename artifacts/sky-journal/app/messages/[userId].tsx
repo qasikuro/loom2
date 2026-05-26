@@ -92,12 +92,10 @@ export default function MessagesScreen() {
     }, [load]),
   );
 
-  // Scroll to bottom whenever messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => flatRef.current?.scrollToEnd({ animated: false }), 80);
-    }
-  }, [messages]);
+  // Scroll to bottom on new content — use onContentSizeChange on FlatList instead of a timeout hack
+  const scrollToBottom = useCallback(() => {
+    flatRef.current?.scrollToEnd({ animated: false });
+  }, []);
 
   const handleSend = useCallback(async () => {
     const content = input.trim();
@@ -200,6 +198,8 @@ export default function MessagesScreen() {
             keyExtractor={item => item.key}
             contentContainerStyle={[styles.listPad, { paddingBottom: 12 }]}
             showsVerticalScrollIndicator={false}
+            onContentSizeChange={scrollToBottom}
+            onLayout={scrollToBottom}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>

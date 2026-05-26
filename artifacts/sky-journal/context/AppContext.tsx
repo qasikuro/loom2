@@ -69,9 +69,10 @@ export interface ProfileLink {
 }
 
 export interface GuideAvailability {
-  days:     number[];  // 0 = Sun … 6 = Sat
-  timeFrom: string;   // "HH:MM" 24-h
-  timeTo:   string;   // "HH:MM" 24-h
+  days:      number[];   // 0 = Sun … 6 = Sat
+  timeFrom:  string;    // "HH:MM" 24-h
+  timeTo:    string;    // "HH:MM" 24-h
+  timezone?: string;    // IANA timezone e.g. "Asia/Singapore"
 }
 
 export interface GuideProfile {
