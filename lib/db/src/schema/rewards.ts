@@ -1,12 +1,13 @@
 import { integer, jsonb, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 export const userRewardsTable = pgTable("user_rewards", {
-  userId:       text("user_id").primaryKey(),
-  stars:        integer("stars").notNull().default(0),
-  auraEnergy:   integer("aura_energy").notNull().default(0),
-  memoryShards: integer("memory_shards").notNull().default(0),
-  lifetimeStars: integer("lifetime_stars").notNull().default(0),
-  updatedAt:    timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  userId:          text("user_id").primaryKey(),
+  stars:           integer("stars").notNull().default(0),
+  auraEnergy:      integer("aura_energy").notNull().default(0),
+  memoryShards:    integer("memory_shards").notNull().default(0),
+  lifetimeStars:   integer("lifetime_stars").notNull().default(0),
+  activeCosmetics: jsonb("active_cosmetics").$type<Record<string, string>>().notNull().default({}),
+  updatedAt:       timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const rewardEventsTable = pgTable("reward_events", {

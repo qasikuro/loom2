@@ -107,10 +107,17 @@ const AVATAR_CFG = {
 
 // ── Timeline entry card ───────────────────────────────────────────────────────
 
-function TimelineCard({ entry, onDelete, index = 0 }: { entry: JournalEntry; onDelete: () => void; index?: number }) {
+// ── Journal theme palettes ─────────────────────────────────────────────────
+const TIMELINE_THEME: Record<string, { accentStrip: string; cardBg: string; cardBorder: string }> = {
+  theme_locket: { accentStrip: '#C8A84B', cardBg: 'rgba(200,168,75,0.06)', cardBorder: 'rgba(200,168,75,0.22)' },
+  theme_aurora: { accentStrip: '#78B4DC', cardBg: 'rgba(120,180,220,0.06)', cardBorder: 'rgba(120,180,220,0.22)' },
+};
+
+function TimelineCard({ entry, onDelete, index = 0, theme }: { entry: JournalEntry; onDelete: () => void; index?: number; theme?: string }) {
   const colors = useColors();
   const cfg    = AVATAR_CFG[entry.type];
   const { t }  = useTranslation();
+  const ts     = (entry.type === 'diary' && theme) ? TIMELINE_THEME[theme] : null;
   const [confirming, setConfirming] = React.useState(false);
   const confirmTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -165,13 +172,16 @@ function TimelineCard({ entry, onDelete, index = 0 }: { entry: JournalEntry; onD
   return (
     <Animated.View style={{ opacity: entranceOpacity, transform: [{ translateY: entranceY }, { scale: pressScale }] }}>
       <Pressable
-        style={[tc.card, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}
+        style={[tc.card, SHADOW.sm, {
+          backgroundColor: ts ? ts.cardBg : colors.card,
+          borderColor: ts ? ts.cardBorder : colors.border,
+        }]}
         onPress={() => { Haptics.selectionAsync(); router.push({ pathname: '/journal-entry', params: { id: entry.id } }); }}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
         {/* ─ Left accent strip ─ */}
-        <View style={[tc.accentStrip, { backgroundColor: cfg.bg }]} pointerEvents="none" />
+        <View style={[tc.accentStrip, { backgroundColor: ts ? ts.accentStrip : cfg.bg }]} pointerEvents="none" />
 
         {/* ─ Top row: avatar + name + time + star ─ */}
         <View style={tc.topRow}>
@@ -479,7 +489,8 @@ export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { t }   = useTranslation();
-  const { journalEntries, deleteJournalEntry, isLoading, constellation } = useApp();
+  const { journalEntries, deleteJournalEntry, isLoading, constellation, activeCosmetics } = useApp();
+  const activeTheme = activeCosmetics['theme'] as string | undefined;
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
   const bottomPad = Platform.OS === 'web' ? 180 : insets.bottom + 180;
@@ -737,6 +748,7 @@ export default function JournalScreen() {
                       entry={entry}
                       index={si * 5 + i}
                       onDelete={() => handleDelete(entry.id)}
+                      theme={activeTheme}
                     />
                   ))}
                 </View>

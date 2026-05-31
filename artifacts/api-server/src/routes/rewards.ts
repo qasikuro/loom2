@@ -161,21 +161,72 @@ router.get("/constellation", requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/rewards/shop — catalog + user's purchased item IDs ─────────────
+// ── GET /api/rewards/shop — catalog + purchased IDs + active cosmetics ───────
 router.get("/rewards/shop", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   try {
+    const [purchases, rewardsRow] = await Promise.all([
+      db
+        .select({ itemId: userPurchasesTable.itemId })
+        .from(userPurchasesTable)
+        .where(eq(userPurchasesTable.userId, userId)),
+      db
+        .select({ activeCosmetics: userRewardsTable.activeCosmetics })
+        .from(userRewardsTable)
+        .where(eq(userRewardsTable.userId, userId))
+        .limit(1),
+    ]);
+
+    const purchasedIds     = purchases.map((p) => p.itemId);
+    const rawActive        = (rewardsRow[0]?.activeCosmetics ?? {}) as Record<string, string>;
+    // Sanitise: only keep active entries where the item is actually owned
+    const activeCosmetics: Record<string, string> = {};
+    for (const [category, itemId] of Object.entries(rawActive)) {
+      if (purchasedIds.includes(itemId)) activeCosmetics[category] = itemId;
+    }
+
+    return res.json({ catalog: SHOP_CATALOG, purchasedIds, activeCosmetics });
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch shop");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PUT /api/rewards/active-cosmetics — persist active cosmetic selection ────
+router.put("/rewards/active-cosmetics", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { activeCosmetics } = req.body as { activeCosmetics?: Record<string, string> };
+
+  if (!activeCosmetics || typeof activeCosmetics !== "object") {
+    return res.status(400).json({ error: "activeCosmetics object is required" });
+  }
+
+  try {
+    // Validate: only store entries where the item is actually owned
     const purchases = await db
       .select({ itemId: userPurchasesTable.itemId })
       .from(userPurchasesTable)
       .where(eq(userPurchasesTable.userId, userId));
+    const purchasedIds = purchases.map((p) => p.itemId);
 
-    return res.json({
-      catalog:      SHOP_CATALOG,
-      purchasedIds: purchases.map((p) => p.itemId),
-    });
+    const sanitised: Record<string, string> = {};
+    for (const [category, itemId] of Object.entries(activeCosmetics)) {
+      if (typeof itemId === "string" && purchasedIds.includes(itemId)) {
+        sanitised[category] = itemId;
+      }
+    }
+
+    await db
+      .insert(userRewardsTable)
+      .values({ userId, activeCosmetics: sanitised })
+      .onConflictDoUpdate({
+        target: userRewardsTable.userId,
+        set: { activeCosmetics: sanitised, updatedAt: sql`now()` },
+      });
+
+    return res.json({ success: true, activeCosmetics: sanitised });
   } catch (err) {
-    req.log.error({ err }, "Failed to fetch shop");
+    req.log.error({ err }, "Failed to persist active cosmetics");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

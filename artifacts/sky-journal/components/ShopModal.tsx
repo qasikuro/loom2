@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { apiFetch, useApp } from '@/context/AppContext';
+import { apiFetch, useApp, COSMETIC_CATEGORY_MAP } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
 
@@ -138,14 +138,16 @@ function BalanceChip({ icon, value, color, bg }: { icon: string; value: number; 
 // ── Shop item card ────────────────────────────────────────────────────────────
 
 interface ItemCardProps {
-  item:         ShopItem;
-  owned:        boolean;
-  canAfford:    boolean;
-  onBuy:        (item: ShopItem) => void;
-  purchasing:   boolean;
+  item:             ShopItem;
+  owned:            boolean;
+  isActive:         boolean;
+  canAfford:        boolean;
+  onBuy:            (item: ShopItem) => void;
+  onActivate:       (item: ShopItem) => void;
+  purchasing:       boolean;
 }
 
-function ItemCard({ item, owned, canAfford, onBuy, purchasing }: ItemCardProps) {
+function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchasing }: ItemCardProps) {
   const colors    = useColors();
   const scale     = useRef(new Animated.Value(1)).current;
   const catColor  = CATEGORY_COLORS[item.category] ?? '#9878D8';
@@ -158,12 +160,22 @@ function ItemCard({ item, owned, canAfford, onBuy, purchasing }: ItemCardProps) 
   if (item.cost.aura)   costParts.push(<Text key="a" style={[styles.costPart, { color: '#9878D8' }]}>◈ {item.cost.aura}</Text>);
   if (item.cost.shards) costParts.push(<Text key="h" style={[styles.costPart, { color: '#78B4DC' }]}>◇ {item.cost.shards}</Text>);
 
-  const disabled = owned || !canAfford || purchasing;
+  const disabled = !owned && (!canAfford || purchasing);
+
+  function handlePress() {
+    if (owned) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      onActivate(item);
+    } else if (canAfford && !purchasing) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      onBuy(item);
+    }
+  }
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
-        onPress={() => { if (!disabled) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onBuy(item); } }}
+        onPress={handlePress}
         onPressIn={pressIn}
         onPressOut={pressOut}
         activeOpacity={1}
@@ -171,11 +183,12 @@ function ItemCard({ item, owned, canAfford, onBuy, purchasing }: ItemCardProps) 
       >
         <View style={[
           styles.card,
-          { backgroundColor: colors.card, borderColor: owned ? `${catColor}60` : colors.border },
-          owned && { borderWidth: 1.5 },
+          { backgroundColor: colors.card, borderColor: isActive ? catColor : owned ? `${catColor}60` : colors.border },
+          (owned || isActive) && { borderWidth: 1.5 },
+          isActive && { backgroundColor: `${catColor}0A` },
         ]}>
           {/* Icon + badge */}
-          <View style={[styles.cardIconWrap, { backgroundColor: `${catColor}18` }]}>
+          <View style={[styles.cardIconWrap, { backgroundColor: isActive ? `${catColor}28` : `${catColor}18` }]}>
             <Text style={[styles.cardIcon, { color: catColor }]}>{item.icon}</Text>
           </View>
 
@@ -194,9 +207,19 @@ function ItemCard({ item, owned, canAfford, onBuy, purchasing }: ItemCardProps) 
                 acc.push(p); return acc;
               }, [])}</View>
               {owned ? (
-                <View style={[styles.ownedBadge, { backgroundColor: `${catColor}22` }]}>
-                  <Text style={[styles.ownedBadgeText, { color: catColor }]}>Owned ✦</Text>
-                </View>
+                <TouchableOpacity
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onActivate(item); }}
+                  style={[
+                    styles.ownedBadge,
+                    isActive
+                      ? { backgroundColor: catColor }
+                      : { backgroundColor: `${catColor}22` },
+                  ]}
+                >
+                  <Text style={[styles.ownedBadgeText, { color: isActive ? '#fff' : catColor }]}>
+                    {isActive ? '✦ Active' : 'Set Active'}
+                  </Text>
+                </TouchableOpacity>
               ) : (
                 <TouchableOpacity
                   onPress={() => { if (!disabled) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onBuy(item); } }}
@@ -231,9 +254,8 @@ interface ShopModalProps {
 export function ShopModal({ visible, onClose }: ShopModalProps) {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
-  const { rewardBalance, reloadRewards } = useApp();
+  const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
 
-  const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
   const [purchasing,   setPurchasing]   = useState<string | null>(null);
   const [toast,        setToast]        = useState<{ message: string; type: ToastProps['type'] } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -243,18 +265,10 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   useEffect(() => {
     if (visible) {
       Animated.spring(slideY, { toValue: 0, tension: 55, friction: 13, useNativeDriver: true }).start();
-      loadPurchases();
     } else {
       Animated.timing(slideY, { toValue: 600, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
     }
   }, [visible]);
-
-  async function loadPurchases() {
-    try {
-      const data = await apiFetch<{ purchasedIds: string[] }>('/rewards/shop');
-      setPurchasedIds(data.purchasedIds);
-    } catch { /* silently skip */ }
-  }
 
   function showToast(message: string, type: ToastProps['type']) {
     setToast({ message, type });
@@ -274,7 +288,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
       });
       if (res.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        setPurchasedIds(prev => [...prev, item.id]);
+        markPurchased(item.id);
         showToast(`${item.icon} ${item.name} is yours!`, 'success');
         reloadRewards();
       }
@@ -282,7 +296,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
       const msg = err?.message ?? '';
       if (msg.includes('already_owned')) {
         showToast('You already own this item.', 'info');
-        setPurchasedIds(prev => prev.includes(item.id) ? prev : [...prev, item.id]);
+        markPurchased(item.id);
       } else if (msg.includes('insufficient_funds') || msg.includes('402')) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         showToast('Not enough currency for this item.', 'error');
@@ -293,7 +307,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
     } finally {
       setPurchasing(null);
     }
-  }, [reloadRewards]);
+  }, [reloadRewards, markPurchased]);
 
   function canAfford(item: ShopItem): boolean {
     if (!rewardBalance) return false;
@@ -357,16 +371,23 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
           contentContainerStyle={styles.itemList}
           showsVerticalScrollIndicator={false}
         >
-          {SHOP_CATALOG.map(item => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              owned={purchasedIds.includes(item.id)}
-              canAfford={canAfford(item)}
-              onBuy={handleBuy}
-              purchasing={purchasing === item.id}
-            />
-          ))}
+          {SHOP_CATALOG.map(item => {
+            const owned    = purchasedIds.includes(item.id);
+            const category = COSMETIC_CATEGORY_MAP[item.id];
+            const isActive = owned && !!category && activeCosmetics[category] === item.id;
+            return (
+              <ItemCard
+                key={item.id}
+                item={item}
+                owned={owned}
+                isActive={isActive}
+                canAfford={canAfford(item)}
+                onBuy={handleBuy}
+                onActivate={it => setActiveCosmetic(it.id)}
+                purchasing={purchasing === item.id}
+              />
+            );
+          })}
           <Text style={[styles.footer, { color: colors.mutedForeground }]}>
             More items drift in with each season ✦
           </Text>

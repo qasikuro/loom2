@@ -11,6 +11,7 @@ import type { JournalEntry } from '@/context/AppContext';
 interface JournalCardProps {
   entry: JournalEntry;
   onDelete?: () => void;
+  theme?: string;
 }
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -26,11 +27,32 @@ function formatTime(iso: string) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
+// ── Theme palettes ──────────────────────────────────────────────────────────
+const THEME_STYLES: Record<string, { bg: string; border: string; accentLeft: string }> = {
+  theme_locket: {
+    bg:          'rgba(200,168,75,0.07)',
+    border:      'rgba(200,168,75,0.28)',
+    accentLeft:  '#C8A84B',
+  },
+  theme_aurora: {
+    bg:          'rgba(120,180,220,0.07)',
+    border:      'rgba(120,180,220,0.28)',
+    accentLeft:  '#78B4DC',
+  },
+};
+
 // ── Diary card ─────────────────────────────────────────────────────────────
-function DiaryCard({ entry, onDelete }: JournalCardProps) {
+function DiaryCard({ entry, onDelete, theme }: JournalCardProps) {
   const colors = useColors();
+  const ts = theme ? THEME_STYLES[theme] : null;
   return (
-    <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm, styles.diaryAccent]}>
+    <View style={[
+      styles.card,
+      { backgroundColor: ts ? ts.bg : colors.card, borderColor: ts ? ts.border : colors.border },
+      SHADOW.sm,
+      styles.diaryAccent,
+      ts && { borderLeftColor: ts.accentLeft },
+    ]}>
       <View style={styles.topRow}>
         <View style={styles.metaLeft}>
           <View style={[styles.typeIcon, { backgroundColor: `${colors.primary}12` }]}>
@@ -164,6 +186,8 @@ export function JournalCard(props: JournalCardProps) {
   if (props.entry.type === 'moment') return <MomentCard {...props} />;
   return <DiaryCard {...props} />;
 }
+
+export { THEME_STYLES };
 
 const styles = StyleSheet.create({
   card: {

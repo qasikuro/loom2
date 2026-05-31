@@ -257,6 +257,15 @@ export interface RewardBalance {
   lifetimeStars: number;
 }
 
+// ── Cosmetic item → category map (mirrors server SHOP_CATALOG) ───────────────
+export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme'> = {
+  'frame_starlight': 'frame',
+  'frame_moonveil':  'frame',
+  'accent_aura':     'accent',
+  'theme_locket':    'theme',
+  'theme_aurora':    'theme',
+};
+
 export interface ConstellationState {
   socialCount:    number;
   memoryCount:    number;
@@ -343,6 +352,11 @@ interface AppContextValue {
   serverNotifications:         ServerNotification[];
   markServerNotificationsRead: () => void;
   deleteServerNotification:    (id: string) => void;
+
+  purchasedIds:      string[];
+  markPurchased:     (itemId: string) => void;
+  activeCosmetics:   Record<string, string>;
+  setActiveCosmetic: (itemId: string) => void;
 
   reloadData:    () => Promise<void>;
   refreshFeed:   () => Promise<void>;
@@ -490,6 +504,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rewardBalance, setRewardBalance]   = useState<RewardBalance | null>(null);
   const [constellation, setConstellation]   = useState<ConstellationState | null>(null);
   const [activeOutfitId, setActiveOutfitIdState] = useState<string | null>(null);
+  const [purchasedIds, setPurchasedIds]         = useState<string[]>([]);
+  const [activeCosmetics, setActiveCosmeticsState] = useState<Record<string, string>>({});
 
   const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
   const [galleryUsage, setGalleryUsage] = useState<GalleryUsage>({ count: 0, limit: 200 });
@@ -550,7 +566,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadFromCache() {
     try {
-      const [c, j, s, o, d, f, sv] = await Promise.all([
+      const [c, j, s, o, d, f, sv, ac] = await Promise.all([
         AsyncStorage.getItem('character_v2'),
         AsyncStorage.getItem('journal_v2'),
         AsyncStorage.getItem('stories_v1'),
@@ -558,6 +574,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem('discover_v1'),
         AsyncStorage.getItem('following_v1'),
         AsyncStorage.getItem('saved_stories_v1'),
+        AsyncStorage.getItem('active_cosmetics_v1'),
       ]);
       if (c)  setCharacterState(JSON.parse(c));
       if (j)  setJournalEntries(JSON.parse(j));
@@ -566,6 +583,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (d)  setDiscoverFeedRaw(JSON.parse(d));
       if (f)  setFollowingIds(JSON.parse(f));
       if (sv) { try { setSavedStoryIds(new Set(JSON.parse(sv))); } catch { /* ignore */ } }
+      if (ac) { try { setActiveCosmeticsState(JSON.parse(ac)); } catch { /* ignore */ } }
     } catch { /* use defaults */ } finally {
       dataReadyRef.current = true;
       setIsLoading(false);
@@ -600,6 +618,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedStoryIds(new Set());
     setRewardBalance(null);
     setConstellation(null);
+    setPurchasedIds([]);
+    setActiveCosmeticsState({});
+    AsyncStorage.removeItem('active_cosmetics_v1').catch(() => null);
     setApiOnline(false);
     // Reset load guards so the next sign-in can trigger a full reload
     dataReadyRef.current = false;
@@ -632,7 +653,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const [
         charRaw, entriesRaw, storiesRaw, outfitsRaw,
         galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw, guidesRaw,
-        rewardBalanceRaw, constellationRaw,
+        rewardBalanceRaw, constellationRaw, shopRaw,
       ] = await Promise.all([
         apiFetch<any>('/character').catch(() => null),
         apiFetch<any[]>('/journal-entries').catch(() => null),
@@ -647,6 +668,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<GuideProfile[]>('/guides?following=true').catch(() => []),
         apiFetch<RewardBalance>('/rewards').catch(() => null),
         apiFetch<ConstellationState>('/constellation').catch(() => null),
+        apiFetch<{ purchasedIds: string[]; activeCosmetics: Record<string, string> }>('/rewards/shop').catch(() => null),
       ]);
 
       // Process core data
@@ -695,6 +717,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setConstellation(constellationRaw);
         // Establish the baseline — no toasts on initial load, only on subsequent reloads.
         prevUnlockedStarsRef.current = constellationRaw.unlockedStars ?? [];
+      }
+      if (shopRaw?.purchasedIds) {
+        const ids = shopRaw.purchasedIds as string[];
+        setPurchasedIds(ids);
+        // Hydrate active cosmetics from server, sanitising against owned items
+        if (shopRaw.activeCosmetics && typeof shopRaw.activeCosmetics === 'object') {
+          const rawActive = shopRaw.activeCosmetics as Record<string, string>;
+          const sanitised: Record<string, string> = {};
+          for (const [cat, itemId] of Object.entries(rawActive)) {
+            if (ids.includes(itemId)) sanitised[cat] = itemId;
+          }
+          setActiveCosmeticsState(sanitised);
+          AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(sanitised)).catch(() => null);
+        }
       }
       setApiOnline(true);
 
@@ -1116,6 +1152,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     apiFetch(`/outfits/${id}`, { method: 'DELETE' }).catch(() => null);
   }, []);
 
+  const markPurchased = useCallback((itemId: string) => {
+    setPurchasedIds(prev => prev.includes(itemId) ? prev : [...prev, itemId]);
+    // Auto-activate first purchase in a category
+    const category = COSMETIC_CATEGORY_MAP[itemId];
+    if (!category) return;
+    setActiveCosmeticsState(prev => {
+      if (prev[category]) return prev; // already have an active item in this category
+      const next = { ...prev, [category]: itemId };
+      AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
+      // Persist to server (fire-and-forget)
+      apiFetch('/rewards/active-cosmetics', {
+        method: 'PUT',
+        body:   JSON.stringify({ activeCosmetics: next }),
+      }).catch(() => null);
+      return next;
+    });
+  }, []);
+
+  const setActiveCosmetic = useCallback((itemId: string) => {
+    const category = COSMETIC_CATEGORY_MAP[itemId];
+    if (!category) return;
+    setActiveCosmeticsState(prev => {
+      const next = { ...prev };
+      if (next[category] === itemId) {
+        delete next[category];
+      } else {
+        next[category] = itemId;
+      }
+      AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
+      // Persist to server (fire-and-forget)
+      apiFetch('/rewards/active-cosmetics', {
+        method: 'PUT',
+        body:   JSON.stringify({ activeCosmetics: next }),
+      }).catch(() => null);
+      return next;
+    });
+  }, []);
+
   const setActiveOutfitId = useCallback((id: string | null) => {
     setActiveOutfitIdState(id);
     if (id) {
@@ -1239,6 +1313,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       friends, followingIds, followUser, unfollowUser, myGuides,
       rewards, dismissReward, showRewardToast,
       rewardBalance, constellation, reloadRewards, reloadConstellation,
+      purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
       reloadData,
       refreshFeed,

@@ -308,6 +308,64 @@ function MoodOrbPicker({ currentMood, onSelect }: { currentMood: string; onSelec
   );
 }
 
+// ── Cosmetic frame ring ────────────────────────────────────────────────────────
+const FRAME_CONFIGS: Record<string, { color: string; glow: string; dashOpacity: number }> = {
+  frame_starlight: { color: '#C8A84B', glow: 'rgba(200,168,75,0.40)', dashOpacity: 0.90 },
+  frame_moonveil:  { color: '#B8C8DC', glow: 'rgba(184,200,220,0.35)', dashOpacity: 0.82 },
+};
+
+function FrameRing({ frameId }: { frameId: string }) {
+  const cfg     = FRAME_CONFIGS[frameId];
+  const pulse   = useRef(new Animated.Value(0)).current;
+  const shimmer = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!cfg) return;
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse,   { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(pulse,   { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    const shimLoop = Animated.loop(Animated.sequence([
+      Animated.timing(shimmer, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(shimmer, { toValue: 0, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+    ]));
+    loop.start();
+    shimLoop.start();
+    return () => { loop.stop(); shimLoop.stop(); };
+  }, [frameId]);
+
+  if (!cfg) return null;
+
+  const outerScale   = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
+  const outerOpacity = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.50, cfg.dashOpacity, 0.50] });
+  const glowOpacity  = shimmer.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.40, 0.12] });
+  const glowScale    = shimmer.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.20] });
+
+  return (
+    <>
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: -14, left: -14, right: -14, bottom: -14,
+          borderRadius: 56,
+          backgroundColor: cfg.glow,
+          opacity: glowOpacity,
+          transform: [{ scale: glowScale }],
+        }}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={{
+          position: 'absolute', top: -5, left: -5, right: -5, bottom: -5,
+          borderRadius: 47, borderWidth: 2.5, borderColor: cfg.color,
+          opacity: outerOpacity,
+          transform: [{ scale: outerScale }],
+        }}
+      />
+    </>
+  );
+}
+
 // ── Breathing avatar ring ──────────────────────────────────────────────────────
 function BreathingAvatarRing({ mood }: { mood: string }) {
   const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
@@ -600,7 +658,9 @@ export default function CharacterScreen() {
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
           gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading,
-          constellation, rewardBalance, reloadConstellation } = useApp();
+          constellation, rewardBalance, reloadConstellation, activeCosmetics } = useApp();
+  const activeFrame  = activeCosmetics['frame']  as string | undefined;
+  const activeAccent = activeCosmetics['accent'] as string | undefined;
   const moodAccent = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
   const { signOut, userId: myUserId } = useAuth();
 
@@ -1150,6 +1210,7 @@ export default function CharacterScreen() {
                 <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
               </View>
               <BreathingAvatarRing mood={character.mood || 'Dreamy'} />
+              {activeFrame && <FrameRing frameId={activeFrame} />}
               <TouchableOpacity
                 style={[styles.avatarEditBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
                 onPress={pickAvatar}
@@ -1236,9 +1297,23 @@ export default function CharacterScreen() {
                 />
               ) : (
                 <TouchableOpacity onPress={() => setEditingBio(true)} activeOpacity={0.75}>
-                  <Text style={[styles.profileBio, { color: character.bio ? 'rgba(200,184,232,0.78)' : 'rgba(200,184,232,0.32)' }]}>
-                    {character.bio || t('profile.tapBio')}
-                  </Text>
+                  <View style={activeAccent === 'accent_aura' ? {
+                    borderRadius: 10,
+                    backgroundColor: 'rgba(107,91,149,0.08)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(107,91,149,0.28)',
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    shadowColor: '#6B5B95',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  } : undefined}>
+                    <Text style={[styles.profileBio, { color: character.bio ? 'rgba(200,184,232,0.78)' : 'rgba(200,184,232,0.32)' }]}>
+                      {character.bio || t('profile.tapBio')}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               )}
             </View>
