@@ -162,14 +162,25 @@ interface ConstellationMapProps {
 export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) {
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const enterAnim       = useRef(new Animated.Value(0)).current;
+  const lineAnim        = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(enterAnim, {
-      toValue: 1,
-      duration: 700,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
+    // Last star delay: 180 + (6-1)*85 = 605 ms; spring settles ~400 ms later → lines at ~950 ms
+    Animated.sequence([
+      Animated.timing(enterAnim, {
+        toValue: 1,
+        duration: 700,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.delay(250),
+      Animated.timing(lineAnim, {
+        toValue: 1,
+        duration: 400,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -198,7 +209,7 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
     const angle  = Math.atan2(dy, dx) * 180 / Math.PI;
 
     return (
-      <View
+      <Animated.View
         key={key}
         pointerEvents="none"
         style={{
@@ -210,6 +221,7 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
           backgroundColor: 'rgba(200,184,232,0.22)',
           transformOrigin: '0 0',
           transform: [{ rotate: `${angle}deg` }],
+          opacity: lineAnim,
         }}
       />
     );
