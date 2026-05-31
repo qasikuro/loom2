@@ -366,7 +366,7 @@ function CollectionTab({ visible }: CollectionTabProps) {
         <Text style={styles.collEmptyIcon}>✦</Text>
         <Text style={[styles.collEmptyText, { color: colors.foreground }]}>Your collection is empty</Text>
         <Text style={[styles.collHint, { color: colors.mutedForeground }]}>
-          Visit the Shop tab to collect cosmetic treasures with your stars, aura energy, and memory shards.
+          Purchase cosmetics from the Shop tab, or receive items through seasonal sky events.
         </Text>
       </View>
     );
@@ -570,20 +570,24 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
               </View>
             </View>
 
-            {/* Items — in-season (purchasable) */}
-            <ScrollView
-              style={{ flex: 1 }}
-              contentContainerStyle={styles.itemList}
-              showsVerticalScrollIndicator={false}
-            >
-              {catalogItems.map(item => {
+            {/* Items — split into This Season + Always Available */}
+            {(() => {
+              const seasonalItems  = catalogItems.filter(i => i.seasonal);
+              const permanentItems = catalogItems.filter(i => !i.seasonal);
+
+              // Derive current season label + colour from the first seasonal item
+              const seasonLabel = seasonalItems[0]?.seasonalLabel ?? null;
+              const seasonColor = seasonLabel ? (SEASON_COLORS[seasonLabel] ?? '#9878D8') : '#9878D8';
+              const seasonIcon  = seasonLabel ? (SEASON_ICONS[seasonLabel]  ?? '✦')       : '✦';
+
+              function renderItem(item: ShopItem, overrides?: Partial<ShopItem>) {
                 const owned    = purchasedIds.includes(item.id);
                 const category = COSMETIC_CATEGORY_MAP[item.id];
                 const isActive = owned && !!category && activeCosmetics[category] === item.id;
                 return (
                   <ItemCard
                     key={item.id}
-                    item={item}
+                    item={overrides ? { ...item, ...overrides } : item}
                     owned={owned}
                     isActive={isActive}
                     canAfford={canAfford(item)}
@@ -592,40 +596,60 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                     purchasing={purchasing === item.id}
                   />
                 );
-              })}
+              }
 
-              {/* Out-of-season seasonal preview */}
-              {previewItems.length > 0 && (
-                <>
-                  <View style={styles.sectionDivider}>
-                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                    <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>Coming in a future season</Text>
-                    <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                  </View>
-                  {previewItems.map(item => {
-                    const owned    = purchasedIds.includes(item.id);
-                    const category = COSMETIC_CATEGORY_MAP[item.id];
-                    const isActive = owned && !!category && activeCosmetics[category] === item.id;
-                    return (
-                      <ItemCard
-                        key={item.id}
-                        item={{ ...item, availableNow: false }}
-                        owned={owned}
-                        isActive={isActive}
-                        canAfford={canAfford(item)}
-                        onBuy={handleBuy}
-                        onActivate={it => setActiveCosmetic(it.id)}
-                        purchasing={purchasing === item.id}
-                      />
-                    );
-                  })}
-                </>
-              )}
+              return (
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={styles.itemList}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* ── This Season ─────────────────────────────── */}
+                  {seasonalItems.length > 0 && (
+                    <>
+                      <View style={[styles.seasonHeader, { borderColor: `${seasonColor}30`, backgroundColor: `${seasonColor}0C` }]}>
+                        <Text style={[styles.seasonHeaderIcon]}>{seasonIcon}</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.seasonHeaderTitle, { color: seasonColor }]}>
+                            {seasonLabel} Collection
+                          </Text>
+                          <Text style={[styles.seasonHeaderSub, { color: colors.mutedForeground }]}>
+                            Available this season only
+                          </Text>
+                        </View>
+                        <SeasonalBadge label={seasonLabel!} />
+                      </View>
+                      {seasonalItems.map(item => renderItem(item))}
 
-              <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-                More items drift in with each season ✦
-              </Text>
-            </ScrollView>
+                      <View style={styles.sectionDivider}>
+                        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                        <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>Always Available</Text>
+                        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                      </View>
+                    </>
+                  )}
+
+                  {/* ── Permanent items ──────────────────────────── */}
+                  {permanentItems.map(item => renderItem(item))}
+
+                  {/* ── Out-of-season preview ────────────────────── */}
+                  {previewItems.length > 0 && (
+                    <>
+                      <View style={styles.sectionDivider}>
+                        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                        <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>Coming in a future season</Text>
+                        <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                      </View>
+                      {previewItems.map(item => renderItem(item, { availableNow: false }))}
+                    </>
+                  )}
+
+                  <Text style={[styles.footer, { color: colors.mutedForeground }]}>
+                    More items drift in with each season ✦
+                  </Text>
+                </ScrollView>
+              );
+            })()}
           </>
         ) : (
           <CollectionTab visible={activeTab === 'collection'} />
@@ -866,7 +890,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
-  // Section divider
+  // ── Season section header ─────────────────────────────────────────────────
+  seasonHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 10,
+  },
+  seasonHeaderIcon:  { fontSize: 22, lineHeight: 26 },
+  seasonHeaderTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
+  seasonHeaderSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 1 },
+
   sectionDivider: {
     flexDirection: 'row',
     alignItems: 'center',
