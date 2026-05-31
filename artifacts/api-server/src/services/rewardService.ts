@@ -26,6 +26,8 @@ export function defaultAmounts(eventType: string): RewardAmounts {
 /**
  * Grant a reward to a user for a specific event.
  * Idempotent: duplicate (userId, eventType, refId) tuples are silently ignored.
+ * Atomic: event insert + balance increment are wrapped in a single transaction
+ * so a partial failure cannot leave the event marked as granted without currency.
  * Returns whether the reward was newly granted and the amounts credited.
  */
 export async function grantReward(
@@ -36,50 +38,54 @@ export async function grantReward(
   amounts?:  RewardAmounts,
 ): Promise<{ granted: boolean; amounts: RewardAmounts }> {
   const creditAmounts = amounts ?? defaultAmounts(eventType);
+  const stars  = creditAmounts.stars  ?? 0;
+  const aura   = creditAmounts.aura   ?? 0;
+  const shards = creditAmounts.shards ?? 0;
 
   try {
-    // Attempt to insert the event record. ON CONFLICT DO NOTHING means if this
-    // exact (userId, eventType, refId) was already granted, nothing happens and
-    // the .returning() gives us an empty array.
-    const [event] = await db
-      .insert(rewardEventsTable)
-      .values({ userId, eventType, refId })
-      .onConflictDoNothing()
-      .returning({ id: rewardEventsTable.id });
+    let granted = false;
 
-    if (!event) {
-      // Already granted — idempotent, do nothing
-      return { granted: false, amounts: creditAmounts };
-    }
+    await db.transaction(async (tx) => {
+      // Attempt to insert the event record. ON CONFLICT DO NOTHING means if this
+      // exact (userId, eventType, refId) was already granted, nothing happens and
+      // .returning() gives us an empty array — so we bail out without touching balances.
+      const [event] = await tx
+        .insert(rewardEventsTable)
+        .values({ userId, eventType, refId })
+        .onConflictDoNothing()
+        .returning({ id: rewardEventsTable.id });
 
-    // Atomically upsert the user_rewards row
-    const stars  = creditAmounts.stars  ?? 0;
-    const aura   = creditAmounts.aura   ?? 0;
-    const shards = creditAmounts.shards ?? 0;
+      if (!event) return; // Already granted — idempotent no-op
 
-    await db
-      .insert(userRewardsTable)
-      .values({
-        userId,
-        stars,
-        auraEnergy:    aura,
-        memoryShards:  shards,
-        lifetimeStars: stars,
-      })
-      .onConflictDoUpdate({
-        target: userRewardsTable.userId,
-        set: {
-          stars:        sql`${userRewardsTable.stars}        + ${stars}`,
-          auraEnergy:   sql`${userRewardsTable.auraEnergy}   + ${aura}`,
-          memoryShards: sql`${userRewardsTable.memoryShards} + ${shards}`,
-          lifetimeStars: sql`${userRewardsTable.lifetimeStars} + ${stars}`,
-          updatedAt:    sql`now()`,
-        },
-      });
+      // Atomically upsert the user_rewards row within the same transaction.
+      // If this statement throws, the whole transaction rolls back, restoring
+      // the reward_events insert and preventing a phantom "granted but no balance" state.
+      await tx
+        .insert(userRewardsTable)
+        .values({
+          userId,
+          stars,
+          auraEnergy:    aura,
+          memoryShards:  shards,
+          lifetimeStars: stars,
+        })
+        .onConflictDoUpdate({
+          target: userRewardsTable.userId,
+          set: {
+            stars:         sql`${userRewardsTable.stars}         + ${stars}`,
+            auraEnergy:    sql`${userRewardsTable.auraEnergy}    + ${aura}`,
+            memoryShards:  sql`${userRewardsTable.memoryShards}  + ${shards}`,
+            lifetimeStars: sql`${userRewardsTable.lifetimeStars} + ${stars}`,
+            updatedAt:     sql`now()`,
+          },
+        });
 
-    return { granted: true, amounts: creditAmounts };
+      granted = true;
+    });
+
+    return { granted, amounts: creditAmounts };
   } catch {
-    // Swallow errors — reward grants are fire-and-forget, never block the main action
+    // Swallow errors — reward grants must never block the main action
     return { granted: false, amounts: creditAmounts };
   }
 }

@@ -299,12 +299,13 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
       grantReward(db as any, updated.userId, "story_witnessed", `${storyId}:${actorId}`).catch(() => null);
       syncConstellation(db as any, updated.userId).catch(() => null);
     }
-    // Reward witness for their daily presence
+    // Reward witness for their daily presence — await for client feedback
     const today = new Date().toISOString().slice(0, 10);
-    grantReward(db as any, actorId, "daily_presence", today).catch(() => null);
+    const { granted: rewardGranted, amounts: rewardAmounts } =
+      await grantReward(db as any, actorId, "daily_presence", today);
     syncConstellation(db as any, actorId).catch(() => null);
 
-    return res.json(serializeStory(updated));
+    return res.json({ ...serializeStory(updated), rewardGranted, rewardAmounts });
   } catch (err) {
     req.log.error({ err }, "Failed to witness story");
     return res.status(500).json({ error: "Internal server error" });

@@ -102,7 +102,8 @@ export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { t }     = useTranslation();
-  const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading } = useApp();
+  const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
+          showRewardToast, reloadRewards, reloadConstellation } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
   const [storiesSort,   setStoriesSort]   = useState<'for-you' | 'new'>('for-you');
@@ -180,13 +181,20 @@ export default function DiscoverScreen() {
       }
       return { ...prev, [storyId]: [...existing, { type: stickerType, count: 1 }] };
     });
-    // Fire-and-forget API call
+    // Fire API call — show reward toast only if server confirms a new grant
     try {
-      await apiFetch('/stickers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storyId, stickerType }),
-      });
+      const res = await apiFetch<{ ok: boolean; rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
+        '/stickers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ storyId, stickerType }),
+        },
+      );
+      if (res?.rewardGranted && res.rewardAmounts) {
+        showRewardToast('Sticker sent', res.rewardAmounts);
+        reloadRewards().catch(() => null);
+        reloadConstellation().catch(() => null);
+      }
     } catch { /* silent — optimistic already applied */ }
   }
 

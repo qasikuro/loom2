@@ -298,7 +298,8 @@ export default function StoryScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
-  const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory } = useApp();
+  const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory,
+          showRewardToast, reloadRewards, reloadConstellation } = useApp();
 
   const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
@@ -373,7 +374,15 @@ export default function StoryScreen() {
       Animated.timing(witnessGlow, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(witnessGlow, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
     ]).start();
-    apiFetch(`/stories/${id}/witness`, { method: 'POST' }).catch(() => null);
+    apiFetch<{ rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
+      `/stories/${id}/witness`, { method: 'POST' },
+    ).then(res => {
+      if (res?.rewardGranted && res.rewardAmounts) {
+        showRewardToast('Daily witness', res.rewardAmounts);
+        reloadRewards().catch(() => null);
+        reloadConstellation().catch(() => null);
+      }
+    }).catch(() => null);
   }
 
   function handleSave() {

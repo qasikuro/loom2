@@ -1154,6 +1154,18 @@ export default function CharacterScreen() {
           ) : null}
         </CharacterAuraHeader>
 
+        {/* ── Reward balance — hero area, above stat bar ────────── */}
+        {rewardBalance && (
+          <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
+            <RewardBalance
+              stars={rewardBalance.stars}
+              auraEnergy={rewardBalance.auraEnergy}
+              memoryShards={rewardBalance.memoryShards}
+              size="sm"
+            />
+          </View>
+        )}
+
         {/* ── Stats row ────────────────────────────────────────── */}
         <View style={styles.statsRow}>
           <TouchableOpacity style={styles.statPill} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.75}>

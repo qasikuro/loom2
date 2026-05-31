@@ -69,15 +69,16 @@ router.post("/stickers", requireAuth, async (req, res) => {
       title:     `sent you a ${stickerType} sticker on "${story.title}"`,
     });
 
-    // Reward sender for sending (aura energy)
+    // Reward sender for sending (aura energy) — await for client feedback
     const refKey = `${storyId}:${stickerType}`;
-    grantReward(db as any, fromUserId, "sticker_sent", refKey).catch(() => null);
+    const { granted: rewardGranted, amounts: rewardAmounts } =
+      await grantReward(db as any, fromUserId, "sticker_sent", refKey);
     syncConstellation(db as any, fromUserId).catch(() => null);
-    // Reward story owner for receiving
+    // Reward story owner for receiving (fire-and-forget — different user)
     grantReward(db as any, story.userId, "sticker_received", refKey).catch(() => null);
     syncConstellation(db as any, story.userId).catch(() => null);
 
-    return res.json({ ok: true });
+    return res.json({ ok: true, rewardGranted, rewardAmounts });
   } catch (err) {
     req.log.error({ err }, "Failed to send sticker");
     return res.status(500).json({ error: "Internal server error" });
