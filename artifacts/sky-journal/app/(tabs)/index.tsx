@@ -441,6 +441,27 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* ══════════════════════════════════════════════════
+            FIND FRIENDS — visible add-to-circle CTA
+        ══════════════════════════════════════════════════ */}
+        <TouchableOpacity
+          style={s.findFriends}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }}
+          activeOpacity={0.82}
+        >
+          <LinearGradient colors={['rgba(96,200,168,0.12)', 'transparent']} style={StyleSheet.absoluteFill} />
+          <View style={s.findFriendsIcon}>
+            <Icon name="user-plus" size={16} color="#60C8A8" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.findFriendsTitle}>Add to your Circle</Text>
+            <Text style={s.findFriendsSub}>Find and follow people in the sky</Text>
+          </View>
+          <View style={s.findFriendsBadge}>
+            <Text style={s.findFriendsBadgeText}>Find Friends</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* ══════════════════════════════════════════════════
             CAMPFIRES — story-bubble style circles
         ══════════════════════════════════════════════════ */}
         {campfires.length > 0 && (
@@ -487,27 +508,42 @@ export default function HomeScreen() {
         </View>
 
         {/* ══════════════════════════════════════════════════
-            QUICK ACTIONS — minimal icon row
+            MAIN ACTIONS — Story + Drift only
         ══════════════════════════════════════════════════ */}
         <View style={s.actions}>
-          {[
-            { icon: 'book-open', label: 'Journal',  color: '#A880F8', route: '/create-journal-entry' as const },
-            { icon: 'feather',   label: 'Story',    color: '#60C8F8', route: '/(tabs)/create' as const },
-            { icon: 'compass',   label: 'Discover', color: '#60D8A8', route: '/(tabs)/discover' as const },
-            { icon: 'moon',      label: 'Drift',    color: '#C8A8FF', route: '/(tabs)/drift' as const },
-          ].map(a => (
-            <TouchableOpacity
-              key={a.label}
-              style={s.actionPill}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); playSound('tap'); router.push(a.route); }}
-              activeOpacity={0.78}
-            >
-              <View style={[s.actionIcon, { backgroundColor: `${a.color}18` }]}>
-                <Icon name={a.icon as any} size={19} color={a.color} />
-              </View>
-              <Text style={[s.actionLabel, { color: `${a.color}CC` }]}>{a.label}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* Create a Story */}
+          <TouchableOpacity
+            style={[s.actionCard, { borderColor: 'rgba(96,200,248,0.22)', backgroundColor: 'rgba(96,200,248,0.06)' }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('tap'); router.push('/(tabs)/create'); }}
+            activeOpacity={0.80}
+          >
+            <LinearGradient colors={['rgba(96,200,248,0.14)', 'transparent']} style={StyleSheet.absoluteFill} />
+            <View style={[s.actionCardIcon, { backgroundColor: 'rgba(96,200,248,0.16)' }]}>
+              <Icon name="feather" size={22} color="#60C8F8" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.actionCardTitle}>Create a Story</Text>
+              <Text style={s.actionCardSub}>Share your next chapter with the world</Text>
+            </View>
+            <Icon name="chevron-right" size={16} color="rgba(96,200,248,0.45)" />
+          </TouchableOpacity>
+
+          {/* Enter Drift */}
+          <TouchableOpacity
+            style={[s.actionCard, { borderColor: 'rgba(200,168,255,0.22)', backgroundColor: 'rgba(160,128,248,0.06)' }]}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('tap'); router.push('/(tabs)/drift'); }}
+            activeOpacity={0.80}
+          >
+            <LinearGradient colors={['rgba(160,128,248,0.14)', 'transparent']} style={StyleSheet.absoluteFill} />
+            <View style={[s.actionCardIcon, { backgroundColor: 'rgba(160,128,248,0.16)' }]}>
+              <Icon name="moon" size={22} color="#C8A8FF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.actionCardTitle}>Enter Drift</Text>
+              <Text style={s.actionCardSub}>A quiet space just for you — breathe</Text>
+            </View>
+            <Icon name="chevron-right" size={16} color="rgba(200,168,255,0.45)" />
+          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -560,26 +596,39 @@ export default function HomeScreen() {
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
                 {serverNotifications.map(n => (
-                  <TouchableOpacity key={n.id} style={[m.notif, { backgroundColor: n.isRead ? colors.muted : `${accent}14`, borderColor: `${accent}20` }]} onLongPress={() => deleteServerNotification(n.id)}>
+                  <View key={n.id} style={[m.notif, { backgroundColor: n.isRead ? colors.muted : `${accent}14`, borderColor: n.isRead ? 'transparent' : `${accent}28` }]}>
                     <View style={[m.notifIcon, { backgroundColor: `${accent}18` }]}>
-                      <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : 'star'} size={13} color={accent} />
+                      <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : n.type === 'new_story' ? 'book-open' : 'star'} size={13} color={accent} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={2}>{n.title}</Text>
                       <Text style={[m.notifSub, { color: colors.mutedForeground }]}>{n.actorName}</Text>
                     </View>
                     {!n.isRead && <View style={[m.unread, { backgroundColor: accent }]} />}
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[m.deleteBtn, { backgroundColor: 'rgba(255,80,80,0.12)' }]}
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); deleteServerNotification(n.id); }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Icon name="x" size={12} color="rgba(255,120,120,0.80)" />
+                    </TouchableOpacity>
+                  </View>
                 ))}
                 {rewards.map(r => (
-                  <TouchableOpacity key={r.id} style={[m.notif, { backgroundColor: `${DEF_ACCENT}12`, borderColor: `${DEF_ACCENT}25` }]} onPress={() => dismissReward(r.id)}>
-                    <Text style={{ fontSize: 20 }}>{r.icon ?? '✦'}</Text>
+                  <View key={r.id} style={[m.notif, { backgroundColor: `${DEF_ACCENT}10`, borderColor: `${DEF_ACCENT}22` }]}>
+                    <Text style={{ fontSize: 20, lineHeight: 24 }}>{r.icon ?? '✦'}</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={[m.notifTitle, { color: colors.foreground }]}>{r.message}</Text>
                       {r.subMessage && <Text style={[m.notifSub, { color: colors.mutedForeground }]}>{r.subMessage}</Text>}
                     </View>
-                    <Icon name="x" size={12} color={`${colors.mutedForeground}60`} />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[m.deleteBtn, { backgroundColor: 'rgba(255,80,80,0.12)' }]}
+                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); dismissReward(r.id); }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Icon name="x" size={12} color="rgba(255,120,120,0.80)" />
+                    </TouchableOpacity>
+                  </View>
                 ))}
               </ScrollView>
             )}
@@ -661,11 +710,20 @@ const s = StyleSheet.create({
   emptyStoriesText: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.45)' },
   emptyStoriesSub:  { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,200,0.35)' },
 
-  // Quick actions
-  actions:    { flexDirection: 'row', justifyContent: 'space-evenly', paddingHorizontal: 16, paddingVertical: 20 },
-  actionPill: { alignItems: 'center', gap: 6 },
-  actionIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
-  actionLabel:{ fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
+  // Find Friends
+  findFriends:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 6, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(96,200,168,0.18)', overflow: 'hidden' },
+  findFriendsIcon:   { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(96,200,168,0.16)', alignItems: 'center', justifyContent: 'center' },
+  findFriendsTitle:  { fontSize: 13.5, fontFamily: 'Satoshi-Bold', color: 'rgba(200,240,225,0.88)' },
+  findFriendsSub:    { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(140,190,170,0.55)', marginTop: 1 },
+  findFriendsBadge:  { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(96,200,168,0.18)', borderWidth: 1, borderColor: 'rgba(96,200,168,0.30)' },
+  findFriendsBadgeText: { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#60C8A8' },
+
+  // Main actions — Story + Drift
+  actions:         { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
+  actionCard:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 16, borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
+  actionCardIcon:  { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
+  actionCardTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(230,225,255,0.92)', marginBottom: 2 },
+  actionCardSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.50)', lineHeight: 16 },
 });
 
 // Modal styles
@@ -691,4 +749,5 @@ const m = StyleSheet.create({
   notifTitle:{ fontSize: 13, fontFamily: 'Satoshi-Medium', lineHeight: 17 },
   notifSub:  { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 1 },
   unread:    { width: 7, height: 7, borderRadius: 3.5 },
+  deleteBtn: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginLeft: 4 },
 });
