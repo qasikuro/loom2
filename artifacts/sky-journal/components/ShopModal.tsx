@@ -275,7 +275,13 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
 
 // ── Collection row ────────────────────────────────────────────────────────────
 
-function CollectionRow({ entry }: { entry: PurchaseEntry }) {
+interface CollectionRowProps {
+  entry:      PurchaseEntry;
+  isActive:   boolean;
+  onActivate: (itemId: string) => void;
+}
+
+function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
   const colors   = useColors();
   const category = COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame';
   const catColor = CATEGORY_COLORS[category] ?? '#9878D8';
@@ -290,8 +296,12 @@ function CollectionRow({ entry }: { entry: PurchaseEntry }) {
   if (entry.shardsSpent > 0) costParts.push(<Text key="h" style={[styles.collCostPart, { color: '#78B4DC' }]}>◇ {entry.shardsSpent}</Text>);
 
   return (
-    <View style={[styles.collRow, { backgroundColor: colors.card, borderColor: `${catColor}40` }]}>
-      <View style={[styles.collIconWrap, { backgroundColor: `${catColor}18` }]}>
+    <View style={[
+      styles.collRow,
+      { backgroundColor: colors.card, borderColor: isActive ? catColor : `${catColor}40` },
+      isActive && { borderWidth: 1.5, backgroundColor: `${catColor}0A` },
+    ]}>
+      <View style={[styles.collIconWrap, { backgroundColor: isActive ? `${catColor}28` : `${catColor}18` }]}>
         <Text style={[styles.collIcon, { color: catColor }]}>{icon}</Text>
       </View>
 
@@ -312,6 +322,20 @@ function CollectionRow({ entry }: { entry: PurchaseEntry }) {
           <Text style={[styles.collDate, { color: colors.mutedForeground }]}>{dateStr}</Text>
         </View>
       </View>
+
+      <TouchableOpacity
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onActivate(entry.itemId); }}
+        style={[
+          styles.ownedBadge,
+          isActive
+            ? { backgroundColor: catColor }
+            : { backgroundColor: `${catColor}22` },
+        ]}
+      >
+        <Text style={[styles.ownedBadgeText, { color: isActive ? '#fff' : catColor }]}>
+          {isActive ? '✦ Active' : 'Set Active'}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -324,6 +348,7 @@ interface CollectionTabProps {
 
 function CollectionTab({ visible }: CollectionTabProps) {
   const colors  = useColors();
+  const { activeCosmetics, setActiveCosmetic } = useApp();
   const [purchases, setPurchases] = useState<PurchaseEntry[]>([]);
   const [loading,   setLoading]   = useState(false);
   const [error,     setError]     = useState(false);
@@ -379,7 +404,12 @@ function CollectionTab({ visible }: CollectionTabProps) {
       showsVerticalScrollIndicator={false}
     >
       {purchases.map(entry => (
-        <CollectionRow key={entry.id} entry={entry} />
+        <CollectionRow
+          key={entry.id}
+          entry={entry}
+          isActive={activeCosmetics[COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame'] === entry.itemId}
+          onActivate={setActiveCosmetic}
+        />
       ))}
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
         {purchases.length} {purchases.length === 1 ? 'treasure' : 'treasures'} collected ✦
