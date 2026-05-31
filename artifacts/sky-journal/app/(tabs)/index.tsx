@@ -14,13 +14,33 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  useApp, type GuideAvailability, type GuideProfile, type DiscoverPost,
+  useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
 } from '@/context/AppContext';
 import { RewardBalance } from '@/components/RewardBalance';
 import { RewardBanner } from '@/components/RewardBanner';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
+
+// ─── Active Event types + theme map ──────────────────────────────────────────
+interface EventInventoryItem {
+  type: 'stars' | 'aura' | 'shards' | 'item';
+  amount?: number; itemId?: string; itemName?: string; label: string;
+}
+interface ActiveEvent {
+  id: string; title: string; description: string;
+  theme: string; status: string;
+  startsAt: string | null; endsAt: string | null;
+  inventory: EventInventoryItem[];
+}
+const EVENT_THEME: Record<string, { color: string; bgStart: string; bgEnd: string; icon: string }> = {
+  spring:  { color: '#F4A0C0', bgStart: 'rgba(244,160,192,0.16)', bgEnd: 'rgba(244,160,192,0.04)', icon: '🌸' },
+  summer:  { color: '#F0C040', bgStart: 'rgba(240,192,64,0.16)',  bgEnd: 'rgba(240,192,64,0.04)',  icon: '☀️' },
+  autumn:  { color: '#E08040', bgStart: 'rgba(224,128,64,0.16)',  bgEnd: 'rgba(224,128,64,0.04)',  icon: '🍂' },
+  winter:  { color: '#80C0F0', bgStart: 'rgba(128,192,240,0.16)', bgEnd: 'rgba(128,192,240,0.04)', icon: '❄️' },
+  special: { color: '#A880F8', bgStart: 'rgba(168,128,248,0.16)', bgEnd: 'rgba(168,128,248,0.04)', icon: '✦'  },
+};
+const ITEM_ICONS: Record<string, string> = { stars: '⭐', aura: '🔵', shards: '💎', item: '🎁' };
 
 // ─── Palette ────────────────────────────────────────────────────────────────
 const MOOD_GRAD: Record<string, readonly [string, string, string]> = {
@@ -355,6 +375,65 @@ const sh = StyleSheet.create({
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// ─── Event Banner component ───────────────────────────────────────────────────
+function EventBanner({ event }: { event: ActiveEvent }) {
+  const th = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
+
+  const countdown = event.endsAt ? (() => {
+    const ms = new Date(event.endsAt).getTime() - Date.now();
+    if (ms <= 0) return null;
+    const d = Math.ceil(ms / 86400000);
+    return d === 1 ? '1 day left' : `${d} days left`;
+  })() : null;
+
+  return (
+    <View style={[ev.card, { borderColor: `${th.color}28` }]}>
+      <LinearGradient
+        colors={[th.bgStart, th.bgEnd, 'transparent']}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {/* Eyebrow */}
+      <View style={ev.eyebrowRow}>
+        <Text style={ev.themeIcon}>{th.icon}</Text>
+        <Text style={[ev.eyebrow, { color: th.color }]}>EVENT</Text>
+        {countdown && (
+          <View style={[ev.pill, { backgroundColor: `${th.color}1E`, marginLeft: 'auto' as any }]}>
+            <Text style={[ev.pillTxt, { color: th.color }]}>{countdown}</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Title */}
+      <Text style={ev.title}>{event.title}</Text>
+
+      {/* Description */}
+      {!!event.description && (
+        <Text style={ev.desc} numberOfLines={2}>{event.description}</Text>
+      )}
+
+      {/* Reward chips */}
+      {event.inventory.length > 0 && (
+        <View style={ev.chips}>
+          {event.inventory.slice(0, 4).map((item, i) => (
+            <View key={i} style={[ev.chip, { backgroundColor: `${th.color}16` }]}>
+              <Text style={ev.chipIcon}>{ITEM_ICONS[item.type] ?? '🎁'}</Text>
+              <Text style={[ev.chipTxt, { color: th.color }]}>{item.label}</Text>
+            </View>
+          ))}
+          {event.inventory.length > 4 && (
+            <View style={[ev.chip, { backgroundColor: `${th.color}0E` }]}>
+              <Text style={[ev.chipTxt, { color: th.color, opacity: 0.60 }]}>
+                +{event.inventory.length - 4} more
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const { width: W } = useWindowDimensions();
   const insets  = useSafeAreaInsets();
@@ -376,9 +455,17 @@ export default function HomeScreen() {
   const [showOutfits, setShowOutfits] = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
   const [showConstellationIntro, setShowConstellationIntro] = useState(false);
+  const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
+  }, []);
+
+  // Fetch active event (public endpoint, no auth required)
+  useEffect(() => {
+    apiFetch<{ event: ActiveEvent | null }>('/events/active')
+      .then(d => setActiveEvent(d.event ?? null))
+      .catch(() => {});
   }, []);
 
   // Auto-dismiss the front reward banner after 4 s (prevents stacking)
@@ -733,6 +820,15 @@ export default function HomeScreen() {
               <Text style={s.introDismissText}>Got it ✦</Text>
             </TouchableOpacity>
           </View>
+          </Animated.View>
+        )}
+
+        {/* ══════════════════════════════════════════════════
+            ACTIVE EVENT BANNER
+        ══════════════════════════════════════════════════ */}
+        {activeEvent && (
+          <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
+            <EventBanner event={activeEvent} />
           </Animated.View>
         )}
 
@@ -1324,6 +1420,29 @@ const s = StyleSheet.create({
   driftChipTxt:    { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,175,255,0.72)' },
   driftCTA:        { flexDirection: 'row', alignItems: 'center', gap: 6 },
   driftCTATxt:     { fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,255,0.55)', fontStyle: 'italic' },
+});
+
+// ── Event banner styles ────────────────────────────────────────────────────────
+const ev = StyleSheet.create({
+  card:       {
+    marginHorizontal: 16, marginTop: 6, marginBottom: 4,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderRadius: 20, overflow: 'hidden', borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.022)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.32, shadowRadius: 14, elevation: 4,
+  },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7 },
+  themeIcon:  { fontSize: 14, lineHeight: 17 },
+  eyebrow:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, textTransform: 'uppercase', opacity: 0.82 },
+  pill:       { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  pillTxt:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
+  title:      { fontSize: 18, fontFamily: 'Satoshi-Bold', color: 'rgba(242,234,255,0.96)', letterSpacing: -0.4, marginBottom: 5 },
+  desc:       { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.52)', lineHeight: 17, marginBottom: 8 },
+  chips:      { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
+  chip:       { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 11 },
+  chipIcon:   { fontSize: 12, lineHeight: 14 },
+  chipTxt:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
 });
 
 // Modal styles

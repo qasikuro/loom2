@@ -181,6 +181,33 @@ Return 4–7 inventory items as a JSON array.`;
   }
 });
 
+// ── Active event (player-facing, auth required) ───────────────────────────────
+
+router.get("/events/active", async (req: Request, res: Response) => {
+  try {
+    const now = new Date();
+    const rows = await db
+      .select()
+      .from(eventsTable)
+      .where(eq(eventsTable.status, "active"))
+      .orderBy(desc(eventsTable.createdAt))
+      .limit(10);
+
+    // prefer one whose date window includes now; fall back to any active event
+    const windowed = rows.find(e => {
+      const after  = !e.startsAt || e.startsAt <= now;
+      const before = !e.endsAt   || e.endsAt   >= now;
+      return after && before;
+    });
+
+    const event = windowed ?? rows[0] ?? null;
+    return res.json({ event });
+  } catch (err) {
+    req.log.error({ err }, "events/active GET failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Grant event inventory to all users ───────────────────────────────────────
 
 router.post("/admin/events/:id/grant", requireAdmin, async (req: Request, res: Response) => {
