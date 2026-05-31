@@ -113,11 +113,12 @@ router.post("/stories", requireAuth, async (req, res) => {
       fanOutStoryNotification(userId, created.id, rest.chapterTitle, req).catch(() => null);
     }
 
-    // Grant story creation reward (once per story ID)
-    grantReward(db as any, userId, "story_created", created.id).catch(() => null);
+    // Grant story creation reward (once per story ID) — await for client feedback
+    const { granted: rewardGranted, amounts: rewardAmounts } =
+      await grantReward(db as any, userId, "story_created", created.id);
     syncConstellation(db as any, userId).catch(() => null);
 
-    return res.status(201).json(serializeStory(created));
+    return res.status(201).json({ ...serializeStory(created), rewardGranted, rewardAmounts });
   } catch (err) {
     req.log.error({ err }, "Failed to create story");
     return res.status(500).json({ error: "Internal server error" });

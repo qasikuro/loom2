@@ -856,28 +856,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 3500);
   }, []);
 
+  // ── Reload helpers — defined before mutations so callbacks can call them ────
+
+  const reloadRewards = useCallback(async () => {
+    try {
+      const data = await apiFetch<RewardBalance>('/rewards');
+      setRewardBalance(data);
+    } catch { /* silently skip */ }
+  }, []);
+
+  const reloadConstellation = useCallback(async () => {
+    try {
+      const data = await apiFetch<ConstellationState>('/constellation');
+      setConstellation(data);
+    } catch { /* silently skip */ }
+  }, []);
+
   // ── Journal entries ────────────────────────────────────────────────────────
 
-  const addJournalEntry = useCallback((entry: JournalEntry) => {
+  const addJournalEntry = useCallback(async (entry: JournalEntry): Promise<void> => {
     setJournalEntries(prev => {
       const updated = [entry, ...prev.filter(e => e.id !== entry.id)];
       AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
       return updated;
     });
-    fireToast('Journal entry', { stars: 2, aura: 1, shards: 3 });
-    apiFetch('/journal-entries', {
-      method: 'POST',
-      body:   JSON.stringify({
-        id:         entry.id,
-        date:       entry.date,
-        type:       entry.type,
-        text:       entry.text,
-        mood:       entry.mood,
-        imageUri:   entry.imageUri   ?? null,
-        friendName: entry.friendName ?? null,
-      }),
-    }).catch(() => null);
-  }, [fireToast]);
+    try {
+      const res = await apiFetch<{ rewardGranted: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
+        '/journal-entries', {
+          method: 'POST',
+          body:   JSON.stringify({
+            id:         entry.id,
+            date:       entry.date,
+            type:       entry.type,
+            text:       entry.text,
+            mood:       entry.mood,
+            imageUri:   entry.imageUri   ?? null,
+            friendName: entry.friendName ?? null,
+          }),
+        },
+      );
+      if (res?.rewardGranted && res.rewardAmounts) {
+        fireToast('Journal entry', res.rewardAmounts);
+        reloadRewards().catch(() => null);
+        reloadConstellation().catch(() => null);
+      }
+    } catch { /* fire-and-forget — local update already applied */ }
+  }, [fireToast, reloadRewards, reloadConstellation]);
 
   const deleteJournalEntry = useCallback((id: string) => {
     setJournalEntries(prev => {
@@ -903,22 +927,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      await apiFetch('/stories', {
-        method: 'POST',
-        body:   JSON.stringify({
-          id:            story.id,
-          date:          story.date,
-          chapterTitle:  story.chapterTitle,
-          description:   story.description ?? '',
-          panels:        story.panels,
-          mood:          story.mood,
-          location:      story.location,
-          isPublic:      story.isPublic,
-          pageLayoutKey: story.pageLayoutKey ?? null,
-          pages:         story.pages ?? null,
-        }),
-      });
-      fireToast('Story created', { stars: 3, aura: 2, shards: 1 });
+      const res = await apiFetch<{ rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
+        '/stories', {
+          method: 'POST',
+          body:   JSON.stringify({
+            id:            story.id,
+            date:          story.date,
+            chapterTitle:  story.chapterTitle,
+            description:   story.description ?? '',
+            panels:        story.panels,
+            mood:          story.mood,
+            location:      story.location,
+            isPublic:      story.isPublic,
+            pageLayoutKey: story.pageLayoutKey ?? null,
+            pages:         story.pages ?? null,
+          }),
+        },
+      );
+      if (res?.rewardGranted && res.rewardAmounts) {
+        fireToast('Story created', res.rewardAmounts);
+        reloadRewards().catch(() => null);
+        reloadConstellation().catch(() => null);
+      }
       loadSocialData();
       return true;
     } catch {
@@ -934,7 +964,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
       return false;
     }
-  }, []);
+  }, [fireToast, reloadRewards, reloadConstellation]);
 
   const updateStory = useCallback((id: string, updates: Partial<Omit<Story, 'id'>>) => {
     setStories(prev => {
@@ -1063,27 +1093,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setSavedStoryIds(prev => {
       const next     = new Set(prev);
       const wasSaved = next.has(id);
-      if (wasSaved) next.delete(id); else { next.add(id); fireToast('Story saved', { stars: 2, shards: 2 }); }
+      if (wasSaved) next.delete(id); else next.add(id);
       AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
       apiFetch(`/stories/${id}/save`, { method: wasSaved ? 'DELETE' : 'POST' }).catch(() => null);
       return next;
     });
-  }, [fireToast]);
+  }, []);
 
   // ── Social: follow / unfollow ──────────────────────────────────────────────
 
   const followUser = useCallback((targetUserId: string) => {
-    setFollowingIds(prev => {
-      if (prev.includes(targetUserId)) return prev;
-      fireToast('New connection', { stars: 1, aura: 1 });
-      return [...prev, targetUserId];
-    });
-    apiFetch(`/follows/${targetUserId}`, { method: 'POST' })
-      .then(() => fetchFriends())
+    setFollowingIds(prev =>
+      prev.includes(targetUserId) ? prev : [...prev, targetUserId],
+    );
+    apiFetch<{ rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
+      `/follows/${targetUserId}`, { method: 'POST' },
+    )
+      .then(res => {
+        if (res?.rewardGranted && res.rewardAmounts) {
+          fireToast('New connection', res.rewardAmounts);
+          reloadRewards().catch(() => null);
+          reloadConstellation().catch(() => null);
+        }
+        fetchFriends();
+      })
       .catch(() => {
         setFollowingIds(prev => prev.filter(id => id !== targetUserId));
       });
-  }, [fireToast]);
+  }, [fireToast, reloadRewards, reloadConstellation]);
 
   const unfollowUser = useCallback((targetUserId: string) => {
     setFollowingIds(prev => prev.filter(id => id !== targetUserId));
@@ -1103,20 +1140,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const showRewardToast = fireToast;
-
-  const reloadRewards = useCallback(async () => {
-    try {
-      const data = await apiFetch<RewardBalance>('/rewards');
-      setRewardBalance(data);
-    } catch { /* silently skip */ }
-  }, []);
-
-  const reloadConstellation = useCallback(async () => {
-    try {
-      const data = await apiFetch<ConstellationState>('/constellation');
-      setConstellation(data);
-    } catch { /* silently skip */ }
-  }, []);
 
   const markServerNotificationsRead = useCallback(() => {
     setServerNotifications(prev => prev.map(n => ({ ...n, isRead: true })));

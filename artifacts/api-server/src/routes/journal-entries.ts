@@ -57,12 +57,14 @@ router.post("/journal-entries", requireAuth, async (req, res) => {
       })
       .returning();
 
-    // Grant daily journal reward (once per calendar day)
+    // Grant daily journal reward (once per calendar day) — await so we can
+    // return granted status to the client for feedback display
     const today = new Date().toISOString().slice(0, 10);
-    grantReward(db as any, userId, "journal_daily", today).catch(() => null);
+    const { granted: rewardGranted, amounts: rewardAmounts } =
+      await grantReward(db as any, userId, "journal_daily", today);
     syncConstellation(db as any, userId).catch(() => null);
 
-    return res.status(201).json(serializeEntry(created));
+    return res.status(201).json({ ...serializeEntry(created), rewardGranted, rewardAmounts });
   } catch (err) {
     req.log.error({ err }, "Failed to create journal entry");
     return res.status(500).json({ error: "Internal server error" });
