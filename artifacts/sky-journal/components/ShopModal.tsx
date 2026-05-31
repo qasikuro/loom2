@@ -344,9 +344,10 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
 
 interface CollectionTabProps {
   visible: boolean;
+  purchaseVersion: number;
 }
 
-function CollectionTab({ visible }: CollectionTabProps) {
+function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
   const colors  = useColors();
   const { activeCosmetics, setActiveCosmetic } = useApp();
   const [purchases, setPurchases] = useState<PurchaseEntry[]>([]);
@@ -354,6 +355,12 @@ function CollectionTab({ visible }: CollectionTabProps) {
   const [error,     setError]     = useState(false);
   const hasFetched = useRef(false);
 
+  // Invalidate the cache whenever a purchase completes in the Shop tab
+  useEffect(() => {
+    hasFetched.current = false;
+  }, [purchaseVersion]);
+
+  // Fetch (or re-fetch) whenever the tab becomes visible or the cache is invalidated
   useEffect(() => {
     if (!visible) return;
     if (hasFetched.current) return;
@@ -364,7 +371,7 @@ function CollectionTab({ visible }: CollectionTabProps) {
       .then(data => { setPurchases(data); })
       .catch(() => { setError(true); })
       .finally(() => { setLoading(false); });
-  }, [visible]);
+  }, [visible, purchaseVersion]);
 
   if (loading) {
     return (
@@ -456,10 +463,11 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   const insets  = useSafeAreaInsets();
   const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
 
-  const [activeTab,    setActiveTab]    = useState<ActiveTab>('shop');
-  const [catalogItems, setCatalogItems] = useState<ShopItem[]>(FALLBACK_CATALOG);
-  const [previewItems, setPreviewItems] = useState<ShopItem[]>([]);
-  const [purchasing,   setPurchasing]   = useState<string | null>(null);
+  const [activeTab,       setActiveTab]       = useState<ActiveTab>('shop');
+  const [catalogItems,    setCatalogItems]    = useState<ShopItem[]>(FALLBACK_CATALOG);
+  const [previewItems,    setPreviewItems]    = useState<ShopItem[]>([]);
+  const [purchasing,      setPurchasing]      = useState<string | null>(null);
+  const [purchaseVersion, setPurchaseVersion] = useState(0);
   const [toast,        setToast]        = useState<{ message: string; type: ToastProps['type'] } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -517,6 +525,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
         markPurchased(item.id);
         showToast(`${item.icon} ${item.name} is yours!`, 'success');
         reloadRewards();
+        setPurchaseVersion(v => v + 1);
       }
     } catch (err: any) {
       const msg = err?.message ?? '';
@@ -682,7 +691,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
             })()}
           </>
         ) : (
-          <CollectionTab visible={activeTab === 'collection'} />
+          <CollectionTab visible={activeTab === 'collection'} purchaseVersion={purchaseVersion} />
         )}
 
         {/* Toast */}
