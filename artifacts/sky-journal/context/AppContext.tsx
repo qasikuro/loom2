@@ -294,15 +294,16 @@ export interface ShopItem {
 }
 
 export interface ConstellationState {
-  socialCount:    number;
-  memoryCount:    number;
-  quietStreak:    number;
-  helpingCount:   number;
-  creativeCount:  number;
-  seasonalCount:  number;
-  unlockedStars:  string[];
-  activeTitle:    string | null;
-  newlyUnlocked?: string[]; // populated by API on each sync; used to fire celebration banners
+  socialCount:     number;
+  memoryCount:     number;
+  quietStreak:     number;
+  helpingCount:    number;
+  creativeCount:   number;
+  seasonalCount:   number;
+  unlockedStars:   string[];
+  starUnlockDates: Record<string, string>;
+  activeTitle:     string | null;
+  newlyUnlocked?:  string[]; // populated by API on each sync; used to fire celebration banners
 }
 
 export interface ServerNotification {

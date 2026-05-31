@@ -214,7 +214,7 @@ router.get("/constellation", requireAuth, async (req, res) => {
       return res.json({
         socialCount: 0, memoryCount: 0, quietStreak: 0,
         helpingCount: 0, creativeCount: 0, seasonalCount: 0,
-        unlockedStars: [], activeTitle: null, newlyUnlocked: [],
+        unlockedStars: [], starUnlockDates: {}, activeTitle: null, newlyUnlocked: [],
       });
     }
 
@@ -223,14 +223,15 @@ router.get("/constellation", requireAuth, async (req, res) => {
     const newlyUnlocked = currentStars.filter(s => !previousStars.includes(s));
 
     return res.json({
-      socialCount:   row.socialCount,
-      memoryCount:   row.memoryCount,
-      quietStreak:   row.quietStreak,
-      helpingCount:  row.helpingCount,
-      creativeCount: row.creativeCount,
-      seasonalCount: row.seasonalCount,
-      unlockedStars: row.unlockedStars,
-      activeTitle:   row.activeTitle,
+      socialCount:     row.socialCount,
+      memoryCount:     row.memoryCount,
+      quietStreak:     row.quietStreak,
+      helpingCount:    row.helpingCount,
+      creativeCount:   row.creativeCount,
+      seasonalCount:   row.seasonalCount,
+      unlockedStars:   row.unlockedStars,
+      starUnlockDates: row.starUnlockDates ?? {},
+      activeTitle:     row.activeTitle,
       newlyUnlocked,
     });
   } catch (err) {

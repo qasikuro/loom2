@@ -28,6 +28,7 @@ import { persistImageUri } from '@/utils/persistImage';
 import { Images } from '@/assets/images';
 import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/context/AppContext';
 import { ConstellationMap, type ConstellationState } from '@/components/ConstellationMap';
+import { ConstellationStarSheet } from '@/components/ConstellationStarSheet';
 import { RewardBalance } from '@/components/RewardBalance';
 import { ShopModal } from '@/components/ShopModal';
 import { useSound } from '@/context/SoundContext';
@@ -953,6 +954,9 @@ export default function CharacterScreen() {
 
   // ── Shop modal ─────────────────────────────────────────────────────────────
   const [showShop, setShowShop] = useState(false);
+
+  // ── Constellation star detail sheet ────────────────────────────────────────
+  const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
 
   // ── Settings drawer ────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -2034,7 +2038,10 @@ export default function CharacterScreen() {
               )}
             </View>
             <View style={{ paddingHorizontal: 16, marginTop: 2 }}>
-              <ConstellationMap state={constellation} />
+              <ConstellationMap
+                state={constellation}
+                onStarPress={(key) => setSelectedStarKey(key)}
+              />
             </View>
 
             {/* Progress summary card — 6 stars with animated full-width bars */}
@@ -2749,6 +2756,15 @@ export default function CharacterScreen() {
 
       {/* ── Sky Shop modal ──────────────────────────────────── */}
       <ShopModal visible={showShop} onClose={() => setShowShop(false)} />
+
+      {/* ── Constellation star detail sheet ─────────────────── */}
+      {constellation && (
+        <ConstellationStarSheet
+          starKey={selectedStarKey}
+          constellation={constellation}
+          onClose={() => setSelectedStarKey(null)}
+        />
+      )}
     </View>
   );
 }

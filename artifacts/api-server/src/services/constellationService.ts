@@ -127,6 +127,24 @@ export async function syncConstellation(
 
     const activeTitle = titleForCount(unlocked.length);
 
+    // ── Resolve per-star unlock dates ─────────────────────────────────────
+    // Fetch existing row to preserve previously-recorded unlock dates.
+    const [existingRow] = await db
+      .select({ starUnlockDates: constellationProgressTable.starUnlockDates, unlockedStars: constellationProgressTable.unlockedStars })
+      .from(constellationProgressTable)
+      .where(eq(constellationProgressTable.userId, userId))
+      .limit(1);
+
+    const prevDates: Record<string, string> = (existingRow?.starUnlockDates as Record<string, string>) ?? {};
+    const prevUnlocked: string[] = (existingRow?.unlockedStars as string[]) ?? [];
+    const now = new Date().toISOString();
+    const starUnlockDates: Record<string, string> = { ...prevDates };
+    for (const key of unlocked) {
+      if (!prevUnlocked.includes(key) && !starUnlockDates[key]) {
+        starUnlockDates[key] = now;
+      }
+    }
+
     // ── Upsert constellation_progress ────────────────────────────────────
     await db
       .insert(constellationProgressTable)
@@ -140,6 +158,7 @@ export async function syncConstellation(
         creativeCount: storyCount,
         seasonalCount: preSeasonalCount,
         unlockedStars: unlocked,
+        starUnlockDates,
         activeTitle,
       })
       .onConflictDoUpdate({
@@ -153,6 +172,7 @@ export async function syncConstellation(
           creativeCount:   storyCount,
           seasonalCount:   preSeasonalCount,
           unlockedStars:   unlocked,
+          starUnlockDates: sql`${constellationProgressTable.starUnlockDates} || ${JSON.stringify(starUnlockDates)}::jsonb`,
           activeTitle:     sql`COALESCE(${constellationProgressTable.activeTitle}, ${activeTitle})`,
           updatedAt:       sql`now()`,
         },

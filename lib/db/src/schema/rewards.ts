@@ -30,6 +30,7 @@ export const constellationProgressTable = pgTable("constellation_progress", {
   creativeCount:   integer("creative_count").notNull().default(0),
   seasonalCount:   integer("seasonal_count").notNull().default(0),
   unlockedStars:   jsonb("unlocked_stars").$type<string[]>().notNull().default([]),
+  starUnlockDates: jsonb("star_unlock_dates").$type<Record<string, string>>().notNull().default({}),
   activeTitle:     text("active_title"),
   updatedAt:       timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

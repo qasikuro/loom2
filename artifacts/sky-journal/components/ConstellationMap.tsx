@@ -4,29 +4,31 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface ConstellationState {
-  socialCount:   number;
-  memoryCount:   number;
-  quietStreak:   number;
-  helpingCount:  number;
-  creativeCount: number;
-  seasonalCount: number;
-  unlockedStars: string[];
-  activeTitle:   string | null;
+  socialCount:     number;
+  memoryCount:     number;
+  quietStreak:     number;
+  helpingCount:    number;
+  creativeCount:   number;
+  seasonalCount:   number;
+  unlockedStars:   string[];
+  starUnlockDates: Record<string, string>;
+  activeTitle:     string | null;
+  newlyUnlocked?:  string[];
 }
 
-interface StarDef {
-  key:       string;
-  label:     string;
-  icon:      string;
-  color:     string;
-  xPct:      number;  // 0–100 of container width
-  yPct:      number;  // 0–100 of container height
-  criterion: string;
-  unit:      string;  // human-readable unit for progress label
+export interface StarDef {
+  key:         string;
+  label:       string;
+  icon:        string;
+  color:       string;
+  xPct:        number;
+  yPct:        number;
+  criterion:   string;
+  unit:        string;
   description: string;
 }
 
-const STARS: StarDef[] = [
+export const CONSTELLATION_STARS: StarDef[] = [
   { key: 'social',   label: 'Social',   icon: 'users',    color: '#78C8A8', xPct: 20, yPct: 16, criterion: 'Follow 5 · Receive 5 stickers',       unit: 'follows',  description: 'Build connections with fellow dreamers of the sky.' },
   { key: 'memory',   label: 'Memory',   icon: 'bookmark', color: '#9878C8', xPct: 78, yPct: 16, criterion: '10 journal entries · 5 saves received', unit: 'entries',  description: 'Preserve your memories and let others hold them.' },
   { key: 'quiet',    label: 'Quiet',    icon: 'moon',     color: '#7890C8', xPct: 11, yPct: 60, criterion: '7-day journal streak',                  unit: 'days',     description: 'Show up every day, even when the words are few.' },
@@ -35,7 +37,22 @@ const STARS: StarDef[] = [
   { key: 'seasonal', label: 'Seasonal', icon: 'wind',     color: '#68B8B0', xPct: 48, yPct: 40, criterion: 'Unlock 3 other stars',                  unit: 'stars',    description: 'A rare star that blooms when your constellation grows.' },
 ];
 
-// Lines connecting star pairs (drawn when both are unlocked)
+export const STAR_THRESHOLDS: Record<string, number> = {
+  social: 5, memory: 10, quiet: 7, creative: 5, helping: 20, seasonal: 3,
+};
+
+export function countForStar(key: string, state: ConstellationState): number {
+  switch (key) {
+    case 'social':   return state.socialCount;
+    case 'memory':   return state.memoryCount;
+    case 'quiet':    return state.quietStreak;
+    case 'creative': return state.creativeCount;
+    case 'helping':  return state.helpingCount;
+    case 'seasonal': return state.seasonalCount;
+    default: return 0;
+  }
+}
+
 const LINES: [string, string][] = [
   ['social',   'seasonal'],
   ['memory',   'seasonal'],
@@ -45,7 +62,6 @@ const LINES: [string, string][] = [
   ['social',   'memory'],
 ];
 
-// Pulsing glow ring for unlocked stars
 function PulseRing({ color }: { color: string }) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -82,7 +98,6 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
   const cy = (star.yPct / 100) * cH;
   const progress = Math.min(1, count / threshold);
 
-  // Per-star entrance animation
   const scaleAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -122,7 +137,6 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
         />
       </TouchableOpacity>
 
-      {/* Progress ring — thin arc (just a border ring approximation) */}
       {!unlocked && progress > 0 && (
         <View pointerEvents="none" style={{
           position: 'absolute', inset: -3, borderRadius: 21,
@@ -132,7 +146,6 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
         }} />
       )}
 
-      {/* Label below */}
       <Text style={[
         styles.starLabel,
         { color: unlocked ? star.color : 'rgba(200,184,232,0.30)' },
@@ -141,37 +154,14 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
   );
 }
 
-// Currency reward earned when each star unlocks
-const STAR_UNLOCK_REWARDS: Record<string, string> = {
-  social:   '✦ 20 Stars',
-  memory:   '◇ 15 Memory Shards',
-  quiet:    '◐ 10 Aura Energy',
-  creative: '◈ 15 Aura Energy',
-  helping:  '✦ 25 Stars',
-  seasonal: '✦ 30 Stars',
-};
-
-const REWARD_COLORS: Record<string, string> = {
-  social:   '#C8A84B',
-  memory:   '#78B4DC',
-  quiet:    '#9878C8',
-  creative: '#9878C8',
-  helping:  '#C8A84B',
-  seasonal: '#C8A84B',
-};
-
 interface ConstellationMapProps {
   state:        ConstellationState | null;
   onStarPress?: (key: string) => void;
 }
 
 export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) {
-  const [dims, setDims]           = useState({ w: 0, h: 0 });
-  const [tooltip, setTooltip]     = useState<StarDef | null>(null);
-  const tooltipBarAnim            = useRef(new Animated.Value(0)).current;
-  const tooltipSlideAnim          = useRef(new Animated.Value(16)).current;
-  const tooltipFadeAnim           = useRef(new Animated.Value(0)).current;
-  const enterAnim                 = useRef(new Animated.Value(0)).current;
+  const [dims, setDims] = useState({ w: 0, h: 0 });
+  const enterAnim       = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(enterAnim, {
@@ -187,105 +177,16 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
     setDims({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
   }
 
-  function handleStarPress(star: StarDef) {
-    const closing = tooltip?.key === star.key;
-    if (closing) {
-      Animated.parallel([
-        Animated.timing(tooltipFadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
-        Animated.timing(tooltipSlideAnim, { toValue: 12, duration: 160, useNativeDriver: true }),
-      ]).start(() => setTooltip(null));
-    } else {
-      setTooltip(star);
-      tooltipBarAnim.setValue(0);
-      tooltipSlideAnim.setValue(16);
-      tooltipFadeAnim.setValue(0);
-      Animated.parallel([
-        Animated.timing(tooltipFadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
-        Animated.spring(tooltipSlideAnim, { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }),
-      ]).start();
-    }
-    onStarPress?.(star.key);
-  }
-
-  // Animate tooltip bar when tooltip opens or switches star
-  useEffect(() => {
-    if (!tooltip) return;
-    const key = tooltip.key;
-    const clampedCur = (() => {
-      if (!state) return 0;
-      switch (key) {
-        case 'social':   return Math.min(state.socialCount,   5);
-        case 'memory':   return Math.min(state.memoryCount,   10);
-        case 'quiet':    return Math.min(state.quietStreak,   7);
-        case 'creative': return Math.min(state.creativeCount, 5);
-        case 'helping':  return Math.min(state.helpingCount,  20);
-        case 'seasonal': return Math.min(state.seasonalCount, 3);
-        default: return 0;
-      }
-    })();
-    const max = (() => {
-      switch (key) {
-        case 'social': return 5; case 'memory': return 10; case 'quiet': return 7;
-        case 'creative': return 5; case 'helping': return 20; case 'seasonal': return 3;
-        default: return 1;
-      }
-    })();
-    const pct = Math.min(1, clampedCur / max);
-    tooltipBarAnim.setValue(0);
-    Animated.timing(tooltipBarAnim, {
-      toValue: pct * 100,
-      duration: 480,
-      delay: 120,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [tooltip?.key]);
-
   const unlockedSet = new Set(state?.unlockedStars ?? []);
 
   function countFor(key: string): number {
     if (!state) return 0;
-    switch (key) {
-      case 'social':   return Math.min(state.socialCount,   5);
-      case 'memory':   return Math.min(state.memoryCount,   10);
-      case 'quiet':    return Math.min(state.quietStreak,   7);
-      case 'creative': return Math.min(state.creativeCount, 5);
-      case 'helping':  return Math.min(state.helpingCount,  20);
-      case 'seasonal': return Math.min(state.seasonalCount, 3);
-      default: return 0;
-    }
-  }
-
-  function rawCountFor(key: string): number {
-    if (!state) return 0;
-    switch (key) {
-      case 'social':   return state.socialCount;
-      case 'memory':   return state.memoryCount;
-      case 'quiet':    return state.quietStreak;
-      case 'creative': return state.creativeCount;
-      case 'helping':  return state.helpingCount;
-      case 'seasonal': return state.seasonalCount;
-      default: return 0;
-    }
-  }
-
-  function thresholdFor(key: string): number {
-    switch (key) {
-      case 'social':   return 5;
-      case 'memory':   return 10;
-      case 'quiet':    return 7;
-      case 'creative': return 5;
-      case 'helping':  return 20;
-      case 'seasonal': return 3;
-      default: return 1;
-    }
+    return Math.min(countForStar(key, state), STAR_THRESHOLDS[key] ?? 1);
   }
 
   function renderLine(a: StarDef, b: StarDef, key: string) {
     if (dims.w === 0 || dims.h === 0) return null;
-    const aUnlocked = unlockedSet.has(a.key);
-    const bUnlocked = unlockedSet.has(b.key);
-    if (!aUnlocked || !bUnlocked) return null;
+    if (!unlockedSet.has(a.key) || !unlockedSet.has(b.key)) return null;
 
     const ax = (a.xPct / 100) * dims.w;
     const ay = (a.yPct / 100) * dims.h;
@@ -314,20 +215,17 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
     );
   }
 
-  const tooltipStar = tooltip ? STARS.find(s => s.key === tooltip.key) : null;
   const slideY = enterAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] });
 
   return (
     <Animated.View style={{ opacity: enterAnim, transform: [{ translateY: slideY }] }}>
     <View style={styles.container}>
-      {/* Night sky background */}
       <LinearGradient
         colors={['#08061A', '#0E0824', '#06040E']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
       />
-      {/* Starfield dots */}
       {[
         { x: 8,  y: 12, s: 1.5, o: 0.35 },
         { x: 35, y: 8,  s: 1,   o: 0.25 },
@@ -349,108 +247,26 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
         }} />
       ))}
 
-      {/* Connector lines + star nodes */}
       <View style={StyleSheet.absoluteFill} onLayout={onLayout}>
         {dims.w > 0 && LINES.map(([ak, bk]) => {
-          const a = STARS.find(s => s.key === ak)!;
-          const b = STARS.find(s => s.key === bk)!;
+          const a = CONSTELLATION_STARS.find(s => s.key === ak)!;
+          const b = CONSTELLATION_STARS.find(s => s.key === bk)!;
           return renderLine(a, b, `${ak}-${bk}`);
         })}
-        {dims.w > 0 && STARS.map((star, idx) => (
+        {dims.w > 0 && CONSTELLATION_STARS.map((star, idx) => (
           <StarNode
             key={star.key}
             star={star}
             unlocked={unlockedSet.has(star.key)}
             count={countFor(star.key)}
-            threshold={thresholdFor(star.key)}
-            onPress={() => handleStarPress(star)}
+            threshold={STAR_THRESHOLDS[star.key] ?? 1}
+            onPress={() => onStarPress?.(star.key)}
             cW={dims.w}
             cH={dims.h}
             enterDelay={180 + idx * 85}
           />
         ))}
       </View>
-
-      {/* Star detail panel */}
-      {tooltipStar && (() => {
-        const isUnlocked = unlockedSet.has(tooltipStar.key);
-        const rawCur     = rawCountFor(tooltipStar.key);
-        const max        = thresholdFor(tooltipStar.key);
-        const rewardColor = REWARD_COLORS[tooltipStar.key] ?? '#C8A84B';
-
-        return (
-          <Animated.View
-            style={[
-              styles.detailPanel,
-              {
-                borderColor: `${tooltipStar.color}40`,
-                backgroundColor: 'rgba(6,4,18,0.95)',
-                opacity: tooltipFadeAnim,
-                transform: [{ translateY: tooltipSlideAnim }],
-              },
-            ]}
-          >
-            {/* Handle bar */}
-            <View style={styles.panelHandle} />
-
-            {/* Header row */}
-            <View style={styles.panelHeader}>
-              <View style={[styles.panelIconCircle, { backgroundColor: `${tooltipStar.color}18`, borderColor: `${tooltipStar.color}35` }]}>
-                <Icon name={tooltipStar.icon as any} size={15} color={tooltipStar.color} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.panelTitle, { color: tooltipStar.color }]}>
-                  {tooltipStar.label} Star
-                </Text>
-                <Text style={styles.panelDesc} numberOfLines={2}>
-                  {tooltipStar.description}
-                </Text>
-              </View>
-              <View style={[styles.statusBadge, isUnlocked
-                ? { backgroundColor: `${tooltipStar.color}18`, borderColor: `${tooltipStar.color}40` }
-                : { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.10)' }
-              ]}>
-                <Text style={[styles.statusBadgeText, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.40)' }]}>
-                  {isUnlocked ? '✦ Earned' : 'Locked'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Divider */}
-            <View style={[styles.panelDivider, { backgroundColor: `${tooltipStar.color}20` }]} />
-
-            {/* Criterion */}
-            <Text style={styles.panelCriterion}>{tooltipStar.criterion}</Text>
-
-            {/* Reward chip row */}
-            <View style={styles.panelRewardRow}>
-              <Text style={styles.panelRewardLabel}>{isUnlocked ? 'EARNED' : 'UNLOCKS'}</Text>
-              <View style={[styles.panelRewardChip, { backgroundColor: `${rewardColor}14`, borderColor: `${rewardColor}30` }]}>
-                <Text style={[styles.panelRewardValue, { color: rewardColor }]}>
-                  {STAR_UNLOCK_REWARDS[tooltipStar.key]}
-                </Text>
-              </View>
-            </View>
-
-            {/* Progress bar */}
-            <View style={styles.panelProgressRow}>
-              <View style={styles.panelBarTrack}>
-                <Animated.View style={[
-                  styles.panelBarFill,
-                  {
-                    width: tooltipBarAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
-                    backgroundColor: tooltipStar.color,
-                  },
-                  isUnlocked && { opacity: 0.65 },
-                ]} />
-              </View>
-              <Text style={[styles.panelProgressText, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.65)' }]}>
-                {rawCur} / {max} {tooltipStar.unit}
-              </Text>
-            </View>
-          </Animated.View>
-        );
-      })()}
     </View>
     </Animated.View>
   );
@@ -479,44 +295,4 @@ const styles = StyleSheet.create({
     width: 52,
     left: -8,
   },
-
-  // ── Star detail panel ────────────────────────────────────────────────────
-  detailPanel: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    borderTopLeftRadius: 16, borderTopRightRadius: 16,
-    borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1,
-    paddingHorizontal: 14, paddingTop: 8, paddingBottom: 12,
-    gap: 6,
-  },
-  panelHandle: {
-    width: 32, height: 3, borderRadius: 2,
-    backgroundColor: 'rgba(200,184,232,0.20)',
-    alignSelf: 'center', marginBottom: 4,
-  },
-  panelHeader:     { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  panelIconCircle: {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0, borderWidth: 1,
-  },
-  panelTitle:      { fontSize: 13, fontFamily: 'Satoshi-Bold', lineHeight: 18 },
-  panelDesc:       { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', lineHeight: 14, marginTop: 1 },
-  statusBadge:     {
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-    borderWidth: 1, flexShrink: 0,
-  },
-  statusBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  panelDivider:    { height: 1, marginVertical: 2 },
-  panelCriterion:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', fontStyle: 'italic', lineHeight: 15 },
-  panelRewardRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  panelRewardLabel:{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.7, color: 'rgba(200,184,232,0.32)' },
-  panelRewardChip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 8, borderWidth: 1,
-  },
-  panelRewardValue:{ fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  panelProgressRow:{ flexDirection: 'row', alignItems: 'center', gap: 8 },
-  panelBarTrack:   { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' },
-  panelBarFill:    { height: '100%', borderRadius: 3 },
-  panelProgressText: { fontSize: 11, fontFamily: 'Satoshi-Bold', minWidth: 90, textAlign: 'right', color: 'rgba(200,184,232,0.65)' },
 });
