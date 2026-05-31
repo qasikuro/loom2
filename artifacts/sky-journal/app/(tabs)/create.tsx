@@ -17,6 +17,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useApp, type StoryPanel, type StoryPage } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { DraftStore } from '@/utils/draftStore';
@@ -131,6 +132,8 @@ export default function CreateScreen() {
   const [posting,  setPosting]  = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const [showMeta, setShowMeta] = useState(false);
+  const [hasDraft, setHasDraft] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentMood = MOODS.find(m => m.label === mood);
 
@@ -160,9 +163,68 @@ export default function CreateScreen() {
     }
   }, [editId, stories]);
 
+  // ── Draft persistence ─────────────────────────────────────────────────────
+  const DRAFT_KEY = 'story_draft_v2';
+
+  function stripPageImages(ps: StoryPage[]): StoryPage[] {
+    return ps.map(p => ({
+      ...p,
+      panels: p.panels.map(({ imageUri: _img, ...rest }) => rest as StoryPanel),
+    }));
+  }
+
   useFocusEffect(useCallback(() => {
-    // nothing needed on focus
-  }, []));
+    if (editId) return;
+    AsyncStorage.getItem(DRAFT_KEY).then(raw => {
+      if (!raw) return;
+      try {
+        const d = JSON.parse(raw);
+        const hasContent = d.title?.trim() ||
+          (d.pages ?? []).some((p: StoryPage) =>
+            p.panels?.some((panel: StoryPanel) => panel.text?.trim() || panel.bubbleText?.trim())
+          );
+        if (hasContent) setHasDraft(true);
+      } catch { /* ignore */ }
+    }).catch(() => null);
+  }, [editId]));
+
+  useEffect(() => {
+    if (editId) return;
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      const hasContent = title.trim() ||
+        pages.some(p => p.panels.some(panel => panel.text?.trim() || panel.bubbleText?.trim()));
+      if (hasContent) {
+        AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({
+          title, desc, mood, location, isPublic,
+          pages: stripPageImages(pages),
+        })).catch(() => null);
+      }
+    }, 800);
+    return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
+  }, [title, desc, mood, location, isPublic, pages, editId]);
+
+  async function loadDraft() {
+    const raw = await AsyncStorage.getItem(DRAFT_KEY).catch(() => null);
+    if (!raw) { setHasDraft(false); return; }
+    try {
+      const d = JSON.parse(raw);
+      setTitle(d.title ?? '');
+      setDesc(d.desc ?? '');
+      setMood(d.mood ?? 'Hopeful');
+      setLocation(d.location ?? 'Daylight Prairie');
+      setIsPublic(d.isPublic ?? true);
+      setPages(d.pages?.length ? d.pages : [makePage()]);
+      setHasDraft(false);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } catch { setHasDraft(false); }
+  }
+
+  async function discardDraft() {
+    await AsyncStorage.removeItem(DRAFT_KEY).catch(() => null);
+    setHasDraft(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
 
   // ── Panel editor launchers ───────────────────────────────────────────────
 
@@ -251,6 +313,7 @@ export default function CreateScreen() {
         setError(tr('create.saveFailed') || 'Story couldn\'t be saved — check your connection and try again');
         return;
       }
+      await AsyncStorage.removeItem(DRAFT_KEY).catch(() => null);
       setTitle('');
       setDesc('');
       setPages([makePage()]);
@@ -314,6 +377,33 @@ export default function CreateScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
       >
+        {/* ── Draft banner ─────────────────────────────────────── */}
+        {hasDraft && !editId && (
+          <View style={[styles.draftBanner, { backgroundColor: 'rgba(107,91,149,0.10)', borderColor: 'rgba(107,91,149,0.28)' }]}>
+            <View style={styles.draftLeft}>
+              <Icon name="edit-3" size={14} color="#8B70C8" />
+              <View>
+                <Text style={[styles.draftTitle, { color: '#FDFAF7' }]}>Unfinished story</Text>
+                <Text style={[styles.draftSub, { color: 'rgba(255,255,255,0.45)' }]}>You have a draft saved</Text>
+              </View>
+            </View>
+            <View style={styles.draftActions}>
+              <TouchableOpacity
+                onPress={loadDraft}
+                style={[styles.draftBtn, { backgroundColor: 'rgba(107,91,149,0.22)', borderColor: 'rgba(107,91,149,0.50)' }]}
+              >
+                <Text style={[styles.draftBtnText, { color: '#C8B8E8' }]}>Resume</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={discardDraft}
+                style={[styles.draftBtn, { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' }]}
+              >
+                <Text style={[styles.draftBtnText, { color: 'rgba(255,255,255,0.45)' }]}>Discard</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* ── Title + Description ──────────────────────────────── */}
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('create.titleLabel')}</Text>
@@ -689,4 +779,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center', gap: 8, paddingVertical: 16, paddingHorizontal: 24,
   },
   publishText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#fff' },
+
+  draftBanner: {
+    borderRadius: 14, borderWidth: 1, padding: 14,
+    marginBottom: 12, gap: 10,
+  },
+  draftLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  draftTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  draftSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2 },
+  draftActions: { flexDirection: 'row', gap: 8 },
+  draftBtn: {
+    borderRadius: 8, borderWidth: 1,
+    paddingVertical: 7, paddingHorizontal: 13,
+  },
+  draftBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 });

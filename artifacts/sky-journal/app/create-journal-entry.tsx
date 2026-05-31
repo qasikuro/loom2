@@ -83,7 +83,7 @@ export default function CreateJournalEntryScreen() {
   const { playSound } = useSound();
   const insets  = useSafeAreaInsets();
   const { t: tr } = useTranslation();
-  const { addJournalEntry } = useApp();
+  const { addJournalEntry, character } = useApp();
   const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
 
   const entryType: JournalEntryType =
@@ -139,7 +139,64 @@ export default function CreateJournalEntryScreen() {
     setShowDatePicker(false);
   }
 
+  const MOOD_PROMPTS: Record<string, string[]> = {
+    Hopeful:     [
+      'What are you looking forward to?',
+      'What small thing made today feel possible?',
+      'Where is your light right now?',
+    ],
+    Peaceful:    [
+      'What brought you stillness today?',
+      'Describe a quiet moment you held onto.',
+      'What are you grateful for in the silence?',
+    ],
+    Lonely:      [
+      'Who do you wish was here right now?',
+      'Write to the version of you that felt less alone.',
+      'What would comfort you tonight?',
+    ],
+    Dreamy:      [
+      'Describe a world you visited in your imagination.',
+      'What have you been daydreaming about lately?',
+      'If today were a chapter, what would it be called?',
+    ],
+    Chaotic:     [
+      'What is spinning the fastest right now?',
+      'Write out everything in your head without stopping.',
+      'What do you most need to let go of?',
+    ],
+    Soft:        [
+      'What gentle thing happened today?',
+      'What are you being tender with?',
+      "Describe a small comfort you've found.",
+    ],
+    Joyful:      [
+      'What made you laugh or smile today?',
+      'How does this feeling live in your body?',
+      'What do you want to remember about right now?',
+    ],
+    Grateful:    [
+      "Write about someone you're quietly thankful for.",
+      'What unexpected thing brought you gratitude today?',
+      'What would you miss if it were gone?',
+    ],
+    Romantic:    [
+      'Write about longing — for a place, a person, a feeling.',
+      'What makes your heart catch?',
+      'Describe something beautiful you noticed today.',
+    ],
+    Adventurous: [
+      'What risk are you considering?',
+      'Where do you want to go next?',
+      "What would you do if you weren't afraid?",
+    ],
+  };
+
   const dayPrompt = tr(`journal.prompts_${today.getDate() % 6}` as any);
+  const moodPrompts  = character.mood ? (MOOD_PROMPTS[character.mood] ?? []) : [];
+  const moodPrompt   = moodPrompts.length > 0 ? moodPrompts[today.getDate() % moodPrompts.length] : null;
+  const activePrompt = entryType === 'diary' && moodPrompt ? moodPrompt : dayPrompt;
+  const isMoodPrompt = entryType === 'diary' && !!moodPrompt;
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -335,11 +392,18 @@ export default function CreateJournalEntryScreen() {
           onPress={() => inputRef.current?.focus()}
         >
           <Icon name="feather" size={13} color={`${cfg.accent}80`} />
-          <Text style={[styles.promptText, { color: colors.mutedForeground }]}>
-            {entryType === 'friend'  ? tr('journal.friendPrompt') :
-             entryType === 'moment'  ? tr('journal.momentPrompt') :
-             dayPrompt}
-          </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.promptText, { color: colors.mutedForeground }]}>
+              {entryType === 'friend'  ? tr('journal.friendPrompt') :
+               entryType === 'moment'  ? tr('journal.momentPrompt') :
+               activePrompt}
+            </Text>
+            {isMoodPrompt && (
+              <Text style={[styles.promptMoodLabel, { color: `${cfg.accent}70` }]}>
+                · matching your {character.mood} mood
+              </Text>
+            )}
+          </View>
         </TouchableOpacity>
 
         {/* Text area */}
@@ -478,8 +542,9 @@ const styles = StyleSheet.create({
 
   friendRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 },
   friendInput:     { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Regular' },
-  promptCard:      { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 },
-  promptText:      { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 19 },
+  promptCard:      { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 },
+  promptText:      { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 19 },
+  promptMoodLabel: { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 4, fontStyle: 'italic' },
   textArea:        { borderWidth: 1, borderRadius: 14, padding: 16, fontFamily: 'Satoshi-Regular', minHeight: 180, marginBottom: 0 },
   sizeBar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 22, paddingVertical: 2, paddingHorizontal: 4, marginTop: 10, marginBottom: 6, alignSelf: 'center' },
   sizeSideBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18 },

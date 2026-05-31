@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable } from "@workspace/db";
 import { and, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -371,6 +371,25 @@ router.post("/follows/:targetUserId", requireAuth, async (req, res) => {
     const { granted: rewardGranted, amounts: rewardAmounts } =
       await grantReward(db as any, userId, "follow_given", targetUserId);
     syncConstellation(db as any, userId).catch(() => null);
+
+    // Fire-and-forget: notify the target that someone followed them
+    db.select({ name: characterTable.name })
+      .from(characterTable)
+      .where(eq(characterTable.userId, userId))
+      .limit(1)
+      .then(([actor]) => {
+        if (!actor) return;
+        const actorName = actor.name ?? "Someone";
+        return db.insert(notificationsTable).values({
+          userId:    targetUserId,
+          actorId:   userId,
+          actorName,
+          type:      "follow",
+          refId:     userId,
+          title:     actorName,
+        });
+      })
+      .catch(() => null);
 
     return res.status(201).json({ following: true, rewardGranted, rewardAmounts });
   } catch (err) {
