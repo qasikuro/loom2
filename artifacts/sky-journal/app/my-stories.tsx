@@ -94,13 +94,19 @@ function StoryCard({ story, colors }: { story: Story; colors: ReturnType<typeof 
         <Text style={styles.cardTitle} numberOfLines={2}>{story.chapterTitle}</Text>
         <View style={styles.cardMeta}>
           <View style={styles.cardStat}>
-            <Icon name="heart" size={11} color="rgba(255,210,100,0.85)" />
+            <Icon name="eye" size={11} color="rgba(255,210,100,0.85)" />
             <Text style={styles.cardStatText}>{story.witnessedCount}</Text>
           </View>
           <View style={styles.cardStat}>
-            <Icon name="message-circle" size={11} color="rgba(200,184,232,0.65)" />
+            <Icon name="bookmark" size={11} color="rgba(200,184,232,0.65)" />
             <Text style={styles.cardStatText}>{story.savedCount}</Text>
           </View>
+          {(story.stickerCount ?? 0) > 0 && (
+            <View style={styles.cardStat}>
+              <Text style={{ fontSize: 10, color: 'rgba(255,210,100,0.85)', lineHeight: 13 }}>✦</Text>
+              <Text style={styles.cardStatText}>{story.stickerCount}</Text>
+            </View>
+          )}
         </View>
       </View>
 
