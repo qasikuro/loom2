@@ -119,6 +119,16 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH }: StarNod
   );
 }
 
+// Currency reward earned when each star unlocks
+const STAR_UNLOCK_REWARDS: Record<string, string> = {
+  social:   '✦ 20 Stars',
+  memory:   '◇ 15 Memory Shards',
+  quiet:    '◐ 10 Aura Energy',
+  creative: '◈ 15 Aura Energy',
+  helping:  '✦ 25 Stars',
+  seasonal: '✦ 30 Stars',
+};
+
 interface ConstellationMapProps {
   state:        ConstellationState | null;
   onStarPress?: (key: string) => void;
@@ -128,6 +138,17 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
   const [dims, setDims]           = useState({ w: 0, h: 0 });
   const [tooltip, setTooltip]     = useState<StarDef | null>(null);
   const tooltipBarAnim            = useRef(new Animated.Value(0)).current;
+  const enterAnim                 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(enterAnim, {
+      toValue: 1,
+      duration: 700,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function onLayout(e: LayoutChangeEvent) {
     setDims({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
@@ -254,7 +275,10 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
 
   const tooltipStar = tooltip ? STARS.find(s => s.key === tooltip.key) : null;
 
+  const slideY = enterAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] });
+
   return (
+    <Animated.View style={{ opacity: enterAnim, transform: [{ translateY: slideY }] }}>
     <View style={styles.container}>
       {/* Night sky background */}
       <LinearGradient
@@ -325,6 +349,15 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
               </View>
             </View>
             <Text style={styles.tooltipCrit}>{tooltipStar.criterion}</Text>
+            {/* Reward earned / unlocks */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+              <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5, color: 'rgba(200,184,232,0.32)' }}>
+                {isUnlocked ? 'EARNED' : 'UNLOCKS'}
+              </Text>
+              <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.45)' }}>
+                {STAR_UNLOCK_REWARDS[tooltipStar.key]}
+              </Text>
+            </View>
             {/* Progress bar */}
             <View style={styles.tooltipBarRow}>
               <View style={styles.tooltipBarTrack}>
@@ -348,6 +381,7 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
         );
       })()}
     </View>
+    </Animated.View>
   );
 }
 

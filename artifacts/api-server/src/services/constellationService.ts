@@ -153,7 +153,7 @@ export async function syncConstellation(
           creativeCount:   storyCount,
           seasonalCount:   preSeasonalCount,
           unlockedStars:   unlocked,
-          activeTitle,
+          activeTitle:     sql`COALESCE(${constellationProgressTable.activeTitle}, ${activeTitle})`,
           updatedAt:       sql`now()`,
         },
       });

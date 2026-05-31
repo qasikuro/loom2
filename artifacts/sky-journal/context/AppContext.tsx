@@ -871,26 +871,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Inline reward toast helper (defined early so mutations can use it) ──────
 
+  // nextSlotRef tracks when the queue will next be free so rewards never overlap.
+  const nextSlotRef = useRef(0);
+
   const fireToast = useCallback((label: string, amounts: { stars?: number; aura?: number; shards?: number }) => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    setRewards(prev => [...prev, {
-      id, message: label, icon: 'star' as const,
-      stars: amounts.stars, aura: amounts.aura, shards: amounts.shards,
-    }]);
-    setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 3500);
+    const now  = Date.now();
+    const wait = Math.max(0, nextSlotRef.current - now);
+    nextSlotRef.current = now + wait + 3600; // 3.5 s shown + 100 ms gap
+    const id = `toast-${now}-${Math.random()}`;
+    const doAdd = () => {
+      setRewards(prev => [...prev, {
+        id, message: label, icon: 'star' as const,
+        stars: amounts.stars, aura: amounts.aura, shards: amounts.shards,
+      }]);
+      setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 3500);
+    };
+    if (wait <= 0) { doAdd(); } else { setTimeout(doAdd, wait); }
   }, []);
 
   // Fires a celebration banner for a newly-unlocked constellation star.
   // Stays on screen longer (6 s) than a regular currency toast.
   const fireStarUnlockToast = useCallback((starKey: string) => {
+    const now  = Date.now();
+    const wait = Math.max(0, nextSlotRef.current - now);
+    nextSlotRef.current = now + wait + 6100; // 6 s shown + 100 ms gap
     const id = `star-unlock-${starKey}-${Date.now()}`;
-    setRewards(prev => [...prev, {
-      id,
-      message:    STAR_META[starKey]?.name ?? starKey,
-      icon:       'star' as const,
-      starUnlock: starKey,
-    }]);
-    setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 6000);
+    const doAdd = () => {
+      setRewards(prev => [...prev, {
+        id,
+        message:    STAR_META[starKey]?.name ?? starKey,
+        icon:       'star' as const,
+        starUnlock: starKey,
+      }]);
+      setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 6000);
+    };
+    if (wait <= 0) { doAdd(); } else { setTimeout(doAdd, wait); }
   }, []);
 
   // ── Reload helpers — defined before mutations so callbacks can call them ────

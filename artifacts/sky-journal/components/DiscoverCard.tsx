@@ -49,6 +49,25 @@ export function DiscoverCard({
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
 
+  // Bounce the ✦ badge whenever stickerCount increases
+  const stickerBounce    = useRef(new Animated.Value(1)).current;
+  const prevStickerCount = useRef(post.stickerCount ?? 0);
+  useEffect(() => {
+    const cur = post.stickerCount ?? 0;
+    if (cur > prevStickerCount.current) {
+      prevStickerCount.current = cur;
+      stickerBounce.setValue(0.7);
+      Animated.spring(stickerBounce, {
+        toValue: 1,
+        friction: 4,
+        tension: 160,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      prevStickerCount.current = cur;
+    }
+  }, [post.stickerCount]);
+
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -196,10 +215,10 @@ export function DiscoverCard({
               </Text>
             </View>
             {post.stickerCount > 0 && (
-              <View style={styles.statPill}>
+              <Animated.View style={[styles.statPill, { transform: [{ scale: stickerBounce }] }]}>
                 <Text style={styles.stickerTotalIcon}>✦</Text>
                 <Text style={styles.statText}>{post.stickerCount}</Text>
-              </View>
+              </Animated.View>
             )}
             <MoodBadge mood={post.vibe} size="sm" />
             {topStickers.length > 0 && (

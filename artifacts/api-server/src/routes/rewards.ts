@@ -1,5 +1,5 @@
 import { db, userRewardsTable, constellationProgressTable, userPurchasesTable } from "@workspace/db";
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { syncConstellation } from "../services/constellationService";
@@ -8,12 +8,15 @@ const router: IRouter = Router();
 
 // ── Shop catalog (source of truth — validated server-side) ──────────────────
 export interface ShopItem {
-  id:          string;
-  name:        string;
-  description: string;
-  icon:        string;
-  category:    "frame" | "accent" | "theme";
-  cost:        { stars?: number; aura?: number; shards?: number };
+  id:             string;
+  name:           string;
+  description:    string;
+  icon:           string;
+  category:       "frame" | "accent" | "theme";
+  cost:           { stars?: number; aura?: number; shards?: number };
+  seasonal?:      boolean;
+  seasonalLabel?: string;
+  seasonalUntil?: string;
 }
 
 export const SHOP_CATALOG: ShopItem[] = [
@@ -56,6 +59,29 @@ export const SHOP_CATALOG: ShopItem[] = [
     icon:        "⋆",
     category:    "theme",
     cost:        { aura: 15, shards: 15 },
+  },
+  // ── Seasonal items (Summer 2026, expire Aug 31) ───────────────────────────
+  {
+    id:             "frame_solstice",
+    name:           "Summer Solstice Frame",
+    description:    "A sun-drenched golden frame shimmering with warm light. Limited time only.",
+    icon:           "☀",
+    category:       "frame",
+    cost:           { stars: 50 },
+    seasonal:       true,
+    seasonalLabel:  "Summer",
+    seasonalUntil:  "2026-08-31",
+  },
+  {
+    id:             "accent_twilight",
+    name:           "Twilight Veil",
+    description:    "A warm amber shimmer wraps your profile in long summer evenings.",
+    icon:           "◐",
+    category:       "accent",
+    cost:           { aura: 30 },
+    seasonal:       true,
+    seasonalLabel:  "Summer",
+    seasonalUntil:  "2026-08-31",
   },
 ];
 
@@ -150,6 +176,56 @@ router.get("/rewards/shop", requireAuth, async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch shop");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PUT /api/constellation/title — user picks which earned title to display ──
+router.put("/constellation/title", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const { title } = req.body as { title?: string };
+  if (!title || typeof title !== "string") {
+    return res.status(400).json({ error: "title is required" });
+  }
+  const VALID_TITLES = [
+    "Star Wanderer", "Memory Keeper", "Sky Child",
+    "Constellation Dreamer", "Guiding Light", "Child of the Sky",
+  ];
+  if (!VALID_TITLES.includes(title)) {
+    return res.status(400).json({ error: "Invalid title" });
+  }
+  try {
+    await db
+      .update(constellationProgressTable)
+      .set({ activeTitle: title, updatedAt: sql`now()` })
+      .where(eq(constellationProgressTable.userId, userId));
+    return res.json({ activeTitle: title });
+  } catch (err) {
+    req.log.error({ err }, "Failed to update constellation title");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── GET /api/rewards/purchases — full purchase history ───────────────────────
+router.get("/rewards/purchases", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const rows = await db
+      .select()
+      .from(userPurchasesTable)
+      .where(eq(userPurchasesTable.userId, userId))
+      .orderBy(desc(userPurchasesTable.purchasedAt));
+    return res.json(rows.map(p => ({
+      id:          p.id,
+      itemId:      p.itemId,
+      itemName:    p.itemName,
+      starsSpent:  p.starsSpent,
+      auraSpent:   p.auraSpent,
+      shardsSpent: p.shardsSpent,
+      purchasedAt: p.purchasedAt,
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch purchase history");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

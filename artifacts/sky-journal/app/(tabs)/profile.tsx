@@ -4,8 +4,8 @@ import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
@@ -51,7 +51,7 @@ interface ProgressRowDef {
   unit: string;
 }
 
-function ConstellationProgressCard({ constellation }: { constellation: ConstellationState }) {
+function ConstellationProgressCard({ constellation, triggerAnim = 0 }: { constellation: ConstellationState; triggerAnim?: number }) {
   const rows: ProgressRowDef[] = [
     { label: 'Social',   count: constellation.socialCount,   threshold: 5,  color: '#78C8A8', icon: '⬡', unit: 'follows'  },
     { label: 'Memory',   count: constellation.memoryCount,   threshold: 10, color: '#9878C8', icon: '◇', unit: 'entries'  },
@@ -69,6 +69,8 @@ function ConstellationProgressCard({ constellation }: { constellation: Constella
   const rowAnims    = useRef(rows.map(() => new Animated.Value(0))).current;
 
   useEffect(() => {
+    overallAnim.setValue(0);
+    rowAnims.forEach(a => a.setValue(0));
     const animations = [
       Animated.timing(overallAnim, {
         toValue: totalPct,
@@ -86,7 +88,7 @@ function ConstellationProgressCard({ constellation }: { constellation: Constella
     ];
     Animated.parallel(animations).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [triggerAnim]);
 
   return (
     <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(107,91,149,0.18)', backgroundColor: 'rgba(8,6,20,0.55)' }}>
@@ -598,10 +600,49 @@ export default function CharacterScreen() {
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
           gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading,
-          constellation, rewardBalance } = useApp();
+          constellation, rewardBalance, reloadConstellation } = useApp();
   const moodAccent = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
   const { signOut, userId: myUserId } = useAuth();
+
+  const [animTrigger, setAnimTrigger] = useState(0);
+  useFocusEffect(useCallback(() => {
+    setAnimTrigger(t => t + 1);
+  }, []));
   const { user }    = useUser();
+
+  // ── Title picker state (#11) ───────────────────────────────────────────────
+  const [showTitlePicker, setShowTitlePicker] = useState(false);
+  const [savingTitle, setSavingTitle]         = useState(false);
+
+  // ── Purchased cosmetics (#8) ───────────────────────────────────────────────
+  const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
+  useEffect(() => {
+    apiFetch<{ catalog: unknown[]; purchasedIds: string[] }>('/rewards/shop')
+      .then(d => { if (d?.purchasedIds) setPurchasedIds(d.purchasedIds); })
+      .catch(() => null);
+  }, []);
+
+  const STAR_TITLES: Record<number, string> = {
+    1: 'Star Wanderer', 2: 'Memory Keeper',      3: 'Sky Child',
+    4: 'Constellation Dreamer',  5: 'Guiding Light', 6: 'Child of the Sky',
+  };
+  const availableTitles = constellation
+    ? (Array.from({ length: constellation.unlockedStars.length }, (_, i) => STAR_TITLES[i + 1]).filter(Boolean) as string[])
+    : [];
+
+  const saveTitle = useCallback(async (title: string) => {
+    setSavingTitle(true);
+    try {
+      await apiFetch('/constellation/title', {
+        method:  'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ title }),
+      });
+      await reloadConstellation();
+    } catch { /* silently skip */ }
+    setSavingTitle(false);
+    setShowTitlePicker(false);
+  }, [reloadConstellation]);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 120;
@@ -1097,7 +1138,15 @@ export default function CharacterScreen() {
           {/* Profile row: avatar left + info right */}
           <View style={styles.profileRow}>
             <View style={styles.avatarWrap}>
-              <View style={[styles.avatarCircle, { borderColor: `${colors.primary}70` }]}>
+              <View style={[styles.avatarCircle, {
+                borderColor: purchasedIds.includes('frame_starlight')
+                  ? '#C8A84B'
+                  : purchasedIds.includes('frame_moonveil')
+                    ? '#B0C8F0'
+                    : purchasedIds.includes('frame_solstice')
+                      ? '#F0B840'
+                      : `${colors.primary}70`,
+              }]}>
                 <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
               </View>
               <BreathingAvatarRing mood={character.mood || 'Dreamy'} />
@@ -1164,11 +1213,19 @@ export default function CharacterScreen() {
               )}
 
               {constellation?.activeTitle && (
-                <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <TouchableOpacity
+                  style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  onPress={() => availableTitles.length > 1 && setShowTitlePicker(true)}
+                  activeOpacity={availableTitles.length > 1 ? 0.7 : 1}
+                  disabled={availableTitles.length <= 1}
+                >
                   <Text style={{ fontSize: 11, color: '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 }}>
                     ✦ {constellation.activeTitle}
                   </Text>
-                </View>
+                  {availableTitles.length > 1 && (
+                    <Icon name="chevron-down" size={9} color="rgba(200,168,75,0.55)" />
+                  )}
+                </TouchableOpacity>
               )}
 
               {editingBio ? (
@@ -1876,11 +1933,19 @@ export default function CharacterScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>My Constellation</Text>
                 {constellation?.activeTitle && (
-                  <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: 'rgba(200,168,75,0.14)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.28)' }}>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: 'rgba(200,168,75,0.14)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.28)' }}
+                    onPress={() => availableTitles.length > 1 && setShowTitlePicker(true)}
+                    activeOpacity={availableTitles.length > 1 ? 0.7 : 1}
+                    disabled={availableTitles.length <= 1}
+                  >
                     <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.2 }}>
                       {constellation.activeTitle}
                     </Text>
-                  </View>
+                    {availableTitles.length > 1 && (
+                      <Icon name="chevron-down" size={8} color="rgba(200,168,75,0.55)" />
+                    )}
+                  </TouchableOpacity>
                 )}
               </View>
               {rewardBalance && (
@@ -1898,7 +1963,7 @@ export default function CharacterScreen() {
             </View>
 
             {/* Progress summary card — 6 stars with animated full-width bars */}
-            {constellation && <ConstellationProgressCard constellation={constellation} />}
+            {constellation && <ConstellationProgressCard constellation={constellation} triggerAnim={animTrigger} />}
 
             {!constellation && (
               <View style={[styles.hEmptyCard, { marginHorizontal: 16, backgroundColor: 'rgba(107,91,149,0.06)', borderColor: 'rgba(107,91,149,0.15)' }]}>
@@ -1966,12 +2031,20 @@ export default function CharacterScreen() {
                       )}
                       <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
                         <Text style={styles.hStoryTitle} numberOfLines={2}>{story.chapterTitle}</Text>
-                        {story.witnessedCount > 0 && (
-                          <View style={[styles.hViewCount, { backgroundColor: 'rgba(8,6,22,0.60)' }]}>
-                            <Icon name="eye" size={9} color="rgba(220,200,255,0.85)" />
-                            <Text style={styles.hViewCountText}>{story.witnessedCount}</Text>
-                          </View>
-                        )}
+                        <View style={{ flexDirection: 'row', gap: 4 }}>
+                          {story.witnessedCount > 0 && (
+                            <View style={[styles.hViewCount, { backgroundColor: 'rgba(8,6,22,0.60)' }]}>
+                              <Icon name="eye" size={9} color="rgba(220,200,255,0.85)" />
+                              <Text style={styles.hViewCountText}>{story.witnessedCount}</Text>
+                            </View>
+                          )}
+                          {(story.stickerCount ?? 0) > 0 && (
+                            <View style={[styles.hViewCount, { backgroundColor: 'rgba(8,6,22,0.60)' }]}>
+                              <Text style={{ fontSize: 9, color: 'rgba(255,210,100,0.85)', lineHeight: 12 }}>✦</Text>
+                              <Text style={styles.hViewCountText}>{story.stickerCount}</Text>
+                            </View>
+                          )}
+                        </View>
                       </LinearGradient>
                       {!story.isPublic && (
                         <View style={{ position: 'absolute', top: 7, right: 7, backgroundColor: 'rgba(8,6,22,0.65)', borderRadius: 6, padding: 3 }}>
@@ -2181,6 +2254,16 @@ export default function CharacterScreen() {
                   {character.isPublic ? 'Public' : 'Private'}
                 </Text>
               </View>
+            </TouchableOpacity>
+            <View style={styles.drawerDivider} />
+            <TouchableOpacity
+              style={styles.drawerItem}
+              onPress={() => { closeDrawer(); setTimeout(() => router.push('/purchase-history' as any), 260); }}
+              activeOpacity={0.7}
+            >
+              <View style={styles.drawerItemIcon}><Icon name="shopping-bag" size={15} color="rgba(200,184,232,0.75)" /></View>
+              <Text style={[styles.drawerItemLabel, { flex: 1 }]}>Purchase History</Text>
+              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
             </TouchableOpacity>
           </View>
 
@@ -2543,6 +2626,50 @@ export default function CharacterScreen() {
             </View>
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      {/* ── Title picker sheet (#11) ─────────────────────────── */}
+      <Modal
+        visible={showTitlePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowTitlePicker(false)}
+      >
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'flex-end' }}
+          onPress={() => setShowTitlePicker(false)}
+        >
+          <Pressable
+            onPress={e => e.stopPropagation()}
+            style={{ backgroundColor: '#0E0B1A', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 10, paddingBottom: 36 }}
+          >
+            <Text style={{ color: '#C8B8E8', fontFamily: 'Satoshi-Bold', fontSize: 16, marginBottom: 4 }}>
+              Choose Title
+            </Text>
+            {availableTitles.map(t => (
+              <TouchableOpacity
+                key={t}
+                onPress={() => saveTitle(t)}
+                disabled={savingTitle}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  padding: 13, borderRadius: 12,
+                  backgroundColor: constellation?.activeTitle === t ? 'rgba(200,168,75,0.12)' : 'rgba(255,255,255,0.04)',
+                  borderWidth: 1,
+                  borderColor:     constellation?.activeTitle === t ? 'rgba(200,168,75,0.30)' : 'rgba(255,255,255,0.07)',
+                }}
+              >
+                <Text style={{ fontFamily: 'Satoshi-Medium', fontSize: 14, color: constellation?.activeTitle === t ? '#C8A84B' : 'rgba(200,184,232,0.75)' }}>
+                  ✦ {t}
+                </Text>
+                {constellation?.activeTitle === t && (
+                  <Icon name="check" size={14} color="#C8A84B" />
+                )}
+              </TouchableOpacity>
+            ))}
+            {savingTitle && <ActivityIndicator color="#C8A84B" style={{ marginTop: 4 }} />}
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* ── Sky Shop modal ──────────────────────────────────── */}
