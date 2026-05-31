@@ -1,0 +1,65 @@
+Build a full redesign of this app homepage using the uploaded screenshots as the functional reference, but make the UI feel modern, premium, lively, and polished. Keep all existing features, but completely upgrade the visual design and layout so it no longer feels static or outdated.
+
+Use this exact stack:
+- React
+- TypeScript
+- Vite
+- Tailwind CSS
+- shadcn/ui
+- Framer Motion
+- lucide-react
+- recharts only if any charts are needed
+- Use clean component-based architecture
+
+Design goals:
+- Make the homepage feel fresh, dynamic, soft, and emotionally warm.
+- Use modern glassmorphism, soft shadows, layered gradients, blurred glow effects, subtle borders, and smooth motion.
+- Avoid the old flat/static look.
+- Make the page feel alive with micro-interactions, hover states, animated cards, subtle floating elements, and gentle transitions.
+- Keep the dark theme, but improve contrast, spacing, hierarchy, and readability.
+- Use a refined premium palette with purple, indigo, blue, teal, and soft gold accents.
+- Make typography more modern, with stronger hierarchy and more breathing room.
+
+Homepage requirements:
+1. Add a visible “Friends” section on the homepage.
+   - Show friend avatars, names, status/mood, and recent activity.
+   - Include a “see all” or “manage friends” action.
+   - Make it feel social and active, not hidden.
+
+2. Make Lumi feel more refreshed and dynamic.
+   - Replace the stale hero card with a more engaging hero section.
+   - Add animated ambient background shapes or glow.
+   - Make Lumi feel responsive, warm, and present.
+   - Keep the soft supportive tone, but present it in a more modern UI.
+
+3. Improve the whole layout.
+   - Better spacing and alignment.
+   - Stronger visual hierarchy.
+   - More interesting cards.
+   - Better bottom navigation.
+   - Better CTA buttons.
+   - Make the homepage feel like a premium wellness/social app.
+
+4. Preserve features already on the page.
+   - Breathe, Reflect, Check in
+   - Campfires / Your Fire / Browse
+   - Circle / Find Friends
+   - Journal / Discover / Profile navigation
+   - Any existing app logic and screens should remain usable.
+
+Interaction ideas:
+- Smooth animated entrance for main sections.
+- Cards slightly lift and glow on hover/tap.
+- Subtle parallax or floating background elements.
+- Bottom nav should look cleaner and more modern.
+- Use motion for transitions between sections.
+
+Implementation notes:
+- Build reusable components for hero, friends list, campfires, and CTA cards.
+- Keep the code clean and production-ready.
+- Make the UI mobile-first and responsive.
+- Use icons from lucide-react.
+- Use shadcn/ui components where appropriate.
+- Do not make it look generic; make it feel custom, beautiful, and emotionally engaging.
+
+Deliver the updated homepage with modern styling and all existing functionality intact.
