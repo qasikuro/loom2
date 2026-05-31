@@ -81,6 +81,7 @@ export default function MessagesInboxScreen() {
       params: {
         userId:    thread.partnerId,
         name:      thread.partnerName,
+        handle:    thread.partnerHandle ?? '',
         avatarUri: thread.partnerAvatar ?? '',
       },
     } as any);

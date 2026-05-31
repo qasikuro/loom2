@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { Animated, Easing, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
-import { VibeStickerPicker, STICKERS, type StickerType } from '@/components/VibeStickerPicker';
+import { STICKERS, type StickerType } from '@/components/VibeStickerPicker';
 import { useColors } from '@/hooks/useColors';
 import type { DiscoverPost } from '@/context/AppContext';
 
@@ -27,27 +27,29 @@ function getGradient(mood: string): [string, string, string] {
 interface StickerCount { type: string; count: number }
 
 interface DiscoverCardProps {
-  post:            DiscoverPost;
-  onPress?:        () => void;
-  onSave?:         () => void;
-  onDelete?:       () => void;
-  onReport?:       () => void;
-  onAuthorPress?:  () => void;
-  onSticker?:      (stickerType: StickerType) => void;
-  stickerCounts?:  StickerCount[];
-  delay?:          number;
+  post:              DiscoverPost;
+  onPress?:          () => void;
+  onSave?:           () => void;
+  onDelete?:         () => void;
+  onReport?:         () => void;
+  onAuthorPress?:    () => void;
+  /** Called when the ✦ sticker button is tapped — parent controls the picker */
+  onStickerToggle?:  () => void;
+  /** Whether this card's sticker picker is currently open (controlled externally) */
+  stickerPickerOpen?: boolean;
+  stickerCounts?:    StickerCount[];
+  delay?:            number;
 }
 
 export function DiscoverCard({
   post, onPress, onSave, onDelete, onReport, onAuthorPress,
-  onSticker, stickerCounts = [], delay = 0,
+  onStickerToggle, stickerPickerOpen = false, stickerCounts = [], delay = 0,
 }: DiscoverCardProps) {
   const colors   = useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const [pickerOpen, setPickerOpen]             = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const mountOpacity = useRef(new Animated.Value(0)).current;
@@ -84,12 +86,7 @@ export function DiscoverCard({
     }
   }
 
-  function handleStickerSend(type: StickerType) {
-    setPickerOpen(false);
-    onSticker?.(type);
-  }
-
-  // Show top-3 sticker types by count
+  // Show top-4 sticker types by count
   const topStickers = [...stickerCounts]
     .sort((a, b) => b.count - a.count)
     .slice(0, 4);
@@ -233,11 +230,11 @@ export function DiscoverCard({
               </TouchableOpacity>
             )}
 
-            {/* Sticker button */}
-            {onSticker && (
+            {/* Sticker button — picker is rendered by parent to avoid overflow:hidden clipping */}
+            {onStickerToggle && (
               <TouchableOpacity
-                onPress={() => setPickerOpen(p => !p)}
-                style={[styles.iconBtn, pickerOpen && styles.iconBtnActive]}
+                onPress={onStickerToggle}
+                style={[styles.iconBtn, stickerPickerOpen && styles.iconBtnActive]}
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                 activeOpacity={0.75}
               >
@@ -274,15 +271,6 @@ export function DiscoverCard({
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* ── Sticker picker (slides in below action bar) ── */}
-        {pickerOpen && (
-          <VibeStickerPicker
-            visible={pickerOpen}
-            onSelect={handleStickerSend}
-            onClose={() => setPickerOpen(false)}
-          />
-        )}
       </Pressable>
     </Animated.View>
   );

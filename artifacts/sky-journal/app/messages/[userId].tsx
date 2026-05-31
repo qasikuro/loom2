@@ -49,10 +49,12 @@ function fmtDate(iso: string) {
 }
 
 export default function MessagesScreen() {
-  const { userId, name, avatarUri } = useLocalSearchParams<{
-    userId:    string;
-    name?:     string;
+  const { userId, name, handle, avatarUri, isGuide } = useLocalSearchParams<{
+    userId:     string;
+    name?:      string;
+    handle?:    string;
     avatarUri?: string;
+    isGuide?:   string;
   }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -62,11 +64,19 @@ export default function MessagesScreen() {
   const [sending,  setSending]  = useState(false);
   const [input,    setInput]    = useState('');
   const [error,    setError]    = useState<string | null>(null);
+  const [headerH,  setHeaderH]  = useState(0);
 
   const flatRef = useRef<FlatList<ListItem>>(null);
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'ios'  ? insets.bottom : 8;
+
+  // Derived subtitle: show @handle for regular users, "Constellation Guide" for guides
+  const partnerSubtitle = isGuide === 'true'
+    ? 'Constellation Guide'
+    : handle
+      ? `@${handle}`
+      : null;
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -92,7 +102,6 @@ export default function MessagesScreen() {
     }, [load]),
   );
 
-  // Scroll to bottom on new content — use onContentSizeChange on FlatList instead of a timeout hack
   const scrollToBottom = useCallback(() => {
     flatRef.current?.scrollToEnd({ animated: false });
   }, []);
@@ -105,7 +114,6 @@ export default function MessagesScreen() {
     setInput('');
     setSending(true);
 
-    // Optimistic insert
     const optimistic: Message = {
       id:         `temp-${Date.now()}`,
       fromUserId: 'me',
@@ -124,9 +132,8 @@ export default function MessagesScreen() {
       });
       setMessages(prev => prev.map(m => m.id === optimistic.id ? sent : m));
     } catch {
-      // Remove optimistic on failure
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-      setInput(content); // restore
+      setInput(content);
     } finally {
       setSending(false);
     }
@@ -151,6 +158,7 @@ export default function MessagesScreen() {
       <LinearGradient
         colors={['#0B0820', '#130B34', '#1A0E48']}
         style={[styles.header, { paddingTop: topPad }]}
+        onLayout={e => setHeaderH(e.nativeEvent.layout.height)}
       >
         <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(120,70,255,0.15)', top: -50, right: -20, pointerEvents: 'none' }} />
         <View style={styles.headerRow}>
@@ -171,7 +179,9 @@ export default function MessagesScreen() {
             </View>
             <View>
               <Text style={styles.partnerName}>{name ?? 'Guide'}</Text>
-              <Text style={styles.partnerSubtitle}>Constellation Guide</Text>
+              {partnerSubtitle ? (
+                <Text style={styles.partnerSubtitle}>{partnerSubtitle}</Text>
+              ) : null}
             </View>
           </View>
         </View>
@@ -189,8 +199,8 @@ export default function MessagesScreen() {
       ) : (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={0}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={headerH}
         >
           <FlatList<ListItem>
             ref={flatRef}
@@ -207,7 +217,9 @@ export default function MessagesScreen() {
                 </View>
                 <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Start the conversation</Text>
                 <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-                  Send a message to your guide. They're here to help you navigate the sky.
+                  {isGuide === 'true'
+                    ? 'Send a message to your guide. They\'re here to help you navigate the sky.'
+                    : 'Send a message to start the conversation.'}
                 </Text>
               </View>
             }

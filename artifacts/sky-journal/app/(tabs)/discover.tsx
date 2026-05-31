@@ -3,7 +3,7 @@ import { DiscoverCard } from '@/components/DiscoverCard';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { ReportSheet } from '@/components/ReportSheet';
 import { apiFetch, useApp } from '@/context/AppContext';
-import type { StickerType } from '@/components/VibeStickerPicker';
+import { VibeStickerPicker, type StickerType } from '@/components/VibeStickerPicker';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
@@ -113,7 +113,8 @@ export default function DiscoverScreen() {
   const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const [refreshing,    setRefreshing]    = useState(false);
-  const [stickerCounts, setStickerCounts] = useState<Record<string, { type: string; count: number }[]>>({});
+  const [stickerCounts,        setStickerCounts]        = useState<Record<string, { type: string; count: number }[]>>({});
+  const [activeStickerStoryId, setActiveStickerStoryId] = useState<string | null>(null);
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
@@ -343,7 +344,8 @@ export default function DiscoverScreen() {
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
               onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
-              onSticker={(type) => handleSendSticker(item.id, type)}
+              onStickerToggle={() => setActiveStickerStoryId(prev => prev === item.id ? null : item.id)}
+              stickerPickerOpen={activeStickerStoryId === item.id}
               stickerCounts={stickerCounts[item.id] ?? []}
             />
           )}
@@ -458,6 +460,24 @@ export default function DiscoverScreen() {
         targetId={reportTargetId ?? ''}
         onClose={() => setReportTargetId(null)}
       />
+
+      {/* ── Sticker picker overlay — rendered at screen level to escape card overflow:hidden ── */}
+      {activeStickerStoryId !== null && (
+        <View style={styles.stickerOverlay} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.stickerBackdrop}
+            activeOpacity={1}
+            onPress={() => setActiveStickerStoryId(null)}
+          />
+          <VibeStickerPicker
+            visible={true}
+            onSelect={(type) => {
+              handleSendSticker(activeStickerStoryId, type);
+            }}
+            onClose={() => setActiveStickerStoryId(null)}
+          />
+        </View>
+      )}
 
       {/* ── Guides ─────────────────────────────────────────── */}
       {activeTab === 'Guides' && (
@@ -825,6 +845,15 @@ function PeopleNoResults({ colors }: { colors: any }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+
+  // Sticker picker overlay — screen-level so it's never clipped by card overflow:hidden
+  stickerOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    zIndex: 999,
+  },
+  stickerBackdrop: {
+    position: 'absolute', top: -2000, left: 0, right: 0, bottom: 0,
+  },
 
   // Header
   headerRow: {
