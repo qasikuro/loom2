@@ -1054,6 +1054,14 @@ export default function CharacterScreen() {
                 <Text style={[styles.usernameError, { color: colors.destructive }]}>{usernameError}</Text>
               )}
 
+              {constellation?.activeTitle && (
+                <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={{ fontSize: 11, color: '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 }}>
+                    ✦ {constellation.activeTitle}
+                  </Text>
+                </View>
+              )}
+
               {editingBio ? (
                 <TextInput
                   style={[styles.bioInput, { color: '#FFFFFF', borderColor: colors.primary, backgroundColor: 'rgba(255,255,255,0.08)' }]}
@@ -1765,6 +1773,44 @@ export default function CharacterScreen() {
             <View style={{ paddingHorizontal: 16, marginTop: 2 }}>
               <ConstellationMap state={constellation} />
             </View>
+
+            {/* Progress legend — 6 stars with counts */}
+            {constellation && (() => {
+              const rows = [
+                { label: 'Social',   count: constellation.socialCount,   threshold: 5,  color: '#78C8A8', icon: '⬡' },
+                { label: 'Memory',   count: constellation.memoryCount,   threshold: 10, color: '#9878C8', icon: '◇' },
+                { label: 'Quiet',    count: constellation.quietStreak,   threshold: 7,  color: '#7890C8', icon: '◐' },
+                { label: 'Creative', count: constellation.creativeCount, threshold: 5,  color: '#C87AA8', icon: '◈' },
+                { label: 'Helping',  count: constellation.helpingCount,  threshold: 20, color: '#C8A84B', icon: '✦' },
+                { label: 'Seasonal', count: constellation.seasonalCount, threshold: 3,  color: '#68B8B0', icon: '✿' },
+              ];
+              return (
+                <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4, gap: 6 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {rows.map(r => {
+                      const done = constellation.unlockedStars.includes(r.label.toLowerCase());
+                      const pct  = Math.min(1, r.count / r.threshold);
+                      return (
+                        <View key={r.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: done ? `${r.color}18` : 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: done ? `${r.color}40` : 'rgba(255,255,255,0.08)' }}>
+                          <Text style={{ fontSize: 9, color: done ? r.color : 'rgba(200,184,232,0.35)' }}>{r.icon}</Text>
+                          <Text style={{ fontSize: 10, color: done ? r.color : 'rgba(200,184,232,0.50)', fontFamily: 'Satoshi-Medium' }}>{r.label}</Text>
+                          {!done && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                              <View style={{ width: 24, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+                                <View style={{ width: `${pct * 100}%`, height: '100%', backgroundColor: r.color, opacity: 0.7 }} />
+                              </View>
+                              <Text style={{ fontSize: 9, color: 'rgba(200,184,232,0.40)', fontFamily: 'Satoshi-Regular' }}>{r.count}/{r.threshold}</Text>
+                            </View>
+                          )}
+                          {done && <Text style={{ fontSize: 9, color: r.color }}>✓</Text>}
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              );
+            })()}
+
             {!constellation && (
               <View style={[styles.hEmptyCard, { marginHorizontal: 16, backgroundColor: 'rgba(107,91,149,0.06)', borderColor: 'rgba(107,91,149,0.15)' }]}>
                 <View style={[styles.hEmptyIconWrap, { backgroundColor: 'rgba(107,91,149,0.10)' }]}>

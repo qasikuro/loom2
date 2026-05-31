@@ -568,7 +568,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Reward balance — if loaded */}
-          {rewardBalance && (rewardBalance.stars > 0 || rewardBalance.auraEnergy > 0 || rewardBalance.memoryShards > 0) && (
+          {rewardBalance && (
             <View style={{ alignItems: 'center', paddingBottom: 16, paddingTop: 4 }}>
               <RewardBalance
                 stars={rewardBalance.stars}

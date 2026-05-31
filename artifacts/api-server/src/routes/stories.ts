@@ -301,6 +301,7 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
     // Reward witness for their daily presence
     const today = new Date().toISOString().slice(0, 10);
     grantReward(db as any, actorId, "daily_presence", today).catch(() => null);
+    syncConstellation(db as any, actorId).catch(() => null);
 
     return res.json(serializeStory(updated));
   } catch (err) {

@@ -845,6 +845,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => null);
   }, []);
 
+  // ── Inline reward toast helper (defined early so mutations can use it) ──────
+
+  const fireToast = useCallback((label: string, amounts: { stars?: number; aura?: number; shards?: number }) => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    setRewards(prev => [...prev, {
+      id, message: label, icon: 'star' as const,
+      stars: amounts.stars, aura: amounts.aura, shards: amounts.shards,
+    }]);
+    setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 3500);
+  }, []);
+
   // ── Journal entries ────────────────────────────────────────────────────────
 
   const addJournalEntry = useCallback((entry: JournalEntry) => {
@@ -853,6 +864,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
       return updated;
     });
+    fireToast('Journal entry', { stars: 2, aura: 1, shards: 3 });
     apiFetch('/journal-entries', {
       method: 'POST',
       body:   JSON.stringify({
@@ -865,7 +877,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         friendName: entry.friendName ?? null,
       }),
     }).catch(() => null);
-  }, []);
+  }, [fireToast]);
 
   const deleteJournalEntry = useCallback((id: string) => {
     setJournalEntries(prev => {
@@ -906,6 +918,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           pages:         story.pages ?? null,
         }),
       });
+      fireToast('Story created', { stars: 3, aura: 2, shards: 1 });
       loadSocialData();
       return true;
     } catch {
@@ -1048,27 +1061,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const toggleSavePost = useCallback((id: string) => {
     setSavedStoryIds(prev => {
-      const next    = new Set(prev);
+      const next     = new Set(prev);
       const wasSaved = next.has(id);
-      if (wasSaved) next.delete(id); else next.add(id);
+      if (wasSaved) next.delete(id); else { next.add(id); fireToast('Story saved', { stars: 2, shards: 2 }); }
       AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
       apiFetch(`/stories/${id}/save`, { method: wasSaved ? 'DELETE' : 'POST' }).catch(() => null);
       return next;
     });
-  }, []);
+  }, [fireToast]);
 
   // ── Social: follow / unfollow ──────────────────────────────────────────────
 
   const followUser = useCallback((targetUserId: string) => {
-    setFollowingIds(prev =>
-      prev.includes(targetUserId) ? prev : [...prev, targetUserId],
-    );
+    setFollowingIds(prev => {
+      if (prev.includes(targetUserId)) return prev;
+      fireToast('New connection', { stars: 1, aura: 1 });
+      return [...prev, targetUserId];
+    });
     apiFetch(`/follows/${targetUserId}`, { method: 'POST' })
       .then(() => fetchFriends())
       .catch(() => {
         setFollowingIds(prev => prev.filter(id => id !== targetUserId));
       });
-  }, []);
+  }, [fireToast]);
 
   const unfollowUser = useCallback((targetUserId: string) => {
     setFollowingIds(prev => prev.filter(id => id !== targetUserId));
@@ -1087,21 +1102,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRewards(prev => prev.filter(r => r.id !== id));
   }, []);
 
-  const showRewardToast = useCallback((label: string, amounts: { stars?: number; aura?: number; shards?: number }) => {
-    const id = `toast-${Date.now()}-${Math.random()}`;
-    const reward: Reward = {
-      id,
-      message: label,
-      icon:    'star',
-      stars:   amounts.stars,
-      aura:    amounts.aura,
-      shards:  amounts.shards,
-    };
-    setRewards(prev => [...prev, reward]);
-    setTimeout(() => {
-      setRewards(prev => prev.filter(r => r.id !== id));
-    }, 3500);
-  }, []);
+  const showRewardToast = fireToast;
 
   const reloadRewards = useCallback(async () => {
     try {
