@@ -70,15 +70,56 @@ function liveNow(avail: GuideAvailability | null | undefined): boolean {
   const [tH = 0, tM = 0] = avail.timeTo.split(':').map(Number);
   return cur >= fH * 60 + fM && cur < tH * 60 + tM;
 }
-function lumiLine(name: string, entries: any[], stories: any[], unread: number, hour: number) {
+// Lumi is aware of what actually happened — she synthesises the real world
+function lumiAwareness(
+  name: string,
+  witnessed: number,
+  saved: number,
+  newCircleStories: number,
+  liveCampfires: number,
+  entries: any[],
+  stories: any[],
+  hour: number,
+): string {
   const n = name || 'sky child';
-  if (unread > 0) return `${unread} new thing${unread > 1 ? 's' : ''} while you were away`;
-  const todayCount = entries.filter(e => new Date(e.date).toDateString() === new Date().toDateString()).length;
-  if (hour < 6)  return 'The stars kept watch while you slept';
-  if (hour < 12) return todayCount ? `Good morning, ${n}` : 'What story will today hold?';
-  if (hour < 17) return todayCount ? `${todayCount} ${todayCount === 1 ? 'memory' : 'memories'} written today` : 'The afternoon sky is all yours';
-  if (hour < 20) return stories.length ? `Your ${stories.length === 1 ? 'story glows' : `${stories.length} stories glow`} out there` : 'Golden hour. A good time to write.';
-  return todayCount === 0 ? 'The night is soft… write something?' : `Tonight's sky is yours`;
+  const todayEntries = entries.filter((e: any) =>
+    new Date(e.date).toDateString() === new Date().toDateString()).length;
+
+  if (witnessed > 0 && saved > 0 && newCircleStories > 0)
+    return `${witnessed} souls witnessed you, ${saved} carried your story — and your circle wrote ${newCircleStories} new chapter${newCircleStories > 1 ? 's' : ''} while you were away`;
+  if (witnessed > 0 && newCircleStories > 0)
+    return `${witnessed} soul${witnessed > 1 ? 's' : ''} found your story, and ${newCircleStories} new chapter${newCircleStories > 1 ? 's' : ''} glow from your circle`;
+  if (witnessed > 0 && liveCampfires > 0)
+    return `${witnessed} soul${witnessed > 1 ? 's' : ''} witnessed you while you were away — and ${liveCampfires} campfire${liveCampfires > 1 ? 's are' : ' is'} burning right now`;
+  if (witnessed > 0 && saved > 0)
+    return `${witnessed} witnessed your story. ${saved} person${saved > 1 ? 's' : ''} saved it — your words are travelling`;
+  if (witnessed > 0)
+    return `${witnessed} soul${witnessed > 1 ? 's' : ''} witnessed your story while you were in the clouds, ${n}`;
+  if (saved > 0 && newCircleStories > 0)
+    return `${saved} person${saved > 1 ? 's' : ''} saved what you made. Your circle added ${newCircleStories} new chapter${newCircleStories > 1 ? 's' : ''}`;
+  if (saved > 0)
+    return `${saved} person${saved > 1 ? 's' : ''} saved your story — your words stayed with them`;
+  if (newCircleStories > 0 && liveCampfires > 0)
+    return `${newCircleStories} new ${newCircleStories === 1 ? 'chapter' : 'chapters'} from your circle, and ${liveCampfires} campfire${liveCampfires > 1 ? 's are' : ' is'} lit — the sky has been alive`;
+  if (newCircleStories > 0)
+    return newCircleStories === 1
+      ? 'Someone in your circle wrote a new chapter — the sky has been busy'
+      : `${newCircleStories} new chapters from your circle — go see what they made`;
+  if (liveCampfires > 0)
+    return `${liveCampfires} campfire${liveCampfires > 1 ? 's are' : ' is'} lit right now — someone is waiting in the warmth`;
+
+  // Poetic time-aware fallback when the world is quiet
+  if (hour < 6)  return `The stars have been keeping watch, ${n}. The sky is all yours right now`;
+  if (hour < 12) return todayEntries
+    ? `Good morning, ${n} — you already wrote ${todayEntries} ${todayEntries === 1 ? 'memory' : 'memories'} today`
+    : `The morning sky is fresh, ${n} — what will today hold?`;
+  if (hour < 17) return stories.length
+    ? `${stories.length} ${stories.length === 1 ? 'story glows' : 'stories glow'} out there — the afternoon is still yours`
+    : `The afternoon sky is all yours, ${n} — begin something`;
+  if (hour < 20) return 'Golden hour. Someone out there is always watching the sky';
+  return todayEntries === 0
+    ? `The night is soft, ${n} — a perfect time to write something small`
+    : `Tonight's sky is yours — you wrote ${todayEntries} ${todayEntries === 1 ? 'memory' : 'memories'} today`;
 }
 
 // ─── Breathing ring ──────────────────────────────────────────────────────────
@@ -224,6 +265,12 @@ export default function HomeScreen() {
 
   const circleStories = discoverPosts.filter(p => p.isFollowing).slice(0, 10);
 
+  // ── Activity digest — what changed in the world while you were away ──────────
+  const witnessedNotifs   = serverNotifications.filter(n => n.type === 'witness').length;
+  const savedNotifs       = serverNotifications.filter(n => n.type === 'save').length;
+  const newStoryNotifs    = serverNotifications.filter(n => n.type === 'new_story').length;
+  const hasDigest = witnessedNotifs > 0 || savedNotifs > 0 || circleStories.length > 0 || newStoryNotifs > 0;
+
   const myCampfire: GuideProfile | null = character.isGuide ? {
     userId: 'me', name: character.name || 'Sky Child',
     username: character.username ?? null, bio: character.bio,
@@ -295,6 +342,8 @@ export default function HomeScreen() {
     ...(myCampfire ? [{ guide: myCampfire, isMine: true }] : []),
     ...myGuides.slice(0, 5).map(g => ({ guide: g, isMine: false })),
   ];
+  const liveCampfireCount = campfires.filter(c =>
+    c.guide.isAvailableNow || liveNow(c.guide.guideAvailability ?? null)).length;
 
   return (
     <Animated.View style={[s.root, { opacity: fadeIn }]}>
@@ -380,22 +429,6 @@ export default function HomeScreen() {
               )}
             </View>
 
-            {/* Greeting — the single emotional focal line */}
-            <Text style={s.heroGreeting}>
-              {lumiLine(character.name, journalEntries, stories, unread, hour)} ✦
-            </Text>
-
-            {/* Primary CTA — one clear action */}
-            <TouchableOpacity
-              style={[s.heroCTA, { borderColor: `${accent}25`, backgroundColor: `${accent}14` }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('tap'); router.push('/(tabs)/create'); }}
-              activeOpacity={0.78}
-            >
-              <LinearGradient colors={[`${accent}28`, `${accent}06`]} style={StyleSheet.absoluteFill} />
-              <Icon name="feather" size={15} color={accent} />
-              <Text style={[s.heroCTAText, { color: accent }]}>Begin a story</Text>
-              <Icon name="chevron-right" size={14} color={`${accent}60`} />
-            </TouchableOpacity>
           </View>
 
           {/* ── Stats row ── */}
@@ -431,6 +464,112 @@ export default function HomeScreen() {
             pointerEvents="none"
           />
         </View>
+
+        {/* ══════════════════════════════════════════════════
+            LUMI — aware companion who synthesises the world
+        ══════════════════════════════════════════════════ */}
+        <TouchableOpacity
+          style={s.lumiBlock}
+          onPress={() => {
+            if (hasNotifs) { setShowNotifs(true); markServerNotificationsRead(); }
+            else router.push('/(tabs)/create');
+          }}
+          activeOpacity={0.88}
+        >
+          <LinearGradient
+            colors={[`${accent}18`, `${accent}08`, 'transparent']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          <Image source={Images.character_default} style={s.lumiAvatar} contentFit="contain" />
+          <View style={{ flex: 1 }}>
+            <Text style={s.lumiLabel}>Lumi</Text>
+            <Text style={s.lumiMsg}>
+              {lumiAwareness(
+                character.name, witnessedNotifs, savedNotifs,
+                circleStories.length, liveCampfireCount,
+                journalEntries, stories, hour,
+              )} ✦
+            </Text>
+          </View>
+          {hasNotifs && (
+            <View style={[s.lumiBadge, { backgroundColor: accent }]}>
+              <Text style={s.lumiBadgeN}>{rewards.length + unread}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {/* ══════════════════════════════════════════════════
+            ACTIVITY DIGEST — what changed while you were away
+        ══════════════════════════════════════════════════ */}
+        {hasDigest && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.digestRow}
+          >
+            {witnessedNotifs > 0 && (
+              <TouchableOpacity
+                style={[s.digestPill, { backgroundColor: 'rgba(200,168,75,0.14)' }]}
+                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}
+                activeOpacity={0.78}
+              >
+                <Icon name="eye" size={13} color="#C8A84B" />
+                <Text style={[s.digestTxt, { color: '#C8A84B' }]}>
+                  {witnessedNotifs} witnessed you
+                </Text>
+              </TouchableOpacity>
+            )}
+            {savedNotifs > 0 && (
+              <TouchableOpacity
+                style={[s.digestPill, { backgroundColor: 'rgba(168,128,248,0.14)' }]}
+                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}
+                activeOpacity={0.78}
+              >
+                <Icon name="bookmark" size={13} color="#A880F8" />
+                <Text style={[s.digestTxt, { color: '#A880F8' }]}>
+                  {savedNotifs} saved your work
+                </Text>
+              </TouchableOpacity>
+            )}
+            {circleStories.length > 0 && (
+              <TouchableOpacity
+                style={[s.digestPill, { backgroundColor: 'rgba(96,200,248,0.14)' }]}
+                onPress={() => router.push('/(tabs)/discover')}
+                activeOpacity={0.78}
+              >
+                <Icon name="book-open" size={13} color="#60C8F8" />
+                <Text style={[s.digestTxt, { color: '#60C8F8' }]}>
+                  {circleStories.length} new {circleStories.length === 1 ? 'story' : 'stories'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {liveCampfireCount > 0 && (
+              <TouchableOpacity
+                style={[s.digestPill, { backgroundColor: 'rgba(232,164,80,0.14)' }]}
+                onPress={() => router.push('/(tabs)/discover')}
+                activeOpacity={0.78}
+              >
+                <Text style={{ fontSize: 13, lineHeight: 16 }}>🔥</Text>
+                <Text style={[s.digestTxt, { color: '#E8A450' }]}>
+                  {liveCampfireCount} campfire{liveCampfireCount > 1 ? 's' : ''} live
+                </Text>
+              </TouchableOpacity>
+            )}
+            {newStoryNotifs > 0 && witnessedNotifs === 0 && savedNotifs === 0 && (
+              <TouchableOpacity
+                style={[s.digestPill, { backgroundColor: 'rgba(96,200,168,0.14)' }]}
+                onPress={() => router.push('/(tabs)/discover')}
+                activeOpacity={0.78}
+              >
+                <Icon name="users" size={13} color="#60C8A8" />
+                <Text style={[s.digestTxt, { color: '#60C8A8' }]}>
+                  {newStoryNotifs} circle update{newStoryNotifs > 1 ? 's' : ''}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        )}
 
         {/* ══════════════════════════════════════════════════
             YOUR CIRCLE — stories from people you follow
@@ -694,6 +833,25 @@ const s = StyleSheet.create({
   emptyStories:{ paddingHorizontal: 20, paddingVertical: 20, alignItems: 'center', gap: 6 },
   emptyStoriesText: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.42)' },
   emptyStoriesSub:  { fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,200,0.30)', fontStyle: 'italic' },
+
+  // ── Lumi companion block ───────────────────────────────────────────────────
+  lumiBlock:   {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    marginHorizontal: 16, marginTop: 2, marginBottom: 4,
+    paddingHorizontal: 18, paddingVertical: 16,
+    borderRadius: 20, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  lumiAvatar:  { width: 52, height: 52 },
+  lumiLabel:   { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.6, color: 'rgba(200,185,255,0.40)', marginBottom: 5, textTransform: 'uppercase' },
+  lumiMsg:     { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(220,205,255,0.72)', lineHeight: 20 },
+  lumiBadge:   { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
+  lumiBadgeN:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#fff' },
+
+  // ── Activity digest strip ──────────────────────────────────────────────────
+  digestRow:   { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
+  digestPill:  { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20 },
+  digestTxt:   { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 
   // ── Find Friends — ambient, at bottom ─────────────────────────────────────
   findFriends:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 12, marginTop: 4, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 16 },
