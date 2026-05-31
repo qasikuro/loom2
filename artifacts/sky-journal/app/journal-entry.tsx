@@ -40,12 +40,34 @@ const TYPE_CFG = {
   moment: { label: 'Quick Moment',  icon: 'moon'    as const,   accent: '#5848A8', bg: 'rgba(88,72,168,0.14)'   },
 };
 
+// ── Journal theme palettes for the full entry reader ──────────────────────────
+const READER_THEME: Record<string, {
+  headerGradient: readonly [string, string, string];
+  accentStrip: string;
+  cardBg: string;
+  cardBorder: string;
+}> = {
+  theme_locket: {
+    headerGradient: ['#2A1D00', '#3D2C08', '#4A3812'] as const,
+    accentStrip:    '#C8A84B',
+    cardBg:         'rgba(200,168,75,0.08)',
+    cardBorder:     'rgba(200,168,75,0.25)',
+  },
+  theme_aurora: {
+    headerGradient: ['#001827', '#082233', '#102E42'] as const,
+    accentStrip:    '#78B4DC',
+    cardBg:         'rgba(120,180,220,0.08)',
+    cardBorder:     'rgba(120,180,220,0.25)',
+  },
+};
+
 export default function JournalEntryScreen() {
   const colors  = useColors();
   const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { id }  = useLocalSearchParams<{ id: string }>();
-  const { journalEntries } = useApp();
+  const { journalEntries, activeCosmetics } = useApp();
+  const activeTheme = activeCosmetics['theme'] as string | undefined;
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 40 : insets.bottom + 24;
@@ -69,11 +91,17 @@ export default function JournalEntryScreen() {
   const displayName = entry.type === 'friend' ? (entry.friendName ?? 'Someone') : cfg.label;
   const initial = entry.type === 'friend' ? (entry.friendName?.[0] ?? '?').toUpperCase() : null;
 
+  // Apply journal theme only to diary entries (same rule as timeline card)
+  const ts = (entry.type === 'diary' && activeTheme) ? READER_THEME[activeTheme] ?? null : null;
+  const headerGradient: [string, string, string] = ts
+    ? [ts.headerGradient[0], ts.headerGradient[1], ts.headerGradient[2]]
+    : ['#1A1640', '#23205C', '#2A2478'];
+
   return (
     <View style={[s.root, { backgroundColor: colors.background }]}>
       {/* ── Gradient header ──────────────────────────────────── */}
       <LinearGradient
-        colors={['#1A1640', '#23205C', '#2A2478']}
+        colors={headerGradient}
         style={[s.header, { paddingTop: topPad + 8 }]}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       >
@@ -124,9 +152,14 @@ export default function JournalEntryScreen() {
 
         {/* Text body */}
         {entry.text ? (
-          <View style={[s.textCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+          <View style={[s.textCard, {
+            backgroundColor: ts ? ts.cardBg : colors.card,
+            borderColor:     ts ? ts.cardBorder : colors.border,
+          }, SHADOW.xs]}>
             {entry.type === 'moment' ? (
               <View style={[s.momentStripe, { backgroundColor: '#5848A8' }]} />
+            ) : ts ? (
+              <View style={[s.momentStripe, { backgroundColor: ts.accentStrip }]} />
             ) : null}
             <Text style={[
               s.bodyText,
