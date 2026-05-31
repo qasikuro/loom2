@@ -590,13 +590,15 @@ export default function HomeScreen() {
       .catch(() => {});
   }, []);
 
-  // Auto-dismiss the front reward banner after 4 s (prevents stacking)
-  const firstRewardId = rewards[0]?.id ?? null;
+  // Auto-dismiss the front reward banner after 4 s (prevents stacking).
+  // Star unlock banners are excluded — they self-manage via the drain queue in AppContext.
+  const firstReward = rewards[0] ?? null;
+  const firstRewardId = firstReward?.id ?? null;
   useEffect(() => {
-    if (!firstRewardId) return;
+    if (!firstRewardId || firstReward?.starUnlock) return;
     const timer = setTimeout(() => dismissReward(firstRewardId), 4000);
     return () => clearTimeout(timer);
-  }, [firstRewardId]);
+  }, [firstRewardId, firstReward?.starUnlock]);
 
   async function dismissConstellationIntro() {
     setShowConstellationIntro(false);

@@ -940,7 +940,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Inline reward toast helper (defined early so mutations can use it) ──────
 
-  // nextSlotRef tracks when the queue will next be free so rewards never overlap.
+  // nextSlotRef tracks when the queue will next be free so regular currency toasts never overlap.
   const nextSlotRef = useRef(0);
 
   const fireToast = useCallback((label: string, amounts: { stars?: number; aura?: number; shards?: number }) => {
@@ -958,24 +958,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (wait <= 0) { doAdd(); } else { setTimeout(doAdd, wait); }
   }, []);
 
-  // Fires a celebration banner for a newly-unlocked constellation star.
-  // Stays on screen longer (6 s) than a regular currency toast.
-  const fireStarUnlockToast = useCallback((starKey: string) => {
-    const now  = Date.now();
-    const wait = Math.max(0, nextSlotRef.current - now);
-    nextSlotRef.current = now + wait + 6100; // 6 s shown + 100 ms gap
-    const id = `star-unlock-${starKey}-${Date.now()}`;
-    const doAdd = () => {
+  // ── Star-unlock sequential queue ─────────────────────────────────────────────
+  // Star unlock banners are shown one at a time: each waits for the previous to
+  // fully expire before appearing. This prevents stacking when multiple stars
+  // unlock at once (e.g. after a long absence).
+  const starUnlockQueueRef  = useRef<string[]>([]);
+  const starUnlockActiveRef = useRef(false);
+
+  const drainStarUnlockQueue = useCallback(() => {
+    // Guard covers both "currently showing" AND "already scheduled but waiting
+    // for a currency-toast slot" — set to true before any setTimeout so that
+    // multiple simultaneous loop calls can't each schedule their own show().
+    if (starUnlockActiveRef.current) return;
+    const starKey = starUnlockQueueRef.current.shift();
+    if (!starKey) return;                           // queue is empty
+
+    // Claim the slot immediately so re-entrant calls bail out.
+    starUnlockActiveRef.current = true;
+
+    // Wait until any active currency toast has finished so the star unlock
+    // banner becomes rewards[0] the instant it is inserted — meaning its
+    // 6-second removal timer starts exactly when it becomes visible.
+    const waitForSlot = Math.max(0, nextSlotRef.current - Date.now());
+
+    const show = () => {
+      // Reserve the display slot so currency toasts queue behind this banner.
+      nextSlotRef.current = Date.now() + 6100;
+      const id = `star-unlock-${starKey}-${Date.now()}`;
       setRewards(prev => [...prev, {
         id,
         message:    STAR_META[starKey]?.name ?? starKey,
         icon:       'star' as const,
         starUnlock: starKey,
       }]);
-      setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 6000);
+      // After 6 s display + 100 ms gap, release the slot and drain next item.
+      setTimeout(() => {
+        setRewards(prev => prev.filter(r => r.id !== id));
+        starUnlockActiveRef.current = false;
+        drainStarUnlockQueue();
+      }, 6100);
     };
-    if (wait <= 0) { doAdd(); } else { setTimeout(doAdd, wait); }
+
+    if (waitForSlot <= 0) { show(); } else { setTimeout(show, waitForSlot); }
   }, []);
+
+  // Fires a celebration banner for a newly-unlocked constellation star.
+  // Stays on screen longer (6 s) than a regular currency toast.
+  const fireStarUnlockToast = useCallback((starKey: string) => {
+    starUnlockQueueRef.current.push(starKey);
+    drainStarUnlockQueue();
+  }, [drainStarUnlockQueue]);
 
   // ── Reload helpers — defined before mutations so callbacks can call them ────
 
