@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useApp, type GuideAvailability, type GuideProfile, type DiscoverPost,
+  type ConstellationState, type RewardBalance as RewardBalanceData,
 } from '@/context/AppContext';
 import { RewardBalance } from '@/components/RewardBalance';
 import { useSound } from '@/context/SoundContext';
@@ -71,6 +72,27 @@ function liveNow(avail: GuideAvailability | null | undefined): boolean {
   const [tH = 0, tM = 0] = avail.timeTo.split(':').map(Number);
   return cur >= fH * 60 + fM && cur < tH * 60 + tM;
 }
+// ─── Constellation star definitions (matches ConstellationMap.tsx) ───────────
+const STAR_DEFS = [
+  { key: 'social',   label: 'Social',   getCount: (c: ConstellationState) => c.socialCount,   threshold: 5,  unit: 'connections',  color: '#78C8A8', action: 'Follow friends & swap stickers in Discover' },
+  { key: 'memory',   label: 'Memory',   getCount: (c: ConstellationState) => c.memoryCount,   threshold: 10, unit: 'memories',     color: '#9878C8', action: 'Write in your journal a little more' },
+  { key: 'quiet',    label: 'Quiet',    getCount: (c: ConstellationState) => c.quietStreak,   threshold: 7,  unit: 'day streak',   color: '#7890C8', action: 'Journal every day to build your streak' },
+  { key: 'creative', label: 'Creative', getCount: (c: ConstellationState) => c.creativeCount, threshold: 5,  unit: 'stories',      color: '#C87AA8', action: 'Create and share a few more stories' },
+  { key: 'helping',  label: 'Helping',  getCount: (c: ConstellationState) => c.helpingCount,  threshold: 20, unit: 'stickers sent',color: '#C8A84B', action: 'Send stickers to stories you love in Discover' },
+  { key: 'seasonal', label: 'Seasonal', getCount: (c: ConstellationState) => c.seasonalCount, threshold: 3,  unit: 'stars',        color: '#68B8B0', action: 'Keep unlocking other stars to light this one' },
+] as const;
+
+/** Returns the locked star closest to its unlock threshold (0–1), or null if all unlocked */
+function closestLockedStar(c: ConstellationState) {
+  const locked = STAR_DEFS.filter(d => !c.unlockedStars.includes(d.key));
+  if (!locked.length) return null;
+  return locked.reduce<typeof STAR_DEFS[number]>((best, d) => {
+    const bp = Math.min(1, best.getCount(c) / best.threshold);
+    const dp = Math.min(1, d.getCount(c) / d.threshold);
+    return dp > bp ? d : best;
+  }, locked[0]!);
+}
+
 // Lumi is aware of what actually happened — she synthesises the real world
 function lumiAwareness(
   name: string,
@@ -81,11 +103,14 @@ function lumiAwareness(
   entries: any[],
   stories: any[],
   hour: number,
+  constellation?: ConstellationState | null,
+  rewardBalance?: RewardBalanceData | null,
 ): string {
   const n = name || 'sky child';
   const todayEntries = entries.filter((e: any) =>
     new Date(e.date).toDateString() === new Date().toDateString()).length;
 
+  // Social activity — highest priority
   if (witnessed > 0 && saved > 0 && newCircleStories > 0)
     return `${witnessed} souls witnessed you, ${saved} carried your story — and your circle wrote ${newCircleStories} new chapter${newCircleStories > 1 ? 's' : ''} while you were away`;
   if (witnessed > 0 && newCircleStories > 0)
@@ -109,7 +134,24 @@ function lumiAwareness(
   if (liveCampfires > 0)
     return `${liveCampfires} campfire${liveCampfires > 1 ? 's are' : ' is'} lit right now — someone is waiting in the warmth`;
 
-  // Poetic time-aware fallback when the world is quiet
+  // ── Constellation awareness — when the world is quiet, Lumi reflects on your journey ──
+  if (constellation) {
+    const unlocked = constellation.unlockedStars.length;
+    if (unlocked === 6)
+      return `All six stars shine in your sky, ${n}. You are a Child of the Sky — the journey never ends`;
+    if (unlocked >= 4)
+      return `${unlocked} stars glow in your constellation, ${n}. Only ${6 - unlocked} more wait for your light`;
+    if (unlocked >= 2)
+      return `${unlocked} stars glow in your sky, ${n} — you are becoming luminous`;
+    if (unlocked === 1)
+      return `Your first star glows, ${n}${constellation.activeTitle ? ` — ${constellation.activeTitle}` : ''}. Keep showing up`;
+    if (constellation.quietStreak >= 5 && !constellation.unlockedStars.includes('quiet'))
+      return `${constellation.quietStreak} days of writing in a row, ${n} — your Quiet Star is almost within reach`;
+    if (rewardBalance && rewardBalance.stars >= 6)
+      return `✦ ${rewardBalance.stars} stars gathered so far, ${n}. You are building something luminous`;
+  }
+
+  // Poetic time-aware fallback
   if (hour < 6)  return `The stars have been keeping watch, ${n}. The sky is all yours right now`;
   if (hour < 12) return todayEntries
     ? `Good morning, ${n} — you already wrote ${todayEntries} ${todayEntries === 1 ? 'memory' : 'memories'} today`
@@ -320,7 +362,7 @@ export default function HomeScreen() {
     friends, discoverPosts, followingIds,
     rewards, serverNotifications,
     markServerNotificationsRead, deleteServerNotification, dismissReward,
-    reloadData, myGuides, rewardBalance,
+    reloadData, myGuides, rewardBalance, constellation,
   } = useApp();
   const { playSound } = useSound();
 
@@ -345,6 +387,13 @@ export default function HomeScreen() {
 
   const totalWitnessed = stories.reduce((s, x) => s + (x.witnessedCount ?? 0), 0);
   const totalSaved     = stories.reduce((s, x) => s + (x.savedCount ?? 0), 0);
+
+  // Next star to unlock (highest % progress among locked stars)
+  const nextStar = constellation ? closestLockedStar(constellation) : null;
+  const nextStarPct = (nextStar && constellation)
+    ? Math.min(1, nextStar.getCount(constellation) / nextStar.threshold)
+    : 0;
+  const nextStarCount = (nextStar && constellation) ? nextStar.getCount(constellation) : 0;
 
   const circleStories = discoverPosts.filter(p => p.isFollowing).slice(0, 10);
 
@@ -383,13 +432,14 @@ export default function HomeScreen() {
   const s4 = useRef(new Animated.Value(0)).current;
   const s5 = useRef(new Animated.Value(0)).current;
   const s6 = useRef(new Animated.Value(0)).current;
+  const s7 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 700, useNativeDriver: true, easing: Easing.out(Easing.quad) }).start();
     // Stagger sections in after a short hero settle
     Animated.sequence([
       Animated.delay(200),
-      Animated.stagger(70, [s0, s1, s2, s3, s4, s5, s6].map(v =>
+      Animated.stagger(70, [s0, s1, s2, s3, s4, s5, s6, s7].map(v =>
         Animated.timing(v, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true })
       )),
     ]).start();
@@ -567,16 +617,23 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Reward balance — if loaded */}
+          {/* Reward balance — tappable, links to constellation on profile */}
           {rewardBalance && (
-            <View style={{ alignItems: 'center', paddingBottom: 16, paddingTop: 4 }}>
+            <TouchableOpacity
+              style={{ alignItems: 'center', paddingBottom: 10, paddingTop: 4 }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
+              activeOpacity={0.8}
+            >
               <RewardBalance
                 stars={rewardBalance.stars}
                 auraEnergy={rewardBalance.auraEnergy}
                 memoryShards={rewardBalance.memoryShards}
                 size="sm"
               />
-            </View>
+              <Text style={{ fontSize: 10, color: 'rgba(200,184,232,0.40)', marginTop: 4, letterSpacing: 0.6 }}>
+                view constellation →
+              </Text>
+            </TouchableOpacity>
           )}
 
           {/* Bottom fade to dark */}
@@ -632,6 +689,7 @@ export default function HomeScreen() {
                 character.name, witnessedNotifs, savedNotifs,
                 circleStories.length, liveCampfireCount,
                 journalEntries, stories, hour,
+                constellation, rewardBalance,
               )} ✦
             </Text>
           </View>
@@ -642,6 +700,73 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
         </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            STAR JOURNEY NUDGE — next constellation milestone
+        ══════════════════════════════════════════════════ */}
+        {nextStar && (
+          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
+          <TouchableOpacity
+            style={s.nudgeCard}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[`${nextStar.color}1A`, `${nextStar.color}08`, 'transparent']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Star glow orb */}
+            <View style={[s.nudgeOrb, { backgroundColor: nextStar.color }]} />
+
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>NEXT STAR</Text>
+                <View style={[s.nudgeDot, { backgroundColor: nextStar.color }]} />
+                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>{nextStar.label}</Text>
+              </View>
+
+              {/* Progress bar */}
+              <View style={s.nudgeTrack}>
+                <View style={[s.nudgeFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} />
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
+                <Text style={s.nudgeAction}>{nextStar.action}</Text>
+                <Text style={[s.nudgeFraction, { color: nextStar.color }]}>
+                  {nextStarCount} / {nextStar.threshold} {nextStar.unit}
+                </Text>
+              </View>
+            </View>
+
+            <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Show "all stars lit" celebration when constellation complete */}
+        {constellation && constellation.unlockedStars.length === 6 && (
+          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
+          <TouchableOpacity
+            style={s.nudgeCard}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['rgba(168,136,248,0.12)', 'rgba(96,200,248,0.08)', 'transparent']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.nudgeEyebrow, { color: '#A888F8', marginBottom: 3 }]}>CONSTELLATION COMPLETE</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(220,210,255,0.80)', fontWeight: '500', letterSpacing: 0.1 }}>
+                ✦ ✦ ✦ ✦ ✦ ✦{'  '}All six stars glow in your sky
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* ══════════════════════════════════════════════════
             ACTIVITY DIGEST — what changed while you were away
@@ -1029,6 +1154,27 @@ const s = StyleSheet.create({
   lumiMsg:     { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(220,205,255,0.72)', lineHeight: 20 },
   lumiBadge:   { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
   lumiBadgeN:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#fff' },
+
+  // ── Star journey nudge card ────────────────────────────────────────────────
+  nudgeCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    marginHorizontal: 16, marginTop: 6, marginBottom: 4,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderRadius: 18, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+  },
+  nudgeOrb: {
+    width: 7, height: 7, borderRadius: 4,
+    opacity: 0.65,
+    shadowRadius: 8, shadowOpacity: 0.9, shadowOffset: { width: 0, height: 0 },
+  },
+  nudgeDot:      { width: 3, height: 3, borderRadius: 2, opacity: 0.6 },
+  nudgeEyebrow:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, textTransform: 'uppercase', opacity: 0.75 },
+  nudgeTrack:    { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginVertical: 1 },
+  nudgeFill:     { height: 3, borderRadius: 2, opacity: 0.75 },
+  nudgeAction:   { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', flex: 1, marginRight: 8 },
+  nudgeFraction: { fontSize: 11, fontFamily: 'Satoshi-Bold', opacity: 0.70 },
 
   // ── Activity digest strip ──────────────────────────────────────────────────
   digestRow:   { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
