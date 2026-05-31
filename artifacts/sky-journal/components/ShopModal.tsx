@@ -11,11 +11,14 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
+
+const COLLECTION_CACHE_KEY = 'collection_v1';
 
 // ── Seasonal constants ────────────────────────────────────────────────────────
 
@@ -350,30 +353,84 @@ interface CollectionTabProps {
 function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
   const colors  = useColors();
   const { activeCosmetics, setActiveCosmetic } = useApp();
-  const [purchases, setPurchases] = useState<PurchaseEntry[]>([]);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState(false);
-  const hasFetched = useRef(false);
+  const [purchases,      setPurchases]      = useState<PurchaseEntry[]>([]);
+  const [initialLoading, setInitialLoading] = useState(false);
+  const [error,          setError]          = useState(false);
+  // true while a background refresh is running (cache already shown)
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Invalidate the cache whenever a purchase completes in the Shop tab
+  // Track whether we need to force a fresh fetch (post-purchase)
+  const needsRefresh = useRef(true);
+  // Track the last purchaseVersion we've synced
+  const lastPurchaseVersion = useRef(-1);
+
+  // When a purchase completes, mark that we need a fresh fetch
   useEffect(() => {
-    hasFetched.current = false;
+    if (purchaseVersion !== lastPurchaseVersion.current) {
+      lastPurchaseVersion.current = purchaseVersion;
+      needsRefresh.current = true;
+    }
   }, [purchaseVersion]);
 
-  // Fetch (or re-fetch) whenever the tab becomes visible or the cache is invalidated
+  // Main fetch logic: called on every open
   useEffect(() => {
     if (!visible) return;
-    if (hasFetched.current) return;
-    hasFetched.current = true;
-    setLoading(true);
-    setError(false);
-    apiFetch<PurchaseEntry[]>('/rewards/purchases')
-      .then(data => { setPurchases(data); })
-      .catch(() => { setError(true); })
-      .finally(() => { setLoading(false); });
+
+    let cancelled = false;
+
+    async function loadCollection() {
+      // 1. Try AsyncStorage first for an instant view
+      try {
+        const raw = await AsyncStorage.getItem(COLLECTION_CACHE_KEY);
+        if (raw && !cancelled) {
+          const cached: PurchaseEntry[] = JSON.parse(raw);
+          setPurchases(cached);
+          setInitialLoading(false);
+          setError(false);
+        } else if (!cancelled) {
+          // No cache yet — show spinner for the first real fetch
+          setInitialLoading(true);
+        }
+      } catch {
+        if (!cancelled) setInitialLoading(true);
+      }
+
+      // 2. Always do a background API refresh — silently if cache was shown,
+      //    or with a spinner if this is the very first load (no cache).
+      if (!cancelled) setRefreshing(true);
+
+      try {
+        const data = await apiFetch<PurchaseEntry[]>('/rewards/purchases');
+        if (!cancelled) {
+          setPurchases(data);
+          setInitialLoading(false);
+          setError(false);
+          needsRefresh.current = false;
+          // Write fresh data to cache
+          AsyncStorage.setItem(COLLECTION_CACHE_KEY, JSON.stringify(data)).catch(() => null);
+        }
+      } catch {
+        if (!cancelled) {
+          // Only show error state if we have nothing to display
+          setPurchases(prev => {
+            if (prev.length === 0) setError(true);
+            return prev;
+          });
+          setInitialLoading(false);
+        }
+      } finally {
+        if (!cancelled) setRefreshing(false);
+      }
+    }
+
+    loadCollection();
+
+    return () => { cancelled = true; };
+    // Re-run whenever the tab becomes visible or a purchase invalidates the cache
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, purchaseVersion]);
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <View style={styles.collCenter}>
         <ActivityIndicator size="small" color="#9878D8" />
@@ -382,7 +439,7 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
     );
   }
 
-  if (error) {
+  if (error && purchases.length === 0) {
     return (
       <View style={styles.collCenter}>
         <Text style={styles.collEmptyIcon}>✕</Text>
@@ -420,6 +477,7 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
       ))}
       <Text style={[styles.footer, { color: colors.mutedForeground }]}>
         {purchases.length} {purchases.length === 1 ? 'treasure' : 'treasures'} collected ✦
+        {refreshing ? '  ↻' : ''}
       </Text>
     </ScrollView>
   );

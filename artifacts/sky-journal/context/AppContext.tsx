@@ -624,7 +624,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const ALL_CACHE_KEYS = [
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
-    'discover_v1', 'following_v1', 'saved_stories_v1',
+    'discover_v1', 'following_v1', 'saved_stories_v1', 'collection_v1',
     // active_outfit_v1 is intentionally NOT cleared on logout so the outfit
     // preference survives a logout/login cycle. loadData() validates the saved
     // ID against the freshly loaded outfit list before applying it.
