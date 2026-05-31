@@ -18,7 +18,8 @@ import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/contex
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
 
-const COLLECTION_CACHE_KEY = 'collection_v1';
+const COLLECTION_CACHE_KEY  = 'collection_v1';
+const SHOP_CATALOG_CACHE_KEY = 'shop_catalog_v1';
 
 // ── Seasonal constants ────────────────────────────────────────────────────────
 
@@ -521,6 +522,12 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   const insets  = useSafeAreaInsets();
   const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
 
+  // Refresh balance in background every time the modal opens so the chip
+  // shows the cached value instantly and updates silently when the API responds.
+  useEffect(() => {
+    if (visible) reloadRewards().catch(() => null);
+  }, [visible, reloadRewards]);
+
   const [activeTab,       setActiveTab]       = useState<ActiveTab>('shop');
   const [catalogItems,    setCatalogItems]    = useState<ShopItem[]>(FALLBACK_CATALOG);
   const [previewItems,    setPreviewItems]    = useState<ShopItem[]>([]);
@@ -536,24 +543,51 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
     if (visible) setActiveTab('shop');
   }, [visible]);
 
-  // Fetch catalog fresh every time the modal opens; fall back to FALLBACK_CATALOG on error
+  // Load catalog — cache first for instant display, then background-refresh from API
   useEffect(() => {
     if (!visible) return;
     Animated.spring(slideY, { toValue: 0, tension: 55, friction: 13, useNativeDriver: true }).start();
-    apiFetch<{
-      catalog:         ShopItem[];
-      seasonalPreview: ShopItem[];
-      purchasedIds:    string[];
-      activeCosmetics: Record<string, string>;
-    }>('/rewards/shop')
-      .then(data => {
-        setCatalogItems(data.catalog.length > 0 ? data.catalog : FALLBACK_CATALOG);
-        setPreviewItems(data.seasonalPreview ?? []);
-      })
-      .catch(() => {
-        setCatalogItems(FALLBACK_CATALOG);
-        setPreviewItems([]);
-      });
+
+    let cancelled = false;
+
+    async function fetchCatalog() {
+      // 1. Show cached catalog immediately (if available)
+      try {
+        const raw = await AsyncStorage.getItem(SHOP_CATALOG_CACHE_KEY);
+        if (raw && !cancelled) {
+          const cached: { catalog: ShopItem[]; seasonalPreview: ShopItem[] } = JSON.parse(raw);
+          setCatalogItems(cached.catalog.length > 0 ? cached.catalog : FALLBACK_CATALOG);
+          setPreviewItems(cached.seasonalPreview ?? []);
+        }
+      } catch { /* ignore — fall through to API fetch */ }
+
+      // 2. Always refresh from API in background; write result to cache
+      try {
+        const data = await apiFetch<{
+          catalog:         ShopItem[];
+          seasonalPreview: ShopItem[];
+          purchasedIds:    string[];
+          activeCosmetics: Record<string, string>;
+        }>('/rewards/shop');
+        if (!cancelled) {
+          setCatalogItems(data.catalog.length > 0 ? data.catalog : FALLBACK_CATALOG);
+          setPreviewItems(data.seasonalPreview ?? []);
+          AsyncStorage.setItem(
+            SHOP_CATALOG_CACHE_KEY,
+            JSON.stringify({ catalog: data.catalog, seasonalPreview: data.seasonalPreview ?? [] }),
+          ).catch(() => null);
+        }
+      } catch {
+        if (!cancelled) {
+          // Only fall back to static catalog if cache didn't already populate the UI
+          setCatalogItems(prev => prev.length > 0 ? prev : FALLBACK_CATALOG);
+          setPreviewItems(prev => prev);
+        }
+      }
+    }
+
+    fetchCatalog();
+    return () => { cancelled = true; };
   }, [visible]);
 
   useEffect(() => {

@@ -596,7 +596,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadFromCache() {
     try {
-      const [c, j, s, o, d, f, sv, ac] = await Promise.all([
+      const [c, j, s, o, d, f, sv, ac, rb] = await Promise.all([
         AsyncStorage.getItem('character_v2'),
         AsyncStorage.getItem('journal_v2'),
         AsyncStorage.getItem('stories_v1'),
@@ -605,6 +605,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem('following_v1'),
         AsyncStorage.getItem('saved_stories_v1'),
         AsyncStorage.getItem('active_cosmetics_v1'),
+        AsyncStorage.getItem('reward_balance_v1'),
       ]);
       if (c)  setCharacterState(JSON.parse(c));
       if (j)  setJournalEntries(JSON.parse(j));
@@ -614,6 +615,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (f)  setFollowingIds(JSON.parse(f));
       if (sv) { try { setSavedStoryIds(new Set(JSON.parse(sv))); } catch { /* ignore */ } }
       if (ac) { try { setActiveCosmeticsState(JSON.parse(ac)); } catch { /* ignore */ } }
+      if (rb) { try { setRewardBalance(JSON.parse(rb)); } catch { /* ignore */ } }
     } catch { /* use defaults */ } finally {
       dataReadyRef.current = true;
       setIsLoading(false);
@@ -625,6 +627,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const ALL_CACHE_KEYS = [
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
     'discover_v1', 'following_v1', 'saved_stories_v1', 'collection_v1',
+    'shop_catalog_v1', 'reward_balance_v1',
     // active_outfit_v1 is intentionally NOT cleared on logout so the outfit
     // preference survives a logout/login cycle. loadData() validates the saved
     // ID against the freshly loaded outfit list before applying it.
@@ -632,9 +635,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const clearUserData = useCallback(async () => {
     // Reset in-memory state immediately so the UI goes blank on sign-out.
-    // We intentionally keep the AsyncStorage cache intact — if the same user
-    // signs back in, loadFromCache() will show their data instantly while the
-    // API call completes, eliminating the white-screen lag.
     setCharacterState(DEFAULT_CHARACTER);
     setJournalEntries([]);
     setStories([]);
@@ -650,9 +650,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setConstellation(null);
     setPurchasedIds([]);
     setActiveCosmeticsState({});
-    AsyncStorage.removeItem('active_cosmetics_v1').catch(() => null);
     setApiOnline(false);
-    // Reset load guards so the next sign-in can trigger a full reload
+    // Purge all user-specific caches so a different user signing in on the same
+    // device cannot see a previous user's balance, purchases, or social data.
+    // active_outfit_v1 is intentionally NOT cleared — the preference is non-sensitive
+    // and is validated against the freshly loaded outfit list on next sign-in.
+    AsyncStorage.multiRemove(ALL_CACHE_KEYS).catch(() => null);
+    AsyncStorage.removeItem('active_cosmetics_v1').catch(() => null);
+    // Reset load guards so the next sign-in triggers a full reload
     dataReadyRef.current = false;
     isLoadingRef.current = false;
   }, []);
@@ -781,14 +786,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }).catch(() => null);
 
       // Persist all fresh data to cache in parallel
-      await Promise.allSettled([
+      const cacheWrites: Promise<void>[] = [
         AsyncStorage.setItem('character_v2',  JSON.stringify(char)),
         AsyncStorage.setItem('journal_v2',    JSON.stringify(entries)),
         AsyncStorage.setItem('stories_v1',    JSON.stringify(stors)),
         AsyncStorage.setItem('outfits_v1',    JSON.stringify(outs)),
         AsyncStorage.setItem('discover_v1',   JSON.stringify(feed)),
         AsyncStorage.setItem('following_v1',  JSON.stringify(follows)),
-      ]);
+      ];
+      if (rewardBalanceRaw) {
+        cacheWrites.push(AsyncStorage.setItem('reward_balance_v1', JSON.stringify(rewardBalanceRaw)));
+      }
+      if (shopRaw?.catalog && Array.isArray(shopRaw.catalog)) {
+        cacheWrites.push(
+          AsyncStorage.setItem('shop_catalog_v1', JSON.stringify({
+            catalog:         shopRaw.catalog,
+            seasonalPreview: (shopRaw as any).seasonalPreview ?? [],
+          })),
+        );
+      }
+      await Promise.allSettled(cacheWrites);
     } catch {
       // Unexpected error — restore from cache rather than leaving a blank screen.
       if (!dataReadyRef.current) await loadFromCache();
@@ -1015,6 +1032,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiFetch<RewardBalance>('/rewards');
       setRewardBalance(data);
+      AsyncStorage.setItem('reward_balance_v1', JSON.stringify(data)).catch(() => null);
     } catch { /* silently skip */ }
   }, []);
 
