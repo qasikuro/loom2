@@ -142,6 +142,43 @@ function BreathRing({ accent, r = 46 }: { accent: string; r?: number }) {
   );
 }
 
+// ─── Friend bubble — story-ring style "who's around" row ─────────────────────
+function FriendBubble({ post }: { post: DiscoverPost }) {
+  const mc = MOOD_COLOR[post.mood] ?? DEF_ACCENT;
+  const label = post.authorHandle ? post.authorHandle.replace('@', '') : post.authorName.split(' ')[0];
+  return (
+    <TouchableOpacity
+      style={fr.wrap}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }}
+      activeOpacity={0.80}
+    >
+      {/* Gradient ring — mood colour → purple */}
+      <LinearGradient
+        colors={[mc, '#A880F8', '#60C8F8']}
+        style={fr.ring}
+        start={{ x: 0.1, y: 1 }} end={{ x: 1, y: 0.1 }}
+      >
+        <View style={fr.inner}>
+          <Text style={fr.initial}>{post.authorName.charAt(0).toUpperCase()}</Text>
+        </View>
+      </LinearGradient>
+      {/* New-story dot */}
+      <View style={[fr.newDot, { backgroundColor: mc }]} />
+      <Text style={fr.name} numberOfLines={1}>{label}</Text>
+    </TouchableOpacity>
+  );
+}
+const fr = StyleSheet.create({
+  row:    { paddingHorizontal: 16, paddingBottom: 6, gap: 4 },
+  wrap:   { alignItems: 'center', width: 66, gap: 5 },
+  ring:   { width: 58, height: 58, borderRadius: 29, padding: 2.5 },
+  inner:  { flex: 1, borderRadius: 27, overflow: 'hidden', backgroundColor: '#0E0B28',
+            alignItems: 'center', justifyContent: 'center' },
+  initial:{ fontSize: 20, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.90)' },
+  newDot: { position: 'absolute', top: 42, right: 10, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#080614' },
+  name:   { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.62)', textAlign: 'center' },
+});
+
 // ─── Campfire bubble (stories-style circle) ──────────────────────────────────
 function CampfireBubble({ guide, isMine }: { guide: GuideProfile; isMine?: boolean }) {
   const live = guide.isAvailableNow || liveNow(guide.guideAvailability ?? null);
@@ -310,6 +347,15 @@ export default function HomeScreen() {
 
   const circleStories = discoverPosts.filter(p => p.isFollowing).slice(0, 10);
 
+  // Unique friends with recent stories (for the "Who's Around" row)
+  const circleAuthors = (() => {
+    const seen = new Set<string>();
+    return circleStories.filter(p => {
+      if (seen.has(p.authorUserId)) return false;
+      seen.add(p.authorUserId); return true;
+    }).slice(0, 10);
+  })();
+
   // ── Activity digest — what changed in the world while you were away ──────────
   const witnessedNotifs   = serverNotifications.filter(n => n.type === 'witness').length;
   const savedNotifs       = serverNotifications.filter(n => n.type === 'save').length;
@@ -327,33 +373,26 @@ export default function HomeScreen() {
   } : null;
 
   // ── Animations ─────────────────────────────────────────────────────────────
-  const auraA  = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
-  // Section entrance stagger (Lumi, Digest, Circle, Drift, Campfires, FindFriends)
+  // Section entrance stagger (Friends, Lumi, Digest, Circle, Drift, Campfires, FindFriends)
   const s0 = useRef(new Animated.Value(0)).current;
   const s1 = useRef(new Animated.Value(0)).current;
   const s2 = useRef(new Animated.Value(0)).current;
   const s3 = useRef(new Animated.Value(0)).current;
   const s4 = useRef(new Animated.Value(0)).current;
   const s5 = useRef(new Animated.Value(0)).current;
+  const s6 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 700, useNativeDriver: true, easing: Easing.out(Easing.quad) }).start();
-    Animated.loop(Animated.sequence([
-      Animated.timing(auraA, { toValue: 1, duration: 3400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(auraA, { toValue: 0, duration: 3400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-    ])).start();
     // Stagger sections in after a short hero settle
     Animated.sequence([
-      Animated.delay(220),
-      Animated.stagger(75, [s0, s1, s2, s3, s4, s5].map(v =>
-        Animated.timing(v, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+      Animated.delay(200),
+      Animated.stagger(70, [s0, s1, s2, s3, s4, s5, s6].map(v =>
+        Animated.timing(v, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true })
       )),
     ]).start();
   }, []);
-
-  const auraOp = auraA.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.07, 0.22, 0.07] });
-  const auraSc = auraA.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1.14] });
 
   async function onRefresh() {
     setRefreshing(true); await reloadData(); setRefreshing(false);
@@ -423,21 +462,17 @@ export default function HomeScreen() {
             HERO — centered immersive sanctuary
         ══════════════════════════════════════════════════ */}
         <View style={[s.hero, { paddingTop: topPad + 8 }]}>
-          {/* Mood sky gradient */}
+          {/* Mood atmosphere — subtle, layered */}
           <LinearGradient
             colors={grad as unknown as [string, string, ...string[]]}
             style={StyleSheet.absoluteFill}
-            start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
+            start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
           />
-          {/* Soft moon — large atmospheric circle, no hard edge */}
-          <Animated.View pointerEvents="none" style={{
-            position: 'absolute', alignSelf: 'center',
-            top: topPad + 50, width: W * 0.72, height: W * 0.72,
-            borderRadius: W * 0.36, backgroundColor: '#ffffff',
-            opacity: auraOp, transform: [{ scale: auraSc }],
-          }} />
-          {/* Accent edge shimmer */}
-          <View pointerEvents="none" style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: 70, backgroundColor: accent, opacity: 0.06 }} />
+          {/* Small accent glow orbs — modern, not the big ugly moon */}
+          <View pointerEvents="none" style={{ position: 'absolute', top: topPad + 20, alignSelf: 'center', width: 160, height: 160, borderRadius: 80, backgroundColor: accent, opacity: 0.07 }} />
+          <View pointerEvents="none" style={{ position: 'absolute', top: topPad + 60, alignSelf: 'center', width: 80, height: 80, borderRadius: 40, backgroundColor: '#A880F8', opacity: 0.10 }} />
+          {/* Edge shimmer */}
+          <View pointerEvents="none" style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: accent, opacity: 0.05 }} />
 
           {/* ── Top row: bell + settings ── */}
           <View style={s.heroActions}>
@@ -455,16 +490,21 @@ export default function HomeScreen() {
 
           {/* ── Centered identity block ── */}
           <View style={s.heroCenter}>
-            {/* Avatar */}
+            {/* Avatar — gradient ring, no animated moon */}
             <TouchableOpacity
               style={s.avatarWrap}
               onPress={() => router.push('/(tabs)/profile')}
               onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfits(true); }}
             >
-              <BreathRing accent={accent} r={44} />
-              <View style={s.avatarInner}>
-                <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" />
-              </View>
+              <LinearGradient
+                colors={[accent, '#A880F8', '#60C8F8']}
+                style={s.avatarRing}
+                start={{ x: 0.1, y: 1 }} end={{ x: 1, y: 0.1 }}
+              >
+                <View style={s.avatarInner}>
+                  <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" />
+                </View>
+              </LinearGradient>
               {character.role && (
                 <View style={[s.roleTag, { backgroundColor: accent }]}>
                   <Text style={s.roleText}>{character.role.slice(0, 1)}</Text>
@@ -525,9 +565,29 @@ export default function HomeScreen() {
         </View>
 
         {/* ══════════════════════════════════════════════════
+            WHO'S AROUND — friends with recent stories
+        ══════════════════════════════════════════════════ */}
+        {circleAuthors.length > 0 && (
+          <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
+            <View style={{ paddingTop: 8, paddingBottom: 4 }}>
+              <SectionHeader
+                label="Who's Around"
+                accent={accent}
+                count={circleAuthors.length}
+                onPress={() => router.push('/(tabs)/discover')}
+                action="See all"
+              />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={fr.row}>
+                {circleAuthors.map(post => <FriendBubble key={post.authorUserId} post={post} />)}
+              </ScrollView>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* ══════════════════════════════════════════════════
             LUMI — aware companion who synthesises the world
         ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+        <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <TouchableOpacity
           style={s.lumiBlock}
           onPress={() => {
@@ -877,8 +937,9 @@ const s = StyleSheet.create({
   heroCenter:  { alignItems: 'center', paddingHorizontal: 28, paddingBottom: 22, gap: 7 },
 
   // Avatar
-  avatarWrap:  { width: 90, height: 90, position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  avatarInner: { width: 82, height: 82, borderRadius: 41, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' },
+  avatarWrap:  { position: 'relative', marginBottom: 4 },
+  avatarRing:  { width: 90, height: 90, borderRadius: 45, padding: 2.5 },
+  avatarInner: { flex: 1, borderRadius: 42.5, overflow: 'hidden', backgroundColor: '#0A0820' },
   roleTag:     { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#080614' },
   roleText:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#fff' },
 
