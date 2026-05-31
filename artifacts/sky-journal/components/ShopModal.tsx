@@ -12,63 +12,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { apiFetch, useApp, COSMETIC_CATEGORY_MAP } from '@/context/AppContext';
+import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
 
-// ── Shop catalog (mirrors server SHOP_CATALOG) ────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-interface ShopItem {
-  id:          string;
-  name:        string;
-  description: string;
-  icon:        string;
-  category:    'frame' | 'accent' | 'theme';
-  cost:        { stars?: number; aura?: number; shards?: number };
+function daysUntil(dateStr?: string): number | null {
+  if (!dateStr) return null;
+  return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86_400_000));
 }
-
-const SHOP_CATALOG: ShopItem[] = [
-  {
-    id:          'frame_starlight',
-    name:        'Starlight Frame',
-    description: 'A golden radiant frame that surrounds your profile with starlight.',
-    icon:        '✦',
-    category:    'frame',
-    cost:        { stars: 30 },
-  },
-  {
-    id:          'frame_moonveil',
-    name:        'Moonveil Frame',
-    description: 'A silver crescent frame woven from moonlight and quiet wishes.',
-    icon:        '◑',
-    category:    'frame',
-    cost:        { stars: 40, shards: 10 },
-  },
-  {
-    id:          'accent_aura',
-    name:        'Aura Glow',
-    description: 'Wraps your bio in a soft purple luminescence.',
-    icon:        '◈',
-    category:    'accent',
-    cost:        { aura: 25 },
-  },
-  {
-    id:          'theme_locket',
-    name:        'Memory Locket',
-    description: 'A vintage golden-locket theme for your journal entries.',
-    icon:        '◇',
-    category:    'theme',
-    cost:        { shards: 20 },
-  },
-  {
-    id:          'theme_aurora',
-    name:        'Aurora Theme',
-    description: 'Paint your journal pages with the colours of the northern lights.',
-    icon:        '⋆',
-    category:    'theme',
-    cost:        { aura: 15, shards: 15 },
-  },
-];
 
 const CATEGORY_LABELS: Record<string, string> = {
   frame:  'Profile Frame',
@@ -200,6 +153,14 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
                 <Text style={[styles.catBadgeText, { color: catColor }]}>{CATEGORY_LABELS[item.category]}</Text>
               </View>
             </View>
+            {item.seasonal && (
+              <View style={styles.seasonalBadge}>
+                <Text style={styles.seasonalText}>
+                  ☀ {item.seasonalLabel ?? 'Seasonal'}
+                  {daysUntil(item.seasonalUntil) !== null ? `  ·  ${daysUntil(item.seasonalUntil)}d left` : ''}
+                </Text>
+              </View>
+            )}
             <Text style={[styles.cardDesc, { color: colors.mutedForeground }]} numberOfLines={2}>{item.description}</Text>
             <View style={styles.cardFooter}>
               <View style={styles.costRow}>{costParts.reduce<React.ReactNode[]>((acc, p, i) => {
@@ -254,7 +215,7 @@ interface ShopModalProps {
 export function ShopModal({ visible, onClose }: ShopModalProps) {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
-  const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
+  const { rewardBalance, reloadRewards, shopCatalog, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
 
   const [purchasing,   setPurchasing]   = useState<string | null>(null);
   const [toast,        setToast]        = useState<{ message: string; type: ToastProps['type'] } | null>(null);
@@ -371,7 +332,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
           contentContainerStyle={styles.itemList}
           showsVerticalScrollIndicator={false}
         >
-          {SHOP_CATALOG.map(item => {
+          {shopCatalog.map(item => {
             const owned    = purchasedIds.includes(item.id);
             const category = COSMETIC_CATEGORY_MAP[item.id];
             const isActive = owned && !!category && activeCosmetics[category] === item.id;
@@ -588,6 +549,24 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 8,
     paddingBottom: 4,
+  },
+
+  // Seasonal badge
+  seasonalBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(240,184,64,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(240,184,64,0.28)',
+    marginBottom: 2,
+  },
+  seasonalText: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+    color: '#F0B840',
+    letterSpacing: 0.4,
   },
 
   // Toast

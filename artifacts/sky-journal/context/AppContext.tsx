@@ -261,10 +261,24 @@ export interface RewardBalance {
 export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme'> = {
   'frame_starlight': 'frame',
   'frame_moonveil':  'frame',
+  'frame_solstice':  'frame',   // seasonal
   'accent_aura':     'accent',
+  'accent_twilight': 'accent',  // seasonal
   'theme_locket':    'theme',
   'theme_aurora':    'theme',
 };
+
+export interface ShopItem {
+  id:             string;
+  name:           string;
+  description:    string;
+  icon:           string;
+  category:       'frame' | 'accent' | 'theme';
+  cost:           { stars?: number; aura?: number; shards?: number };
+  seasonal?:      boolean;
+  seasonalLabel?: string;
+  seasonalUntil?: string;
+}
 
 export interface ConstellationState {
   socialCount:    number;
@@ -353,6 +367,7 @@ interface AppContextValue {
   markServerNotificationsRead: () => void;
   deleteServerNotification:    (id: string) => void;
 
+  shopCatalog:       ShopItem[];
   purchasedIds:      string[];
   markPurchased:     (itemId: string) => void;
   activeCosmetics:   Record<string, string>;
@@ -505,6 +520,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [constellation, setConstellation]   = useState<ConstellationState | null>(null);
   const [activeOutfitId, setActiveOutfitIdState] = useState<string | null>(null);
   const [purchasedIds, setPurchasedIds]         = useState<string[]>([]);
+  const [shopCatalog, setShopCatalog]           = useState<ShopItem[]>([]);
   const [activeCosmetics, setActiveCosmeticsState] = useState<Record<string, string>>({});
 
   const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
@@ -668,7 +684,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<GuideProfile[]>('/guides?following=true').catch(() => []),
         apiFetch<RewardBalance>('/rewards').catch(() => null),
         apiFetch<ConstellationState>('/constellation').catch(() => null),
-        apiFetch<{ purchasedIds: string[]; activeCosmetics: Record<string, string> }>('/rewards/shop').catch(() => null),
+        apiFetch<{ catalog?: ShopItem[]; purchasedIds: string[]; activeCosmetics: Record<string, string> }>('/rewards/shop').catch(() => null),
       ]);
 
       // Process core data
@@ -731,6 +747,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setActiveCosmeticsState(sanitised);
           AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(sanitised)).catch(() => null);
         }
+      }
+      if (shopRaw?.catalog && Array.isArray(shopRaw.catalog)) {
+        setShopCatalog(shopRaw.catalog as ShopItem[]);
       }
       setApiOnline(true);
 
@@ -1313,7 +1332,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       friends, followingIds, followUser, unfollowUser, myGuides,
       rewards, dismissReward, showRewardToast,
       rewardBalance, constellation, reloadRewards, reloadConstellation,
-      purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
+      shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
       reloadData,
       refreshFeed,
