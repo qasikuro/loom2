@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   useApp, type GuideAvailability, type GuideProfile, type DiscoverPost,
 } from '@/context/AppContext';
+import { RewardBalance } from '@/components/RewardBalance';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -319,7 +320,7 @@ export default function HomeScreen() {
     friends, discoverPosts, followingIds,
     rewards, serverNotifications,
     markServerNotificationsRead, deleteServerNotification, dismissReward,
-    reloadData, myGuides,
+    reloadData, myGuides, rewardBalance,
   } = useApp();
   const { playSound } = useSound();
 
@@ -565,6 +566,18 @@ export default function HomeScreen() {
               </>
             )}
           </View>
+
+          {/* Reward balance — if loaded */}
+          {rewardBalance && (rewardBalance.stars > 0 || rewardBalance.auraEnergy > 0 || rewardBalance.memoryShards > 0) && (
+            <View style={{ alignItems: 'center', paddingBottom: 16, paddingTop: 4 }}>
+              <RewardBalance
+                stars={rewardBalance.stars}
+                auraEnergy={rewardBalance.auraEnergy}
+                memoryShards={rewardBalance.memoryShards}
+                size="sm"
+              />
+            </View>
+          )}
 
           {/* Bottom fade to dark */}
           <LinearGradient

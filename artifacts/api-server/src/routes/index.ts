@@ -15,6 +15,7 @@ import guidesRouter from "./guides";
 import messagesRouter from "./messages";
 import driftRouter from "./drift";
 import stickersRouter from "./stickers";
+import rewardsRouter from "./rewards";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(guidesRouter);
 router.use(messagesRouter);
 router.use(driftRouter);
 router.use(stickersRouter);
+router.use(rewardsRouter);
 
 export default router;

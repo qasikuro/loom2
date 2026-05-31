@@ -2,6 +2,8 @@ import { db, characterTable, storiesTable, followsTable, outfitsTable } from "@w
 import { and, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { grantReward } from "../services/rewardService";
+import { syncConstellation } from "../services/constellationService";
 
 const router: IRouter = Router();
 
@@ -364,6 +366,11 @@ router.post("/follows/:targetUserId", requireAuth, async (req, res) => {
       .insert(followsTable)
       .values({ followerId: userId, followingId: targetUserId })
       .onConflictDoNothing();
+
+    // Reward follower for their social generosity (once per target)
+    grantReward(db as any, userId, "follow_given", targetUserId).catch(() => null);
+    syncConstellation(db as any, userId).catch(() => null);
+
     return res.status(201).json({ following: true });
   } catch (err) {
     req.log.error({ err }, "Failed to follow");

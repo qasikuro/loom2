@@ -3,6 +3,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { grantReward } from "../services/rewardService";
+import { syncConstellation } from "../services/constellationService";
 
 const router: IRouter = Router();
 
@@ -54,6 +56,11 @@ router.post("/journal-entries", requireAuth, async (req, res) => {
         set: { userId, date: new Date(date), ...rest },
       })
       .returning();
+
+    // Grant daily journal reward (once per calendar day)
+    const today = new Date().toISOString().slice(0, 10);
+    grantReward(db as any, userId, "journal_daily", today).catch(() => null);
+    syncConstellation(db as any, userId).catch(() => null);
 
     return res.status(201).json(serializeEntry(created));
   } catch (err) {

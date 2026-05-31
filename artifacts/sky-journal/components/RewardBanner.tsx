@@ -72,6 +72,57 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
     );
   }
 
+  // ── Currency reward variant (stars / aura / shards) ───────────────────────
+  const hasCurrency = reward.stars != null || reward.aura != null || reward.shards != null;
+  if (hasCurrency) {
+    return (
+      <Animated.View
+        style={[
+          animStyle,
+          styles.currencyCard,
+          { backgroundColor: '#0C0920', borderColor: 'rgba(107,91,149,0.30)' },
+          SHADOW.md,
+        ]}
+      >
+        <View style={[styles.currIconWrap, { backgroundColor: 'rgba(200,168,75,0.14)' }]}>
+          <Text style={styles.currIconEmoji}>✦</Text>
+        </View>
+        <View style={styles.body}>
+          <Text style={[styles.currLabel, { color: 'rgba(200,184,232,0.65)' }]}>{reward.message}</Text>
+          <View style={styles.currChipsRow}>
+            {reward.stars != null && reward.stars > 0 && (
+              <View style={[styles.currChip, { backgroundColor: 'rgba(200,168,75,0.12)', borderColor: 'rgba(200,168,75,0.28)' }]}>
+                <Text style={styles.currChipEmoji}>✦</Text>
+                <Text style={[styles.currChipNum, { color: '#C8A84B' }]}>+{reward.stars}</Text>
+              </View>
+            )}
+            {reward.aura != null && reward.aura > 0 && (
+              <View style={[styles.currChip, { backgroundColor: 'rgba(107,91,149,0.12)', borderColor: 'rgba(107,91,149,0.28)' }]}>
+                <Text style={styles.currChipEmoji}>◈</Text>
+                <Text style={[styles.currChipNum, { color: '#9878D8' }]}>+{reward.aura}</Text>
+              </View>
+            )}
+            {reward.shards != null && reward.shards > 0 && (
+              <View style={[styles.currChip, { backgroundColor: 'rgba(120,180,220,0.12)', borderColor: 'rgba(120,180,220,0.28)' }]}>
+                <Text style={styles.currChipEmoji}>◇</Text>
+                <Text style={[styles.currChipNum, { color: '#78B4DC' }]}>+{reward.shards}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+        {onDismiss && (
+          <TouchableOpacity
+            onPress={onDismiss}
+            style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.06)' }]}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Icon name="x" size={12} color="rgba(200,184,232,0.35)" />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+    );
+  }
+
   return (
     <Animated.View
       style={[
@@ -139,4 +190,22 @@ const styles = StyleSheet.create({
   risingLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
   risingTitle:    { fontSize: 14, fontFamily: 'Satoshi-Bold', lineHeight: 20 },
   risingSubtitle: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+
+  currencyCard: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: 12, borderRadius: 16, borderWidth: 1, padding: 14,
+  },
+  currIconWrap: {
+    width: 38, height: 38, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  currIconEmoji:  { fontSize: 16 },
+  currLabel:      { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.1, marginBottom: 5 },
+  currChipsRow:   { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
+  currChip:       {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, borderWidth: 1,
+  },
+  currChipEmoji:  { fontSize: 11 },
+  currChipNum:    { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
 });

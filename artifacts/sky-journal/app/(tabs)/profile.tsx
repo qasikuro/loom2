@@ -27,6 +27,8 @@ import { persistImageUri } from '@/utils/persistImage';
 
 import { Images } from '@/assets/images';
 import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/context/AppContext';
+import { ConstellationMap } from '@/components/ConstellationMap';
+import { RewardBalance } from '@/components/RewardBalance';
 import { useSound } from '@/context/SoundContext';
 import { SkeletonProfileCard } from '@/components/Skeleton';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
@@ -489,7 +491,8 @@ export default function CharacterScreen() {
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
-          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading } = useApp();
+          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading,
+          constellation, rewardBalance } = useApp();
   const moodAccent = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
   const { signOut, userId: myUserId } = useAuth();
   const { user }    = useUser();
@@ -1735,6 +1738,42 @@ export default function CharacterScreen() {
                 </View>
               )}
             </View>
+          </View>
+
+          {/* ── My Constellation ─────────────────────────────── */}
+          <View style={styles.hSection}>
+            <View style={styles.hSectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>My Constellation</Text>
+                {constellation?.activeTitle && (
+                  <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: 'rgba(200,168,75,0.14)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.28)' }}>
+                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.2 }}>
+                      {constellation.activeTitle}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              {rewardBalance && (
+                <RewardBalance
+                  stars={rewardBalance.stars}
+                  auraEnergy={rewardBalance.auraEnergy}
+                  memoryShards={rewardBalance.memoryShards}
+                  size="sm"
+                />
+              )}
+            </View>
+            <View style={{ paddingHorizontal: 16, marginTop: 2 }}>
+              <ConstellationMap state={constellation} />
+            </View>
+            {!constellation && (
+              <View style={[styles.hEmptyCard, { marginHorizontal: 16, backgroundColor: 'rgba(107,91,149,0.06)', borderColor: 'rgba(107,91,149,0.15)' }]}>
+                <View style={[styles.hEmptyIconWrap, { backgroundColor: 'rgba(107,91,149,0.10)' }]}>
+                  <Text style={{ fontSize: 20 }}>✦</Text>
+                </View>
+                <Text style={[styles.hEmptyTitle, { color: colors.foreground }]}>Stars await you</Text>
+                <Text style={[styles.hEmptySubtitle, { color: colors.mutedForeground }]}>Journal, create stories, and connect with others to unlock your constellation</Text>
+              </View>
+            )}
           </View>
 
           {/* ── My Stories ───────────────────────────────────── */}

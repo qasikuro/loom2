@@ -232,6 +232,27 @@ export interface Reward {
   count?:      number;
   icon:        string;
   isRising?:   boolean;
+  stars?:      number;
+  aura?:       number;
+  shards?:     number;
+}
+
+export interface RewardBalance {
+  stars:        number;
+  auraEnergy:   number;
+  memoryShards: number;
+  lifetimeStars: number;
+}
+
+export interface ConstellationState {
+  socialCount:   number;
+  memoryCount:   number;
+  quietStreak:   number;
+  helpingCount:  number;
+  creativeCount: number;
+  seasonalCount: number;
+  unlockedStars: string[];
+  activeTitle:   string | null;
 }
 
 export interface ServerNotification {
@@ -298,6 +319,12 @@ interface AppContextValue {
 
   rewards:       Reward[];
   dismissReward: (id: string) => void;
+  showRewardToast: (label: string, amounts: { stars?: number; aura?: number; shards?: number }) => void;
+
+  rewardBalance:      RewardBalance | null;
+  constellation:      ConstellationState | null;
+  reloadRewards:      () => Promise<void>;
+  reloadConstellation: () => Promise<void>;
 
   serverNotifications:         ServerNotification[];
   markServerNotificationsRead: () => void;
@@ -444,6 +471,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [outfits, setOutfits]               = useState<Outfit[]>([]);
   const [savedStoryIds, setSavedStoryIds]   = useState<Set<string>>(new Set());
   const [rewards, setRewards]               = useState<Reward[]>([]);
+  const [rewardBalance, setRewardBalance]   = useState<RewardBalance | null>(null);
+  const [constellation, setConstellation]   = useState<ConstellationState | null>(null);
   const [activeOutfitId, setActiveOutfitIdState] = useState<string | null>(null);
 
   const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
@@ -549,6 +578,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setActiveOutfitIdState(null);
     setServerNotifications([]);
     setSavedStoryIds(new Set());
+    setRewardBalance(null);
+    setConstellation(null);
     setApiOnline(false);
     // Reset load guards so the next sign-in can trigger a full reload
     dataReadyRef.current = false;
@@ -581,6 +612,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const [
         charRaw, entriesRaw, storiesRaw, outfitsRaw,
         galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw, guidesRaw,
+        rewardBalanceRaw, constellationRaw,
       ] = await Promise.all([
         apiFetch<any>('/character').catch(() => null),
         apiFetch<any[]>('/journal-entries').catch(() => null),
@@ -593,6 +625,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<any[]>('/notifications').catch(() => []),
         apiFetch<FriendSummary[]>('/friends').catch(() => []),
         apiFetch<GuideProfile[]>('/guides?following=true').catch(() => []),
+        apiFetch<RewardBalance>('/rewards').catch(() => null),
+        apiFetch<ConstellationState>('/constellation').catch(() => null),
       ]);
 
       // Process core data
@@ -636,6 +670,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setFriends(friendsRaw ?? []);
       setServerNotifications(notifs);
       setMyGuides(guides);
+      if (rewardBalanceRaw) setRewardBalance(rewardBalanceRaw);
+      if (constellationRaw) setConstellation(constellationRaw);
       setApiOnline(true);
 
       // Restore active outfit across sessions.
@@ -1051,6 +1087,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setRewards(prev => prev.filter(r => r.id !== id));
   }, []);
 
+  const showRewardToast = useCallback((label: string, amounts: { stars?: number; aura?: number; shards?: number }) => {
+    const id = `toast-${Date.now()}-${Math.random()}`;
+    const reward: Reward = {
+      id,
+      message: label,
+      icon:    'star',
+      stars:   amounts.stars,
+      aura:    amounts.aura,
+      shards:  amounts.shards,
+    };
+    setRewards(prev => [...prev, reward]);
+    setTimeout(() => {
+      setRewards(prev => prev.filter(r => r.id !== id));
+    }, 3500);
+  }, []);
+
+  const reloadRewards = useCallback(async () => {
+    try {
+      const data = await apiFetch<RewardBalance>('/rewards');
+      setRewardBalance(data);
+    } catch { /* silently skip */ }
+  }, []);
+
+  const reloadConstellation = useCallback(async () => {
+    try {
+      const data = await apiFetch<ConstellationState>('/constellation');
+      setConstellation(data);
+    } catch { /* silently skip */ }
+  }, []);
+
   const markServerNotificationsRead = useCallback(() => {
     setServerNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => null);
@@ -1079,7 +1145,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
       discoverPosts, savedStoryIds, toggleSavePost,
       friends, followingIds, followUser, unfollowUser, myGuides,
-      rewards, dismissReward,
+      rewards, dismissReward, showRewardToast,
+      rewardBalance, constellation, reloadRewards, reloadConstellation,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
       reloadData,
       refreshFeed,

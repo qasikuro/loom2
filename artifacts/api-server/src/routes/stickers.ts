@@ -8,6 +8,8 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { grantReward } from "../services/rewardService";
+import { syncConstellation } from "../services/constellationService";
 
 const router: IRouter = Router();
 
@@ -66,6 +68,14 @@ router.post("/stickers", requireAuth, async (req, res) => {
       refId:     storyId,
       title:     `sent you a ${stickerType} sticker on "${story.title}"`,
     });
+
+    // Reward sender for sending (aura energy)
+    const refKey = `${storyId}:${stickerType}`;
+    grantReward(db as any, fromUserId, "sticker_sent", refKey).catch(() => null);
+    syncConstellation(db as any, fromUserId).catch(() => null);
+    // Reward story owner for receiving
+    grantReward(db as any, story.userId, "sticker_received", refKey).catch(() => null);
+    syncConstellation(db as any, story.userId).catch(() => null);
 
     return res.json({ ok: true });
   } catch (err) {

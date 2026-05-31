@@ -3,6 +3,8 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { grantReward } from "../services/rewardService";
+import { syncConstellation } from "../services/constellationService";
 
 const router: IRouter = Router();
 
@@ -110,6 +112,10 @@ router.post("/stories", requireAuth, async (req, res) => {
     if (rest.isPublic) {
       fanOutStoryNotification(userId, created.id, rest.chapterTitle, req).catch(() => null);
     }
+
+    // Grant story creation reward (once per story ID)
+    grantReward(db as any, userId, "story_created", created.id).catch(() => null);
+    syncConstellation(db as any, userId).catch(() => null);
 
     return res.status(201).json(serializeStory(created));
   } catch (err) {
@@ -288,7 +294,13 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
     // Notify the story author (fire-and-forget, skip if own story)
     if (updated.userId !== actorId) {
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "witness", req).catch(() => null);
+      // Reward story owner for receiving a witness
+      grantReward(db as any, updated.userId, "story_witnessed", `${storyId}:${actorId}`).catch(() => null);
+      syncConstellation(db as any, updated.userId).catch(() => null);
     }
+    // Reward witness for their daily presence
+    const today = new Date().toISOString().slice(0, 10);
+    grantReward(db as any, actorId, "daily_presence", today).catch(() => null);
 
     return res.json(serializeStory(updated));
   } catch (err) {
@@ -311,6 +323,9 @@ router.post("/stories/:id/save", requireAuth, async (req, res) => {
 
     if (updated.userId !== actorId) {
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "save", req).catch(() => null);
+      // Reward story owner for receiving a save
+      grantReward(db as any, updated.userId, "story_saved", `${storyId}:${actorId}`).catch(() => null);
+      syncConstellation(db as any, updated.userId).catch(() => null);
     }
 
     return res.json({ savedCount: updated.savedCount });
