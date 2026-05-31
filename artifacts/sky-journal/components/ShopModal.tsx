@@ -16,12 +16,30 @@ import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/contex
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Seasonal constants ────────────────────────────────────────────────────────
 
-function daysUntil(dateStr?: string): number | null {
-  if (!dateStr) return null;
-  return Math.max(0, Math.ceil((new Date(dateStr).getTime() - Date.now()) / 86_400_000));
-}
+const SEASON_COLORS: Record<string, string> = {
+  Spring: '#E88FB0',
+  Summer: '#C8A84B',
+  Autumn: '#C8784B',
+  Winter: '#78B4DC',
+};
+
+const SEASON_ICONS: Record<string, string> = {
+  Spring: '🌸',
+  Summer: '☀',
+  Autumn: '🍂',
+  Winter: '❄',
+};
+
+// Static fallback shown on fetch failure — permanent items only
+const FALLBACK_CATALOG: ShopItem[] = [
+  { id: 'frame_starlight', name: 'Starlight Frame', description: 'A golden radiant frame that surrounds your profile with starlight.', icon: '✦', category: 'frame', cost: { stars: 30 } },
+  { id: 'frame_moonveil',  name: 'Moonveil Frame',  description: 'A silver crescent frame woven from moonlight and quiet wishes.',   icon: '◑', category: 'frame', cost: { stars: 40, shards: 10 } },
+  { id: 'accent_aura',     name: 'Aura Glow',       description: 'Wraps your bio in a soft purple luminescence.',                    icon: '◈', category: 'accent', cost: { aura: 25 } },
+  { id: 'theme_locket',    name: 'Memory Locket',   description: 'A vintage golden-locket theme for your journal entries.',          icon: '◇', category: 'theme', cost: { shards: 20 } },
+  { id: 'theme_aurora',    name: 'Aurora Theme',    description: 'Paint your journal pages with the colours of the northern lights.', icon: '⋆', category: 'theme', cost: { aura: 15, shards: 15 } },
+];
 
 const CATEGORY_LABELS: Record<string, string> = {
   frame:  'Profile Frame',
@@ -44,14 +62,14 @@ interface ToastProps {
 }
 
 function PurchaseToast({ message, type, visible }: ToastProps) {
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity    = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(12)).current;
 
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.timing(opacity,     { toValue: 1,  duration: 260, useNativeDriver: true }),
-        Animated.spring(translateY,  { toValue: 0,  tension: 180, friction: 10, useNativeDriver: true }),
+        Animated.timing(opacity,    { toValue: 1, duration: 260, useNativeDriver: true }),
+        Animated.spring(translateY, { toValue: 0, tension: 180, friction: 10, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
@@ -77,7 +95,7 @@ function PurchaseToast({ message, type, visible }: ToastProps) {
   );
 }
 
-// ── Balance row ───────────────────────────────────────────────────────────────
+// ── Balance chip ──────────────────────────────────────────────────────────────
 
 function BalanceChip({ icon, value, color, bg }: { icon: string; value: number; color: string; bg: string }) {
   return (
@@ -88,22 +106,37 @@ function BalanceChip({ icon, value, color, bg }: { icon: string; value: number; 
   );
 }
 
+// ── Seasonal badge pill ───────────────────────────────────────────────────────
+
+function SeasonalBadge({ label }: { label: string }) {
+  const color = SEASON_COLORS[label] ?? '#9878D8';
+  const icon  = SEASON_ICONS[label]  ?? '✦';
+  return (
+    <View style={[styles.seasonBadge, { backgroundColor: `${color}22`, borderColor: `${color}55` }]}>
+      <Text style={[styles.seasonBadgeText, { color }]}>{icon} {label}</Text>
+    </View>
+  );
+}
+
 // ── Shop item card ────────────────────────────────────────────────────────────
 
 interface ItemCardProps {
-  item:             ShopItem;
-  owned:            boolean;
-  isActive:         boolean;
-  canAfford:        boolean;
-  onBuy:            (item: ShopItem) => void;
-  onActivate:       (item: ShopItem) => void;
-  purchasing:       boolean;
+  item:       ShopItem;
+  owned:      boolean;
+  isActive:   boolean;
+  canAfford:  boolean;
+  onBuy:      (item: ShopItem) => void;
+  onActivate: (item: ShopItem) => void;
+  purchasing: boolean;
 }
 
 function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchasing }: ItemCardProps) {
-  const colors    = useColors();
-  const scale     = useRef(new Animated.Value(1)).current;
-  const catColor  = CATEGORY_COLORS[item.category] ?? '#9878D8';
+  const colors   = useColors();
+  const scale    = useRef(new Animated.Value(1)).current;
+  const catColor = CATEGORY_COLORS[item.category] ?? '#9878D8';
+
+  // availableNow is only set to false for out-of-season seasonal items
+  const availableNow = item.availableNow !== false;
 
   function pressIn()  { Animated.spring(scale, { toValue: 0.95, tension: 200, friction: 8, useNativeDriver: true }).start(); }
   function pressOut() { Animated.spring(scale, { toValue: 1,    tension: 200, friction: 8, useNativeDriver: true }).start(); }
@@ -113,9 +146,11 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
   if (item.cost.aura)   costParts.push(<Text key="a" style={[styles.costPart, { color: '#9878D8' }]}>◈ {item.cost.aura}</Text>);
   if (item.cost.shards) costParts.push(<Text key="h" style={[styles.costPart, { color: '#78B4DC' }]}>◇ {item.cost.shards}</Text>);
 
-  const disabled = !owned && (!canAfford || purchasing);
+  const isUnavailable = !availableNow && !owned;
+  const disabled      = isUnavailable || (!owned && (!canAfford || purchasing));
 
   function handlePress() {
+    if (isUnavailable) return;
     if (owned) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onActivate(item);
@@ -129,8 +164,8 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
     <Animated.View style={{ transform: [{ scale }] }}>
       <TouchableOpacity
         onPress={handlePress}
-        onPressIn={pressIn}
-        onPressOut={pressOut}
+        onPressIn={isUnavailable ? undefined : pressIn}
+        onPressOut={isUnavailable ? undefined : pressOut}
         activeOpacity={1}
         disabled={disabled}
       >
@@ -139,8 +174,9 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
           { backgroundColor: colors.card, borderColor: isActive ? catColor : owned ? `${catColor}60` : colors.border },
           (owned || isActive) && { borderWidth: 1.5 },
           isActive && { backgroundColor: `${catColor}0A` },
+          isUnavailable && { opacity: 0.72 },
         ]}>
-          {/* Icon + badge */}
+          {/* Icon */}
           <View style={[styles.cardIconWrap, { backgroundColor: isActive ? `${catColor}28` : `${catColor}18` }]}>
             <Text style={[styles.cardIcon, { color: catColor }]}>{item.icon}</Text>
           </View>
@@ -152,21 +188,17 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
               <View style={[styles.catBadge, { backgroundColor: `${catColor}18` }]}>
                 <Text style={[styles.catBadgeText, { color: catColor }]}>{CATEGORY_LABELS[item.category]}</Text>
               </View>
+              {item.seasonal && item.seasonalLabel && (
+                <SeasonalBadge label={item.seasonalLabel} />
+              )}
             </View>
-            {item.seasonal && (
-              <View style={styles.seasonalBadge}>
-                <Text style={styles.seasonalText}>
-                  ☀ {item.seasonalLabel ?? 'Seasonal'}
-                  {daysUntil(item.seasonalUntil) !== null ? `  ·  ${daysUntil(item.seasonalUntil)}d left` : ''}
-                </Text>
-              </View>
-            )}
             <Text style={[styles.cardDesc, { color: colors.mutedForeground }]} numberOfLines={2}>{item.description}</Text>
             <View style={styles.cardFooter}>
               <View style={styles.costRow}>{costParts.reduce<React.ReactNode[]>((acc, p, i) => {
                 if (i > 0) acc.push(<Text key={`sep${i}`} style={styles.costSep}>+</Text>);
                 acc.push(p); return acc;
               }, [])}</View>
+
               {owned ? (
                 <TouchableOpacity
                   onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onActivate(item); }}
@@ -181,6 +213,12 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
                     {isActive ? '✦ Active' : 'Set Active'}
                   </Text>
                 </TouchableOpacity>
+              ) : !availableNow ? (
+                <View style={[styles.returnsBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                  <Text style={[styles.returnsBadgeText, { color: colors.mutedForeground }]}>
+                    Returns in season
+                  </Text>
+                </View>
               ) : (
                 <TouchableOpacity
                   onPress={() => { if (!disabled) { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onBuy(item); } }}
@@ -208,25 +246,45 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
 // ── Main modal ────────────────────────────────────────────────────────────────
 
 interface ShopModalProps {
-  visible:  boolean;
-  onClose:  () => void;
+  visible: boolean;
+  onClose: () => void;
 }
 
 export function ShopModal({ visible, onClose }: ShopModalProps) {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
-  const { rewardBalance, reloadRewards, shopCatalog, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
+  const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
 
+  const [catalogItems, setCatalogItems] = useState<ShopItem[]>(FALLBACK_CATALOG);
+  const [previewItems, setPreviewItems] = useState<ShopItem[]>([]);
   const [purchasing,   setPurchasing]   = useState<string | null>(null);
   const [toast,        setToast]        = useState<{ message: string; type: ToastProps['type'] } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const slideY = useRef(new Animated.Value(600)).current;
 
+  // Fetch catalog fresh every time the modal opens; fall back to FALLBACK_CATALOG on error
   useEffect(() => {
-    if (visible) {
-      Animated.spring(slideY, { toValue: 0, tension: 55, friction: 13, useNativeDriver: true }).start();
-    } else {
+    if (!visible) return;
+    Animated.spring(slideY, { toValue: 0, tension: 55, friction: 13, useNativeDriver: true }).start();
+    apiFetch<{
+      catalog:         ShopItem[];
+      seasonalPreview: ShopItem[];
+      purchasedIds:    string[];
+      activeCosmetics: Record<string, string>;
+    }>('/rewards/shop')
+      .then(data => {
+        setCatalogItems(data.catalog.length > 0 ? data.catalog : FALLBACK_CATALOG);
+        setPreviewItems(data.seasonalPreview ?? []);
+      })
+      .catch(() => {
+        setCatalogItems(FALLBACK_CATALOG);
+        setPreviewItems([]);
+      });
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible) {
       Animated.timing(slideY, { toValue: 600, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
     }
   }, [visible]);
@@ -241,7 +299,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
     setPurchasing(item.id);
     try {
       const res = await apiFetch<{
-        success: boolean;
+        success:    boolean;
         newBalance: { stars: number; auraEnergy: number; memoryShards: number; lifetimeStars: number };
       }>('/rewards/spend', {
         method: 'POST',
@@ -258,6 +316,8 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
       if (msg.includes('already_owned')) {
         showToast('You already own this item.', 'info');
         markPurchased(item.id);
+      } else if (msg.includes('seasonal_unavailable') || msg.includes('403')) {
+        showToast('This item is out of season.', 'info');
       } else if (msg.includes('insufficient_funds') || msg.includes('402')) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         showToast('Not enough currency for this item.', 'error');
@@ -326,13 +386,13 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
           </View>
         </View>
 
-        {/* Items */}
+        {/* Items — in-season (purchasable) */}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={styles.itemList}
           showsVerticalScrollIndicator={false}
         >
-          {shopCatalog.map(item => {
+          {catalogItems.map(item => {
             const owned    = purchasedIds.includes(item.id);
             const category = COSMETIC_CATEGORY_MAP[item.id];
             const isActive = owned && !!category && activeCosmetics[category] === item.id;
@@ -349,6 +409,35 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
               />
             );
           })}
+
+          {/* Out-of-season seasonal preview */}
+          {previewItems.length > 0 && (
+            <>
+              <View style={styles.sectionDivider}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+                <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>Coming in a future season</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              </View>
+              {previewItems.map(item => {
+                const owned    = purchasedIds.includes(item.id);
+                const category = COSMETIC_CATEGORY_MAP[item.id];
+                const isActive = owned && !!category && activeCosmetics[category] === item.id;
+                return (
+                  <ItemCard
+                    key={item.id}
+                    item={{ ...item, availableNow: false }}
+                    owned={owned}
+                    isActive={isActive}
+                    canAfford={canAfford(item)}
+                    onBuy={handleBuy}
+                    onActivate={it => setActiveCosmetic(it.id)}
+                    purchasing={purchasing === item.id}
+                  />
+                );
+              })}
+            </>
+          )}
+
           <Text style={[styles.footer, { color: colors.mutedForeground }]}>
             More items drift in with each season ✦
           </Text>
@@ -476,7 +565,7 @@ const styles = StyleSheet.create({
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexWrap: 'wrap',
   },
   cardName: {
@@ -495,6 +584,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  seasonBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  seasonBadgeText: {
+    fontSize: 9,
+    fontFamily: 'Satoshi-Bold',
+    letterSpacing: 0.4,
   },
   cardDesc: {
     fontSize: 12,
@@ -531,6 +631,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.2,
   },
+  returnsBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  returnsBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Medium',
+    letterSpacing: 0.1,
+    fontStyle: 'italic',
+  },
   buyBtn: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -542,6 +654,25 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
 
+  // Section divider
+  sectionDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Medium',
+    fontStyle: 'italic',
+    letterSpacing: 0.2,
+  },
+
   footer: {
     textAlign: 'center',
     fontSize: 11,
@@ -549,24 +680,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 8,
     paddingBottom: 4,
-  },
-
-  // Seasonal badge
-  seasonalBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(240,184,64,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(240,184,64,0.28)',
-    marginBottom: 2,
-  },
-  seasonalText: {
-    fontSize: 9,
-    fontFamily: 'Satoshi-Bold',
-    color: '#F0B840',
-    letterSpacing: 0.4,
   },
 
   // Toast

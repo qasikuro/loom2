@@ -8,18 +8,27 @@ const router: IRouter = Router();
 
 // ── Shop catalog (source of truth — validated server-side) ──────────────────
 export interface ShopItem {
-  id:             string;
-  name:           string;
-  description:    string;
-  icon:           string;
-  category:       "frame" | "accent" | "theme";
-  cost:           { stars?: number; aura?: number; shards?: number };
-  seasonal?:      boolean;
-  seasonalLabel?: string;
-  seasonalUntil?: string;
+  id:              string;
+  name:            string;
+  description:     string;
+  icon:            string;
+  category:        "frame" | "accent" | "theme";
+  cost:            { stars?: number; aura?: number; shards?: number };
+  seasonal?:       boolean;
+  seasonalLabel?:  string;
+  // Months (1–12) in which this item is purchasable; repeats every year.
+  // Omit for always-available items.
+  seasonalMonths?: number[];
+}
+
+// Returns true if the item is currently available for purchase.
+function isItemAvailable(item: ShopItem, month: number): boolean {
+  if (!item.seasonal || !item.seasonalMonths) return true;
+  return item.seasonalMonths.includes(month);
 }
 
 export const SHOP_CATALOG: ShopItem[] = [
+  // ── Permanent items ───────────────────────────────────────────────────────
   {
     id:          "frame_starlight",
     name:        "Starlight Frame",
@@ -60,17 +69,40 @@ export const SHOP_CATALOG: ShopItem[] = [
     category:    "theme",
     cost:        { aura: 15, shards: 15 },
   },
-  // ── Seasonal items (Summer 2026, expire Aug 31) ───────────────────────────
+  // ── Seasonal: Spring (March – May) ───────────────────────────────────────
+  {
+    id:             "frame_blossom",
+    name:           "Cherry Blossom Frame",
+    description:    "Delicate pink petals drift around your profile in a soft spring breeze.",
+    icon:           "🌸",
+    category:       "frame",
+    cost:           { stars: 45 },
+    seasonal:       true,
+    seasonalLabel:  "Spring",
+    seasonalMonths: [3, 4, 5],
+  },
+  {
+    id:             "accent_petal",
+    name:           "Petal Drift",
+    description:    "A gentle flurry of blossoms frames your bio in quiet spring colour.",
+    icon:           "✿",
+    category:       "accent",
+    cost:           { aura: 20, shards: 10 },
+    seasonal:       true,
+    seasonalLabel:  "Spring",
+    seasonalMonths: [3, 4, 5],
+  },
+  // ── Seasonal: Summer (June – August) ─────────────────────────────────────
   {
     id:             "frame_solstice",
     name:           "Summer Solstice Frame",
-    description:    "A sun-drenched golden frame shimmering with warm light. Limited time only.",
+    description:    "A sun-drenched golden frame shimmering with warm light.",
     icon:           "☀",
     category:       "frame",
     cost:           { stars: 50 },
     seasonal:       true,
     seasonalLabel:  "Summer",
-    seasonalUntil:  "2026-08-31",
+    seasonalMonths: [6, 7, 8],
   },
   {
     id:             "accent_twilight",
@@ -81,7 +113,53 @@ export const SHOP_CATALOG: ShopItem[] = [
     cost:           { aura: 30 },
     seasonal:       true,
     seasonalLabel:  "Summer",
-    seasonalUntil:  "2026-08-31",
+    seasonalMonths: [6, 7, 8],
+  },
+  // ── Seasonal: Autumn (September – November) ───────────────────────────────
+  {
+    id:             "frame_harvest",
+    name:           "Harvest Frame",
+    description:    "Warm amber and crimson leaves curl around your profile at dusk.",
+    icon:           "🍂",
+    category:       "frame",
+    cost:           { stars: 45, shards: 5 },
+    seasonal:       true,
+    seasonalLabel:  "Autumn",
+    seasonalMonths: [9, 10, 11],
+  },
+  {
+    id:             "accent_ember",
+    name:           "Ember Glow",
+    description:    "A deep burnished warmth settles across your bio like a bonfire at dusk.",
+    icon:           "🔥",
+    category:       "accent",
+    cost:           { aura: 25, shards: 8 },
+    seasonal:       true,
+    seasonalLabel:  "Autumn",
+    seasonalMonths: [9, 10, 11],
+  },
+  // ── Seasonal: Winter (December – February) ────────────────────────────────
+  {
+    id:             "theme_aurora_winter",
+    name:           "Aurora Winter Theme",
+    description:    "Your journal pages shimmer with the silent greens and violets of the polar aurora.",
+    icon:           "🌌",
+    category:       "theme",
+    cost:           { aura: 20, shards: 20 },
+    seasonal:       true,
+    seasonalLabel:  "Winter",
+    seasonalMonths: [12, 1, 2],
+  },
+  {
+    id:             "frame_frost",
+    name:           "Frost Frame",
+    description:    "Ice-crystal filigree shimmers quietly around the edge of your profile.",
+    icon:           "❄",
+    category:       "frame",
+    cost:           { stars: 40, shards: 10 },
+    seasonal:       true,
+    seasonalLabel:  "Winter",
+    seasonalMonths: [12, 1, 2],
   },
 ];
 
@@ -185,7 +263,14 @@ router.get("/rewards/shop", requireAuth, async (req, res) => {
       if (purchasedIds.includes(itemId)) activeCosmetics[category] = itemId;
     }
 
-    return res.json({ catalog: SHOP_CATALOG, purchasedIds, activeCosmetics });
+    // Split catalog: currently-available items vs out-of-season seasonal previews
+    const currentMonth = new Date().getMonth() + 1; // 1-indexed
+    const catalog        = SHOP_CATALOG.filter(item => isItemAvailable(item, currentMonth));
+    const seasonalPreview = SHOP_CATALOG
+      .filter(item => item.seasonal && !isItemAvailable(item, currentMonth))
+      .map(item => ({ ...item, availableNow: false as const }));
+
+    return res.json({ catalog, seasonalPreview, purchasedIds, activeCosmetics });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch shop");
     return res.status(500).json({ error: "Internal server error" });
@@ -317,6 +402,12 @@ router.post("/rewards/spend", requireAuth, async (req, res) => {
   const item = SHOP_CATALOG.find((i) => i.id === itemId);
   if (!item) {
     return res.status(404).json({ error: "Item not found" });
+  }
+
+  // Block seasonal items that are currently out of season
+  const currentMonth = new Date().getMonth() + 1;
+  if (!isItemAvailable(item, currentMonth)) {
+    return res.status(403).json({ error: "seasonal_unavailable" });
   }
 
   const starsNeeded  = item.cost.stars  ?? 0;

@@ -259,25 +259,38 @@ export interface RewardBalance {
 
 // ── Cosmetic item → category map (mirrors server SHOP_CATALOG) ───────────────
 export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme'> = {
-  'frame_starlight': 'frame',
-  'frame_moonveil':  'frame',
-  'frame_solstice':  'frame',   // seasonal
-  'accent_aura':     'accent',
-  'accent_twilight': 'accent',  // seasonal
-  'theme_locket':    'theme',
-  'theme_aurora':    'theme',
+  // Permanent
+  'frame_starlight':    'frame',
+  'frame_moonveil':     'frame',
+  'accent_aura':        'accent',
+  'theme_locket':       'theme',
+  'theme_aurora':       'theme',
+  // Spring
+  'frame_blossom':      'frame',
+  'accent_petal':       'accent',
+  // Summer
+  'frame_solstice':     'frame',
+  'accent_twilight':    'accent',
+  // Autumn
+  'frame_harvest':      'frame',
+  'accent_ember':       'accent',
+  // Winter
+  'theme_aurora_winter': 'theme',
+  'frame_frost':        'frame',
 };
 
 export interface ShopItem {
-  id:             string;
-  name:           string;
-  description:    string;
-  icon:           string;
-  category:       'frame' | 'accent' | 'theme';
-  cost:           { stars?: number; aura?: number; shards?: number };
-  seasonal?:      boolean;
-  seasonalLabel?: string;
-  seasonalUntil?: string;
+  id:              string;
+  name:            string;
+  description:     string;
+  icon:            string;
+  category:        'frame' | 'accent' | 'theme';
+  cost:            { stars?: number; aura?: number; shards?: number };
+  seasonal?:       boolean;
+  seasonalLabel?:  string;
+  seasonalMonths?: number[];
+  // Server sets this to false for out-of-season items in seasonalPreview
+  availableNow?:   boolean;
 }
 
 export interface ConstellationState {
