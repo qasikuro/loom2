@@ -5,19 +5,100 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import type { Reward } from '@/context/AppContext';
+import { STAR_META } from '@/context/AppContext';
 
 interface RewardBannerProps {
   reward: Reward;
   onDismiss?: () => void;
 }
 
-export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
-  const colors    = useColors();
-  const slideAnim = useRef(new Animated.Value(-72)).current;
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
+// ── Particle specs: 8 directions, mix of sizes and travel distances ───────────
+const PARTICLES = [
+  { angle: 0,   dist: 34, size: 7,  delay: 0   },
+  { angle: 45,  dist: 28, size: 5,  delay: 60  },
+  { angle: 90,  dist: 38, size: 8,  delay: 20  },
+  { angle: 135, dist: 26, size: 5,  delay: 80  },
+  { angle: 180, dist: 32, size: 7,  delay: 10  },
+  { angle: 225, dist: 30, size: 6,  delay: 50  },
+  { angle: 270, dist: 36, size: 8,  delay: 30  },
+  { angle: 315, dist: 24, size: 5,  delay: 70  },
+];
+
+interface StarParticlesProps {
+  color: string;
+}
+
+function StarParticles({ color }: StarParticlesProps) {
+  const anims = useRef(PARTICLES.map(() => ({
+    opacity:   new Animated.Value(0),
+    translateX: new Animated.Value(0),
+    translateY: new Animated.Value(0),
+    scale:     new Animated.Value(0),
+  }))).current;
 
   useEffect(() => {
-    // Slide in from above with a spring, fade in simultaneously
+    const animations = PARTICLES.map((p, i) => {
+      const rad = (p.angle * Math.PI) / 180;
+      const toX  = Math.cos(rad) * p.dist;
+      const toY  = Math.sin(rad) * p.dist;
+      const a    = anims[i];
+
+      return Animated.sequence([
+        Animated.delay(p.delay),
+        Animated.parallel([
+          // Burst outward
+          Animated.spring(a.translateX, { toValue: toX, tension: 80, friction: 7, useNativeDriver: true }),
+          Animated.spring(a.translateY, { toValue: toY, tension: 80, friction: 7, useNativeDriver: true }),
+          // Pop in then hold
+          Animated.sequence([
+            Animated.timing(a.scale, { toValue: 1, duration: 180, useNativeDriver: true, easing: Easing.out(Easing.back(2)) }),
+          ]),
+          // Fade in then fade out slowly
+          Animated.sequence([
+            Animated.timing(a.opacity, { toValue: 0.85, duration: 150, useNativeDriver: true }),
+            Animated.delay(900),
+            Animated.timing(a.opacity, { toValue: 0, duration: 1200, useNativeDriver: true }),
+          ]),
+        ]),
+      ]);
+    });
+
+    Animated.parallel(animations).start();
+  }, []);
+
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {PARTICLES.map((p, i) => (
+        <Animated.Text
+          key={i}
+          style={[
+            styles.particle,
+            {
+              fontSize:  p.size,
+              color,
+              opacity:   anims[i].opacity,
+              transform: [
+                { translateX: anims[i].translateX },
+                { translateY: anims[i].translateY },
+                { scale:     anims[i].scale },
+              ],
+            },
+          ]}
+        >
+          ✦
+        </Animated.Text>
+      ))}
+    </View>
+  );
+}
+
+export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
+  const colors    = useColors();
+  const slideAnim = useRef(new Animated.Value(-80)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const glowAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
     Animated.parallel([
       Animated.spring(slideAnim, {
         toValue: 0,
@@ -31,7 +112,17 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
         useNativeDriver: true,
         easing: Easing.out(Easing.quad),
       }),
-    ]).start();
+    ]).start(() => {
+      // After entering, pulse the glow for star_unlock banners
+      if (reward.starUnlock) {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(glowAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+            Animated.timing(glowAnim, { toValue: 0, duration: 1200, useNativeDriver: true }),
+          ]),
+        ).start();
+      }
+    });
   }, []);
 
   const animStyle = {
@@ -39,6 +130,59 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
     opacity: fadeAnim,
   };
 
+  // ── Star unlock variant ────────────────────────────────────────────────────
+  if (reward.starUnlock) {
+    const meta        = STAR_META[reward.starUnlock] ?? { name: reward.message, color: '#C8A84B', icon: '✦' };
+    const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.18, 0.42] });
+
+    return (
+      <Animated.View
+        style={[
+          animStyle,
+          styles.starCard,
+          { borderColor: `${meta.color}55` },
+          SHADOW.lg,
+        ]}
+      >
+        {/* Particle burst */}
+        <StarParticles color={meta.color} />
+
+        {/* Animated background glow */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.starGlowBg,
+            { backgroundColor: meta.color, opacity: glowOpacity },
+          ]}
+          pointerEvents="none"
+        />
+
+        {/* Icon circle */}
+        <View style={[styles.starIconCircle, { backgroundColor: `${meta.color}22`, borderColor: `${meta.color}44` }]}>
+          <Text style={[styles.starIconEmoji, { color: meta.color }]}>{meta.icon}</Text>
+        </View>
+
+        {/* Text content */}
+        <View style={styles.starBody}>
+          <Text style={[styles.starLabel, { color: `${meta.color}AA` }]}>CONSTELLATION STAR UNLOCKED</Text>
+          <Text style={[styles.starName, { color: '#F0EAF8' }]}>{meta.name}</Text>
+          <Text style={[styles.starSub, { color: 'rgba(200,184,232,0.55)' }]}>Added to your sky</Text>
+        </View>
+
+        {onDismiss && (
+          <TouchableOpacity
+            onPress={onDismiss}
+            style={[styles.closeBtn, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Icon name="x" size={13} color="rgba(200,184,232,0.45)" />
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+    );
+  }
+
+  // ── Rising variant ─────────────────────────────────────────────────────────
   if (reward.isRising) {
     return (
       <Animated.View
@@ -123,6 +267,7 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
     );
   }
 
+  // ── Default variant ────────────────────────────────────────────────────────
   return (
     <Animated.View
       style={[
@@ -157,6 +302,7 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
 }
 
 const styles = StyleSheet.create({
+  // ── Default ───────────────────────────────────────────────────────────────
   card: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -178,6 +324,8 @@ const styles = StyleSheet.create({
     width: 28, height: 28, borderRadius: 8,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
+
+  // ── Rising ────────────────────────────────────────────────────────────────
   risingCard: {
     flexDirection: 'row', alignItems: 'center',
     gap: 12, borderRadius: 16, borderWidth: 1, padding: 14,
@@ -191,6 +339,7 @@ const styles = StyleSheet.create({
   risingTitle:    { fontSize: 14, fontFamily: 'Satoshi-Bold', lineHeight: 20 },
   risingSubtitle: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
 
+  // ── Currency ──────────────────────────────────────────────────────────────
   currencyCard: {
     flexDirection: 'row', alignItems: 'center',
     gap: 12, borderRadius: 16, borderWidth: 1, padding: 14,
@@ -208,4 +357,49 @@ const styles = StyleSheet.create({
   },
   currChipEmoji:  { fontSize: 11 },
   currChipNum:    { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+
+  // ── Star Unlock ───────────────────────────────────────────────────────────
+  starCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    padding: 16,
+    backgroundColor: '#07061A',
+    overflow: 'hidden',
+    minHeight: 76,
+  },
+  starGlowBg: {
+    borderRadius: 20,
+  },
+  starIconCircle: {
+    width: 48, height: 48, borderRadius: 24,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0, borderWidth: 1,
+  },
+  starIconEmoji: {
+    fontSize: 22, lineHeight: 28,
+  },
+  starBody: { flex: 1, gap: 2 },
+  starLabel: {
+    fontSize: 8, fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.4, textTransform: 'uppercase',
+  },
+  starName: {
+    fontSize: 17, fontFamily: 'Satoshi-Bold',
+    lineHeight: 22, letterSpacing: -0.3,
+  },
+  starSub: {
+    fontSize: 11, fontFamily: 'Satoshi-Regular',
+  },
+
+  // ── Particle dot ──────────────────────────────────────────────────────────
+  particle: {
+    position: 'absolute',
+    // Centred inside the icon circle (left ~16 padding + half of 48px circle = 40px)
+    left: 38,
+    top: 26,
+    textAlign: 'center',
+  },
 });

@@ -84,19 +84,21 @@ router.get("/rewards", requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/constellation — full constellation progress (auto-syncs) ───────
+// ── GET /api/constellation — full constellation progress (always re-syncs) ──
 router.get("/constellation", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   try {
-    const existing = await db
-      .select()
+    // Capture previous unlocked stars BEFORE re-syncing so we can diff
+    const [before] = await db
+      .select({ unlockedStars: constellationProgressTable.unlockedStars })
       .from(constellationProgressTable)
       .where(eq(constellationProgressTable.userId, userId))
       .limit(1);
 
-    if (existing.length === 0) {
-      await syncConstellation(db as any, userId);
-    }
+    const previousStars: string[] = (before?.unlockedStars as string[]) ?? [];
+
+    // Always re-sync so counts and star thresholds are current
+    await syncConstellation(db as any, userId);
 
     const [row] = await db
       .select()
@@ -108,9 +110,13 @@ router.get("/constellation", requireAuth, async (req, res) => {
       return res.json({
         socialCount: 0, memoryCount: 0, quietStreak: 0,
         helpingCount: 0, creativeCount: 0, seasonalCount: 0,
-        unlockedStars: [], activeTitle: null,
+        unlockedStars: [], activeTitle: null, newlyUnlocked: [],
       });
     }
+
+    // Diff: stars present now that were absent before
+    const currentStars = (row.unlockedStars as string[]) ?? [];
+    const newlyUnlocked = currentStars.filter(s => !previousStars.includes(s));
 
     return res.json({
       socialCount:   row.socialCount,
@@ -121,6 +127,7 @@ router.get("/constellation", requireAuth, async (req, res) => {
       seasonalCount: row.seasonalCount,
       unlockedStars: row.unlockedStars,
       activeTitle:   row.activeTitle,
+      newlyUnlocked,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch constellation");

@@ -235,7 +235,18 @@ export interface Reward {
   stars?:      number;
   aura?:       number;
   shards?:     number;
+  starUnlock?: string; // star key, e.g. 'quiet' | 'creative' | etc.
 }
+
+// Star metadata — used by AppContext (toast firing) and RewardBanner (display)
+export const STAR_META: Record<string, { name: string; color: string; icon: string }> = {
+  social:   { name: 'Luminary Bond',   color: '#78C8A8', icon: '⬡' },
+  memory:   { name: 'Memory Keeper',   color: '#9878C8', icon: '◇' },
+  quiet:    { name: 'Quiet Star',      color: '#7890C8', icon: '◐' },
+  creative: { name: 'Story Weaver',    color: '#C87AA8', icon: '◈' },
+  helping:  { name: 'Guiding Hand',    color: '#C8A84B', icon: '✦' },
+  seasonal: { name: 'Celestial Bloom', color: '#68B8B0', icon: '✿' },
+};
 
 export interface RewardBalance {
   stars:        number;
@@ -245,14 +256,15 @@ export interface RewardBalance {
 }
 
 export interface ConstellationState {
-  socialCount:   number;
-  memoryCount:   number;
-  quietStreak:   number;
-  helpingCount:  number;
-  creativeCount: number;
-  seasonalCount: number;
-  unlockedStars: string[];
-  activeTitle:   string | null;
+  socialCount:    number;
+  memoryCount:    number;
+  quietStreak:    number;
+  helpingCount:   number;
+  creativeCount:  number;
+  seasonalCount:  number;
+  unlockedStars:  string[];
+  activeTitle:    string | null;
+  newlyUnlocked?: string[]; // populated by API on each sync; used to fire celebration banners
 }
 
 export interface ServerNotification {
@@ -499,6 +511,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const isLoadingRef = useRef(false);
   const dataReadyRef = useRef(false);
 
+  // Tracks previously known unlocked stars so we can diff on each constellation reload.
+  // null = no baseline yet (initial load) → never fire toasts until we have a baseline.
+  const prevUnlockedStarsRef = useRef<string[] | null>(null);
+
   // ── Load active outfit id from AsyncStorage ────────────────────────────────
 
   useEffect(() => {
@@ -671,7 +687,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setServerNotifications(notifs);
       setMyGuides(guides);
       if (rewardBalanceRaw) setRewardBalance(rewardBalanceRaw);
-      if (constellationRaw) setConstellation(constellationRaw);
+      if (constellationRaw) {
+        setConstellation(constellationRaw);
+        // Establish the baseline — no toasts on initial load, only on subsequent reloads.
+        prevUnlockedStarsRef.current = constellationRaw.unlockedStars ?? [];
+      }
       setApiOnline(true);
 
       // Restore active outfit across sessions.
@@ -856,6 +876,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 3500);
   }, []);
 
+  // Fires a celebration banner for a newly-unlocked constellation star.
+  // Stays on screen longer (6 s) than a regular currency toast.
+  const fireStarUnlockToast = useCallback((starKey: string) => {
+    const id = `star-unlock-${starKey}-${Date.now()}`;
+    setRewards(prev => [...prev, {
+      id,
+      message:    STAR_META[starKey]?.name ?? starKey,
+      icon:       'star' as const,
+      starUnlock: starKey,
+    }]);
+    setTimeout(() => setRewards(prev => prev.filter(r => r.id !== id)), 6000);
+  }, []);
+
   // ── Reload helpers — defined before mutations so callbacks can call them ────
 
   const reloadRewards = useCallback(async () => {
@@ -869,8 +902,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiFetch<ConstellationState>('/constellation');
       setConstellation(data);
+
+      // Diff against previous baseline and fire celebration banners for new stars.
+      // If prevUnlockedStarsRef is null we have no baseline yet — skip toasts.
+      const prev = prevUnlockedStarsRef.current;
+      prevUnlockedStarsRef.current = data.unlockedStars ?? [];
+
+      if (prev !== null) {
+        // Prefer the server-computed diff (newlyUnlocked) if present; fall back to local diff.
+        const newStars: string[] = data.newlyUnlocked?.length
+          ? data.newlyUnlocked
+          : (data.unlockedStars ?? []).filter(s => !prev.includes(s));
+
+        for (const starKey of newStars) {
+          fireStarUnlockToast(starKey);
+        }
+      }
     } catch { /* silently skip */ }
-  }, []);
+  }, [fireStarUnlockToast]);
 
   // ── Journal entries ────────────────────────────────────────────────────────
 
