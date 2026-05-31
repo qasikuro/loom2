@@ -375,19 +375,139 @@ const sh = StyleSheet.create({
 });
 
 // ════════════════════════════════════════════════════════════════════════════
-// ─── Event Banner component ───────────────────────────────────────────────────
-function EventBanner({ event }: { event: ActiveEvent }) {
-  const th = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
+// ─── Shared countdown helper ─────────────────────────────────────────────────
+function eventCountdown(endsAt: string | null): { label: string; dateStr: string | null } | null {
+  if (!endsAt) return null;
+  const ms = new Date(endsAt).getTime() - Date.now();
+  if (ms <= 0) return null;
+  const d = Math.ceil(ms / 86400000);
+  const label = d === 1 ? '1 day left' : `${d} days left`;
+  const dateStr = new Date(endsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return { label, dateStr };
+}
 
-  const countdown = event.endsAt ? (() => {
-    const ms = new Date(event.endsAt).getTime() - Date.now();
-    if (ms <= 0) return null;
-    const d = Math.ceil(ms / 86400000);
-    return d === 1 ? '1 day left' : `${d} days left`;
-  })() : null;
+// ─── Event Detail Sheet ───────────────────────────────────────────────────────
+function EventDetailSheet({ event, visible, onClose }: { event: ActiveEvent; visible: boolean; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const slideY = useRef(new Animated.Value(600)).current;
+  const th     = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
+  const cd     = eventCountdown(event.endsAt);
+
+  useEffect(() => {
+    if (visible) {
+      Animated.spring(slideY, { toValue: 0, tension: 55, friction: 13, useNativeDriver: true }).start();
+    } else {
+      Animated.timing(slideY, { toValue: 600, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const REWARD_BG:    Record<string, string> = { stars: 'rgba(200,168,75,0.14)', aura: 'rgba(107,91,149,0.14)', shards: 'rgba(120,180,220,0.14)', item: 'rgba(168,136,248,0.14)' };
+  const REWARD_COLOR: Record<string, string> = { stars: '#C8A84B', aura: '#9878D8', shards: '#78B4DC', item: '#A880F8' };
+  const REWARD_BORDER:Record<string, string> = { stars: 'rgba(200,168,75,0.28)', aura: 'rgba(107,91,149,0.28)', shards: 'rgba(120,180,220,0.28)', item: 'rgba(168,136,248,0.28)' };
 
   return (
-    <View style={[ev.card, { borderColor: `${th.color}28` }]}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Pressable style={m.overlay} onPress={onClose}>
+        <Animated.View
+          style={[ev.sheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 20, transform: [{ translateY: slideY }] }]}
+        >
+          <Pressable onPress={e => e.stopPropagation()}>
+            {/* Handle */}
+            <View style={ev.sheetHandle} />
+
+            {/* Themed header stripe */}
+            <LinearGradient
+              colors={[th.bgStart, 'transparent']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={ev.sheetHeaderGrad}
+              pointerEvents="none"
+            />
+
+            {/* Eyebrow + close */}
+            <View style={ev.sheetTopRow}>
+              <View style={ev.eyebrowRow}>
+                <Text style={ev.themeIcon}>{th.icon}</Text>
+                <Text style={[ev.eyebrow, { color: th.color }]}>SKY EVENT</Text>
+              </View>
+              <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                style={[ev.sheetClose, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+                <Icon name="x" size={13} color="rgba(200,184,232,0.55)" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Title */}
+            <Text style={ev.sheetTitle}>{event.title}</Text>
+
+            {/* Countdown */}
+            {cd && (
+              <View style={[ev.pill, { backgroundColor: `${th.color}1E`, alignSelf: 'flex-start', marginBottom: 14 }]}>
+                <Text style={[ev.pillTxt, { color: th.color }]}>
+                  {cd.label}{cd.dateStr ? `  ·  ends ${cd.dateStr}` : ''}
+                </Text>
+              </View>
+            )}
+
+            {/* Description */}
+            {!!event.description && (
+              <Text style={ev.sheetDesc}>{event.description}</Text>
+            )}
+
+            {/* Rewards section */}
+            {event.inventory.length > 0 && (
+              <>
+                <Text style={ev.sheetRewardsLabel}>Rewards this event</Text>
+                <View style={ev.sheetRewardsList}>
+                  {event.inventory.map((item, i) => {
+                    const bg     = REWARD_BG[item.type]     ?? 'rgba(200,184,232,0.10)';
+                    const color  = REWARD_COLOR[item.type]  ?? '#C8B8E8';
+                    const border = REWARD_BORDER[item.type] ?? 'rgba(200,184,232,0.20)';
+                    return (
+                      <View key={i} style={[ev.sheetRewardRow, { backgroundColor: bg, borderColor: border }]}>
+                        <View style={[ev.sheetRewardIcon, { backgroundColor: `${color}20` }]}>
+                          <Text style={{ fontSize: 16, lineHeight: 20 }}>{ITEM_ICONS[item.type] ?? '🎁'}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[ev.sheetRewardName, { color }]}>{item.label}</Text>
+                          <Text style={ev.sheetRewardType}>
+                            {item.type === 'stars' ? 'Stars currency' : item.type === 'aura' ? 'Aura energy' : item.type === 'shards' ? 'Memory shards' : 'Cosmetic item'}
+                          </Text>
+                        </View>
+                        {(item.type === 'stars' || item.type === 'aura' || item.type === 'shards') && item.amount != null && (
+                          <Text style={[ev.sheetRewardAmt, { color }]}>+{item.amount}</Text>
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            {/* Admin-grant note */}
+            <View style={ev.sheetNote}>
+              <Text style={ev.sheetNoteText}>
+                ✦  Rewards are granted by the sky team during or after the event
+              </Text>
+            </View>
+          </Pressable>
+        </Animated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// ─── Event Banner (tappable) ──────────────────────────────────────────────────
+function EventBanner({ event, onPress }: { event: ActiveEvent; onPress: () => void }) {
+  const th = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
+  const cd = eventCountdown(event.endsAt);
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.82}
+      style={[ev.card, { borderColor: `${th.color}28` }]}
+    >
       <LinearGradient
         colors={[th.bgStart, th.bgEnd, 'transparent']}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
@@ -397,11 +517,12 @@ function EventBanner({ event }: { event: ActiveEvent }) {
       <View style={ev.eyebrowRow}>
         <Text style={ev.themeIcon}>{th.icon}</Text>
         <Text style={[ev.eyebrow, { color: th.color }]}>EVENT</Text>
-        {countdown && (
+        {cd && (
           <View style={[ev.pill, { backgroundColor: `${th.color}1E`, marginLeft: 'auto' as any }]}>
-            <Text style={[ev.pillTxt, { color: th.color }]}>{countdown}</Text>
+            <Text style={[ev.pillTxt, { color: th.color }]}>{cd.label}</Text>
           </View>
         )}
+        <Icon name="chevron-right" size={12} color={`${th.color}80`} />
       </View>
 
       {/* Title */}
@@ -412,7 +533,7 @@ function EventBanner({ event }: { event: ActiveEvent }) {
         <Text style={ev.desc} numberOfLines={2}>{event.description}</Text>
       )}
 
-      {/* Reward chips */}
+      {/* Reward chips (up to 4) */}
       {event.inventory.length > 0 && (
         <View style={ev.chips}>
           {event.inventory.slice(0, 4).map((item, i) => (
@@ -424,13 +545,13 @@ function EventBanner({ event }: { event: ActiveEvent }) {
           {event.inventory.length > 4 && (
             <View style={[ev.chip, { backgroundColor: `${th.color}0E` }]}>
               <Text style={[ev.chipTxt, { color: th.color, opacity: 0.60 }]}>
-                +{event.inventory.length - 4} more
+                +{event.inventory.length - 4} more  →
               </Text>
             </View>
           )}
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -456,6 +577,7 @@ export default function HomeScreen() {
   const [refreshing,  setRefreshing]  = useState(false);
   const [showConstellationIntro, setShowConstellationIntro] = useState(false);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
+  const [showEventSheet, setShowEventSheet] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
@@ -828,7 +950,7 @@ export default function HomeScreen() {
         ══════════════════════════════════════════════════ */}
         {activeEvent && (
           <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
-            <EventBanner event={activeEvent} />
+            <EventBanner event={activeEvent} onPress={() => setShowEventSheet(true)} />
           </Animated.View>
         )}
 
@@ -1260,6 +1382,15 @@ export default function HomeScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* ── Event Detail Sheet ───────────────────────────────────────────── */}
+      {activeEvent && (
+        <EventDetailSheet
+          event={activeEvent}
+          visible={showEventSheet}
+          onClose={() => setShowEventSheet(false)}
+        />
+      )}
     </Animated.View>
   );
 }
@@ -1443,6 +1574,46 @@ const ev = StyleSheet.create({
   chip:       { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 11 },
   chipIcon:   { fontSize: 12, lineHeight: 14 },
   chipTxt:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
+
+  // ── Event Detail Sheet ────────────────────────────────────────────────────
+  sheet: {
+    backgroundColor: '#0C0820',
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.12)',
+    paddingHorizontal: 20, paddingTop: 8,
+    overflow: 'hidden',
+  },
+  sheetHandle: {
+    width: 36, height: 4, borderRadius: 2,
+    backgroundColor: 'rgba(200,184,232,0.22)',
+    alignSelf: 'center', marginBottom: 16,
+  },
+  sheetHeaderGrad: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+  },
+  sheetTopRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 },
+  sheetClose:    { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  sheetTitle:    { fontSize: 24, fontFamily: 'Satoshi-Bold', color: 'rgba(242,234,255,0.97)', letterSpacing: -0.6, marginBottom: 10 },
+  sheetDesc:     { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.60)', lineHeight: 19, marginBottom: 18 },
+  sheetRewardsLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.6, textTransform: 'uppercase', color: 'rgba(200,184,232,0.45)', marginBottom: 10 },
+  sheetRewardsList:  { gap: 8, marginBottom: 20 },
+  sheetRewardRow:    {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 12, borderRadius: 14, borderWidth: 1,
+  },
+  sheetRewardIcon:   { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  sheetRewardName:   { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  sheetRewardType:   { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', marginTop: 1 },
+  sheetRewardAmt:    { fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
+  sheetNote: {
+    borderTopWidth: 1, borderTopColor: 'rgba(200,184,232,0.08)',
+    paddingTop: 14, marginTop: 4,
+  },
+  sheetNoteText: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
+    color: 'rgba(200,184,232,0.38)', textAlign: 'center', lineHeight: 17,
+  },
 });
 
 // Modal styles
