@@ -3,7 +3,8 @@ import { Images } from '@/assets/images';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Animated, Easing, Modal, Platform, Pressable,
@@ -372,6 +373,16 @@ export default function HomeScreen() {
   const [showNotifs,  setShowNotifs]  = useState(false);
   const [showOutfits, setShowOutfits] = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
+  const [showConstellationIntro, setShowConstellationIntro] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
+  }, []);
+
+  async function dismissConstellationIntro() {
+    setShowConstellationIntro(false);
+    await AsyncStorage.setItem('star_intro_v1', 'done');
+  }
 
   const hour       = new Date().getHours();
   const unread     = serverNotifications.filter(n => !n.isRead).length;
@@ -387,6 +398,21 @@ export default function HomeScreen() {
 
   const totalWitnessed = stories.reduce((s, x) => s + (x.witnessedCount ?? 0), 0);
   const totalSaved     = stories.reduce((s, x) => s + (x.savedCount ?? 0), 0);
+
+  // Mood this week — dominant mood from last 7 days of journal entries
+  const moodThisWeek = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 7);
+    const recent = journalEntries.filter(e => new Date(e.date) >= cutoff && e.mood);
+    if (recent.length < 2) return null;
+    const counts: Record<string, number> = {};
+    recent.forEach(e => { counts[e.mood] = (counts[e.mood] ?? 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return (sorted[0]?.[1] ?? 0) >= 2 ? sorted[0]![0] : null;
+  }, [journalEntries]);
+
+  // Public story count (for Creative Star nudge)
+  const publicStoryCount = useMemo(() => stories.filter(s => s.isPublic).length, [stories]);
 
   // Next star to unlock (highest % progress among locked stars)
   const nextStar = constellation ? closestLockedStar(constellation) : null;
@@ -589,6 +615,11 @@ export default function HomeScreen() {
               )}
             </View>
 
+            {/* Mood arc — dominant mood this week */}
+            {moodThisWeek && (
+              <Text style={s.heroMoodArc}>You've been feeling {moodThisWeek} most this week</Text>
+            )}
+
           </View>
 
           {/* ── Stats — glassy frosted card ── */}
@@ -643,6 +674,35 @@ export default function HomeScreen() {
             pointerEvents="none"
           />
         </View>
+
+        {/* ══════════════════════════════════════════════════
+            CONSTELLATION INTRO — one-time, first-run hint
+        ══════════════════════════════════════════════════ */}
+        {showConstellationIntro && (
+          <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }] }}>
+          <View style={s.introCard}>
+            <LinearGradient
+              colors={['rgba(168,136,248,0.14)', 'rgba(96,168,248,0.08)', 'transparent']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={s.introTitle}>✦  Your constellation awaits</Text>
+              <Text style={s.introBody}>
+                Earn stars by journaling daily, creating stories, and connecting with others.
+                Each star unlocks a title — and lets you spend in the shop.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={dismissConstellationIntro}
+              style={s.introDismiss}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={s.introDismissText}>Got it ✦</Text>
+            </TouchableOpacity>
+          </View>
+          </Animated.View>
+        )}
 
         {/* ══════════════════════════════════════════════════
             WHO'S AROUND — friends with recent stories
@@ -737,6 +797,11 @@ export default function HomeScreen() {
                   {nextStarCount} / {nextStar.threshold} {nextStar.unit}
                 </Text>
               </View>
+              {nextStar.key === 'creative' && stories.length > 0 && (
+                <Text style={s.nudgePublicNote}>
+                  {publicStoryCount} of {stories.length} {stories.length === 1 ? 'story is' : 'stories are'} public
+                </Text>
+              )}
             </View>
 
             <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
@@ -1174,7 +1239,25 @@ const s = StyleSheet.create({
   nudgeTrack:    { height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.06)', overflow: 'hidden', marginVertical: 1 },
   nudgeFill:     { height: 3, borderRadius: 2, opacity: 0.75 },
   nudgeAction:   { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', flex: 1, marginRight: 8 },
-  nudgeFraction: { fontSize: 11, fontFamily: 'Satoshi-Bold', opacity: 0.70 },
+  nudgeFraction:   { fontSize: 11, fontFamily: 'Satoshi-Bold', opacity: 0.70 },
+  nudgePublicNote: { fontSize: 10.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.38)', marginTop: 4, fontStyle: 'italic' },
+
+  // ── Constellation intro card (one-time) ───────────────────────────────────
+  introCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    marginHorizontal: 16, marginTop: 8, marginBottom: 4,
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderRadius: 18, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1, borderColor: 'rgba(168,136,248,0.12)',
+  },
+  introTitle:       { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(220,200,255,0.82)', marginBottom: 5, letterSpacing: 0.1 },
+  introBody:        { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.52)', lineHeight: 18 },
+  introDismiss:     { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: 'rgba(168,136,248,0.12)', alignSelf: 'center' },
+  introDismissText: { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: 'rgba(200,168,255,0.75)', letterSpacing: 0.3 },
+
+  // ── Hero mood arc ─────────────────────────────────────────────────────────
+  heroMoodArc: { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.42)', marginTop: 5, textAlign: 'center' },
 
   // ── Activity digest strip ──────────────────────────────────────────────────
   digestRow:   { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 14 },

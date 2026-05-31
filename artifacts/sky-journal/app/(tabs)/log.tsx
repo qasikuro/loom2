@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -55,6 +56,25 @@ const WEEK_DAYS   = ['S','M','T','W','T','F','S'];
 
 function toDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+/** Consecutive days ending today (or yesterday if today has no entry yet) */
+function computeStreak(entries: JournalEntry[]): number {
+  const days = new Set(entries.map(e => toDateKey(new Date(e.date))));
+  const today = new Date();
+  let streak = 0;
+  for (let i = 0; i <= 366; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    if (days.has(toDateKey(d))) {
+      streak++;
+    } else if (i === 0) {
+      continue; // no entry today yet — streak still alive
+    } else {
+      break;
+    }
+  }
+  return streak;
 }
 
 function formatHeader(dk: string, t: TFunc): string {
@@ -459,10 +479,13 @@ export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { t }   = useTranslation();
-  const { journalEntries, deleteJournalEntry, isLoading } = useApp();
+  const { journalEntries, deleteJournalEntry, isLoading, constellation } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
   const bottomPad = Platform.OS === 'web' ? 180 : insets.bottom + 180;
+
+  const journalStreak = useMemo(() => computeStreak(journalEntries), [journalEntries]);
+  const quietStarDone = constellation?.unlockedStars.includes('quiet') ?? false;
 
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [searchQuery,  setSearchQuery]  = useState('');
@@ -546,6 +569,19 @@ export default function JournalScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ── Streak indicator ── */}
+        {journalStreak > 0 && (
+          <View style={styles.streakRow}>
+            <Text style={styles.streakFlame}>🔥</Text>
+            <Text style={styles.streakText}>{journalStreak}-day streak</Text>
+            {quietStarDone ? (
+              <Text style={[styles.streakSub, { color: '#7890C8' }]}>· Quiet Star ✦ unlocked</Text>
+            ) : (
+              <Text style={styles.streakSub}>· {Math.max(0, 7 - journalStreak)} more day{7 - journalStreak !== 1 ? 's' : ''} for Quiet Star</Text>
+            )}
+          </View>
+        )}
 
         {/* Filter tabs — white pill style inside dark header */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false}
@@ -731,6 +767,10 @@ const styles = StyleSheet.create({
   hdrBtnActive: { backgroundColor:'rgba(120,86,255,0.28)', borderColor:'rgba(120,86,255,0.40)' },
 
   // Filter tabs inside dark header
+  streakRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 18, paddingBottom: 10, paddingTop: 2 },
+  streakFlame:    { fontSize: 14, lineHeight: 18 },
+  streakText:     { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.82)' },
+  streakSub:      { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)' },
   filtersScroll: { maxHeight:56 },
   filtersRow: { flexDirection:'row', gap:7, paddingHorizontal:16, paddingVertical:8, paddingBottom:12 },
   filterTab: {
