@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --sky-lavender: #C8B8E8;
+  --sky-blue: #B8D4F0;
+  --sky-gold: #C8A84B;
+  --sky-cream: #F8F4EE;
+  --sky-purple: #6B5B95;
+  --sky-night: #1A1630;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: transparent; }
