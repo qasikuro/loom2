@@ -29,6 +29,7 @@ import { Images } from '@/assets/images';
 import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/context/AppContext';
 import { ConstellationMap } from '@/components/ConstellationMap';
 import { RewardBalance } from '@/components/RewardBalance';
+import { ShopModal } from '@/components/ShopModal';
 import { useSound } from '@/context/SoundContext';
 import { SkeletonProfileCard } from '@/components/Skeleton';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
@@ -744,6 +745,9 @@ export default function CharacterScreen() {
   const [avatarUploading,  setAvatarUploading]  = useState(false);
   const [avatarError,      setAvatarError]      = useState<string | null>(null);
 
+  // ── Shop modal ─────────────────────────────────────────────────────────────
+  const [showShop, setShowShop] = useState(false);
+
   // ── Settings drawer ────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerX = useRef(new Animated.Value(screenW * 0.82)).current;
@@ -1162,6 +1166,7 @@ export default function CharacterScreen() {
               auraEnergy={rewardBalance.auraEnergy}
               memoryShards={rewardBalance.memoryShards}
               size="sm"
+              onPress={() => setShowShop(true)}
             />
           </View>
         )}
@@ -1779,6 +1784,7 @@ export default function CharacterScreen() {
                   auraEnergy={rewardBalance.auraEnergy}
                   memoryShards={rewardBalance.memoryShards}
                   size="sm"
+                  onPress={() => setShowShop(true)}
                 />
               )}
             </View>
@@ -2493,6 +2499,9 @@ export default function CharacterScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* ── Sky Shop modal ──────────────────────────────────── */}
+      <ShopModal visible={showShop} onClose={() => setShowShop(false)} />
     </View>
   );
 }

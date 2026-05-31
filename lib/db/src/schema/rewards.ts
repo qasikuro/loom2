@@ -33,6 +33,20 @@ export const constellationProgressTable = pgTable("constellation_progress", {
   updatedAt:       timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const userPurchasesTable = pgTable("user_purchases", {
+  id:          uuid("id").primaryKey().defaultRandom(),
+  userId:      text("user_id").notNull(),
+  itemId:      text("item_id").notNull(),
+  itemName:    text("item_name").notNull(),
+  starsSpent:  integer("stars_spent").notNull().default(0),
+  auraSpent:   integer("aura_spent").notNull().default(0),
+  shardsSpent: integer("shards_spent").notNull().default(0),
+  purchasedAt: timestamp("purchased_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("user_purchases_user_item_idx").on(table.userId, table.itemId),
+]);
+
 export type UserRewards           = typeof userRewardsTable.$inferSelect;
 export type RewardEvent           = typeof rewardEventsTable.$inferSelect;
 export type ConstellationProgress = typeof constellationProgressTable.$inferSelect;
+export type UserPurchase          = typeof userPurchasesTable.$inferSelect;

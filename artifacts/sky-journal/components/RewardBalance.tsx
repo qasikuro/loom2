@@ -1,17 +1,18 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface RewardBalanceProps {
   stars:        number;
   auraEnergy:   number;
   memoryShards: number;
   size?:        'sm' | 'md';
+  onPress?:     () => void;
 }
 
-export function RewardBalance({ stars, auraEnergy, memoryShards, size = 'md' }: RewardBalanceProps) {
+export function RewardBalance({ stars, auraEnergy, memoryShards, size = 'md', onPress }: RewardBalanceProps) {
   const sm = size === 'sm';
 
-  return (
+  const inner = (
     <View style={styles.row}>
       <View style={[styles.chip, { backgroundColor: 'rgba(200,168,75,0.14)', borderColor: 'rgba(200,168,75,0.30)' }]}>
         <Text style={[styles.chipIcon, sm && styles.chipIconSm]}>✦</Text>
@@ -25,8 +26,23 @@ export function RewardBalance({ stars, auraEnergy, memoryShards, size = 'md' }: 
         <Text style={[styles.chipIcon, sm && styles.chipIconSm]}>◇</Text>
         <Text style={[styles.chipNum, sm && styles.chipNumSm, { color: '#78B4DC' }]}>{memoryShards}</Text>
       </View>
+      {onPress && (
+        <View style={styles.shopHint}>
+          <Text style={styles.shopHintText}>Shop ›</Text>
+        </View>
+      )}
     </View>
   );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.72}>
+        {inner}
+      </TouchableOpacity>
+    );
+  }
+
+  return inner;
 }
 
 const styles = StyleSheet.create({
@@ -48,4 +64,16 @@ const styles = StyleSheet.create({
   chipIconSm:  { fontSize: 11 },
   chipNum:     { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
   chipNumSm:   { fontSize: 11 },
+  shopHint: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(107,91,149,0.12)',
+  },
+  shopHintText: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(152,120,216,0.80)',
+    letterSpacing: 0.3,
+  },
 });
