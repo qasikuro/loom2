@@ -104,6 +104,7 @@ export const ListStoriesResponseItem = zod.object({
   isPublic: zod.boolean(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
+  stickerCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
 export const ListStoriesResponse = zod.array(ListStoriesResponseItem);
@@ -150,6 +151,7 @@ export const GetStoryResponse = zod.object({
   isPublic: zod.boolean(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
+  stickerCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
 
@@ -183,6 +185,7 @@ export const WitnessStoryResponse = zod.object({
   isPublic: zod.boolean(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
+  stickerCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
 

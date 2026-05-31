@@ -162,6 +162,7 @@ export interface Story {
   isPublic:        boolean;
   witnessedCount:  number;
   savedCount:      number;
+  stickerCount:    number;
   pageLayoutKey?:  string;
   pages?:          StoryPage[];
 }
@@ -214,6 +215,7 @@ export interface DiscoverPost {
   mood:             string;
   witnessedCount:   number;
   savedCount:       number;
+  stickerCount:     number;
   timeAgo:          string;
   date:             string;
   chapterNumber:    number;
@@ -420,6 +422,7 @@ function toAppStory(raw: any): Story {
     isPublic:       raw.isPublic ?? raw.is_public ?? false,
     witnessedCount: raw.witnessedCount ?? raw.witnessed_count ?? 0,
     savedCount:     raw.savedCount     ?? raw.saved_count     ?? 0,
+    stickerCount:   raw.stickerCount   ?? 0,
     pageLayoutKey:  raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
     pages:          Array.isArray(raw.pages) ? raw.pages : undefined,
   };
@@ -455,6 +458,7 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
     mood:           raw.mood ?? 'Hopeful',
     witnessedCount: raw.witnessedCount ?? 0,
     savedCount:     raw.savedCount ?? 0,
+    stickerCount:   raw.stickerCount ?? 0,
     timeAgo:        relativeTimeDiscover(raw.date ?? raw.createdAt ?? new Date().toISOString()),
     date:           raw.date ?? raw.createdAt ?? new Date().toISOString(),
     chapterNumber:  raw.chapterNumber ?? 1,

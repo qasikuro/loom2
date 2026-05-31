@@ -17,5 +17,6 @@ export interface Story {
   isPublic: boolean;
   witnessedCount: number;
   savedCount: number;
+  stickerCount: number;
   createdAt: Date;
 }

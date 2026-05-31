@@ -326,10 +326,12 @@ components:
           type: integer
         savedCount:
           type: integer
+        stickerCount:
+          type: integer
         createdAt:
           type: string
           format: date-time
-      required: [id, date, chapterTitle, panels, mood, location, isPublic, witnessedCount, savedCount, createdAt]
+      required: [id, date, chapterTitle, panels, mood, location, isPublic, witnessedCount, savedCount, stickerCount, createdAt]
 
     StoryInput:
       type: object

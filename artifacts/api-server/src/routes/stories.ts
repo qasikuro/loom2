@@ -1,5 +1,5 @@
-import { db, storiesTable, followsTable, characterTable, notificationsTable } from "@workspace/db";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { db, storiesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable } from "@workspace/db";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -54,7 +54,9 @@ router.get("/stories", requireAuth, async (req, res) => {
       .from(storiesTable)
       .where(and(eq(storiesTable.userId, userId), eq(storiesTable.isHidden, false)))
       .orderBy(desc(storiesTable.date));
-    return res.json(rows.map(serializeStory));
+
+    const stickerCounts = await fetchStickerCounts(rows.map(r => r.id));
+    return res.json(rows.map(r => serializeStory(r, stickerCounts[r.id] ?? 0)));
   } catch (err) {
     req.log.error({ err }, "Failed to list stories");
     return res.status(500).json({ error: "Internal server error" });
@@ -217,9 +219,11 @@ router.get("/stories/:id", requireAuth, async (req, res) => {
         .limit(1);
 
       if (publicRows.length === 0) return res.status(404).json({ error: "Not found" });
-      return res.json(serializeStory(publicRows[0].story));
+      const counts = await fetchStickerCounts([storyId]);
+      return res.json(serializeStory(publicRows[0].story, counts[storyId] ?? 0));
     }
-    return res.json(serializeStory(rows[0]));
+    const counts = await fetchStickerCounts([storyId]);
+    return res.json(serializeStory(rows[0], counts[storyId] ?? 0));
   } catch (err) {
     req.log.error({ err }, "Failed to get story");
     return res.status(500).json({ error: "Internal server error" });
@@ -366,7 +370,19 @@ function sanitizePanels(panels: unknown): unknown[] {
   return panels.map((p: any) => ({ ...p, imageUri: safeImageUri(p.imageUri) }));
 }
 
-function serializeStory(row: typeof storiesTable.$inferSelect) {
+async function fetchStickerCounts(storyIds: string[]): Promise<Record<string, number>> {
+  if (storyIds.length === 0) return {};
+  const rows = await db
+    .select({ storyId: stickerReactionsTable.storyId, cnt: count() })
+    .from(stickerReactionsTable)
+    .where(inArray(stickerReactionsTable.storyId, storyIds))
+    .groupBy(stickerReactionsTable.storyId);
+  const map: Record<string, number> = {};
+  rows.forEach(r => { map[r.storyId] = Number(r.cnt); });
+  return map;
+}
+
+function serializeStory(row: typeof storiesTable.$inferSelect, stickerCount = 0) {
   return {
     id:             row.id,
     date:           row.date.toISOString(),
@@ -378,6 +394,7 @@ function serializeStory(row: typeof storiesTable.$inferSelect) {
     isPublic:       row.isPublic,
     witnessedCount: row.witnessedCount,
     savedCount:     row.savedCount,
+    stickerCount,
     pageLayoutKey:  row.pageLayoutKey ?? undefined,
     pages:          row.pages ?? undefined,
     createdAt:      row.createdAt.toISOString(),

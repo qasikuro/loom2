@@ -326,6 +326,7 @@ export default function StoryScreen() {
 
   const witnessedCount = ((story?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0));
   const savedCount     = (story?.savedCount ?? post?.savedCount ?? 0) + savedOffset;
+  const stickerCount   = story?.stickerCount ?? post?.stickerCount ?? 0;
 
   function toCellPanel(p: any): CellPanel {
     return {
@@ -549,6 +550,13 @@ export default function StoryScreen() {
             <View style={styles.endStatDot} />
             <Icon name="bookmark" size={14} color={isSaved ? '#8B7AB5' : 'rgba(200,184,232,0.6)'} />
             <Text style={[styles.endStatText, isSaved && { color: '#8B7AB5' }]}>{savedCount}</Text>
+            {stickerCount > 0 && (
+              <>
+                <View style={styles.endStatDot} />
+                <Text style={styles.endStatStickerIcon}>✦</Text>
+                <Text style={styles.endStatText}>{stickerCount}</Text>
+              </>
+            )}
           </View>
           {/* Follow author CTA for discover posts */}
           {post?.authorUserId && (
@@ -573,6 +581,13 @@ export default function StoryScreen() {
           <View style={styles.dotDivider} />
           <Icon name="bookmark" size={14} color="rgba(240,234,248,0.6)" />
           <Text style={styles.witnessedNum}>{savedCount}</Text>
+          {stickerCount > 0 && (
+            <>
+              <View style={styles.dotDivider} />
+              <Text style={styles.bottomStickerIcon}>✦</Text>
+              <Text style={styles.witnessedNum}>{stickerCount}</Text>
+            </>
+          )}
         </View>
 
         <View style={styles.actionRow}>
@@ -709,6 +724,7 @@ const styles = StyleSheet.create({
   endStats: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
   endStatText: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.6)' },
   endStatDot:  { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(200,184,232,0.3)', marginHorizontal: 4 },
+  endStatStickerIcon: { fontSize: 11, color: 'rgba(200,184,232,0.6)' },
   endViewProfile: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
     marginTop: 12, paddingHorizontal: 16, paddingVertical: 9,
@@ -726,6 +742,7 @@ const styles = StyleSheet.create({
   witnessedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   witnessedNum: { color: 'rgba(240,234,248,0.6)', fontSize: 14, fontFamily: 'Satoshi-Regular' },
   dotDivider: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(240,234,248,0.3)', marginHorizontal: 4 },
+  bottomStickerIcon: { fontSize: 12, color: 'rgba(240,234,248,0.6)' },
   actionRow: { flexDirection: 'row', gap: 8 },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,

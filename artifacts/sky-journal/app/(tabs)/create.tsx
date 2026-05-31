@@ -305,6 +305,7 @@ export default function CreateScreen() {
         isPublic,
         witnessedCount: 0,
         savedCount:     0,
+        stickerCount:   0,
         pageLayoutKey:  filledPages[0].layoutKey,
         pages:          filledPages,
       });

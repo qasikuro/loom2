@@ -195,6 +195,12 @@ export function DiscoverCard({
                   : post.witnessedCount}
               </Text>
             </View>
+            {post.stickerCount > 0 && (
+              <View style={styles.statPill}>
+                <Text style={styles.stickerTotalIcon}>✦</Text>
+                <Text style={styles.statText}>{post.stickerCount}</Text>
+              </View>
+            )}
             <MoodBadge mood={post.vibe} size="sm" />
             {topStickers.length > 0 && (
               <View style={styles.stickerCountRow}>
@@ -374,6 +380,7 @@ const styles = StyleSheet.create({
   },
   stickerCountEmoji: { fontSize: 10 },
   stickerCountNum:   { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.6)' },
+  stickerTotalIcon:  { fontSize: 9, color: 'rgba(200,184,232,0.55)' },
 
   actionsGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconBtn: {

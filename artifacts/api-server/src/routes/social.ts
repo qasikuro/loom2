@@ -1,5 +1,5 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable } from "@workspace/db";
-import { and, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable } from "@workspace/db";
+import { and, count, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
@@ -499,9 +499,22 @@ router.get("/discover", requireAuth, async (req, res) => {
     });
 
     scored.sort((a, b) => b.score - a.score);
+    const top50 = scored.slice(0, 50);
+
+    // Fetch sticker counts in bulk for the top 50 stories
+    const top50Ids = top50.map(({ row }) => row.id);
+    let stickerCountMap: Record<string, number> = {};
+    if (top50Ids.length > 0) {
+      const stickerRows = await db
+        .select({ storyId: stickerReactionsTable.storyId, cnt: count() })
+        .from(stickerReactionsTable)
+        .where(inArray(stickerReactionsTable.storyId, top50Ids))
+        .groupBy(stickerReactionsTable.storyId);
+      stickerRows.forEach(r => { stickerCountMap[r.storyId] = Number(r.cnt); });
+    }
 
     return res.json(
-      scored.slice(0, 50).map(({ row, isFollowing }) => {
+      top50.map(({ row, isFollowing }) => {
         const rawPanels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
         const panels = rawPanels.map(p => ({
           ...p,
@@ -521,6 +534,7 @@ router.get("/discover", requireAuth, async (req, res) => {
           location:        row.location,
           witnessedCount:  row.witnessedCount,
           savedCount:      row.savedCount,
+          stickerCount:    stickerCountMap[row.id] ?? 0,
           date:            row.date.toISOString(),
           panels,
           pageLayoutKey:   row.pageLayoutKey ?? undefined,
