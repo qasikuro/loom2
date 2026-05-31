@@ -462,17 +462,27 @@ export default function HomeScreen() {
             HERO — centered immersive sanctuary
         ══════════════════════════════════════════════════ */}
         <View style={[s.hero, { paddingTop: topPad + 8 }]}>
-          {/* Mood atmosphere — subtle, layered */}
+          {/* Base mood gradient — diagonal, rich */}
           <LinearGradient
-            colors={grad as unknown as [string, string, ...string[]]}
+            colors={[`${accent}28`, grad[0], grad[1], grad[2]] as unknown as [string, string, ...string[]]}
             style={StyleSheet.absoluteFill}
-            start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          {/* Small accent glow orbs — modern, not the big ugly moon */}
-          <View pointerEvents="none" style={{ position: 'absolute', top: topPad + 20, alignSelf: 'center', width: 160, height: 160, borderRadius: 80, backgroundColor: accent, opacity: 0.07 }} />
-          <View pointerEvents="none" style={{ position: 'absolute', top: topPad + 60, alignSelf: 'center', width: 80, height: 80, borderRadius: 40, backgroundColor: '#A880F8', opacity: 0.10 }} />
-          {/* Edge shimmer */}
-          <View pointerEvents="none" style={{ position: 'absolute', top: -20, right: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: accent, opacity: 0.05 }} />
+          {/* Cross-wash — opposite angle, creates mesh depth without circles */}
+          <LinearGradient
+            colors={[`${accent}22`, 'transparent', `${accent}14`]}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }}
+            pointerEvents="none"
+          />
+          {/* Top vignette — adds premium depth at the very top */}
+          <LinearGradient
+            colors={['rgba(0,0,0,0.22)', 'transparent']}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 90 }}
+            pointerEvents="none"
+          />
+          {/* Accent pinstripe — thin premium top edge */}
+          <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, backgroundColor: accent, opacity: 0.45 }} />
 
           {/* ── Top row: bell + settings ── */}
           <View style={s.heroActions}>
@@ -530,7 +540,7 @@ export default function HomeScreen() {
 
           </View>
 
-          {/* ── Stats row ── */}
+          {/* ── Stats — glassy frosted card ── */}
           <View style={s.statBar}>
             {[
               { n: journalEntries.length, l: 'entries',  press: () => router.push('/(tabs)/log') },
@@ -928,7 +938,7 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#080614' },
 
   // ── Hero — centered immersive ──────────────────────────────────────────────
-  hero:        { paddingHorizontal: 0, paddingBottom: 32, overflow: 'hidden' },
+  hero:        { paddingHorizontal: 0, paddingBottom: 28, overflow: 'hidden', borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 4 },
   heroActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, paddingHorizontal: 20, marginBottom: 12 },
   heroBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   heroBadge:   { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: 3.5 },
@@ -937,14 +947,14 @@ const s = StyleSheet.create({
   heroCenter:  { alignItems: 'center', paddingHorizontal: 28, paddingBottom: 22, gap: 7 },
 
   // Avatar
-  avatarWrap:  { position: 'relative', marginBottom: 4 },
-  avatarRing:  { width: 90, height: 90, borderRadius: 45, padding: 2.5 },
-  avatarInner: { flex: 1, borderRadius: 42.5, overflow: 'hidden', backgroundColor: '#0A0820' },
+  avatarWrap:  { position: 'relative', marginBottom: 6 },
+  avatarRing:  { width: 98, height: 98, borderRadius: 49, padding: 3 },
+  avatarInner: { flex: 1, borderRadius: 46, overflow: 'hidden', backgroundColor: '#0A0820' },
   roleTag:     { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#080614' },
   roleText:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#fff' },
 
   // Identity text — centered
-  heroName:    { fontSize: 30, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.97)', letterSpacing: -1, textAlign: 'center' },
+  heroName:    { fontSize: 32, fontFamily: 'Satoshi-Bold', color: 'rgba(245,240,255,0.98)', letterSpacing: -1.2, textAlign: 'center' },
   heroHandle:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.42)', textAlign: 'center' },
   heroBioRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   moodDot:     { width: 6, height: 6, borderRadius: 3 },
@@ -963,11 +973,14 @@ const s = StyleSheet.create({
   heroCTAText: { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
 
   // Stats row — below hero center, no top border (gradient does the separation)
-  statBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingTop: 18, paddingBottom: 4, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  statItem: { alignItems: 'center', gap: 2 },
-  statN:    { fontSize: 19, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.92)', letterSpacing: -0.5 },
-  statL:    { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.36)', letterSpacing: 0.4 },
-  statSep:  { width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.06)' },
+  statBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly',
+              paddingVertical: 14, paddingHorizontal: 8, marginHorizontal: 20, marginBottom: 6,
+              backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 22,
+              borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.09)' },
+  statItem: { alignItems: 'center', gap: 3, flex: 1 },
+  statN:    { fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.96)', letterSpacing: -0.8 },
+  statL:    { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.42)', letterSpacing: 0.6, textTransform: 'uppercase' },
+  statSep:  { width: 0.5, height: 30, backgroundColor: 'rgba(255,255,255,0.10)' },
 
   // ── Sections ───────────────────────────────────────────────────────────────
   section:     { paddingVertical: 18 },
