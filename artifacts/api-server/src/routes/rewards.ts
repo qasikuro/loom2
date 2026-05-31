@@ -317,24 +317,54 @@ router.put("/rewards/active-cosmetics", requireAuth, async (req, res) => {
 });
 
 // ── PUT /api/constellation/title — user picks which earned title to display ──
+//
+// Entitlement model: titles are indexed 1–6 by star count.  A user may only
+// choose a title whose index (1-based) is ≤ the number of stars they have
+// actually unlocked.  We load their constellation row first and reject any
+// request for an unearned title with 403.
+//
 router.put("/constellation/title", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const { title } = req.body as { title?: string };
   if (!title || typeof title !== "string") {
     return res.status(400).json({ error: "title is required" });
   }
-  const VALID_TITLES = [
-    "Star Wanderer", "Memory Keeper", "Sky Child",
-    "Constellation Dreamer", "Guiding Light", "Child of the Sky",
+
+  // Ordered list mirrors constellationService TITLES map (index = stars needed)
+  const ORDERED_TITLES = [
+    "Star Wanderer",        // 1 star
+    "Memory Keeper",        // 2 stars
+    "Sky Child",            // 3 stars
+    "Constellation Dreamer",// 4 stars
+    "Guiding Light",        // 5 stars
+    "Child of the Sky",     // 6 stars
   ];
-  if (!VALID_TITLES.includes(title)) {
+
+  const titleIndex = ORDERED_TITLES.indexOf(title); // 0-based
+  if (titleIndex === -1) {
     return res.status(400).json({ error: "Invalid title" });
   }
+
   try {
+    // Fetch the user's current constellation progress to check earned stars
+    const [progress] = await db
+      .select({ unlockedStars: constellationProgressTable.unlockedStars })
+      .from(constellationProgressTable)
+      .where(eq(constellationProgressTable.userId, userId))
+      .limit(1);
+
+    const earnedCount = (progress?.unlockedStars as string[] | undefined)?.length ?? 0;
+
+    // Title at index N requires N+1 stars
+    if (earnedCount === 0 || titleIndex >= earnedCount) {
+      return res.status(403).json({ error: "title_not_earned" });
+    }
+
     await db
       .update(constellationProgressTable)
       .set({ activeTitle: title, updatedAt: sql`now()` })
       .where(eq(constellationProgressTable.userId, userId));
+
     return res.json({ activeTitle: title });
   } catch (err) {
     req.log.error({ err }, "Failed to update constellation title");
