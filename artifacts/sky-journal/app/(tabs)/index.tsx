@@ -298,6 +298,13 @@ export default function HomeScreen() {
 
   return (
     <Animated.View style={[s.root, { opacity: fadeIn }]}>
+      {/* Continuous atmospheric depth — deep purple sky fading to near-black */}
+      <LinearGradient
+        colors={['#1E1438', '#10102A', '#080614']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
+        pointerEvents="none"
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomPad }}
@@ -305,27 +312,31 @@ export default function HomeScreen() {
       >
 
         {/* ══════════════════════════════════════════════════
-            HERO BANNER — full-bleed profile + live stats
+            HERO — centered immersive sanctuary
         ══════════════════════════════════════════════════ */}
-        <View style={[s.hero, { paddingTop: topPad + 10 }]}>
-          {/* Mood gradient sky */}
+        <View style={[s.hero, { paddingTop: topPad + 8 }]}>
+          {/* Mood sky gradient */}
           <LinearGradient
             colors={grad as unknown as [string, string, ...string[]]}
             style={StyleSheet.absoluteFill}
-            start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }}
+            start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
           />
-          {/* Breathing aura */}
+          {/* Soft moon — large atmospheric circle, no hard edge */}
           <Animated.View pointerEvents="none" style={{
-            position: 'absolute', top: topPad - 10, left: W * 0.05,
-            width: W * 0.90, height: W * 0.90, borderRadius: W * 0.45,
-            backgroundColor: accent, opacity: auraOp, transform: [{ scale: auraSc }],
+            position: 'absolute', alignSelf: 'center',
+            top: topPad + 50, width: W * 0.72, height: W * 0.72,
+            borderRadius: W * 0.36, backgroundColor: '#ffffff',
+            opacity: auraOp, transform: [{ scale: auraSc }],
           }} />
-          {/* Edge glows */}
-          <View pointerEvents="none" style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: 60, backgroundColor: accent, opacity: 0.06 }} />
+          {/* Accent edge shimmer */}
+          <View pointerEvents="none" style={{ position: 'absolute', top: -30, right: -30, width: 140, height: 140, borderRadius: 70, backgroundColor: accent, opacity: 0.06 }} />
 
-          {/* ── Top row: actions ── */}
+          {/* ── Top row: bell + settings ── */}
           <View style={s.heroActions}>
-            <TouchableOpacity onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }} style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <TouchableOpacity
+              onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Icon name="bell" size={17} color="rgba(220,210,255,0.78)" />
               {hasNotifs && <View style={[s.heroBadge, { backgroundColor: accent }]} />}
             </TouchableOpacity>
@@ -334,12 +345,13 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* ── Avatar + identity ── */}
-          <View style={s.identity}>
+          {/* ── Centered identity block ── */}
+          <View style={s.heroCenter}>
+            {/* Avatar */}
             <TouchableOpacity
+              style={s.avatarWrap}
               onPress={() => router.push('/(tabs)/profile')}
               onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfits(true); }}
-              style={s.avatarWrap}
             >
               <BreathRing accent={accent} r={44} />
               <View style={s.avatarInner}>
@@ -352,45 +364,45 @@ export default function HomeScreen() {
               )}
             </TouchableOpacity>
 
-            <View style={{ flex: 1, gap: 4 }}>
-              <Text style={s.heroName} numberOfLines={1}>{character.name || 'Sky Child'}</Text>
-              {character.username && <Text style={s.heroHandle}>@{character.username}</Text>}
+            {/* Name — large, the visual anchor */}
+            <Text style={s.heroName}>{character.name || 'Sky Child'}</Text>
+
+            {/* Mood + handle — soft metadata */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               {character.mood && (
-                <View style={s.heroBioRow}>
+                <>
                   <View style={[s.moodDot, { backgroundColor: mc }]} />
                   <Text style={[s.heroMood, { color: mc }]}>{character.mood}</Text>
-                  {character.role && <Text style={[s.heroRole, { color: `${accent}80` }]}>· {character.role}</Text>}
-                </View>
+                </>
+              )}
+              {character.username && (
+                <Text style={s.heroHandle}>{character.mood ? '· ' : ''}@{character.username}</Text>
               )}
             </View>
+
+            {/* Greeting — the single emotional focal line */}
+            <Text style={s.heroGreeting}>
+              {lumiLine(character.name, journalEntries, stories, unread, hour)} ✦
+            </Text>
+
+            {/* Primary CTA — one clear action */}
+            <TouchableOpacity
+              style={[s.heroCTA, { borderColor: `${accent}25`, backgroundColor: `${accent}14` }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('tap'); router.push('/(tabs)/create'); }}
+              activeOpacity={0.78}
+            >
+              <LinearGradient colors={[`${accent}28`, `${accent}06`]} style={StyleSheet.absoluteFill} />
+              <Icon name="feather" size={15} color={accent} />
+              <Text style={[s.heroCTAText, { color: accent }]}>Begin a story</Text>
+              <Icon name="chevron-right" size={14} color={`${accent}60`} />
+            </TouchableOpacity>
           </View>
 
-          {/* ── Bio ── */}
-          {character.bio ? (
-            <Text style={s.bio} numberOfLines={2}>{character.bio}</Text>
-          ) : (
-            <TouchableOpacity onPress={() => router.push('/(tabs)/profile')}>
-              <Text style={s.bioEmpty}>Add a bio ✦</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* ── Trait chips ── */}
-          {character.traits.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.traitsRow}>
-              {character.traits.slice(0, 8).map(t => (
-                <View key={t} style={[s.trait, { backgroundColor: `${accent}16`, borderColor: `${accent}28` }]}>
-                  <Text style={[s.traitTxt, { color: accent }]}>{t}</Text>
-                </View>
-              ))}
-            </ScrollView>
-          )}
-
-          {/* ── Stats bar ── */}
+          {/* ── Stats row ── */}
           <View style={s.statBar}>
             {[
               { n: journalEntries.length, l: 'entries',  press: () => router.push('/(tabs)/log') },
               { n: stories.length,        l: 'stories',  press: () => router.push('/(tabs)/create') },
-              { n: outfits.length,        l: 'outfits',  press: () => router.push('/(tabs)/profile') },
               { n: friends.length,        l: 'circle',   press: () => router.push('/(tabs)/discover') },
             ].map((item, i) => (
               <React.Fragment key={item.l}>
@@ -401,107 +413,33 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               </React.Fragment>
             ))}
+            {unread > 0 && (
+              <>
+                <View style={s.statSep} />
+                <TouchableOpacity style={s.statItem} onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
+                  <Text style={[s.statN, { color: accent }]}>{unread}</Text>
+                  <Text style={s.statL}>new</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
 
           {/* Bottom fade to dark */}
           <LinearGradient
             colors={['transparent', '#080614']}
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28 }}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 44 }}
             pointerEvents="none"
           />
         </View>
 
         {/* ══════════════════════════════════════════════════
-            LUMI — floating companion line
-        ══════════════════════════════════════════════════ */}
-        <View style={s.lumiRow}>
-          <Image source={Images.character_default} style={s.lumiImg} contentFit="contain" />
-          <Text style={s.lumiText} numberOfLines={2}>
-            {lumiLine(character.name, journalEntries, stories, unread, hour)} ✦
-          </Text>
-        </View>
-
-        {/* ══════════════════════════════════════════════════
-            ACTIVITY HUD — glowing inline metrics
-        ══════════════════════════════════════════════════ */}
-        <TouchableOpacity style={s.hud} onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }} activeOpacity={0.75}>
-          {[
-            { icon: 'eye',      n: totalWitnessed, color: '#C8A84B', label: 'witnessed' },
-            { icon: 'bookmark', n: totalSaved,     color: '#A880F8', label: 'saved' },
-            { icon: 'users',    n: friends.length, color: '#60C8A8', label: 'circle' },
-            { icon: 'bell',     n: unread,         color: '#D878B0', label: 'new', dim: unread === 0 },
-          ].map((item, i) => (
-            <View key={item.label} style={s.hudItem}>
-              {i > 0 && <View style={s.hudSep} />}
-              <Icon name={item.icon as any} size={12} color={item.dim ? 'rgba(160,140,200,0.28)' : item.color} />
-              <Text style={[s.hudN, { color: item.dim ? 'rgba(160,140,200,0.28)' : item.color }]}>{item.n}</Text>
-              <Text style={[s.hudL, { opacity: item.dim ? 0.28 : 0.55 }]}>{item.label}</Text>
-            </View>
-          ))}
-        </TouchableOpacity>
-
-        {/* ══════════════════════════════════════════════════
-            FIND FRIENDS — visible add-to-circle CTA
-        ══════════════════════════════════════════════════ */}
-        <TouchableOpacity
-          style={s.findFriends}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }}
-          activeOpacity={0.82}
-        >
-          <LinearGradient colors={['rgba(96,200,168,0.12)', 'transparent']} style={StyleSheet.absoluteFill} />
-          <View style={s.findFriendsIcon}>
-            <Icon name="user-plus" size={16} color="#60C8A8" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.findFriendsTitle}>Add to your Circle</Text>
-            <Text style={s.findFriendsSub}>Find and follow people in the sky</Text>
-          </View>
-          <View style={s.findFriendsBadge}>
-            <Text style={s.findFriendsBadgeText}>Find Friends</Text>
-          </View>
-        </TouchableOpacity>
-
-        {/* ══════════════════════════════════════════════════
-            CAMPFIRES — story-bubble style circles
-        ══════════════════════════════════════════════════ */}
-        {campfires.length > 0 && (
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>CAMPFIRES</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.fireRow}>
-              {campfires.map(({ guide, isMine }) => (
-                <CampfireBubble key={guide.userId} guide={guide} isMine={isMine} />
-              ))}
-              {/* Browse more */}
-              <TouchableOpacity style={s.moreBtn} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
-                <View style={s.moreCircle}>
-                  <Icon name="compass" size={18} color="rgba(160,140,200,0.60)" />
-                </View>
-                <Text style={fb.name}>Browse</Text>
-                <Text style={fb.sub}>Discover</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        )}
-
-        {campfires.length === 0 && (
-          <View style={s.section}>
-            <Text style={s.sectionLabel}>CAMPFIRES</Text>
-            <TouchableOpacity style={s.fireEmptyRow} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
-              <Text style={{ fontSize: 18 }}>🔥</Text>
-              <Text style={s.fireEmptyTxt}>Find guides to see their campfire sessions here</Text>
-              <Icon name="chevron-right" size={14} color="rgba(160,140,200,0.40)" />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ══════════════════════════════════════════════════
-            CIRCLE STORIES — masonry full-bleed grid
+            YOUR CIRCLE — stories from people you follow
         ══════════════════════════════════════════════════ */}
         <View style={s.section}>
           <View style={s.sectionRow}>
-            <Text style={s.sectionLabel}>FROM YOUR CIRCLE</Text>
+            <Text style={s.sectionLabel}>Your Circle</Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/discover')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={[s.sectionAll, { color: accent }]}>All →</Text>
+              <Text style={[s.sectionAll, { color: accent }]}>See all</Text>
             </TouchableOpacity>
           </View>
           <View style={s.masonry}>{renderCircleStories()}</View>
@@ -545,6 +483,58 @@ export default function HomeScreen() {
             <Icon name="chevron-right" size={16} color="rgba(200,168,255,0.45)" />
           </TouchableOpacity>
         </View>
+
+        {/* ══════════════════════════════════════════════════
+            CAMPFIRES — guide sessions you follow
+        ══════════════════════════════════════════════════ */}
+        {campfires.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>Campfires</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.fireRow}>
+              {campfires.map(({ guide, isMine }) => (
+                <CampfireBubble key={guide.userId} guide={guide} isMine={isMine} />
+              ))}
+              <TouchableOpacity style={s.moreBtn} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
+                <View style={s.moreCircle}>
+                  <Icon name="compass" size={18} color="rgba(160,140,200,0.55)" />
+                </View>
+                <Text style={fb.name}>Browse</Text>
+                <Text style={fb.sub}>Discover</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
+
+        {campfires.length === 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>Campfires</Text>
+            <TouchableOpacity style={s.fireEmptyRow} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
+              <Text style={{ fontSize: 18 }}>🔥</Text>
+              <Text style={s.fireEmptyTxt}>Find guides to light up your campfire sessions</Text>
+              <Icon name="chevron-right" size={14} color="rgba(160,140,200,0.35)" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* ══════════════════════════════════════════════════
+            FIND FRIENDS — ambient, low-pressure CTA
+        ══════════════════════════════════════════════════ */}
+        <TouchableOpacity
+          style={s.findFriends}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }}
+          activeOpacity={0.80}
+        >
+          <View style={s.findFriendsIcon}>
+            <Icon name="user-plus" size={15} color="#60C8A8" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.findFriendsTitle}>Add to your Circle</Text>
+            <Text style={s.findFriendsSub}>Find and follow people in the sky</Text>
+          </View>
+          <View style={s.findFriendsBadge}>
+            <Text style={s.findFriendsBadgeText}>Find Friends</Text>
+          </View>
+        </TouchableOpacity>
 
       </ScrollView>
 
@@ -643,87 +633,83 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#080614' },
 
-  // Hero banner
-  hero: { paddingHorizontal: 20, paddingBottom: 28, overflow: 'hidden' },
-  heroActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, marginBottom: 20 },
+  // ── Hero — centered immersive ──────────────────────────────────────────────
+  hero:        { paddingHorizontal: 0, paddingBottom: 32, overflow: 'hidden' },
+  heroActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, paddingHorizontal: 20, marginBottom: 12 },
   heroBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
   heroBadge:   { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: 3.5 },
 
+  // Centered identity block
+  heroCenter:  { alignItems: 'center', paddingHorizontal: 28, paddingBottom: 22, gap: 7 },
+
   // Avatar
-  identity:   { flexDirection: 'row', alignItems: 'flex-end', gap: 16, marginBottom: 14 },
-  avatarWrap: { width: 86, height: 86, position: 'relative', alignItems: 'center', justifyContent: 'center' },
-  avatarInner:{ width: 78, height: 78, borderRadius: 39, overflow: 'hidden', borderWidth: 2, borderColor: 'rgba(255,255,255,0.10)' },
-  roleTag:    { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#080614' },
-  roleText:   { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  avatarWrap:  { width: 90, height: 90, position: 'relative', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  avatarInner: { width: 82, height: 82, borderRadius: 41, overflow: 'hidden', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.08)' },
+  roleTag:     { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#080614' },
+  roleText:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#fff' },
 
-  // Identity text
-  heroName:   { fontSize: 24, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.96)', letterSpacing: -0.5 },
-  heroHandle: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.45)' },
-  heroBioRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  moodDot:    { width: 6, height: 6, borderRadius: 3 },
-  heroMood:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
-  heroRole:   { fontSize: 12, fontFamily: 'Satoshi-Regular' },
+  // Identity text — centered
+  heroName:    { fontSize: 30, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.97)', letterSpacing: -1, textAlign: 'center' },
+  heroHandle:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.42)', textAlign: 'center' },
+  heroBioRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  moodDot:     { width: 6, height: 6, borderRadius: 3 },
+  heroMood:    { fontSize: 12.5, fontFamily: 'Satoshi-Medium' },
+  heroRole:    { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 
-  // Bio + traits
-  bio:        { fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.60)', lineHeight: 19.5, marginBottom: 12 },
-  bioEmpty:   { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.25)', fontStyle: 'italic', marginBottom: 12 },
-  traitsRow:  { flexDirection: 'row', gap: 6, paddingBottom: 4, marginBottom: 16 },
-  trait:      { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, borderWidth: 1 },
-  traitTxt:   { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
+  // Greeting — the single emotional focal line
+  heroGreeting: {
+    fontSize: 16, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
+    color: 'rgba(220,205,255,0.60)', textAlign: 'center', lineHeight: 23,
+    marginTop: 4, marginBottom: 2, paddingHorizontal: 10,
+  },
 
-  // Stats
-  statBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.07)' },
+  // Primary CTA
+  heroCTA:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 26, paddingVertical: 13, borderRadius: 28, borderWidth: 1, overflow: 'hidden', marginTop: 4 },
+  heroCTAText: { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+
+  // Stats row — below hero center, no top border (gradient does the separation)
+  statBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingTop: 18, paddingBottom: 4, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
   statItem: { alignItems: 'center', gap: 2 },
-  statN:    { fontSize: 19, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.92)', letterSpacing: -0.4 },
-  statL:    { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.38)', letterSpacing: 0.3 },
+  statN:    { fontSize: 19, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.92)', letterSpacing: -0.5 },
+  statL:    { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.36)', letterSpacing: 0.4 },
   statSep:  { width: 1, height: 26, backgroundColor: 'rgba(255,255,255,0.06)' },
 
-  // Lumi
-  lumiRow:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingVertical: 14 },
-  lumiImg:  { width: 40, height: 40 },
-  lumiText: { flex: 1, fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(210,195,255,0.58)', lineHeight: 19 },
-
-  // Activity HUD
-  hud:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: 'rgba(255,255,255,0.04)', marginBottom: 4 },
-  hudItem:  { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  hudSep:   { width: 1, height: 16, backgroundColor: 'rgba(255,255,255,0.06)', marginHorizontal: 2 },
-  hudN:     { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
-  hudL:     { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,1)', marginTop: 1 },
-
-  // Sections
-  section:     { paddingVertical: 16 },
+  // ── Sections ───────────────────────────────────────────────────────────────
+  section:     { paddingVertical: 18 },
   sectionRow:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 },
-  sectionLabel:{ fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, color: 'rgba(180,165,220,0.35)', flex: 1, paddingHorizontal: 20 },
-  sectionAll:  { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  // Mixed-case editorial label — softer hierarchy signal
+  sectionLabel:{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: 'rgba(200,185,240,0.38)', flex: 1, paddingHorizontal: 20 },
+  sectionAll:  { fontSize: 12.5, fontFamily: 'Satoshi-Medium' },
 
-  // Campfires
-  fireRow:     { flexDirection: 'row', gap: 16, paddingHorizontal: 20 },
+  // ── Campfires ──────────────────────────────────────────────────────────────
+  fireRow:     { flexDirection: 'row', gap: 18, paddingHorizontal: 20 },
   moreBtn:     { alignItems: 'center', width: 72, gap: 5 },
-  moreCircle:  { width: 62, height: 62, borderRadius: 31, borderWidth: 2, borderColor: 'rgba(160,140,200,0.18)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  moreCircle:  { width: 62, height: 62, borderRadius: 31, borderWidth: 1, borderColor: 'rgba(160,140,200,0.14)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   fireEmptyRow:{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingVertical: 14 },
-  fireEmptyTxt:{ flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.45)', lineHeight: 18 },
+  fireEmptyTxt:{ flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.42)', lineHeight: 18 },
 
-  // Masonry stories
+  // ── Masonry circle stories ─────────────────────────────────────────────────
   masonry:     { paddingHorizontal: 12, gap: 8 },
   masonryRow:  { flexDirection: 'row', gap: 8 },
   emptyStories:{ paddingHorizontal: 20, paddingVertical: 20, alignItems: 'center', gap: 6 },
-  emptyStoriesText: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.45)' },
-  emptyStoriesSub:  { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,200,0.35)' },
+  emptyStoriesText: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.42)' },
+  emptyStoriesSub:  { fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,200,0.30)', fontStyle: 'italic' },
 
-  // Find Friends
-  findFriends:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 6, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(96,200,168,0.18)', overflow: 'hidden' },
-  findFriendsIcon:   { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(96,200,168,0.16)', alignItems: 'center', justifyContent: 'center' },
-  findFriendsTitle:  { fontSize: 13.5, fontFamily: 'Satoshi-Bold', color: 'rgba(200,240,225,0.88)' },
-  findFriendsSub:    { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(140,190,170,0.55)', marginTop: 1 },
-  findFriendsBadge:  { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(96,200,168,0.18)', borderWidth: 1, borderColor: 'rgba(96,200,168,0.30)' },
-  findFriendsBadgeText: { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#60C8A8' },
+  // ── Find Friends — ambient, at bottom ─────────────────────────────────────
+  findFriends:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 12, marginTop: 4, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 16 },
+  findFriendsIcon:  { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(96,200,168,0.14)', alignItems: 'center', justifyContent: 'center' },
+  findFriendsTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(190,230,215,0.80)' },
+  findFriendsSub:   { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(130,180,160,0.50)', marginTop: 1 },
+  findFriendsBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, backgroundColor: 'rgba(96,200,168,0.15)' },
+  findFriendsBadgeText: { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#5EC8A0' },
 
-  // Main actions — Story + Drift
-  actions:         { paddingHorizontal: 16, paddingVertical: 12, gap: 10 },
-  actionCard:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 16, borderRadius: 18, borderWidth: 1, overflow: 'hidden' },
-  actionCardIcon:  { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
-  actionCardTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(230,225,255,0.92)', marginBottom: 2 },
-  actionCardSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.50)', lineHeight: 16 },
+  // ── Main actions — Story + Drift ───────────────────────────────────────────
+  actions:         { paddingHorizontal: 16, paddingVertical: 8, gap: 10 },
+  // No border — elevation/gradient does the work
+  actionCard:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 18, paddingVertical: 18, borderRadius: 20, overflow: 'hidden' },
+  actionCardIcon:  { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  actionCardTitle: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(235,230,255,0.94)', marginBottom: 3 },
+  actionCardSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.48)', lineHeight: 16 },
 });
 
 // Modal styles

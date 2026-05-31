@@ -1,0 +1,212 @@
+Looking at your screenshots, the biggest issue is not visual quality.
+The problem is that the app feels like a collection of cards inside a dark screen rather than a place.
+AAA apps (Supercell, Riot, Sky, Discord, Notion Calendar, Arc Browser) don't necessarily have better shadows or gradients. They create a strong visual hierarchy and emotional identity.
+What currently makes it feel indie
+Too many equal-weight cards
+Campfires
+Stories
+Create Story
+Drift
+Add Friends
+Everything screams for attention equally.
+No visual focal point
+User doesn't know what the "main thing" is.
+Excessive borders
+Every card has outlines.
+Every section is boxed.
+Empty dark background
+Feels like cards floating in void.
+The profile page is visually noisy
+Giant green glow.
+Multiple stat rows.
+Different text styles competing.
+Biggest AAA Upgrade
+Instead of:
+
+Dark Background
+↓
+Card
+Card
+Card
+Card
+Do:
+
+Living Atmosphere
+↓
+Hero Area
+↓
+One Primary Action
+↓
+Social Layer
+↓
+Utilities
+Home Screen Redesign
+Current:
+
+Campfires
+Stories
+Create Story
+Drift
+AAA:
+
+━━━━━━━━━━━━━━
+Good Evening, Null
+━━━━━━━━━━━━━━
+
+[ Large Living Scene ]
+
+"The afternoon sky is all yours"
+
+Continue Journey
+Then
+
+Your Circle
+Horizontal story bubbles.
+Then
+
+Create
+Two large tiles:
+Story Drift
+Then
+
+Campfires
+This instantly creates hierarchy.
+Remove 70% of Borders
+Current cards:
+
+┌────────────┐
+│ Story      │
+└────────────┘
+AAA:
+Use elevation instead.
+
+Soft gradient
+Tiny shadow
+Glass blur
+No visible stroke.
+Add Atmospheric Depth
+Right now:
+
+#020212
+everywhere.
+Instead:
+
+top
+deep purple
+
+middle
+midnight blue
+
+bottom
+near black
+Very subtle.
+Think Sky game.
+Hero Section
+Current profile:
+Huge random green circle.
+Instead:
+
+☾
+
+        [avatar]
+
+          Null
+
+      Hopeful • Solo
+
+"The afternoon sky
+is all yours"
+Background:
+Massive blurred moon.
+Like:
+
+◯
+behind avatar.
+Not neon.
+Soft.
+Campfires
+Current:
+Rectangle cards.
+AAA:
+Make them feel alive.
+
+╭─────────────╮
+│             │
+│ image       │
+│             │
+╰─────────────╯
+
+Pirate Days
+
+3 around fire
+2 active now
+Small metadata.
+Less text.
+More image.
+Bottom Navigation
+This is currently your strongest element.
+Keep:
+
+Home
+Journal
+★
+Discover
+Profile
+But make the center button feel integrated.
+Currently it feels pasted on top.
+Instead:
+
+★
+
+╭──────────────╮
+ Home Journal Discover Profile
+╰──────────────╯
+Floating with stronger blur.
+Profile Screen AAA Version
+Current profile is:
+
+Avatar
+Name
+Bio
+Tags
+Stats
+Banner
+Friends
+Campfires
+AAA profile:
+
+Large atmosphere
+↓
+Avatar
+↓
+Name
+
+Mood
+↓
+Current Quote
+
+━━━━━━━━━━━━━━
+
+Journey
+
+12 Entries
+4 Stories
+3 Friends
+
+━━━━━━━━━━━━━━
+
+Recent Story
+
+━━━━━━━━━━━━━━
+
+Circle
+Much cleaner.
+Most Important Change
+If you only do ONE thing:
+Replace cards with a single immersive hero section.
+Right now users open:
+"Here are 5 features."
+AAA experience:
+"Welcome back to your sky."
+That shift alone will make the app feel 10× more premium than adding 3D effects, parallax, or fancy animations.
+For Skyloom specifically, I would lean into "personal digital sanctuary" rather than social network. The home screen should feel like entering a room in the sky, and the features (Stories, Drift, Campfires, Journal) should feel like objects inside that space—not separate app modules.
