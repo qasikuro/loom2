@@ -22,15 +22,16 @@ interface StarDef {
   xPct:      number;  // 0–100 of container width
   yPct:      number;  // 0–100 of container height
   criterion: string;
+  unit:      string;  // human-readable unit for progress label
 }
 
 const STARS: StarDef[] = [
-  { key: 'social',   label: 'Social',   icon: 'users',    color: '#78C8A8', xPct: 20, yPct: 16, criterion: 'Follow 5 · Receive 5 stickers' },
-  { key: 'memory',   label: 'Memory',   icon: 'bookmark', color: '#9878C8', xPct: 78, yPct: 16, criterion: '10 journal entries · 5 saves received' },
-  { key: 'quiet',    label: 'Quiet',    icon: 'moon',     color: '#7890C8', xPct: 11, yPct: 60, criterion: '7-day journal streak' },
-  { key: 'creative', label: 'Creative', icon: 'feather',  color: '#C87AA8', xPct: 86, yPct: 60, criterion: '5 stories · 1 witnessed ×3' },
-  { key: 'helping',  label: 'Helping',  icon: 'star',     color: '#C8A84B', xPct: 48, yPct: 84, criterion: 'Send 20 stickers' },
-  { key: 'seasonal', label: 'Seasonal', icon: 'wind',     color: '#68B8B0', xPct: 48, yPct: 40, criterion: 'Unlock 3 other stars' },
+  { key: 'social',   label: 'Social',   icon: 'users',    color: '#78C8A8', xPct: 20, yPct: 16, criterion: 'Follow 5 · Receive 5 stickers',       unit: 'follows' },
+  { key: 'memory',   label: 'Memory',   icon: 'bookmark', color: '#9878C8', xPct: 78, yPct: 16, criterion: '10 journal entries · 5 saves received', unit: 'entries' },
+  { key: 'quiet',    label: 'Quiet',    icon: 'moon',     color: '#7890C8', xPct: 11, yPct: 60, criterion: '7-day journal streak',                  unit: 'days' },
+  { key: 'creative', label: 'Creative', icon: 'feather',  color: '#C87AA8', xPct: 86, yPct: 60, criterion: '5 stories · 1 witnessed ×3',            unit: 'stories' },
+  { key: 'helping',  label: 'Helping',  icon: 'star',     color: '#C8A84B', xPct: 48, yPct: 84, criterion: 'Send 20 stickers',                      unit: 'stickers' },
+  { key: 'seasonal', label: 'Seasonal', icon: 'wind',     color: '#68B8B0', xPct: 48, yPct: 40, criterion: 'Unlock 3 other stars',                  unit: 'stars' },
 ];
 
 // Lines connecting star pairs (drawn when both are unlocked)
@@ -138,7 +139,7 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
 
   const unlockedSet = new Set(state?.unlockedStars ?? []);
 
-  // Count for each star type
+  // Clamped count (used only for computing bar fill width — never for labels)
   function countFor(key: string): number {
     if (!state) return 0;
     switch (key) {
@@ -148,6 +149,21 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
       case 'creative': return Math.min(state.creativeCount, 5);
       case 'helping':  return Math.min(state.helpingCount,  20);
       case 'seasonal': return Math.min(state.seasonalCount, 3);
+      default: return 0;
+    }
+  }
+
+  // Raw (un-clamped) count — used for the human-readable label so users see the
+  // real number even when they've exceeded the threshold (e.g. 12 / 5 follows)
+  function rawCountFor(key: string): number {
+    if (!state) return 0;
+    switch (key) {
+      case 'social':   return state.socialCount;
+      case 'memory':   return state.memoryCount;
+      case 'quiet':    return state.quietStreak;
+      case 'creative': return state.creativeCount;
+      case 'helping':  return state.helpingCount;
+      case 'seasonal': return state.seasonalCount;
       default: return 0;
     }
   }
@@ -253,23 +269,40 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
       </View>
 
       {/* Tooltip */}
-      {tooltipStar && (
-        <View style={[styles.tooltip, { borderColor: `${tooltipStar.color}35`, backgroundColor: 'rgba(8,6,20,0.92)' }]}>
-          <View style={styles.tooltipHeader}>
-            <Icon name={tooltipStar.icon as any} size={14} color={tooltipStar.color} />
-            <Text style={[styles.tooltipTitle, { color: tooltipStar.color }]}>{tooltipStar.label} Star</Text>
-            <View style={[styles.tooltipBadge, unlockedSet.has(tooltipStar.key) && { backgroundColor: `${tooltipStar.color}22`, borderColor: `${tooltipStar.color}40` }]}>
-              <Text style={[styles.tooltipBadgeText, { color: unlockedSet.has(tooltipStar.key) ? tooltipStar.color : 'rgba(200,184,232,0.40)' }]}>
-                {unlockedSet.has(tooltipStar.key) ? '✦ Unlocked' : 'Locked'}
+      {tooltipStar && (() => {
+        const isUnlocked = unlockedSet.has(tooltipStar.key);
+        const rawCur     = rawCountFor(tooltipStar.key);   // exact value for label
+        const clampedCur = countFor(tooltipStar.key);      // clamped for bar fill
+        const max        = thresholdFor(tooltipStar.key);
+        const pct        = Math.min(1, clampedCur / max);
+        return (
+          <View style={[styles.tooltip, { borderColor: `${tooltipStar.color}35`, backgroundColor: 'rgba(8,6,20,0.92)' }]}>
+            <View style={styles.tooltipHeader}>
+              <Icon name={tooltipStar.icon as any} size={14} color={tooltipStar.color} />
+              <Text style={[styles.tooltipTitle, { color: tooltipStar.color }]}>{tooltipStar.label} Star</Text>
+              <View style={[styles.tooltipBadge, isUnlocked && { backgroundColor: `${tooltipStar.color}22`, borderColor: `${tooltipStar.color}40` }]}>
+                <Text style={[styles.tooltipBadgeText, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.40)' }]}>
+                  {isUnlocked ? '✦ Unlocked' : 'Locked'}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.tooltipCrit}>{tooltipStar.criterion}</Text>
+            {/* Progress bar */}
+            <View style={styles.tooltipBarRow}>
+              <View style={styles.tooltipBarTrack}>
+                <View style={[
+                  styles.tooltipBarFill,
+                  { width: `${pct * 100}%` as any, backgroundColor: tooltipStar.color },
+                  isUnlocked && { opacity: 0.7 },
+                ]} />
+              </View>
+              <Text style={[styles.tooltipProgressLabel, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.65)' }]}>
+                {rawCur} / {max} {tooltipStar.unit}
               </Text>
             </View>
           </View>
-          <Text style={styles.tooltipCrit}>{tooltipStar.criterion}</Text>
-          <Text style={styles.tooltipProgress}>
-            {countFor(tooltipStar.key)} / {thresholdFor(tooltipStar.key)}
-          </Text>
-        </View>
-      )}
+        );
+      })()}
     </View>
   );
 }
@@ -311,6 +344,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
   },
   tooltipBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  tooltipCrit:      { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic' },
-  tooltipProgress:  { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.70)' },
+  tooltipCrit:          { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic' },
+  tooltipBarRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  tooltipBarTrack:      { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' },
+  tooltipBarFill:       { height: '100%', borderRadius: 3 },
+  tooltipProgressLabel: { fontSize: 11, fontFamily: 'Satoshi-Bold', minWidth: 90, textAlign: 'right' },
 });
