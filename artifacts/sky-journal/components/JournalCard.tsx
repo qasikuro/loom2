@@ -9,9 +9,10 @@ import { SHADOW } from '@/constants/colors';
 import type { JournalEntry } from '@/context/AppContext';
 
 interface JournalCardProps {
-  entry: JournalEntry;
-  onDelete?: () => void;
-  theme?: string;
+  entry:         JournalEntry;
+  onDelete?:     () => void;
+  theme?:        string;
+  stickerCount?: number;
 }
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -42,7 +43,7 @@ const THEME_STYLES: Record<string, { bg: string; border: string; accentLeft: str
 };
 
 // ── Diary card ─────────────────────────────────────────────────────────────
-function DiaryCard({ entry, onDelete, theme }: JournalCardProps) {
+function DiaryCard({ entry, onDelete, theme, stickerCount }: JournalCardProps) {
   const colors = useColors();
   const ts = theme ? THEME_STYLES[theme] : null;
   return (
@@ -86,13 +87,18 @@ function DiaryCard({ entry, onDelete, theme }: JournalCardProps) {
       </View>
       <View style={styles.footer}>
         <MoodBadge mood={entry.mood} size="sm" />
+        {stickerCount != null && stickerCount > 0 && (
+          <View style={styles.stickerBadge}>
+            <Text style={styles.stickerBadgeText}>✦ {stickerCount}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
 }
 
 // ── Friend card ────────────────────────────────────────────────────────────
-function FriendCard({ entry, onDelete }: JournalCardProps) {
+function FriendCard({ entry, onDelete, stickerCount }: JournalCardProps) {
   const colors = useColors();
   const name = entry.friendName ?? 'Unknown';
   const friendColor = '#3A78B8';
@@ -139,13 +145,18 @@ function FriendCard({ entry, onDelete }: JournalCardProps) {
 
       <View style={styles.footer}>
         <MoodBadge mood={entry.mood} size="sm" />
+        {stickerCount != null && stickerCount > 0 && (
+          <View style={styles.stickerBadge}>
+            <Text style={styles.stickerBadgeText}>✦ {stickerCount}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
 }
 
 // ── Moment card ────────────────────────────────────────────────────────────
-function MomentCard({ entry, onDelete }: JournalCardProps) {
+function MomentCard({ entry, onDelete, stickerCount }: JournalCardProps) {
   return (
     <View style={[styles.momentCard, SHADOW.md]}>
       <View style={styles.topRow}>
@@ -175,6 +186,11 @@ function MomentCard({ entry, onDelete }: JournalCardProps) {
 
       <View style={styles.footer}>
         <MoodBadge mood={entry.mood} size="sm" />
+        {stickerCount != null && stickerCount > 0 && (
+          <View style={[styles.stickerBadge, { backgroundColor: 'rgba(200,168,75,0.12)', borderColor: 'rgba(200,168,75,0.28)' }]}>
+            <Text style={[styles.stickerBadgeText, { color: '#C8A84B' }]}>✦ {stickerCount}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -191,19 +207,19 @@ export { THEME_STYLES };
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 14,
+    borderRadius: 18,
     borderWidth: 1,
-    padding: 12,
-    marginBottom: 8,
+    padding: 14,
+    marginBottom: 10,
     gap: 0,
   },
   diaryAccent: {
     borderLeftWidth: 3,
-    borderLeftColor: '#6B5B95',
+    borderLeftColor: '#8060B8',
   },
   friendAccent: {
     borderLeftWidth: 3,
-    borderLeftColor: '#3A78B8',
+    borderLeftColor: '#4088C8',
   },
   topRow: {
     flexDirection: 'row',
@@ -221,6 +237,11 @@ const styles = StyleSheet.create({
   diaryText: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 21, fontStyle: 'italic' },
   thumb: { width: 72, height: 88, borderRadius: 11, flexShrink: 0 },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
+  stickerBadge: {
+    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
+    backgroundColor: 'rgba(200,168,75,0.10)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.25)',
+  },
+  stickerBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#C8A84B' },
   // Friend
   friendRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   friendAvatar: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
@@ -232,19 +253,24 @@ const styles = StyleSheet.create({
     fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 21, fontStyle: 'italic',
     borderWidth: 1, borderRadius: 10, padding: 10, marginBottom: 10,
   },
-  // Moment (dark card)
+  // Moment (deep space card)
   momentCard: {
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(200,184,232,0.14)',
+    borderColor: 'rgba(200,184,232,0.10)',
     borderLeftWidth: 3,
-    borderLeftColor: '#5848A8',
-    backgroundColor: '#1E1A38',
+    borderLeftColor: '#6858B8',
+    backgroundColor: '#0C0A20',
     padding: 14,
     marginBottom: 10,
     gap: 0,
+    shadowColor: '#9B78FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 4,
   },
-  momentDate: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,244,0.85)' },
-  momentTime: { fontSize: 10, fontFamily: 'Satoshi-Regular', marginTop: 1, color: 'rgba(200,184,232,0.45)' },
-  momentText: { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 21, color: 'rgba(240,234,248,0.82)', marginBottom: 8 },
+  momentDate: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.88)' },
+  momentTime: { fontSize: 10, fontFamily: 'Satoshi-Regular', marginTop: 1, color: 'rgba(200,184,232,0.40)' },
+  momentText: { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 22, color: 'rgba(240,234,255,0.85)', marginBottom: 8 },
 });

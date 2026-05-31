@@ -23,15 +23,16 @@ interface StarDef {
   yPct:      number;  // 0–100 of container height
   criterion: string;
   unit:      string;  // human-readable unit for progress label
+  description: string;
 }
 
 const STARS: StarDef[] = [
-  { key: 'social',   label: 'Social',   icon: 'users',    color: '#78C8A8', xPct: 20, yPct: 16, criterion: 'Follow 5 · Receive 5 stickers',       unit: 'follows' },
-  { key: 'memory',   label: 'Memory',   icon: 'bookmark', color: '#9878C8', xPct: 78, yPct: 16, criterion: '10 journal entries · 5 saves received', unit: 'entries' },
-  { key: 'quiet',    label: 'Quiet',    icon: 'moon',     color: '#7890C8', xPct: 11, yPct: 60, criterion: '7-day journal streak',                  unit: 'days' },
-  { key: 'creative', label: 'Creative', icon: 'feather',  color: '#C87AA8', xPct: 86, yPct: 60, criterion: '5 stories · 1 witnessed ×3',            unit: 'stories' },
-  { key: 'helping',  label: 'Helping',  icon: 'star',     color: '#C8A84B', xPct: 48, yPct: 84, criterion: 'Send 20 stickers',                      unit: 'stickers' },
-  { key: 'seasonal', label: 'Seasonal', icon: 'wind',     color: '#68B8B0', xPct: 48, yPct: 40, criterion: 'Unlock 3 other stars',                  unit: 'stars' },
+  { key: 'social',   label: 'Social',   icon: 'users',    color: '#78C8A8', xPct: 20, yPct: 16, criterion: 'Follow 5 · Receive 5 stickers',       unit: 'follows',  description: 'Build connections with fellow dreamers of the sky.' },
+  { key: 'memory',   label: 'Memory',   icon: 'bookmark', color: '#9878C8', xPct: 78, yPct: 16, criterion: '10 journal entries · 5 saves received', unit: 'entries',  description: 'Preserve your memories and let others hold them.' },
+  { key: 'quiet',    label: 'Quiet',    icon: 'moon',     color: '#7890C8', xPct: 11, yPct: 60, criterion: '7-day journal streak',                  unit: 'days',     description: 'Show up every day, even when the words are few.' },
+  { key: 'creative', label: 'Creative', icon: 'feather',  color: '#C87AA8', xPct: 86, yPct: 60, criterion: '5 stories · 1 witnessed ×3',            unit: 'stories',  description: 'Tell your story. Let the sky be your canvas.' },
+  { key: 'helping',  label: 'Helping',  icon: 'star',     color: '#C8A84B', xPct: 48, yPct: 84, criterion: 'Send 20 stickers',                      unit: 'stickers', description: 'Scatter light across the stories of others.' },
+  { key: 'seasonal', label: 'Seasonal', icon: 'wind',     color: '#68B8B0', xPct: 48, yPct: 40, criterion: 'Unlock 3 other stars',                  unit: 'stars',    description: 'A rare star that blooms when your constellation grows.' },
 ];
 
 // Lines connecting star pairs (drawn when both are unlocked)
@@ -66,22 +67,43 @@ function PulseRing({ color }: { color: string }) {
 }
 
 interface StarNodeProps {
-  star:      StarDef;
-  unlocked:  boolean;
-  count:     number;
-  threshold: number;
-  onPress:   () => void;
-  cW:        number;
-  cH:        number;
+  star:       StarDef;
+  unlocked:   boolean;
+  count:      number;
+  threshold:  number;
+  onPress:    () => void;
+  cW:         number;
+  cH:         number;
+  enterDelay: number;
 }
 
-function StarNode({ star, unlocked, count, threshold, onPress, cW, cH }: StarNodeProps) {
+function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDelay }: StarNodeProps) {
   const cx = (star.xPct / 100) * cW;
   const cy = (star.yPct / 100) * cH;
   const progress = Math.min(1, count / threshold);
 
+  // Per-star entrance animation
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      delay: enterDelay,
+      tension: 90,
+      friction: 11,
+      useNativeDriver: true,
+    }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <View style={{ position: 'absolute', left: cx - 18, top: cy - 18, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+    <Animated.View style={{
+      position: 'absolute',
+      left: cx - 18, top: cy - 18,
+      width: 36, height: 36,
+      alignItems: 'center', justifyContent: 'center',
+      transform: [{ scale: scaleAnim }],
+      opacity: scaleAnim.interpolate({ inputRange: [0, 0.25, 1], outputRange: [0, 0.7, 1] }),
+    }}>
       {unlocked && <PulseRing color={star.color} />}
       <TouchableOpacity
         onPress={onPress}
@@ -115,7 +137,7 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH }: StarNod
         styles.starLabel,
         { color: unlocked ? star.color : 'rgba(200,184,232,0.30)' },
       ]}>{star.label}</Text>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -129,6 +151,15 @@ const STAR_UNLOCK_REWARDS: Record<string, string> = {
   seasonal: '✦ 30 Stars',
 };
 
+const REWARD_COLORS: Record<string, string> = {
+  social:   '#C8A84B',
+  memory:   '#78B4DC',
+  quiet:    '#9878C8',
+  creative: '#9878C8',
+  helping:  '#C8A84B',
+  seasonal: '#C8A84B',
+};
+
 interface ConstellationMapProps {
   state:        ConstellationState | null;
   onStarPress?: (key: string) => void;
@@ -138,6 +169,8 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
   const [dims, setDims]           = useState({ w: 0, h: 0 });
   const [tooltip, setTooltip]     = useState<StarDef | null>(null);
   const tooltipBarAnim            = useRef(new Animated.Value(0)).current;
+  const tooltipSlideAnim          = useRef(new Animated.Value(16)).current;
+  const tooltipFadeAnim           = useRef(new Animated.Value(0)).current;
   const enterAnim                 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -156,9 +189,20 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
 
   function handleStarPress(star: StarDef) {
     const closing = tooltip?.key === star.key;
-    setTooltip(closing ? null : star);
-    if (!closing) {
+    if (closing) {
+      Animated.parallel([
+        Animated.timing(tooltipFadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
+        Animated.timing(tooltipSlideAnim, { toValue: 12, duration: 160, useNativeDriver: true }),
+      ]).start(() => setTooltip(null));
+    } else {
+      setTooltip(star);
       tooltipBarAnim.setValue(0);
+      tooltipSlideAnim.setValue(16);
+      tooltipFadeAnim.setValue(0);
+      Animated.parallel([
+        Animated.timing(tooltipFadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.spring(tooltipSlideAnim, { toValue: 0, tension: 80, friction: 10, useNativeDriver: true }),
+      ]).start();
     }
     onStarPress?.(star.key);
   }
@@ -190,7 +234,8 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
     tooltipBarAnim.setValue(0);
     Animated.timing(tooltipBarAnim, {
       toValue: pct * 100,
-      duration: 420,
+      duration: 480,
+      delay: 120,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
@@ -198,7 +243,6 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
 
   const unlockedSet = new Set(state?.unlockedStars ?? []);
 
-  // Clamped count (used only for computing bar fill width — never for labels)
   function countFor(key: string): number {
     if (!state) return 0;
     switch (key) {
@@ -212,8 +256,6 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
     }
   }
 
-  // Raw (un-clamped) count — used for the human-readable label so users see the
-  // real number even when they've exceeded the threshold (e.g. 12 / 5 follows)
   function rawCountFor(key: string): number {
     if (!state) return 0;
     switch (key) {
@@ -239,7 +281,6 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
     }
   }
 
-  // Draw connector lines between two star positions
   function renderLine(a: StarDef, b: StarDef, key: string) {
     if (dims.w === 0 || dims.h === 0) return null;
     const aUnlocked = unlockedSet.has(a.key);
@@ -274,7 +315,6 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
   }
 
   const tooltipStar = tooltip ? STARS.find(s => s.key === tooltip.key) : null;
-
   const slideY = enterAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] });
 
   return (
@@ -316,7 +356,7 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
           const b = STARS.find(s => s.key === bk)!;
           return renderLine(a, b, `${ak}-${bk}`);
         })}
-        {dims.w > 0 && STARS.map(star => (
+        {dims.w > 0 && STARS.map((star, idx) => (
           <StarNode
             key={star.key}
             star={star}
@@ -326,58 +366,89 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
             onPress={() => handleStarPress(star)}
             cW={dims.w}
             cH={dims.h}
+            enterDelay={180 + idx * 85}
           />
         ))}
       </View>
 
-      {/* Tooltip */}
+      {/* Star detail panel */}
       {tooltipStar && (() => {
         const isUnlocked = unlockedSet.has(tooltipStar.key);
-        const rawCur     = rawCountFor(tooltipStar.key);   // exact value for label
-        const clampedCur = countFor(tooltipStar.key);      // clamped for bar fill
+        const rawCur     = rawCountFor(tooltipStar.key);
         const max        = thresholdFor(tooltipStar.key);
-        const pct        = Math.min(1, clampedCur / max);
+        const rewardColor = REWARD_COLORS[tooltipStar.key] ?? '#C8A84B';
+
         return (
-          <View style={[styles.tooltip, { borderColor: `${tooltipStar.color}35`, backgroundColor: 'rgba(8,6,20,0.92)' }]}>
-            <View style={styles.tooltipHeader}>
-              <Icon name={tooltipStar.icon as any} size={14} color={tooltipStar.color} />
-              <Text style={[styles.tooltipTitle, { color: tooltipStar.color }]}>{tooltipStar.label} Star</Text>
-              <View style={[styles.tooltipBadge, isUnlocked && { backgroundColor: `${tooltipStar.color}22`, borderColor: `${tooltipStar.color}40` }]}>
-                <Text style={[styles.tooltipBadgeText, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.40)' }]}>
-                  {isUnlocked ? '✦ Unlocked' : 'Locked'}
+          <Animated.View
+            style={[
+              styles.detailPanel,
+              {
+                borderColor: `${tooltipStar.color}40`,
+                backgroundColor: 'rgba(6,4,18,0.95)',
+                opacity: tooltipFadeAnim,
+                transform: [{ translateY: tooltipSlideAnim }],
+              },
+            ]}
+          >
+            {/* Handle bar */}
+            <View style={styles.panelHandle} />
+
+            {/* Header row */}
+            <View style={styles.panelHeader}>
+              <View style={[styles.panelIconCircle, { backgroundColor: `${tooltipStar.color}18`, borderColor: `${tooltipStar.color}35` }]}>
+                <Icon name={tooltipStar.icon as any} size={15} color={tooltipStar.color} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.panelTitle, { color: tooltipStar.color }]}>
+                  {tooltipStar.label} Star
+                </Text>
+                <Text style={styles.panelDesc} numberOfLines={2}>
+                  {tooltipStar.description}
+                </Text>
+              </View>
+              <View style={[styles.statusBadge, isUnlocked
+                ? { backgroundColor: `${tooltipStar.color}18`, borderColor: `${tooltipStar.color}40` }
+                : { backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.10)' }
+              ]}>
+                <Text style={[styles.statusBadgeText, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.40)' }]}>
+                  {isUnlocked ? '✦ Earned' : 'Locked'}
                 </Text>
               </View>
             </View>
-            <Text style={styles.tooltipCrit}>{tooltipStar.criterion}</Text>
-            {/* Reward earned / unlocks */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-              <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5, color: 'rgba(200,184,232,0.32)' }}>
-                {isUnlocked ? 'EARNED' : 'UNLOCKS'}
-              </Text>
-              <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.45)' }}>
-                {STAR_UNLOCK_REWARDS[tooltipStar.key]}
-              </Text>
+
+            {/* Divider */}
+            <View style={[styles.panelDivider, { backgroundColor: `${tooltipStar.color}20` }]} />
+
+            {/* Criterion */}
+            <Text style={styles.panelCriterion}>{tooltipStar.criterion}</Text>
+
+            {/* Reward chip row */}
+            <View style={styles.panelRewardRow}>
+              <Text style={styles.panelRewardLabel}>{isUnlocked ? 'EARNED' : 'UNLOCKS'}</Text>
+              <View style={[styles.panelRewardChip, { backgroundColor: `${rewardColor}14`, borderColor: `${rewardColor}30` }]}>
+                <Text style={[styles.panelRewardValue, { color: rewardColor }]}>
+                  {STAR_UNLOCK_REWARDS[tooltipStar.key]}
+                </Text>
+              </View>
             </View>
+
             {/* Progress bar */}
-            <View style={styles.tooltipBarRow}>
-              <View style={styles.tooltipBarTrack}>
+            <View style={styles.panelProgressRow}>
+              <View style={styles.panelBarTrack}>
                 <Animated.View style={[
-                  styles.tooltipBarFill,
+                  styles.panelBarFill,
                   {
-                    width: tooltipBarAnim.interpolate({
-                      inputRange: [0, 100],
-                      outputRange: ['0%', '100%'],
-                    }) as any,
+                    width: tooltipBarAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
                     backgroundColor: tooltipStar.color,
                   },
-                  isUnlocked && { opacity: 0.7 },
+                  isUnlocked && { opacity: 0.65 },
                 ]} />
               </View>
-              <Text style={[styles.tooltipProgressLabel, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.65)' }]}>
+              <Text style={[styles.panelProgressText, { color: isUnlocked ? tooltipStar.color : 'rgba(200,184,232,0.65)' }]}>
                 {rawCur} / {max} {tooltipStar.unit}
               </Text>
             </View>
-          </View>
+          </Animated.View>
         );
       })()}
     </View>
@@ -408,23 +479,44 @@ const styles = StyleSheet.create({
     width: 52,
     left: -8,
   },
-  tooltip: {
-    position: 'absolute', bottom: 10, left: 12, right: 12,
-    borderRadius: 14, borderWidth: 1,
-    paddingHorizontal: 14, paddingVertical: 10,
-    gap: 4,
+
+  // ── Star detail panel ────────────────────────────────────────────────────
+  detailPanel: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    borderTopLeftRadius: 16, borderTopRightRadius: 16,
+    borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1,
+    paddingHorizontal: 14, paddingTop: 8, paddingBottom: 12,
+    gap: 6,
   },
-  tooltipHeader: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  tooltipTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', flex: 1 },
-  tooltipBadge: {
+  panelHandle: {
+    width: 32, height: 3, borderRadius: 2,
+    backgroundColor: 'rgba(200,184,232,0.20)',
+    alignSelf: 'center', marginBottom: 4,
+  },
+  panelHeader:     { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  panelIconCircle: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0, borderWidth: 1,
+  },
+  panelTitle:      { fontSize: 13, fontFamily: 'Satoshi-Bold', lineHeight: 18 },
+  panelDesc:       { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', lineHeight: 14, marginTop: 1 },
+  statusBadge:     {
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1, flexShrink: 0,
   },
-  tooltipBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  tooltipCrit:          { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic' },
-  tooltipBarRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2 },
-  tooltipBarTrack:      { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' },
-  tooltipBarFill:       { height: '100%', borderRadius: 3 },
-  tooltipProgressLabel: { fontSize: 11, fontFamily: 'Satoshi-Bold', minWidth: 90, textAlign: 'right' },
+  statusBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  panelDivider:    { height: 1, marginVertical: 2 },
+  panelCriterion:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', fontStyle: 'italic', lineHeight: 15 },
+  panelRewardRow:  { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  panelRewardLabel:{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.7, color: 'rgba(200,184,232,0.32)' },
+  panelRewardChip: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 8, paddingVertical: 2.5, borderRadius: 8, borderWidth: 1,
+  },
+  panelRewardValue:{ fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  panelProgressRow:{ flexDirection: 'row', alignItems: 'center', gap: 8 },
+  panelBarTrack:   { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' },
+  panelBarFill:    { height: '100%', borderRadius: 3 },
+  panelProgressText: { fontSize: 11, fontFamily: 'Satoshi-Bold', minWidth: 90, textAlign: 'right', color: 'rgba(200,184,232,0.65)' },
 });

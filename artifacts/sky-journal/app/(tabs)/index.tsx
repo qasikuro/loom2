@@ -1,3 +1,4 @@
+import { StarField } from '@/components/StarField';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import * as Haptics from 'expo-haptics';
@@ -17,6 +18,7 @@ import {
   type ConstellationState, type RewardBalance as RewardBalanceData,
 } from '@/context/AppContext';
 import { RewardBalance } from '@/components/RewardBalance';
+import { RewardBanner } from '@/components/RewardBanner';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -379,6 +381,14 @@ export default function HomeScreen() {
     AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
   }, []);
 
+  // Auto-dismiss the front reward banner after 4 s (prevents stacking)
+  const firstRewardId = rewards[0]?.id ?? null;
+  useEffect(() => {
+    if (!firstRewardId) return;
+    const timer = setTimeout(() => dismissReward(firstRewardId), 4000);
+    return () => clearTimeout(timer);
+  }, [firstRewardId]);
+
   async function dismissConstellationIntro() {
     setShowConstellationIntro(false);
     await AsyncStorage.setItem('star_intro_v1', 'done');
@@ -522,13 +532,23 @@ export default function HomeScreen() {
 
   return (
     <Animated.View style={[s.root, { opacity: fadeIn }]}>
-      {/* Continuous atmospheric depth — deep purple sky fading to near-black */}
+      {/* ── Deep space void — near-black with purple undertone ── */}
       <LinearGradient
-        colors={['#1E1438', '#10102A', '#080614']}
+        colors={['#100A28', '#08061A', '#04030C']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
         pointerEvents="none"
       />
+      {/* ── Twinkling star field ── */}
+      <StarField density="high" />
+
+      {/* ── Reward banner queue — one at a time, auto-dismisses after 4 s ── */}
+      {rewards[0] && (
+        <View style={{ position: 'absolute', top: topPad + 8, left: 16, right: 16, zIndex: 999 }} pointerEvents="box-none">
+          <RewardBanner reward={rewards[0]} onDismiss={() => dismissReward(rewards[0]!.id)} />
+        </View>
+      )}
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomPad }}
@@ -539,27 +559,34 @@ export default function HomeScreen() {
             HERO — centered immersive sanctuary
         ══════════════════════════════════════════════════ */}
         <View style={[s.hero, { paddingTop: topPad + 8 }]}>
-          {/* Base mood gradient — diagonal, rich */}
+          {/* ── Base mood nebula ── */}
           <LinearGradient
-            colors={[`${accent}28`, grad[0], grad[1], grad[2]] as unknown as [string, string, ...string[]]}
+            colors={[`${accent}30`, grad[0], grad[1], '#04030C'] as unknown as [string, string, ...string[]]}
             style={StyleSheet.absoluteFill}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           />
-          {/* Cross-wash — opposite angle, creates mesh depth without circles */}
+          {/* ── Cross-nebula shimmer ── */}
           <LinearGradient
-            colors={[`${accent}22`, 'transparent', `${accent}14`]}
+            colors={[`${accent}1A`, 'transparent', 'rgba(96,180,248,0.10)']}
             style={StyleSheet.absoluteFill}
             start={{ x: 1, y: 0 }} end={{ x: 0, y: 1 }}
             pointerEvents="none"
           />
-          {/* Top vignette — adds premium depth at the very top */}
+          {/* ── Micro star field inside hero ── */}
+          <StarField density="low" />
+          {/* ── Top vignette — depth ── */}
           <LinearGradient
-            colors={['rgba(0,0,0,0.22)', 'transparent']}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 90 }}
+            colors={['rgba(0,0,0,0.30)', 'transparent']}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 100 }}
             pointerEvents="none"
           />
-          {/* Accent pinstripe — thin premium top edge */}
-          <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, backgroundColor: accent, opacity: 0.45 }} />
+          {/* ── Accent pinstripe — top edge ── */}
+          <LinearGradient
+            colors={[accent, '#A880F8', 'transparent']}
+            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1.5, opacity: 0.55 }}
+            pointerEvents="none"
+          />
 
           {/* ── Top row: bell + settings ── */}
           <View style={s.heroActions}>
@@ -577,16 +604,21 @@ export default function HomeScreen() {
 
           {/* ── Centered identity block ── */}
           <View style={s.heroCenter}>
-            {/* Avatar — gradient ring, no animated moon */}
+            {/* Avatar — orbital ring system */}
             <TouchableOpacity
               style={s.avatarWrap}
               onPress={() => router.push('/(tabs)/profile')}
               onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfits(true); }}
             >
+              {/* Outermost diffuse glow ring */}
+              <View pointerEvents="none" style={[s.avatarOrbit3, { borderColor: `${accent}10` }]} />
+              {/* Breathing orbital ring */}
+              <BreathRing accent={accent} r={59} />
+              {/* Main gradient ring */}
               <LinearGradient
-                colors={[accent, '#A880F8', '#60C8F8']}
+                colors={[accent, '#A880F8', '#60C8F8', accent]}
                 style={s.avatarRing}
-                start={{ x: 0.1, y: 1 }} end={{ x: 1, y: 0.1 }}
+                start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}
               >
                 <View style={s.avatarInner}>
                   <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -667,10 +699,10 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Bottom fade to dark */}
+          {/* Bottom fade to deep void */}
           <LinearGradient
-            colors={['transparent', '#080614']}
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 44 }}
+            colors={['transparent', '#04030C']}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 56 }}
             pointerEvents="none"
           />
         </View>
@@ -1138,27 +1170,28 @@ export default function HomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#080614' },
+  root: { flex: 1, backgroundColor: '#04030C' },
 
-  // ── Hero — centered immersive ──────────────────────────────────────────────
-  hero:        { paddingHorizontal: 0, paddingBottom: 28, overflow: 'hidden', borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 4 },
+  // ── Hero — immersive cosmic sanctuary ──────────────────────────────────────
+  hero:        { paddingHorizontal: 0, paddingBottom: 32, overflow: 'hidden', borderBottomLeftRadius: 36, borderBottomRightRadius: 36, marginBottom: 4 },
   heroActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, paddingHorizontal: 20, marginBottom: 12 },
-  heroBtn:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  heroBtn:     { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 19, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
   heroBadge:   { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: 3.5 },
 
   // Centered identity block
-  heroCenter:  { alignItems: 'center', paddingHorizontal: 28, paddingBottom: 22, gap: 7 },
+  heroCenter:  { alignItems: 'center', paddingHorizontal: 28, paddingBottom: 22, gap: 8 },
 
-  // Avatar
-  avatarWrap:  { position: 'relative', marginBottom: 6 },
-  avatarRing:  { width: 98, height: 98, borderRadius: 49, padding: 3 },
-  avatarInner: { flex: 1, borderRadius: 46, overflow: 'hidden', backgroundColor: '#0A0820' },
-  roleTag:     { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#080614' },
-  roleText:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  // Avatar — orbital system
+  avatarWrap:   { position: 'relative', marginBottom: 8, width: 108, height: 108, alignItems: 'center', justifyContent: 'center' },
+  avatarOrbit3: { position: 'absolute', width: 130, height: 130, borderRadius: 65, borderWidth: 1 },
+  avatarRing:   { width: 96, height: 96, borderRadius: 48, padding: 3 },
+  avatarInner:  { flex: 1, borderRadius: 45, overflow: 'hidden', backgroundColor: '#060412' },
+  roleTag:      { position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#04030C' },
+  roleText:     { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#fff' },
 
   // Identity text — centered
-  heroName:    { fontSize: 32, fontFamily: 'Satoshi-Bold', color: 'rgba(245,240,255,0.98)', letterSpacing: -1.2, textAlign: 'center' },
-  heroHandle:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.42)', textAlign: 'center' },
+  heroName:    { fontSize: 34, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.98)', letterSpacing: -1.4, textAlign: 'center' },
+  heroHandle:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.38)', textAlign: 'center' },
   heroBioRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   moodDot:     { width: 6, height: 6, borderRadius: 3 },
   heroMood:    { fontSize: 12.5, fontFamily: 'Satoshi-Medium' },
@@ -1175,15 +1208,17 @@ const s = StyleSheet.create({
   heroCTA:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 26, paddingVertical: 13, borderRadius: 28, borderWidth: 1, overflow: 'hidden', marginTop: 4 },
   heroCTAText: { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
 
-  // Stats row — below hero center, no top border (gradient does the separation)
+  // Stats row — glass morphism pill
   statBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly',
-              paddingVertical: 14, paddingHorizontal: 8, marginHorizontal: 20, marginBottom: 6,
-              backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 22,
-              borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.09)' },
-  statItem: { alignItems: 'center', gap: 3, flex: 1 },
-  statN:    { fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.96)', letterSpacing: -0.8 },
-  statL:    { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.42)', letterSpacing: 0.6, textTransform: 'uppercase' },
-  statSep:  { width: 0.5, height: 30, backgroundColor: 'rgba(255,255,255,0.10)' },
+              paddingVertical: 16, paddingHorizontal: 8, marginHorizontal: 20, marginBottom: 8,
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              borderRadius: 24,
+              borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+              shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.40, shadowRadius: 16, elevation: 6 },
+  statItem: { alignItems: 'center', gap: 4, flex: 1 },
+  statN:    { fontSize: 24, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.96)', letterSpacing: -1.0 },
+  statL:    { fontSize: 9.5, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.38)', letterSpacing: 0.8, textTransform: 'uppercase' },
+  statSep:  { width: 0.5, height: 32, backgroundColor: 'rgba(255,255,255,0.08)' },
 
   // ── Sections ───────────────────────────────────────────────────────────────
   section:     { paddingVertical: 18 },
@@ -1209,14 +1244,16 @@ const s = StyleSheet.create({
   // ── Lumi companion block ───────────────────────────────────────────────────
   lumiBlock:   {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    marginHorizontal: 16, marginTop: 2, marginBottom: 4,
+    marginHorizontal: 16, marginTop: 4, marginBottom: 4,
     paddingHorizontal: 18, paddingVertical: 16,
-    borderRadius: 20, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 22, overflow: 'hidden',
+    backgroundColor: 'rgba(155,120,255,0.05)',
+    borderWidth: 1, borderColor: 'rgba(168,136,248,0.12)',
+    shadowColor: '#9B78FF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.18, shadowRadius: 20, elevation: 4,
   },
   lumiAvatar:  { width: 52, height: 52 },
-  lumiLabel:   { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.6, color: 'rgba(200,185,255,0.40)', marginBottom: 5, textTransform: 'uppercase' },
-  lumiMsg:     { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(220,205,255,0.72)', lineHeight: 20 },
+  lumiLabel:   { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2.0, color: 'rgba(200,185,255,0.35)', marginBottom: 5, textTransform: 'uppercase' },
+  lumiMsg:     { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(225,215,255,0.78)', lineHeight: 20.5 },
   lumiBadge:   { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
   lumiBadgeN:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#fff' },
 
@@ -1225,9 +1262,10 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginTop: 6, marginBottom: 4,
     paddingHorizontal: 16, paddingVertical: 14,
-    borderRadius: 18, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 20, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 4,
   },
   nudgeOrb: {
     width: 7, height: 7, borderRadius: 4,
@@ -1274,7 +1312,7 @@ const s = StyleSheet.create({
 
   // ── Drift invitation card ──────────────────────────────────────────────────
   driftSection:    { paddingHorizontal: 16, paddingBottom: 8 },
-  driftCard:       { borderRadius: 22, overflow: 'hidden', backgroundColor: 'rgba(50,24,120,0.30)', position: 'relative' },
+  driftCard:       { borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(40,18,110,0.38)', position: 'relative', borderWidth: 1, borderColor: 'rgba(168,136,248,0.12)' },
   driftLumi:       { position: 'absolute', top: -10, right: -6, width: 110, height: 110 },
   driftContent:    { padding: 22, paddingRight: 96 },
   driftEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },

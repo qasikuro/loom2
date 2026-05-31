@@ -225,6 +225,10 @@ export default function RootLayout() {
                               name="journal-entry"
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />
+                            <Stack.Screen
+                              name="purchase-history"
+                              options={{ presentation: 'card', animation: 'slide_from_right' }}
+                            />
                           </Stack>
                         </KeyboardProvider>
                       </GestureHandlerRootView>

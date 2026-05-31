@@ -311,6 +311,10 @@ export default function StoryScreen() {
   const witnessScale = useRef(new Animated.Value(1)).current;
   const witnessGlow  = useRef(new Animated.Value(0)).current;
 
+  // Sticker badge bounce animation (prevStickerRef init to 0 — stickerCount is derived below)
+  const stickerBounce  = useRef(new Animated.Value(1)).current;
+  const prevStickerRef = useRef(0);
+
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
@@ -327,6 +331,17 @@ export default function StoryScreen() {
   const witnessedCount = ((story?.witnessedCount ?? post?.witnessedCount ?? 0) + (witnessed ? 1 : 0));
   const savedCount     = (story?.savedCount ?? post?.savedCount ?? 0) + savedOffset;
   const stickerCount   = story?.stickerCount ?? post?.stickerCount ?? 0;
+
+  // Trigger sticker bounce when count increases
+  useEffect(() => {
+    if (stickerCount > prevStickerRef.current) {
+      prevStickerRef.current = stickerCount;
+      stickerBounce.setValue(0.55);
+      Animated.spring(stickerBounce, { toValue: 1, friction: 4, tension: 160, useNativeDriver: true }).start();
+    } else {
+      prevStickerRef.current = stickerCount;
+    }
+  }, [stickerCount]);
 
   function toCellPanel(p: any): CellPanel {
     return {
@@ -551,11 +566,11 @@ export default function StoryScreen() {
             <Icon name="bookmark" size={14} color={isSaved ? '#8B7AB5' : 'rgba(200,184,232,0.6)'} />
             <Text style={[styles.endStatText, isSaved && { color: '#8B7AB5' }]}>{savedCount}</Text>
             {stickerCount > 0 && (
-              <>
+              <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ scale: stickerBounce }] }}>
                 <View style={styles.endStatDot} />
                 <Text style={styles.endStatStickerIcon}>✦</Text>
                 <Text style={styles.endStatText}>{stickerCount}</Text>
-              </>
+              </Animated.View>
             )}
           </View>
           {/* Follow author CTA for discover posts */}
@@ -582,11 +597,11 @@ export default function StoryScreen() {
           <Icon name="bookmark" size={14} color="rgba(240,234,248,0.6)" />
           <Text style={styles.witnessedNum}>{savedCount}</Text>
           {stickerCount > 0 && (
-            <>
+            <Animated.View style={{ flexDirection: 'row', alignItems: 'center', transform: [{ scale: stickerBounce }] }}>
               <View style={styles.dotDivider} />
               <Text style={styles.bottomStickerIcon}>✦</Text>
               <Text style={styles.witnessedNum}>{stickerCount}</Text>
-            </>
+            </Animated.View>
           )}
         </View>
 
