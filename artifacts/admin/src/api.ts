@@ -46,6 +46,14 @@ export const api = {
   resolveReport: (id: string, status: "resolved" | "dismissed") => apiFetch(`/admin/reports/${id}/resolve`, { method: "PUT", body: JSON.stringify({ status }) }),
   deleteReport:  (id: string) => apiFetch(`/admin/reports/${id}`, { method: "DELETE" }),
   getStickers:   (offset = 0) => apiFetch<{ stickers: AdminSticker[]; total: number }>(`/admin/stickers?offset=${offset}`),
+
+  // Events
+  getEvents:         () => apiFetch<{ events: AdminEvent[] }>("/admin/events"),
+  createEvent:       (body: EventBody) => apiFetch<AdminEvent>("/admin/events", { method: "POST", body: JSON.stringify(body) }),
+  updateEvent:       (id: string, body: EventBody) => apiFetch<AdminEvent>(`/admin/events/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteEvent:       (id: string) => apiFetch(`/admin/events/${id}`, { method: "DELETE" }),
+  generateInventory: (body: GenerateInventoryBody) => apiFetch<{ inventory: EventInventoryItem[]; prompt: string }>("/admin/events/generate-inventory", { method: "POST", body: JSON.stringify(body) }),
+  grantEvent:        (id: string) => apiFetch<{ granted: number; stars: number; aura: number; shards: number; itemsGranted: number; message: string }>(`/admin/events/${id}/grant`, { method: "POST" }),
 };
 
 export interface Stats {
@@ -123,6 +131,46 @@ export interface ContentItem {
   date: string;
   authorName: string | null;
   username: string | null;
+}
+
+export interface EventInventoryItem {
+  type:      "stars" | "aura" | "shards" | "item";
+  amount?:   number;
+  itemId?:   string;
+  itemName?: string;
+  label:     string;
+}
+
+export interface AdminEvent {
+  id:          string;
+  title:       string;
+  description: string;
+  theme:       string;
+  status:      string;
+  startsAt:    string | null;
+  endsAt:      string | null;
+  inventory:   EventInventoryItem[];
+  aiPrompt:    string;
+  createdBy:   string;
+  createdAt:   string;
+}
+
+export interface EventBody {
+  title:       string;
+  description: string;
+  theme:       string;
+  status:      string;
+  startsAt:    string | null;
+  endsAt:      string | null;
+  inventory:   EventInventoryItem[];
+  aiPrompt:    string;
+}
+
+export interface GenerateInventoryBody {
+  title:       string;
+  description: string;
+  theme:       string;
+  extra:       string;
 }
 
 export interface Report {

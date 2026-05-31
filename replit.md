@@ -186,6 +186,39 @@ DiscoverPost { authorUserId, authorName, authorHandle, chapterTitle,
 - No follower counts — soft ambient feedback only
 - No algorithmic pressure — calm aesthetic discovery
 
+## Admin Events System
+
+### Database (`lib/db/src/schema/events.ts`)
+- `events` table: id (uuid PK), title, description, theme (spring|summer|autumn|winter|special), status (draft|active|ended), startsAt, endsAt, inventory (jsonb), aiPrompt, createdBy, createdAt
+
+### API routes (admin-only, `artifacts/api-server/src/routes/admin-events.ts`)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET    | `/api/admin/events` | List all events |
+| POST   | `/api/admin/events` | Create event |
+| PUT    | `/api/admin/events/:id` | Update event |
+| DELETE | `/api/admin/events/:id` | Delete event |
+| POST   | `/api/admin/events/generate-inventory` | AI (Claude) generates themed inventory |
+| POST   | `/api/admin/events/:id/grant` | Grant inventory to all users |
+
+### AI inventory generation
+- Uses Anthropic (same Claude integration as `drift.ts`)
+- Prompt includes event title, description, theme + optional admin note
+- Returns 4–7 inventory items: stars / aura / memory shards / cosmetic items
+- Admin can edit generated items before saving
+
+### Grant mechanics
+- Currency (stars/aura/shards): upserted into `user_rewards` (increment existing balances)
+- Cosmetic items: inserted into `user_purchases` with `onConflictDoNothing` (skip if already owned)
+- Two-tap confirm guard in admin UI before irreversible grant
+
+### Admin Events page (`artifacts/admin/src/pages/EventsPage.tsx`)
+- List view grouped by status: Active → Drafts → Ended
+- Create/Edit form: title, description, theme, date range, status, inventory editor
+- "Generate with AI" button + optional extra context field
+- Per-item inline editor (type selector, amount/id/name fields)
+- "Grant to All Users" button with inline confirm → shows result summary
+
 ## Generated Assets
 - `assets/images/icon.png` — App icon (dreamy Sky Kid character)
 - `assets/images/splash.png` — Splash screen (floating island scene)

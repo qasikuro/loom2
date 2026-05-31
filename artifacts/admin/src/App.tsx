@@ -5,12 +5,14 @@ import DashboardPage from "./pages/DashboardPage";
 import UsersPage from "./pages/UsersPage";
 import ContentPage from "./pages/ContentPage";
 import ReportsPage from "./pages/ReportsPage";
+import EventsPage from "./pages/EventsPage";
 
 const NAV = [
-  { id: "dashboard", label: "Dashboard",    icon: "⬡" },
-  { id: "users",     label: "Users",         icon: "⊹" },
-  { id: "content",   label: "Content",       icon: "▦" },
-  { id: "reports",   label: "Reports",       icon: "⚑" },
+  { id: "dashboard", label: "Dashboard", icon: "⬡" },
+  { id: "users",     label: "Users",     icon: "⊹" },
+  { id: "content",   label: "Content",   icon: "▦" },
+  { id: "events",    label: "Events",    icon: "✦" },
+  { id: "reports",   label: "Reports",   icon: "⚑" },
 ] as const;
 type Page = (typeof NAV)[number]["id"];
 
@@ -208,6 +210,7 @@ function AdminApp() {
       {page === "dashboard" && <DashboardPage />}
       {page === "users"     && <UsersPage />}
       {page === "content"   && <ContentPage />}
+      {page === "events"    && <EventsPage />}
       {page === "reports"   && <ReportsPage />}
     </Layout>
   );
