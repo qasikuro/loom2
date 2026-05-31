@@ -27,7 +27,7 @@ import { persistImageUri } from '@/utils/persistImage';
 
 import { Images } from '@/assets/images';
 import { apiFetch, useApp, type GalleryPhoto, type Outfit, type Story } from '@/context/AppContext';
-import { ConstellationMap } from '@/components/ConstellationMap';
+import { ConstellationMap, type ConstellationState } from '@/components/ConstellationMap';
 import { RewardBalance } from '@/components/RewardBalance';
 import { ShopModal } from '@/components/ShopModal';
 import { useSound } from '@/context/SoundContext';
@@ -39,6 +39,111 @@ import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WeatherWidget } from '@/components/WeatherWidget';
+
+// ── Constellation Progress Card ────────────────────────────────────────────────
+
+interface ProgressRowDef {
+  label: string;
+  count: number;
+  threshold: number;
+  color: string;
+  icon: string;
+  unit: string;
+}
+
+function ConstellationProgressCard({ constellation }: { constellation: ConstellationState }) {
+  const rows: ProgressRowDef[] = [
+    { label: 'Social',   count: constellation.socialCount,   threshold: 5,  color: '#78C8A8', icon: '⬡', unit: 'follows'  },
+    { label: 'Memory',   count: constellation.memoryCount,   threshold: 10, color: '#9878C8', icon: '◇', unit: 'entries'  },
+    { label: 'Quiet',    count: constellation.quietStreak,   threshold: 7,  color: '#7890C8', icon: '◐', unit: 'days'     },
+    { label: 'Creative', count: constellation.creativeCount, threshold: 5,  color: '#C87AA8', icon: '◈', unit: 'stories'  },
+    { label: 'Helping',  count: constellation.helpingCount,  threshold: 20, color: '#C8A84B', icon: '✦', unit: 'stickers' },
+    { label: 'Seasonal', count: constellation.seasonalCount, threshold: 3,  color: '#68B8B0', icon: '✿', unit: 'stars'    },
+  ];
+  const totalPct = Math.round(
+    rows.reduce((sum, r) => sum + Math.min(1, r.count / r.threshold), 0) / rows.length * 100,
+  );
+
+  // One Animated.Value per row + one for the overall bar
+  const overallAnim = useRef(new Animated.Value(0)).current;
+  const rowAnims    = useRef(rows.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    const animations = [
+      Animated.timing(overallAnim, {
+        toValue: totalPct,
+        duration: 460,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }),
+      ...rows.map((r, i) => Animated.timing(rowAnims[i], {
+        toValue: Math.round(Math.min(1, r.count / r.threshold) * 100),
+        duration: 420,
+        delay: 60 + i * 45,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      })),
+    ];
+    Animated.parallel(animations).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(107,91,149,0.18)', backgroundColor: 'rgba(8,6,20,0.55)' }}>
+      {/* Card header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
+        <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.55)', letterSpacing: 0.8 }}>STAR PROGRESS</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.80)' }}>{totalPct}%</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)' }}>overall</Text>
+        </View>
+      </View>
+      {/* Overall bar */}
+      <View style={{ marginHorizontal: 14, marginTop: 8, marginBottom: 4, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+        <Animated.View style={{
+          width: overallAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
+          height: '100%', borderRadius: 2, backgroundColor: '#9B78E8', opacity: 0.7,
+        }} />
+      </View>
+      {/* Per-star rows */}
+      <View style={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 10 }}>
+        {rows.map((r, i) => {
+          const done = constellation.unlockedStars.includes(r.label.toLowerCase());
+          const pctN = Math.round(Math.min(1, r.count / r.threshold) * 100);
+          return (
+            <View key={r.label}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 10, color: done ? r.color : 'rgba(200,184,232,0.30)' }}>{r.icon}</Text>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: done ? r.color : 'rgba(200,184,232,0.55)' }}>{r.label}</Text>
+                  {done && (
+                    <View style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, backgroundColor: `${r.color}22` }}>
+                      <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: r.color }}>✓ done</Text>
+                    </View>
+                  )}
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: done ? r.color : 'rgba(200,184,232,0.50)' }}>
+                    {r.count} / {r.threshold} {r.unit}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: done ? `${r.color}BB` : 'rgba(200,184,232,0.35)', minWidth: 32, textAlign: 'right' }}>
+                    {pctN}%
+                  </Text>
+                </View>
+              </View>
+              <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <Animated.View style={{
+                  width: rowAnims[i].interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
+                  height: '100%', borderRadius: 3, backgroundColor: r.color, opacity: done ? 0.55 : 0.80,
+                }} />
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -1792,68 +1897,8 @@ export default function CharacterScreen() {
               <ConstellationMap state={constellation} />
             </View>
 
-            {/* Progress summary card — 6 stars with full-width bars */}
-            {constellation && (() => {
-              const rows = [
-                { label: 'Social',   count: constellation.socialCount,   threshold: 5,  color: '#78C8A8', icon: '⬡', unit: 'follows'  },
-                { label: 'Memory',   count: constellation.memoryCount,   threshold: 10, color: '#9878C8', icon: '◇', unit: 'entries'  },
-                { label: 'Quiet',    count: constellation.quietStreak,   threshold: 7,  color: '#7890C8', icon: '◐', unit: 'days'     },
-                { label: 'Creative', count: constellation.creativeCount, threshold: 5,  color: '#C87AA8', icon: '◈', unit: 'stories'  },
-                { label: 'Helping',  count: constellation.helpingCount,  threshold: 20, color: '#C8A84B', icon: '✦', unit: 'stickers' },
-                { label: 'Seasonal', count: constellation.seasonalCount, threshold: 3,  color: '#68B8B0', icon: '✿', unit: 'stars'    },
-              ];
-              const totalPct = Math.round(rows.reduce((sum, r) => sum + Math.min(1, r.count / r.threshold), 0) / rows.length * 100);
-              return (
-                <View style={{ marginHorizontal: 16, marginTop: 8, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(107,91,149,0.18)', backgroundColor: 'rgba(8,6,20,0.55)' }}>
-                  {/* Card header */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
-                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.55)', letterSpacing: 0.8 }}>STAR PROGRESS</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.80)' }}>{totalPct}%</Text>
-                      <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)' }}>overall</Text>
-                    </View>
-                  </View>
-                  {/* Overall bar */}
-                  <View style={{ marginHorizontal: 14, marginTop: 8, marginBottom: 4, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                    <View style={{ width: `${totalPct}%`, height: '100%', borderRadius: 2, backgroundColor: '#9B78E8', opacity: 0.7 }} />
-                  </View>
-                  {/* Per-star rows */}
-                  <View style={{ paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 10 }}>
-                    {rows.map(r => {
-                      const done = constellation.unlockedStars.includes(r.label.toLowerCase());
-                      const pct  = Math.min(1, r.count / r.threshold);
-                      const pctN = Math.round(pct * 100);
-                      return (
-                        <View key={r.label}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={{ fontSize: 10, color: done ? r.color : 'rgba(200,184,232,0.30)' }}>{r.icon}</Text>
-                              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: done ? r.color : 'rgba(200,184,232,0.55)' }}>{r.label}</Text>
-                              {done && (
-                                <View style={{ paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, backgroundColor: `${r.color}22` }}>
-                                  <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: r.color }}>✓ done</Text>
-                                </View>
-                              )}
-                            </View>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: done ? r.color : 'rgba(200,184,232,0.50)' }}>
-                                {r.count} / {r.threshold} {r.unit}
-                              </Text>
-                              <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: done ? `${r.color}BB` : 'rgba(200,184,232,0.35)', minWidth: 32, textAlign: 'right' }}>
-                                {pctN}%
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                            <View style={{ width: `${pctN}%`, height: '100%', borderRadius: 3, backgroundColor: r.color, opacity: done ? 0.55 : 0.80 }} />
-                          </View>
-                        </View>
-                      );
-                    })}
-                  </View>
-                </View>
-              );
-            })()}
+            {/* Progress summary card — 6 stars with animated full-width bars */}
+            {constellation && <ConstellationProgressCard constellation={constellation} />}
 
             {!constellation && (
               <View style={[styles.hEmptyCard, { marginHorizontal: 16, backgroundColor: 'rgba(107,91,149,0.06)', borderColor: 'rgba(107,91,149,0.15)' }]}>

@@ -127,15 +127,53 @@ interface ConstellationMapProps {
 export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) {
   const [dims, setDims]           = useState({ w: 0, h: 0 });
   const [tooltip, setTooltip]     = useState<StarDef | null>(null);
+  const tooltipBarAnim            = useRef(new Animated.Value(0)).current;
 
   function onLayout(e: LayoutChangeEvent) {
     setDims({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });
   }
 
   function handleStarPress(star: StarDef) {
-    setTooltip(prev => prev?.key === star.key ? null : star);
+    const closing = tooltip?.key === star.key;
+    setTooltip(closing ? null : star);
+    if (!closing) {
+      tooltipBarAnim.setValue(0);
+    }
     onStarPress?.(star.key);
   }
+
+  // Animate tooltip bar when tooltip opens or switches star
+  useEffect(() => {
+    if (!tooltip) return;
+    const key = tooltip.key;
+    const clampedCur = (() => {
+      if (!state) return 0;
+      switch (key) {
+        case 'social':   return Math.min(state.socialCount,   5);
+        case 'memory':   return Math.min(state.memoryCount,   10);
+        case 'quiet':    return Math.min(state.quietStreak,   7);
+        case 'creative': return Math.min(state.creativeCount, 5);
+        case 'helping':  return Math.min(state.helpingCount,  20);
+        case 'seasonal': return Math.min(state.seasonalCount, 3);
+        default: return 0;
+      }
+    })();
+    const max = (() => {
+      switch (key) {
+        case 'social': return 5; case 'memory': return 10; case 'quiet': return 7;
+        case 'creative': return 5; case 'helping': return 20; case 'seasonal': return 3;
+        default: return 1;
+      }
+    })();
+    const pct = Math.min(1, clampedCur / max);
+    tooltipBarAnim.setValue(0);
+    Animated.timing(tooltipBarAnim, {
+      toValue: pct * 100,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [tooltip?.key]);
 
   const unlockedSet = new Set(state?.unlockedStars ?? []);
 
@@ -290,9 +328,15 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
             {/* Progress bar */}
             <View style={styles.tooltipBarRow}>
               <View style={styles.tooltipBarTrack}>
-                <View style={[
+                <Animated.View style={[
                   styles.tooltipBarFill,
-                  { width: `${pct * 100}%` as any, backgroundColor: tooltipStar.color },
+                  {
+                    width: tooltipBarAnim.interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ['0%', '100%'],
+                    }) as any,
+                    backgroundColor: tooltipStar.color,
+                  },
                   isUnlocked && { opacity: 0.7 },
                 ]} />
               </View>
