@@ -585,41 +585,60 @@ export default function HomeScreen() {
         </View>
 
         {/* ══════════════════════════════════════════════════
-            MAIN ACTIONS — Story + Drift only
+            DRIFT — Lumi's sanctuary, a real invitation
         ══════════════════════════════════════════════════ */}
-        <View style={s.actions}>
-          {/* Create a Story */}
+        <View style={s.driftSection}>
           <TouchableOpacity
-            style={[s.actionCard, { borderColor: 'rgba(96,200,248,0.22)', backgroundColor: 'rgba(96,200,248,0.06)' }]}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('tap'); router.push('/(tabs)/create'); }}
-            activeOpacity={0.80}
-          >
-            <LinearGradient colors={['rgba(96,200,248,0.14)', 'transparent']} style={StyleSheet.absoluteFill} />
-            <View style={[s.actionCardIcon, { backgroundColor: 'rgba(96,200,248,0.16)' }]}>
-              <Icon name="feather" size={22} color="#60C8F8" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.actionCardTitle}>Create a Story</Text>
-              <Text style={s.actionCardSub}>Share your next chapter with the world</Text>
-            </View>
-            <Icon name="chevron-right" size={16} color="rgba(96,200,248,0.45)" />
-          </TouchableOpacity>
-
-          {/* Enter Drift */}
-          <TouchableOpacity
-            style={[s.actionCard, { borderColor: 'rgba(200,168,255,0.22)', backgroundColor: 'rgba(160,128,248,0.06)' }]}
+            style={s.driftCard}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('tap'); router.push('/(tabs)/drift'); }}
-            activeOpacity={0.80}
+            activeOpacity={0.84}
           >
-            <LinearGradient colors={['rgba(160,128,248,0.14)', 'transparent']} style={StyleSheet.absoluteFill} />
-            <View style={[s.actionCardIcon, { backgroundColor: 'rgba(160,128,248,0.16)' }]}>
-              <Icon name="moon" size={22} color="#C8A8FF" />
+            {/* Deep dreamy atmosphere */}
+            <LinearGradient
+              colors={['rgba(90,48,200,0.35)', 'rgba(50,24,140,0.28)', 'rgba(16,10,50,0.20)']}
+              start={{ x: 0.1, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Soft glow behind Lumi */}
+            <View pointerEvents="none" style={{ position: 'absolute', top: -24, right: -24, width: 130, height: 130, borderRadius: 65, backgroundColor: '#A880F8', opacity: 0.10 }} />
+
+            {/* Lumi — floating in top-right, peeking in */}
+            <Image source={Images.character_default} style={s.driftLumi} contentFit="contain" />
+
+            {/* Content — padded to not overlap Lumi */}
+            <View style={s.driftContent}>
+              <View style={s.driftEyebrowRow}>
+                <Icon name="moon" size={12} color="rgba(200,168,255,0.65)" />
+                <Text style={s.driftEyebrow}>Drift · with Lumi</Text>
+              </View>
+
+              <Text style={s.driftTitle}>A space to just be</Text>
+
+              <Text style={s.driftDesc}>
+                Lumi is waiting inside. No stories, no pressure — just breathing,
+                soft prompts, and a gentle check-in on how you're really feeling right now.
+              </Text>
+
+              {/* Feature pills */}
+              <View style={s.driftChips}>
+                {[
+                  { icon: 'wind',      label: 'Breathe'  },
+                  { icon: 'edit-2',    label: 'Reflect'  },
+                  { icon: 'heart',     label: 'Check in' },
+                ].map(c => (
+                  <View key={c.label} style={s.driftChip}>
+                    <Icon name={c.icon as any} size={11} color="rgba(200,175,255,0.65)" />
+                    <Text style={s.driftChipTxt}>{c.label}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* CTA line */}
+              <View style={s.driftCTA}>
+                <Text style={s.driftCTATxt}>Enter when you're ready</Text>
+                <Icon name="arrow-right" size={13} color="rgba(200,168,255,0.50)" />
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.actionCardTitle}>Enter Drift</Text>
-              <Text style={s.actionCardSub}>A quiet space just for you — breathe</Text>
-            </View>
-            <Icon name="chevron-right" size={16} color="rgba(200,168,255,0.45)" />
           </TouchableOpacity>
         </View>
 
@@ -861,13 +880,20 @@ const s = StyleSheet.create({
   findFriendsBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, backgroundColor: 'rgba(96,200,168,0.15)' },
   findFriendsBadgeText: { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#5EC8A0' },
 
-  // ── Main actions — Story + Drift ───────────────────────────────────────────
-  actions:         { paddingHorizontal: 16, paddingVertical: 8, gap: 10 },
-  // No border — elevation/gradient does the work
-  actionCard:      { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 18, paddingVertical: 18, borderRadius: 20, overflow: 'hidden' },
-  actionCardIcon:  { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
-  actionCardTitle: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(235,230,255,0.94)', marginBottom: 3 },
-  actionCardSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.48)', lineHeight: 16 },
+  // ── Drift invitation card ──────────────────────────────────────────────────
+  driftSection:    { paddingHorizontal: 16, paddingBottom: 8 },
+  driftCard:       { borderRadius: 22, overflow: 'hidden', backgroundColor: 'rgba(50,24,120,0.30)', position: 'relative' },
+  driftLumi:       { position: 'absolute', top: -10, right: -6, width: 110, height: 110 },
+  driftContent:    { padding: 22, paddingRight: 96 },
+  driftEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  driftEyebrow:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.5, color: 'rgba(200,168,255,0.55)', textTransform: 'uppercase' },
+  driftTitle:      { fontSize: 24, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.97)', letterSpacing: -0.6, marginBottom: 10, lineHeight: 28 },
+  driftDesc:       { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.55)', lineHeight: 19.5, marginBottom: 18 },
+  driftChips:      { flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap' },
+  driftChip:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(160,128,248,0.16)' },
+  driftChipTxt:    { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,175,255,0.72)' },
+  driftCTA:        { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  driftCTATxt:     { fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,255,0.55)', fontStyle: 'italic' },
 });
 
 // Modal styles
