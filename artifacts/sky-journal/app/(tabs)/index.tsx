@@ -153,62 +153,73 @@ function CampfireBubble({ guide, isMine }: { guide: GuideProfile; isMine?: boole
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/guide/[userId]', params: { userId: guide.userId } } as any); }}
       activeOpacity={0.82}
     >
-      {/* Ring */}
-      <View style={[fb.ring, { borderColor: ringColor }]}>
-        <View style={fb.circle}>
-          {guide.avatarUri
-            ? <Image source={{ uri: guide.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-            : <LinearGradient colors={isMine ? ['#5A28B8', '#3050C0'] : ['#2A2050', '#181430']} style={StyleSheet.absoluteFill} />
-          }
-          {!guide.avatarUri && (
-            <Text style={fb.initial}>{guide.name.charAt(0).toUpperCase()}</Text>
-          )}
+      {/* Pulse ring container — BreathRing positioned relative to this */}
+      <View style={{ position: 'relative', width: 66, height: 66, alignItems: 'center', justifyContent: 'center' }}>
+        {live && <BreathRing accent="#50D880" r={33} />}
+        {isMine && !live && <BreathRing accent="#A880F8" r={33} />}
+        <View style={[fb.ring, { borderColor: ringColor }]}>
+          <View style={fb.circle}>
+            {guide.avatarUri
+              ? <Image source={{ uri: guide.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+              : <LinearGradient colors={isMine ? ['#5A28B8', '#3050C0'] : ['#2A2050', '#181430']} style={StyleSheet.absoluteFill} />
+            }
+            {!guide.avatarUri && (
+              <Text style={fb.initial}>{guide.name.charAt(0).toUpperCase()}</Text>
+            )}
+          </View>
+          {live && <View style={fb.liveDot} />}
         </View>
-        {live && <View style={fb.liveDot} />}
       </View>
       <Text style={fb.name} numberOfLines={1}>{isMine ? 'Your Fire' : guide.name.split(' ')[0]}</Text>
-      <Text style={fb.sub} numberOfLines={1}>
-        {live ? '● Live' : next ?? 'Offline'}
+      <Text style={[fb.sub, live && { color: '#50D880' }]} numberOfLines={1}>
+        {live ? '● Live now' : next ?? 'Offline'}
       </Text>
     </TouchableOpacity>
   );
 }
 const fb = StyleSheet.create({
-  wrap:    { alignItems: 'center', width: 72, gap: 5 },
+  wrap:    { alignItems: 'center', width: 76, gap: 6 },
   ring:    { width: 62, height: 62, borderRadius: 31, borderWidth: 2, padding: 2, position: 'relative' },
   circle:  { flex: 1, borderRadius: 28, overflow: 'hidden', backgroundColor: '#181430', alignItems: 'center', justifyContent: 'center' },
   initial: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: 'rgba(220,200,255,0.85)' },
-  liveDot: { position: 'absolute', bottom: 2, right: 2, width: 10, height: 10, borderRadius: 5, backgroundColor: '#50D880', borderWidth: 2, borderColor: '#080614' },
-  name:    { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(220,210,255,0.80)', textAlign: 'center' },
-  sub:     { fontSize: 9.5, fontFamily: 'Satoshi-Regular', color: 'rgba(160,140,200,0.50)', textAlign: 'center' },
+  liveDot: { position: 'absolute', bottom: 1, right: 1, width: 11, height: 11, borderRadius: 6, backgroundColor: '#50D880', borderWidth: 2, borderColor: '#080614' },
+  name:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium', color: 'rgba(220,210,255,0.82)', textAlign: 'center' },
+  sub:     { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(160,140,200,0.50)', textAlign: 'center' },
 });
 
 // ─── Story panel (masonry cell) ──────────────────────────────────────────────
 function StoryPanel({ post, wide = false }: { post: DiscoverPost; wide?: boolean }) {
   const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
-  const h  = wide ? 200 : 140;
+  const h  = wide ? 200 : 148;
   return (
     <TouchableOpacity
-      style={[sp.wrap, { height: h }]}
+      style={[sp.wrap, { height: h, borderColor: `${mc}28` }]}
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }}
-      activeOpacity={0.88}
+      activeOpacity={0.85}
     >
       {post.imageUri
         ? <Image source={{ uri: post.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-        : <LinearGradient colors={[`${mc}60`, `${mc}18`, '#080614']} style={StyleSheet.absoluteFill} />
+        : <LinearGradient colors={[`${mc}70`, `${mc}28`, '#080614']} style={StyleSheet.absoluteFill} />
       }
+      {/* Top mood stripe */}
       <LinearGradient
-        colors={['transparent', 'rgba(4,3,18,0.92)']}
-        style={sp.grad}
+        colors={[`${mc}40`, 'transparent']}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 48 }}
+        pointerEvents="none"
       />
+      {/* Bottom scrim */}
+      <LinearGradient colors={['transparent', 'rgba(4,3,18,0.95)']} style={sp.grad} />
       <View style={sp.meta}>
-        <View style={[sp.moodDot, { backgroundColor: mc }]} />
+        <View style={sp.moodRow}>
+          <View style={[sp.moodDot, { backgroundColor: mc }]} />
+          <Text style={[sp.mood, { color: mc }]}>{post.mood}</Text>
+        </View>
         <Text style={sp.title} numberOfLines={wide ? 2 : 1}>{post.chapterTitle || 'Untitled'}</Text>
         <Text style={sp.author} numberOfLines={1}>{post.authorName}</Text>
       </View>
       {post.witnessedCount > 0 && (
         <View style={sp.witness}>
-          <Icon name="eye" size={9} color="rgba(255,255,255,0.55)" />
+          <Icon name="eye" size={9} color="rgba(255,255,255,0.60)" />
           <Text style={sp.witnessN}>{post.witnessedCount}</Text>
         </View>
       )}
@@ -216,14 +227,48 @@ function StoryPanel({ post, wide = false }: { post: DiscoverPost; wide?: boolean
   );
 }
 const sp = StyleSheet.create({
-  wrap:    { borderRadius: 16, overflow: 'hidden', backgroundColor: '#12103A', flex: 1 },
+  wrap:    { borderRadius: 20, overflow: 'hidden', backgroundColor: '#0E0C2A', flex: 1, borderWidth: 0.5 },
   grad:    { ...StyleSheet.absoluteFillObject },
   meta:    { position: 'absolute', bottom: 10, left: 10, right: 10, gap: 2 },
-  moodDot: { width: 5, height: 5, borderRadius: 2.5, marginBottom: 2 },
-  title:   { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.92)', lineHeight: 15 },
-  author:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.50)' },
-  witness: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', alignItems: 'center', gap: 2 },
-  witnessN:{ fontSize: 9.5, fontFamily: 'Satoshi-Medium', color: 'rgba(255,255,255,0.55)' },
+  moodRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 1 },
+  moodDot: { width: 4, height: 4, borderRadius: 2 },
+  mood:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase' },
+  title:   { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(240,235,255,0.95)', lineHeight: 16 },
+  author:  { fontSize: 10.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.55)', marginTop: 1 },
+  witness: { position: 'absolute', top: 9, right: 9, flexDirection: 'row', alignItems: 'center', gap: 3,
+             backgroundColor: 'rgba(0,0,0,0.35)', paddingHorizontal: 5, paddingVertical: 3, borderRadius: 8 },
+  witnessN:{ fontSize: 9.5, fontFamily: 'Satoshi-Medium', color: 'rgba(255,255,255,0.65)' },
+});
+
+// ─── Section header with accent bar + optional count badge ───────────────────
+function SectionHeader({ label, accent, count, onPress, action }: {
+  label: string; accent: string; count?: number; onPress?: () => void; action?: string;
+}) {
+  return (
+    <View style={sh.row}>
+      <View style={[sh.bar, { backgroundColor: accent }]} />
+      <Text style={sh.label}>{label}</Text>
+      {count != null && count > 0 && (
+        <View style={[sh.badge, { backgroundColor: `${accent}1C` }]}>
+          <Text style={[sh.badgeN, { color: accent }]}>{count}</Text>
+        </View>
+      )}
+      <View style={{ flex: 1 }} />
+      {onPress && (
+        <TouchableOpacity onPress={onPress} hitSlop={{ top: 8, bottom: 8, left: 12, right: 4 }}>
+          <Text style={[sh.action, { color: accent }]}>{action ?? 'See all'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+const sh = StyleSheet.create({
+  row:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, marginBottom: 14 },
+  bar:    { width: 3, height: 13, borderRadius: 2 },
+  label:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, color: 'rgba(200,185,255,0.50)', textTransform: 'uppercase' },
+  badge:  { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
+  badgeN: { fontSize: 10.5, fontFamily: 'Satoshi-Bold' },
+  action: { fontSize: 12.5, fontFamily: 'Satoshi-Medium' },
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -284,6 +329,13 @@ export default function HomeScreen() {
   // ── Animations ─────────────────────────────────────────────────────────────
   const auraA  = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
+  // Section entrance stagger (Lumi, Digest, Circle, Drift, Campfires, FindFriends)
+  const s0 = useRef(new Animated.Value(0)).current;
+  const s1 = useRef(new Animated.Value(0)).current;
+  const s2 = useRef(new Animated.Value(0)).current;
+  const s3 = useRef(new Animated.Value(0)).current;
+  const s4 = useRef(new Animated.Value(0)).current;
+  const s5 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeIn, { toValue: 1, duration: 700, useNativeDriver: true, easing: Easing.out(Easing.quad) }).start();
@@ -291,6 +343,13 @@ export default function HomeScreen() {
       Animated.timing(auraA, { toValue: 1, duration: 3400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       Animated.timing(auraA, { toValue: 0, duration: 3400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ])).start();
+    // Stagger sections in after a short hero settle
+    Animated.sequence([
+      Animated.delay(220),
+      Animated.stagger(75, [s0, s1, s2, s3, s4, s5].map(v =>
+        Animated.timing(v, { toValue: 1, duration: 520, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+      )),
+    ]).start();
   }, []);
 
   const auraOp = auraA.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.07, 0.22, 0.07] });
@@ -468,6 +527,7 @@ export default function HomeScreen() {
         {/* ══════════════════════════════════════════════════
             LUMI — aware companion who synthesises the world
         ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <TouchableOpacity
           style={s.lumiBlock}
           onPress={() => {
@@ -498,10 +558,12 @@ export default function HomeScreen() {
             </View>
           )}
         </TouchableOpacity>
+        </Animated.View>
 
         {/* ══════════════════════════════════════════════════
             ACTIVITY DIGEST — what changed while you were away
         ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         {hasDigest && (
           <ScrollView
             horizontal
@@ -570,23 +632,27 @@ export default function HomeScreen() {
             )}
           </ScrollView>
         )}
+        </Animated.View>
 
         {/* ══════════════════════════════════════════════════
             YOUR CIRCLE — stories from people you follow
         ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s2, transform: [{ translateY: s2.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <View style={s.section}>
-          <View style={s.sectionRow}>
-            <Text style={s.sectionLabel}>Your Circle</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/discover')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={[s.sectionAll, { color: accent }]}>See all</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            label="Your Circle"
+            accent={accent}
+            count={circleStories.length}
+            onPress={() => router.push('/(tabs)/discover')}
+          />
           <View style={s.masonry}>{renderCircleStories()}</View>
         </View>
+        </Animated.View>
 
         {/* ══════════════════════════════════════════════════
             DRIFT — Lumi's sanctuary, a real invitation
         ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s3, transform: [{ translateY: s3.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <View style={s.driftSection}>
           <TouchableOpacity
             style={s.driftCard}
@@ -641,13 +707,20 @@ export default function HomeScreen() {
             </View>
           </TouchableOpacity>
         </View>
+        </Animated.View>
 
         {/* ══════════════════════════════════════════════════
             CAMPFIRES — guide sessions you follow
         ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s4, transform: [{ translateY: s4.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         {campfires.length > 0 && (
           <View style={s.section}>
-            <Text style={s.sectionLabel}>Campfires</Text>
+            <SectionHeader
+              label="Campfires"
+              accent="#E8A450"
+              count={liveCampfireCount > 0 ? liveCampfireCount : undefined}
+              action={liveCampfireCount > 0 ? `${liveCampfireCount} live` : undefined}
+            />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.fireRow}>
               {campfires.map(({ guide, isMine }) => (
                 <CampfireBubble key={guide.userId} guide={guide} isMine={isMine} />
@@ -665,7 +738,7 @@ export default function HomeScreen() {
 
         {campfires.length === 0 && (
           <View style={s.section}>
-            <Text style={s.sectionLabel}>Campfires</Text>
+            <SectionHeader label="Campfires" accent="#E8A450" />
             <TouchableOpacity style={s.fireEmptyRow} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
               <Text style={{ fontSize: 18 }}>🔥</Text>
               <Text style={s.fireEmptyTxt}>Find guides to light up your campfire sessions</Text>
@@ -673,10 +746,12 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         )}
+        </Animated.View>
 
         {/* ══════════════════════════════════════════════════
             FIND FRIENDS — ambient, low-pressure CTA
         ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s5, transform: [{ translateY: s5.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <TouchableOpacity
           style={s.findFriends}
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }}
@@ -693,6 +768,7 @@ export default function HomeScreen() {
             <Text style={s.findFriendsBadgeText}>Find Friends</Text>
           </View>
         </TouchableOpacity>
+        </Animated.View>
 
       </ScrollView>
 
