@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { Images } from '@/assets/images';
 import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,827 +20,533 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { Images } from '@/assets/images';
 import { Swipeable } from 'react-native-gesture-handler';
 import { useApp } from '@/context/AppContext';
 import { useSound } from '@/context/SoundContext';
-import { SkeletonBox } from '@/components/Skeleton';
-import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
-import { useTranslation } from 'react-i18next';
+import { SHADOW } from '@/constants/colors';
+import { getTimeVariant } from '@/components/GradientSky';
 
-
-const FRIEND_MOOD_COLORS: Record<string, string> = {
-  Hopeful: '#6BA57A', Peaceful: '#5B9BB5', Lonely: '#5D7BA5',
-  Romantic: '#B86098', Chaotic: '#B85830', Dreamy: '#9B7AB5',
-  Soft: '#7B6BAA', Adventurous: '#3A9060',
+// ── Time-aware deep sky palettes ───────────────────────────────────────────────
+const SKY_PALETTES: Record<string, readonly [string, string, string, string, string]> = {
+  dawn:  ['#1A0828', '#3C1040', '#782040', '#C05030', '#D09878'],
+  day:   ['#080A20', '#0E1848', '#1A3080', '#3060B8', '#5888C8'],
+  dusk:  ['#0A0618', '#281040', '#601848', '#A83038', '#C87050'],
+  night: ['#030208', '#060312', '#0E0820', '#140C30', '#0A0818'],
 };
 
-const CATEGORIES = [
-  {
-    key: 'flames',
-    title: 'App Flames and Energy System',
-    desc: 'Track your celestial flames and energy',
-    icon: 'zap'     as const,
-    iconColor: '#F0C060',
-    iconBg:    'rgba(200,160,40,0.28)',
-    image: Images.story_bg1,
-  },
-  {
-    key: 'guides',
-    title: 'Guides and Video',
-    desc: 'Explore sky tutorials and walkthroughs',
-    icon: 'play-circle' as const,
-    iconColor: '#A8D8F0',
-    iconBg:    'rgba(60,140,190,0.28)',
-    image: Images.story_bg2,
-  },
-  {
-    key: 'marketplace',
-    title: 'Marketplace',
-    desc: 'Trade items and discover rare finds',
-    icon: 'shopping-bag' as const,
-    iconColor: '#C0A8F0',
-    iconBg:    'rgba(107,91,149,0.28)',
-    image: Images.story_bg3,
-  },
-  {
-    key: 'discovers',
-    title: 'Discovers',
-    desc: 'Uncover hidden realms and sky secrets',
-    icon: 'compass' as const,
-    iconColor: '#70D0A8',
-    iconBg:    'rgba(58,144,96,0.28)',
-    image: Images.character_default,
-  },
-  {
-    key: 'connections',
-    title: 'Connections and Requests',
-    desc: 'Manage your sky friendships and bonds',
-    icon: 'users'   as const,
-    iconColor: '#F0A8C0',
-    iconBg:    'rgba(180,80,120,0.28)',
-    image: Images.story_bg1,
-  },
-];
+// ── Mood → aurora tint (3 colours) ────────────────────────────────────────────
+const MOOD_AURORA: Record<string, readonly [string, string, string]> = {
+  Hopeful:     ['#C0B030', '#50C878', '#60A870'],
+  Peaceful:    ['#3090C8', '#5070B8', '#60A8C0'],
+  Dreamy:      ['#8058C8', '#6040B8', '#A870D8'],
+  Lonely:      ['#405888', '#385090', '#506888'],
+  Romantic:    ['#C04898', '#A83088', '#D06098'],
+  Soft:        ['#9068B8', '#7850A8', '#B888C8'],
+  Chaotic:     ['#D04828', '#C03018', '#E06840'],
+  Adventurous: ['#388848', '#309060', '#58A870'],
+};
+const DEFAULT_AURORA: readonly [string, string, string] = ['#5840A0', '#3858B8', '#8050B8'];
 
-// Stars in the header — restrained, 3 only
-const HEADER_STARS = [
-  { t: 16, l: 42,  s: 2 },
-  { t: 26, r: 60,  s: 2 },
-  { t: 10, l: 180, s: 1.5 },
+// ── Static star positions (3 depth layers) ────────────────────────────────────
+const STARS_FAR  = Array.from({ length: 22 }, (_, i) => ({
+  lp: ((i * 47 + 23) % 100) / 100,
+  tp: ((i * 37 + 15) % 58) / 100,
+  s:  0.9 + (i % 3) * 0.4,
+  o:  0.18 + (i % 5) * 0.07,
+}));
+const STARS_MID  = Array.from({ length: 12 }, (_, i) => ({
+  lp: ((i * 71 + 41) % 96) / 100,
+  tp: ((i * 53 + 28) % 62) / 100,
+  s:  1.4 + (i % 4) * 0.5,
+  o:  0.28 + (i % 4) * 0.10,
+}));
+const STARS_NEAR = Array.from({ length: 6 }, (_, i) => ({
+  lp: ((i * 89 + 12) % 90) / 100,
+  tp: ((i * 61 +  8) % 48) / 100,
+  s:  2.0 + (i % 3) * 1.2,
+  o:  0.50 + (i % 2) * 0.18,
+}));
+
+// ── Warm ambient glow positions (candle-like) ─────────────────────────────────
+const GLOWS = [
+  { lp: 0.06, tp: 0.60, color: '#FF8830', r: 44 },
+  { lp: 0.22, tp: 0.68, color: '#FFC048', r: 34 },
+  { lp: 0.72, tp: 0.65, color: '#FF7828', r: 38 },
+  { lp: 0.88, tp: 0.71, color: '#FFAA40', r: 30 },
+  { lp: 0.50, tp: 0.75, color: '#D868A0', r: 28 },
 ] as const;
 
-// Mood → hero background aurora palette
-const MOOD_AURORA: Record<string, [string, string, string, string]> = {
-  Hopeful:     ['#D0C848', '#EEE878', '#C8B840', '#F8F098'],
-  Peaceful:    ['#60B0D8', '#88C8EC', '#5098C0', '#B0D8F0'],
-  Dreamy:      ['#B098D8', '#CAB8EC', '#9888C8', '#E0D0F8'],
-  Lonely:      ['#7888B8', '#9090C0', '#6878A8', '#B0B8D0'],
-  Romantic:    ['#D870A8', '#F090C4', '#C86098', '#F8C0D8'],
-  Soft:        ['#C098D0', '#D8B0E4', '#B088C0', '#EACEF4'],
-  Chaotic:     ['#E07848', '#F09868', '#D06838', '#F8B890'],
-  Joyful:      ['#60C080', '#80D898', '#50B070', '#B0E8C0'],
-  Adventurous: ['#58A868', '#78C088', '#489858', '#A8D8B0'],
-  Grateful:    ['#C070A0', '#DC90B8', '#B06090', '#F0C0D8'],
-};
-const DEFAULT_AURORA: [string, string, string, string] = ['#C0B0DC', '#B4CAE8', '#CEC0E8', '#E8E0F8'];
+// ── Action orbs ───────────────────────────────────────────────────────────────
+const ORBS = [
+  { key: 'journal',  label: 'Journal',  icon: 'book-open',  color: '#A880F8', glow: 'rgba(168,128,248,0.35)', route: '/create-journal-entry' as const },
+  { key: 'story',    label: 'Story',    icon: 'feather',    color: '#60C8F8', glow: 'rgba(96,200,248,0.32)',  route: '/(tabs)/create' as const },
+  { key: 'wander',   label: 'Wander',   icon: 'compass',    color: '#60D8A8', glow: 'rgba(96,216,168,0.32)', route: '/(tabs)/discover' as const },
+  { key: 'drift',    label: 'Drift',    icon: 'moon',       color: '#C8A8FF', glow: 'rgba(200,168,255,0.35)', route: '/(tabs)/drift' as const },
+] as const;
 
-// Burst: 8 directions + particle sizes
+// ── Context-aware Lumi message ────────────────────────────────────────────────
+function lumiSpeech(char: any, entries: any[], friends: any[], unread: number, hour: number) {
+  if (unread > 0) return `${unread} new thing${unread > 1 ? 's' : ''} in your space ✦`;
+  const today = new Date();
+  const todayEntries = entries.filter(e => {
+    const d = new Date(e.date);
+    return d.getDate() === today.getDate() &&
+           d.getMonth() === today.getMonth() &&
+           d.getFullYear() === today.getFullYear();
+  });
+  const name = char.name ? char.name.split(' ')[0] : 'sky child';
+  if (hour < 6)  return 'The stars are keeping watch for you ✦';
+  if (hour < 12) return todayEntries.length ? `Good morning, ${name} ✦` : 'What will you carry today?';
+  if (hour < 17) return todayEntries.length ? `${todayEntries.length} ${todayEntries.length === 1 ? 'memory' : 'memories'} written today ✦` : 'The afternoon is yours to fill';
+  if (hour < 20) {
+    const mood = char.mood || '';
+    if (mood === 'Peaceful') return 'A quiet dusk, just for you ✦';
+    if (mood === 'Dreamy')   return 'The golden hour feels dreamy...';
+    return 'The sky is golden right now ✦';
+  }
+  if (friends.length > 0) return `${friends.length} friend${friends.length > 1 ? 's' : ''} drifting nearby`;
+  return todayEntries.length === 0 ? 'The night is soft... write something?' : 'Tonight\'s chapter is yours ✦';
+}
+
+// ── Burst dirs ────────────────────────────────────────────────────────────────
 const BURST_DIRS  = Array.from({ length: 8 }, (_, i) => (i * 45 * Math.PI) / 180);
-const BURST_SIZES = [7, 4, 9, 5, 8, 4, 7, 5];
-
-// Expanded ambient sparkles — 8 positions, mix of gold + mood-tinted
-const AMBIENT_SPARKLES = [
-  { t: 14, l: 22,  s: 4,   o: 0.55, gold: true  },
-  { t: 30, r: 28,  s: 3,   o: 0.38, gold: true  },
-  { t: 52, l: 48,  s: 3,   o: 0.42, gold: false },
-  { t: 18, r: 70,  s: 4.5, o: 0.30, gold: false },
-  { t: 72, r: 22,  s: 2.5, o: 0.48, gold: true  },
-  { t: 44, l: 16,  s: 3.5, o: 0.32, gold: false },
-  { t: 82, l: 58,  s: 4,   o: 0.40, gold: true  },
-  { t: 62, r: 50,  s: 3,   o: 0.34, gold: false },
-] as const;
+const BURST_SIZES = [7, 4, 9, 5, 8, 4, 7, 5] as const;
 
 export default function HomeScreen() {
+  const { width: W, height: H } = useWindowDimensions();
+  const insets  = useSafeAreaInsets();
   const colors  = useColors();
-  const { t } = useTranslation();
-  const { width: screenW } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
   const {
-    character, journalEntries, stories, rewards, dismissReward,
-    outfits, activeOutfitId, setActiveOutfitId,
-    serverNotifications, markServerNotificationsRead, deleteServerNotification,
-    followingIds, friends, isLoading, myGuides,
+    character, journalEntries, stories, outfits,
+    activeOutfitId, setActiveOutfitId,
+    friends, rewards, serverNotifications,
+    markServerNotificationsRead, deleteServerNotification, dismissReward,
+    isLoading,
   } = useApp();
   const { playSound } = useSound();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  // Tab bar height (64) + safe area + breathing room
   const bottomPad = Platform.OS === 'web' ? 84 : insets.bottom + 90;
 
   const [showNotifs,       setShowNotifs]       = useState(false);
   const [showOutfitPicker, setShowOutfitPicker] = useState(false);
 
-
-  const unreadServerCount = serverNotifications.filter(n => !n.isRead).length;
-  const hasNotifs = rewards.length > 0 || unreadServerCount > 0;
-
-  const latestEntry = journalEntries[0];
-  const lastSeen    = latestEntry
-    ? new Date(latestEntry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    : null;
-
+  const hour         = new Date().getHours();
+  const timeVariant  = getTimeVariant();
+  const unreadCount  = serverNotifications.filter(n => !n.isRead).length;
+  const hasNotifs    = rewards.length > 0 || unreadCount > 0;
   const activeOutfit = outfits.find(o => o.id === activeOutfitId) ?? null;
+  const latestEntry  = journalEntries[0];
+  const skyColors    = SKY_PALETTES[timeVariant] ?? SKY_PALETTES.night;
+  const aurora       = MOOD_AURORA[character.mood ?? ''] ?? DEFAULT_AURORA;
+  const speech       = lumiSpeech(character, journalEntries, friends, unreadCount, hour);
 
-  // ── Animations ──────────────────────────────────────────────────────────────
+  // ── Animated values ──────────────────────────────────────────────────────────
+  const sceneAnim     = useRef(new Animated.Value(0)).current;
+  const anim1         = useRef(new Animated.Value(0)).current;
+  const anim2         = useRef(new Animated.Value(0)).current;
+  const anim3         = useRef(new Animated.Value(0)).current;
+  const lumiFloat     = useRef(new Animated.Value(0)).current;
+  const lumiTap       = useRef(new Animated.Value(1)).current;
+  const bubblePulse   = useRef(new Animated.Value(1)).current;
+  const memoryFade    = useRef(new Animated.Value(0)).current;
 
-  // Star twinkle – each header star pulses at a different rhythm
-  const starAnims = useRef(HEADER_STARS.map(() => new Animated.Value(0.28))).current;
+  const starsFarAnims  = useRef(STARS_FAR.map(s => new Animated.Value(s.o))).current;
+  const starsMidAnims  = useRef(STARS_MID.map(s => new Animated.Value(s.o))).current;
+  const starsNearAnims = useRef(STARS_NEAR.map(s => new Animated.Value(s.o))).current;
+  const glowAnims      = useRef(GLOWS.map(() => new Animated.Value(0.55))).current;
+  const orbAnims       = useRef(ORBS.map(() => ({ op: new Animated.Value(0), sc: new Animated.Value(0.6) }))).current;
 
-  // Ambient sparkle shimmer (8 positions)
-  const sparkleAnims = useRef(AMBIENT_SPARKLES.map(sp => new Animated.Value(sp.o))).current;
-
-  // Aurora drift animations (two independent orbs)
-  const auroraAnim1 = useRef(new Animated.Value(0)).current;
-  const auroraAnim2 = useRef(new Animated.Value(0)).current;
-
-  // Burst particles on character tap
   const burstAnims = useRef(
     BURST_DIRS.map(() => ({ x: new Animated.Value(0), y: new Animated.Value(0), op: new Animated.Value(0), sc: new Animated.Value(0) }))
   ).current;
 
-  // Character tap scale bounce
-  const heroTapScale = useRef(new Animated.Value(1)).current;
-
-  // Hero character float
-  const heroFloat = useRef(new Animated.Value(0)).current;
-
-  // Nav cards stagger entrance
-  const cardAnims = useRef(
-    CATEGORIES.map(() => ({
-      opacity:    new Animated.Value(0),
-      translateY: new Animated.Value(28),
-    }))
-  ).current;
-
-  // Character info card entrance
-  const infoCardAnim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
-    // Star twinkle loops
-    starAnims.forEach((anim, i) => {
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(anim, {
-            toValue: 0.9 + (i % 3) * 0.03,
-            duration: 800 + i * 180,
-            useNativeDriver: true,
-            easing: Easing.inOut(Easing.sin),
-          }),
-          Animated.timing(anim, {
-            toValue: 0.15 + (i % 2) * 0.08,
-            duration: 1000 + i * 150,
-            useNativeDriver: true,
-            easing: Easing.inOut(Easing.sin),
-          }),
-        ])
-      );
-      // Stagger each star
-      setTimeout(() => loop.start(), i * 320);
+    // Scene fade in
+    Animated.timing(sceneAnim, { toValue: 1, duration: 900, useNativeDriver: true, easing: Easing.out(Easing.quad) }).start();
+
+    // Memory echo fade in (delayed)
+    Animated.timing(memoryFade, { toValue: 1, duration: 700, delay: 600, useNativeDriver: true }).start();
+
+    // Aurora drift loops (3 independent blobs)
+    [
+      { anim: anim1, dur: 6200, offset: 0 },
+      { anim: anim2, dur: 8400, offset: 2200 },
+      { anim: anim3, dur: 10800, offset: 4600 },
+    ].forEach(({ anim, dur, offset }) => {
+      setTimeout(() => Animated.loop(Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: dur, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(anim, { toValue: 0, duration: dur, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      ])).start(), offset);
     });
 
-    // Ambient sparkle shimmer loops (8 sparkles, each with unique rhythm)
-    sparkleAnims.forEach((anim, i) => {
-      const hiVal = 0.75 + (i % 3) * 0.10;
-      const loVal = 0.08 + (i % 2) * 0.06;
-      setTimeout(() => {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(anim, { toValue: hiVal, duration: 1200 + i * 220, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-            Animated.timing(anim, { toValue: loVal, duration: 1000 + i * 190, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-          ])
-        ).start();
-      }, i * 280);
+    // Star twinkle — far (slowest)
+    starsFarAnims.forEach((a, i) => setTimeout(() => Animated.loop(Animated.sequence([
+      Animated.timing(a, { toValue: Math.min(0.95, STARS_FAR[i].o + 0.45), duration: 1900 + i * 190, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(a, { toValue: Math.max(0.05, STARS_FAR[i].o - 0.12), duration: 1600 + i * 170, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+    ])).start(), i * 140));
+
+    // Star twinkle — mid
+    starsMidAnims.forEach((a, i) => setTimeout(() => Animated.loop(Animated.sequence([
+      Animated.timing(a, { toValue: Math.min(0.95, STARS_MID[i].o + 0.38), duration: 1400 + i * 210, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(a, { toValue: Math.max(0.08, STARS_MID[i].o - 0.18), duration: 1200 + i * 195, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+    ])).start(), i * 195));
+
+    // Star twinkle — near (brightest, fastest)
+    starsNearAnims.forEach((a, i) => setTimeout(() => Animated.loop(Animated.sequence([
+      Animated.timing(a, { toValue: 0.92, duration: 900 + i * 280, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(a, { toValue: 0.28, duration: 1100 + i * 240, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+    ])).start(), i * 380));
+
+    // Candle-glow flicker
+    glowAnims.forEach((a, i) => {
+      const flicker = () => Animated.sequence([
+        Animated.timing(a, { toValue: 0.35 + Math.random() * 0.55, duration: 200 + Math.random() * 280, useNativeDriver: true }),
+        Animated.timing(a, { toValue: 0.50 + Math.random() * 0.40, duration: 170 + Math.random() * 230, useNativeDriver: true }),
+      ]).start(() => flicker());
+      setTimeout(flicker, i * 280);
     });
 
-    // Aurora drift loops
+    // Lumi gentle float
     Animated.loop(Animated.sequence([
-      Animated.timing(auroraAnim1, { toValue: 1, duration: 4400, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      Animated.timing(auroraAnim1, { toValue: 0, duration: 4400, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(lumiFloat, { toValue: 1, duration: 3400, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(lumiFloat, { toValue: 0, duration: 3400, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
     ])).start();
-    setTimeout(() => {
-      Animated.loop(Animated.sequence([
-        Animated.timing(auroraAnim2, { toValue: 1, duration: 5800, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-        Animated.timing(auroraAnim2, { toValue: 0, duration: 5800, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      ])).start();
-    }, 1600);
 
-    // Hero float — gentle sine wave
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(heroFloat, {
-          toValue: 1,
-          duration: 3400,
-          useNativeDriver: true,
-          easing: Easing.inOut(Easing.sin),
-        }),
-        Animated.timing(heroFloat, {
-          toValue: 0,
-          duration: 3400,
-          useNativeDriver: true,
-          easing: Easing.inOut(Easing.sin),
-        }),
-      ])
-    ).start();
+    // Speech bubble subtle breathe
+    Animated.loop(Animated.sequence([
+      Animated.timing(bubblePulse, { toValue: 1.015, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(bubblePulse, { toValue: 0.985, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+    ])).start();
 
-    // Info card fade in
-    Animated.timing(infoCardAnim, {
-      toValue: 1,
-      duration: 500,
-      delay: 60,
-      useNativeDriver: true,
-      easing: Easing.out(Easing.quad),
-    }).start();
-
-    // Nav cards staggered entrance — drift down from sky
+    // Action orbs staggered entrance
     Animated.parallel(
-      cardAnims.map((anim, i) =>
-        Animated.parallel([
-          Animated.timing(anim.opacity, {
-            toValue: 1,
-            duration: 480,
-            delay: 140 + i * 100,
-            useNativeDriver: true,
-            easing: Easing.out(Easing.quad),
-          }),
-          Animated.spring(anim.translateY, {
-            toValue: 0,
-            delay: 140 + i * 100,
-            tension: 52,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-        ])
-      )
+      orbAnims.map((a, i) => Animated.parallel([
+        Animated.timing(a.op, { toValue: 1, duration: 480, delay: 400 + i * 90, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
+        Animated.spring(a.sc, { toValue: 1, delay: 400 + i * 90, tension: 58, friction: 8, useNativeDriver: true }),
+      ]))
     ).start();
   }, []);
 
+  // ── Derived Animated values ───────────────────────────────────────────────────
+  const lumiY = lumiFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -11] });
 
-  const heroFloatY = heroFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -9] });
+  const a1x = anim1.interpolate({ inputRange: [0, 1], outputRange: [0,  W * 0.18] });
+  const a1y = anim1.interpolate({ inputRange: [0, 1], outputRange: [0,  H * 0.10] });
+  const a1o = anim1.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.32, 0.12] });
 
-  // Aurora interpolations
-  const aurora1X  = auroraAnim1.interpolate({ inputRange: [0, 1], outputRange: [0,  38] });
-  const aurora1Y  = auroraAnim1.interpolate({ inputRange: [0, 1], outputRange: [0,  20] });
-  const aurora1Op = auroraAnim1.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.28, 0.54, 0.28] });
-  const aurora2X  = auroraAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -30] });
-  const aurora2Y  = auroraAnim2.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
-  const aurora2Op = auroraAnim2.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.22, 0.48, 0.22] });
+  const a2x = anim2.interpolate({ inputRange: [0, 1], outputRange: [0, -W * 0.14] });
+  const a2y = anim2.interpolate({ inputRange: [0, 1], outputRange: [0,  H * 0.08] });
+  const a2o = anim2.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.10, 0.28, 0.10] });
 
-  // Burst interaction
-  function triggerHeroBurst() {
+  const a3x = anim3.interpolate({ inputRange: [0, 1], outputRange: [-W * 0.08, W * 0.08] });
+  const a3y = anim3.interpolate({ inputRange: [0, 1], outputRange: [ H * 0.06, -H * 0.06] });
+  const a3o = anim3.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.08, 0.22, 0.08] });
+
+  // Lumi tap burst
+  function tapLumi() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     playSound('star');
-    // Scale bounce
     Animated.sequence([
-      Animated.timing(heroTapScale, { toValue: 1.07, duration: 75, useNativeDriver: true }),
-      Animated.spring(heroTapScale, { toValue: 1, tension: 200, friction: 7, useNativeDriver: true }),
+      Animated.timing(lumiTap, { toValue: 1.13, duration: 80, useNativeDriver: true }),
+      Animated.spring(lumiTap, { toValue: 1, tension: 200, friction: 7, useNativeDriver: true }),
     ]).start();
-    // Reset + fire burst
     burstAnims.forEach(p => { p.x.setValue(0); p.y.setValue(0); p.op.setValue(0); p.sc.setValue(0); });
     Animated.parallel(
       burstAnims.map((p, i) => {
-        const dist = 42 + (i % 3) * 18;
+        const dist = 36 + (i % 3) * 14;
         return Animated.sequence([
           Animated.parallel([
-            Animated.timing(p.op, { toValue: 1,   duration: 55, useNativeDriver: true }),
-            Animated.timing(p.sc, { toValue: 1.2, duration: 55, useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 1, duration: 50, useNativeDriver: true }),
+            Animated.timing(p.sc, { toValue: 1.2, duration: 50, useNativeDriver: true }),
           ]),
           Animated.parallel([
-            Animated.timing(p.x,  { toValue: Math.cos(BURST_DIRS[i]) * dist, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-            Animated.timing(p.y,  { toValue: Math.sin(BURST_DIRS[i]) * dist, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-            Animated.timing(p.op, { toValue: 0,   duration: 500, useNativeDriver: true }),
-            Animated.timing(p.sc, { toValue: 2.2, duration: 500, useNativeDriver: true }),
+            Animated.timing(p.x,  { toValue: Math.cos(BURST_DIRS[i]) * dist, duration: 460, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(p.y,  { toValue: Math.sin(BURST_DIRS[i]) * dist, duration: 460, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0, duration: 460, useNativeDriver: true }),
+            Animated.timing(p.sc, { toValue: 2.0, duration: 460, useNativeDriver: true }),
           ]),
         ]);
       })
     ).start();
   }
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <View style={styles.root}>
 
-      {/* ── Vivid header ──────────────────────────────────── */}
+      {/* ═══════════════════════════════════════════════
+          LAYER 0 — Deep sky gradient (time-aware)
+      ═══════════════════════════════════════════════ */}
       <LinearGradient
-        colors={['#0A0818', '#18083A', '#2A1262']}
-        style={[styles.headerGrad, { paddingTop: topPad }]}
-        start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
-      >
-        {/* Animated twinkling stars */}
-        {(HEADER_STARS as ReadonlyArray<{ t: number; s: number; l?: number; r?: number }>).map((st, i) => (
-          <Animated.View
-            key={i}
-            style={[
-              styles.star,
-              {
-                top: st.t,
-                left: (st as any).l,
-                right: (st as any).r,
-                width: st.s, height: st.s,
-                opacity: starAnims[i],
-              },
-            ]}
-          />
+        colors={skyColors as unknown as [string, string, ...string[]]}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.35, y: 0 }} end={{ x: 0.65, y: 1 }}
+      />
+
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: sceneAnim }]}>
+
+        {/* ═══════════════════════════════════════════
+            LAYER 1 — Stars (far, mid, near depth)
+        ═══════════════════════════════════════════ */}
+        {STARS_FAR.map((s, i) => (
+          <Animated.View key={`sf${i}`} pointerEvents="none" style={{
+            position: 'absolute', left: s.lp * W, top: s.tp * H,
+            width: s.s, height: s.s, borderRadius: s.s,
+            backgroundColor: '#E8E0FF', opacity: starsFarAnims[i],
+          }} />
+        ))}
+        {STARS_MID.map((s, i) => (
+          <Animated.View key={`sm${i}`} pointerEvents="none" style={{
+            position: 'absolute', left: s.lp * W, top: s.tp * H,
+            width: s.s, height: s.s, borderRadius: s.s,
+            backgroundColor: '#F0EAFF', opacity: starsMidAnims[i],
+          }} />
+        ))}
+        {STARS_NEAR.map((s, i) => (
+          <Animated.View key={`sn${i}`} pointerEvents="none" style={{
+            position: 'absolute', left: s.lp * W, top: s.tp * H,
+            width: s.s, height: s.s, borderRadius: s.s,
+            backgroundColor: '#FFFFFF', opacity: starsNearAnims[i],
+          }} />
         ))}
 
-        {/* Top row */}
-        <View style={styles.topRow}>
-          <TouchableOpacity
-            style={styles.avatarRing}
-            onPress={() => router.push('/(tabs)/profile')}
-            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-          >
-            {activeOutfit?.imageUri
-              ? <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatar} contentFit="cover" />
-              : <Image source={Images.character_default} style={styles.avatar} contentFit="cover" />
-            }
-          </TouchableOpacity>
+        {/* ═══════════════════════════════════════════
+            LAYER 2 — Aurora blobs (mood-reactive)
+        ═══════════════════════════════════════════ */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute', top: -H * 0.12, left: -W * 0.18,
+          width: W * 0.80, height: W * 0.80, borderRadius: W * 0.40,
+          backgroundColor: aurora[0], opacity: a1o,
+          transform: [{ translateX: a1x }, { translateY: a1y }],
+        }} />
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute', top: H * 0.08, right: -W * 0.22,
+          width: W * 0.72, height: W * 0.72, borderRadius: W * 0.36,
+          backgroundColor: aurora[1], opacity: a2o,
+          transform: [{ translateX: a2x }, { translateY: a2y }],
+        }} />
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute', top: H * 0.28, left: W * 0.10,
+          width: W * 0.68, height: W * 0.68, borderRadius: W * 0.34,
+          backgroundColor: aurora[2], opacity: a3o,
+          transform: [{ translateX: a3x }, { translateY: a3y }],
+        }} />
 
-          <TouchableOpacity
-            style={styles.nameBlock}
-            onPress={() => router.push('/(tabs)/profile')}
-            activeOpacity={0.7}
-            hitSlop={{ top: 4, bottom: 4, left: 0, right: 4 }}
-          >
-            <Text style={styles.charName} numberOfLines={1}>{character.name || t('home.skyChild')}</Text>
-            <Text style={styles.subtitle}>{t('home.subtitle')}</Text>
-          </TouchableOpacity>
+        {/* ═══════════════════════════════════════════
+            LAYER 3 — Horizon gradient (ground depth)
+        ═══════════════════════════════════════════ */}
+        <LinearGradient
+          colors={['transparent', 'rgba(4,3,12,0.62)', 'rgba(2,1,8,0.90)']}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: H * 0.52 }}
+          pointerEvents="none"
+        />
 
-          <View style={styles.headerIcons}>
-            <TouchableOpacity
-              style={[styles.headerIconBtn, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(200,184,232,0.18)' }]}
-              onPress={() => router.push('/(tabs)/profile')}
-              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-            >
-              <Icon name="settings" size={18} color="rgba(220,210,255,0.85)" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerIconBtn, { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(200,184,232,0.18)' }]}
-              onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-              hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
-            >
-              <Icon name="bell" size={18} color="rgba(220,210,255,0.85)" />
-              {hasNotifs && <View style={styles.notifDot} />}
-            </TouchableOpacity>
-          </View>
-        </View>
+        {/* Mountain silhouette suggestion */}
+        <View pointerEvents="none" style={{
+          position: 'absolute', bottom: bottomPad + 80,
+          left: 0, right: 0, height: 50,
+          backgroundColor: 'rgba(3,2,10,0.50)',
+          borderTopLeftRadius: W * 0.4,
+          borderTopRightRadius: W * 0.2,
+        }} />
+        <View pointerEvents="none" style={{
+          position: 'absolute', bottom: bottomPad + 100,
+          left: -W * 0.1, width: W * 0.45, height: 60,
+          backgroundColor: 'rgba(6,4,18,0.45)',
+          borderTopRightRadius: W * 0.3,
+        }} />
+        <View pointerEvents="none" style={{
+          position: 'absolute', bottom: bottomPad + 85,
+          right: -W * 0.05, width: W * 0.40, height: 50,
+          backgroundColor: 'rgba(6,4,18,0.40)',
+          borderTopLeftRadius: W * 0.25,
+        }} />
 
-        {/* Stats strip */}
-        <View style={styles.statsStrip}>
-          <View style={styles.statPill}>
-            <Icon name="book-open" size={12} color="rgba(200,184,232,0.65)" />
-            <Text style={styles.statPillText}>{t('home.entries', { n: journalEntries.length })}</Text>
-          </View>
-          <View style={styles.statDot} />
-          <View style={styles.statPill}>
-            <Icon name="layers" size={12} color="rgba(200,184,232,0.65)" />
-            <Text style={styles.statPillText}>{t('home.stories', { n: stories.length })}</Text>
-          </View>
-          {lastSeen && (
-            <>
-              <View style={styles.statDot} />
-              <View style={styles.statPill}>
-                <Icon name="clock" size={12} color="rgba(200,184,232,0.65)" />
-                <Text style={styles.statPillText}>{t('home.lastSeen', { date: lastSeen })}</Text>
-              </View>
-            </>
-          )}
-        </View>
+        {/* ═══════════════════════════════════════════
+            LAYER 4 — Warm ambient glows (candle-like)
+        ═══════════════════════════════════════════ */}
+        {GLOWS.map((g, i) => (
+          <Animated.View key={`g${i}`} pointerEvents="none" style={{
+            position: 'absolute',
+            left: g.lp * W - g.r,
+            top:  g.tp * H - g.r,
+            width: g.r * 2, height: g.r * 2, borderRadius: g.r,
+            backgroundColor: g.color, opacity: glowAnims[i],
+          }} />
+        ))}
 
-        {/* ── Character Hero ─────────────────────────────────── */}
-        {(() => {
-          const heroH  = Math.round(screenW * 0.54);
-          const aurora = MOOD_AURORA[character.mood || ''] ?? DEFAULT_AURORA;
-          const burstOriginX = screenW / 2 - 4;
-          const burstOriginY = heroH / 2 - 4;
-          return (
-            <View style={[styles.charHero, { height: heroH }]}>
-              {/* Mood-reactive base gradient */}
-              <LinearGradient
-                colors={[aurora[0], aurora[1], aurora[2], aurora[3]]}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              />
+      </Animated.View>
 
-              {/* Aurora orb 1 — drifts right + down */}
-              <Animated.View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute', top: -50, left: -50,
-                  width: 210, height: 210, borderRadius: 105,
-                  backgroundColor: aurora[0],
-                  opacity: aurora1Op,
-                  transform: [{ translateX: aurora1X }, { translateY: aurora1Y }],
-                }}
-              />
-              {/* Aurora orb 2 — drifts left + up */}
-              <Animated.View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute', bottom: -40, right: -40,
-                  width: 180, height: 180, borderRadius: 90,
-                  backgroundColor: aurora[2],
-                  opacity: aurora2Op,
-                  transform: [{ translateX: aurora2X }, { translateY: aurora2Y }],
-                }}
-              />
+      {/* ═══════════════════════════════════════════════
+          UI LAYER — header, Lumi, memory, orbs
+      ═══════════════════════════════════════════════ */}
 
-              {/* Floating + tappable character */}
-              <Animated.View
-                style={[StyleSheet.absoluteFill, { transform: [{ translateY: heroFloatY }, { scale: heroTapScale }] }]}
-              >
-                <Pressable style={StyleSheet.absoluteFill} onPress={triggerHeroBurst}>
-                  {activeOutfit?.imageUri
-                    ? <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
-                    : <Image source={Images.character_default} style={StyleSheet.absoluteFill} contentFit="contain" />
-                  }
-                </Pressable>
-              </Animated.View>
-
-              {/* Gradient overlays */}
-              <LinearGradient colors={['rgba(18,16,42,0.45)', 'transparent']} style={styles.charHeroTopOverlay} pointerEvents="none" />
-              <LinearGradient colors={['transparent', 'rgba(15,13,30,0.95)']} style={styles.charHeroOverlay} pointerEvents="none" />
-
-              {/* 8 ambient sparkle dots */}
-              {(AMBIENT_SPARKLES as ReadonlyArray<{ t: number; s: number; o: number; gold: boolean; l?: number; r?: number }>).map((sp, i) => (
-                <Animated.View
-                  key={i}
-                  pointerEvents="none"
-                  style={{
-                    position: 'absolute',
-                    top: sp.t,
-                    left:  (sp as any).l,
-                    right: (sp as any).r,
-                    width: sp.s, height: sp.s, borderRadius: sp.s,
-                    backgroundColor: sp.gold ? '#C8A84B' : aurora[1],
-                    opacity: sparkleAnims[i],
-                  }}
-                />
-              ))}
-
-              {/* Burst particles — fired on character tap */}
-              {burstAnims.map((p, i) => (
-                <Animated.View
-                  key={`burst${i}`}
-                  pointerEvents="none"
-                  style={{
-                    position: 'absolute',
-                    left: burstOriginX,
-                    top:  burstOriginY,
-                    width:  BURST_SIZES[i],
-                    height: BURST_SIZES[i],
-                    borderRadius: BURST_SIZES[i],
-                    backgroundColor: i % 2 === 0 ? '#C8A84B' : aurora[0],
-                    opacity: p.op,
-                    transform: [{ translateX: p.x }, { translateY: p.y }, { scale: p.sc }],
-                  }}
-                />
-              ))}
-
-              {/* Label */}
-              <View style={styles.charHeroLabel}>
-                <Text style={styles.charHeroLabelText}>{t('home.mySkykid')}</Text>
-                {activeOutfit && (
-                  <View style={styles.outfitNamePill}>
-                    <Icon name="star" size={9} color="rgba(200,168,75,0.9)" />
-                    <Text style={styles.outfitNameText} numberOfLines={1}>{activeOutfit.name}</Text>
-                  </View>
-                )}
-              </View>
-
-              {/* Change outfit button */}
-              {outfits.length > 0 && (
-                <TouchableOpacity
-                  style={styles.changeOutfitBtn}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfitPicker(true); }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Icon name="refresh-cw" size={14} color="rgba(200,184,232,0.9)" />
-                </TouchableOpacity>
-              )}
-            </View>
-          );
-        })()}
-      </LinearGradient>
-
-      {/* ── Scrollable content ──────────────────────────────── */}
-      <ScrollView
-        style={styles.cardsArea}
-        contentContainerStyle={[styles.cardsList, { paddingBottom: bottomPad }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Character info card — animated fade-in */}
-        <Animated.View style={{ opacity: infoCardAnim }}>
-          <TouchableOpacity
-            style={[styles.charInfoCard, SHADOW.sm, { backgroundColor: colors.card, borderColor: colors.border }]}
-            onPress={() => router.push('/(tabs)/profile')}
-            activeOpacity={0.86}
-          >
-            <View style={styles.charInfoLeft}>
-              <View style={styles.charNameRow}>
-                <Text style={[styles.charInfoName, { color: colors.foreground }]}>{character.name || t('home.skyChild')}</Text>
-                <Text style={[styles.charInfoStar, { color: colors.gold }]}>✦</Text>
-              </View>
-              {character.bio
-                ? <Text style={[styles.charInfoBio, { color: colors.mutedForeground }]} numberOfLines={2}>{character.bio}</Text>
-                : <Text style={[styles.charInfoBioEmpty, { color: `${colors.mutedForeground}80` }]}>{t('home.tapBio')}</Text>
-              }
-              {character.traits.length > 0 && (
-                <View style={styles.charInfoTraits}>
-                  {character.traits.slice(0, 4).map(t => (
-                    <View key={t} style={[styles.charInfoTrait, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
-                      <Text style={[styles.charInfoTraitText, { color: colors.primary }]}>{t}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-            <View style={styles.charInfoRight}>
-              <Text style={[styles.charInfoCta, { color: colors.primary }]}>{t('home.edit')}</Text>
-              <Icon name="chevron-right" size={14} color={`${colors.primary}80`} />
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* ── Friends section ──────────────────────────────── */}
-        <View style={styles.friendsSection}>
-          <Text style={[styles.friendsLabel, { color: colors.mutedForeground }]}>Friends</Text>
-          {isLoading && friends.length === 0 ? (
-            /* Skeleton friend bubbles while API loads */
-            <View style={{ flexDirection: 'row', gap: 16, paddingVertical: 4 }}>
-              {[0, 1, 2, 3].map(i => (
-                <View key={i} style={{ alignItems: 'center', gap: 6 }}>
-                  <SkeletonBox width={52} height={52} borderRadius={26} />
-                  <SkeletonBox width={40} height={10} borderRadius={5} />
-                </View>
-              ))}
-            </View>
-          ) : friends.length === 0 ? (
-            <TouchableOpacity
-              style={[styles.friendsEmptyCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => router.push('/(tabs)/discover')}
-              activeOpacity={0.82}
-            >
-              <View style={[styles.friendsEmptyIcon, { backgroundColor: `${colors.primary}15` }]}>
-                <Icon name="users" size={18} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.friendsEmptyTitle, { color: colors.foreground }]}>No friends yet</Text>
-                <Text style={[styles.friendsEmptySub, { color: colors.mutedForeground }]}>Find people to follow in Discover</Text>
-              </View>
-              <Icon name="chevron-right" size={14} color={`${colors.primary}70`} />
-            </TouchableOpacity>
-          ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.friendsRow}>
-              {friends.map(friend => {
-                const initial   = friend.name.charAt(0).toUpperCase();
-                const moodColor = FRIEND_MOOD_COLORS[friend.mood] ?? '#6B5B95';
-                return (
-                  <TouchableOpacity
-                    key={friend.userId}
-                    style={styles.friendBubbleWrap}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      router.push({ pathname: '/user/[userId]', params: { userId: friend.userId } } as any);
-                    }}
-                    activeOpacity={0.78}
-                  >
-                    <View style={[styles.friendBubble, { borderColor: `${moodColor}55` }]}>
-                      {friend.avatarUri ? (
-                        <Image
-                          source={{ uri: friend.avatarUri }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                        />
-                      ) : (
-                        <LinearGradient
-                          colors={[`${moodColor}60`, `${moodColor}25`]}
-                          style={StyleSheet.absoluteFill}
-                        />
-                      )}
-                      {!friend.avatarUri && (
-                        <Text style={[styles.friendBubbleInitial, { color: moodColor }]}>{initial}</Text>
-                      )}
-                    </View>
-                    <Text style={[styles.friendBubbleName, { color: colors.mutedForeground }]} numberOfLines={1}>
-                      {friend.username ? `@${friend.username}` : friend.name.split(' ')[0]}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          )}
-        </View>
-
-        {/* ── Your Constellation Guide widget ──────────────── */}
-        {myGuides.length > 0 && (() => {
-          const guide = myGuides[0];
-          return (
-            <TouchableOpacity
-              style={[styles.guideWidget, SHADOW.sm]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push({ pathname: '/guide/[userId]', params: { userId: guide.userId } } as any);
-              }}
-              activeOpacity={0.88}
-            >
-              <LinearGradient
-                colors={['rgba(60,30,140,0.72)', 'rgba(20,12,60,0.82)']}
-                style={StyleSheet.absoluteFill}
-              />
-              {/* Nebula accent */}
-              <View style={{ position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(120,70,255,0.18)', top: -20, right: 20, pointerEvents: 'none' }} />
-              {/* Badge */}
-              <View style={styles.guideWidgetBadge}>
-                <Icon name="star" size={10} color="#C8A84B" />
-                <Text style={styles.guideWidgetBadgeText}>Your Guide</Text>
-              </View>
-              <View style={styles.guideWidgetRow}>
-                {/* Avatar */}
-                <View style={styles.guideWidgetAvatar}>
-                  {guide.avatarUri ? (
-                    <Image source={{ uri: guide.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-                  ) : (
-                    <LinearGradient colors={['rgba(120,70,255,0.60)', 'rgba(60,140,240,0.45)']} style={StyleSheet.absoluteFill} />
-                  )}
-                  {!guide.avatarUri && (
-                    <Text style={styles.guideWidgetInitial}>{guide.name.charAt(0).toUpperCase()}</Text>
-                  )}
-                  <View style={[styles.guideWidgetDot, { backgroundColor: guide.isAvailableNow ? '#60D890' : '#606070' }]} />
-                </View>
-                {/* Info */}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.guideWidgetName}>{guide.name}</Text>
-                  {guide.username && <Text style={styles.guideWidgetHandle}>@{guide.username}</Text>}
-                  <Text style={styles.guideWidgetStatus}>
-                    {guide.isAvailableNow ? '✦ Available Now' : '✦ Offline'}
-                  </Text>
-                  {guide.guideTopics.length > 0 && (
-                    <Text style={styles.guideWidgetTopics} numberOfLines={1}>
-                      {guide.guideTopics.slice(0, 3).join(' · ')}
-                    </Text>
-                  )}
-                </View>
-                {/* Message CTA */}
-                <TouchableOpacity
-                  style={styles.guideWidgetMsgBtn}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.push({ pathname: '/messages/[userId]', params: { userId: guide.userId, name: guide.name } } as any);
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Icon name="message-circle" size={14} color="rgba(220,210,255,0.90)" />
-                  <Text style={styles.guideWidgetMsgText}>Message</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          );
-        })()}
-
-        {/* ── Drift Mode entry card ─────────────────────────── */}
+      {/* ── Floating header ──────────────────────────────── */}
+      <View style={[styles.header, { paddingTop: topPad + 8 }]}>
         <TouchableOpacity
-          style={[styles.driftCard, SHADOW.sm]}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); playSound('whoosh'); router.push('/(tabs)/drift'); }}
-          activeOpacity={0.88}
+          onPress={() => router.push('/(tabs)/profile')}
+          onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfitPicker(true); }}
+          style={styles.avatarRing}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <LinearGradient
-            colors={['#180A40', '#2C1462', '#180A40']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          {/* Glow orb */}
-          <View style={{ position: 'absolute', right: -18, top: -18, width: 130, height: 130, borderRadius: 65, backgroundColor: 'rgba(130,60,255,0.16)', pointerEvents: 'none' }} />
-          {/* Stars */}
-          <View style={{ position: 'absolute', top: 12, right: 28, width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#C0A0FF', opacity: 0.7, pointerEvents: 'none' }} />
-          <View style={{ position: 'absolute', top: 28, right: 66, width: 2, height: 2, borderRadius: 1, backgroundColor: '#C8A84B', opacity: 0.55, pointerEvents: 'none' }} />
-          <View style={{ position: 'absolute', bottom: 18, right: 40, width: 2.5, height: 2.5, borderRadius: 1.25, backgroundColor: '#C0A0FF', opacity: 0.45, pointerEvents: 'none' }} />
-          <View style={{ position: 'absolute', top: 10, left: 130, width: 2, height: 2, borderRadius: 1, backgroundColor: '#F0EAFF', opacity: 0.35, pointerEvents: 'none' }} />
-
-          {/* Badge row */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#A07AEF' }} />
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#A07AEF', letterSpacing: 1.6, textTransform: 'uppercase' }}>Drift Mode</Text>
-          </View>
-
-          {/* Content row */}
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 19, fontFamily: 'Satoshi-Bold', color: '#EDE6FF', letterSpacing: -0.4, lineHeight: 25, marginBottom: 7 }}>
-                Begin your drift
-              </Text>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(192,168,255,0.62)', lineHeight: 19 }}>
-                A quiet space with Lumi. Breathing, reflection, and soft focus — entirely at your pace.
-              </Text>
-            </View>
-            {/* Lumi orb */}
-            <View style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(110,55,220,0.24)', borderWidth: 1, borderColor: 'rgba(140,80,255,0.32)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 24, color: '#C0A0FF' }}>✦</Text>
-            </View>
-          </View>
-
-          {/* CTA pill */}
-          <View style={{ marginTop: 16, flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: 'rgba(110,55,220,0.28)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(140,80,255,0.42)' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#B898F8' }}>Enter Drift</Text>
-              <Icon name="arrow-right" size={13} color="#B898F8" />
-            </View>
-          </View>
+          {activeOutfit?.imageUri
+            ? <Image source={{ uri: activeOutfit.imageUri }} style={styles.avatarImg} contentFit="cover" />
+            : <Image source={Images.character_default} style={styles.avatarImg} contentFit="cover" />
+          }
+          {activeOutfit && (
+            <View style={styles.outfitDot} />
+          )}
         </TouchableOpacity>
 
-        {/* Section label */}
-        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('home.featuresBeingAdded')}</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/(tabs)/profile')}
+          style={styles.nameBlock}
+          hitSlop={{ top: 4, bottom: 4, left: 0, right: 8 }}
+        >
+          <Text style={styles.nameText} numberOfLines={1}>
+            {character.name || 'Sky Child'}
+          </Text>
+          {character.mood ? (
+            <Text style={styles.moodText}>{character.mood} · {timeVariant}</Text>
+          ) : (
+            <Text style={styles.moodText}>{timeVariant} sky</Text>
+          )}
+        </TouchableOpacity>
 
-        {/* ── Animated navigation cards ──────────────────────── */}
-        <View style={styles.hList}>
-          {CATEGORIES.map((cat, i) => (
-            <Animated.View
-              key={cat.key}
-              style={{
-                opacity: cardAnims[i].opacity,
-                transform: [{ translateY: cardAnims[i].translateY }],
-              }}
-            >
-              <TouchableOpacity
-                style={[styles.hCard, SHADOW.sm]}
-                onPress={() => {}}
-                activeOpacity={1}
-              >
-                <Image source={cat.image} style={StyleSheet.absoluteFill} contentFit="cover" />
-                <LinearGradient
-                  colors={['rgba(12,10,26,0.94)', 'rgba(12,10,26,0.72)', 'rgba(12,10,26,0.14)']}
-                  locations={[0, 0.5, 1]}
-                  start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-                  style={StyleSheet.absoluteFill}
-                  pointerEvents="none"
-                />
-                <View style={[styles.hCardIcon, { backgroundColor: cat.iconBg }]}>
-                  <Icon name={cat.icon} size={16} color={cat.iconColor} />
-                </View>
-                <View style={styles.hCardLeft}>
-                  <Text style={styles.hCardTitle}>{cat.title}</Text>
-                  <Text style={styles.hCardDesc}>{cat.desc}</Text>
-                </View>
-                <View style={styles.hCardArrow}>
-                  <Icon name="arrow-right" size={14} color="rgba(220,210,255,0.6)" />
-                </View>
-
-                {true && (
-                  <BlurView
-                    intensity={Platform.OS === 'web' ? 16 : 32}
-                    tint="dark"
-                    style={[StyleSheet.absoluteFill, styles.lockedOverlay]}
-                    pointerEvents="none"
-                  >
-                    <View style={styles.lockPill}>
-                      <Icon name="lock" size={10} color="rgba(210,200,255,0.72)" />
-                      <Text style={styles.lockLabel}>Soon</Text>
-                    </View>
-                  </BlurView>
-                )}
-              </TouchableOpacity>
-            </Animated.View>
-          ))}
+        <View style={styles.headerRight}>
+          {(stories.length > 0 || journalEntries.length > 0) && (
+            <View style={styles.statsPill}>
+              <Icon name="layers" size={10} color="rgba(200,180,255,0.50)" />
+              <Text style={styles.statsText}>{stories.length + journalEntries.length}</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={[styles.bellBtn, hasNotifs && styles.bellActive]}
+            onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="bell" size={17} color="rgba(220,210,255,0.82)" />
+            {hasNotifs && <View style={styles.bellDot} />}
+          </TouchableOpacity>
         </View>
-      </ScrollView>
+      </View>
 
-      {/* ── Outfit picker modal ──────────────────────────────── */}
-      <Modal
-        visible={showOutfitPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowOutfitPicker(false)}
-      >
+      {/* ── Center space: memory echo + Lumi ─────────────── */}
+      <View style={[styles.centerSpace, { paddingTop: topPad + 70, paddingBottom: bottomPad + 20 }]}>
+
+        {/* Memory echo — floats above Lumi as a faint whisper */}
+        {latestEntry?.text && (
+          <Animated.View style={[styles.memoryEcho, { opacity: memoryFade }]}>
+            <Text style={styles.memoryQuote} numberOfLines={3}>
+              "{latestEntry.text.length > 90
+                  ? latestEntry.text.slice(0, 90) + '...'
+                  : latestEntry.text}"
+            </Text>
+            <Text style={styles.memoryDate}>
+              {new Date(latestEntry.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </Text>
+          </Animated.View>
+        )}
+
+        {/* Friends whisper (if has friends) */}
+        {friends.length > 0 && (
+          <Animated.View style={[styles.friendsWhisper, { opacity: memoryFade }]}>
+            {friends.slice(0, 5).map((f, i) => {
+              const MOOD_COLORS: Record<string, string> = { Hopeful: '#6BA57A', Peaceful: '#5B9BB5', Lonely: '#5D7BA5', Romantic: '#B86098', Chaotic: '#B85830', Dreamy: '#9B7AB5', Soft: '#7B6BAA', Adventurous: '#3A9060' };
+              const mc = MOOD_COLORS[f.mood] ?? '#7060A8';
+              return (
+                <TouchableOpacity
+                  key={f.userId}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/user/[userId]', params: { userId: f.userId } } as any); }}
+                  style={[styles.friendDot, { backgroundColor: `${mc}35`, borderColor: `${mc}55` }]}
+                >
+                  {f.avatarUri
+                    ? <Image source={{ uri: f.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    : <Text style={[styles.friendInitial, { color: mc }]}>{f.name.charAt(0).toUpperCase()}</Text>
+                  }
+                </TouchableOpacity>
+              );
+            })}
+            {friends.length > 5 && <Text style={styles.friendMore}>+{friends.length - 5}</Text>}
+          </Animated.View>
+        )}
+
+        {/* Lumi companion */}
+        <Pressable onPress={tapLumi} style={styles.lumiSection}>
+          {/* Speech bubble */}
+          <Animated.View style={[styles.speechBubble, { transform: [{ scale: bubblePulse }] }]}>
+            <Text style={styles.speechText}>{speech}</Text>
+            <View style={styles.speechTail} />
+          </Animated.View>
+
+          {/* Glow ring */}
+          <Animated.View pointerEvents="none" style={[styles.lumiGlow, {
+            backgroundColor: `${aurora[0]}22`,
+            transform: [{ translateY: lumiY }],
+          }]} />
+
+          {/* Lumi image (floating) */}
+          <Animated.View style={{ transform: [{ translateY: lumiY }, { scale: lumiTap }] }}>
+            {activeOutfit?.imageUri
+              ? <Image source={{ uri: activeOutfit.imageUri }} style={styles.lumiImg} contentFit="contain" />
+              : <Image source={Images.character_default} style={styles.lumiImg} contentFit="contain" />
+            }
+          </Animated.View>
+
+          {/* Burst particles */}
+          {burstAnims.map((p, i) => (
+            <Animated.View key={`b${i}`} pointerEvents="none" style={{
+              position: 'absolute',
+              width: BURST_SIZES[i], height: BURST_SIZES[i], borderRadius: BURST_SIZES[i],
+              backgroundColor: i % 2 === 0 ? '#C8A84B' : aurora[0],
+              opacity: p.op,
+              transform: [{ translateX: p.x }, { translateY: p.y }, { scale: p.sc }],
+            }} />
+          ))}
+        </Pressable>
+      </View>
+
+      {/* ── Action orbs ──────────────────────────────────── */}
+      <View style={[styles.orbsBar, { paddingBottom: bottomPad - 10 }]}>
+        {ORBS.map((orb, i) => (
+          <Animated.View key={orb.key} style={{ opacity: orbAnims[i].op, transform: [{ scale: orbAnims[i].sc }] }}>
+            <TouchableOpacity
+              style={[styles.orbWrap, { shadowColor: orb.color }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                playSound('tap');
+                router.push(orb.route);
+              }}
+              activeOpacity={0.78}
+            >
+              {/* Glow blob behind orb */}
+              <View style={[styles.orbGlow, { backgroundColor: orb.glow }]} />
+              <View style={[styles.orbCircle, { borderColor: `${orb.color}40` }]}>
+                <Icon name={orb.icon as any} size={22} color={orb.color} />
+              </View>
+              <Text style={[styles.orbLabel, { color: `${orb.color}BB` }]}>{orb.label}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        ))}
+      </View>
+
+      {/* ── Outfit picker modal ──────────────────────────── */}
+      <Modal visible={showOutfitPicker} transparent animationType="slide" onRequestClose={() => setShowOutfitPicker(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowOutfitPicker(false)}>
           <Pressable
             style={[styles.pickerSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24, backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={e => e.stopPropagation()}
           >
-            <View style={[styles.sheetHandle, { backgroundColor: `${colors.primary}30` }]} />
+            <View style={[styles.sheetHandle, { backgroundColor: `${colors.primary}28` }]} />
             <View style={styles.pickerHeader}>
-              <Text style={[styles.pickerTitle, { color: colors.foreground }]}>{t('home.chooseOutfit')}</Text>
-              <TouchableOpacity
-                style={[styles.closeBtn, { backgroundColor: colors.muted }]}
-                onPress={() => setShowOutfitPicker(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
+              <Text style={[styles.pickerTitle, { color: colors.foreground }]}>Choose Outfit</Text>
+              <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.muted }]} onPress={() => setShowOutfitPicker(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Icon name="x" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
-            <Text style={[styles.pickerSub, { color: colors.mutedForeground }]}>{t('home.outfitSubtitle')}</Text>
-
+            <Text style={[styles.pickerSub, { color: colors.mutedForeground }]}>Wear one of your saved outfits</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pickerRow}>
               <TouchableOpacity
                 style={[styles.pickerCard, !activeOutfitId && { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}40` }]}
@@ -848,12 +555,9 @@ export default function HomeScreen() {
                 <View style={[styles.pickerCardImg, { backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}>
                   <Icon name="slash" size={22} color={colors.mutedForeground} />
                 </View>
-                <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]}>{t('home.none')}</Text>
-                {!activeOutfitId && (
-                  <View style={[styles.pickerActiveDot, { backgroundColor: colors.primary }]}><Icon name="check" size={10} color="#fff" /></View>
-                )}
+                <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]}>None</Text>
+                {!activeOutfitId && <View style={[styles.pickerActiveDot, { backgroundColor: colors.primary }]}><Icon name="check" size={10} color="#fff" /></View>}
               </TouchableOpacity>
-
               {outfits.map(outfit => (
                 <TouchableOpacity
                   key={outfit.id}
@@ -865,9 +569,7 @@ export default function HomeScreen() {
                     : <View style={[styles.pickerCardImg, { backgroundColor: `${colors.primary}12`, alignItems: 'center', justifyContent: 'center' }]}><Icon name="star" size={22} color={`${colors.primary}60`} /></View>
                   }
                   <Text style={[styles.pickerCardName, { color: colors.mutedForeground }]} numberOfLines={1}>{outfit.name}</Text>
-                  {activeOutfitId === outfit.id && (
-                    <View style={[styles.pickerActiveDot, { backgroundColor: colors.primary }]}><Icon name="check" size={10} color="#fff" /></View>
-                  )}
+                  {activeOutfitId === outfit.id && <View style={[styles.pickerActiveDot, { backgroundColor: colors.primary }]}><Icon name="check" size={10} color="#fff" /></View>}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -875,152 +577,55 @@ export default function HomeScreen() {
         </Pressable>
       </Modal>
 
-      {/* ── Notifications modal ──────────────────────────────── */}
-      <Modal
-        visible={showNotifs}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowNotifs(false)}
-      >
+      {/* ── Notifications modal ──────────────────────────── */}
+      <Modal visible={showNotifs} transparent animationType="slide" onRequestClose={() => setShowNotifs(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setShowNotifs(false)}>
           <Pressable
-            style={[styles.notifsSheet, { paddingBottom: bottomPad + 24, backgroundColor: colors.card, borderColor: colors.border }]}
+            style={[styles.notifsSheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24, backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={e => e.stopPropagation()}
           >
-            <View style={[styles.sheetHandle, { backgroundColor: `${colors.primary}30` }]} />
+            <View style={[styles.sheetHandle, { backgroundColor: `${colors.primary}28` }]} />
             <View style={styles.notifsHeader}>
               <Text style={[styles.notifsTitle, { color: colors.foreground }]}>Notifications</Text>
-              {hasNotifs && (
-                <View style={[styles.countBadge, { backgroundColor: colors.primary }]}><Text style={styles.countText}>{rewards.length}</Text></View>
-              )}
-              <TouchableOpacity
-                style={[styles.closeBtn, { backgroundColor: colors.muted }]}
-                onPress={() => setShowNotifs(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
+              {hasNotifs && <View style={[styles.countBadge, { backgroundColor: colors.primary }]}><Text style={styles.countText}>{rewards.length + unreadCount}</Text></View>}
+              <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.muted }]} onPress={() => setShowNotifs(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Icon name="x" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
 
             {rewards.length === 0 && serverNotifications.length === 0 ? (
               <View style={styles.notifsEmpty}>
-                <Icon name="bell-off" size={34} color={`${colors.mutedForeground}70`} />
+                <Icon name="bell-off" size={32} color={`${colors.mutedForeground}70`} />
                 <Text style={[styles.notifsEmptyText, { color: colors.mutedForeground }]}>You're all caught up ✦</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 8 }}>
-                {serverNotifications.length > 0 && serverNotifications.map(n => (
-                  <Swipeable
-                    key={n.id}
-                    renderRightActions={() => (
-                      <TouchableOpacity
-                        style={styles.swipeDelete}
-                        onPress={() => deleteServerNotification(n.id)}
-                      >
-                        <Icon name="trash-2" size={17} color="#fff" />
-                      </TouchableOpacity>
-                    )}
-                    overshootRight={false}
-                  >
-                    <TouchableOpacity
-                      style={[styles.notifItem, {
-                        backgroundColor: 'rgba(120,86,255,0.07)',
-                        borderColor: 'rgba(120,86,255,0.22)',
-                      }]}
-                      onPress={() => {
-                        setShowNotifs(false);
-                        if (n.type === 'new_story') {
-                          router.push({ pathname: '/story/[id]', params: { id: n.refId, source: 'discover' } });
-                        }
-                      }}
-                      activeOpacity={0.82}
-                    >
-                      <View style={[styles.notifIconWrap, {
-                        backgroundColor:
-                          n.type === 'witness' ? 'rgba(200,168,75,0.18)' :
-                          n.type === 'save'    ? 'rgba(139,122,181,0.22)' :
-                          `${colors.primary}28`,
-                      }]}>
-                        <Icon
-                          name={
-                            n.type === 'witness'   ? 'eye' :
-                            n.type === 'save'      ? 'bookmark' :
-                            n.type === 'new_story' ? 'book-open' : 'star'
-                          }
-                          size={16}
-                          color={
-                            n.type === 'witness' ? '#C8A84B' :
-                            n.type === 'save'    ? '#8B7AB5' :
-                            colors.primary
-                          }
-                        />
-                      </View>
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>
-                          {n.actorName}
-                        </Text>
-                        <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 17, color: colors.mutedForeground }}>
-                          {n.type === 'witness'   ? 'witnessed your story' :
-                           n.type === 'save'      ? 'saved your story' :
-                           n.type === 'new_story' ? 'shared a new story' :
-                           'added a new outfit'}{n.title ? `: "${n.title}"` : ''}
-                        </Text>
-                      </View>
+                {serverNotifications.map(n => (
+                  <Swipeable key={n.id} renderRightActions={() => (
+                    <TouchableOpacity style={styles.swipeDelete} onPress={() => deleteServerNotification(n.id)}>
+                      <Icon name="trash-2" size={18} color="#fff" />
                     </TouchableOpacity>
+                  )}>
+                    <View style={[styles.notifRow, { backgroundColor: n.isRead ? colors.muted : `${colors.primary}14`, borderColor: colors.border }]}>
+                      <View style={[styles.notifIcon, { backgroundColor: `${colors.primary}20` }]}>
+                        <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : 'star'} size={14} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.notifText, { color: colors.foreground }]} numberOfLines={2}>{n.title}</Text>
+                        <Text style={[styles.notifMeta, { color: colors.mutedForeground }]}>{n.actorName}</Text>
+                      </View>
+                      {!n.isRead && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
+                    </View>
                   </Swipeable>
                 ))}
                 {rewards.map(r => (
-                  <Swipeable
-                    key={r.id}
-                    renderRightActions={() => (
-                      <TouchableOpacity
-                        style={styles.swipeDelete}
-                        onPress={() => dismissReward(r.id)}
-                      >
-                        <Icon name="trash-2" size={17} color="#fff" />
-                      </TouchableOpacity>
-                    )}
-                    overshootRight={false}
-                  >
-                    <View style={[styles.notifItem, {
-                      backgroundColor: r.isRising ? 'rgba(200,168,75,0.08)' : 'rgba(255,255,255,0.04)',
-                      borderColor: r.isRising ? 'rgba(200,168,75,0.25)' : 'rgba(200,184,232,0.1)',
-                    }]}>
-                      <View style={[styles.notifIconWrap, {
-                        backgroundColor: r.isRising ? `${colors.gold}30` : `${colors.primary}28`,
-                      }]}>
-                        <Icon
-                          name={r.isRising ? 'trending-up' : (r.icon as any)}
-                          size={16}
-                          color={r.isRising ? colors.gold : colors.primary}
-                        />
-                      </View>
-                      <View style={{ flex: 1, gap: 2 }}>
-                        {r.count !== undefined && (
-                          <Text style={{
-                            fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5,
-                            color: r.isRising ? colors.gold : colors.foreground,
-                          }}>
-                            {r.count}
-                          </Text>
-                        )}
-                        <Text style={{
-                          fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 18,
-                          color: r.isRising ? colors.foreground : colors.mutedForeground,
-                        }}>
-                          {r.message}
-                        </Text>
-                        {r.subMessage && (
-                          <Text style={{
-                            fontSize: 11, fontFamily: 'Satoshi-Regular',
-                            color: r.isRising ? `${colors.gold}B0` : `${colors.mutedForeground}90`,
-                          }}>
-                            {r.subMessage}
-                          </Text>
-                        )}
-                      </View>
+                  <TouchableOpacity key={r.id} style={[styles.rewardRow, { backgroundColor: `${colors.accent}18`, borderColor: `${colors.accent}35` }]} onPress={() => dismissReward(r.id)} activeOpacity={0.8}>
+                    <Text style={styles.rewardEmoji}>{r.icon ?? '✦'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rewardTitle, { color: colors.foreground }]}>{r.message}</Text>
                     </View>
-                  </Swipeable>
+                    <Icon name="x" size={13} color={`${colors.mutedForeground}80`} />
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             )}
@@ -1033,344 +638,223 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#080714' },
+  root: { flex: 1, backgroundColor: '#030208' },
 
-  headerGrad: { position: 'relative', overflow: 'hidden' },
-  star:       { position: 'absolute', borderRadius: 99, backgroundColor: 'rgba(220,210,255,1)' },
-
-  topRow: {
+  // Header
+  header: {
+    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 20,
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, gap: 12,
+    paddingHorizontal: 20, paddingBottom: 14,
+    // subtle dark gradient behind header for readability
+    backgroundColor: 'rgba(6,4,18,0.40)',
   },
   avatarRing: {
-    width: 50, height: 50, borderRadius: 25,
-    borderWidth: 2, borderColor: 'rgba(180,140,255,0.55)',
-    overflow: 'hidden', flexShrink: 0,
-    shadowColor: '#9B78FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.55,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  avatar:    { width: '100%', height: '100%' },
-  nameBlock: { flex: 1 },
-  charName:  { fontSize: 17, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.5 },
-  subtitle:  { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(210,196,240,0.50)', marginTop: 2, letterSpacing: 0.3 },
-
-  headerIcons:   { flexDirection: 'row', gap: 8 },
-  headerIconBtn: {
-    width: 38, height: 38, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.09)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.14)',
-    position: 'relative',
-  },
-  notifDot: {
-    position: 'absolute', top: 8, right: 8,
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: '#E04455',
-    borderWidth: 1.5, borderColor: '#1A1638',
-  },
-
-  statsStrip: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: 2, paddingBottom: 12, gap: 8,
-  },
-  statPill:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statPillText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.52)' },
-  statDot:      { width: 2.5, height: 2.5, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.25)' },
-
-  charHero:          { position: 'relative', width: '100%', overflow: 'hidden' },
-  charHeroLabel:     { position: 'absolute', top: 12, left: 16, zIndex: 10, gap: 5 },
-  charHeroLabelText: {
-    fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4,
-    color: 'rgba(220,210,255,0.72)',
-    textTransform: 'uppercase',
-  },
-  outfitNamePill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(12,10,24,0.60)', borderRadius: 8,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderWidth: 1, borderColor: 'rgba(200,168,75,0.20)',
-    alignSelf: 'flex-start',
-  },
-  outfitNameText:     { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(232,220,190,0.88)', letterSpacing: 0.1 },
-  charHeroTopOverlay: { position: 'absolute', top: 0, left: 0, right: 0, height: 64, zIndex: 2 },
-  charHeroOverlay:    { position: 'absolute', bottom: 0, left: 0, right: 0, height: 110, zIndex: 2 },
-  changeOutfitBtn: {
-    position: 'absolute', bottom: 12, right: 16, zIndex: 10,
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.16)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-
-  cardsArea: { flex: 1 },
-  cardsList:  { paddingTop: 20, paddingHorizontal: 16 },
-
-  charInfoCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: '#27243E',
-    borderRadius: 22, padding: 18,
-    marginBottom: 22,
-    borderWidth: 1, borderColor: 'rgba(160,120,255,0.14)',
-    shadowColor: '#7040C0',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.40,
-    shadowRadius: 14,
-    elevation: 6,
-  },
-  charInfoLeft:     { flex: 1 },
-  charInfoRight:    { flexDirection: 'row', alignItems: 'center', gap: 3, flexShrink: 0 },
-  charInfoCta:      { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,160,255,0.72)' },
-  charNameRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 },
-  charInfoName:     { fontSize: 17, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.4 },
-  charInfoStar:     { fontSize: 11, color: '#D4A840' },
-  charInfoBio:      { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,196,240,0.72)', lineHeight: 19, fontStyle: 'italic', marginBottom: 10 },
-  charInfoBioEmpty: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,196,240,0.32)', lineHeight: 19, fontStyle: 'italic', marginBottom: 10 },
-  charInfoTraits:   { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
-  charInfoTrait:    { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(155,120,255,0.14)', borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)' },
-  charInfoTraitText:{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(210,196,240,0.85)' },
-
-  sectionLabel: {
-    fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(210,196,240,0.45)',
-    letterSpacing: 2.0, textTransform: 'uppercase', marginBottom: 12,
-  },
-
-  hList: { gap: 12 },
-  hCard: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: 20, overflow: 'hidden',
-    height: 86, gap: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.55,
-    shadowRadius: 12,
-    elevation: 5,
-  },
-  hCardIcon:  {
-    width: 38, height: 38, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  hCardLeft:  { flex: 1, gap: 4 },
-  hCardTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.3 },
-  hCardDesc:  { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(210,196,240,0.58)', lineHeight: 17 },
-  hCardArrow: {
-    width: 30, height: 30, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
-  // Your Guide widget
-  guideWidget: {
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(120,70,255,0.30)',
+    width: 40, height: 40, borderRadius: 20,
     overflow: 'hidden',
-    paddingTop: 10,
-    paddingBottom: 14,
-    paddingHorizontal: 14,
+    borderWidth: 1.5, borderColor: 'rgba(200,184,232,0.45)',
   },
-  guideWidgetBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    marginBottom: 10,
+  avatarImg: { width: 40, height: 40 },
+  outfitDot: {
+    position: 'absolute', bottom: 1, right: 1,
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: '#C8A84B',
+    borderWidth: 1.5, borderColor: '#030208',
   },
-  guideWidgetBadgeText: {
-    fontSize: 9,
-    fontFamily: 'Satoshi-Bold',
-    color: '#C8A84B',
-    letterSpacing: 1.3,
-    textTransform: 'uppercase',
+  nameBlock: { flex: 1, marginLeft: 11 },
+  nameText: {
+    fontSize: 15, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,235,255,0.90)', letterSpacing: -0.2,
   },
-  guideWidgetRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
+  moodText: {
+    fontSize: 11, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(190,175,240,0.48)', marginTop: 1.5, letterSpacing: 0.2,
   },
-  guideWidgetAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(120,70,255,0.30)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  guideWidgetInitial: {
-    fontSize: 22,
-    fontFamily: 'Satoshi-Bold',
-    color: 'rgba(220,210,255,0.9)',
-  },
-  guideWidgetDot: {
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 11,
-    height: 11,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: 'rgba(12,8,36,0.95)',
-  },
-  guideWidgetName:   { fontSize: 14, fontFamily: 'Satoshi-Bold',    color: 'rgba(220,210,255,0.96)' },
-  guideWidgetHandle: { fontSize: 11, fontFamily: 'Satoshi-Medium',  color: 'rgba(155,120,232,0.65)', marginBottom: 2 },
-  guideWidgetStatus: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', fontStyle: 'italic' },
-  guideWidgetTopics: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', marginTop: 3 },
-  guideWidgetMsgBtn: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: 'rgba(120,70,255,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(120,70,255,0.40)',
-    alignSelf: 'center',
-  },
-  guideWidgetMsgText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(210,195,255,0.85)' },
-
-  driftCard: {
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: 'rgba(140,80,255,0.22)',
-    overflow: 'hidden',
-    padding: 20,
-    marginBottom: 20,
-  },
-
-  lockedOverlay: {
-    borderRadius: 20,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    padding: 12,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(6,5,18,0.60)' : undefined,
-  },
-  lockPill: {
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  statsPill: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(10,8,24,0.70)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.16)',
-    borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3,
+    paddingHorizontal: 9, paddingVertical: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 10, borderWidth: 1, borderColor: 'rgba(200,184,232,0.12)',
   },
-  lockLabel: {
-    fontSize: 11, fontFamily: 'Satoshi-Bold',
-    color: 'rgba(200,184,232,0.65)', letterSpacing: 0.3,
+  statsText: {
+    fontSize: 11, fontFamily: 'Satoshi-Medium',
+    color: 'rgba(200,180,255,0.50)',
+  },
+  bellBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.14)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  bellActive: {
+    backgroundColor: 'rgba(155,120,255,0.18)',
+    borderColor: 'rgba(155,120,255,0.38)',
+  },
+  bellDot: {
+    position: 'absolute', top: 7, right: 7,
+    width: 6, height: 6, borderRadius: 3,
+    backgroundColor: '#FF5C8A',
   },
 
-  // Friends row
-  friendsSection: { marginTop: 0, marginBottom: 24 },
-  friendsLabel: {
-    fontSize: 10, fontFamily: 'Satoshi-Bold',
-    textTransform: 'uppercase', letterSpacing: 2.0,
-    marginBottom: 14, paddingHorizontal: 0,
-    color: 'rgba(210,196,240,0.48)',
+  // Center space
+  centerSpace: {
+    flex: 1, alignItems: 'center', justifyContent: 'flex-end',
   },
-  friendsRow: { gap: 16, paddingVertical: 4, paddingHorizontal: 2 },
-  friendBubbleWrap: { alignItems: 'center', gap: 6, width: 64 },
-  friendBubble: {
-    width: 56, height: 56, borderRadius: 28,
-    borderWidth: 2, overflow: 'hidden',
+  memoryEcho: {
+    marginBottom: 20, paddingHorizontal: 22, paddingVertical: 11,
+    backgroundColor: 'rgba(255,255,255,0.035)',
+    borderRadius: 16, borderWidth: 1,
+    borderColor: 'rgba(190,170,255,0.08)',
+    maxWidth: 300, alignItems: 'center',
+  },
+  memoryQuote: {
+    fontSize: 12.5, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(190,170,255,0.40)',
+    fontStyle: 'italic', textAlign: 'center', lineHeight: 18.5,
+  },
+  memoryDate: {
+    fontSize: 10, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(170,150,220,0.28)', marginTop: 5, letterSpacing: 0.5,
+  },
+
+  // Friends whisper
+  friendsWhisper: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginBottom: 14,
+  },
+  friendDot: {
+    width: 30, height: 30, borderRadius: 15,
+    overflow: 'hidden', borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#9B78FF',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  friendBubbleInitial: { fontSize: 20, fontFamily: 'Satoshi-Bold' },
-  friendBubbleName: {
-    fontSize: 10, fontFamily: 'Satoshi-Medium',
-    textAlign: 'center', maxWidth: 62,
-    color: 'rgba(210,196,240,0.65)',
+  friendInitial: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  friendMore: {
+    fontSize: 11, fontFamily: 'Satoshi-Medium',
+    color: 'rgba(190,170,255,0.40)', marginLeft: 2,
   },
-  friendsEmptyCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+
+  // Lumi
+  lumiSection: { alignItems: 'center' },
+  speechBubble: {
+    marginBottom: 10,
+    paddingHorizontal: 18, paddingVertical: 11,
+    backgroundColor: 'rgba(20,12,52,0.88)',
     borderRadius: 18, borderWidth: 1,
-    paddingHorizontal: 16, paddingVertical: 15,
-    backgroundColor: '#27243E',
-    borderColor: 'rgba(155,120,255,0.14)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.40,
-    shadowRadius: 8,
-    elevation: 3,
+    borderColor: 'rgba(190,170,255,0.30)',
+    maxWidth: 260,
   },
-  friendsEmptyIcon: {
-    width: 40, height: 40, borderRadius: 13,
+  speechText: {
+    fontSize: 13.5, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(238,228,255,0.95)',
+    textAlign: 'center', lineHeight: 19,
+  },
+  speechTail: {
+    position: 'absolute', bottom: -7, alignSelf: 'center',
+    width: 13, height: 13,
+    backgroundColor: 'rgba(20,12,52,0.88)',
+    transform: [{ rotate: '45deg' }],
+    borderRightWidth: 1, borderBottomWidth: 1,
+    borderColor: 'rgba(190,170,255,0.30)',
+  },
+  lumiGlow: {
+    position: 'absolute',
+    width: 172, height: 172, borderRadius: 86,
+    top: 14,
+  },
+  lumiImg: { width: 152, height: 152 },
+
+  // Action orbs
+  orbsBar: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'space-evenly',
+    alignItems: 'flex-end', paddingHorizontal: 16,
+    // dark band behind orbs for readability
+    paddingTop: 18,
+    backgroundColor: 'rgba(4,3,12,0.55)',
+  },
+  orbWrap: {
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.70, shadowRadius: 16, elevation: 12,
+  },
+  orbGlow: {
+    position: 'absolute', bottom: 26,
+    width: 70, height: 70, borderRadius: 35,
+  },
+  orbCircle: {
+    width: 60, height: 60, borderRadius: 30,
+    backgroundColor: 'rgba(255,255,255,0.09)',
+    borderWidth: 1.5,
     alignItems: 'center', justifyContent: 'center',
   },
-  friendsEmptyTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
-  friendsEmptySub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 3 },
+  orbLabel: {
+    fontSize: 11, fontFamily: 'Satoshi-Medium',
+    marginTop: 7, letterSpacing: 0.3,
+  },
 
   // Modals
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(8,6,24,0.72)',
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.60)',
     justifyContent: 'flex-end',
   },
-  sheetHandle: {
-    width: 40, height: 4, borderRadius: 2,
-    backgroundColor: 'rgba(200,184,232,0.3)',
-    alignSelf: 'center', marginBottom: 18,
-  },
-
   pickerSheet: {
-    backgroundColor: '#0E0B22',
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 16, paddingHorizontal: 20,
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
+    borderTopLeftRadius: 26, borderTopRightRadius: 26,
+    borderWidth: 1, paddingTop: 12, paddingHorizontal: 20,
   },
-  pickerHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 6,
+  notifsSheet: {
+    borderTopLeftRadius: 26, borderTopRightRadius: 26,
+    borderWidth: 1, paddingTop: 12, paddingHorizontal: 20,
+    maxHeight: '80%',
   },
-  pickerTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.2 },
-  pickerSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', fontStyle: 'italic', marginBottom: 14 },
-  closeBtn:    {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    alignItems: 'center', justifyContent: 'center',
+  sheetHandle: {
+    width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16,
   },
+  pickerHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
+  pickerTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold' },
+  pickerSub: { fontSize: 13, fontFamily: 'Satoshi-Regular', marginBottom: 16 },
   pickerRow: { flexDirection: 'row', gap: 12, paddingBottom: 4 },
   pickerCard: {
-    width: 88, alignItems: 'center', gap: 8,
-    borderRadius: 16, padding: 10,
+    width: 88, borderRadius: 14, padding: 8, alignItems: 'center',
     borderWidth: 1.5, borderColor: 'transparent',
   },
-  pickerCardActive: { borderColor: 'rgba(139,122,181,0.55)', backgroundColor: 'rgba(139,122,181,0.1)' },
-  pickerCardImg:    { width: 66, height: 66, borderRadius: 14, overflow: 'hidden' },
-  pickerCardNone:   { backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
-  pickerCardNoImg:  { backgroundColor: 'rgba(139,122,181,0.1)', alignItems: 'center', justifyContent: 'center' },
-  pickerCardName:   { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.75)', textAlign: 'center' },
-  pickerActiveDot:  {
-    position: 'absolute', top: 6, right: 6,
+  pickerCardImg: { width: 72, height: 72, borderRadius: 12, overflow: 'hidden', marginBottom: 6 },
+  pickerCardName: { fontSize: 11, fontFamily: 'Satoshi-Medium', textAlign: 'center' },
+  pickerActiveDot: {
+    position: 'absolute', top: 4, right: 4,
     width: 18, height: 18, borderRadius: 9,
-    backgroundColor: '#8B7AB5',
     alignItems: 'center', justifyContent: 'center',
   },
-
-  notifsSheet: {
-    backgroundColor: '#0E0B22',
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    paddingTop: 16, paddingHorizontal: 20,
-    maxHeight: '72%',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)',
+  closeBtn: {
+    width: 30, height: 30, borderRadius: 15,
+    alignItems: 'center', justifyContent: 'center',
   },
-  notifsHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 10, marginBottom: 18,
+  notifsHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
+  notifsTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', flex: 1 },
+  countBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  countText: { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  notifsEmpty: { alignItems: 'center', paddingVertical: 36, gap: 10 },
+  notifsEmptyText: { fontSize: 14, fontFamily: 'Satoshi-Regular' },
+  notifRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 14, borderWidth: 1,
   },
-  notifsTitle:    { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', flex: 1, letterSpacing: -0.3 },
-  countBadge:     { backgroundColor: '#8B7AB5', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  countText:      { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#fff' },
-  notifsEmpty:    { alignItems: 'center', paddingVertical: 40, gap: 12 },
-  notifsEmptyText:{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.5)', fontStyle: 'italic' },
-  notifItem:      { flexDirection: 'row', alignItems: 'flex-start', gap: 12, borderWidth: 1, borderRadius: 16, padding: 14 },
-  swipeDelete:    { width: 64, alignSelf: 'stretch', backgroundColor: '#C0392B', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginLeft: 6 },
-  notifIconWrap:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  dismissBtn:     { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  notifIcon: {
+    width: 36, height: 36, borderRadius: 18,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  notifText: { fontSize: 13, fontFamily: 'Satoshi-Medium', lineHeight: 18 },
+  notifMeta: { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2 },
+  unreadDot: { width: 7, height: 7, borderRadius: 3.5 },
+  rewardRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 14, borderWidth: 1,
+  },
+  rewardEmoji: { fontSize: 22 },
+  rewardTitle: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  swipeDelete: {
+    width: 60, backgroundColor: '#D03050', borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center', marginLeft: 8,
+  },
 });
