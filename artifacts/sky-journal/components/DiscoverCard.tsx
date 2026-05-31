@@ -49,13 +49,17 @@ export function DiscoverCard({
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
 
-  // Bounce the ✦ badge whenever stickerCount increases
+  // Combine server count with locally-sent stickers so the badge
+  // reflects the optimistic update and the animation fires immediately.
+  const localExtra       = stickerCounts.reduce((sum, s) => sum + s.count, 0);
+  const displayStickerCount = (post.stickerCount ?? 0) + localExtra;
+
+  // Bounce the ✦ badge whenever the combined stickerCount increases
   const stickerBounce    = useRef(new Animated.Value(1)).current;
-  const prevStickerCount = useRef(post.stickerCount ?? 0);
+  const prevStickerCount = useRef(displayStickerCount);
   useEffect(() => {
-    const cur = post.stickerCount ?? 0;
-    if (cur > prevStickerCount.current) {
-      prevStickerCount.current = cur;
+    if (displayStickerCount > prevStickerCount.current) {
+      prevStickerCount.current = displayStickerCount;
       stickerBounce.setValue(0.7);
       Animated.spring(stickerBounce, {
         toValue: 1,
@@ -64,9 +68,9 @@ export function DiscoverCard({
         useNativeDriver: true,
       }).start();
     } else {
-      prevStickerCount.current = cur;
+      prevStickerCount.current = displayStickerCount;
     }
-  }, [post.stickerCount]);
+  }, [displayStickerCount]);
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -214,10 +218,10 @@ export function DiscoverCard({
                   : post.witnessedCount}
               </Text>
             </View>
-            {post.stickerCount > 0 && (
+            {displayStickerCount > 0 && (
               <Animated.View style={[styles.statPill, { transform: [{ scale: stickerBounce }] }]}>
                 <Text style={styles.stickerTotalIcon}>✦</Text>
-                <Text style={styles.statText}>{post.stickerCount}</Text>
+                <Text style={styles.statText}>{displayStickerCount}</Text>
               </Animated.View>
             )}
             <MoodBadge mood={post.vibe} size="sm" />
