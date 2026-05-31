@@ -1,0 +1,3 @@
+- [RewardBanner exit animation](reward-banner-exit.md) — isExiting prop triggers slide-up+fade; parent must gate next banner with bannerGate after 300ms delay
+- [StarNode animKey replay](star-node-animkey.md) — animKey prop causes scaleAnim.setValue(0)+spring on each tab return; must be passed from ConstellationMap down to each StarNode
+- [JournalEntry has no stickerCount](journal-entry-no-sticker.md) — stickerCount only exists on Story + DiscoverPost; JournalCard accepts it as optional prop but JournalEntry type does not include it

@@ -91,15 +91,17 @@ interface StarNodeProps {
   cW:         number;
   cH:         number;
   enterDelay: number;
+  animKey?:   number;
 }
 
-function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDelay }: StarNodeProps) {
+function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDelay, animKey = 0 }: StarNodeProps) {
   const cx = (star.xPct / 100) * cW;
   const cy = (star.yPct / 100) * cH;
   const progress = Math.min(1, count / threshold);
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    scaleAnim.setValue(0);
     Animated.spring(scaleAnim, {
       toValue: 1,
       delay: enterDelay,
@@ -108,7 +110,7 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
       useNativeDriver: true,
     }).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [animKey]);
 
   return (
     <Animated.View style={{
@@ -280,6 +282,7 @@ export function ConstellationMap({ state, onStarPress, animKey }: ConstellationM
             cW={dims.w}
             cH={dims.h}
             enterDelay={180 + idx * 85}
+            animKey={animKey}
           />
         ))}
       </View>

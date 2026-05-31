@@ -8,8 +8,9 @@ import type { Reward } from '@/context/AppContext';
 import { STAR_META } from '@/context/AppContext';
 
 interface RewardBannerProps {
-  reward: Reward;
+  reward:     Reward;
   onDismiss?: () => void;
+  isExiting?: boolean;
 }
 
 // ── Particle specs: 8 directions, mix of sizes and travel distances ───────────
@@ -92,7 +93,7 @@ function StarParticles({ color }: StarParticlesProps) {
   );
 }
 
-export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
+export function RewardBanner({ reward, onDismiss, isExiting = false }: RewardBannerProps) {
   const colors    = useColors();
   const slideAnim = useRef(new Animated.Value(-80)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
@@ -124,6 +125,25 @@ export function RewardBanner({ reward, onDismiss }: RewardBannerProps) {
       }
     });
   }, []);
+
+  // Exit animation — slides up and fades out when parent signals dismissal
+  useEffect(() => {
+    if (!isExiting) return;
+    Animated.parallel([
+      Animated.timing(slideAnim, {
+        toValue: -90,
+        duration: 280,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 250,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [isExiting]);
 
   const animStyle = {
     transform: [{ translateY: slideAnim }],

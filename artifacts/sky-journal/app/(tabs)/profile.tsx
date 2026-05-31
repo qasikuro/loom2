@@ -1163,6 +1163,18 @@ export default function CharacterScreen() {
     : (['#DDD2FF', '#C8B4F8', '#B4A4EC'] as const);
 
   const activeOutfit = activeOutfitId ? outfits.find(o => o.id === activeOutfitId) : null;
+
+  const XP_PER_LEVEL  = 300;
+  const xpBase        = rewardBalance?.stars ?? 0;
+  const profileLevel  = Math.max(1, Math.floor(xpBase / XP_PER_LEVEL) + 1);
+  const xpInLevel     = xpBase % XP_PER_LEVEL;
+  const profileXpPct  = xpInLevel / XP_PER_LEVEL;
+  const profileTitle  = constellation?.activeTitle ?? (
+    (constellation?.unlockedStars.length ?? 0) >= 5 ? 'Guiding Light'  :
+    (constellation?.unlockedStars.length ?? 0) >= 3 ? 'Dreamwalker'    :
+    (constellation?.unlockedStars.length ?? 0) >= 1 ? 'Star Wanderer'  : 'Sky Child'
+  );
+
   const avatarSource = character.avatarUri
     ? { uri: character.avatarUri }
     : activeOutfit?.imageUri
@@ -1397,6 +1409,24 @@ export default function CharacterScreen() {
               {avatarError}
             </Text>
           ) : null}
+
+          {/* ── Level / XP bar ─────────────────────────── */}
+          <View style={{ marginHorizontal: 16, marginTop: 14, marginBottom: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.3 }}>
+                🌙 {profileTitle}
+              </Text>
+              <View style={{ backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 }}>
+                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.5 }}>Lv.{profileLevel}</Text>
+              </View>
+            </View>
+            <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+              <View style={{ height: 5, borderRadius: 3, backgroundColor: '#C8A84B', width: `${Math.round(profileXpPct * 100)}%` as any }} />
+            </View>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,168,75,0.55)', marginTop: 4, letterSpacing: 0.3 }}>
+              {xpInLevel} / {XP_PER_LEVEL} XP
+            </Text>
+          </View>
         </CharacterAuraHeader>
 
         {/* ── Reward balance — hero area, above stat bar ────────── */}
@@ -1415,20 +1445,67 @@ export default function CharacterScreen() {
         {/* ── Stats row ────────────────────────────────────────── */}
         <View style={styles.statsRow}>
           <TouchableOpacity style={styles.statPill} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.75}>
+            <Icon name="book-open" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
             <Text style={styles.statPillNum}>{stories.length}</Text>
             <Text style={styles.statPillLabel}>Stories</Text>
           </TouchableOpacity>
           <View style={styles.statPillDot} />
+          <TouchableOpacity style={styles.statPill} onPress={() => setShowShop(true)} activeOpacity={0.75}>
+            <Icon name="gift" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
+            <Text style={styles.statPillNum}>{purchasedIds.length}</Text>
+            <Text style={styles.statPillLabel}>Rewards</Text>
+          </TouchableOpacity>
+          <View style={styles.statPillDot} />
           <View style={styles.statPill}>
+            <Icon name="star" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
             <Text style={styles.statPillNum}>{outfits.length}</Text>
             <Text style={styles.statPillLabel}>Outfits</Text>
           </View>
           <View style={styles.statPillDot} />
           <View style={styles.statPill}>
+            <Icon name="eye" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
             <Text style={styles.statPillNum}>{totalWitnessed}</Text>
             <Text style={styles.statPillLabel}>Witnessed</Text>
           </View>
         </View>
+
+        {/* ── Current Outfit card ──────────────────────────────── */}
+        {activeOutfit && (
+          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+            <TouchableOpacity
+              style={[styles.currentOutfitCard, { borderColor: `${moodAccent}28` }]}
+              onPress={() => openOutfit(activeOutfit.id)}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={[`${moodAccent}18`, 'transparent'] as unknown as [string, string]}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              {activeOutfit.imageUri ? (
+                <Image source={{ uri: activeOutfit.imageUri }} style={styles.currentOutfitThumb} contentFit="cover" />
+              ) : (
+                <View style={[styles.currentOutfitThumb, { backgroundColor: 'rgba(200,184,232,0.08)', alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={{ fontSize: 22 }}>✨</Text>
+                </View>
+              )}
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.currentOutfitEyebrow, { color: `${moodAccent}AA` as any }]}>CURRENT OUTFIT</Text>
+                <Text style={styles.currentOutfitName} numberOfLines={1}>{activeOutfit.name}</Text>
+                {activeOutfit.tags && activeOutfit.tags.length > 0 && (
+                  <View style={{ flexDirection: 'row', gap: 5, marginTop: 2 }}>
+                    {activeOutfit.tags.slice(0, 3).map((tag, idx) => (
+                      <View key={idx} style={[styles.currentOutfitTag, { backgroundColor: `${moodAccent}14`, borderColor: `${moodAccent}28` }]}>
+                        <Text style={[styles.currentOutfitTagTxt, { color: moodAccent }]}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+              <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.30)" />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* ── Weather strip ─────────────────────────────────────── */}
         {weatherQuery ? (
@@ -3521,4 +3598,27 @@ const styles = StyleSheet.create({
   soundPillOn:  { backgroundColor: 'rgba(120,70,255,0.22)', borderColor: 'rgba(120,70,255,0.55)' },
   soundPillOff: { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(200,184,232,0.20)' },
   soundKnob:    { width: 14, height: 14, borderRadius: 7 },
+
+  currentOutfitCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 12, borderRadius: 16, overflow: 'hidden',
+    borderWidth: 1,
+    backgroundColor: 'rgba(107,91,149,0.10)',
+  },
+  currentOutfitThumb: {
+    width: 56, height: 56, borderRadius: 12, overflow: 'hidden',
+    backgroundColor: 'rgba(200,184,232,0.08)',
+  },
+  currentOutfitEyebrow: {
+    fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4,
+  },
+  currentOutfitName: {
+    fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EEE8FF', letterSpacing: 0.1,
+  },
+  currentOutfitTag: {
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1,
+  },
+  currentOutfitTagTxt: {
+    fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3,
+  },
 });

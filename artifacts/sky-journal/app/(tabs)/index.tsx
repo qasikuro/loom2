@@ -8,7 +8,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
-  Animated, Easing, Modal, Platform, Pressable,
+  Animated, DimensionValue, Easing, Modal, Platform, Pressable,
   RefreshControl, ScrollView, StyleSheet,
   Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
@@ -661,6 +661,144 @@ function EventBanner({ event, onPress }: { event: ActiveEvent; onPress: () => vo
   );
 }
 
+// ─── Season-derived data ─────────────────────────────────────────────────────
+const SEASON_BY_MONTH: Record<number, { name: string; icon: string; color: string; bgA: string; bgB: string; endMonth: number }> = {
+  0: { name: "Winter's Light",    icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.20)', bgB: 'rgba(80,140,200,0.08)',  endMonth: 2  },
+  1: { name: "Winter's Light",    icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.20)', bgB: 'rgba(80,140,200,0.08)',  endMonth: 2  },
+  2: { name: 'Spring in the Sky', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
+  3: { name: 'Spring in the Sky', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
+  4: { name: 'Spring in the Sky', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
+  5: { name: 'Summer Solstice',   icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.22)',  bgB: 'rgba(200,120,40,0.08)',  endMonth: 8  },
+  6: { name: 'Summer Solstice',   icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.22)',  bgB: 'rgba(200,120,40,0.08)',  endMonth: 8  },
+  7: { name: 'Summer Solstice',   icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.22)',  bgB: 'rgba(200,120,40,0.08)',  endMonth: 8  },
+  8: { name: 'Autumn Memories',   icon: '🍂', color: '#E08050', bgA: 'rgba(224,128,80,0.22)',  bgB: 'rgba(160,80,40,0.08)',   endMonth: 11 },
+  9: { name: 'Autumn Memories',   icon: '🍂', color: '#E08050', bgA: 'rgba(224,128,80,0.22)',  bgB: 'rgba(160,80,40,0.08)',   endMonth: 11 },
+  10: { name: 'Autumn Memories',  icon: '🍂', color: '#E08050', bgA: 'rgba(224,128,80,0.22)',  bgB: 'rgba(160,80,40,0.08)',   endMonth: 11 },
+  11: { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.20)', bgB: 'rgba(80,140,200,0.08)',  endMonth: 2  },
+};
+
+function SeasonCard({ activeEvent, constellation, onPress }: {
+  activeEvent: ActiveEvent | null;
+  constellation: ConstellationState | null;
+  onPress: () => void;
+}) {
+  const month = new Date().getMonth();
+  const sd    = SEASON_BY_MONTH[month]!;
+  const th    = activeEvent ? (EVENT_THEME[activeEvent.theme] ?? null) : null;
+  const color = th?.color   ?? sd.color;
+  const icon  = th?.icon    ?? sd.icon;
+  const name  = activeEvent?.title ?? sd.name;
+  const bgA   = th ? th.bgStart : sd.bgA;
+  const bgB   = th ? th.bgEnd   : sd.bgB;
+
+  const end = new Date(); end.setMonth(sd.endMonth, 1); end.setHours(0, 0, 0, 0);
+  if (end <= new Date()) end.setFullYear(end.getFullYear() + 1);
+  const daysLeft = Math.max(1, Math.ceil((end.getTime() - Date.now()) / 86400000));
+
+  const stars = constellation?.unlockedStars.length ?? 0;
+  const pct   = stars / 6;
+
+  return (
+    <TouchableOpacity style={sc.card} onPress={onPress} activeOpacity={0.84}>
+      <LinearGradient
+        colors={[bgA, bgB, 'transparent'] as unknown as [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View pointerEvents="none" style={[sc.glowOrb, { backgroundColor: color }]} />
+      <View style={sc.eyebrowRow}>
+        <Text style={sc.seasonIcon}>{icon}</Text>
+        <Text style={[sc.eyebrow, { color }]}>CURRENT SEASON</Text>
+        <View style={{ flex: 1 }} />
+        <View style={[sc.pill, { backgroundColor: `${color}22` }]}>
+          <Text style={[sc.pillTxt, { color }]}>{daysLeft}d left</Text>
+        </View>
+        <View style={[sc.badge, { backgroundColor: `${color}18`, borderColor: `${color}38` }]}>
+          <Text style={[sc.badgeTxt, { color }]}>Season Pass</Text>
+        </View>
+      </View>
+      <Text style={sc.seasonName}>{name}</Text>
+      <View style={sc.progBlock}>
+        <View style={sc.progTrack}>
+          <View style={[sc.progFill, { width: `${Math.round(pct * 100)}%` as DimensionValue, backgroundColor: color }]} />
+        </View>
+        <Text style={[sc.progLabel, { color: `${color}BB` }]}>{stars}/6 seasonal stars collected</Text>
+      </View>
+      <View style={[sc.cta, { borderColor: `${color}45` }]}>
+        <Text style={[sc.ctaTxt, { color }]}>Continue Journey  →</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+const sc = StyleSheet.create({
+  card:       { marginHorizontal: 16, marginTop: 10, marginBottom: 4, borderRadius: 20, padding: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(200,180,255,0.12)', backgroundColor: 'rgba(16,10,40,0.55)' },
+  glowOrb:    { position: 'absolute', top: -70, right: -50, width: 180, height: 180, borderRadius: 90, opacity: 0.07 },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+  seasonIcon: { fontSize: 16, lineHeight: 20 },
+  eyebrow:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4 },
+  pill:       { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  pillTxt:    { fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3 },
+  badge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1, marginLeft: 3 },
+  badgeTxt:   { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.6 },
+  seasonName: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#EEE8FF', letterSpacing: 0.2, marginBottom: 14 },
+  progBlock:  { gap: 7, marginBottom: 14 },
+  progTrack:  { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' },
+  progFill:   { height: 5, borderRadius: 3 },
+  progLabel:  { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3 },
+  cta:        { alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 22, borderWidth: 1 },
+  ctaTxt:     { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3 },
+});
+
+// ─── Constellation Mini-bar ──────────────────────────────────────────────────
+const MINI_STARS = [
+  { key: 'social',   label: 'Social',   color: '#78C8A8' },
+  { key: 'memory',   label: 'Memory',   color: '#9878C8' },
+  { key: 'quiet',    label: 'Quiet',    color: '#7890C8' },
+  { key: 'creative', label: 'Creative', color: '#C87AA8' },
+  { key: 'helping',  label: 'Helping',  color: '#C8A84B' },
+  { key: 'seasonal', label: 'Seasonal', color: '#68B8B0' },
+];
+function ConstellationMini({ constellation, onPress }: { constellation: ConstellationState | null; onPress: () => void }) {
+  if (!constellation) return null;
+  return (
+    <TouchableOpacity style={cm.wrap} onPress={onPress} activeOpacity={0.85}>
+      <View style={cm.header}>
+        <Text style={cm.headerTitle}>Your Constellation</Text>
+        <Text style={cm.headerCta}>{constellation.unlockedStars.length}/6 stars  →</Text>
+      </View>
+      <View style={cm.row}>
+        {MINI_STARS.map((star, i) => {
+          const lit = constellation.unlockedStars.includes(star.key);
+          return (
+            <React.Fragment key={star.key}>
+              {i > 0 && <View style={[cm.line, { backgroundColor: lit ? 'rgba(200,184,232,0.22)' : 'rgba(200,184,232,0.06)' }]} />}
+              <View style={cm.starCol}>
+                <View style={[cm.dot, {
+                  backgroundColor: lit ? star.color : 'rgba(200,184,232,0.12)',
+                  shadowColor: lit ? star.color : 'transparent',
+                  shadowOffset: { width: 0, height: 0 }, shadowRadius: lit ? 7 : 0, shadowOpacity: lit ? 0.9 : 0,
+                }]} />
+                <Text style={[cm.dotLabel, { color: lit ? 'rgba(220,210,255,0.60)' : 'rgba(200,184,232,0.25)' }]}>{star.label}</Text>
+              </View>
+            </React.Fragment>
+          );
+        })}
+      </View>
+    </TouchableOpacity>
+  );
+}
+const cm = StyleSheet.create({
+  wrap:        { marginHorizontal: 16, marginVertical: 6, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: 'rgba(200,184,232,0.08)' },
+  header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  headerTitle: { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.55)', letterSpacing: 0.3 },
+  headerCta:   { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.35)', letterSpacing: 0.3 },
+  row:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  starCol:     { alignItems: 'center', gap: 6 },
+  dot:         { width: 13, height: 13, borderRadius: 7 },
+  line:        { height: 1.5, flex: 1, marginHorizontal: 1 },
+  dotLabel:    { fontSize: 8.5, fontFamily: 'Satoshi-Medium', letterSpacing: 0.2 },
+});
+
 export default function HomeScreen() {
   const { width: W } = useWindowDimensions();
   const insets  = useSafeAreaInsets();
@@ -686,8 +824,10 @@ export default function HomeScreen() {
   const [showEventSheet, setShowEventSheet] = useState(false);
 
   // ── Banner anti-stack gate (#13) ───────────────────────────────────────────
-  const [bannerGate, setBannerGate] = useState(false);
+  const [bannerGate,    setBannerGate]    = useState(false);
+  const [bannerExiting, setBannerExiting] = useState(false);
   const bannerGateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bannerExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
@@ -702,11 +842,22 @@ export default function HomeScreen() {
 
   // Auto-dismiss the front reward banner after 4 s (prevents stacking).
   // Star unlock banners are excluded — they self-manage via the drain queue in AppContext.
-  const firstReward = rewards[0] ?? null;
+  const firstReward   = rewards[0] ?? null;
   const firstRewardId = firstReward?.id ?? null;
   useEffect(() => {
     if (!firstRewardId || firstReward?.starUnlock) return;
-    const timer = setTimeout(() => dismissReward(firstRewardId), 4000);
+    const timer = setTimeout(() => {
+      if (bannerExitTimerRef.current) clearTimeout(bannerExitTimerRef.current);
+      setBannerExiting(true);
+      const id = firstRewardId;
+      bannerExitTimerRef.current = setTimeout(() => {
+        dismissReward(id);
+        setBannerExiting(false);
+        setBannerGate(true);
+        if (bannerGateTimerRef.current) clearTimeout(bannerGateTimerRef.current);
+        bannerGateTimerRef.current = setTimeout(() => setBannerGate(false), 400);
+      }, 300);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [firstRewardId, firstReward?.starUnlock]);
 
@@ -869,11 +1020,19 @@ export default function HomeScreen() {
           <RewardBanner
             key={rewards[0].id}
             reward={rewards[0]}
+            isExiting={bannerExiting}
             onDismiss={() => {
-              dismissReward(rewards[0]!.id);
-              setBannerGate(true);
-              if (bannerGateTimerRef.current) clearTimeout(bannerGateTimerRef.current);
-              bannerGateTimerRef.current = setTimeout(() => setBannerGate(false), 360);
+              if (bannerExiting) return;
+              const id = rewards[0]!.id;
+              if (bannerExitTimerRef.current) clearTimeout(bannerExitTimerRef.current);
+              setBannerExiting(true);
+              bannerExitTimerRef.current = setTimeout(() => {
+                dismissReward(id);
+                setBannerExiting(false);
+                setBannerGate(true);
+                if (bannerGateTimerRef.current) clearTimeout(bannerGateTimerRef.current);
+                bannerGateTimerRef.current = setTimeout(() => setBannerGate(false), 400);
+              }, 300);
             }}
           />
         </View>
@@ -1038,6 +1197,17 @@ export default function HomeScreen() {
         </View>
 
         {/* ══════════════════════════════════════════════════
+            SEASON JOURNEY CARD
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
+          <SeasonCard
+            activeEvent={activeEvent}
+            constellation={constellation}
+            onPress={() => activeEvent ? setShowEventSheet(true) : router.push('/(tabs)/profile')}
+          />
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
             CONSTELLATION INTRO — one-time, first-run hint
         ══════════════════════════════════════════════════ */}
         {showConstellationIntro && (
@@ -1082,7 +1252,7 @@ export default function HomeScreen() {
           <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
             <View style={{ paddingTop: 8, paddingBottom: 4 }}>
               <SectionHeader
-                label="Who's Around"
+                label="Your Circle"
                 accent={accent}
                 count={circleAuthors.length}
                 onPress={() => router.push('/(tabs)/discover')}
@@ -1130,6 +1300,13 @@ export default function HomeScreen() {
             </View>
           )}
         </TouchableOpacity>
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            YOUR CONSTELLATION — compact mini-bar
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }] }}>
+          <ConstellationMini constellation={constellation} onPress={() => router.push('/(tabs)/profile')} />
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
