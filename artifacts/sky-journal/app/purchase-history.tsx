@@ -1,9 +1,11 @@
 import { Icon } from '@/components/Icon';
 import { apiFetch } from '@/context/AppContext';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,86 +18,127 @@ interface Purchase {
   id:          string;
   itemId:      string;
   itemName:    string;
-  starsSpent:  number;
-  auraSpent:   number;
-  shardsSpent: number;
+  starsSpent:  number | null;
+  auraSpent:   number | null;
+  shardsSpent: number | null;
   purchasedAt: string;
 }
 
-const CATEGORY_ICON: Record<string, string> = {
-  frame_starlight: '✦',
-  frame_moonveil:  '◑',
-  frame_solstice:  '☀',
-  accent_aura:     '◈',
-  accent_twilight: '◐',
-  theme_locket:    '◇',
-  theme_aurora:    '⋆',
-};
+function categoryMeta(itemId: string): { icon: string; label: string; color: string } {
+  if (itemId.startsWith('frame_'))  return { icon: '⬡', label: 'Frame',  color: '#C8A84B' };
+  if (itemId.startsWith('accent_')) return { icon: '◈', label: 'Accent', color: '#9B8BCC' };
+  if (itemId.startsWith('theme_'))  return { icon: '◇', label: 'Theme',  color: '#78B8E8' };
+  return { icon: '✦', label: 'Item', color: '#C8B8E8' };
+}
 
-export default function PurchaseHistoryScreen() {
-  const insets = useSafeAreaInsets();
-  const [purchases, setPurchases] = useState<Purchase[]>([]);
-  const [loading, setLoading]     = useState(true);
+function costStr(p: Purchase): string {
+  const parts: string[] = [];
+  if (p.starsSpent)  parts.push(`✦ ${p.starsSpent}`);
+  if (p.auraSpent)   parts.push(`◈ ${p.auraSpent}`);
+  if (p.shardsSpent) parts.push(`◇ ${p.shardsSpent}`);
+  return parts.join(' · ') || '—';
+}
 
-  useEffect(() => {
-    apiFetch<Purchase[]>('/rewards/purchases')
-      .then(data => setPurchases(data ?? []))
-      .catch(() => null)
-      .finally(() => setLoading(false));
-  }, []);
-
-  function formatDate(iso: string) {
+function formatDate(iso: string): string {
+  try {
     return new Date(iso).toLocaleDateString(undefined, {
       year: 'numeric', month: 'short', day: 'numeric',
     });
+  } catch {
+    return iso;
   }
+}
 
-  function costStr(p: Purchase) {
-    const parts: string[] = [];
-    if (p.starsSpent)  parts.push(`✦ ${p.starsSpent}`);
-    if (p.auraSpent)   parts.push(`◈ ${p.auraSpent}`);
-    if (p.shardsSpent) parts.push(`◇ ${p.shardsSpent}`);
-    return parts.join(' · ') || 'Free';
-  }
+export default function PurchaseHistoryScreen() {
+  const insets = useSafeAreaInsets();
+  const topPad = Platform.OS === 'web' ? 48 : insets.top;
+
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [hasError,  setHasError]  = useState(false);
+
+  useEffect(() => {
+    apiFetch<Purchase[]>('/rewards/purchases')
+      .then(data => { setPurchases(data ?? []); })
+      .catch(() => { setHasError(true); })
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
-    <View style={[s.root, { paddingTop: insets.top + 8 }]}>
-      {/* Header */}
-      <View style={s.header}>
+    <View style={s.root}>
+      <LinearGradient
+        colors={['#0A081A', '#120E28', '#0A081A']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+      />
+
+      {/* ── Header ── */}
+      <View style={[s.header, { paddingTop: topPad + 10 }]}>
         <TouchableOpacity
           onPress={() => router.back()}
+          style={s.backBtn}
+          activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon name="arrow-left" size={20} color="rgba(200,184,232,0.85)" />
+          <Icon name="chevron-left" size={20} color="rgba(200,184,232,0.85)" />
         </TouchableOpacity>
         <Text style={s.title}>Purchase History</Text>
+        <View style={{ width: 36 }} />
       </View>
 
+      {/* ── Content ── */}
       {loading ? (
-        <ActivityIndicator color="#C8A84B" style={{ marginTop: 60 }} />
+        <View style={s.center}>
+          <ActivityIndicator color="#C8A84B" />
+        </View>
+      ) : hasError ? (
+        <View style={s.center}>
+          <Text style={{ fontSize: 32, marginBottom: 8 }}>✦</Text>
+          <Text style={s.emptyHead}>Couldn't load history</Text>
+          <Text style={s.emptySub}>Check your connection and try again.</Text>
+        </View>
       ) : purchases.length === 0 ? (
-        <View style={s.empty}>
-          <Text style={s.emptyIcon}>◇</Text>
+        <View style={s.center}>
+          <View style={s.emptyIconWrap}>
+            <Icon name="shopping-bag" size={26} color="rgba(200,168,75,0.55)" />
+          </View>
           <Text style={s.emptyHead}>No purchases yet</Text>
-          <Text style={s.emptySub}>Items you buy from the shop will appear here.</Text>
+          <Text style={s.emptySub}>Items you buy in the Sky Shop will appear here.</Text>
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 32, gap: 10 }}
+          contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          {purchases.map(p => (
-            <View key={p.id} style={s.item}>
-              <View style={s.itemIcon}>
-                <Text style={{ fontSize: 18 }}>{CATEGORY_ICON[p.itemId] ?? '✦'}</Text>
+          {purchases.map((p, i) => {
+            const cat = categoryMeta(p.itemId);
+            return (
+              <View
+                key={p.id}
+                style={[s.row, i === 0 && { marginTop: 4 }]}
+              >
+                {/* Icon bubble */}
+                <View style={[s.iconBubble, { backgroundColor: `${cat.color}18`, borderColor: `${cat.color}30` }]}>
+                  <Text style={[s.catIcon, { color: cat.color }]}>{cat.icon}</Text>
+                </View>
+
+                {/* Info */}
+                <View style={s.info}>
+                  <Text style={s.itemName} numberOfLines={1}>{p.itemName}</Text>
+                  <View style={s.metaRow}>
+                    <View style={[s.catPill, { backgroundColor: `${cat.color}15`, borderColor: `${cat.color}28` }]}>
+                      <Text style={[s.catPillText, { color: cat.color }]}>{cat.label}</Text>
+                    </View>
+                    <Text style={s.dateText}>{formatDate(p.purchasedAt)}</Text>
+                  </View>
+                </View>
+
+                {/* Cost */}
+                <Text style={s.costText}>{costStr(p)}</Text>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.itemName}>{p.itemName}</Text>
-                <Text style={s.itemDate}>{formatDate(p.purchasedAt)}</Text>
-              </View>
-              <Text style={s.itemCost}>{costStr(p)}</Text>
-            </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
     </View>
@@ -103,18 +146,51 @@ export default function PurchaseHistoryScreen() {
 }
 
 const s = StyleSheet.create({
-  root:     { flex: 1, backgroundColor: '#08061A' },
-  header:   { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingBottom: 12 },
-  title:    { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#C8B8E8' },
+  root: { flex: 1 },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingBottom: 14,
+    borderBottomWidth: 1, borderBottomColor: 'rgba(200,184,232,0.08)',
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 11,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.14)',
+  },
+  title: {
+    fontSize: 16, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(235,228,255,0.95)', letterSpacing: -0.2,
+  },
 
-  empty:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 32 },
-  emptyIcon: { fontSize: 40, color: 'rgba(200,168,75,0.35)', marginBottom: 4 },
-  emptyHead: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)', textAlign: 'center' },
-  emptySub:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.32)', textAlign: 'center' },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, paddingHorizontal: 36 },
+  emptyIconWrap: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: 'rgba(200,168,75,0.08)',
+    borderWidth: 1, borderColor: 'rgba(200,168,75,0.18)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: 4,
+  },
+  emptyHead: { fontSize: 16, fontFamily: 'Satoshi-Bold',    color: 'rgba(200,184,232,0.75)', textAlign: 'center' },
+  emptySub:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', textAlign: 'center', lineHeight: 19, fontStyle: 'italic' },
 
-  item:     { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
-  itemIcon: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(200,168,75,0.10)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(200,168,75,0.18)' },
-  itemName: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.85)' },
-  itemDate: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', marginTop: 2 },
-  itemCost: { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B' },
+  list: { paddingHorizontal: 16, paddingTop: 12, gap: 8 },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 13, borderRadius: 14, borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(200,184,232,0.10)',
+  },
+  iconBubble: {
+    width: 42, height: 42, borderRadius: 13,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1,
+  },
+  catIcon: { fontSize: 18 },
+
+  info:    { flex: 1, gap: 4 },
+  itemName:{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(235,228,255,0.90)' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  catPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, borderWidth: 1 },
+  catPillText: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
+  dateText: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.38)' },
+
+  costText: { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,168,75,0.80)', textAlign: 'right' },
 });

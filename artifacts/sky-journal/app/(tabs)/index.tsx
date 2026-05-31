@@ -685,6 +685,10 @@ export default function HomeScreen() {
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [showEventSheet, setShowEventSheet] = useState(false);
 
+  // ── Banner anti-stack gate (#13) ───────────────────────────────────────────
+  const [bannerGate, setBannerGate] = useState(false);
+  const bannerGateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
   }, []);
@@ -859,10 +863,19 @@ export default function HomeScreen() {
       {/* ── Twinkling star field ── */}
       <StarField density="high" />
 
-      {/* ── Reward banner queue — one at a time, auto-dismisses after 4 s ── */}
-      {rewards[0] && (
+      {/* ── Reward banner queue — one at a time, anti-stack gate prevents overlap ── */}
+      {!bannerGate && rewards[0] && (
         <View style={{ position: 'absolute', top: topPad + 8, left: 16, right: 16, zIndex: 999 }} pointerEvents="box-none">
-          <RewardBanner reward={rewards[0]} onDismiss={() => dismissReward(rewards[0]!.id)} />
+          <RewardBanner
+            key={rewards[0].id}
+            reward={rewards[0]}
+            onDismiss={() => {
+              dismissReward(rewards[0]!.id);
+              setBannerGate(true);
+              if (bannerGateTimerRef.current) clearTimeout(bannerGateTimerRef.current);
+              bannerGateTimerRef.current = setTimeout(() => setBannerGate(false), 360);
+            }}
+          />
         </View>
       )}
 

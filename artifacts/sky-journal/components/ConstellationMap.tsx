@@ -157,14 +157,18 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
 interface ConstellationMapProps {
   state:        ConstellationState | null;
   onStarPress?: (key: string) => void;
+  animKey?:     number;
 }
 
-export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) {
+export function ConstellationMap({ state, onStarPress, animKey }: ConstellationMapProps) {
   const [dims, setDims] = useState({ w: 0, h: 0 });
   const enterAnim       = useRef(new Animated.Value(0)).current;
   const lineAnim        = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Reset before replaying so tab-return triggers the full entrance again
+    enterAnim.setValue(0);
+    lineAnim.setValue(0);
     // Last star delay: 180 + (6-1)*85 = 605 ms; spring settles ~400 ms later → lines at ~950 ms
     Animated.sequence([
       Animated.timing(enterAnim, {
@@ -182,7 +186,7 @@ export function ConstellationMap({ state, onStarPress }: ConstellationMapProps) 
       }),
     ]).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [animKey]);
 
   function onLayout(e: LayoutChangeEvent) {
     setDims({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height });

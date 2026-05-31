@@ -2041,6 +2041,7 @@ export default function CharacterScreen() {
               <ConstellationMap
                 state={constellation}
                 onStarPress={(key) => setSelectedStarKey(key)}
+                animKey={animTrigger}
               />
             </View>
 
