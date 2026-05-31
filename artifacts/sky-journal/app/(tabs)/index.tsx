@@ -375,6 +375,23 @@ const sh = StyleSheet.create({
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// ─── Cosmetic item metadata (mirrors shop catalog — used for rich previews) ───
+const COSMETIC_META: Record<string, { icon: string; category: 'frame' | 'accent' | 'theme'; catLabel: string; desc: string }> = {
+  frame_starlight:     { icon: '✦', category: 'frame',  catLabel: 'Profile Frame', desc: 'Golden starlight radiance' },
+  frame_moonveil:      { icon: '◑', category: 'frame',  catLabel: 'Profile Frame', desc: 'Silver moonlit crescent' },
+  accent_aura:         { icon: '◈', category: 'accent', catLabel: 'Bio Accent',    desc: 'Soft purple luminescence' },
+  theme_locket:        { icon: '◇', category: 'theme',  catLabel: 'Journal Theme', desc: 'Vintage memory locket' },
+  theme_aurora:        { icon: '⋆', category: 'theme',  catLabel: 'Journal Theme', desc: 'Northern lights colours' },
+  frame_blossom:       { icon: '🌸', category: 'frame',  catLabel: 'Profile Frame', desc: 'Cherry petals, spring breeze' },
+  accent_petal:        { icon: '✿', category: 'accent', catLabel: 'Bio Accent',    desc: 'Blossoms frame your bio' },
+  frame_solstice:      { icon: '☀', category: 'frame',  catLabel: 'Profile Frame', desc: 'Sun-drenched summer glow' },
+  accent_twilight:     { icon: '◐', category: 'accent', catLabel: 'Bio Accent',    desc: 'Warm amber twilight shimmer' },
+  frame_harvest:       { icon: '🍂', category: 'frame',  catLabel: 'Profile Frame', desc: 'Amber autumn leaves at dusk' },
+  accent_ember:        { icon: '🔥', category: 'accent', catLabel: 'Bio Accent',    desc: 'Burnished bonfire warmth' },
+  theme_aurora_winter: { icon: '🌌', category: 'theme',  catLabel: 'Journal Theme', desc: 'Polar aurora shimmer' },
+  frame_frost:         { icon: '❄', category: 'frame',  catLabel: 'Profile Frame', desc: 'Ice-crystal filigree' },
+};
+
 // ─── Shared countdown helper ─────────────────────────────────────────────────
 function eventCountdown(endsAt: string | null): { label: string; dateStr: string | null } | null {
   if (!endsAt) return null;
@@ -454,35 +471,124 @@ function EventDetailSheet({ event, visible, onClose }: { event: ActiveEvent; vis
               <Text style={ev.sheetDesc}>{event.description}</Text>
             )}
 
-            {/* Rewards section */}
-            {event.inventory.length > 0 && (
-              <>
-                <Text style={ev.sheetRewardsLabel}>Rewards this event</Text>
-                <View style={ev.sheetRewardsList}>
-                  {event.inventory.map((item, i) => {
-                    const bg     = REWARD_BG[item.type]     ?? 'rgba(200,184,232,0.10)';
-                    const color  = REWARD_COLOR[item.type]  ?? '#C8B8E8';
-                    const border = REWARD_BORDER[item.type] ?? 'rgba(200,184,232,0.20)';
-                    return (
-                      <View key={i} style={[ev.sheetRewardRow, { backgroundColor: bg, borderColor: border }]}>
-                        <View style={[ev.sheetRewardIcon, { backgroundColor: `${color}20` }]}>
-                          <Text style={{ fontSize: 16, lineHeight: 20 }}>{ITEM_ICONS[item.type] ?? '🎁'}</Text>
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[ev.sheetRewardName, { color }]}>{item.label}</Text>
-                          <Text style={ev.sheetRewardType}>
-                            {item.type === 'stars' ? 'Stars currency' : item.type === 'aura' ? 'Aura energy' : item.type === 'shards' ? 'Memory shards' : 'Cosmetic item'}
-                          </Text>
-                        </View>
-                        {(item.type === 'stars' || item.type === 'aura' || item.type === 'shards') && item.amount != null && (
-                          <Text style={[ev.sheetRewardAmt, { color }]}>+{item.amount}</Text>
-                        )}
+            {/* Rewards section — cosmetics as showcase cards, currencies as chips */}
+            {event.inventory.length > 0 && (() => {
+              const cosmeticItems = event.inventory.filter(it => it.type === 'item');
+              const currencyItems = event.inventory.filter(it => it.type !== 'item');
+
+              return (
+                <>
+                  {/* ── Cosmetic showcase ── */}
+                  {cosmeticItems.length > 0 && (
+                    <>
+                      <Text style={ev.sheetRewardsLabel}>Exclusive cosmetics</Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        contentContainerStyle={ev.showScroll}
+                        style={{ marginHorizontal: -20 }}
+                      >
+                        {cosmeticItems.map((item, i) => {
+                          const meta = item.itemId ? (COSMETIC_META[item.itemId] ?? null) : null;
+                          const icon = meta?.icon ?? '🎁';
+                          const catLabel = meta?.catLabel ?? 'Cosmetic item';
+                          const desc = meta?.desc ?? item.label;
+                          const cat  = meta?.category ?? 'frame';
+
+                          return (
+                            <View key={i} style={[ev.showCard, { borderColor: `${th.color}40` }]}>
+                              {/* Preview area */}
+                              <View style={[ev.showPreview, { backgroundColor: `${th.color}08` }]}>
+                                <LinearGradient
+                                  colors={[`${th.color}18`, 'transparent']}
+                                  style={StyleSheet.absoluteFill}
+                                  start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }}
+                                  pointerEvents="none"
+                                />
+
+                                {cat === 'frame' && (
+                                  /* Concentric frame rings around central icon */
+                                  <View style={[ev.frameOuter, { borderColor: `${th.color}50` }]}>
+                                    <View style={[ev.frameMid, { borderColor: `${th.color}38` }]}>
+                                      <View style={[ev.frameInner, { borderColor: `${th.color}28`, backgroundColor: `${th.color}10` }]}>
+                                        <Text style={ev.showIcon}>{icon}</Text>
+                                      </View>
+                                    </View>
+                                  </View>
+                                )}
+
+                                {cat === 'accent' && (
+                                  /* Horizontal glow band with floating icon */
+                                  <View style={ev.accentWrap}>
+                                    <LinearGradient
+                                      colors={[`${th.color}00`, `${th.color}40`, `${th.color}00`]}
+                                      start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                                      style={ev.accentBand}
+                                      pointerEvents="none"
+                                    />
+                                    <Text style={ev.showIcon}>{icon}</Text>
+                                    <View style={ev.accentDots}>
+                                      {[0,1,2,3,4].map(d => (
+                                        <View key={d} style={[ev.accentDot, { opacity: 0.18 + d * 0.08, backgroundColor: th.color }]} />
+                                      ))}
+                                    </View>
+                                  </View>
+                                )}
+
+                                {cat === 'theme' && (
+                                  /* Journal page lines with icon */
+                                  <View style={ev.themeWrap}>
+                                    {[0,1,2,3].map(l => (
+                                      <View key={l} style={[ev.themeLine, { backgroundColor: `${th.color}22`, width: l === 2 ? '60%' : '80%' }]} />
+                                    ))}
+                                    <View style={[ev.themeIconBadge, { backgroundColor: `${th.color}18`, borderColor: `${th.color}30` }]}>
+                                      <Text style={ev.showIcon}>{icon}</Text>
+                                    </View>
+                                  </View>
+                                )}
+                              </View>
+
+                              {/* Card footer */}
+                              <View style={ev.showCardBody}>
+                                <Text style={ev.showCardName} numberOfLines={2}>{item.label}</Text>
+                                <Text style={[ev.showCardCat, { color: `${th.color}AA` }]}>{catLabel}</Text>
+                                <Text style={[ev.showCardDesc, { color: 'rgba(200,184,232,0.45)' }]} numberOfLines={2}>{desc}</Text>
+                                <View style={[ev.showCardBadge, { backgroundColor: `${th.color}14`, borderColor: `${th.color}28` }]}>
+                                  <Text style={[ev.showCardBadgeTxt, { color: th.color }]}>✦ Limited to this event</Text>
+                                </View>
+                              </View>
+                            </View>
+                          );
+                        })}
+                        <View style={{ width: 20 }} />
+                      </ScrollView>
+                    </>
+                  )}
+
+                  {/* ── Currency chips ── */}
+                  {currencyItems.length > 0 && (
+                    <>
+                      <Text style={[ev.sheetRewardsLabel, { marginTop: cosmeticItems.length > 0 ? 18 : 0 }]}>Also included</Text>
+                      <View style={ev.currRow}>
+                        {currencyItems.map((item, i) => {
+                          const color  = REWARD_COLOR[item.type]  ?? '#C8B8E8';
+                          const bg     = REWARD_BG[item.type]     ?? 'rgba(200,184,232,0.10)';
+                          const border = REWARD_BORDER[item.type] ?? 'rgba(200,184,232,0.20)';
+                          return (
+                            <View key={i} style={[ev.currChip, { backgroundColor: bg, borderColor: border }]}>
+                              <Text style={ev.currChipEmoji}>{ITEM_ICONS[item.type] ?? '✦'}</Text>
+                              <Text style={[ev.currChipNum, { color }]}>
+                                {item.amount != null ? `+${item.amount}` : ''} {item.type === 'stars' ? 'Stars' : item.type === 'aura' ? 'Aura' : 'Shards'}
+                              </Text>
+                            </View>
+                          );
+                        })}
                       </View>
-                    );
-                  })}
-                </View>
-              </>
-            )}
+                    </>
+                  )}
+                </>
+              );
+            })()}
 
             {/* Admin-grant note */}
             <View style={ev.sheetNote}>
@@ -1616,6 +1722,46 @@ const ev = StyleSheet.create({
     fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
     color: 'rgba(200,184,232,0.38)', textAlign: 'center', lineHeight: 17,
   },
+
+  // ── Cosmetic showcase cards ───────────────────────────────────────────────
+  showScroll:    { paddingLeft: 20, paddingRight: 0, gap: 12, paddingBottom: 4 },
+  showCard:      {
+    width: 148, borderRadius: 18, borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    overflow: 'hidden',
+  },
+  showPreview:   { height: 118, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  showIcon:      { fontSize: 30, lineHeight: 36 },
+
+  // Frame category: concentric rounded-rect rings
+  frameOuter:    { width: 88, height: 88, borderRadius: 20, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  frameMid:      { width: 68, height: 68, borderRadius: 15, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  frameInner:    { width: 50, height: 50, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Accent category: horizontal glow band
+  accentWrap:    { width: '100%', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  accentBand:    { position: 'absolute', left: 0, right: 0, height: 28 },
+  accentDots:    { flexDirection: 'row', gap: 5, marginTop: 4 },
+  accentDot:     { width: 5, height: 5, borderRadius: 2.5 },
+
+  // Theme category: journal-page lines
+  themeWrap:     { width: '100%', paddingHorizontal: 16, gap: 7, alignItems: 'flex-start', justifyContent: 'center' },
+  themeLine:     { height: 2, borderRadius: 1 },
+  themeIconBadge:{ position: 'absolute', top: 8, right: 14, width: 36, height: 36, borderRadius: 10, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Card footer text
+  showCardBody:  { padding: 12, gap: 3 },
+  showCardName:  { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(242,234,255,0.92)', letterSpacing: -0.2, lineHeight: 17 },
+  showCardCat:   { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase' },
+  showCardDesc:  { fontSize: 10.5, fontFamily: 'Satoshi-Regular', lineHeight: 14, marginTop: 1 },
+  showCardBadge: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 3, marginTop: 6, alignSelf: 'flex-start' },
+  showCardBadgeTxt: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
+
+  // Currency chips row (below showcase)
+  currRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
+  currChip:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 11, borderWidth: 1 },
+  currChipEmoji: { fontSize: 14, lineHeight: 17 },
+  currChipNum:   { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
 });
 
 // Modal styles
