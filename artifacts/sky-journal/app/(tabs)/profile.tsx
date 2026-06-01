@@ -162,6 +162,13 @@ function getCover(story: Story) {
   return null;
 }
 
+/** Compact balance formatter: 1000 → "1k", 12500 → "12.5k" */
+function fmtBal(n: number): string {
+  if (n >= 10000) return `${Math.floor(n / 1000)}k`;
+  if (n >= 1000)  return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return String(n);
+}
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function fmtDate(iso: string) {
   const d = new Date(iso);
@@ -2219,10 +2226,10 @@ export default function CharacterScreen() {
                 <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>Browse frames, accents & themes</Text>
               </View>
               {rewardBalance && (
-                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B' }}>✦ {rewardBalance.stars}</Text>
-                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9878D8' }}>◈ {rewardBalance.auraEnergy}</Text>
-                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#78B4DC' }}>◇ {rewardBalance.memoryShards}</Text>
+                <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', flexShrink: 1 }}>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B' }} numberOfLines={1}>✦ {fmtBal(rewardBalance.stars)}</Text>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9878D8' }} numberOfLines={1}>◈ {fmtBal(rewardBalance.auraEnergy)}</Text>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#78B4DC' }} numberOfLines={1}>◇ {fmtBal(rewardBalance.memoryShards)}</Text>
                 </View>
               )}
               <Icon name="chevron-right" size={16} color="rgba(107,91,149,0.55)" />

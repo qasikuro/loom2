@@ -8,6 +8,8 @@ import { requireAuth, getUserId } from "../middleware/auth";
 function safeImageUri(uri: string | null | undefined): string | null {
   if (!uri) return null;
   if (uri.startsWith("http://") || uri.startsWith("https://")) return uri;
+  // Uploaded avatars served by our own API are safe (/api/images/…)
+  if (uri.startsWith("/api/images/")) return uri;
   return null;
 }
 

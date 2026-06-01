@@ -35,6 +35,7 @@ export async function syncConstellation(
     // ── Fetch all aggregate counts in parallel ─────────────────────────────
     const [
       journalRows,
+      journalCountRows,
       storyRows,
       stickersReceivedRows,
       stickersSentRows,
@@ -43,12 +44,18 @@ export async function syncConstellation(
       witnessedStoriesRows,
       outfitRows,
     ] = await Promise.all([
-      // All journal entry dates (for streak calculation)
+      // All journal entry dates (for quiet-streak calculation)
       db
         .selectDistinct({ date: sql<string>`DATE(${journalEntriesTable.date})` })
         .from(journalEntriesTable)
         .where(eq(journalEntriesTable.userId, userId))
         .orderBy(sql`DATE(${journalEntriesTable.date}) DESC`),
+
+      // Total entry count — every new entry increments this (used for memoryCount)
+      db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(journalEntriesTable)
+        .where(eq(journalEntriesTable.userId, userId)),
 
       // Total story count
       db
@@ -106,7 +113,8 @@ export async function syncConstellation(
       expected = prev.toISOString().slice(0, 10);
     }
 
-    const journalCount     = journalDates.length;
+    // memoryCount = total entries ever written (every journal entry counts)
+    const journalCount     = journalCountRows[0]?.count ?? 0;
     const storyCount       = storyRows[0]?.count         ?? 0;
     const stickersReceived = stickersReceivedRows[0]?.count ?? 0;
     const stickersSent     = stickersSentRows[0]?.count  ?? 0;
