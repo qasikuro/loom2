@@ -416,8 +416,8 @@ function BreathingAvatarRing({ mood }: { mood: string }) {
 }
 
 // ── Character aura header ──────────────────────────────────────────────────────
-function CharacterAuraHeader({ mood, paddingTop, children }: {
-  mood: string; paddingTop: number; children: React.ReactNode;
+function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }: {
+  mood: string; paddingTop: number; activeEffect?: string; children: React.ReactNode;
 }) {
   const aura   = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const { width: screenW } = useWindowDimensions();
@@ -1210,7 +1210,7 @@ export default function CharacterScreen() {
         scrollEventThrottle={16}
       >
       {/* ── Profile header ───────────────────────────────────────── */}
-      <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 8}>
+      <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 8} activeEffect={activeEffect}>
 
           {/* Top controls: vis toggle left, settings + bell right */}
           <View style={styles.headerTopRow}>
