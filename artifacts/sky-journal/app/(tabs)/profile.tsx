@@ -59,7 +59,7 @@ function ConstellationProgressCard({ constellation, triggerAnim = 0 }: { constel
     { label: 'Quiet',    count: constellation.quietStreak,   threshold: 7,  color: '#7890C8', icon: '◐', unit: 'days'     },
     { label: 'Creative', count: constellation.creativeCount, threshold: 5,  color: '#C87AA8', icon: '◈', unit: 'stories'  },
     { label: 'Helping',  count: constellation.helpingCount,  threshold: 20, color: '#C8A84B', icon: '✦', unit: 'stickers' },
-    { label: 'Seasonal', count: constellation.seasonalCount, threshold: 3,  color: '#68B8B0', icon: '✿', unit: 'stars'    },
+    { label: 'Seasonal', count: constellation.seasonalCount, threshold: 6,  color: '#68B8B0', icon: '✿', unit: 'outfits' },
   ];
   const totalPct = Math.round(
     rows.reduce((sum, r) => sum + Math.min(1, r.count / r.threshold), 0) / rows.length * 100,

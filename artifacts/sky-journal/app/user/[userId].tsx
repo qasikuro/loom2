@@ -684,6 +684,21 @@ export default function UserProfileScreen() {
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Witnessed</Text>
             </View>
           </View>
+
+          {/* Message button — only visible when viewing someone else's profile */}
+          {!isSelf && (
+            <TouchableOpacity
+              style={[styles.messageBtn, { borderColor: aura.accent + '55', backgroundColor: aura.accent + '10' }]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: '/messages/[userId]', params: { userId: profile.userId, name: profile.name } } as any);
+              }}
+              activeOpacity={0.8}
+            >
+              <Icon name="message-circle" size={15} color={aura.accent} />
+              <Text style={[styles.messageBtnText, { color: aura.accent }]}>Send Message</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
 
         {/* ── BODY ─────────────────────────────────────────────────── */}
@@ -1088,6 +1103,18 @@ const styles = StyleSheet.create({
   statNum:  { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
   statLabel: { fontSize: 10, fontFamily: 'Satoshi-Regular' },
   statDivider: { width: 1, marginVertical: 4 },
+
+  messageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    marginHorizontal: -16,
+    marginTop: 0,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  messageBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
 
   // ── Body
   body: { paddingHorizontal: 16, paddingTop: 14, gap: 14 },
