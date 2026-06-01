@@ -678,7 +678,8 @@ export default function CharacterScreen() {
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
           gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading,
-          constellation, rewardBalance, reloadConstellation, activeCosmetics } = useApp();
+          constellation, rewardBalance, reloadConstellation, activeCosmetics,
+          shopCatalog, purchasedIds, setActiveCosmetic } = useApp();
   const activeFrame  = activeCosmetics['frame']  as string | undefined;
   const activeAccent = activeCosmetics['accent'] as string | undefined;
   const moodAccent = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
@@ -694,13 +695,7 @@ export default function CharacterScreen() {
   const [showTitlePicker, setShowTitlePicker] = useState(false);
   const [savingTitle, setSavingTitle]         = useState(false);
 
-  // ── Purchased cosmetics (#8) ───────────────────────────────────────────────
-  const [purchasedIds, setPurchasedIds] = useState<string[]>([]);
-  useEffect(() => {
-    apiFetch<{ catalog: unknown[]; purchasedIds: string[] }>('/rewards/shop')
-      .then(d => { if (d?.purchasedIds) setPurchasedIds(d.purchasedIds); })
-      .catch(() => null);
-  }, []);
+  // purchasedIds + shopCatalog come from useApp() (already loaded in context)
 
   const STAR_TITLES: Record<number, string> = {
     1: 'Star Wanderer', 2: 'Memory Keeper',      3: 'Sky Child',
@@ -2236,6 +2231,75 @@ export default function CharacterScreen() {
             </TouchableOpacity>
           </View>
           )}
+
+          {/* ── Owned Cosmetics (Style tab, #7) ──────────────── */}
+          {profileTab === 'style' && purchasedIds.length > 0 && (() => {
+            const owned = shopCatalog.filter(item => purchasedIds.includes(item.id));
+            if (owned.length === 0) return null;
+            const CATEGORY_ICON: Record<string, string> = { frame: '⬡', accent: '◈', theme: '◇' };
+            const CATEGORY_COLOR: Record<string, string> = { frame: '#C8A84B', accent: '#9878C8', theme: '#78B8E8' };
+            return (
+              <View style={styles.hSection}>
+                <View style={styles.hSectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Owned Cosmetics</Text>
+                    <View style={[styles.hCountPill, { backgroundColor: 'rgba(200,168,75,0.12)', borderColor: 'rgba(200,168,75,0.25)' }]}>
+                      <Text style={[styles.hCountPillText, { color: '#C8A84B' }]}>{owned.length}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => router.push('/purchase-history' as any)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: colors.mutedForeground }}>History</Text>
+                  </TouchableOpacity>
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollPad}>
+                  {owned.map(item => {
+                    const cat = item.category;
+                    const isActive = activeCosmetics[cat] === item.id;
+                    const iconChar = CATEGORY_ICON[cat] ?? '✦';
+                    const catColor = CATEGORY_COLOR[cat] ?? '#C8B8E8';
+                    return (
+                      <TouchableOpacity
+                        key={item.id}
+                        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveCosmetic(item.id); }}
+                        activeOpacity={0.8}
+                        style={{
+                          width: 90, marginRight: 8,
+                          borderRadius: 14, borderWidth: 1.5,
+                          borderColor: isActive ? catColor : 'rgba(255,255,255,0.08)',
+                          backgroundColor: isActive ? `${catColor}12` : 'rgba(255,255,255,0.04)',
+                          padding: 10, alignItems: 'center', gap: 6,
+                        }}
+                      >
+                        <View style={{
+                          width: 40, height: 40, borderRadius: 20,
+                          backgroundColor: `${catColor}18`,
+                          alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                        </View>
+                        <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: isActive ? catColor : 'rgba(200,184,232,0.70)', textAlign: 'center' }} numberOfLines={2}>{item.name}</Text>
+                        <View style={{
+                          flexDirection: 'row', alignItems: 'center', gap: 3,
+                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                          backgroundColor: `${catColor}18`,
+                        }}>
+                          <Text style={{ fontSize: 9, color: catColor }}>{iconChar}</Text>
+                          <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: catColor, textTransform: 'capitalize' }}>{cat}</Text>
+                        </View>
+                        {isActive && (
+                          <View style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: catColor }} />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            );
+          })()}
 
           {/* ── Wardrobe (Style tab) ─────────────────────────── */}
           {profileTab === 'style' && (
