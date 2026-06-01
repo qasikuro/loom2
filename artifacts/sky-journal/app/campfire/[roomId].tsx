@@ -357,7 +357,7 @@ const POLL_MS = 5000;
 
 export default function CampfireRoom() {
   const insets        = useSafeAreaInsets();
-  const { character } = useApp();
+  const { character, markCampfireRoomRead } = useApp();
   const { roomId }    = useLocalSearchParams<{ roomId: string }>();
 
   const [data,    setData]    = useState<RoomData | null>(null);
@@ -394,9 +394,10 @@ export default function CampfireRoom() {
 
   useEffect(() => {
     fetchData();
+    if (roomId) markCampfireRoomRead(roomId); // mark as read on enter
     pollRef.current = setInterval(() => fetchData(true), POLL_MS);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [fetchData]);
+  }, [fetchData, roomId, markCampfireRoomRead]);
 
   // ── Send message ───────────────────────────────────────────────────────────
 

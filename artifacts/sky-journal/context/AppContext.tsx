@@ -384,6 +384,10 @@ interface AppContextValue {
   markServerNotificationsRead: () => void;
   deleteServerNotification:    (id: string) => void;
 
+  campfireUnread:       number;
+  unreadCampfireRooms:  { id: string; name: string; mood: string }[];
+  markCampfireRoomRead: (roomId: string) => Promise<void>;
+
   shopCatalog:       ShopItem[];
   purchasedIds:      string[];
   markPurchased:     (itemId: string) => void;
@@ -548,6 +552,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [friends, setFriends]                         = useState<FriendSummary[]>([]);
   const [serverNotifications, setServerNotifications] = useState<ServerNotification[]>([]);
   const [myGuides, setMyGuides]                       = useState<GuideProfile[]>([]);
+
+  const [campfireUnread, setCampfireUnread]           = useState(0);
+  const [unreadCampfireRooms, setUnreadCampfireRooms] = useState<{ id: string; name: string; mood: string }[]>([]);
+  const campfireToastShownRef = useRef<Set<string>>(new Set());
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
     discoverFeedRaw.map(p => ({
@@ -914,6 +922,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch { /* silently fail — keep showing cached data */ }
   }
 
+  // ── Campfire unread polling ───────────────────────────────────────────────────
+  // Polls the campfire lobby to detect new messages in rooms the user has visited.
+  // Uses AsyncStorage keys "campfire_seen_<roomId>" (ISO timestamp of last visit).
+  // Fires a single toast per room per app session; badge persists until user taps in.
+
+  const pollCampfireUnread = useCallback(async () => {
+    try {
+      const rooms = await apiFetch<{
+        id: string; name: string; mood: string;
+        lastMessage: { createdAt: string; authorName: string } | null;
+      }[]>('/campfire');
+      if (!rooms || !Array.isArray(rooms)) return;
+
+      const newUnread: { id: string; name: string; mood: string }[] = [];
+      for (const room of rooms) {
+        if (!room.lastMessage) continue;
+        const seenRaw = await AsyncStorage.getItem(`campfire_seen_${room.id}`);
+        if (!seenRaw) continue; // never visited → don't count as unread
+        const lastSeen = new Date(seenRaw).getTime();
+        const lastMsg  = new Date(room.lastMessage.createdAt).getTime();
+        if (lastMsg > lastSeen) {
+          newUnread.push({ id: room.id, name: room.name, mood: room.mood });
+          // Toast once per room per app session
+          if (!campfireToastShownRef.current.has(room.id)) {
+            campfireToastShownRef.current.add(room.id);
+            const toastId = `campfire-${room.id}-${lastMsg}`;
+            setRewards(prev => [
+              { id: toastId, icon: '💬', message: `New whisper in ${room.name}`, subMessage: `${room.lastMessage!.authorName} spoke by the fire` },
+              ...prev.slice(0, 4),
+            ]);
+            setTimeout(() => setRewards(prev => prev.filter(r => r.id !== toastId)), 5000);
+          }
+        }
+      }
+      setUnreadCampfireRooms(newUnread);
+      setCampfireUnread(newUnread.length);
+    } catch { /* silent */ }
+  }, []);
+
+  const markCampfireRoomRead = useCallback(async (roomId: string) => {
+    await AsyncStorage.setItem(`campfire_seen_${roomId}`, new Date().toISOString());
+    campfireToastShownRef.current.delete(roomId);
+    setUnreadCampfireRooms(prev => {
+      const next = prev.filter(r => r.id !== roomId);
+      setCampfireUnread(next.length);
+      return next;
+    });
+  }, []);
+
   // Re-fetch from the API every time the app comes to the foreground so that
   // admin amendments (removed stories, account changes) are reflected without
   // requiring a full sign-out / sign-in cycle.
@@ -922,11 +979,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (appStateRef.current !== 'active' && nextState === 'active') {
         softLoadData();
+        pollCampfireUnread();
       }
       appStateRef.current = nextState;
     });
     return () => sub.remove();
   }, []);
+
+  // Poll campfire for new messages every 90s once API is available
+  useEffect(() => {
+    if (!apiOnline) return;
+    pollCampfireUnread();
+    const id = setInterval(() => pollCampfireUnread(), 90_000);
+    return () => clearInterval(id);
+  }, [apiOnline, pollCampfireUnread]);
 
   // ── Character ──────────────────────────────────────────────────────────────
 
@@ -1403,6 +1469,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       rewardBalance, constellation, reloadRewards, reloadConstellation,
       shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
+      campfireUnread, unreadCampfireRooms, markCampfireRoomRead,
       reloadData,
       refreshFeed,
       clearUserData,

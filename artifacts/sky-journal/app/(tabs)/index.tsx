@@ -818,6 +818,7 @@ export default function HomeScreen() {
     rewards, serverNotifications,
     markServerNotificationsRead, deleteServerNotification, dismissReward,
     reloadData, myGuides, rewardBalance, constellation,
+    campfireUnread, unreadCampfireRooms,
   } = useApp();
   const { userId: clerkUserId } = useAuth();
   const { playSound } = useSound();
@@ -888,7 +889,7 @@ export default function HomeScreen() {
 
   const hour       = new Date().getHours();
   const unread     = serverNotifications.filter(n => !n.isRead).length;
-  const hasNotifs  = rewards.length > 0 || unread > 0;
+  const hasNotifs  = rewards.length > 0 || unread > 0 || campfireUnread > 0;
   const accent     = MOOD_ACCENT[character.mood ?? ''] ?? DEF_ACCENT;
   const grad       = MOOD_GRAD[character.mood ?? ''] ?? DEFAULT_GRAD;
   const mc         = MOOD_COLOR[character.mood ?? ''] ?? DEF_ACCENT;
@@ -1097,6 +1098,17 @@ export default function HomeScreen() {
           <View style={s.heroBar}>
             <Text style={s.heroAppLabel}>Sky Journal</Text>
             <View style={{ flexDirection: 'row', gap: 6 }}>
+              <TouchableOpacity
+                onPress={() => { router.push('/campfire' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Icon name="message-circle" size={16} color={campfireUnread > 0 ? '#78D8A0' : 'rgba(220,210,255,0.75)'} />
+                {campfireUnread > 0 && (
+                  <View style={[s.heroBadge, { backgroundColor: '#78D8A0', width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#0A1A0F', lineHeight: 10 }}>{campfireUnread > 9 ? '9+' : campfireUnread}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1689,13 +1701,30 @@ export default function HomeScreen() {
                 <Icon name="x" size={15} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
-            {rewards.length === 0 && serverNotifications.length === 0 ? (
+            {rewards.length === 0 && serverNotifications.length === 0 && campfireUnread === 0 ? (
               <View style={m.empty}>
                 <Icon name="bell-off" size={28} color={`${colors.mutedForeground}60`} />
                 <Text style={[m.emptyTxt, { color: colors.mutedForeground }]}>All caught up ✦</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
+                {unreadCampfireRooms.map(room => (
+                  <TouchableOpacity
+                    key={room.id}
+                    style={[m.notif, { backgroundColor: 'rgba(120,216,160,0.10)', borderColor: 'rgba(120,216,160,0.28)', borderWidth: 1 }]}
+                    onPress={() => { setShowNotifs(false); setTimeout(() => router.push(`/campfire/${room.id}` as any), 260); }}
+                    activeOpacity={0.78}
+                  >
+                    <View style={[m.notifIcon, { backgroundColor: 'rgba(120,216,160,0.15)' }]}>
+                      <Icon name="message-circle" size={13} color="#78D8A0" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={1}>New whisper in {room.name}</Text>
+                      <Text style={[m.notifSub, { color: colors.mutedForeground }]}>Tap to join the fire</Text>
+                    </View>
+                    <Icon name="chevron-right" size={13} color="rgba(120,216,160,0.55)" />
+                  </TouchableOpacity>
+                ))}
                 {serverNotifications.map(n => (
                   <View key={n.id} style={[m.notif, { backgroundColor: n.isRead ? colors.muted : `${accent}14`, borderColor: n.isRead ? 'transparent' : `${accent}28` }]}>
                     <View style={[m.notifIcon, { backgroundColor: `${accent}18` }]}>
