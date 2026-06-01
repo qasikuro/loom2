@@ -6,15 +6,17 @@ import { z } from "zod";
 
 const router: IRouter = Router();
 
+const VALID_EXPRESSIONS = ["candle", "spark", "lantern", "hush"] as const;
+
 const SendMessageSchema = z.object({
-  content: z.string().min(1).max(2000),
-});
+  content:    z.string().min(1).max(2000).optional(),
+  expression: z.enum(VALID_EXPRESSIONS).optional(),
+}).refine(d => d.content || d.expression, { message: "content or expression required" });
 
 // ── GET /api/messages — list conversations (distinct threads) ─────────────────
 router.get("/messages", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   try {
-    // Get all messages involving me
     const rows = await db
       .select()
       .from(messagesTable)
@@ -28,7 +30,7 @@ router.get("/messages", requireAuth, async (req, res) => {
       .limit(500);
 
     // Build threads: last message per conversation partner
-    const seen    = new Map<string, typeof rows[number]>();
+    const seen       = new Map<string, typeof rows[number]>();
     const partnerIds = new Set<string>();
     for (const row of rows) {
       const partner = row.fromUserId === userId ? row.toUserId : row.fromUserId;
@@ -40,7 +42,7 @@ router.get("/messages", requireAuth, async (req, res) => {
 
     // Fetch partner character info in one query
     const partnerArr = Array.from(partnerIds);
-    const charMap = new Map<string, { name: string; username: string | null; avatarUri: string | null }>();
+    const charMap    = new Map<string, { name: string; username: string | null; avatarUri: string | null }>();
     if (partnerArr.length > 0) {
       const charRows = await db
         .select({ userId: characterTable.userId, name: characterTable.name, username: characterTable.username, avatarUri: characterTable.avatarUri })
@@ -51,14 +53,21 @@ router.get("/messages", requireAuth, async (req, res) => {
       }
     }
 
+    const EXPR_LABELS: Record<string, string> = {
+      candle: 'offered a candle 🕯️', spark: 'sent a spark ✦',
+      lantern: 'lit a lantern 🌙',   hush:  'fell silent 🤫',
+    };
+
     const threads = Array.from(seen.entries()).map(([partner, lastMsg]) => ({
       partnerId:    partner,
-      partnerName:  charMap.get(partner)?.name   ?? "Sky Child",
-      partnerHandle:charMap.get(partner)?.username ?? null,
+      partnerName:  charMap.get(partner)?.name      ?? "Sky Child",
+      partnerHandle:charMap.get(partner)?.username  ?? null,
       partnerAvatar:charMap.get(partner)?.avatarUri ?? null,
-      lastMessage:  lastMsg.content,
-      lastAt:       lastMsg.createdAt,
-      unread:       lastMsg.toUserId === userId && !lastMsg.isRead,
+      lastMessage:  lastMsg.expression
+        ? EXPR_LABELS[lastMsg.expression] ?? lastMsg.expression
+        : (lastMsg.content ?? ''),
+      lastAt:  lastMsg.createdAt,
+      unread:  lastMsg.toUserId === userId && !lastMsg.isRead,
     }));
 
     return res.json(threads);
@@ -79,16 +88,16 @@ router.get("/messages/:userId", requireAuth, async (req, res) => {
       .from(messagesTable)
       .where(
         or(
-          and(eq(messagesTable.fromUserId, myId),    eq(messagesTable.toUserId, otherId)),
-          and(eq(messagesTable.fromUserId, otherId),  eq(messagesTable.toUserId, myId)),
+          and(eq(messagesTable.fromUserId, myId),   eq(messagesTable.toUserId, otherId)),
+          and(eq(messagesTable.fromUserId, otherId), eq(messagesTable.toUserId, myId)),
         ),
       )
       .orderBy(asc(messagesTable.createdAt))
       .limit(200);
 
-    // Mark unread messages as read
-    const unreadIds = rows.filter(r => r.toUserId === myId && !r.isRead).map(r => r.id);
-    if (unreadIds.length > 0) {
+    // Mark incoming unread messages as read
+    const hasUnread = rows.some(r => r.toUserId === myId && !r.isRead);
+    if (hasUnread) {
       await db
         .update(messagesTable)
         .set({ isRead: true })
@@ -99,7 +108,8 @@ router.get("/messages/:userId", requireAuth, async (req, res) => {
       id:         r.id,
       fromUserId: r.fromUserId,
       toUserId:   r.toUserId,
-      content:    r.content,
+      content:    r.content    ?? null,
+      expression: r.expression ?? null,
       isRead:     r.isRead,
       createdAt:  r.createdAt,
       isOwn:      r.fromUserId === myId,
@@ -110,10 +120,10 @@ router.get("/messages/:userId", requireAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/messages/:userId — send a message ───────────────────────────────
+// ── POST /api/messages/:userId — send a message or expression ─────────────────
 router.post("/messages/:userId", requireAuth, async (req, res) => {
-  const fromId  = getUserId(req);
-  const toId    = String(req.params.userId);
+  const fromId = getUserId(req);
+  const toId   = String(req.params.userId);
 
   if (fromId === toId) {
     return res.status(400).json({ error: "Cannot message yourself" });
@@ -121,8 +131,10 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
 
   const parsed = SendMessageSchema.safeParse(req.body);
   if (!parsed.success) {
-    return res.status(400).json({ error: "Invalid input" });
+    return res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid input" });
   }
+
+  const { content, expression } = parsed.data;
 
   try {
     // Check if this is the first message in this thread (before inserting)
@@ -139,7 +151,7 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
 
     const [msg] = await db
       .insert(messagesTable)
-      .values({ fromUserId: fromId, toUserId: toId, content: parsed.data.content })
+      .values({ fromUserId: fromId, toUserId: toId, content: content ?? null, expression: expression ?? null })
       .returning();
 
     // First contact with a guide → increment their dreamersGuided counter
@@ -154,7 +166,8 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
       id:         msg.id,
       fromUserId: msg.fromUserId,
       toUserId:   msg.toUserId,
-      content:    msg.content,
+      content:    msg.content    ?? null,
+      expression: msg.expression ?? null,
       isRead:     msg.isRead,
       createdAt:  msg.createdAt,
       isOwn:      true,

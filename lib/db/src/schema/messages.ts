@@ -4,7 +4,8 @@ export const messagesTable = pgTable("messages", {
   id:         uuid("id").primaryKey().defaultRandom(),
   fromUserId: text("from_user_id").notNull(),
   toUserId:   text("to_user_id").notNull(),
-  content:    text("content").notNull(),
+  content:    text("content"),
+  expression: text("expression"),
   isRead:     boolean("is_read").notNull().default(false),
   createdAt:  timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
