@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
@@ -14,6 +15,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -37,61 +39,97 @@ type ListItem =
   | { type: 'date'; date: string; key: string }
   | { type: 'msg';  msg: Message; key: string };
 
-// ── Expression config ─────────────────────────────────────────────────────────
+// ── Sticker registry ──────────────────────────────────────────────────────────
 
-const EXPRESSIONS: { id: string; emoji: string; label: string; color: string }[] = [
-  { id: 'candle',  emoji: '🕯️', label: 'offered a candle', color: '#C8A84B' },
-  { id: 'spark',   emoji: '✦',  label: 'sent a spark',      color: '#B890FF' },
-  { id: 'lantern', emoji: '🌙', label: 'lit a lantern',      color: '#78B4DC' },
-  { id: 'hush',    emoji: '🤫', label: 'fell silent',        color: '#C8B8E8' },
+export interface StickerDef {
+  id:          string;
+  emoji:       string;
+  label:       string;
+  color:       string;
+  anim:        StickerAnimType;
+  haptic:      'light' | 'medium' | 'heavy';
+  ownLabel:    string;
+  otherLabel:  string;
+}
+
+export const STICKERS: StickerDef[] = [
+  { id: 'bomb',     emoji: '💣', label: 'BOOM!',    color: '#FF6B35', anim: 'explode',   haptic: 'heavy',  ownLabel: 'you threw a bomb',     otherLabel: 'threw a bomb 💥'     },
+  { id: 'stone',    emoji: '🪨', label: 'bonk!',    color: '#9A8462', anim: 'throw',     haptic: 'medium', ownLabel: 'you threw a stone',    otherLabel: 'threw a stone 🪨'    },
+  { id: 'mirror',   emoji: '🪞', label: 'shatter!', color: '#78B4DC', anim: 'shatter',   haptic: 'heavy',  ownLabel: 'you broke the mirror', otherLabel: 'broke the mirror ✦'  },
+  { id: 'kiss',     emoji: '💋', label: 'mwah!',    color: '#FF6B9D', anim: 'hearts',    haptic: 'light',  ownLabel: 'you sent a kiss',      otherLabel: 'sent you a kiss 💕'  },
+  { id: 'stars',    emoji: '⭐', label: 'dazzled!', color: '#FFD700', anim: 'starburst', haptic: 'light',  ownLabel: 'you scattered stars',  otherLabel: 'scattered stars ✦'   },
+  { id: 'fire',     emoji: '🔥', label: 'fire!',    color: '#FF6B35', anim: 'fire',      haptic: 'medium', ownLabel: 'you lit a fire',       otherLabel: 'lit a fire 🔥'       },
+  { id: 'snow',     emoji: '❄️', label: 'brr~',     color: '#78C8DC', anim: 'snow',      haptic: 'light',  ownLabel: 'you cast a blizzard',  otherLabel: 'cast a blizzard ❄️'  },
+  { id: 'confetti', emoji: '🎉', label: 'yay!',     color: '#C8A84B', anim: 'confetti',  haptic: 'medium', ownLabel: 'you celebrated',       otherLabel: 'celebrated 🎉'       },
+  { id: 'candle',   emoji: '🕯️', label: 'candle',   color: '#C8A84B', anim: 'glow',      haptic: 'light',  ownLabel: 'you offered a candle', otherLabel: 'offered a candle 🕯️' },
+  { id: 'spark',    emoji: '✦',  label: 'spark',    color: '#B890FF', anim: 'sparkle',   haptic: 'light',  ownLabel: 'you sent a spark',     otherLabel: 'sent a spark ✦'      },
+  { id: 'lantern',  emoji: '🌙', label: 'lantern',  color: '#78B4DC', anim: 'float',     haptic: 'light',  ownLabel: 'you lit a lantern',    otherLabel: 'lit a lantern 🌙'    },
+  { id: 'hush',     emoji: '🤫', label: 'hush~',    color: '#C8B8E8', anim: 'fade',      haptic: 'light',  ownLabel: 'you fell silent',      otherLabel: 'fell silent 🤫'      },
 ];
 
-function getExpr(id: string) {
-  return EXPRESSIONS.find(e => e.id === id) ?? { emoji: '✦', label: id, color: '#C8B8E8' };
+function getSticker(id: string): StickerDef {
+  return STICKERS.find(s => s.id === id) ?? STICKERS[9];
+}
+
+// ── Haptic helpers ────────────────────────────────────────────────────────────
+async function fireHaptic(def: StickerDef) {
+  switch (def.haptic) {
+    case 'heavy':
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      await new Promise(r => setTimeout(r, 80));
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      break;
+    case 'medium':
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await new Promise(r => setTimeout(r, 60));
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      break;
+    default:
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
 function fmtTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-
 function fmtDate(iso: string) {
-  const d     = new Date(iso);
-  const now   = new Date();
-  const delta = now.getTime() - d.getTime();
-  if (delta < 86400000 && d.getDay() === now.getDay()) return 'Today';
-  if (delta < 172800000) return 'Yesterday';
+  const d   = new Date(iso);
+  const now = new Date();
+  const dt  = now.getTime() - d.getTime();
+  if (dt < 86400000 && d.getDay() === now.getDay()) return 'Today';
+  if (dt < 172800000) return 'Yesterday';
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-// ── Expression bubble with pop-in animation ───────────────────────────────────
-
-function ExpressionBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
+// ── Sticker bubble (in chat history) ─────────────────────────────────────────
+function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
   msg: Message; partnerInitial: string; avatarUri?: string; primaryColor: string;
 }) {
-  const expr   = getExpr(msg.expression!);
-  const scaleA = useRef(new Animated.Value(0.5)).current;
+  const def    = getSticker(msg.expression!);
+  const scaleA = useRef(new Animated.Value(0.4)).current;
   const opA    = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.spring(scaleA, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true }),
-      Animated.timing(opA, { toValue: 1, duration: 200, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
+      Animated.spring(scaleA, { toValue: 1, tension: 130, friction: 8, useNativeDriver: true }),
+      Animated.timing(opA,    { toValue: 1, duration: 180, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
     ]).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const label = msg.isOwn ? def.ownLabel : def.otherLabel;
 
   if (msg.isOwn) {
     return (
       <View style={styles.exprRowOwn}>
         <Animated.View style={[
-          styles.exprPill,
-          { borderColor: `${expr.color}45`, backgroundColor: `${expr.color}14`, opacity: opA, transform: [{ scale: scaleA }] },
+          styles.stickerPill,
+          { borderColor: `${def.color}45`, backgroundColor: `${def.color}14`, opacity: opA, transform: [{ scale: scaleA }] },
         ]}>
-          <Text style={styles.exprEmoji}>{expr.emoji}</Text>
-          <Text style={[styles.exprLabel, { color: `${expr.color}CC` }]}>you {expr.label}</Text>
+          <Text style={styles.stickerPillEmoji}>{def.emoji}</Text>
+          <Text style={[styles.stickerPillLabel, { color: `${def.color}CC` }]}>{label}</Text>
         </Animated.View>
       </View>
     );
@@ -106,16 +144,17 @@ function ExpressionBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
         }
       </View>
       <Animated.View style={[
-        styles.exprPill,
-        { borderColor: `${expr.color}45`, backgroundColor: `${expr.color}14`, opacity: opA, transform: [{ scale: scaleA }] },
+        styles.stickerPill,
+        { borderColor: `${def.color}45`, backgroundColor: `${def.color}14`, opacity: opA, transform: [{ scale: scaleA }] },
       ]}>
-        <Text style={styles.exprEmoji}>{expr.emoji}</Text>
-        <Text style={[styles.exprLabel, { color: `${expr.color}CC` }]}>{expr.label}</Text>
+        <Text style={styles.stickerPillEmoji}>{def.emoji}</Text>
+        <Text style={[styles.stickerPillLabel, { color: `${def.color}CC` }]}>{label}</Text>
       </Animated.View>
     </View>
   );
 }
 
+// ── Main screen ───────────────────────────────────────────────────────────────
 export default function MessagesScreen() {
   const { userId, name, handle, avatarUri, isGuide } = useLocalSearchParams<{
     userId:     string;
@@ -128,15 +167,18 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const { markDmThreadRead } = useApp();
 
-  const [messages,       setMessages]       = useState<Message[]>([]);
-  const [loading,        setLoading]        = useState(true);
-  const [sending,        setSending]        = useState(false);
-  const [input,          setInput]          = useState('');
-  const [error,          setError]          = useState<string | null>(null);
-  const [headerH,        setHeaderH]        = useState(0);
-  const [showExprPicker, setShowExprPicker] = useState(false);
+  const [messages,   setMessages]   = useState<Message[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [sending,    setSending]    = useState(false);
+  const [input,      setInput]      = useState('');
+  const [error,      setError]      = useState<string | null>(null);
+  const [headerH,    setHeaderH]    = useState(0);
+  const [showPicker, setShowPicker] = useState(false);
 
-  const flatRef = useRef<FlatList<ListItem>>(null);
+  const [playingAnim, setPlayingAnim] = useState<{ type: StickerAnimType; emoji: string } | null>(null);
+
+  const lastMsgIdRef = useRef<string | null>(null);
+  const flatRef      = useRef<FlatList<ListItem>>(null);
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'ios'  ? insets.bottom : 8;
@@ -145,18 +187,39 @@ export default function MessagesScreen() {
     ? 'Constellation Guide'
     : handle ? `@${handle}` : null;
 
+  const playSticker = useCallback((def: StickerDef) => {
+    setPlayingAnim({ type: def.anim, emoji: def.emoji });
+    fireHaptic(def);
+  }, []);
+
   const load = useCallback(async () => {
     if (!userId) return;
     try {
       const data = await apiFetch<Message[]>(`/messages/${userId}`);
-      setMessages(data ?? []);
+      const msgs = data ?? [];
+
+      // Detect newly received sticker (from polling) and play animation
+      if (lastMsgIdRef.current && msgs.length > 0) {
+        const lastKnownIdx = msgs.findIndex(m => m.id === lastMsgIdRef.current);
+        if (lastKnownIdx !== -1) {
+          const newMsgs = msgs.slice(lastKnownIdx + 1);
+          const incomingSticker = newMsgs.find(m => !m.isOwn && m.expression);
+          if (incomingSticker?.expression) {
+            playSticker(getSticker(incomingSticker.expression));
+          }
+        }
+      }
+
+      if (msgs.length > 0) lastMsgIdRef.current = msgs[msgs.length - 1].id;
+
+      setMessages(msgs);
       markDmThreadRead(userId);
     } catch {
       setError('Could not load messages');
     } finally {
       setLoading(false);
     }
-  }, [userId, markDmThreadRead]);
+  }, [userId, markDmThreadRead, playSticker]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -185,6 +248,7 @@ export default function MessagesScreen() {
         method: 'POST', body: JSON.stringify({ content }),
       });
       setMessages(prev => prev.map(m => m.id === optimistic.id ? (sent ?? optimistic) : m));
+      if (sent?.id) lastMsgIdRef.current = sent.id;
     } catch {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
       setInput(content);
@@ -193,27 +257,31 @@ export default function MessagesScreen() {
     }
   }, [input, sending, userId]);
 
-  const handleExpression = useCallback(async (exprId: string) => {
+  const handleSticker = useCallback(async (def: StickerDef) => {
     if (sending || !userId) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setShowExprPicker(false);
+    setShowPicker(false);
     setSending(true);
+
+    // Play animation + haptic immediately
+    playSticker(def);
+
     const optimistic: Message = {
       id: `temp-${Date.now()}`, fromUserId: 'me', toUserId: userId,
-      content: null, expression: exprId, isRead: false, createdAt: new Date().toISOString(), isOwn: true,
+      content: null, expression: def.id, isRead: false, createdAt: new Date().toISOString(), isOwn: true,
     };
     setMessages(prev => [...prev, optimistic]);
     try {
       const sent = await apiFetch<Message>(`/messages/${userId}`, {
-        method: 'POST', body: JSON.stringify({ expression: exprId }),
+        method: 'POST', body: JSON.stringify({ expression: def.id }),
       });
       setMessages(prev => prev.map(m => m.id === optimistic.id ? (sent ?? optimistic) : m));
+      if (sent?.id) lastMsgIdRef.current = sent.id;
     } catch {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
     } finally {
       setSending(false);
     }
-  }, [sending, userId]);
+  }, [sending, userId, playSticker]);
 
   // Build flat list with date separators
   const listData: ListItem[] = [];
@@ -286,7 +354,7 @@ export default function MessagesScreen() {
                 <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
                   {isGuide === 'true'
                     ? "Send a message to your guide. They're here to help you navigate the sky."
-                    : 'Send a whisper or light a candle to begin.'}
+                    : 'Send a whisper — or tap ✦ to throw something fun.'}
                 </Text>
               </View>
             }
@@ -299,10 +367,9 @@ export default function MessagesScreen() {
                 );
               }
               const msg = item.msg;
-
               if (msg.expression) {
                 return (
-                  <ExpressionBubble
+                  <StickerBubble
                     msg={msg}
                     partnerInitial={partnerInitial}
                     avatarUri={avatarUri}
@@ -310,7 +377,6 @@ export default function MessagesScreen() {
                   />
                 );
               }
-
               return (
                 <View style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
                   {!msg.isOwn && (
@@ -339,22 +405,25 @@ export default function MessagesScreen() {
             }}
           />
 
-          {/* ── Expression picker strip ────────────────────── */}
-          {showExprPicker && (
-            <View style={[styles.exprStrip, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              {EXPRESSIONS.map(e => (
-                <TouchableOpacity
-                  key={e.id}
-                  style={[styles.exprBtn, { borderColor: `${e.color}35`, backgroundColor: `${e.color}12` }]}
-                  onPress={() => handleExpression(e.id)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={styles.exprBtnEmoji}>{e.emoji}</Text>
-                  <Text style={[styles.exprBtnLabel, { color: `${e.color}CC` }]}>
-                    {e.label.split(' ').slice(0, 2).join('\n')}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          {/* ── Sticker picker grid ────────────────────────── */}
+          {showPicker && (
+            <View style={[styles.pickerSheet, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.pickerTitle, { color: colors.mutedForeground }]}>✦  stickers</Text>
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+                <View style={styles.pickerGrid}>
+                  {STICKERS.map(def => (
+                    <TouchableOpacity
+                      key={def.id}
+                      style={[styles.pickerCell, { borderColor: `${def.color}30`, backgroundColor: `${def.color}10` }]}
+                      onPress={() => handleSticker(def)}
+                      activeOpacity={0.72}
+                    >
+                      <Text style={styles.pickerEmoji}>{def.emoji}</Text>
+                      <Text style={[styles.pickerLabel, { color: `${def.color}CC` }]}>{def.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
             </View>
           )}
 
@@ -365,21 +434,21 @@ export default function MessagesScreen() {
           ]}>
             <TouchableOpacity
               style={[
-                styles.exprToggleBtn,
-                { borderColor: showExprPicker ? `${colors.primary}55` : 'rgba(200,184,232,0.18)' },
-                showExprPicker && { backgroundColor: `${colors.primary}18` },
+                styles.stickerToggleBtn,
+                { borderColor: showPicker ? `${colors.primary}55` : 'rgba(200,184,232,0.18)' },
+                showPicker && { backgroundColor: `${colors.primary}18` },
               ]}
-              onPress={() => { Haptics.selectionAsync(); setShowExprPicker(v => !v); }}
+              onPress={() => { Haptics.selectionAsync(); setShowPicker(v => !v); }}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               activeOpacity={0.75}
             >
-              <Text style={[styles.exprToggleIcon, { color: showExprPicker ? colors.primary : colors.mutedForeground }]}>✦</Text>
+              <Text style={[styles.stickerToggleIcon, { color: showPicker ? colors.primary : colors.mutedForeground }]}>✦</Text>
             </TouchableOpacity>
 
             <TextInput
               style={[styles.input, { color: colors.foreground, backgroundColor: colors.muted }]}
               value={input}
-              onChangeText={t => { setInput(t); if (showExprPicker) setShowExprPicker(false); }}
+              onChangeText={t => { setInput(t); if (showPicker) setShowPicker(false); }}
               placeholder="Send a whisper…"
               placeholderTextColor={colors.mutedForeground}
               multiline
@@ -401,6 +470,15 @@ export default function MessagesScreen() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      )}
+
+      {/* ── Full-screen sticker animation overlay ─────────── */}
+      {playingAnim && (
+        <ChatStickerAnimation
+          type={playingAnim.type}
+          mainEmoji={playingAnim.emoji}
+          onComplete={() => setPlayingAnim(null)}
+        />
       )}
     </View>
   );
@@ -441,34 +519,41 @@ const styles = StyleSheet.create({
 
   exprRowOwn:   { flexDirection: 'row', justifyContent: 'flex-end',  marginBottom: 10, marginRight: 6 },
   exprRowOther: { flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 10, marginLeft: 6, alignItems: 'center', gap: 8 },
-  exprPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1,
-  },
-  exprEmoji: { fontSize: 18 },
-  exprLabel: { fontSize: 12, fontFamily: 'Satoshi-Medium', fontStyle: 'italic' },
 
-  exprStrip: {
-    flexDirection: 'row', alignItems: 'stretch', justifyContent: 'space-around',
-    paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1, gap: 6,
+  stickerPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 1, maxWidth: '82%',
   },
-  exprBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4,
-    paddingVertical: 10, borderRadius: 12, borderWidth: 1,
+  stickerPillEmoji: { fontSize: 22 },
+  stickerPillLabel: { fontSize: 12, fontFamily: 'Satoshi-Medium', fontStyle: 'italic', flexShrink: 1 },
+
+  pickerSheet: {
+    borderTopWidth: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, maxHeight: 280,
   },
-  exprBtnEmoji: { fontSize: 22 },
-  exprBtnLabel: { fontSize: 9, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3, textAlign: 'center' },
+  pickerTitle: {
+    fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 1.2,
+    textAlign: 'center', marginBottom: 10,
+  },
+  pickerGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', paddingBottom: 4,
+  },
+  pickerCell: {
+    width: 74, alignItems: 'center', justifyContent: 'center', gap: 5,
+    paddingVertical: 10, borderRadius: 14, borderWidth: 1,
+  },
+  pickerEmoji: { fontSize: 28, lineHeight: 34 },
+  pickerLabel: { fontSize: 9, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3, textAlign: 'center' },
 
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 8,
     paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 1,
   },
-  exprToggleBtn: {
+  stickerToggleBtn: {
     width: 36, height: 36, borderRadius: 18,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, marginBottom: 3,
   },
-  exprToggleIcon: { fontSize: 17, lineHeight: 20 },
+  stickerToggleIcon: { fontSize: 17, lineHeight: 20 },
   input: {
     flex: 1, borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 10,
