@@ -705,7 +705,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const [
         charRaw, entriesRaw, storiesRaw, outfitsRaw,
         galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw, guidesRaw,
-        rewardBalanceRaw, constellationRaw, shopRaw,
+        rewardBalanceRaw, constellationRaw, shopRaw, savedIdsRaw,
       ] = await Promise.all([
         apiFetch<any>('/character').catch(() => null),
         apiFetch<any[]>('/journal-entries').catch(() => null),
@@ -721,6 +721,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<RewardBalance>('/rewards').catch(() => null),
         apiFetch<ConstellationState>('/constellation').catch(() => null),
         apiFetch<{ catalog?: ShopItem[]; purchasedIds: string[]; activeCosmetics: Record<string, string> }>('/rewards/shop').catch(() => null),
+        apiFetch<string[]>('/stories/saved/ids').catch(() => null),
       ]);
 
       // Process core data
@@ -797,10 +798,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('active_outfit_v1', validId).catch(() => null);
       }
 
-      // Restore saved-story IDs that were bookmarked in previous sessions.
-      AsyncStorage.getItem('saved_stories_v1').then(raw => {
-        if (raw) { try { setSavedStoryIds(new Set(JSON.parse(raw))); } catch { /* ignore */ } }
-      }).catch(() => null);
+      // Sync saved-story IDs from server (authoritative); fall back to AsyncStorage cache.
+      if (Array.isArray(savedIdsRaw)) {
+        const ids = new Set<string>(savedIdsRaw);
+        setSavedStoryIds(ids);
+        AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...ids])).catch(() => null);
+      } else {
+        AsyncStorage.getItem('saved_stories_v1').then(raw => {
+          if (raw) { try { setSavedStoryIds(new Set(JSON.parse(raw))); } catch { /* ignore */ } }
+        }).catch(() => null);
+      }
 
       // Persist all fresh data to cache in parallel
       const cacheWrites: Promise<void>[] = [

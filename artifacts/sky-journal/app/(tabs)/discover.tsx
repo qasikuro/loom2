@@ -272,13 +272,22 @@ export default function DiscoverScreen() {
             <Text style={styles.headerTitle}>{t('discover.title')}</Text>
             <Text style={styles.headerSub}>{t('discover.subTitle')}</Text>
           </View>
-          <TouchableOpacity
-            style={styles.usersBtn}
-            onPress={() => router.push('/messages' as any)}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Icon name="message-circle" size={18} color="rgba(200,184,232,0.85)" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.usersBtn}
+              onPress={() => { router.push('/saved-stories' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="bookmark" size={18} color="rgba(200,184,232,0.85)" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.usersBtn}
+              onPress={() => router.push('/messages' as any)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Icon name="message-circle" size={18} color="rgba(200,184,232,0.85)" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Tab pills row — horizontal scroll so tabs never clip on narrow screens */}

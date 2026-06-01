@@ -1,4 +1,4 @@
-import { boolean, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export type StoryPanel = { id: string; text: string; imageUri?: string };
 
@@ -31,3 +31,12 @@ export const storiesTable = pgTable("stories", {
 
 export type Story      = typeof storiesTable.$inferSelect;
 export type StoryInput = typeof storiesTable.$inferInsert;
+
+export const storySavesTable = pgTable("story_saves", {
+  userId:  text("user_id").notNull(),
+  storyId: uuid("story_id").notNull(),
+  savedAt: timestamp("saved_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.storyId] }),
+  index("story_saves_user_id_idx").on(table.userId),
+]);

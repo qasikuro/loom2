@@ -1,4 +1,4 @@
-import { db, storiesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable } from "@workspace/db";
+import { db, storiesTable, storySavesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable } from "@workspace/db";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
@@ -316,6 +316,87 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/stories/saved/ids — return just the list of saved storyIds for the current user
+router.get("/stories/saved/ids", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const rows = await db
+      .select({ storyId: storySavesTable.storyId })
+      .from(storySavesTable)
+      .where(eq(storySavesTable.userId, userId));
+    return res.json(rows.map(r => r.storyId));
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch saved story ids");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// GET /api/stories/saved — full saved stories (with author info, in discover format)
+router.get("/stories/saved", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const rows = await db
+      .select({
+        story:   storiesTable,
+        author:  { name: characterTable.name, username: characterTable.username, avatarUri: characterTable.name },
+      })
+      .from(storySavesTable)
+      .innerJoin(storiesTable, eq(storiesTable.id, storySavesTable.storyId))
+      .leftJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+      .where(eq(storySavesTable.userId, userId))
+      .orderBy(desc(storySavesTable.savedAt));
+
+    if (rows.length === 0) return res.json([]);
+
+    const storyIds = rows.map(r => r.story.id);
+    const stickerCounts = await fetchStickerCounts(storyIds);
+
+    const result = rows.map(r => {
+      const s = r.story;
+      const sc = stickerCounts[s.id] ?? 0;
+      const panels = sanitizePanels(s.panels);
+      const firstImage = (panels as any[]).find((p: any) => p.imageUri)?.imageUri ?? null;
+      const createdAt = s.createdAt ?? new Date();
+      const daysOld = (Date.now() - new Date(createdAt).getTime()) / 86_400_000;
+      let timeAgo: string;
+      if (daysOld < 1)       timeAgo = 'today';
+      else if (daysOld < 2)  timeAgo = 'yesterday';
+      else if (daysOld < 7)  timeAgo = `${Math.floor(daysOld)}d ago`;
+      else if (daysOld < 30) timeAgo = `${Math.floor(daysOld / 7)}w ago`;
+      else                   timeAgo = `${Math.floor(daysOld / 30)}mo ago`;
+
+      return {
+        id:             s.id,
+        authorUserId:   s.userId,
+        authorName:     r.author?.name ?? 'Sky Kid',
+        authorHandle:   r.author?.username ?? '',
+        chapterTitle:   s.chapterTitle,
+        description:    s.description ?? '',
+        storySnippet:   (panels[0] as any)?.text ?? '',
+        imageUri:       firstImage,
+        mood:           s.mood,
+        witnessedCount: s.witnessedCount,
+        savedCount:     s.savedCount,
+        stickerCount:   sc,
+        timeAgo,
+        date:           s.date.toISOString(),
+        chapterNumber:  1,
+        vibe:           s.mood,
+        saved:          true,
+        isFollowing:    false,
+        panels:         panels,
+        pageLayoutKey:  s.pageLayoutKey ?? undefined,
+        pages:          s.pages ?? undefined,
+      };
+    });
+
+    return res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch saved stories");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/stories/:id/save", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
   const actorId = getUserId(req);
@@ -328,9 +409,13 @@ router.post("/stories/:id/save", requireAuth, async (req, res) => {
 
     if (!updated) return res.status(404).json({ error: "Not found" });
 
+    // Persist who saved this story (idempotent)
+    await db.insert(storySavesTable)
+      .values({ userId: actorId, storyId })
+      .onConflictDoNothing();
+
     if (updated.userId !== actorId) {
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "save", req).catch(() => null);
-      // Reward story owner for receiving a save
       grantReward(db as any, updated.userId, "story_saved", `${storyId}:${actorId}`).catch(() => null);
       syncConstellation(db as any, updated.userId).catch(() => null);
     }
@@ -344,15 +429,16 @@ router.post("/stories/:id/save", requireAuth, async (req, res) => {
 
 router.delete("/stories/:id/save", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
+  const actorId = getUserId(req);
   try {
-    const [updated] = await db
-      .update(storiesTable)
-      .set({ savedCount: sql`GREATEST(${storiesTable.savedCount} - 1, 0)` })
-      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)))
-      .returning();
-
-    if (!updated) return res.status(404).json({ error: "Not found" });
-    return res.json({ savedCount: updated.savedCount });
+    await Promise.all([
+      db.update(storiesTable)
+        .set({ savedCount: sql`GREATEST(${storiesTable.savedCount} - 1, 0)` })
+        .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true))),
+      db.delete(storySavesTable)
+        .where(and(eq(storySavesTable.userId, actorId), eq(storySavesTable.storyId, storyId))),
+    ]);
+    return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to unsave story");
     return res.status(500).json({ error: "Internal server error" });
