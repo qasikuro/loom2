@@ -20,7 +20,7 @@ import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
-const SHOP_CATALOG_CACHE_KEY = 'shop_catalog_v1';
+const SHOP_CATALOG_CACHE_KEY = 'shop_catalog_v2';
 
 // ── Seasonal constants ────────────────────────────────────────────────────────
 

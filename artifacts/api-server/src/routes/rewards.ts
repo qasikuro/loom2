@@ -164,11 +164,11 @@ export const SHOP_CATALOG: ShopItem[] = [
   // ── Profile Effects (animated particles on profile header) ────────────────
   {
     id:          "effect_butterfly",
-    name:        "Ethereal Butterflies",
-    description: "Luminous butterflies drift across your profile, wings catching the light of distant stars.",
+    name:        "Ethereal Butterflies ✦ Free",
+    description: "Luminous butterflies drift across your profile, wings catching the light of distant stars. Try it free!",
     icon:        "🦋",
     category:    "effect",
-    cost:        { stars: 60, aura: 15 },
+    cost:        { stars: 0 },
   },
   {
     id:          "effect_hearts",
