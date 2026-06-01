@@ -819,6 +819,7 @@ export default function HomeScreen() {
     markServerNotificationsRead, deleteServerNotification, dismissReward,
     reloadData, myGuides, rewardBalance, constellation,
     campfireUnread, unreadCampfireRooms,
+    dmUnread, unreadDmThreads, markDmThreadRead,
   } = useApp();
   const { userId: clerkUserId } = useAuth();
   const { playSound } = useSound();
@@ -889,7 +890,7 @@ export default function HomeScreen() {
 
   const hour       = new Date().getHours();
   const unread     = serverNotifications.filter(n => !n.isRead).length;
-  const hasNotifs  = rewards.length > 0 || unread > 0 || campfireUnread > 0;
+  const hasNotifs  = rewards.length > 0 || unread > 0 || campfireUnread > 0 || dmUnread > 0;
   const accent     = MOOD_ACCENT[character.mood ?? ''] ?? DEF_ACCENT;
   const grad       = MOOD_GRAD[character.mood ?? ''] ?? DEFAULT_GRAD;
   const mc         = MOOD_COLOR[character.mood ?? ''] ?? DEF_ACCENT;
@@ -1701,13 +1702,39 @@ export default function HomeScreen() {
                 <Icon name="x" size={15} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
-            {rewards.length === 0 && serverNotifications.length === 0 && campfireUnread === 0 ? (
+            {rewards.length === 0 && serverNotifications.length === 0 && campfireUnread === 0 && dmUnread === 0 ? (
               <View style={m.empty}>
                 <Icon name="bell-off" size={28} color={`${colors.mutedForeground}60`} />
                 <Text style={[m.emptyTxt, { color: colors.mutedForeground }]}>All caught up ✦</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
+                {unreadDmThreads.map(thread => (
+                  <TouchableOpacity
+                    key={thread.partnerId}
+                    style={[m.notif, { backgroundColor: 'rgba(107,91,149,0.12)', borderColor: 'rgba(107,91,149,0.30)', borderWidth: 1 }]}
+                    onPress={() => {
+                      markDmThreadRead(thread.partnerId);
+                      setShowNotifs(false);
+                      setTimeout(() => router.push(`/messages/${thread.partnerId}?name=${encodeURIComponent(thread.partnerName)}${thread.partnerHandle ? `&handle=${encodeURIComponent(thread.partnerHandle)}` : ''}` as any), 260);
+                    }}
+                    activeOpacity={0.78}
+                  >
+                    <View style={[m.notifIcon, { backgroundColor: 'rgba(107,91,149,0.18)' }]}>
+                      <Icon name="message-circle" size={13} color="#9B78E8" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={1}>
+                        Message from {thread.partnerName}
+                      </Text>
+                      <Text style={[m.notifSub, { color: colors.mutedForeground }]}>
+                        {thread.partnerHandle ? `@${thread.partnerHandle}` : 'Tap to read'}
+                      </Text>
+                    </View>
+                    <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#9B78E8' }} />
+                    <Icon name="chevron-right" size={13} color="rgba(107,91,149,0.55)" />
+                  </TouchableOpacity>
+                ))}
                 {unreadCampfireRooms.map(room => (
                   <TouchableOpacity
                     key={room.id}

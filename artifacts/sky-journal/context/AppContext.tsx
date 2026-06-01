@@ -388,6 +388,10 @@ interface AppContextValue {
   unreadCampfireRooms:  { id: string; name: string; mood: string }[];
   markCampfireRoomRead: (roomId: string) => Promise<void>;
 
+  dmUnread:         number;
+  unreadDmThreads:  { partnerId: string; partnerName: string; partnerHandle: string | null }[];
+  markDmThreadRead: (partnerId: string) => void;
+
   shopCatalog:       ShopItem[];
   purchasedIds:      string[];
   markPurchased:     (itemId: string) => void;
@@ -555,6 +559,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [campfireUnread, setCampfireUnread]           = useState(0);
   const [unreadCampfireRooms, setUnreadCampfireRooms] = useState<{ id: string; name: string; mood: string }[]>([]);
+  const [dmUnread,        setDmUnread]        = useState(0);
+  const [unreadDmThreads, setUnreadDmThreads] = useState<{ partnerId: string; partnerName: string; partnerHandle: string | null }[]>([]);
   const campfireToastShownRef = useRef<Set<string>>(new Set());
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
@@ -971,6 +977,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // ── DM unread polling ─────────────────────────────────────────────────────
+  // Polls /api/messages threads to find conversations with unread messages.
+  const pollDmUnread = useCallback(async () => {
+    try {
+      const threads = await apiFetch<{
+        partnerId: string; partnerName: string; partnerHandle: string | null;
+        lastMessage: string; lastAt: string; unread: boolean;
+      }[]>('/messages');
+      if (!threads || !Array.isArray(threads)) return;
+      const unreadThreads = threads.filter(t => t.unread).map(t => ({
+        partnerId:    t.partnerId,
+        partnerName:  t.partnerName,
+        partnerHandle:t.partnerHandle,
+      }));
+      setUnreadDmThreads(unreadThreads);
+      setDmUnread(unreadThreads.length);
+    } catch { /* silent */ }
+  }, []);
+
+  const markDmThreadRead = useCallback((partnerId: string) => {
+    setUnreadDmThreads(prev => {
+      const next = prev.filter(t => t.partnerId !== partnerId);
+      setDmUnread(next.length);
+      return next;
+    });
+  }, []);
+
   // Re-fetch from the API every time the app comes to the foreground so that
   // admin amendments (removed stories, account changes) are reflected without
   // requiring a full sign-out / sign-in cycle.
@@ -993,6 +1026,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const id = setInterval(() => pollCampfireUnread(), 90_000);
     return () => clearInterval(id);
   }, [apiOnline, pollCampfireUnread]);
+
+  // Poll DM threads for unread messages every 60s once API is available
+  useEffect(() => {
+    if (!apiOnline) return;
+    pollDmUnread();
+    const id = setInterval(() => pollDmUnread(), 60_000);
+    return () => clearInterval(id);
+  }, [apiOnline, pollDmUnread]);
 
   // ── Character ──────────────────────────────────────────────────────────────
 
@@ -1470,6 +1511,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
       campfireUnread, unreadCampfireRooms, markCampfireRoomRead,
+      dmUnread, unreadDmThreads, markDmThreadRead,
       reloadData,
       refreshFeed,
       clearUserData,

@@ -1,6 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
-import { apiFetch } from '@/context/AppContext';
+import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -126,6 +126,7 @@ export default function MessagesScreen() {
   }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { markDmThreadRead } = useApp();
 
   const [messages,       setMessages]       = useState<Message[]>([]);
   const [loading,        setLoading]        = useState(true);
@@ -149,12 +150,13 @@ export default function MessagesScreen() {
     try {
       const data = await apiFetch<Message[]>(`/messages/${userId}`);
       setMessages(data ?? []);
+      markDmThreadRead(userId);
     } catch {
       setError('Could not load messages');
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, markDmThreadRead]);
 
   useEffect(() => { load(); }, [load]);
 
