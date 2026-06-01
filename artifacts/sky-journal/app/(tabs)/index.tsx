@@ -1067,9 +1067,9 @@ export default function HomeScreen() {
       >
 
         {/* ══════════════════════════════════════════════════
-            HERO — centered immersive sanctuary
+            HERO — compact identity card
         ══════════════════════════════════════════════════ */}
-        <View style={[s.hero, { paddingTop: topPad + 8 }]}>
+        <View style={[s.hero, { paddingTop: topPad + 6 }]}>
           {/* ── Base mood nebula ── */}
           <LinearGradient
             colors={[`${accent}30`, grad[0], grad[1], '#04030C'] as unknown as [string, string, ...string[]]}
@@ -1085,12 +1085,6 @@ export default function HomeScreen() {
           />
           {/* ── Micro star field inside hero ── */}
           <StarField density="low" />
-          {/* ── Top vignette — depth ── */}
-          <LinearGradient
-            colors={['rgba(0,0,0,0.30)', 'transparent']}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 100 }}
-            pointerEvents="none"
-          />
           {/* ── Accent pinstripe — top edge ── */}
           <LinearGradient
             colors={[accent, '#A880F8', 'transparent']}
@@ -1099,39 +1093,39 @@ export default function HomeScreen() {
             pointerEvents="none"
           />
 
-          {/* ── Top row: bell + settings ── */}
-          <View style={s.heroActions}>
-            <TouchableOpacity
-              onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
-              style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Icon name="bell" size={17} color="rgba(220,210,255,0.78)" />
-              {hasNotifs && <View style={[s.heroBadge, { backgroundColor: accent }]} />}
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Icon name="settings" size={17} color="rgba(220,210,255,0.78)" />
-            </TouchableOpacity>
+          {/* ── Top bar: app label left · bell + settings right ── */}
+          <View style={s.heroBar}>
+            <Text style={s.heroAppLabel}>Sky Journal</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <TouchableOpacity
+                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Icon name="bell" size={16} color="rgba(220,210,255,0.75)" />
+                {hasNotifs && <View style={[s.heroBadge, { backgroundColor: accent }]} />}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Icon name="settings" size={16} color="rgba(220,210,255,0.75)" />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* ── Centered identity block ── */}
-          <View style={s.heroCenter}>
-            {/* Avatar — orbital ring system */}
+          {/* ── Identity row: avatar left · info right ── */}
+          <View style={s.heroIdentityRow}>
+            {/* Avatar — smaller, with breathing ring */}
             <TouchableOpacity
-              style={s.avatarWrap}
+              style={s.heroAvatarWrap}
               onPress={() => router.push('/(tabs)/profile')}
               onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfits(true); }}
+              activeOpacity={0.88}
             >
-              {/* Outermost diffuse glow ring */}
-              <View pointerEvents="none" style={[s.avatarOrbit3, { borderColor: `${accent}10` }]} />
-              {/* Breathing orbital ring */}
-              <BreathRing accent={accent} r={59} />
-              {/* Main gradient ring */}
+              <BreathRing accent={accent} r={38} />
               <LinearGradient
                 colors={[accent, '#A880F8', '#60C8F8', accent]}
-                style={s.avatarRing}
+                style={s.heroAvatarRing}
                 start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}
               >
-                <View style={s.avatarInner}>
+                <View style={s.heroAvatarInner}>
                   <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" />
                 </View>
               </LinearGradient>
@@ -1142,75 +1136,94 @@ export default function HomeScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Name — large, the visual anchor */}
-            <Text style={s.heroName}>{character.name || 'Sky Child'}</Text>
+            {/* Info column */}
+            <View style={s.heroInfoCol}>
+              <Text style={s.heroName} numberOfLines={1}>{character.name || 'Sky Child'}</Text>
 
-            {/* Mood + handle — soft metadata */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              {character.mood && (
-                <>
-                  <View style={[s.moodDot, { backgroundColor: mc }]} />
-                  <Text style={[s.heroMood, { color: mc }]}>{character.mood}</Text>
-                </>
-              )}
-              {character.username && (
-                <Text style={s.heroHandle}>{character.mood ? '· ' : ''}@{character.username}</Text>
-              )}
+              {/* Mood + handle row */}
+              <View style={s.heroSubRow}>
+                {character.mood && (
+                  <>
+                    <View style={[s.moodDot, { backgroundColor: mc }]} />
+                    <Text style={[s.heroMood, { color: mc }]}>{character.mood}</Text>
+                  </>
+                )}
+                {character.username && (
+                  <Text style={s.heroHandle}>{character.mood ? ' · ' : ''}@{character.username}</Text>
+                )}
+              </View>
+
+              {/* Compact inline stats */}
+              <View style={s.heroStatInlineRow}>
+                {([
+                  { n: journalEntries.length, l: 'entries',  press: () => router.push('/(tabs)/log') },
+                  { n: stories.length,        l: 'stories',  press: () => router.push('/(tabs)/create') },
+                  { n: friends.length,        l: 'circle',   press: () => router.push('/(tabs)/discover') },
+                ] as const).map((item, i) => (
+                  <React.Fragment key={item.l}>
+                    {i > 0 && <Text style={s.heroStatDot}>·</Text>}
+                    <TouchableOpacity onPress={item.press} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
+                      <Text style={s.heroStatInline}>
+                        <Text style={s.heroStatInlineN}>{item.n}</Text>
+                        {' '}{item.l}
+                      </Text>
+                    </TouchableOpacity>
+                  </React.Fragment>
+                ))}
+                {unread > 0 && (
+                  <>
+                    <Text style={s.heroStatDot}>·</Text>
+                    <TouchableOpacity onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}>
+                      <Text style={[s.heroStatInlineN, { color: accent }]}>{unread} new</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
             </View>
-
-            {/* Mood arc — dominant mood this week */}
-            {moodThisWeek && (
-              <Text style={s.heroMoodArc}>You've been feeling {moodThisWeek} most this week</Text>
-            )}
-
           </View>
 
-          {/* ── Stats — glassy frosted card ── */}
-          <View style={s.statBar}>
-            {[
-              { n: journalEntries.length, l: 'entries',  press: () => router.push('/(tabs)/log') },
-              { n: stories.length,        l: 'stories',  press: () => router.push('/(tabs)/create') },
-              { n: friends.length,        l: 'circle',   press: () => router.push('/(tabs)/discover') },
-            ].map((item, i) => (
-              <React.Fragment key={item.l}>
-                {i > 0 && <View style={s.statSep} />}
-                <TouchableOpacity style={s.statItem} onPress={item.press} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
-                  <Text style={s.statN}>{item.n}</Text>
-                  <Text style={s.statL}>{item.l}</Text>
-                </TouchableOpacity>
-              </React.Fragment>
-            ))}
-            {unread > 0 && (
-              <>
-                <View style={s.statSep} />
-                <TouchableOpacity style={s.statItem} onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
-                  <Text style={[s.statN, { color: accent }]}>{unread}</Text>
-                  <Text style={s.statL}>new</Text>
-                </TouchableOpacity>
-              </>
+          {/* ── Quick action pills ── */}
+          <View style={s.heroActionRow}>
+            <TouchableOpacity
+              style={[s.heroActionPill, { borderColor: `${accent}38`, backgroundColor: `${accent}12` }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/create-journal-entry' as any); }}
+              activeOpacity={0.75}
+            >
+              <Icon name="edit-3" size={12} color={accent} />
+              <Text style={[s.heroActionTxt, { color: accent }]}>Write</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.heroActionPill, { borderColor: 'rgba(168,136,248,0.32)', backgroundColor: 'rgba(168,136,248,0.10)' }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/create'); }}
+              activeOpacity={0.75}
+            >
+              <Icon name="layers" size={12} color="#A880F8" />
+              <Text style={[s.heroActionTxt, { color: '#A880F8' }]}>Create</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.heroActionPill, { borderColor: 'rgba(96,200,248,0.28)', backgroundColor: 'rgba(96,200,248,0.08)' }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }}
+              activeOpacity={0.75}
+            >
+              <Icon name="compass" size={12} color="#60C8F8" />
+              <Text style={[s.heroActionTxt, { color: '#60C8F8' }]}>Discover</Text>
+            </TouchableOpacity>
+            {rewardBalance && (
+              <TouchableOpacity
+                style={[s.heroActionPill, { borderColor: 'rgba(200,168,75,0.30)', backgroundColor: 'rgba(200,168,75,0.08)' }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
+                activeOpacity={0.75}
+              >
+                <Text style={{ fontSize: 11, lineHeight: 13 }}>⭐</Text>
+                <Text style={[s.heroActionTxt, { color: '#C8A84B' }]}>{rewardBalance.stars}</Text>
+              </TouchableOpacity>
             )}
           </View>
-
-          {/* Reward balance — tap to open the Sky Shop */}
-          {rewardBalance && (
-            <View style={{ alignItems: 'center', paddingBottom: 10, paddingTop: 4 }}>
-              <RewardBalance
-                stars={rewardBalance.stars}
-                auraEnergy={rewardBalance.auraEnergy}
-                memoryShards={rewardBalance.memoryShards}
-                size="sm"
-                onPress={() => setShowShop(true)}
-              />
-              <Text style={{ fontSize: 10, color: 'rgba(200,184,232,0.35)', marginTop: 4, letterSpacing: 0.5 }}>
-                tap to visit the shop
-              </Text>
-            </View>
-          )}
 
           {/* Bottom fade to deep void */}
           <LinearGradient
             colors={['transparent', '#04030C']}
-            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 56 }}
+            style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 36 }}
             pointerEvents="none"
           />
         </View>
@@ -1743,49 +1756,55 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#04030C' },
 
-  // ── Hero — immersive cosmic sanctuary ──────────────────────────────────────
-  hero:        { paddingHorizontal: 0, paddingBottom: 32, overflow: 'hidden', borderBottomLeftRadius: 36, borderBottomRightRadius: 36, marginBottom: 4 },
+  // ── Hero — compact identity card ───────────────────────────────────────────
+  hero:        { paddingHorizontal: 0, paddingBottom: 0, overflow: 'hidden', borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 4 },
+
+  // Top bar: label left, buttons right
+  heroBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, marginBottom: 14 },
+  heroAppLabel:{ fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, color: 'rgba(200,184,232,0.40)', textTransform: 'uppercase' },
+  heroBtn:     { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
+  heroBadge:   { position: 'absolute', top: 6, right: 6, width: 7, height: 7, borderRadius: 3.5 },
+
+  // Identity row: avatar left, info right
+  heroIdentityRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, marginBottom: 14 },
+  heroAvatarWrap:  { position: 'relative', width: 80, height: 80, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  heroAvatarRing:  { width: 70, height: 70, borderRadius: 35, padding: 2.5 },
+  heroAvatarInner: { flex: 1, borderRadius: 33, overflow: 'hidden', backgroundColor: '#060412' },
+  roleTag:         { position: 'absolute', bottom: 2, right: 2, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#04030C' },
+  roleText:        { fontSize: 9, fontFamily: 'Satoshi-Bold', color: '#fff' },
+
+  // Info column (right of avatar)
+  heroInfoCol:    { flex: 1, gap: 5 },
+  heroName:       { fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.97)', letterSpacing: -0.6, lineHeight: 26 },
+  heroSubRow:     { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap' },
+  heroHandle:     { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.38)' },
+  moodDot:        { width: 6, height: 6, borderRadius: 3 },
+  heroMood:       { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
+  heroBioRow:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  heroRole:       { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+
+  // Compact inline stats (below name/mood)
+  heroStatInlineRow: { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap', marginTop: 1 },
+  heroStatDot:       { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.22)' },
+  heroStatInline:    { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(190,175,230,0.42)' },
+  heroStatInlineN:   { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(225,215,255,0.68)' },
+
+  // Quick action pills row
+  heroActionRow: { flexDirection: 'row', gap: 7, paddingHorizontal: 16, paddingBottom: 18, flexWrap: 'wrap' },
+  heroActionPill:{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  heroActionTxt: { fontSize: 12.5, fontFamily: 'Satoshi-Bold' },
+
+  // Kept for legacy references (unused by new hero)
   heroActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 6, paddingHorizontal: 20, marginBottom: 12 },
-  heroBtn:     { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 19, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  heroBadge:   { position: 'absolute', top: 7, right: 7, width: 7, height: 7, borderRadius: 3.5 },
-
-  // Centered identity block
   heroCenter:  { alignItems: 'center', paddingHorizontal: 28, paddingBottom: 22, gap: 8 },
-
-  // Avatar — orbital system
   avatarWrap:   { position: 'relative', marginBottom: 8, width: 108, height: 108, alignItems: 'center', justifyContent: 'center' },
   avatarOrbit3: { position: 'absolute', width: 130, height: 130, borderRadius: 65, borderWidth: 1 },
   avatarRing:   { width: 96, height: 96, borderRadius: 48, padding: 3 },
   avatarInner:  { flex: 1, borderRadius: 45, overflow: 'hidden', backgroundColor: '#060412' },
-  roleTag:      { position: 'absolute', bottom: 2, right: 2, width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#04030C' },
-  roleText:     { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#fff' },
-
-  // Identity text — centered
-  heroName:    { fontSize: 34, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.98)', letterSpacing: -1.4, textAlign: 'center' },
-  heroHandle:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.38)', textAlign: 'center' },
-  heroBioRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  moodDot:     { width: 6, height: 6, borderRadius: 3 },
-  heroMood:    { fontSize: 12.5, fontFamily: 'Satoshi-Medium' },
-  heroRole:    { fontSize: 12, fontFamily: 'Satoshi-Regular' },
-
-  // Greeting — the single emotional focal line
-  heroGreeting: {
-    fontSize: 16, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
-    color: 'rgba(220,205,255,0.60)', textAlign: 'center', lineHeight: 23,
-    marginTop: 4, marginBottom: 2, paddingHorizontal: 10,
-  },
-
-  // Primary CTA
+  heroGreeting: { fontSize: 16, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(220,205,255,0.60)', textAlign: 'center', lineHeight: 23, marginTop: 4, marginBottom: 2, paddingHorizontal: 10 },
   heroCTA:     { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 26, paddingVertical: 13, borderRadius: 28, borderWidth: 1, overflow: 'hidden', marginTop: 4 },
   heroCTAText: { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-
-  // Stats row — glass morphism pill
-  statBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly',
-              paddingVertical: 16, paddingHorizontal: 8, marginHorizontal: 20, marginBottom: 8,
-              backgroundColor: 'rgba(255,255,255,0.04)',
-              borderRadius: 24,
-              borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-              shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.40, shadowRadius: 16, elevation: 6 },
+  statBar:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingVertical: 16, paddingHorizontal: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 24, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.40, shadowRadius: 16, elevation: 6 },
   statItem: { alignItems: 'center', gap: 4, flex: 1 },
   statN:    { fontSize: 24, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.96)', letterSpacing: -1.0 },
   statL:    { fontSize: 9.5, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.38)', letterSpacing: 0.8, textTransform: 'uppercase' },
