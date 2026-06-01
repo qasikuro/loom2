@@ -77,16 +77,17 @@ function FireOrb({ room, onPress }: { room: CampfireRoom; onPress: () => void })
 
   useEffect(() => {
     const p = Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.06, duration: 1800 + (room.soulCount * 120), useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(pulseAnim, { toValue: 1.06, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
       Animated.timing(pulseAnim, { toValue: 0.88, duration: 2200, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
     ]));
     const g = Animated.loop(Animated.sequence([
-      Animated.timing(glowAnim, { toValue: 1, duration: 2400, useNativeDriver: false, easing: Easing.inOut(Easing.sin) }),
-      Animated.timing(glowAnim, { toValue: 0.4, duration: 2000, useNativeDriver: false, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(glowAnim, { toValue: 1, duration: 2400, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(glowAnim, { toValue: 0.4, duration: 2000, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
     ]));
     p.start(); g.start();
     return () => { p.stop(); g.stop(); };
-  }, [room.soulCount]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const lastPreview = room.lastMessage
     ? room.lastMessage.expression

@@ -128,8 +128,8 @@ router.post("/campfire", requireAuth, async (req, res) => {
 // ── GET /api/campfire/:roomId — room + recent messages ────────────────────────
 
 router.get("/campfire/:roomId", requireAuth, async (req, res) => {
-  const { roomId } = req.params;
-  const userId     = getUserId(req);
+  const roomId = req.params.roomId as string;
+  const userId = getUserId(req);
   const now        = new Date();
 
   const [room] = await db
@@ -179,8 +179,8 @@ router.get("/campfire/:roomId", requireAuth, async (req, res) => {
 const VALID_EXPRESSIONS = ["candle", "spark", "lantern", "hush"] as const;
 
 router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
-  const { roomId } = req.params;
-  const userId     = getUserId(req);
+  const roomId = req.params.roomId as string;
+  const userId = getUserId(req);
   const { content, expression, authorName } = req.body as {
     content?:    string;
     expression?: string;
