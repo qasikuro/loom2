@@ -226,6 +226,14 @@ export default function RootLayout() {
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />
                             <Stack.Screen
+                              name="campfire/index"
+                              options={{ presentation: 'card', animation: 'fade' }}
+                            />
+                            <Stack.Screen
+                              name="campfire/[roomId]"
+                              options={{ presentation: 'card', animation: 'fade' }}
+                            />
+                            <Stack.Screen
                               name="purchase-history"
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />

@@ -10,3 +10,4 @@ export * from "./reports";
 export * from "./sticker-reactions";
 export * from "./rewards";
 export * from "./events";
+export * from "./campfire";

@@ -17,6 +17,7 @@ import driftRouter from "./drift";
 import stickersRouter from "./stickers";
 import rewardsRouter from "./rewards";
 import adminEventsRouter from "./admin-events";
+import campfireRouter from "./campfire";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(driftRouter);
 router.use(stickersRouter);
 router.use(rewardsRouter);
 router.use(adminEventsRouter);
+router.use(campfireRouter);
 
 export default router;

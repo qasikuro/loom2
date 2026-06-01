@@ -830,6 +830,7 @@ export default function HomeScreen() {
   const [bannerExiting, setBannerExiting] = useState(false);
   const bannerGateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bannerExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [displayedRewardId, setDisplayedRewardId] = useState<string | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
@@ -842,10 +843,19 @@ export default function HomeScreen() {
       .catch(() => {});
   }, []);
 
+  // Lock the displayed reward ID during exit + gate — prevents the new reward from
+  // remounting and starting its entrance animation before the old one finishes.
+  useEffect(() => {
+    if (bannerExiting || bannerGate) return;
+    const nextId = rewards[0]?.id ?? null;
+    setDisplayedRewardId(prev => prev === nextId ? prev : nextId);
+  }, [rewards, bannerExiting, bannerGate]);
+  const displayedReward = rewards.find(r => r.id === displayedRewardId) ?? rewards[0] ?? null;
+
   // Auto-dismiss the front reward banner after 4 s (prevents stacking).
   // Star unlock banners are excluded — they self-manage via the drain queue in AppContext.
-  const firstReward   = rewards[0] ?? null;
-  const firstRewardId = firstReward?.id ?? null;
+  const firstReward   = displayedReward;
+  const firstRewardId = displayedReward?.id ?? null;
   useEffect(() => {
     if (!firstRewardId || firstReward?.starUnlock) return;
     const timer = setTimeout(() => {
@@ -1017,15 +1027,15 @@ export default function HomeScreen() {
       <StarField density="high" />
 
       {/* ── Reward banner queue — one at a time, anti-stack gate prevents overlap ── */}
-      {!bannerGate && rewards[0] && (
+      {!bannerGate && displayedReward && (
         <View style={{ position: 'absolute', top: topPad + 8, left: 16, right: 16, zIndex: 999 }} pointerEvents="box-none">
           <RewardBanner
-            key={rewards[0].id}
-            reward={rewards[0]}
+            key={displayedReward.id}
+            reward={displayedReward}
             isExiting={bannerExiting}
             onDismiss={() => {
               if (bannerExiting) return;
-              const id = rewards[0]!.id;
+              const id = displayedReward.id;
               if (bannerExitTimerRef.current) clearTimeout(bannerExitTimerRef.current);
               setBannerExiting(true);
               bannerExitTimerRef.current = setTimeout(() => {
@@ -1567,6 +1577,32 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
+            COMMUNITY CAMPFIRES — group sky chat
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s4, transform: [{ translateY: s4.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+        <TouchableOpacity
+          style={s.communityFire}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/campfire/index' as any); }}
+          activeOpacity={0.80}
+        >
+          <LinearGradient
+            colors={['rgba(184,144,255,0.10)', 'rgba(120,196,232,0.06)']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            pointerEvents="none"
+          />
+          <View style={s.communityFireIcon}>
+            <Text style={{ fontSize: 20 }}>🔥</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.communityFireTitle}>Community Campfires</Text>
+            <Text style={s.communityFireSub}>Gather around the fire · Whisper · Wander</Text>
+          </View>
+          <Icon name="chevron-right" size={14} color="rgba(160,140,200,0.40)" />
+        </TouchableOpacity>
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
             FIND FRIENDS — ambient, low-pressure CTA
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s5, transform: [{ translateY: s5.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
@@ -1834,6 +1870,10 @@ const s = StyleSheet.create({
   findFriendsSub:   { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(130,180,160,0.50)', marginTop: 1 },
   findFriendsBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, backgroundColor: 'rgba(96,200,168,0.15)' },
   findFriendsBadgeText: { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#5EC8A0' },
+  communityFire:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 12, marginTop: 4, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,120,255,0.14)' },
+  communityFireIcon:  { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(184,120,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  communityFireTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(220,200,255,0.85)' },
+  communityFireSub:   { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(180,150,220,0.45)', marginTop: 1 },
 
   // ── Drift invitation card ──────────────────────────────────────────────────
   driftSection:    { paddingHorizontal: 16, paddingBottom: 8 },
