@@ -1426,24 +1426,8 @@ export default function CharacterScreen() {
             <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
               <View style={{ height: 5, borderRadius: 3, backgroundColor: '#C8A84B', width: `${Math.round(profileXpPct * 100)}%` as any }} />
             </View>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,168,75,0.55)', marginTop: 4, letterSpacing: 0.3 }}>
-              {xpInLevel} / {XP_PER_LEVEL} XP
-            </Text>
           </View>
         </CharacterAuraHeader>
-
-        {/* ── Reward balance — hero area, above stat bar ────────── */}
-        {rewardBalance && (
-          <View style={{ alignItems: 'center', paddingTop: 10, paddingBottom: 4 }}>
-            <RewardBalance
-              stars={rewardBalance.stars}
-              auraEnergy={rewardBalance.auraEnergy}
-              memoryShards={rewardBalance.memoryShards}
-              size="sm"
-              onPress={() => setShowShop(true)}
-            />
-          </View>
-        )}
 
         {/* ── Stats row ────────────────────────────────────────── */}
         <View style={styles.statsRow}>
@@ -1482,40 +1466,42 @@ export default function CharacterScreen() {
           ))}
         </View>
 
-        {/* ── Current Outfit card — Style tab ─────────────────── */}
+        {/* ── Current Outfit hero — Style tab ──────────────────── */}
         {profileTab === 'style' && activeOutfit && (
-          <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
+          <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
             <TouchableOpacity
-              style={[styles.currentOutfitCard, { borderColor: `${moodAccent}28` }]}
+              style={[styles.currentOutfitHero, { borderColor: `${moodAccent}35` }]}
               onPress={() => openOutfit(activeOutfit.id)}
-              activeOpacity={0.85}
+              activeOpacity={0.88}
             >
-              <LinearGradient
-                colors={[`${moodAccent}18`, 'transparent'] as unknown as [string, string]}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFill}
-              />
               {activeOutfit.imageUri ? (
-                <Image source={{ uri: activeOutfit.imageUri }} style={styles.currentOutfitThumb} contentFit="cover" />
+                <Image source={{ uri: activeOutfit.imageUri }} style={styles.currentOutfitHeroImage} contentFit="cover" />
               ) : (
-                <View style={[styles.currentOutfitThumb, { backgroundColor: 'rgba(200,184,232,0.08)', alignItems: 'center', justifyContent: 'center' }]}>
-                  <Text style={{ fontSize: 22 }}>✨</Text>
+                <View style={[styles.currentOutfitHeroImage, { backgroundColor: 'rgba(200,184,232,0.07)', alignItems: 'center', justifyContent: 'center' }]}>
+                  <Text style={{ fontSize: 52 }}>✨</Text>
                 </View>
               )}
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[styles.currentOutfitEyebrow, { color: `${moodAccent}AA` as any }]}>CURRENT OUTFIT</Text>
-                <Text style={styles.currentOutfitName} numberOfLines={1}>{activeOutfit.name}</Text>
+              <LinearGradient
+                colors={['transparent', 'rgba(8,6,22,0.88)']}
+                start={{ x: 0, y: 0.35 }} end={{ x: 0, y: 1 }}
+                style={styles.currentOutfitHeroOverlay}
+                pointerEvents="none"
+              />
+              <View style={[styles.currentOutfitHeroBadge, { backgroundColor: `${moodAccent}22`, borderColor: `${moodAccent}55` }]}>
+                <Text style={[styles.currentOutfitEyebrow, { color: moodAccent }]}>CURRENTLY WORN</Text>
+              </View>
+              <View style={styles.currentOutfitHeroBottom}>
+                <Text style={styles.currentOutfitHeroName} numberOfLines={1}>{activeOutfit.name}</Text>
                 {activeOutfit.tags && activeOutfit.tags.length > 0 && (
-                  <View style={{ flexDirection: 'row', gap: 5, marginTop: 2 }}>
-                    {activeOutfit.tags.slice(0, 3).map((tag, idx) => (
-                      <View key={idx} style={[styles.currentOutfitTag, { backgroundColor: `${moodAccent}14`, borderColor: `${moodAccent}28` }]}>
-                        <Text style={[styles.currentOutfitTagTxt, { color: moodAccent }]}>{tag}</Text>
+                  <View style={{ flexDirection: 'row', gap: 5, marginTop: 6 }}>
+                    {activeOutfit.tags.slice(0, 4).map((tag, idx) => (
+                      <View key={idx} style={[styles.currentOutfitTag, { backgroundColor: 'rgba(240,230,255,0.12)', borderColor: 'rgba(240,230,255,0.22)' }]}>
+                        <Text style={[styles.currentOutfitTagTxt, { color: 'rgba(240,230,255,0.85)' }]}>{tag}</Text>
                       </View>
                     ))}
                   </View>
                 )}
               </View>
-              <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.30)" />
             </TouchableOpacity>
           </View>
         )}
@@ -3634,5 +3620,27 @@ const styles = StyleSheet.create({
   },
   currentOutfitTagTxt: {
     fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3,
+  },
+  currentOutfitHero: {
+    borderRadius: 20, overflow: 'hidden', borderWidth: 1,
+    backgroundColor: 'rgba(107,91,149,0.10)',
+  },
+  currentOutfitHeroImage: {
+    width: '100%', height: 216,
+  },
+  currentOutfitHeroOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 130,
+  },
+  currentOutfitHeroBadge: {
+    position: 'absolute', top: 12, left: 12,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 20, borderWidth: 1,
+  },
+  currentOutfitHeroBottom: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 16, paddingBottom: 18,
+  },
+  currentOutfitHeroName: {
+    fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: 0.1,
   },
 });

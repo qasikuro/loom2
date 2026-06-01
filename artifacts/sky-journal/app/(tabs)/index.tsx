@@ -1196,6 +1196,83 @@ export default function HomeScreen() {
         </View>
 
         {/* ══════════════════════════════════════════════════
+            YOUR CONSTELLATION — emotional centrepiece
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }] }}>
+          <ConstellationMini constellation={constellation} onPress={() => router.push('/(tabs)/profile')} />
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            CONTINUE JOURNEY — primary CTA
+        ══════════════════════════════════════════════════ */}
+        {nextStar && (
+          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
+          <TouchableOpacity
+            style={s.nudgeCard}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={[`${nextStar.color}1A`, `${nextStar.color}08`, 'transparent']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[s.nudgeOrb, { backgroundColor: nextStar.color }]} />
+
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>NEXT STAR</Text>
+                <View style={[s.nudgeDot, { backgroundColor: nextStar.color }]} />
+                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>{nextStar.label}</Text>
+              </View>
+
+              <View style={s.nudgeTrack}>
+                <View style={[s.nudgeFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} />
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
+                <Text style={s.nudgeAction}>{nextStar.action}</Text>
+                <Text style={[s.nudgeFraction, { color: nextStar.color }]}>
+                  {nextStarCount} / {nextStar.threshold} {nextStar.unit}
+                </Text>
+              </View>
+              {nextStar.key === 'creative' && stories.length > 0 && (
+                <Text style={s.nudgePublicNote}>
+                  {publicStoryCount} of {stories.length} {stories.length === 1 ? 'story is' : 'stories are'} public
+                </Text>
+              )}
+              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: nextStar.color, marginTop: 7, letterSpacing: 0.4 }}>
+                Continue Journey →
+              </Text>
+            </View>
+          </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {constellation && constellation.unlockedStars.length === 6 && (
+          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
+          <TouchableOpacity
+            style={s.nudgeCard}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['rgba(168,136,248,0.12)', 'rgba(96,200,248,0.08)', 'transparent']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.nudgeEyebrow, { color: '#A888F8', marginBottom: 3 }]}>CONSTELLATION COMPLETE</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(220,210,255,0.80)', fontWeight: '500', letterSpacing: 0.1 }}>
+                ✦ ✦ ✦ ✦ ✦ ✦{'  '}All six stars glow in your sky
+              </Text>
+            </View>
+            <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* ══════════════════════════════════════════════════
             SEASON JOURNEY CARD
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
@@ -1265,7 +1342,7 @@ export default function HomeScreen() {
         )}
 
         {/* ══════════════════════════════════════════════════
-            LUMI — aware companion who synthesises the world
+            LUMI — aware companion (lower priority)
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <TouchableOpacity
@@ -1300,85 +1377,6 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
         </Animated.View>
-
-        {/* ══════════════════════════════════════════════════
-            YOUR CONSTELLATION — compact mini-bar
-        ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }] }}>
-          <ConstellationMini constellation={constellation} onPress={() => router.push('/(tabs)/profile')} />
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════
-            STAR JOURNEY NUDGE — next constellation milestone
-        ══════════════════════════════════════════════════ */}
-        {nextStar && (
-          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
-          <TouchableOpacity
-            style={s.nudgeCard}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={[`${nextStar.color}1A`, `${nextStar.color}08`, 'transparent']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            {/* Star glow orb */}
-            <View style={[s.nudgeOrb, { backgroundColor: nextStar.color }]} />
-
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>NEXT STAR</Text>
-                <View style={[s.nudgeDot, { backgroundColor: nextStar.color }]} />
-                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>{nextStar.label}</Text>
-              </View>
-
-              {/* Progress bar */}
-              <View style={s.nudgeTrack}>
-                <View style={[s.nudgeFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} />
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
-                <Text style={s.nudgeAction}>{nextStar.action}</Text>
-                <Text style={[s.nudgeFraction, { color: nextStar.color }]}>
-                  {nextStarCount} / {nextStar.threshold} {nextStar.unit}
-                </Text>
-              </View>
-              {nextStar.key === 'creative' && stories.length > 0 && (
-                <Text style={s.nudgePublicNote}>
-                  {publicStoryCount} of {stories.length} {stories.length === 1 ? 'story is' : 'stories are'} public
-                </Text>
-              )}
-            </View>
-
-            <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* Show "all stars lit" celebration when constellation complete */}
-        {constellation && constellation.unlockedStars.length === 6 && (
-          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
-          <TouchableOpacity
-            style={s.nudgeCard}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={['rgba(168,136,248,0.12)', 'rgba(96,200,248,0.08)', 'transparent']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={[s.nudgeEyebrow, { color: '#A888F8', marginBottom: 3 }]}>CONSTELLATION COMPLETE</Text>
-              <Text style={{ fontSize: 13, color: 'rgba(220,210,255,0.80)', fontWeight: '500', letterSpacing: 0.1 }}>
-                ✦ ✦ ✦ ✦ ✦ ✦{'  '}All six stars glow in your sky
-              </Text>
-            </View>
-            <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-          </Animated.View>
-        )}
 
         {/* ══════════════════════════════════════════════════
             ACTIVITY DIGEST — what changed while you were away
