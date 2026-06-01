@@ -1,0 +1,500 @@
+You've got a strong visual identity already (Sky-inspired, dreamy, purple cosmos aesthetic), but from a UX perspective these screens feel beautiful yet overloaded. The biggest issue isn't the art direction—it's hierarchy and information density.
+
+The two pages I'd redesign first are:
+
+1. Profile/Home page
+
+
+2. Profile Detail (Journey / Style / About) page
+
+
+
+
+---
+
+1. HOME PAGE REDESIGN
+
+Current problems:
+
+What's hurting UX
+
+❌ Too many cards with equal visual weight
+
+Season
+
+Lumi
+
+Circle
+
+Constellation
+
+Campfires
+
+Notifications
+
+
+All compete for attention.
+
+
+---
+
+❌ No primary action
+
+Users land and ask:
+
+> "What should I do now?"
+
+
+
+The screen doesn't answer clearly.
+
+
+---
+
+❌ Important progress is buried
+
+The constellation system is your core retention mechanic.
+
+Yet it's hidden between cards.
+
+
+---
+
+Better Structure
+
+Think:
+
+Hero
+
+Current Goal
+
+Friends Activity
+
+Exploration
+
+
+---
+
+Proposed Layout
+
+[Profile Header]
+
+Good Evening, Null ✨
+
+Your next star:
+Social (2/5)
+
+[Progress Bar]
+40%
+
+Continue Journey →
+
+This becomes the main CTA.
+
+
+---
+
+Section 1
+
+Your Constellation
+
+Large beautiful constellation.
+
+Not tiny.
+
+Make it the emotional centerpiece.
+
+Social ★
+ Memory     Creative
+
+ Quiet      Helping
+
+      Seasonal
+
+Tap star → see requirements.
+
+
+---
+
+Section 2
+
+Continue Journey
+
+Single card:
+
+SUMMER SOLSTICE
+
+0/6 Stars
+
+Continue →
+
+No extra text.
+
+No secondary buttons.
+
+
+---
+
+Section 3
+
+Circle Activity
+
+Replace multiple cards with one feed.
+
+Sarah witnessed your story
+
+Kai earned Creative Star
+
+2 new campfires
+
+Like Discord activity.
+
+
+---
+
+Section 4
+
+Lumi
+
+Move Lumi down.
+
+Lumi is a companion, not the primary goal.
+
+Current screen gives Lumi too much attention.
+
+
+---
+
+VISUAL IMPROVEMENTS
+
+Current issue:
+
+Everything is a card.
+
+Everything glows.
+
+Nothing stands out.
+
+
+---
+
+Introduce Visual Levels
+
+Level 1
+
+Primary
+
+Heavy glow
+
+Constellation
+Continue Journey
+
+
+---
+
+Level 2
+
+Medium cards
+
+Circle
+Campfires
+Season
+
+
+---
+
+Level 3
+
+Minimal
+
+Stats
+Counts
+Notifications
+
+
+---
+
+2. PROFILE PAGE REDESIGN
+
+Current page is trying to be:
+
+Identity
+
+Social profile
+
+RPG progression
+
+Outfit system
+
+About page
+
+
+all at once.
+
+
+---
+
+Problem
+
+Top section is too tall.
+
+The user sees:
+
+Avatar
+
+Vibe
+
+Traits
+
+XP
+
+Currency
+
+Stats
+
+
+before reaching content.
+
+
+---
+
+Better Header
+
+Compress dramatically.
+
+
+---
+
+Current
+
+~500px tall
+
+
+---
+
+Proposed
+
+Avatar
+
+Null
+@kaskas
+
+✨ Soft
+🌙 Curious
+🤫 Silent
+
+Level 1 Sky Child
+Progress Bar
+
+Done.
+
+
+---
+
+Everything else moves below.
+
+
+---
+
+Better Tab Structure
+
+Current:
+
+Journey
+Style
+About
+
+Good idea.
+
+Bad execution.
+
+
+---
+
+Journey
+
+Only progression.
+
+Constellation
+
+Story Stats
+
+Achievements
+
+Season Progress
+
+
+---
+
+Style
+
+Only self-expression.
+
+Current Outfit
+
+Wardrobe
+
+Gallery
+
+Frames
+
+Themes
+
+
+---
+
+About
+
+Only personal identity.
+
+Bio
+
+Guide Intro
+
+Topics
+
+Availability
+
+Socials
+
+Country
+
+Currently these are mixed.
+
+
+---
+
+Constellation Redesign
+
+Current version:
+
+Tiny circles.
+
+Hard to understand.
+
+Feels decorative.
+
+
+---
+
+Make It A Real Progress Galaxy
+
+Example:
+
+Memory ★
+             |
+Social ★--- Core --- Creative ☆
+             |
+      Helping ☆
+
+     Quiet ☆
+     Seasonal ☆
+
+Each node:
+
+animated
+
+progress ring
+
+tap expands
+
+
+This becomes a memorable feature.
+
+
+---
+
+Constellation Guide Card
+
+Current:
+
+Guide Introduction
+simple
+
+Feels unfinished.
+
+
+---
+
+Replace with:
+
+✨ Constellation Guide
+
+Helping lonely creatives
+find inspiration and
+connection.
+
+[Edit]
+
+People relate to descriptions.
+
+Not labels.
+
+
+---
+
+Outfit Screen
+
+Current screen has:
+
+Current Outfit
+Sky Shop
+Wardrobe
+Gallery
+
+Good foundation.
+
+Needs stronger focus.
+
+
+---
+
+Make Current Outfit Hero
+
+Large card:
+
+[Full outfit preview]
+
+Don Pirate
+
+Ethereal • Dark
+
+Currently Worn
+
+
+---
+
+Then:
+
+Wardrobe
+
+Gallery
+
+Shop
+
+below.
+
+
+---
+
+Biggest UX Win
+
+If I were leading this redesign, I would make one change above all others:
+
+Replace the card-heavy homepage with a single progression-driven experience.
+
+Current feeling:
+
+> "Here's everything."
+
+
+
+Desired feeling:
+
+> "Here's your next meaningful action."
+
+
+
+The best social/wellness/gamified apps (Duolingo, Finch, Habitica, Sky) all obsess over showing the user exactly what to do next.
+
+Your visual design is already close to production quality. The next leap is not better graphics—it's stronger hierarchy, fewer competing cards, and making the Constellation system the central narrative of the product.

@@ -2224,6 +2224,13 @@ export default function CharacterScreen() {
                 <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: colors.foreground, letterSpacing: -0.2 }}>Sky Shop</Text>
                 <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>Browse frames, accents & themes</Text>
               </View>
+              {rewardBalance && (
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B' }}>✦ {rewardBalance.stars}</Text>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9878D8' }}>◈ {rewardBalance.auraEnergy}</Text>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#78B4DC' }}>◇ {rewardBalance.memoryShards}</Text>
+                </View>
+              )}
               <Icon name="chevron-right" size={16} color="rgba(107,91,149,0.55)" />
             </TouchableOpacity>
           </View>

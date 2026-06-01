@@ -19,6 +19,7 @@ import {
 } from '@/context/AppContext';
 import { RewardBalance } from '@/components/RewardBalance';
 import { RewardBanner } from '@/components/RewardBanner';
+import { ShopModal } from '@/components/ShopModal';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -822,6 +823,7 @@ export default function HomeScreen() {
   const [showConstellationIntro, setShowConstellationIntro] = useState(false);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
   const [showEventSheet, setShowEventSheet] = useState(false);
+  const [showShop,       setShowShop]       = useState(false);
 
   // ── Banner anti-stack gate (#13) ───────────────────────────────────────────
   const [bannerGate,    setBannerGate]    = useState(false);
@@ -1169,7 +1171,7 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Reward balance — display only; shop lives on Profile tab */}
+          {/* Reward balance — tap to open the Sky Shop */}
           {rewardBalance && (
             <View style={{ alignItems: 'center', paddingBottom: 10, paddingTop: 4 }}>
               <RewardBalance
@@ -1177,9 +1179,10 @@ export default function HomeScreen() {
                 auraEnergy={rewardBalance.auraEnergy}
                 memoryShards={rewardBalance.memoryShards}
                 size="sm"
+                onPress={() => setShowShop(true)}
               />
               <Text style={{ fontSize: 10, color: 'rgba(200,184,232,0.35)', marginTop: 4, letterSpacing: 0.5 }}>
-                your sky treasures
+                tap to visit the shop
               </Text>
             </View>
           )}
@@ -1685,6 +1688,8 @@ export default function HomeScreen() {
           onClose={() => setShowEventSheet(false)}
         />
       )}
+
+      <ShopModal visible={showShop} onClose={() => setShowShop(false)} />
 
     </Animated.View>
   );

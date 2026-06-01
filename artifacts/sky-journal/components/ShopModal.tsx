@@ -132,11 +132,14 @@ function PurchaseToast({ message, type, visible }: ToastProps) {
 
 // ── Balance chip ──────────────────────────────────────────────────────────────
 
-function BalanceChip({ icon, value, color, bg }: { icon: string; value: number; color: string; bg: string }) {
+function BalanceChip({ icon, value, color, bg, label }: { icon: string; value: number; color: string; bg: string; label: string }) {
   return (
-    <View style={[styles.balChip, { backgroundColor: bg, borderColor: `${color}44` }]}>
-      <Text style={[styles.balChipIcon, { color }]}>{icon}</Text>
-      <Text style={[styles.balChipNum, { color }]}>{value}</Text>
+    <View style={styles.balChipWrap}>
+      <View style={[styles.balChip, { backgroundColor: bg, borderColor: `${color}44` }]}>
+        <Text style={[styles.balChipIcon, { color }]}>{icon}</Text>
+        <Text style={[styles.balChipNum, { color }]}>{value}</Text>
+      </View>
+      <Text style={[styles.balChipLabel, { color: `${color}AA` }]}>{label}</Text>
     </View>
   );
 }
@@ -740,11 +743,34 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
           <>
             {/* Balance */}
             <View style={[styles.balanceRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Text style={[styles.balLabel, { color: colors.mutedForeground }]}>Your balance</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.balLabel, { color: colors.mutedForeground }]}>Your balance</Text>
+                <Text style={[styles.balHint, { color: colors.mutedForeground }]}>Journal & create to earn more</Text>
+              </View>
               <View style={styles.balChips}>
-                <BalanceChip icon="✦" value={stars}  color="#C8A84B" bg="rgba(200,168,75,0.14)" />
-                <BalanceChip icon="◈" value={aura}   color="#9878D8" bg="rgba(152,120,216,0.14)" />
-                <BalanceChip icon="◇" value={shards} color="#78B4DC" bg="rgba(120,180,220,0.14)" />
+                <BalanceChip icon="✦" value={stars}  color="#C8A84B" bg="rgba(200,168,75,0.14)"   label="Stars" />
+                <BalanceChip icon="◈" value={aura}   color="#9878D8" bg="rgba(152,120,216,0.14)"  label="Aura" />
+                <BalanceChip icon="◇" value={shards} color="#78B4DC" bg="rgba(120,180,220,0.14)"  label="Shards" />
+              </View>
+            </View>
+
+            {/* Earn guide */}
+            <View style={[styles.earnGuide, { borderColor: colors.border }]}>
+              <Text style={[styles.earnGuideTitle, { color: colors.mutedForeground }]}>HOW TO EARN</Text>
+              <View style={styles.earnGuideGrid}>
+                {[
+                  { icon: '✦', color: '#C8A84B', name: 'Stars',  tips: 'Write in your journal (+2)  ·  Create stories (+3)' },
+                  { icon: '◈', color: '#9878D8', name: 'Aura',   tips: 'Open the app daily (+3)  ·  Follow wanderers (+1)' },
+                  { icon: '◇', color: '#78B4DC', name: 'Shards', tips: 'Save a story (+2)  ·  Give stickers (+1)' },
+                ].map(({ icon, color, name, tips }) => (
+                  <View key={name} style={styles.earnGuideRow}>
+                    <Text style={[styles.earnGuideIcon, { color }]}>{icon}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.earnGuideName, { color }]}>{name}</Text>
+                      <Text style={[styles.earnGuideTips, { color: colors.mutedForeground }]}>{tips}</Text>
+                    </View>
+                  </View>
+                ))}
               </View>
             </View>
 
@@ -1037,8 +1063,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  balChipIcon: { fontSize: 11 },
-  balChipNum:  { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  balChipIcon:  { fontSize: 11 },
+  balChipNum:   { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  balChipWrap:  { alignItems: 'center', gap: 3 },
+  balChipLabel: { fontSize: 9, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4 },
+  balHint:      { fontSize: 10, fontFamily: 'Satoshi-Regular', marginTop: 2, fontStyle: 'italic' },
+
+  // Earn guide
+  earnGuide: {
+    marginHorizontal: 16, marginBottom: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 12, borderWidth: 1,
+    backgroundColor: 'rgba(107,91,149,0.04)',
+    gap: 8,
+  },
+  earnGuideTitle: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.9 },
+  earnGuideGrid:  { gap: 6 },
+  earnGuideRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  earnGuideIcon:  { fontSize: 13, lineHeight: 18, width: 18, textAlign: 'center' },
+  earnGuideName:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1, lineHeight: 16 },
+  earnGuideTips:  { fontSize: 10, fontFamily: 'Satoshi-Regular', lineHeight: 15 },
 
   // Item list
   itemList: {
