@@ -3,6 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { syncConstellation } from "../services/constellationService";
 
 /** Strip device-local URIs that are invisible to other users. */
 function safeImageUri(uri: string | null | undefined): string | null {
@@ -70,6 +71,8 @@ router.post("/outfits", requireAuth, async (req, res) => {
     if (rest.isPublic) {
       fanOutOutfitNotification(userId, created.id, rest.name, req).catch(() => null);
     }
+    // Sync constellation progress — outfit count drives the Seasonal star
+    syncConstellation(db as any, userId).catch(() => null);
 
     return res.status(201).json(serializeOutfit(created));
   } catch (err) {

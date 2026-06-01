@@ -6,6 +6,7 @@ import {
   storiesTable,
   stickerReactionsTable,
   followsTable,
+  outfitsTable,
 } from "@workspace/db";
 
 const TITLES: Record<number, string> = {
@@ -40,6 +41,7 @@ export async function syncConstellation(
       followsGivenRows,
       savedStoriesRows,
       witnessedStoriesRows,
+      outfitRows,
     ] = await Promise.all([
       // All journal entry dates (for streak calculation)
       db
@@ -83,6 +85,12 @@ export async function syncConstellation(
         .select({ count: sql<number>`cast(count(*) as int)` })
         .from(storiesTable)
         .where(and(eq(storiesTable.userId, userId), gte(storiesTable.witnessedCount, 3))),
+
+      // Total outfits logged (seasonal participation)
+      db
+        .select({ count: sql<number>`cast(count(*) as int)` })
+        .from(outfitsTable)
+        .where(and(eq(outfitsTable.userId, userId), eq(outfitsTable.isHidden, false))),
     ]);
 
     // ── Compute quiet streak ───────────────────────────────────────────────
@@ -105,6 +113,7 @@ export async function syncConstellation(
     const followsGiven     = followsGivenRows[0]?.count  ?? 0;
     const savesReceived    = savedStoriesRows[0]?.total   ?? 0;
     const witnessedStories = witnessedStoriesRows[0]?.count ?? 0;
+    const outfitCount      = outfitRows[0]?.count        ?? 0;
 
     // ── Determine unlocked stars ───────────────────────────────────────────
     const unlocked: string[] = [];
@@ -114,9 +123,8 @@ export async function syncConstellation(
     const quietUnlocked    = quietStreak   >= 7;
     const helpingUnlocked  = stickersSent  >= 20;
     const creativeUnlocked = storyCount    >= 5  && witnessedStories >= 1;
-    // Seasonal unlocks once any 3 other stars are achieved
-    const preSeasonalCount = [socialUnlocked, memoryUnlocked, quietUnlocked, helpingUnlocked, creativeUnlocked].filter(Boolean).length;
-    const seasonalUnlocked = preSeasonalCount >= 3;
+    // Seasonal star: unlocks after logging 6 outfits (seasonal wardrobe participation)
+    const seasonalUnlocked = outfitCount  >= 6;
 
     if (socialUnlocked)   unlocked.push("social");
     if (memoryUnlocked)   unlocked.push("memory");
@@ -156,7 +164,7 @@ export async function syncConstellation(
         lastJournalDate: journalDates[0] ?? null,
         helpingCount:  stickersSent,
         creativeCount: storyCount,
-        seasonalCount: preSeasonalCount,
+        seasonalCount: outfitCount,
         unlockedStars: unlocked,
         starUnlockDates,
         activeTitle,
@@ -170,7 +178,7 @@ export async function syncConstellation(
           lastJournalDate: journalDates[0] ?? null,
           helpingCount:    stickersSent,
           creativeCount:   storyCount,
-          seasonalCount:   preSeasonalCount,
+          seasonalCount:   outfitCount,
           unlockedStars:   unlocked,
           starUnlockDates: sql`${constellationProgressTable.starUnlockDates} || ${JSON.stringify(starUnlockDates)}::jsonb`,
           activeTitle:     sql`COALESCE(${constellationProgressTable.activeTitle}, ${activeTitle})`,

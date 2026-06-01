@@ -34,11 +34,11 @@ export const CONSTELLATION_STARS: StarDef[] = [
   { key: 'quiet',    label: 'Quiet',    icon: 'moon',     color: '#7890C8', xPct: 11, yPct: 60, criterion: '7-day journal streak',                  unit: 'days',     description: 'Show up every day, even when the words are few.' },
   { key: 'creative', label: 'Creative', icon: 'feather',  color: '#C87AA8', xPct: 86, yPct: 60, criterion: '5 stories · 1 witnessed ×3',            unit: 'stories',  description: 'Tell your story. Let the sky be your canvas.' },
   { key: 'helping',  label: 'Helping',  icon: 'star',     color: '#C8A84B', xPct: 48, yPct: 84, criterion: 'Send 20 stickers',                      unit: 'stickers', description: 'Scatter light across the stories of others.' },
-  { key: 'seasonal', label: 'Seasonal', icon: 'wind',     color: '#68B8B0', xPct: 48, yPct: 40, criterion: 'Unlock 3 other stars',                  unit: 'stars',    description: 'A rare star that blooms when your constellation grows.' },
+  { key: 'seasonal', label: 'Seasonal', icon: 'wind',     color: '#68B8B0', xPct: 48, yPct: 40, criterion: 'Log 6 outfits to your Sky Wardrobe',      unit: 'outfits',  description: 'Wear the seasons — each outfit is a memory woven into your sky.' },
 ];
 
 export const STAR_THRESHOLDS: Record<string, number> = {
-  social: 5, memory: 10, quiet: 7, creative: 5, helping: 20, seasonal: 3,
+  social: 5, memory: 10, quiet: 7, creative: 5, helping: 20, seasonal: 6,
 };
 
 export function countForStar(key: string, state: ConstellationState): number {

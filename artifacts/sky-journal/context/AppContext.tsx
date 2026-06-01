@@ -1204,8 +1204,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tags:        outfit.tags,
         isPublic:    outfit.isPublic,
       }),
-    }).catch(() => null);
-  }, []);
+    })
+    .then(() => reloadConstellation().catch(() => null))
+    .catch(() => null);
+  }, [reloadConstellation]);
 
   const updateOutfit = useCallback((id: string, updates: Partial<Omit<Outfit, 'id'>>) => {
     setOutfits(prev => {

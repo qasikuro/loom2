@@ -103,7 +103,7 @@ const STAR_DEFS = [
   { key: 'quiet',    label: 'Quiet',    getCount: (c: ConstellationState) => c.quietStreak,   threshold: 7,  unit: 'day streak',   color: '#7890C8', action: 'Journal every day to build your streak' },
   { key: 'creative', label: 'Creative', getCount: (c: ConstellationState) => c.creativeCount, threshold: 5,  unit: 'stories',      color: '#C87AA8', action: 'Create and share a few more stories' },
   { key: 'helping',  label: 'Helping',  getCount: (c: ConstellationState) => c.helpingCount,  threshold: 20, unit: 'stickers sent',color: '#C8A84B', action: 'Send stickers to stories you love in Discover' },
-  { key: 'seasonal', label: 'Seasonal', getCount: (c: ConstellationState) => c.seasonalCount, threshold: 3,  unit: 'stars',        color: '#68B8B0', action: 'Keep unlocking other stars to light this one' },
+  { key: 'seasonal', label: 'Seasonal', getCount: (c: ConstellationState) => c.seasonalCount, threshold: 6,  unit: 'outfits',      color: '#68B8B0', action: 'Log 6 outfits to your Sky Wardrobe' },
 ] as const;
 
 /** Returns the locked star closest to its unlock threshold (0–1), or null if all unlocked */
