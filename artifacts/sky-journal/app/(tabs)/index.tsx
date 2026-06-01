@@ -13,6 +13,7 @@ import {
   Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from '@clerk/expo';
 import {
   useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
@@ -770,16 +771,22 @@ function ConstellationMini({ constellation, onPress }: { constellation: Constell
       <View style={cm.row}>
         {MINI_STARS.map((star, i) => {
           const lit = constellation.unlockedStars.includes(star.key);
+          // Compute partial-progress glow (0–1) for unlit stars
+          const def = STAR_DEFS.find(d => d.key === star.key);
+          const pct = (!lit && def) ? Math.min(1, def.getCount(constellation) / def.threshold) : 0;
+          const hasProgress = pct > 0;
           return (
             <React.Fragment key={star.key}>
-              {i > 0 && <View style={[cm.line, { backgroundColor: lit ? 'rgba(200,184,232,0.22)' : 'rgba(200,184,232,0.06)' }]} />}
+              {i > 0 && <View style={[cm.line, { backgroundColor: lit ? 'rgba(200,184,232,0.22)' : hasProgress ? 'rgba(200,184,232,0.12)' : 'rgba(200,184,232,0.06)' }]} />}
               <View style={cm.starCol}>
                 <View style={[cm.dot, {
-                  backgroundColor: lit ? star.color : 'rgba(200,184,232,0.12)',
-                  shadowColor: lit ? star.color : 'transparent',
-                  shadowOffset: { width: 0, height: 0 }, shadowRadius: lit ? 7 : 0, shadowOpacity: lit ? 0.9 : 0,
+                  backgroundColor: lit ? star.color : hasProgress ? `${star.color}40` : 'rgba(200,184,232,0.12)',
+                  shadowColor: lit ? star.color : hasProgress ? star.color : 'transparent',
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowRadius: lit ? 7 : hasProgress ? 4 : 0,
+                  shadowOpacity: lit ? 0.9 : hasProgress ? 0.45 : 0,
                 }]} />
-                <Text style={[cm.dotLabel, { color: lit ? 'rgba(220,210,255,0.60)' : 'rgba(200,184,232,0.25)' }]}>{star.label}</Text>
+                <Text style={[cm.dotLabel, { color: lit ? 'rgba(220,210,255,0.60)' : hasProgress ? 'rgba(200,184,232,0.40)' : 'rgba(200,184,232,0.25)' }]}>{star.label}</Text>
               </View>
             </React.Fragment>
           );
@@ -812,6 +819,7 @@ export default function HomeScreen() {
     markServerNotificationsRead, deleteServerNotification, dismissReward,
     reloadData, myGuides, rewardBalance, constellation,
   } = useApp();
+  const { userId: clerkUserId } = useAuth();
   const { playSound } = useSound();
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
@@ -932,13 +940,15 @@ export default function HomeScreen() {
   const newStoryNotifs    = serverNotifications.filter(n => n.type === 'new_story').length;
   const hasDigest = witnessedNotifs > 0 || savedNotifs > 0 || circleStories.length > 0 || newStoryNotifs > 0;
 
-  const myCampfire: GuideProfile | null = character.isGuide ? {
-    userId: 'me', name: character.name || 'Sky Child',
+  const myCampfire: GuideProfile | null = (character.isGuide && clerkUserId) ? {
+    userId: clerkUserId, name: character.name || 'Sky Child',
     username: character.username ?? null, bio: character.bio,
     guideBio: character.guideBio ?? '', guideTopics: character.guideTopics ?? [],
     guideAvailability: character.guideAvailability ?? null,
     peaceRating: 0, dreamersGuided: 0, followerCount: friends.length,
     avatarUri: character.avatarUri ?? null, mood: character.mood,
+    traits: character.traits ?? [], role: character.role ?? null,
+    country: character.country ?? null,
     isFollowing: false, isAvailableNow: liveNow(character.guideAvailability ?? null),
   } : null;
 

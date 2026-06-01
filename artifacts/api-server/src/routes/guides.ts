@@ -143,17 +143,22 @@ router.get("/guides", requireAuth, async (req, res) => {
 router.get("/guides/:userId", requireAuth, async (req, res) => {
   const viewerId = getUserId(req);
   const targetId = String(req.params.userId);
+  const isOwnProfile = viewerId === targetId;
 
   try {
+    // Own profile: fetch without guide/public restrictions so user can always see it
+    // Other profiles: must be a public guide
     const [guideRow] = await db
       .select()
       .from(characterTable)
       .where(
-        and(
-          eq(characterTable.userId,   targetId),
-          eq(characterTable.isGuide,  true),
-          eq(characterTable.isPublic, true),
-        ),
+        isOwnProfile
+          ? eq(characterTable.userId, targetId)
+          : and(
+              eq(characterTable.userId,   targetId),
+              eq(characterTable.isGuide,  true),
+              eq(characterTable.isPublic, true),
+            ),
       )
       .limit(1);
 

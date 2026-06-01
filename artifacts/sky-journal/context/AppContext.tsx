@@ -95,6 +95,9 @@ export interface GuideProfile {
   followerCount:     number;
   avatarUri:         string | null;
   mood:              string;
+  traits?:           string[];
+  role?:             string | null;
+  country?:          string | null;
   isFollowing:       boolean;
   isAvailableNow:    boolean;
 }
