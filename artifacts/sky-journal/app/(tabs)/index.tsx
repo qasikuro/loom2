@@ -1582,7 +1582,7 @@ export default function HomeScreen() {
         <Animated.View style={{ opacity: s4, transform: [{ translateY: s4.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <TouchableOpacity
           style={s.communityFire}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/campfire/index' as any); }}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/campfire' as any); }}
           activeOpacity={0.80}
         >
           <LinearGradient
