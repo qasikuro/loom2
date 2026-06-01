@@ -24,11 +24,25 @@ interface Purchase {
   purchasedAt: string;
 }
 
-function categoryMeta(itemId: string): { icon: string; label: string; color: string } {
-  if (itemId.startsWith('frame_'))  return { icon: '⬡', label: 'Frame',  color: '#C8A84B' };
-  if (itemId.startsWith('accent_')) return { icon: '◈', label: 'Accent', color: '#9B8BCC' };
-  if (itemId.startsWith('theme_'))  return { icon: '◇', label: 'Theme',  color: '#78B8E8' };
-  return { icon: '✦', label: 'Item', color: '#C8B8E8' };
+const ITEM_EMOJI: Record<string, string> = {
+  frame_starlight:     '✦',  frame_moonveil:      '◑',
+  accent_aura:         '◈',  theme_locket:        '◇',
+  theme_aurora:        '⋆',  frame_blossom:       '🌸',
+  accent_petal:        '✿',  frame_solstice:      '☀',
+  accent_twilight:     '◐',  frame_harvest:       '🍂',
+  accent_ember:        '🔥', theme_aurora_winter:  '🌌',
+  frame_frost:         '❄',  effect_butterfly:    '🦋',
+  effect_hearts:       '💜', effect_fireflies:    '✨',
+  effect_blossom:      '🌸', effect_fire:         '🔥',
+  effect_leaves:       '🍃',
+};
+
+function categoryMeta(itemId: string): { label: string; color: string } {
+  if (itemId.startsWith('frame_'))  return { label: 'Frame',  color: '#C8A84B' };
+  if (itemId.startsWith('accent_')) return { label: 'Accent', color: '#9B8BCC' };
+  if (itemId.startsWith('theme_'))  return { label: 'Theme',  color: '#78B8E8' };
+  if (itemId.startsWith('effect_')) return { label: 'Effect', color: '#70C8A0' };
+  return { label: 'Item', color: '#C8B8E8' };
 }
 
 function costStr(p: Purchase): string {
@@ -36,7 +50,7 @@ function costStr(p: Purchase): string {
   if (p.starsSpent)  parts.push(`✦ ${p.starsSpent}`);
   if (p.auraSpent)   parts.push(`◈ ${p.auraSpent}`);
   if (p.shardsSpent) parts.push(`◇ ${p.shardsSpent}`);
-  return parts.join(' · ') || '—';
+  return parts.join(' · ') || 'Free';
 }
 
 function formatDate(iso: string): string {
@@ -112,7 +126,8 @@ export default function PurchaseHistoryScreen() {
           showsVerticalScrollIndicator={false}
         >
           {purchases.map((p, i) => {
-            const cat = categoryMeta(p.itemId);
+            const cat  = categoryMeta(p.itemId);
+            const emoji = ITEM_EMOJI[p.itemId] ?? '✦';
             return (
               <View
                 key={p.id}
@@ -120,7 +135,7 @@ export default function PurchaseHistoryScreen() {
               >
                 {/* Icon bubble */}
                 <View style={[s.iconBubble, { backgroundColor: `${cat.color}18`, borderColor: `${cat.color}30` }]}>
-                  <Text style={[s.catIcon, { color: cat.color }]}>{cat.icon}</Text>
+                  <Text style={s.catIcon}>{emoji}</Text>
                 </View>
 
                 {/* Info */}
