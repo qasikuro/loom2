@@ -19,6 +19,7 @@ import {
 } from '@/context/AppContext';
 import { RewardBalance } from '@/components/RewardBalance';
 import { RewardBanner } from '@/components/RewardBanner';
+import { ShopModal } from '@/components/ShopModal';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -818,6 +819,7 @@ export default function HomeScreen() {
 
   const [showNotifs,  setShowNotifs]  = useState(false);
   const [showOutfits, setShowOutfits] = useState(false);
+  const [showShop,    setShowShop]    = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
   const [showConstellationIntro, setShowConstellationIntro] = useState(false);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
@@ -1169,11 +1171,11 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Reward balance — tappable, links to constellation on profile */}
+          {/* Reward balance — tappable, opens Shop modal */}
           {rewardBalance && (
             <TouchableOpacity
               style={{ alignItems: 'center', paddingBottom: 10, paddingTop: 4 }}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
               activeOpacity={0.8}
             >
               <RewardBalance
@@ -1183,7 +1185,7 @@ export default function HomeScreen() {
                 size="sm"
               />
               <Text style={{ fontSize: 10, color: 'rgba(200,184,232,0.40)', marginTop: 4, letterSpacing: 0.6 }}>
-                view constellation →
+                tap to open shop →
               </Text>
             </TouchableOpacity>
           )}
@@ -1689,6 +1691,9 @@ export default function HomeScreen() {
           onClose={() => setShowEventSheet(false)}
         />
       )}
+
+      {/* ── Shop modal — opened from balance row ──────────────────────────── */}
+      <ShopModal visible={showShop} onClose={() => setShowShop(false)} />
     </Animated.View>
   );
 }
