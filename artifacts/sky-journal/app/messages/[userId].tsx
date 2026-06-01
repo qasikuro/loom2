@@ -220,20 +220,56 @@ export default function MessagesScreen() {
     playStickerSound(def.id);
   }, [playStickerSound]);
 
+  // Queue of sticker animations waiting to play (so back-to-back stickers each get their moment)
+  const stickerQueueRef = useRef<StickerDef[]>([]);
+  const animBusyRef     = useRef(false);
+
+  const drainStickerQueue = useCallback(() => {
+    if (animBusyRef.current || stickerQueueRef.current.length === 0) return;
+    const next = stickerQueueRef.current.shift()!;
+    animBusyRef.current = true;
+    setPlayingAnim({ type: next.anim, emoji: next.emoji });
+    fireHaptic(next);
+    playStickerSound(next.id);
+  }, [playStickerSound]);
+
+  const queueSticker = useCallback((def: StickerDef) => {
+    stickerQueueRef.current.push(def);
+    drainStickerQueue();
+  }, [drainStickerQueue]);
+
+  // Called when the overlay animation finishes — play next in queue if any
+  const handleAnimComplete = useCallback(() => {
+    setPlayingAnim(null);
+    animBusyRef.current = false;
+    drainStickerQueue();
+  }, [drainStickerQueue]);
+
   const load = useCallback(async () => {
     if (!userId) return;
     try {
       const data = await apiFetch<Message[]>(`/messages/${userId}`);
       const msgs = data ?? [];
+      const isFirstLoad = lastMsgIdRef.current === null;
 
-      if (lastMsgIdRef.current && msgs.length > 0) {
+      if (!isFirstLoad && msgs.length > 0) {
+        // ── Poll cycle: animate every new incoming sticker, in order ─────────
         const lastKnownIdx = msgs.findIndex(m => m.id === lastMsgIdRef.current);
         if (lastKnownIdx !== -1) {
           const newMsgs = msgs.slice(lastKnownIdx + 1);
-          const incomingSticker = newMsgs.find(m => !m.isOwn && m.expression);
-          if (incomingSticker?.expression) {
-            playSticker(getSticker(incomingSticker.expression));
-          }
+          newMsgs
+            .filter(m => !m.isOwn && m.expression)
+            .forEach(m => queueSticker(getSticker(m.expression!)));
+        }
+      } else if (isFirstLoad && msgs.length > 0) {
+        // ── First open: animate the most recent UNREAD sticker if fresh (≤ 3 min) ─
+        const freshCutoff = Date.now() - 3 * 60 * 1000;
+        const freshUnread = [...msgs]
+          .reverse()
+          .find(m => !m.isOwn && m.expression && !m.isRead && new Date(m.createdAt).getTime() > freshCutoff);
+        if (freshUnread?.expression) {
+          // Small delay so the screen finishes loading before the animation fires
+          setTimeout(() => queueSticker(getSticker(freshUnread.expression!)), 700);
         }
       }
 
@@ -246,12 +282,13 @@ export default function MessagesScreen() {
     } finally {
       setLoading(false);
     }
-  }, [userId, markDmThreadRead, playSticker]);
+  }, [userId, markDmThreadRead, queueSticker]);
 
   useEffect(() => { load(); }, [load]);
 
   useFocusEffect(useCallback(() => {
-    const interval = setInterval(() => { load().catch(() => null); }, 8000);
+    // 3.5 s poll — fast enough to feel near-real-time without hammering the server
+    const interval = setInterval(() => { load().catch(() => null); }, 3500);
     return () => clearInterval(interval);
   }, [load]));
 
@@ -544,7 +581,7 @@ export default function MessagesScreen() {
         <ChatStickerAnimation
           type={playingAnim.type}
           mainEmoji={playingAnim.emoji}
-          onComplete={() => setPlayingAnim(null)}
+          onComplete={handleAnimComplete}
         />
       )}
     </View>
