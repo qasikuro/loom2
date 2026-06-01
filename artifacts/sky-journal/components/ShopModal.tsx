@@ -53,15 +53,24 @@ const ITEM_ICON_MAP: Record<string, string> = {
   accent_ember:       '🔥',
   theme_aurora_winter:'🌌',
   frame_frost:        '❄',
+  effect_butterfly:   '🦋',
+  effect_hearts:      '💜',
+  effect_fireflies:   '✨',
+  effect_blossom:     '🌸',
+  effect_fire:        '🔥',
+  effect_leaves:      '🍃',
 };
 
 // Static fallback shown on fetch failure — permanent items only
 const FALLBACK_CATALOG: ShopItem[] = [
-  { id: 'frame_starlight', name: 'Starlight Frame', description: 'A golden radiant frame that surrounds your profile with starlight.', icon: '✦', category: 'frame', cost: { stars: 30 } },
-  { id: 'frame_moonveil',  name: 'Moonveil Frame',  description: 'A silver crescent frame woven from moonlight and quiet wishes.',   icon: '◑', category: 'frame', cost: { stars: 40, shards: 10 } },
-  { id: 'accent_aura',     name: 'Aura Glow',       description: 'Wraps your bio in a soft purple luminescence.',                    icon: '◈', category: 'accent', cost: { aura: 25 } },
-  { id: 'theme_locket',    name: 'Memory Locket',   description: 'A vintage golden-locket theme for your journal entries.',          icon: '◇', category: 'theme', cost: { shards: 20 } },
-  { id: 'theme_aurora',    name: 'Aurora Theme',    description: 'Paint your journal pages with the colours of the northern lights.', icon: '⋆', category: 'theme', cost: { aura: 15, shards: 15 } },
+  { id: 'frame_starlight',  name: 'Starlight Frame',          description: 'A golden radiant frame that surrounds your profile with starlight.',             icon: '✦', category: 'frame',  cost: { stars: 30 } },
+  { id: 'frame_moonveil',   name: 'Moonveil Frame',           description: 'A silver crescent frame woven from moonlight and quiet wishes.',                  icon: '◑', category: 'frame',  cost: { stars: 40, shards: 10 } },
+  { id: 'accent_aura',      name: 'Aura Glow',                description: 'Wraps your bio in a soft purple luminescence.',                                   icon: '◈', category: 'accent', cost: { aura: 25 } },
+  { id: 'theme_locket',     name: 'Memory Locket',            description: 'A vintage golden-locket theme for your journal entries.',                          icon: '◇', category: 'theme',  cost: { shards: 20 } },
+  { id: 'theme_aurora',     name: 'Aurora Theme',             description: 'Paint your journal pages with the colours of the northern lights.',                icon: '⋆', category: 'theme',  cost: { aura: 15, shards: 15 } },
+  { id: 'effect_butterfly', name: 'Ethereal Butterflies ✦ Free', description: 'Luminous butterflies drift across your profile, wings catching starlight.',    icon: '🦋', category: 'effect', cost: { stars: 0 } },
+  { id: 'effect_fireflies', name: 'Firefly Glow ✦ Free',     description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',icon: '✨', category: 'effect', cost: { stars: 0 } },
+  { id: 'effect_hearts',    name: 'Floating Hearts',          description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.', icon: '💜', category: 'effect', cost: { stars: 45, aura: 10 } },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {
