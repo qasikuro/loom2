@@ -311,8 +311,20 @@ function MoodOrbPicker({ currentMood, onSelect }: { currentMood: string; onSelec
 
 // ── Cosmetic frame ring ────────────────────────────────────────────────────────
 const FRAME_CONFIGS: Record<string, { color: string; glow: string; dashOpacity: number }> = {
-  frame_starlight: { color: '#C8A84B', glow: 'rgba(200,168,75,0.40)', dashOpacity: 0.90 },
+  frame_starlight: { color: '#C8A84B', glow: 'rgba(200,168,75,0.40)',   dashOpacity: 0.90 },
   frame_moonveil:  { color: '#B8C8DC', glow: 'rgba(184,200,220,0.35)', dashOpacity: 0.82 },
+  frame_blossom:   { color: '#F0A8C0', glow: 'rgba(240,168,192,0.38)', dashOpacity: 0.88 },
+  frame_solstice:  { color: '#F0B840', glow: 'rgba(240,184,64,0.42)',  dashOpacity: 0.88 },
+  frame_harvest:   { color: '#D47830', glow: 'rgba(212,120,48,0.40)',  dashOpacity: 0.86 },
+  frame_frost:     { color: '#A8D0F0', glow: 'rgba(168,208,240,0.38)', dashOpacity: 0.84 },
+};
+
+// ── Cosmetic accent glow ───────────────────────────────────────────────────────
+const ACCENT_CONFIGS: Record<string, { color: string; shadow: string }> = {
+  accent_aura:     { color: '#6B5B95', shadow: 'rgba(107,91,149,0.55)' },
+  accent_petal:    { color: '#D878A0', shadow: 'rgba(216,120,160,0.50)' },
+  accent_twilight: { color: '#4888C8', shadow: 'rgba(72,136,200,0.50)' },
+  accent_ember:    { color: '#D47830', shadow: 'rgba(212,120,48,0.50)'  },
 };
 
 function FrameRing({ frameId }: { frameId: string }) {
@@ -1218,13 +1230,9 @@ export default function CharacterScreen() {
           <View style={styles.profileRow}>
             <View style={styles.avatarWrap}>
               <View style={[styles.avatarCircle, {
-                borderColor: purchasedIds.includes('frame_starlight')
-                  ? '#C8A84B'
-                  : purchasedIds.includes('frame_moonveil')
-                    ? '#B0C8F0'
-                    : purchasedIds.includes('frame_solstice')
-                      ? '#F0B840'
-                      : `${colors.primary}70`,
+                borderColor: (activeFrame && FRAME_CONFIGS[activeFrame])
+                  ? FRAME_CONFIGS[activeFrame].color
+                  : `${colors.primary}70`,
               }]}>
                 <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
               </View>
@@ -1316,14 +1324,14 @@ export default function CharacterScreen() {
                 />
               ) : (
                 <TouchableOpacity onPress={() => setEditingBio(true)} activeOpacity={0.75}>
-                  <View style={activeAccent === 'accent_aura' ? {
+                  <View style={activeAccent && ACCENT_CONFIGS[activeAccent] ? {
                     borderRadius: 10,
-                    backgroundColor: 'rgba(107,91,149,0.08)',
+                    backgroundColor: `${ACCENT_CONFIGS[activeAccent].color}14`,
                     borderWidth: 1,
-                    borderColor: 'rgba(107,91,149,0.28)',
+                    borderColor: `${ACCENT_CONFIGS[activeAccent].color}45`,
                     paddingHorizontal: 10,
                     paddingVertical: 6,
-                    shadowColor: '#6B5B95',
+                    shadowColor: ACCENT_CONFIGS[activeAccent].shadow,
                     shadowOffset: { width: 0, height: 0 },
                     shadowOpacity: 0.35,
                     shadowRadius: 8,
