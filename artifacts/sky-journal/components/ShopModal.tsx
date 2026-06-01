@@ -646,7 +646,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
           seasonalPreview: ShopItem[];
           purchasedIds:    string[];
           activeCosmetics: Record<string, string>;
-        }>('/rewards/shop');
+        }>(`/rewards/shop?t=${Date.now()}`);
         if (!cancelled) {
           setCatalogItems(data.catalog.length > 0 ? data.catalog : FALLBACK_CATALOG);
           setPreviewItems(data.seasonalPreview ?? []);

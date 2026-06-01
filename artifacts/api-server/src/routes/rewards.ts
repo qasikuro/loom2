@@ -329,7 +329,7 @@ router.get("/rewards/shop", requireAuth, async (req, res) => {
       .filter(item => item.seasonal && !isItemAvailable(item, currentMonth))
       .map(item => ({ ...item, availableNow: false as const }));
 
-    return res.json({ catalog, seasonalPreview, purchasedIds, activeCosmetics });
+    return res.set('Cache-Control', 'no-store').json({ catalog, seasonalPreview, purchasedIds, activeCosmetics });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch shop");
     return res.status(500).json({ error: "Internal server error" });
