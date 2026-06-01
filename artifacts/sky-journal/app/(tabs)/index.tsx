@@ -220,17 +220,20 @@ function FriendBubble({ post }: { post: DiscoverPost }) {
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }}
       activeOpacity={0.80}
     >
-      {/* Gradient ring — mood colour → purple */}
+      {/* Outer glow ring — mood colour gradient */}
       <LinearGradient
         colors={[mc, '#A880F8', '#60C8F8']}
         style={fr.ring}
         start={{ x: 0.1, y: 1 }} end={{ x: 1, y: 0.1 }}
       >
         <View style={fr.inner}>
-          <Text style={fr.initial}>{post.authorName.charAt(0).toUpperCase()}</Text>
+          {post.authorAvatarUri
+            ? <Image source={{ uri: post.authorAvatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+            : <Text style={fr.initial}>{post.authorName.charAt(0).toUpperCase()}</Text>
+          }
         </View>
       </LinearGradient>
-      {/* New-story dot */}
+      {/* Active-story dot */}
       <View style={[fr.newDot, { backgroundColor: mc }]} />
       <Text style={fr.name} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
@@ -238,13 +241,13 @@ function FriendBubble({ post }: { post: DiscoverPost }) {
 }
 const fr = StyleSheet.create({
   row:    { paddingHorizontal: 16, paddingBottom: 6, gap: 4 },
-  wrap:   { alignItems: 'center', width: 66, gap: 5 },
-  ring:   { width: 58, height: 58, borderRadius: 29, padding: 2.5 },
-  inner:  { flex: 1, borderRadius: 27, overflow: 'hidden', backgroundColor: '#0E0B28',
+  wrap:   { alignItems: 'center', width: 70, gap: 6 },
+  ring:   { width: 62, height: 62, borderRadius: 31, padding: 2.5 },
+  inner:  { flex: 1, borderRadius: 29, overflow: 'hidden', backgroundColor: '#0E0B28',
             alignItems: 'center', justifyContent: 'center' },
-  initial:{ fontSize: 20, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.90)' },
-  newDot: { position: 'absolute', top: 42, right: 10, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#080614' },
-  name:   { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.62)', textAlign: 'center' },
+  initial:{ fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.90)' },
+  newDot: { position: 'absolute', top: 44, right: 8, width: 11, height: 11, borderRadius: 6, borderWidth: 2.5, borderColor: '#080614' },
+  name:   { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.65)', textAlign: 'center', maxWidth: 66 },
 });
 
 // ─── Campfire bubble (stories-style circle) ──────────────────────────────────
@@ -1388,39 +1391,64 @@ export default function HomeScreen() {
         )}
 
         {/* ══════════════════════════════════════════════════
-            LUMI — aware companion (lower priority)
+            LUMI — immersive companion card
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <TouchableOpacity
-          style={s.lumiBlock}
+          style={s.lumiCard}
           onPress={() => {
             if (hasNotifs) { setShowNotifs(true); markServerNotificationsRead(); }
             else router.push('/(tabs)/create');
           }}
           activeOpacity={0.88}
         >
+          {/* Deep sky background */}
           <LinearGradient
-            colors={[`${accent}18`, `${accent}08`, 'transparent']}
+            colors={['#12082E', '#0A061C', '#08050F']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFill}
           />
-          <Image source={Images.character_default} style={s.lumiAvatar} contentFit="contain" />
-          <View style={{ flex: 1 }}>
-            <Text style={s.lumiLabel}>Lumi</Text>
-            <Text style={s.lumiMsg}>
+          {/* Nebula glow orbs */}
+          <View pointerEvents="none" style={[s.lumiOrb1, { backgroundColor: accent }]} />
+          <View pointerEvents="none" style={s.lumiOrb2} />
+          {/* Star flecks */}
+          {[{top:14,left:24},{top:8,left:'62%'},{top:22,right:18},{top:38,left:'38%'},{bottom:16,left:52},{bottom:12,right:'28%'}].map((pos,i)=>(
+            <View key={i} pointerEvents="none" style={[s.lumiStar, pos as any, { opacity: 0.18 + (i % 3) * 0.10 }]} />
+          ))}
+          {/* Card content */}
+          <View style={s.lumiContent}>
+            {/* Eyebrow row */}
+            <View style={s.lumiEyebrow}>
+              <View style={[s.lumiDot, { backgroundColor: accent }]} />
+              <Text style={[s.lumiEyebrowTxt, { color: accent }]}>LUMI</Text>
+              <View style={{ flex: 1 }} />
+              {hasNotifs && (
+                <View style={[s.lumiPill, { backgroundColor: `${accent}20`, borderColor: `${accent}45` }]}>
+                  <Text style={[s.lumiPillTxt, { color: accent }]}>
+                    {witnessedNotifs > 0
+                      ? `${witnessedNotifs} witnessed you`
+                      : savedNotifs > 0
+                      ? `${savedNotifs} saved your work`
+                      : `${rewards.length + unread} new`}
+                  </Text>
+                </View>
+              )}
+            </View>
+            {/* Main message */}
+            <Text style={s.lumiMsgV2}>
               {lumiAwareness(
                 character.name, witnessedNotifs, savedNotifs,
                 circleStories.length, liveCampfireCount,
                 journalEntries, stories, hour,
                 constellation, rewardBalance,
-              )} ✦
+              )}{' '}
+              <Text style={{ color: accent, fontSize: 14 }}>✦</Text>
+            </Text>
+            {/* CTA hint */}
+            <Text style={s.lumiHint}>
+              {hasNotifs ? 'Tap to view  →' : 'Begin something  →'}
             </Text>
           </View>
-          {hasNotifs && (
-            <View style={[s.lumiBadge, { backgroundColor: accent }]}>
-              <Text style={s.lumiBadgeN}>{rewards.length + unread}</Text>
-            </View>
-          )}
         </TouchableOpacity>
         </Animated.View>
 
@@ -1887,21 +1915,26 @@ const s = StyleSheet.create({
   emptyStoriesText: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,220,0.42)' },
   emptyStoriesSub:  { fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,200,0.30)', fontStyle: 'italic' },
 
-  // ── Lumi companion block ───────────────────────────────────────────────────
-  lumiBlock:   {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
+  // ── Lumi companion card — immersive night-sky design ─────────────────────
+  lumiCard: {
     marginHorizontal: 16, marginTop: 4, marginBottom: 4,
-    paddingHorizontal: 18, paddingVertical: 16,
-    borderRadius: 22, overflow: 'hidden',
-    backgroundColor: 'rgba(155,120,255,0.05)',
-    borderWidth: 1, borderColor: 'rgba(168,136,248,0.12)',
-    shadowColor: '#9B78FF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.18, shadowRadius: 20, elevation: 4,
+    borderRadius: 24, overflow: 'hidden',
+    backgroundColor: '#0D0820',
+    borderWidth: 1, borderColor: 'rgba(155,120,255,0.18)',
+    shadowColor: '#6B3FD8', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.40, shadowRadius: 28, elevation: 10,
+    minHeight: 148,
   },
-  lumiAvatar:  { width: 52, height: 52 },
-  lumiLabel:   { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2.0, color: 'rgba(200,185,255,0.35)', marginBottom: 5, textTransform: 'uppercase' },
-  lumiMsg:     { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(225,215,255,0.78)', lineHeight: 20.5 },
-  lumiBadge:   { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
-  lumiBadgeN:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  lumiContent:    { padding: 20, paddingTop: 18 },
+  lumiOrb1:       { position: 'absolute', top: -50, right: -40, width: 180, height: 180, borderRadius: 90, opacity: 0.14 },
+  lumiOrb2:       { position: 'absolute', bottom: -30, left: -30, width: 140, height: 140, borderRadius: 70, opacity: 0.09, backgroundColor: '#2A60C8' },
+  lumiStar:       { position: 'absolute', width: 2.5, height: 2.5, borderRadius: 2, backgroundColor: '#E8DCFF' },
+  lumiEyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 14 },
+  lumiDot:        { width: 7, height: 7, borderRadius: 4 },
+  lumiEyebrowTxt: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 2.5 },
+  lumiPill:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  lumiPillTxt:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
+  lumiMsgV2:      { fontSize: 17, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(238,228,255,0.93)', lineHeight: 26, letterSpacing: -0.15 },
+  lumiHint:       { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(180,160,240,0.32)', marginTop: 16, letterSpacing: 0.4 },
 
   // ── Star journey nudge card ────────────────────────────────────────────────
   nudgeCard: {
