@@ -40,6 +40,7 @@ import { useTranslation } from 'react-i18next';
 import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WeatherWidget } from '@/components/WeatherWidget';
+import { ProfileEffect } from '@/components/ProfileEffect';
 
 // ── Constellation Progress Card ────────────────────────────────────────────────
 
@@ -470,6 +471,8 @@ function CharacterAuraHeader({ mood, paddingTop, children }: {
     <View style={[styles.profileHeader, { paddingTop, overflow: 'hidden' }]}>
       {/* Dark atmospheric base */}
       <LinearGradient colors={aura.gradient} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+      {/* Animated profile effect — SVG particles floating over the header */}
+      {activeEffect && <ProfileEffect effectId={activeEffect} />}
 
       {/* Outer soft halo (larger, lower opacity) */}
       <Animated.View
@@ -682,6 +685,7 @@ export default function CharacterScreen() {
           shopCatalog, purchasedIds, setActiveCosmetic } = useApp();
   const activeFrame  = activeCosmetics['frame']  as string | undefined;
   const activeAccent = activeCosmetics['accent'] as string | undefined;
+  const activeEffect = activeCosmetics['effect'] as string | undefined;
   const moodAccent = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
   const { signOut, userId: myUserId } = useAuth();
 
@@ -2236,8 +2240,8 @@ export default function CharacterScreen() {
           {profileTab === 'style' && purchasedIds.length > 0 && (() => {
             const owned = shopCatalog.filter(item => purchasedIds.includes(item.id));
             if (owned.length === 0) return null;
-            const CATEGORY_ICON: Record<string, string> = { frame: '⬡', accent: '◈', theme: '◇' };
-            const CATEGORY_COLOR: Record<string, string> = { frame: '#C8A84B', accent: '#9878C8', theme: '#78B8E8' };
+            const CATEGORY_ICON: Record<string, string> = { frame: '⬡', accent: '◈', theme: '◇', effect: '✦' };
+            const CATEGORY_COLOR: Record<string, string> = { frame: '#C8A84B', accent: '#9878C8', theme: '#78B8E8', effect: '#70C8A0' };
             return (
               <View style={styles.hSection}>
                 <View style={styles.hSectionHeader}>

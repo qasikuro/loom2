@@ -68,12 +68,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   frame:  'Profile Frame',
   accent: 'Bio Accent',
   theme:  'Journal Theme',
+  effect: 'Profile Effect',
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
   frame:  '#C8A84B',
   accent: '#9878D8',
   theme:  '#78B4DC',
+  effect: '#70C8A0',
 };
 
 // ── Purchase history entry type ───────────────────────────────────────────────
@@ -198,6 +200,32 @@ function ItemPreview({ category, icon, color }: { category: string; color: strin
           <View style={[pv.themeIconBadge, { backgroundColor: `${color}18`, borderColor: `${color}35` }]}>
             <Text style={[pv.icon, { fontSize: 13 }]}>{icon}</Text>
           </View>
+        </View>
+      )}
+
+      {category === 'effect' && (
+        <View style={[pv.effectWrap, { backgroundColor: `${color}0A` }]}>
+          {['●', '✦', '●'].map((dot, i) => (
+            <View
+              key={i}
+              style={[pv.effectDot, {
+                backgroundColor: color,
+                opacity: 0.30 + i * 0.25,
+                transform: [{ scale: 0.7 + i * 0.2 }],
+              }]}
+            />
+          ))}
+          <Text style={[pv.effectIcon, { color }]}>{icon}</Text>
+          {['●', '✦', '●'].map((dot, i) => (
+            <View
+              key={i + 3}
+              style={[pv.effectDot, {
+                backgroundColor: color,
+                opacity: 0.80 - i * 0.25,
+                transform: [{ scale: 1.1 - i * 0.2 }],
+              }]}
+            />
+          ))}
         </View>
       )}
     </View>
@@ -957,6 +985,25 @@ const pv = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Effect: floating particle row
+  effectWrap: {
+    width: '100%',
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 4,
+  },
+  effectDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  effectIcon: {
+    fontSize: 19,
   },
 });
 

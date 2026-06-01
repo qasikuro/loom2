@@ -261,7 +261,7 @@ export interface RewardBalance {
 }
 
 // ── Cosmetic item → category map (mirrors server SHOP_CATALOG) ───────────────
-export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme'> = {
+export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' | 'effect'> = {
   // Permanent
   'frame_starlight':    'frame',
   'frame_moonveil':     'frame',
@@ -280,6 +280,13 @@ export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme'>
   // Winter
   'theme_aurora_winter': 'theme',
   'frame_frost':        'frame',
+  // Profile effects
+  'effect_butterfly':   'effect',
+  'effect_hearts':      'effect',
+  'effect_fireflies':   'effect',
+  'effect_blossom':     'effect',
+  'effect_fire':        'effect',
+  'effect_leaves':      'effect',
 };
 
 export interface ShopItem {
@@ -287,7 +294,7 @@ export interface ShopItem {
   name:            string;
   description:     string;
   icon:            string;
-  category:        'frame' | 'accent' | 'theme';
+  category:        'frame' | 'accent' | 'theme' | 'effect';
   cost:            { stars?: number; aura?: number; shards?: number };
   seasonal?:       boolean;
   seasonalLabel?:  string;

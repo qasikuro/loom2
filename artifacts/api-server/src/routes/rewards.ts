@@ -12,7 +12,7 @@ export interface ShopItem {
   name:            string;
   description:     string;
   icon:            string;
-  category:        "frame" | "accent" | "theme";
+  category:        "frame" | "accent" | "theme" | "effect";
   cost:            { stars?: number; aura?: number; shards?: number };
   seasonal?:       boolean;
   seasonalLabel?:  string;
@@ -160,6 +160,64 @@ export const SHOP_CATALOG: ShopItem[] = [
     seasonal:       true,
     seasonalLabel:  "Winter",
     seasonalMonths: [12, 1, 2],
+  },
+  // ── Profile Effects (animated particles on profile header) ────────────────
+  {
+    id:          "effect_butterfly",
+    name:        "Ethereal Butterflies",
+    description: "Luminous butterflies drift across your profile, wings catching the light of distant stars.",
+    icon:        "🦋",
+    category:    "effect",
+    cost:        { stars: 60, aura: 15 },
+  },
+  {
+    id:          "effect_hearts",
+    name:        "Floating Hearts",
+    description: "Soft hearts rise gently from below, carrying warmth to every corner of your sky.",
+    icon:        "💜",
+    category:    "effect",
+    cost:        { stars: 45, aura: 10 },
+  },
+  {
+    id:          "effect_fireflies",
+    name:        "Firefly Glow",
+    description: "Golden fireflies blink softly around you like scattered wishes under a summer sky.",
+    icon:        "✨",
+    category:    "effect",
+    cost:        { stars: 40, shards: 15 },
+  },
+  {
+    id:             "effect_blossom",
+    name:           "Cherry Blossom Rain",
+    description:    "Delicate pink petals spiral through your profile in a gentle spring shower.",
+    icon:           "🌸",
+    category:       "effect",
+    cost:           { stars: 65 },
+    seasonal:       true,
+    seasonalLabel:  "Spring",
+    seasonalMonths: [3, 4, 5],
+  },
+  {
+    id:             "effect_fire",
+    name:           "Sky Lanterns",
+    description:    "Warm amber flames float upward like sky lanterns released at summer dusk.",
+    icon:           "🔥",
+    category:       "effect",
+    cost:           { stars: 55, aura: 10 },
+    seasonal:       true,
+    seasonalLabel:  "Summer",
+    seasonalMonths: [6, 7, 8],
+  },
+  {
+    id:             "effect_leaves",
+    name:           "Forest Whisper",
+    description:    "Autumn leaves drift quietly through your profile, carrying the scent of rain on stone.",
+    icon:           "🍃",
+    category:       "effect",
+    cost:           { stars: 50, shards: 10 },
+    seasonal:       true,
+    seasonalLabel:  "Autumn",
+    seasonalMonths: [9, 10, 11],
   },
 ];
 
