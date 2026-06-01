@@ -180,11 +180,11 @@ export const SHOP_CATALOG: ShopItem[] = [
   },
   {
     id:          "effect_fireflies",
-    name:        "Firefly Glow",
-    description: "Golden fireflies blink softly around you like scattered wishes under a summer sky.",
+    name:        "Firefly Glow ✦ Free",
+    description: "Golden fireflies blink softly around you like scattered wishes under a summer sky. Try it free!",
     icon:        "✨",
     category:    "effect",
-    cost:        { stars: 40, shards: 15 },
+    cost:        { stars: 0 },
   },
   {
     id:             "effect_blossom",

@@ -1,419 +1,285 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
-import Svg, { Circle, Ellipse, G, Path } from 'react-native-svg';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-type FlyMode = 'drift' | 'rise' | 'fall' | 'glow';
-
-interface ParticleSpec {
-  startX:   number;
-  startY:   number;
-  delay:    number;
-  flyMode:  FlyMode;
-  xSwing:   number;
-  yTravel:  number;
-  speed:    number;
-  rotSpeed: number;
-  scaleMin: number;
-  scaleMax: number;
-  opacity:  number;
-  wingFlap: boolean;
-  render:   () => React.ReactElement;
-}
-
-// ── Deterministic pseudo-random (stable per index, no Math.random) ─────────────
-
+// ── Deterministic RNG (stable per seed, no Math.random) ───────────────────────
 function rng(seed: number): number {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
   return x - Math.floor(x);
 }
 
-// ── SVG shapes ─────────────────────────────────────────────────────────────────
-
-function ButterflyShape({ c1, c2 }: { c1: string; c2: string }) {
-  return (
-    <Svg width={40} height={34} viewBox="0 0 40 34">
-      <Path d="M 20,17 C 16,9 3,6 4,14 C 5,20 14,21 20,17 Z" fill={c1} fillOpacity={0.88} />
-      <Path d="M 20,17 C 13,21 8,27 12,31 C 16,33 20,27 20,17 Z" fill={c2} fillOpacity={0.80} />
-      <Path d="M 20,17 C 24,9 37,6 36,14 C 35,20 26,21 20,17 Z" fill={c1} fillOpacity={0.88} />
-      <Path d="M 20,17 C 27,21 32,27 28,31 C 24,33 20,27 20,17 Z" fill={c2} fillOpacity={0.80} />
-      <Ellipse cx={20} cy={17} rx={1.5} ry={7.5} fill="#1A0E30" fillOpacity={0.72} />
-      <Path d="M 20,9 L 16,3" stroke="#1A0E30" strokeWidth={0.9} strokeOpacity={0.50} fill="none" />
-      <Path d="M 20,9 L 24,3" stroke="#1A0E30" strokeWidth={0.9} strokeOpacity={0.50} fill="none" />
-      <Circle cx={16} cy={3} r={1} fill="#1A0E30" fillOpacity={0.40} />
-      <Circle cx={24} cy={3} r={1} fill="#1A0E30" fillOpacity={0.40} />
-    </Svg>
-  );
+// ── Effect catalogue ──────────────────────────────────────────────────────────
+interface EffectDef {
+  particles:  string[];          // emoji / chars to cycle through
+  count:      number;
+  mode:       'rise' | 'fall' | 'drift' | 'glow';
+  fontSize:   number;
+  colors?:    string[];          // for plain View dots when emoji is empty
+  speedMs:    [number, number];  // [min, max] cycle duration
+  xSwingPct:  number;            // horizontal sway as fraction of width
+  yTravelPct: number;            // vertical travel as fraction of height
 }
 
-function HeartShape({ color }: { color: string }) {
-  return (
-    <Svg width={22} height={20} viewBox="0 0 22 20">
-      <Path
-        d="M 11,18.5 L 2,10 C -0.8,7 -0.2,3 3.5,1.5 C 6,0.5 8.5,2 11,5 C 13.5,2 16,0.5 18.5,1.5 C 22.2,3 22.8,7 20,10 Z"
-        fill={color}
-        fillOpacity={0.92}
-      />
-    </Svg>
-  );
+const EFFECTS: Record<string, EffectDef> = {
+  effect_butterfly: {
+    particles:  ['🦋', '🦋', '🦋', '🦋'],
+    count:      6,
+    mode:       'drift',
+    fontSize:   26,
+    speedMs:    [3000, 5200],
+    xSwingPct:  0.14,
+    yTravelPct: 0.18,
+  },
+  effect_hearts: {
+    particles:  ['💜', '💗', '🤍', '💙', '🩷', '💜'],
+    count:      9,
+    mode:       'rise',
+    fontSize:   20,
+    speedMs:    [2400, 4000],
+    xSwingPct:  0.10,
+    yTravelPct: 0.65,
+  },
+  effect_fire: {
+    particles:  ['🔥', '✨', '🔥', '💫', '🔥'],
+    count:      11,
+    mode:       'rise',
+    fontSize:   18,
+    speedMs:    [1100, 2100],
+    xSwingPct:  0.06,
+    yTravelPct: 0.55,
+  },
+  effect_blossom: {
+    particles:  ['🌸', '🌺', '🌷', '🌸', '🌼'],
+    count:      9,
+    mode:       'fall',
+    fontSize:   22,
+    speedMs:    [3600, 5800],
+    xSwingPct:  0.18,
+    yTravelPct: 0.90,
+  },
+  effect_leaves: {
+    particles:  ['🍃', '🍂', '🍁', '🌿', '🍃'],
+    count:      8,
+    mode:       'fall',
+    fontSize:   20,
+    speedMs:    [4000, 6400],
+    xSwingPct:  0.22,
+    yTravelPct: 0.95,
+  },
+  effect_fireflies: {
+    particles:  ['✦', '✧', '⋆', '✦', '✧'],
+    count:      14,
+    mode:       'glow',
+    fontSize:   16,
+    colors:     ['#E8D44A', '#F0E060', '#D8C840', '#F4EC70', '#C8D860'],
+    speedMs:    [2000, 4000],
+    xSwingPct:  0.20,
+    yTravelPct: 0.22,
+  },
+};
+
+// ── Single particle ────────────────────────────────────────────────────────────
+
+interface ParticleProps {
+  def:       EffectDef;
+  idx:       number;
+  width:     number;
+  height:    number;
 }
 
-function FlameShape({ c1, c2 }: { c1: string; c2: string }) {
-  return (
-    <Svg width={14} height={22} viewBox="0 0 14 22">
-      <Path d="M 7,21 C 2,15 0,9.5 3.5,5 C 5.5,2 7,0 7,0 C 7,0 8.5,2 10.5,5 C 14,9.5 12,15 7,21 Z" fill={c1} fillOpacity={0.85} />
-      <Path d="M 7,17 C 4,13 4,9 6,6 C 6.5,4.5 7,3 7,3 C 7.5,4.5 8.5,7 8,10 C 7.5,13 7,17 7,17 Z" fill={c2} fillOpacity={0.93} />
-    </Svg>
-  );
-}
+function Particle({ def, idx, width, height }: ParticleProps) {
+  // Deterministic positions / timing based on idx seed
+  const s      = (n: number) => rng(idx * 37 + n);
+  const speedMs = def.speedMs[0] + s(1) * (def.speedMs[1] - def.speedMs[0]);
+  const delay   = idx * 380 + s(2) * 600;
 
-function BlossomShape({ c1, c2 }: { c1: string; c2: string }) {
-  const angles = [0, 72, 144, 216, 288] as const;
-  return (
-    <Svg width={28} height={28} viewBox="0 0 28 28">
-      <G transform="translate(14,14)">
-        {angles.map((angle, i) => (
-          <Path
-            key={i}
-            transform={`rotate(${angle})`}
-            d="M 0,-8 C -4,-5 -4,-1 0,6 C 4,-1 4,-5 0,-8 Z"
-            fill={c1}
-            fillOpacity={0.88}
-          />
-        ))}
-        <Circle cx={0} cy={0} r={2.8} fill={c2} fillOpacity={0.96} />
-        <Circle cx={0} cy={0} r={1.2} fill="#FFC0D8" fillOpacity={0.80} />
-      </G>
-    </Svg>
-  );
-}
+  // Starting position (% of container)
+  const startXPct = s(3);
+  const startYPct = def.mode === 'rise'  ? 0.55 + s(4) * 0.40 :
+                    def.mode === 'fall'  ? s(4) * 0.15 :
+                    def.mode === 'glow'  ? s(4) :
+                    /* drift */            s(4);
 
-function LeafShape({ color }: { color: string }) {
-  return (
-    <Svg width={14} height={24} viewBox="0 0 14 24">
-      <Path d="M 7,22 C 2,15 2,8 7,1 C 12,8 12,15 7,22 Z" fill={color} fillOpacity={0.88} />
-      <Path d="M 7,22 L 7,1" stroke="#fff" strokeWidth={0.7} strokeOpacity={0.22} fill="none" />
-      <Path d="M 7,15 Q 4,12 4,9" stroke="#fff" strokeWidth={0.5} strokeOpacity={0.18} fill="none" />
-      <Path d="M 7,15 Q 10,12 10,9" stroke="#fff" strokeWidth={0.5} strokeOpacity={0.18} fill="none" />
-    </Svg>
-  );
-}
+  const startX = startXPct * Math.max(0, width  - 30);
+  const startY = startYPct * Math.max(0, height - 30);
 
-function FireflyShape({ color }: { color: string }) {
-  return (
-    <Svg width={18} height={18} viewBox="0 0 18 18">
-      <Circle cx={9} cy={9} r={8} fill={color} fillOpacity={0.10} />
-      <Circle cx={9} cy={9} r={5} fill={color} fillOpacity={0.25} />
-      <Circle cx={9} cy={9} r={2.8} fill={color} fillOpacity={0.90} />
-    </Svg>
-  );
-}
+  // Travel distances (px from start)
+  const xSwing  = def.xSwingPct  * width  * (s(5) * 0.6 + 0.7);
+  const yTravel = def.yTravelPct * height * (s(6) * 0.4 + 0.8);
 
-// ── Color palettes ─────────────────────────────────────────────────────────────
-
-const BFY = [
-  { c1: '#C8B8E8', c2: '#C8A84B' },
-  { c1: '#B8D4F0', c2: '#9878C8' },
-  { c1: '#F0C8E8', c2: '#C8A84B' },
-  { c1: '#D8C0F8', c2: '#A8D4D0' },
-  { c1: '#C8D8F0', c2: '#D4A870' },
-];
-const HRT = ['#F0B8D4', '#D8B0F0', '#F4C4E8', '#C8B0F8', '#F8D0E8', '#E8B8F8', '#F0C0DC', '#D4C0F8'];
-const FLM = [
-  { c1: '#E88040', c2: '#F0D040' },
-  { c1: '#E87030', c2: '#F0AA30' },
-  { c1: '#D46030', c2: '#E8C040' },
-  { c1: '#F09050', c2: '#F4DC50' },
-];
-const BLM = [
-  { c1: '#F4B8D0', c2: '#FFF0F6' },
-  { c1: '#F8C8D8', c2: '#FFF8FA' },
-  { c1: '#ECAAC8', c2: '#FFE8F4' },
-  { c1: '#F0C0DC', c2: '#FFF4F8' },
-];
-const LVS = ['#4A9860', '#5AAB6E', '#3D8854', '#72BB8A', '#4E9266', '#5EA870', '#427E52'];
-const FFY = ['#E8D44A', '#F0E060', '#D8C840', '#F4EC70', '#E8CC40', '#F8E868'];
-
-// ── Particle generator per effect ─────────────────────────────────────────────
-
-function makeParticles(effectId: string, w: number, h: number): ParticleSpec[] {
-  switch (effectId) {
-    case 'effect_butterfly':
-      return Array.from({ length: 5 }, (_, i) => {
-        const col = BFY[i % BFY.length];
-        return {
-          startX:   rng(i * 11) * Math.max(0, w - 42),
-          startY:   rng(i * 17) * Math.max(0, h - 36),
-          delay:    i * 700 + rng(i * 23) * 500,
-          flyMode:  'drift',
-          xSwing:   40 + rng(i * 7) * 35,
-          yTravel:  22 + rng(i * 13) * 20,
-          speed:    3400 + rng(i * 19) * 1400,
-          rotSpeed: 0,
-          scaleMin: 0.82,
-          scaleMax: 1.06,
-          opacity:  0.90,
-          wingFlap: true,
-          render:   () => <ButterflyShape c1={col.c1} c2={col.c2} />,
-        };
-      });
-
-    case 'effect_hearts':
-      return Array.from({ length: 8 }, (_, i) => ({
-        startX:   rng(i * 11) * Math.max(0, w - 24),
-        startY:   h * 0.55 + rng(i * 17) * (h * 0.40),
-        delay:    i * 500 + rng(i * 23) * 350,
-        flyMode:  'rise' as FlyMode,
-        xSwing:   16 + rng(i * 7) * 20,
-        yTravel:  58 + rng(i * 13) * 55,
-        speed:    2800 + rng(i * 19) * 1200,
-        rotSpeed: 0,
-        scaleMin: 0.78,
-        scaleMax: 1.12,
-        opacity:  0.90,
-        wingFlap: false,
-        render:   () => <HeartShape color={HRT[i % HRT.length]} />,
-      }));
-
-    case 'effect_fire':
-      return Array.from({ length: 10 }, (_, i) => {
-        const col = FLM[i % FLM.length];
-        return {
-          startX:   rng(i * 11) * Math.max(0, w - 16),
-          startY:   h * 0.65 + rng(i * 17) * (h * 0.30),
-          delay:    i * 320 + rng(i * 23) * 220,
-          flyMode:  'rise' as FlyMode,
-          xSwing:   7 + rng(i * 7) * 10,
-          yTravel:  45 + rng(i * 13) * 45,
-          speed:    1500 + rng(i * 19) * 700,
-          rotSpeed: 0,
-          scaleMin: 0.65,
-          scaleMax: 1.25,
-          opacity:  0.92,
-          wingFlap: false,
-          render:   () => <FlameShape c1={col.c1} c2={col.c2} />,
-        };
-      });
-
-    case 'effect_blossom':
-      return Array.from({ length: 8 }, (_, i) => {
-        const col = BLM[i % BLM.length];
-        return {
-          startX:   rng(i * 11) * Math.max(0, w - 28),
-          startY:   rng(i * 17) * (h * 0.22) - 12,
-          delay:    i * 550 + rng(i * 23) * 450,
-          flyMode:  'fall' as FlyMode,
-          xSwing:   22 + rng(i * 7) * 22,
-          yTravel:  h * 0.85 + rng(i * 13) * (h * 0.12),
-          speed:    4000 + rng(i * 19) * 1600,
-          rotSpeed: 2800 + rng(i * 29) * 2400,
-          scaleMin: 0.78,
-          scaleMax: 1.06,
-          opacity:  0.88,
-          wingFlap: false,
-          render:   () => <BlossomShape c1={col.c1} c2={col.c2} />,
-        };
-      });
-
-    case 'effect_leaves':
-      return Array.from({ length: 7 }, (_, i) => ({
-        startX:   rng(i * 11) * Math.max(0, w - 16),
-        startY:   rng(i * 17) * (h * 0.18) - 14,
-        delay:    i * 650 + rng(i * 23) * 500,
-        flyMode:  'fall' as FlyMode,
-        xSwing:   28 + rng(i * 7) * 28,
-        yTravel:  h * 0.88 + rng(i * 13) * (h * 0.09),
-        speed:    4400 + rng(i * 19) * 1800,
-        rotSpeed: 2400 + rng(i * 29) * 2800,
-        scaleMin: 0.78,
-        scaleMax: 1.06,
-        opacity:  0.86,
-        wingFlap: false,
-        render:   () => <LeafShape color={LVS[i % LVS.length]} />,
-      }));
-
-    case 'effect_fireflies':
-      return Array.from({ length: 12 }, (_, i) => ({
-        startX:   rng(i * 11) * Math.max(0, w - 18),
-        startY:   rng(i * 17) * Math.max(0, h - 18),
-        delay:    i * 280 + rng(i * 23) * 450,
-        flyMode:  'glow' as FlyMode,
-        xSwing:   16 + rng(i * 7) * 20,
-        yTravel:  16 + rng(i * 13) * 20,
-        speed:    2600 + rng(i * 19) * 1400,
-        rotSpeed: 0,
-        scaleMin: 0.65,
-        scaleMax: 1.30,
-        opacity:  0.88,
-        wingFlap: false,
-        render:   () => <FireflyShape color={FFY[i % FFY.length]} />,
-      }));
-
-    default:
-      return [];
-  }
-}
-
-// ── Particle component ─────────────────────────────────────────────────────────
-
-function Particle({ spec }: { spec: ParticleSpec }) {
+  // Animated values — all JS driver (works on web + native)
   const tx      = useRef(new Animated.Value(0)).current;
   const ty      = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
-  const scale   = useRef(new Animated.Value(spec.scaleMin)).current;
   const rotate  = useRef(new Animated.Value(0)).current;
-  const wingX   = useRef(new Animated.Value(1)).current;
+  const scale   = useRef(new Animated.Value(0.85)).current;
+
+  const emoji = def.particles[idx % def.particles.length];
+  const color = def.colors ? def.colors[idx % def.colors.length] : undefined;
 
   useEffect(() => {
+    if (width === 0 || height === 0) return;
+
+    let running = true;
     const timer = setTimeout(() => {
-      const { flyMode, xSwing, yTravel, speed, rotSpeed, scaleMin, scaleMax, opacity: maxOp, wingFlap } = spec;
+      if (!running) return;
 
-      // Opacity
-      let opAnim: Animated.CompositeAnimation;
-      if (flyMode === 'glow') {
-        opAnim = Animated.loop(Animated.sequence([
-          Animated.timing(opacity, { toValue: maxOp, duration: speed * 0.42, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-          Animated.timing(opacity, { toValue: 0.06, duration: speed * 0.58, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-        ]));
-      } else if (flyMode === 'rise') {
-        opAnim = Animated.loop(Animated.sequence([
-          Animated.timing(opacity, { toValue: maxOp, duration: speed * 0.18, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: maxOp, duration: speed * 0.58, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0, duration: speed * 0.24, useNativeDriver: true }),
-        ]));
-      } else if (flyMode === 'fall') {
-        opAnim = Animated.loop(Animated.sequence([
-          Animated.timing(opacity, { toValue: 0, duration: 0, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: maxOp, duration: speed * 0.14, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: maxOp, duration: speed * 0.66, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: 0,   duration: speed * 0.20, useNativeDriver: true }),
-        ]));
+      // ── X sway (all modes) ──────────────────────────────────────────────
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(tx, { toValue:  xSwing, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(tx, { toValue: -xSwing, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        ])
+      ).start();
+
+      // ── Y movement ──────────────────────────────────────────────────────
+      if (def.mode === 'rise') {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(ty, { toValue: -yTravel, duration: speedMs, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+            Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: false }),
+          ])
+        ).start();
+      } else if (def.mode === 'fall') {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(ty, { toValue: yTravel, duration: speedMs, easing: Easing.in(Easing.quad), useNativeDriver: false }),
+            Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: false }),
+          ])
+        ).start();
+      } else if (def.mode === 'glow') {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(ty, { toValue: -yTravel, duration: speedMs * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+            Animated.timing(ty, { toValue:  yTravel, duration: speedMs * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          ])
+        ).start();
       } else {
-        opAnim = Animated.loop(Animated.sequence([
-          Animated.timing(opacity, { toValue: maxOp, duration: speed * 0.35, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: maxOp * 0.70, duration: speed * 0.30, useNativeDriver: true }),
-          Animated.timing(opacity, { toValue: maxOp, duration: speed * 0.35, useNativeDriver: true }),
-        ]));
+        // drift
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(ty, { toValue: -yTravel, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+            Animated.timing(ty, { toValue:  yTravel, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          ])
+        ).start();
       }
 
-      // Y movement
-      let yAnim: Animated.CompositeAnimation;
-      if (flyMode === 'rise') {
-        yAnim = Animated.loop(Animated.sequence([
-          Animated.timing(ty, { toValue: -yTravel, duration: speed, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
-          Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ]));
-      } else if (flyMode === 'fall') {
-        yAnim = Animated.loop(Animated.sequence([
-          Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: true }),
-          Animated.timing(ty, { toValue: yTravel, duration: speed, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }),
-          Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ]));
+      // ── Opacity ──────────────────────────────────────────────────────────
+      const fadeInDur  = speedMs * 0.16;
+      const holdDur    = speedMs * 0.58;
+      const fadeOutDur = speedMs * 0.26;
+
+      if (def.mode === 'glow') {
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(opacity, { toValue: 1.0, duration: speedMs * 0.40, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+            Animated.timing(opacity, { toValue: 0.08, duration: speedMs * 0.60, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          ])
+        ).start();
       } else {
-        yAnim = Animated.loop(Animated.sequence([
-          Animated.timing(ty, { toValue: -yTravel, duration: speed / 2, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-          Animated.timing(ty, { toValue:  yTravel, duration: speed / 2, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-        ]));
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(opacity, { toValue: 0.95, duration: fadeInDur, useNativeDriver: false }),
+            Animated.timing(opacity, { toValue: 0.95, duration: holdDur, useNativeDriver: false }),
+            Animated.timing(opacity, { toValue: 0, duration: fadeOutDur, useNativeDriver: false }),
+            Animated.timing(opacity, { toValue: 0, duration: 0, useNativeDriver: false }),
+          ])
+        ).start();
       }
 
-      // X sway
-      const xAnim = Animated.loop(Animated.sequence([
-        Animated.timing(tx, { toValue:  xSwing, duration: speed / 2, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-        Animated.timing(tx, { toValue: -xSwing, duration: speed / 2, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      ]));
+      // ── Rotation (fall mode only) ─────────────────────────────────────────
+      if (def.mode === 'fall' || def.mode === 'drift') {
+        Animated.loop(
+          Animated.timing(rotate, { toValue: 1, duration: speedMs * (1 + s(7) * 0.8), easing: Easing.linear, useNativeDriver: false })
+        ).start();
+      }
 
-      // Scale pulse
-      const scaleAnim = Animated.loop(Animated.sequence([
-        Animated.timing(scale, { toValue: scaleMax, duration: speed * 0.5, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-        Animated.timing(scale, { toValue: scaleMin, duration: speed * 0.5, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      ]));
+      // ── Scale pulse ───────────────────────────────────────────────────────
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(scale, { toValue: 1.18, duration: speedMs * 0.48, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(scale, { toValue: 0.80, duration: speedMs * 0.52, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        ])
+      ).start();
+    }, delay);
 
-      // Rotation (blossoms / leaves)
-      const rotAnim = rotSpeed > 0
-        ? Animated.loop(Animated.timing(rotate, { toValue: 1, duration: rotSpeed, useNativeDriver: true, easing: Easing.linear }))
-        : null;
-
-      // Wing flap (butterflies only) — scaleX oscillation simulates top-down wing fold
-      const wingAnim = wingFlap
-        ? Animated.loop(Animated.sequence([
-            Animated.timing(wingX, { toValue: 0.25, duration: 200, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }),
-            Animated.timing(wingX, { toValue: 1.00, duration: 200, useNativeDriver: true, easing: Easing.inOut(Easing.quad) }),
-          ]))
-        : null;
-
-      opAnim.start();
-      yAnim.start();
-      xAnim.start();
-      scaleAnim.start();
-      rotAnim?.start();
-      wingAnim?.start();
-    }, spec.delay);
-
-    return () => clearTimeout(timer);
+    return () => {
+      running = false;
+      clearTimeout(timer);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [width, height]);
 
   const rotDeg = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
     <Animated.View
       pointerEvents="none"
-      style={[
-        styles.particle,
-        {
-          left:    spec.startX,
-          top:     spec.startY,
-          opacity,
-          transform: [
-            { translateX: tx },
-            { translateY: ty },
-            { rotate: rotDeg },
-            { scale },
-            ...(spec.wingFlap ? [{ scaleX: wingX }] : []),
-          ],
-        },
-      ]}
+      style={{
+        position:  'absolute',
+        left:      startX,
+        top:       startY,
+        opacity,
+        transform: [
+          { translateX: tx },
+          { translateY: ty },
+          { rotate: rotDeg },
+          { scale },
+        ],
+      }}
     >
-      {spec.render()}
+      {color ? (
+        // Firefly: colored glyph
+        <Text style={{ fontSize: def.fontSize, color, lineHeight: def.fontSize + 4 }}>
+          {emoji}
+        </Text>
+      ) : (
+        <Text style={{ fontSize: def.fontSize, lineHeight: def.fontSize + 4 }}>
+          {emoji}
+        </Text>
+      )}
     </Animated.View>
   );
 }
 
-// ── Canvas (deferred until layout is measured) ─────────────────────────────────
+// ── Canvas — rendered once dimensions are known ────────────────────────────────
 
 function EffectCanvas({ effectId, width, height }: { effectId: string; width: number; height: number }) {
-  const particles = useMemo(() => makeParticles(effectId, width, height), [effectId, width, height]);
+  const def = EFFECTS[effectId];
+  if (!def) return null;
   return (
     <>
-      {particles.map((spec, i) => (
-        <Particle key={`${effectId}-${i}`} spec={spec} />
+      {Array.from({ length: def.count }, (_, i) => (
+        <Particle key={i} def={def} idx={i} width={width} height={height} />
       ))}
     </>
   );
 }
 
-// ── Public export ──────────────────────────────────────────────────────────────
+// ── Public export ─────────────────────────────────────────────────────────────
 
 export function ProfileEffect({ effectId }: { effectId: string | undefined }) {
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
 
-  if (!effectId) return null;
+  if (!effectId || !EFFECTS[effectId]) return null;
 
   return (
     <View
-      style={[StyleSheet.absoluteFill, { zIndex: 20 }]}
+      style={[StyleSheet.absoluteFill, styles.wrap]}
       pointerEvents="none"
       onLayout={e => {
         const { width, height } = e.nativeEvent.layout;
-        setDims(prev => (prev?.w === width && prev?.h === height ? prev : { w: width, h: height }));
+        setDims(prev =>
+          prev?.w === width && prev?.h === height ? prev : { w: width, h: height }
+        );
       }}
     >
-      {dims && <EffectCanvas effectId={effectId} width={dims.w} height={dims.h} />}
+      {dims && (
+        <EffectCanvas effectId={effectId} width={dims.w} height={dims.h} />
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  particle: { position: 'absolute' },
+  wrap: { zIndex: 20, overflow: 'hidden' },
 });
