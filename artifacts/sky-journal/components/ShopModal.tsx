@@ -11,6 +11,7 @@ import {
   View,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -152,6 +153,54 @@ function SeasonalBadge({ label }: { label: string }) {
   );
 }
 
+// ── Visual cosmetic preview ───────────────────────────────────────────────────
+// Shows a miniature visual of what each category looks like when equipped.
+// Frames → concentric border rings. Accents → glow band. Themes → page lines.
+
+function ItemPreview({ category, icon, color }: { category: string; color: string; icon: string }) {
+  return (
+    <View style={[pv.wrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
+      {category === 'frame' && (
+        <View style={[pv.frameOuter, { borderColor: `${color}60` }]}>
+          <View style={[pv.frameMid, { borderColor: `${color}40` }]}>
+            <View style={[pv.frameInner, { borderColor: `${color}28`, backgroundColor: `${color}12` }]}>
+              <Text style={pv.icon}>{icon}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {category === 'accent' && (
+        <View style={pv.accentWrap}>
+          <LinearGradient
+            colors={[`${color}00`, `${color}48`, `${color}00`]}
+            start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+            style={pv.accentBand}
+            pointerEvents="none"
+          />
+          <Text style={pv.icon}>{icon}</Text>
+          <View style={pv.accentDots}>
+            {[0, 1, 2, 3, 4].map(d => (
+              <View key={d} style={[pv.dot, { opacity: 0.15 + d * 0.08, backgroundColor: color }]} />
+            ))}
+          </View>
+        </View>
+      )}
+
+      {category === 'theme' && (
+        <View style={pv.themeWrap}>
+          {[80, 100, 60, 90].map((w, l) => (
+            <View key={l} style={[pv.themeLine, { backgroundColor: `${color}26`, width: `${w}%` as any }]} />
+          ))}
+          <View style={[pv.themeIconBadge, { backgroundColor: `${color}18`, borderColor: `${color}35` }]}>
+            <Text style={[pv.icon, { fontSize: 13 }]}>{icon}</Text>
+          </View>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ── Shop item card ────────────────────────────────────────────────────────────
 
 interface ItemCardProps {
@@ -210,10 +259,8 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
           isActive && { backgroundColor: `${catColor}0A` },
           isUnavailable && { opacity: 0.72 },
         ]}>
-          {/* Icon */}
-          <View style={[styles.cardIconWrap, { backgroundColor: isActive ? `${catColor}28` : `${catColor}18` }]}>
-            <Text style={[styles.cardIcon, { color: catColor }]}>{item.icon}</Text>
-          </View>
+          {/* Visual preview */}
+          <ItemPreview category={item.category} icon={item.icon} color={catColor} />
 
           {/* Info */}
           <View style={styles.cardInfo}>
@@ -796,6 +843,96 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 }
 
 // ── Styles ────────────────────────────────────────────────────────────────────
+
+// ── ItemPreview styles ────────────────────────────────────────────────────────
+const pv = StyleSheet.create({
+  wrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    flexShrink: 0,
+  },
+  icon: { fontSize: 18 },
+
+  // Frame: concentric border rings
+  frameOuter: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  frameMid: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  frameInner: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Accent: glow band
+  accentWrap: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  accentBand: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 22,
+  },
+  accentDots: {
+    flexDirection: 'row',
+    gap: 3,
+    marginTop: 6,
+  },
+  dot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+
+  // Theme: journal lines
+  themeWrap: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    gap: 4,
+  },
+  themeLine: {
+    height: 3,
+    borderRadius: 2,
+  },
+  themeIconBadge: {
+    position: 'absolute',
+    bottom: 5,
+    right: 5,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
 
 const styles = StyleSheet.create({
   backdrop: {
