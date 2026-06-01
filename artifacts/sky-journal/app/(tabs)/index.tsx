@@ -1100,13 +1100,13 @@ export default function HomeScreen() {
             <Text style={s.heroAppLabel}>Sky Journal</Text>
             <View style={{ flexDirection: 'row', gap: 6 }}>
               <TouchableOpacity
-                onPress={() => { router.push('/campfire' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onPress={() => { router.push('/messages' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Icon name="message-circle" size={16} color={campfireUnread > 0 ? '#78D8A0' : 'rgba(220,210,255,0.75)'} />
-                {campfireUnread > 0 && (
-                  <View style={[s.heroBadge, { backgroundColor: '#78D8A0', width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' }]}>
-                    <Text style={{ fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#0A1A0F', lineHeight: 10 }}>{campfireUnread > 9 ? '9+' : campfireUnread}</Text>
+                <Icon name="message-circle" size={16} color={dmUnread > 0 ? '#9B78E8' : 'rgba(220,210,255,0.75)'} />
+                {dmUnread > 0 && (
+                  <View style={[s.heroBadge, { backgroundColor: '#9B78E8', width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' }]}>
+                    <Text style={{ fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#fff', lineHeight: 10 }}>{dmUnread > 9 ? '9+' : dmUnread}</Text>
                   </View>
                 )}
               </TouchableOpacity>
