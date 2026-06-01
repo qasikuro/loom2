@@ -630,25 +630,22 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
     if (visible) setActiveTab('shop');
   }, [visible]);
 
-  // Load catalog — cache first for instant display, then background-refresh from API
+  // Load catalog — always fetch fresh from API (no stale cache reads)
   useEffect(() => {
     if (!visible) return;
     Animated.spring(slideY, { toValue: 0, tension: 55, friction: 13, useNativeDriver: true }).start();
 
+    // Reset to fallback immediately so any stale in-memory state is cleared
+    setCatalogItems(FALLBACK_CATALOG);
+    setPreviewItems([]);
+
+    // Clear any stale persisted cache so it never poisons a future session
+    AsyncStorage.removeItem(SHOP_CATALOG_CACHE_KEY).catch(() => null);
+
     let cancelled = false;
 
     async function fetchCatalog() {
-      // 1. Show cached catalog immediately (if available)
-      try {
-        const raw = await AsyncStorage.getItem(SHOP_CATALOG_CACHE_KEY);
-        if (raw && !cancelled) {
-          const cached: { catalog: ShopItem[]; seasonalPreview: ShopItem[] } = JSON.parse(raw);
-          setCatalogItems(cached.catalog.length > 0 ? cached.catalog : FALLBACK_CATALOG);
-          setPreviewItems(cached.seasonalPreview ?? []);
-        }
-      } catch { /* ignore — fall through to API fetch */ }
-
-      // 2. Always refresh from API in background; write result to cache
+      // Always fetch fresh — ?t= param busts the native HTTP cache (prevents 304)
       try {
         const data = await apiFetch<{
           catalog:         ShopItem[];
@@ -659,16 +656,10 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
         if (!cancelled) {
           setCatalogItems(data.catalog.length > 0 ? data.catalog : FALLBACK_CATALOG);
           setPreviewItems(data.seasonalPreview ?? []);
-          AsyncStorage.setItem(
-            SHOP_CATALOG_CACHE_KEY,
-            JSON.stringify({ catalog: data.catalog, seasonalPreview: data.seasonalPreview ?? [] }),
-          ).catch(() => null);
         }
       } catch {
         if (!cancelled) {
-          // Only fall back to static catalog if cache didn't already populate the UI
-          setCatalogItems(prev => prev.length > 0 ? prev : FALLBACK_CATALOG);
-          setPreviewItems(prev => prev);
+          // Network/auth failed — FALLBACK_CATALOG (already set above) stays visible
         }
       }
     }
