@@ -955,6 +955,9 @@ export default function CharacterScreen() {
   // ── Shop modal ─────────────────────────────────────────────────────────────
   const [showShop, setShowShop] = useState(false);
 
+  // ── Profile content tab ────────────────────────────────────────────────────
+  const [profileTab, setProfileTab] = useState<'journey' | 'style' | 'about'>('journey');
+
   // ── Constellation star detail sheet ────────────────────────────────────────
   const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
 
@@ -1444,23 +1447,17 @@ export default function CharacterScreen() {
 
         {/* ── Stats row ────────────────────────────────────────── */}
         <View style={styles.statsRow}>
-          <TouchableOpacity style={styles.statPill} onPress={() => router.push('/my-stories' as any)} activeOpacity={0.75}>
+          <TouchableOpacity style={styles.statPill} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab('journey'); }} activeOpacity={0.75}>
             <Icon name="book-open" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
             <Text style={styles.statPillNum}>{stories.length}</Text>
             <Text style={styles.statPillLabel}>Stories</Text>
           </TouchableOpacity>
           <View style={styles.statPillDot} />
-          <TouchableOpacity style={styles.statPill} onPress={() => setShowShop(true)} activeOpacity={0.75}>
-            <Icon name="gift" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
-            <Text style={styles.statPillNum}>{purchasedIds.length}</Text>
-            <Text style={styles.statPillLabel}>Rewards</Text>
-          </TouchableOpacity>
-          <View style={styles.statPillDot} />
-          <View style={styles.statPill}>
+          <TouchableOpacity style={styles.statPill} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab('style'); }} activeOpacity={0.75}>
             <Icon name="star" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
             <Text style={styles.statPillNum}>{outfits.length}</Text>
             <Text style={styles.statPillLabel}>Outfits</Text>
-          </View>
+          </TouchableOpacity>
           <View style={styles.statPillDot} />
           <View style={styles.statPill}>
             <Icon name="eye" size={13} color={moodAccent} style={{ marginBottom: 2 }} />
@@ -1469,8 +1466,24 @@ export default function CharacterScreen() {
           </View>
         </View>
 
-        {/* ── Current Outfit card ──────────────────────────────── */}
-        {activeOutfit && (
+        {/* ── Profile section tabs: Journey | Style | About ─────── */}
+        <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 14, marginBottom: 2, backgroundColor: 'rgba(200,184,232,0.05)', borderRadius: 14, padding: 3, gap: 2, borderWidth: 1, borderColor: 'rgba(200,184,232,0.10)' }}>
+          {(['journey', 'style', 'about'] as const).map(tab => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab(tab); }}
+              style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', backgroundColor: profileTab === tab ? 'rgba(107,91,149,0.60)' : 'transparent' }}
+              activeOpacity={0.75}
+            >
+              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: profileTab === tab ? '#fff' : 'rgba(200,184,232,0.50)' }}>
+                {tab === 'journey' ? '✦ Journey' : tab === 'style' ? '✨ Style' : '◌ About'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ── Current Outfit card — Style tab ─────────────────── */}
+        {profileTab === 'style' && activeOutfit && (
           <View style={{ paddingHorizontal: 16, marginTop: 12 }}>
             <TouchableOpacity
               style={[styles.currentOutfitCard, { borderColor: `${moodAccent}28` }]}
@@ -1508,13 +1521,14 @@ export default function CharacterScreen() {
         )}
 
         {/* ── Weather strip ─────────────────────────────────────── */}
-        {weatherQuery ? (
+        {profileTab === 'about' && weatherQuery ? (
           <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
             <WeatherWidget query={weatherQuery} accentColor={moodAccent} />
           </View>
         ) : null}
 
         {/* ── Ping friends ──────────────────────────────────────── */}
+        {profileTab === 'about' && (
         <View style={{ paddingHorizontal: 16, marginTop: 10 }}>
           <View style={[styles.pingCard, { backgroundColor: colors.card, borderColor: `${moodAccent}30` }, SHADOW.xs]}>
             <View style={styles.pingLeft}>
@@ -1560,6 +1574,7 @@ export default function CharacterScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        )}
 
         {/* ── Content ─────────────────────────────────────────── */}
         <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
@@ -1572,8 +1587,8 @@ export default function CharacterScreen() {
             </>
           )}
 
-          {/* ── About Me ──────────────────────────────────────── */}
-          {(!isLoading || character.name !== 'Sky Child') && (
+          {/* ── About Me (About tab) ─────────────────────────── */}
+          {profileTab === 'about' && (!isLoading || character.name !== 'Sky Child') && (
           <View style={[styles.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
             {/* Header row */}
             <View style={styles.aboutCardHeader}>
@@ -1781,38 +1796,8 @@ export default function CharacterScreen() {
           </View>
           )}
 
-          {/* Current outfit compact card */}
-          {activeOutfit && (
-            <TouchableOpacity
-              style={[styles.compactOutfitCard, { backgroundColor: '#27243E', borderColor: 'rgba(155,120,255,0.14)' }, SHADOW.xs]}
-              onPress={() => openOutfit(activeOutfit.id)}
-              activeOpacity={0.88}
-            >
-              <View style={styles.compactOutfitImg}>
-                {activeOutfit.imageUri ? (
-                  <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                ) : (
-                  <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(155,120,255,0.15)' }]}>
-                    <Icon name="camera" size={20} color="rgba(155,120,255,0.5)" />
-                  </View>
-                )}
-              </View>
-              <View style={{ flex: 1, paddingLeft: 12, gap: 4 }}>
-                <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', letterSpacing: 1.2, textTransform: 'uppercase' }}>Current Outfit</Text>
-                <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EDE8FF' }} numberOfLines={1}>{activeOutfit.name}</Text>
-                <View style={{ flexDirection: 'row', gap: 5 }}>
-                  {(activeOutfit.tags ?? []).slice(0, 2).map(tag => (
-                    <View key={tag} style={{ backgroundColor: 'rgba(155,120,255,0.22)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(190,165,255,0.95)' }}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-              <Icon name="chevron-right" size={14} color="rgba(155,120,255,0.45)" />
-            </TouchableOpacity>
-          )}
-
-          {/* ── Constellation Guide Mode ─────────────────────── */}
+          {/* ── Constellation Guide Mode (About tab) ─────────── */}
+          {profileTab === 'about' && (
           <View style={[styles.guideCardWrap, { borderColor: 'rgba(120,70,255,0.22)' }, SHADOW.sm]}>
 
             {/* ── Dark gradient hero header ── */}
@@ -2083,7 +2068,10 @@ export default function CharacterScreen() {
             </View>
           </View>
 
-          {/* ── My Constellation ─────────────────────────────── */}
+          )}
+
+          {/* ── My Constellation (Journey tab) ───────────────── */}
+          {profileTab === 'journey' && (
           <View style={styles.hSection}>
             <View style={styles.hSectionHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -2104,53 +2092,9 @@ export default function CharacterScreen() {
                   </TouchableOpacity>
                 )}
               </View>
-              {rewardBalance && (
-                <RewardBalance
-                  stars={rewardBalance.stars}
-                  auraEnergy={rewardBalance.auraEnergy}
-                  memoryShards={rewardBalance.memoryShards}
-                  size="sm"
-                />
-              )}
             </View>
 
-            {/* ── Sky Shop entry ─────────────────────────────── */}
-            <View style={{ paddingHorizontal: 16, marginTop: 10, marginBottom: 4 }}>
-              <TouchableOpacity
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
-                activeOpacity={0.82}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: 'rgba(107,91,149,0.08)',
-                  borderColor: 'rgba(107,91,149,0.22)',
-                  borderWidth: 1,
-                  borderRadius: 16,
-                  paddingVertical: 13,
-                  paddingHorizontal: 16,
-                }}
-              >
-                <View style={{
-                  width: 38, height: 38, borderRadius: 19,
-                  backgroundColor: 'rgba(107,91,149,0.16)',
-                  alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <Text style={{ fontSize: 18 }}>🛍</Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: colors.foreground, letterSpacing: -0.2 }}>
-                    Sky Shop
-                  </Text>
-                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
-                    Browse frames, accents & themes
-                  </Text>
-                </View>
-                <Icon name="chevron-right" size={16} color="rgba(107,91,149,0.55)" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ paddingHorizontal: 16, marginTop: 2 }}>
+            <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
               <ConstellationMap
                 state={constellation}
                 onStarPress={(key) => setSelectedStarKey(key)}
@@ -2171,8 +2115,10 @@ export default function CharacterScreen() {
               </View>
             )}
           </View>
+          )}
 
-          {/* ── My Stories ───────────────────────────────────── */}
+          {/* ── My Stories (Journey tab) ─────────────────────── */}
+          {profileTab === 'journey' && (
           <View style={styles.hSection}>
             <View style={styles.hSectionHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -2261,8 +2207,30 @@ export default function CharacterScreen() {
               </ScrollView>
             )}
           </View>
+          )}
 
-          {/* ── Wardrobe ─────────────────────────────────────── */}
+          {/* ── Sky Shop entry (Style tab) ───────────────────── */}
+          {profileTab === 'style' && (
+          <View style={styles.hSection}>
+            <TouchableOpacity
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
+              activeOpacity={0.82}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(107,91,149,0.08)', borderColor: 'rgba(107,91,149,0.22)', borderWidth: 1, borderRadius: 16, paddingVertical: 13, paddingHorizontal: 16 }}
+            >
+              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(107,91,149,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 18 }}>🛍</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: colors.foreground, letterSpacing: -0.2 }}>Sky Shop</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>Browse frames, accents & themes</Text>
+              </View>
+              <Icon name="chevron-right" size={16} color="rgba(107,91,149,0.55)" />
+            </TouchableOpacity>
+          </View>
+          )}
+
+          {/* ── Wardrobe (Style tab) ─────────────────────────── */}
+          {profileTab === 'style' && (
           <View style={styles.hSection}>
             <View style={styles.hSectionHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -2332,8 +2300,10 @@ export default function CharacterScreen() {
               </ScrollView>
             )}
           </View>
+          )}
 
-          {/* ── Gallery ──────────────────────────────────────── */}
+          {/* ── Gallery (Style tab) ──────────────────────────── */}
+          {profileTab === 'style' && (
           <View style={styles.hSection}>
             <View style={styles.hSectionHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -2394,6 +2364,7 @@ export default function CharacterScreen() {
               <Text style={[styles.galError, { color: colors.destructive, marginTop: 6 }]}>{galleryError}</Text>
             )}
           </View>
+          )}
 
         </View>
 
