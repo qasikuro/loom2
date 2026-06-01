@@ -616,6 +616,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   }, [visible, reloadRewards]);
 
   const [activeTab,       setActiveTab]       = useState<ActiveTab>('shop');
+  const [filterCat,       setFilterCat]       = useState<string | null>(null);
   const [catalogItems,    setCatalogItems]    = useState<ShopItem[]>(FALLBACK_CATALOG);
   const [previewItems,    setPreviewItems]    = useState<ShopItem[]>([]);
   const [purchasing,      setPurchasing]      = useState<string | null>(null);
@@ -625,9 +626,9 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
   const slideY = useRef(new Animated.Value(600)).current;
 
-  // Reset to shop tab when modal re-opens
+  // Reset to shop tab + clear category filter when modal re-opens
   useEffect(() => {
-    if (visible) setActiveTab('shop');
+    if (visible) { setActiveTab('shop'); setFilterCat(null); }
   }, [visible]);
 
   // Load catalog — always fetch fresh from API (no stale cache reads)
@@ -802,10 +803,42 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
               </View>
             </View>
 
+            {/* Category filter pills */}
+            {(() => {
+              const cats: { id: string | null; label: string; icon: string; color: string }[] = [
+                { id: null,     label: 'All',    icon: '✦', color: '#9878D8' },
+                { id: 'effect', label: 'Effect', icon: '✨', color: '#70C8A0' },
+                { id: 'frame',  label: 'Frame',  icon: '◑', color: '#C8A84B' },
+                { id: 'accent', label: 'Accent', icon: '◈', color: '#9878D8' },
+                { id: 'theme',  label: 'Theme',  icon: '⋆', color: '#78B4DC' },
+              ];
+              return (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
+                  {cats.map(c => {
+                    const active = filterCat === c.id;
+                    return (
+                      <TouchableOpacity
+                        key={c.id ?? 'all'}
+                        onPress={() => setFilterCat(c.id)}
+                        style={[styles.filterPill, active && { backgroundColor: `${c.color}22`, borderColor: c.color }]}
+                      >
+                        <Text style={[styles.filterPillText, { color: active ? c.color : colors.mutedForeground }]}>
+                          {c.icon} {c.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              );
+            })()}
+
             {/* Items — split into This Season + Always Available */}
             {(() => {
-              const seasonalItems  = catalogItems.filter(i => i.seasonal);
-              const permanentItems = catalogItems.filter(i => !i.seasonal);
+              const visible_catalog = filterCat
+                ? catalogItems.filter(i => i.category === filterCat)
+                : catalogItems;
+              const seasonalItems  = visible_catalog.filter(i => i.seasonal);
+              const permanentItems = visible_catalog.filter(i => !i.seasonal);
 
               // Derive current season label + colour from the first seasonal item
               const seasonLabel = seasonalItems[0]?.seasonalLabel ?? null;
@@ -1126,6 +1159,19 @@ const styles = StyleSheet.create({
   },
   earnGuideTitle: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.9 },
   earnGuideGrid:  { gap: 6 },
+  // Category filter pills
+  filterRow:        { flexShrink: 0, marginBottom: 4 },
+  filterRowContent: { paddingHorizontal: 16, gap: 8, paddingVertical: 6 },
+  filterPill: {
+    paddingHorizontal: 12,
+    paddingVertical:   6,
+    borderRadius:      20,
+    borderWidth:       1,
+    borderColor:       'transparent',
+    backgroundColor:   'transparent',
+  },
+  filterPillText: { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: -0.1 },
+
   earnGuideRow:   { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   earnGuideIcon:  { fontSize: 13, lineHeight: 18, width: 18, textAlign: 'center' },
   earnGuideName:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1, lineHeight: 16 },
