@@ -99,7 +99,7 @@ function liveNow(avail: GuideAvailability | null | undefined): boolean {
 }
 // ─── Constellation star definitions (matches ConstellationMap.tsx) ───────────
 const STAR_DEFS = [
-  { key: 'social',   label: 'Social',   getCount: (c: ConstellationState) => c.socialCount,   threshold: 5,  unit: 'connections',  color: '#78C8A8', action: 'Follow friends & swap stickers in Discover' },
+  { key: 'social',   label: 'Social',   getCount: (c: ConstellationState) => c.socialCount,   threshold: 5,  unit: 'follows',      color: '#78C8A8', action: 'Follow 5 people you admire in Discover' },
   { key: 'memory',   label: 'Memory',   getCount: (c: ConstellationState) => c.memoryCount,   threshold: 10, unit: 'memories',     color: '#9878C8', action: 'Write in your journal a little more' },
   { key: 'quiet',    label: 'Quiet',    getCount: (c: ConstellationState) => c.quietStreak,   threshold: 7,  unit: 'day streak',   color: '#7890C8', action: 'Journal every day to build your streak' },
   { key: 'creative', label: 'Creative', getCount: (c: ConstellationState) => c.creativeCount, threshold: 5,  unit: 'stories',      color: '#C87AA8', action: 'Create and share a few more stories' },

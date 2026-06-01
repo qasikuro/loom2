@@ -1202,8 +1202,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res?.rewardGranted && res.rewardAmounts) {
         fireToast('Journal entry', res.rewardAmounts);
         reloadRewards().catch(() => null);
-        reloadConstellation().catch(() => null);
       }
+      // Always sync constellation so memory count & star progress update immediately
+      reloadConstellation().catch(() => null);
     } catch { /* fire-and-forget — local update already applied */ }
   }, [fireToast, reloadRewards, reloadConstellation]);
 
@@ -1251,8 +1252,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res?.rewardGranted && res.rewardAmounts) {
         fireToast('Story created', res.rewardAmounts);
         reloadRewards().catch(() => null);
-        reloadConstellation().catch(() => null);
       }
+      // Always sync constellation so creative count updates immediately
+      reloadConstellation().catch(() => null);
       loadSocialData();
       return true;
     } catch {
@@ -1457,8 +1459,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (res?.rewardGranted && res.rewardAmounts) {
           fireToast('New connection', res.rewardAmounts);
           reloadRewards().catch(() => null);
-          reloadConstellation().catch(() => null);
         }
+        // Always sync so social count updates immediately
+        reloadConstellation().catch(() => null);
         fetchFriends();
       })
       .catch(() => {

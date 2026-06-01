@@ -1,5 +1,5 @@
 import { type NodePgDatabase } from "drizzle-orm/node-postgres";
-import { eq, sql, and, gte } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import {
   constellationProgressTable,
   journalEntriesTable,
@@ -37,11 +37,8 @@ export async function syncConstellation(
       journalRows,
       journalCountRows,
       storyRows,
-      stickersReceivedRows,
       stickersSentRows,
       followsGivenRows,
-      savedStoriesRows,
-      witnessedStoriesRows,
       outfitRows,
     ] = await Promise.all([
       // All journal entry dates (for quiet-streak calculation)
@@ -63,12 +60,6 @@ export async function syncConstellation(
         .from(storiesTable)
         .where(eq(storiesTable.userId, userId)),
 
-      // Total stickers received
-      db
-        .select({ count: sql<number>`cast(count(*) as int)` })
-        .from(stickerReactionsTable)
-        .where(eq(stickerReactionsTable.toUserId, userId)),
-
       // Total stickers sent
       db
         .select({ count: sql<number>`cast(count(*) as int)` })
@@ -80,18 +71,6 @@ export async function syncConstellation(
         .select({ count: sql<number>`cast(count(*) as int)` })
         .from(followsTable)
         .where(eq(followsTable.followerId, userId)),
-
-      // Saves received (savedCount sum on own stories)
-      db
-        .select({ total: sql<number>`cast(coalesce(sum(${storiesTable.savedCount}), 0) as int)` })
-        .from(storiesTable)
-        .where(eq(storiesTable.userId, userId)),
-
-      // Stories with at least 3 witnesses
-      db
-        .select({ count: sql<number>`cast(count(*) as int)` })
-        .from(storiesTable)
-        .where(and(eq(storiesTable.userId, userId), gte(storiesTable.witnessedCount, 3))),
 
       // Total outfits logged (seasonal participation)
       db
@@ -114,23 +93,21 @@ export async function syncConstellation(
     }
 
     // memoryCount = total entries ever written (every journal entry counts)
-    const journalCount     = journalCountRows[0]?.count ?? 0;
-    const storyCount       = storyRows[0]?.count         ?? 0;
-    const stickersReceived = stickersReceivedRows[0]?.count ?? 0;
-    const stickersSent     = stickersSentRows[0]?.count  ?? 0;
-    const followsGiven     = followsGivenRows[0]?.count  ?? 0;
-    const savesReceived    = savedStoriesRows[0]?.total   ?? 0;
-    const witnessedStories = witnessedStoriesRows[0]?.count ?? 0;
-    const outfitCount      = outfitRows[0]?.count        ?? 0;
+    const journalCount = journalCountRows[0]?.count ?? 0;
+    const storyCount   = storyRows[0]?.count        ?? 0;
+    const stickersSent = stickersSentRows[0]?.count  ?? 0;
+    const followsGiven = followsGivenRows[0]?.count  ?? 0;
+    const outfitCount  = outfitRows[0]?.count        ?? 0;
 
     // ── Determine unlocked stars ───────────────────────────────────────────
     const unlocked: string[] = [];
 
-    const socialUnlocked   = followsGiven >= 5 && stickersReceived >= 5;
-    const memoryUnlocked   = journalCount  >= 10 && savesReceived  >= 5;
-    const quietUnlocked    = quietStreak   >= 7;
-    const helpingUnlocked  = stickersSent  >= 20;
-    const creativeUnlocked = storyCount    >= 5  && witnessedStories >= 1;
+    // Requirements are intentionally self-achievable (no dependency on others' actions)
+    const socialUnlocked   = followsGiven >= 5;
+    const memoryUnlocked   = journalCount >= 10;
+    const quietUnlocked    = quietStreak  >= 7;
+    const helpingUnlocked  = stickersSent >= 20;
+    const creativeUnlocked = storyCount   >= 5;
     // Seasonal star: unlocks after logging 6 outfits (seasonal wardrobe participation)
     const seasonalUnlocked = outfitCount  >= 6;
 
