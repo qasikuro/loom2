@@ -2110,10 +2110,46 @@ export default function CharacterScreen() {
                   auraEnergy={rewardBalance.auraEnergy}
                   memoryShards={rewardBalance.memoryShards}
                   size="sm"
-                  onPress={() => setShowShop(true)}
                 />
               )}
             </View>
+
+            {/* ── Sky Shop entry ─────────────────────────────── */}
+            <View style={{ paddingHorizontal: 16, marginTop: 10, marginBottom: 4 }}>
+              <TouchableOpacity
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
+                activeOpacity={0.82}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 12,
+                  backgroundColor: 'rgba(107,91,149,0.08)',
+                  borderColor: 'rgba(107,91,149,0.22)',
+                  borderWidth: 1,
+                  borderRadius: 16,
+                  paddingVertical: 13,
+                  paddingHorizontal: 16,
+                }}
+              >
+                <View style={{
+                  width: 38, height: 38, borderRadius: 19,
+                  backgroundColor: 'rgba(107,91,149,0.16)',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <Text style={{ fontSize: 18 }}>🛍</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: colors.foreground, letterSpacing: -0.2 }}>
+                    Sky Shop
+                  </Text>
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
+                    Browse frames, accents & themes
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={16} color="rgba(107,91,149,0.55)" />
+              </TouchableOpacity>
+            </View>
+
             <View style={{ paddingHorizontal: 16, marginTop: 2 }}>
               <ConstellationMap
                 state={constellation}

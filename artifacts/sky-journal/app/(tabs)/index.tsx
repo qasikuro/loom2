@@ -19,7 +19,6 @@ import {
 } from '@/context/AppContext';
 import { RewardBalance } from '@/components/RewardBalance';
 import { RewardBanner } from '@/components/RewardBanner';
-import { ShopModal } from '@/components/ShopModal';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -819,7 +818,6 @@ export default function HomeScreen() {
 
   const [showNotifs,  setShowNotifs]  = useState(false);
   const [showOutfits, setShowOutfits] = useState(false);
-  const [showShop,    setShowShop]    = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
   const [showConstellationIntro, setShowConstellationIntro] = useState(false);
   const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
@@ -1171,23 +1169,19 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Reward balance — tappable, opens Shop modal */}
+          {/* Reward balance — display only; shop lives on Profile tab */}
           {rewardBalance && (
-            <TouchableOpacity
-              style={{ alignItems: 'center', paddingBottom: 10, paddingTop: 4 }}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
-              activeOpacity={0.8}
-            >
+            <View style={{ alignItems: 'center', paddingBottom: 10, paddingTop: 4 }}>
               <RewardBalance
                 stars={rewardBalance.stars}
                 auraEnergy={rewardBalance.auraEnergy}
                 memoryShards={rewardBalance.memoryShards}
                 size="sm"
               />
-              <Text style={{ fontSize: 10, color: 'rgba(200,184,232,0.40)', marginTop: 4, letterSpacing: 0.6 }}>
-                tap to open shop →
+              <Text style={{ fontSize: 10, color: 'rgba(200,184,232,0.35)', marginTop: 4, letterSpacing: 0.5 }}>
+                your sky treasures
               </Text>
-            </TouchableOpacity>
+            </View>
           )}
 
           {/* Bottom fade to deep void */}
@@ -1692,8 +1686,6 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* ── Shop modal — opened from balance row ──────────────────────────── */}
-      <ShopModal visible={showShop} onClose={() => setShowShop(false)} />
     </Animated.View>
   );
 }
