@@ -496,7 +496,7 @@ export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { t }   = useTranslation();
-  const { journalEntries, deleteJournalEntry, isLoading, constellation, activeCosmetics } = useApp();
+  const { journalEntries, deleteJournalEntry, isLoading, apiOnline, reloadData, constellation, activeCosmetics } = useApp();
   const activeTheme = activeCosmetics['theme'] as string | undefined;
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
@@ -635,6 +635,17 @@ export default function JournalScreen() {
           })}
         </ScrollView>
       </LinearGradient>
+
+      {/* ── Offline / error banner ─────────────────────────────────── */}
+      {!apiOnline && !isLoading && (
+        <View style={offlineBanner.row}>
+          <View style={offlineBanner.dot} />
+          <Text style={offlineBanner.msg}>Offline — showing cached data</Text>
+          <TouchableOpacity style={offlineBanner.btn} onPress={reloadData} activeOpacity={0.75}>
+            <Text style={offlineBanner.btnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Search bar ─────────────────────────────────────────────── */}
       {showSearch && (
@@ -829,4 +840,22 @@ const styles = StyleSheet.create({
   emptyText: { fontSize:13, fontFamily:'Satoshi-Regular', textAlign:'center', lineHeight:20, fontStyle:'italic' },
   emptyBtn: { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:24, height:48, borderRadius:24, marginTop:4 },
   emptyBtnText: { fontSize:14, fontFamily:'Satoshi-Bold', color:'#fff' },
+});
+
+const offlineBanner = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 14, marginVertical: 6,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderRadius: 12, borderWidth: 1,
+    backgroundColor: 'rgba(14, 10, 32, 0.88)',
+    borderColor: 'rgba(200, 168, 75, 0.35)',
+  },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C8A84B', flexShrink: 0 },
+  msg: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(220, 210, 240, 0.78)' },
+  btn: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)',
+  },
+  btnText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9B78E8' },
 });

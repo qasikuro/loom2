@@ -680,7 +680,7 @@ export default function CharacterScreen() {
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
-          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading,
+          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading, apiOnline, reloadData,
           constellation, rewardBalance, reloadConstellation, activeCosmetics,
           shopCatalog, purchasedIds, setActiveCosmetic } = useApp();
   const activeFrame  = activeCosmetics['frame']  as string | undefined;
@@ -1204,6 +1204,16 @@ export default function CharacterScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* ── Offline / error banner ─────────────────────────────────── */}
+      {!apiOnline && !isLoading && (
+        <View style={profileOfflineS.row}>
+          <View style={profileOfflineS.dot} />
+          <Text style={profileOfflineS.msg}>Offline — saved locally</Text>
+          <TouchableOpacity style={profileOfflineS.btn} onPress={reloadData} activeOpacity={0.75}>
+            <Text style={profileOfflineS.btnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomPad + 40 }}
@@ -3726,4 +3736,23 @@ const styles = StyleSheet.create({
   currentOutfitHeroName: {
     fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: 0.1,
   },
+});
+
+const profileOfflineS = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 14, marginTop: 8, marginBottom: 2,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderRadius: 12, borderWidth: 1,
+    backgroundColor: 'rgba(14, 10, 32, 0.88)',
+    borderColor: 'rgba(200, 168, 75, 0.35)',
+    zIndex: 10,
+  },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C8A84B', flexShrink: 0 },
+  msg: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(220, 210, 240, 0.78)' },
+  btn: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)',
+  },
+  btnText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9B78E8' },
 });

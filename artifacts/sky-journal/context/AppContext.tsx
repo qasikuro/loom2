@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { showToastGlobal } from '@/components/Toast';
 import Constants from 'expo-constants';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -1078,7 +1079,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         guideTopics:       c.guideTopics       ?? [],
         guideAvailability: c.guideAvailability ?? null,
       }),
-    }).catch(() => null);
+    }).catch(() => {
+      showToastGlobal("Couldn't sync profile — saved locally", 'warning');
+    });
   }, []);
 
   // ── Inline reward toast helper (defined early so mutations can use it) ──────
@@ -1214,7 +1217,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       // Always sync constellation so memory count & star progress update immediately
       reloadConstellation().catch(() => null);
-    } catch { /* fire-and-forget — local update already applied */ }
+    } catch {
+      showToastGlobal("Entry saved locally — couldn't sync to server", 'warning');
+    }
   }, [fireToast, reloadRewards, reloadConstellation]);
 
   const deleteJournalEntry = useCallback((id: string) => {
@@ -1223,7 +1228,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
       return updated;
     });
-    apiFetch(`/journal-entries/${id}`, { method: 'DELETE' }).catch(() => null);
+    apiFetch(`/journal-entries/${id}`, { method: 'DELETE' }).catch(() => {
+      showToastGlobal("Couldn't delete entry", 'error');
+    });
   }, []);
 
   // ── Stories ────────────────────────────────────────────────────────────────
@@ -1277,6 +1284,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
         return reverted;
       });
+      showToastGlobal("Story couldn't be published — please try again", 'error');
       return false;
     }
   }, [fireToast, reloadRewards, reloadConstellation]);
@@ -1300,7 +1308,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         pageLayoutKey: updates.pageLayoutKey ?? null,
         pages:         updates.pages ?? null,
       }),
-    }).catch(() => null);
+    }).catch(() => {
+      showToastGlobal("Couldn't save story changes", 'error');
+    });
   }, []);
 
   const deleteStory = useCallback((id: string) => {
@@ -1309,7 +1319,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('stories_v1', JSON.stringify(updated));
       return updated;
     });
-    apiFetch(`/stories/${id}`, { method: 'DELETE' }).catch(() => null);
+    apiFetch(`/stories/${id}`, { method: 'DELETE' }).catch(() => {
+      showToastGlobal("Couldn't delete story", 'error');
+    });
   }, []);
 
   // ── Outfits ────────────────────────────────────────────────────────────────
@@ -1334,7 +1346,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }),
     })
     .then(() => reloadConstellation().catch(() => null))
-    .catch(() => null);
+    .catch(() => {
+      showToastGlobal("Outfit saved locally — couldn't sync to server", 'warning');
+    });
   }, [reloadConstellation]);
 
   const updateOutfit = useCallback((id: string, updates: Partial<Omit<Outfit, 'id'>>) => {
@@ -1346,7 +1360,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     apiFetch(`/outfits/${id}`, {
       method: 'PATCH',
       body:   JSON.stringify(updates),
-    }).catch(() => null);
+    }).catch(() => {
+      showToastGlobal("Couldn't save outfit changes", 'error');
+    });
   }, []);
 
   const deleteOutfit = useCallback((id: string) => {
@@ -1362,7 +1378,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       return prev;
     });
-    apiFetch(`/outfits/${id}`, { method: 'DELETE' }).catch(() => null);
+    apiFetch(`/outfits/${id}`, { method: 'DELETE' }).catch(() => {
+      showToastGlobal("Couldn't delete outfit", 'error');
+    });
   }, []);
 
   const markPurchased = useCallback((itemId: string) => {

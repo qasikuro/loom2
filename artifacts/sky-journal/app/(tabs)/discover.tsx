@@ -103,6 +103,7 @@ export default function DiscoverScreen() {
   const insets    = useSafeAreaInsets();
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
+          apiOnline, reloadData,
           showRewardToast, reloadRewards, reloadConstellation } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
@@ -325,6 +326,17 @@ export default function DiscoverScreen() {
           })}
         </ScrollView>
       </LinearGradient>
+
+      {/* ── Offline / error banner ──────────────────────────────────── */}
+      {!apiOnline && !isLoading && (
+        <View style={offlineBannerS.row}>
+          <View style={offlineBannerS.dot} />
+          <Text style={offlineBannerS.msg}>Offline — showing cached stories</Text>
+          <TouchableOpacity style={offlineBannerS.btn} onPress={reloadData} activeOpacity={0.75}>
+            <Text style={offlineBannerS.btnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Thin separator */}
       <View style={[styles.sep, { backgroundColor: colors.border }]} />
@@ -1160,4 +1172,22 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   ctaBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
+});
+
+const offlineBannerS = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    marginHorizontal: 14, marginTop: 8, marginBottom: 2,
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderRadius: 12, borderWidth: 1,
+    backgroundColor: 'rgba(14, 10, 32, 0.88)',
+    borderColor: 'rgba(200, 168, 75, 0.35)',
+  },
+  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C8A84B', flexShrink: 0 },
+  msg: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(220, 210, 240, 0.78)' },
+  btn: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)',
+  },
+  btnText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9B78E8' },
 });

@@ -15,6 +15,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ToastProvider } from '@/components/Toast';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
@@ -180,6 +181,7 @@ export default function RootLayout() {
                         <AuthTokenBridge />
                         <AuthNavigator />
                         <AppOverlays />
+                        <ToastProvider>
                         <GestureHandlerRootView style={{ flex: 1 }}>
                         <KeyboardProvider>
                           <Stack screenOptions={{ headerShown: false }}>
@@ -240,6 +242,7 @@ export default function RootLayout() {
                           </Stack>
                         </KeyboardProvider>
                       </GestureHandlerRootView>
+                      </ToastProvider>
                       </AppProvider>
                     </SoundProvider>
                   </QueryClientProvider>
