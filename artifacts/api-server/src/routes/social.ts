@@ -4,6 +4,7 @@ import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
+import { sendPushNotification } from "../services/pushService";
 
 const router: IRouter = Router();
 
@@ -377,16 +378,21 @@ router.post("/follows/:targetUserId", requireAuth, async (req, res) => {
       .from(characterTable)
       .where(eq(characterTable.userId, userId))
       .limit(1)
-      .then(([actor]) => {
+      .then(async ([actor]) => {
         if (!actor) return;
         const actorName = actor.name ?? "Someone";
-        return db.insert(notificationsTable).values({
+        await db.insert(notificationsTable).values({
           userId:    targetUserId,
           actorId:   userId,
           actorName,
           type:      "follow",
           refId:     userId,
           title:     actorName,
+        });
+        await sendPushNotification(targetUserId, {
+          title: actorName,
+          body:  "is now following you ✦",
+          data:  { type: "follow", refId: userId },
         });
       })
       .catch(() => null);

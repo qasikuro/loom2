@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
+import { sendPushNotification } from "../services/pushService";
 
 const router: IRouter = Router();
 
@@ -299,6 +300,7 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
     // Notify the story author (fire-and-forget, skip if own story)
     if (updated.userId !== actorId) {
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "witness", req).catch(() => null);
+      sendPushForWitness(actorId, updated.userId, storyId, updated.chapterTitle).catch(() => null);
       // Reward story owner for receiving a witness
       grantReward(db as any, updated.userId, "story_witnessed", `${storyId}:${actorId}`).catch(() => null);
       syncConstellation(db as any, updated.userId).catch(() => null);
@@ -444,6 +446,25 @@ router.delete("/stories/:id/save", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+async function sendPushForWitness(
+  actorId:      string,
+  authorId:     string,
+  storyId:      string,
+  chapterTitle: string,
+): Promise<void> {
+  const [row] = await db
+    .select({ name: characterTable.name })
+    .from(characterTable)
+    .where(eq(characterTable.userId, actorId))
+    .limit(1);
+  const actorName = row?.name ?? "A sky child";
+  await sendPushNotification(authorId, {
+    title: actorName,
+    body:  `witnessed your story "${chapterTitle}" ✦`,
+    data:  { type: "witness", refId: storyId },
+  });
+}
 
 function safeImageUri(uri: string | null | undefined): string | null {
   if (!uri) return null;

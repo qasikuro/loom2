@@ -3,6 +3,7 @@ import { and, eq, or, desc, asc, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { z } from "zod";
+import { sendPushNotification } from "../services/pushService";
 
 const router: IRouter = Router();
 
@@ -178,6 +179,9 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
         .where(and(eq(characterTable.userId, toId), eq(characterTable.isGuide, true)));
     }
 
+    // Fire-and-forget: push notification to recipient
+    sendPushForMessage(fromId, toId, content ?? null, expression ?? null).catch(() => null);
+
     return res.status(201).json({
       id:         msg.id,
       fromUserId: msg.fromUserId,
@@ -193,5 +197,45 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+const EXPR_PUSH_LABELS: Record<string, string> = {
+  bomb:     "threw a bomb 💥",
+  stone:    "threw a stone 🪨",
+  mirror:   "broke the mirror ✦",
+  kiss:     "sent you a kiss 💕",
+  stars:    "scattered stars ✦",
+  fire:     "lit a fire 🔥",
+  snow:     "cast a blizzard ❄️",
+  confetti: "celebrated 🎉",
+  candle:   "offered a candle 🕯️",
+  spark:    "sent a spark ✦",
+  lantern:  "lit a lantern 🌙",
+  hush:     "fell silent 🤫",
+  donkey:   "sent the donkey 🫏",
+  wolf:     "howled at the moon 🌕",
+};
+
+async function sendPushForMessage(
+  fromId:     string,
+  toId:       string,
+  content:    string | null,
+  expression: string | null,
+): Promise<void> {
+  const [row] = await db
+    .select({ name: characterTable.name })
+    .from(characterTable)
+    .where(eq(characterTable.userId, fromId))
+    .limit(1);
+  const senderName = row?.name ?? "A sky child";
+  const body = expression
+    ? (EXPR_PUSH_LABELS[expression] ?? expression)
+    : (content ? (content.length > 80 ? content.slice(0, 77) + "…" : content) : "");
+  if (!body) return;
+  await sendPushNotification(toId, {
+    title: senderName,
+    body,
+    data:  { type: "message", refId: fromId },
+  });
+}
 
 export default router;

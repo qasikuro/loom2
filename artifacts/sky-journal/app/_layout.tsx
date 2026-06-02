@@ -3,9 +3,11 @@ import '@/i18n';
 
 import { ClerkLoaded, ClerkLoading, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
+import Constants from 'expo-constants';
 import * as Font from 'expo-font';
+import * as Notifications from 'expo-notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Redirect, Stack, useSegments } from 'expo-router';
+import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
@@ -21,11 +23,9 @@ import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
 
-// Configure foreground notification display — wrapped in try/catch because
-// expo-notifications remote push support is removed from Expo Go (SDK 53+).
-try {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const Notifications = require('expo-notifications');
+// Configure how notifications appear when the app is in the foreground.
+// Guarded by platform check — expo-notifications has no-op stubs on web.
+if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
@@ -33,7 +33,7 @@ try {
       shouldSetBadge:  false,
     }),
   });
-} catch { /* silently skip in Expo Go */ }
+}
 
 function ThemedRoot({ children }: { children: React.ReactNode }) {
   const { isDark } = useTheme();
@@ -67,13 +67,8 @@ function AuthTokenBridge() {
       if (Platform.OS !== 'web') {
         (async () => {
           try {
-            // Dynamic require so Expo Go doesn't crash on import
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const Notifications = require('expo-notifications');
-            // eslint-disable-next-line @typescript-eslint/no-var-requires
-            const Constants = require('expo-constants').default;
             const perms = await Notifications.requestPermissionsAsync();
-            const granted = perms.granted ?? perms.ios?.status === 1;
+            const granted = perms.granted ?? (perms.ios?.status === 1);
             if (!granted) return;
             const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
             if (!projectId) return;
@@ -120,6 +115,38 @@ function AppOverlays() {
   }
 
   return <OnboardingOverlay visible={showOnboarding} onComplete={handleComplete} />;
+}
+
+function NotificationDeepLinkHandler() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data as Record<string, unknown>;
+      if (!data?.type) return;
+      switch (data.type) {
+        case 'follow':
+          router.push('/(tabs)/discover' as any);
+          break;
+        case 'witness':
+        case 'save':
+        case 'new_story':
+          if (data.refId) router.push(`/story/${data.refId}` as any);
+          break;
+        case 'message':
+          if (data.refId) router.push(`/campfire/${data.refId}` as any);
+          break;
+        default:
+          break;
+      }
+    });
+
+    return () => sub.remove();
+  }, []);
+
+  return null;
 }
 
 function AuthNavigator() {
@@ -179,6 +206,7 @@ export default function RootLayout() {
                     <SoundProvider>
                       <AppProvider>
                         <AuthTokenBridge />
+                        <NotificationDeepLinkHandler />
                         <AuthNavigator />
                         <AppOverlays />
                         <ToastProvider>
