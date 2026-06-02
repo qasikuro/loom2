@@ -159,4 +159,27 @@ router.get("/users/check-username", requireAuth, async (req, res) => {
   }
 });
 
+// ── Push token registration (token-only, no other fields required) ────────────
+
+router.post("/push-token", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const token  = String(req.body?.token ?? "").trim();
+  if (!token || !token.startsWith("ExponentPushToken[")) {
+    return res.status(400).json({ error: "Invalid push token" });
+  }
+  try {
+    await db
+      .insert(characterTable)
+      .values({ userId, pushToken: token, name: "Sky Child", updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: characterTable.userId,
+        set:    { pushToken: token, updatedAt: new Date() },
+      });
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to store push token");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;

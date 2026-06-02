@@ -77,10 +77,10 @@ function AuthTokenBridge() {
             if (!authToken) return;
             const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | null;
             if (!apiUrl) return;
-            await fetch(`${apiUrl}/character`, {
-              method:  'PUT',
+            await fetch(`${apiUrl}/push-token`, {
+              method:  'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-              body:    JSON.stringify({ pushToken: tokenData.data }),
+              body:    JSON.stringify({ token: tokenData.data }),
             });
           } catch { /* push token registration requires a dev/prod build — silently skip in Expo Go */ }
         })();
@@ -120,31 +120,42 @@ function AppOverlays() {
 function NotificationDeepLinkHandler() {
   const router = useRouter();
 
+  const navigate = useCallback((data: Record<string, unknown>) => {
+    if (!data?.type) return;
+    switch (data.type) {
+      case 'follow':
+        if (data.refId) router.push(`/user/${data.refId}` as any);
+        break;
+      case 'witness':
+      case 'save':
+      case 'new_story':
+        if (data.refId) router.push(`/story/${data.refId}` as any);
+        break;
+      case 'message':
+        if (data.refId) router.push(`/messages/${data.refId}` as any);
+        break;
+      default:
+        break;
+    }
+  }, [router]);
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
+    // Handle notification taps when the app is already open
     const sub = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data as Record<string, unknown>;
-      if (!data?.type) return;
-      switch (data.type) {
-        case 'follow':
-          router.push('/(tabs)/discover' as any);
-          break;
-        case 'witness':
-        case 'save':
-        case 'new_story':
-          if (data.refId) router.push(`/story/${data.refId}` as any);
-          break;
-        case 'message':
-          if (data.refId) router.push(`/campfire/${data.refId}` as any);
-          break;
-        default:
-          break;
-      }
+      navigate(response.notification.request.content.data as Record<string, unknown>);
     });
 
+    // Handle cold-start: app launched by tapping a notification
+    Notifications.getLastNotificationResponseAsync().then(response => {
+      if (response) {
+        navigate(response.notification.request.content.data as Record<string, unknown>);
+      }
+    }).catch(() => null);
+
     return () => sub.remove();
-  }, []);
+  }, [navigate]);
 
   return null;
 }
