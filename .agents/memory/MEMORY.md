@@ -5,3 +5,4 @@
 - [JournalEntry has no stickerCount](journal-entry-no-sticker.md) — stickerCount only exists on Story + DiscoverPost; JournalCard accepts it as optional prop but JournalEntry type does not include it
 - [FireOrb mixed native driver crash](campfire-animation.md) — never mix useNativeDriver:true and false on the same Animated.View; split into nested views or unify to native; also avoid soulCount in deps array as loop restarts crash native driver
 - [Campfire route params type](campfire-params.md) — cast req.params.roomId as string for Drizzle uuid columns; destructuring alone leaves string|string[] which fails insert/eq overloads
+- [ClerkProvider must be unconditional in Expo](clerk-provider-unconditional.md) — @clerk/expo v3 uses useClerkSignal internally; gating ClerkProvider behind any condition causes "not within ClerkProvider" crash when Expo Router renders routes early

@@ -202,9 +202,20 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <ThemedRoot>
-        {/* App content — rendered immediately so Clerk/Router load in background */}
-        {fontsReady && (
-          <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} proxyUrl={clerkProxyUrl}>
+        {/*
+          ClerkProvider must be unconditional — @clerk/expo v3 uses useClerkSignal
+          internally, which throws if the provider is not mounted on every render.
+          Gating it behind fontsReady caused sign-in to render outside the provider
+          when Expo Router initialised routes before fonts finished loading.
+        */}
+        <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} proxyUrl={clerkProxyUrl}>
+          {/* Show a spinner while fonts load (AppSplashScreen overlays this) */}
+          {!fontsReady ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1A1630' }}>
+              <ActivityIndicator size="large" color="#C8A84B" />
+            </View>
+          ) : (
+            <>
             <ClerkLoading>
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1A1630' }}>
                 <ActivityIndicator size="large" color="#C8A84B" />
@@ -288,8 +299,9 @@ export default function RootLayout() {
                 </ErrorBoundary>
               </SafeAreaProvider>
             </ClerkLoaded>
-          </ClerkProvider>
-        )}
+            </>
+          )}
+        </ClerkProvider>
 
         {/* Custom splash — overlays everything, fades out when ready */}
         {!splashDone && (
