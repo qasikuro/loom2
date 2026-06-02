@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showToastGlobal } from '@/components/Toast';
+import { GetCharacterResponse, ListJournalEntriesResponse, ListOutfitsResponse, ListStoriesResponse } from '@workspace/api-zod';
 import Constants from 'expo-constants';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -340,6 +341,143 @@ export interface FriendSummary {
   isPublic:  boolean;
 }
 
+// ── Raw API response shapes ────────────────────────────────────────────────────
+// Explicit typed interfaces for every API boundary — replace all `any` params
+// in mapper functions and `apiFetch<any>` call sites.
+
+interface RawCharacterResponse {
+  name?: string;
+  bio?: string;
+  mood?: string;
+  traits?: unknown;
+  isPublic?: boolean;
+  is_public?: boolean;
+  username?: string;
+  avatarUri?: string;
+  activeOutfitId?: string;
+  active_outfit_id?: string;
+  birthday?: string;
+  country?: string;
+  role?: string;
+  timezone?: string;
+  pushToken?: string;
+  push_token?: string;
+  links?: unknown;
+  isGuide?: boolean;
+  guideBio?: string;
+  guideTopics?: unknown;
+  guideAvailability?: unknown;
+}
+
+interface RawJournalEntryResponse {
+  id: string;
+  date: string | Date;
+  type: string;
+  text: string;
+  mood: string;
+  imageUri?: string | null;
+  image_uri?: string | null;
+  friendName?: string | null;
+  friend_name?: string | null;
+  stickerCount?: number;
+}
+
+interface RawStoryPanel {
+  id?: string;
+  text?: string;
+  imageUri?: string | null;
+  bgPreset?: string;
+  overlays?: unknown[];
+  imageAspectRatio?: number;
+  bubbleText?: string;
+}
+
+interface RawStoryResponse {
+  id: string;
+  date: string | Date;
+  chapterTitle?: string;
+  chapter_title?: string;
+  description?: string;
+  panels?: RawStoryPanel[];
+  mood: string;
+  location?: string;
+  isPublic?: boolean;
+  is_public?: boolean;
+  witnessedCount?: number;
+  witnessed_count?: number;
+  savedCount?: number;
+  saved_count?: number;
+  stickerCount?: number;
+  pageLayoutKey?: string;
+  page_layout_key?: string;
+  pages?: unknown[];
+}
+
+interface RawOutfitResponse {
+  id: string;
+  date: string | Date;
+  name: string;
+  description?: string;
+  story?: string;
+  imageUri?: string | null;
+  image_uri?: string | null;
+  tags?: unknown;
+  isPublic?: boolean;
+  is_public?: boolean;
+}
+
+interface RawDiscoverApiItem {
+  id: string;
+  authorUserId?: string;
+  authorName?: string;
+  authorUsername?: string;
+  authorAvatarUri?: string | null;
+  chapterTitle?: string;
+  description?: string;
+  storySnippet?: string;
+  imageUri?: string | null;
+  mood?: string;
+  witnessedCount?: number;
+  savedCount?: number;
+  stickerCount?: number;
+  date?: string;
+  createdAt?: string;
+  chapterNumber?: number;
+  panels?: Array<{ text?: string; imageUri?: string | null; overlays?: unknown[] }>;
+  pages?: unknown[];
+  pageLayoutKey?: string;
+}
+
+interface RawGalleryPhoto {
+  id: string;
+  imageUri?: string | null;
+  caption?: string | null;
+  createdAt: string;
+}
+
+interface RawGalleryUsage {
+  count: number;
+  limit: number;
+}
+
+interface RawNotification {
+  id: string;
+  actorId: string;
+  actorName: string;
+  type: string;
+  refId: string;
+  title: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+interface RawShopResponse {
+  catalog?: ShopItem[];
+  seasonalPreview?: unknown[];
+  purchasedIds: string[];
+  activeCosmetics: Record<string, string>;
+}
+
 // ── Context value ─────────────────────────────────────────────────────────────
 
 interface AppContextValue {
@@ -441,12 +579,12 @@ function relativeTimeDiscover(dateStr: string): string {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function toAppCharacter(raw: any): Character {
+function toAppCharacter(raw: RawCharacterResponse): Character {
   return {
     name:              raw.name          ?? DEFAULT_CHARACTER.name,
     bio:               raw.bio           ?? DEFAULT_CHARACTER.bio,
     mood:              raw.mood          ?? DEFAULT_CHARACTER.mood,
-    traits:            Array.isArray(raw.traits) ? raw.traits : [],
+    traits:            Array.isArray(raw.traits) ? (raw.traits as string[]) : [],
     isPublic:          raw.isPublic      ?? raw.is_public      ?? true,
     username:          raw.username      ?? undefined,
     avatarUri:         raw.avatarUri     ?? undefined,
@@ -456,15 +594,15 @@ function toAppCharacter(raw: any): Character {
     role:              raw.role          ?? undefined,
     timezone:          raw.timezone      ?? undefined,
     pushToken:         raw.pushToken     ?? raw.push_token ?? undefined,
-    links:             Array.isArray(raw.links) ? raw.links : undefined,
+    links:             Array.isArray(raw.links) ? (raw.links as ProfileLink[]) : undefined,
     isGuide:           raw.isGuide          ?? false,
     guideBio:          raw.guideBio         ?? '',
-    guideTopics:       Array.isArray(raw.guideTopics) ? raw.guideTopics : [],
-    guideAvailability: raw.guideAvailability ?? null,
+    guideTopics:       Array.isArray(raw.guideTopics) ? (raw.guideTopics as string[]) : [],
+    guideAvailability: (raw.guideAvailability as GuideAvailability | null | undefined) ?? null,
   };
 }
 
-function toAppJournalEntry(raw: any): JournalEntry {
+function toAppJournalEntry(raw: RawJournalEntryResponse): JournalEntry {
   return {
     id:           raw.id,
     date:         typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
@@ -477,14 +615,22 @@ function toAppJournalEntry(raw: any): JournalEntry {
   };
 }
 
-function toAppStory(raw: any): Story {
+function toAppStory(raw: RawStoryResponse): Story {
   return {
     id:             raw.id,
     date:           typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
-    chapterTitle:   raw.chapterTitle ?? raw.chapter_title,
+    chapterTitle:   raw.chapterTitle ?? raw.chapter_title ?? '',
     description:    raw.description ?? '',
     panels:         Array.isArray(raw.panels)
-      ? raw.panels.map((p: any) => ({ ...p, imageUri: resolveUri(p.imageUri) }))
+      ? raw.panels.map((p: RawStoryPanel): StoryPanel => ({
+          id:               p.id ?? '',
+          text:             p.text ?? '',
+          imageUri:         resolveUri(p.imageUri ?? undefined),
+          bgPreset:         p.bgPreset,
+          overlays:         p.overlays as PanelOverlay[] | undefined,
+          imageAspectRatio: p.imageAspectRatio,
+          bubbleText:       p.bubbleText,
+        }))
       : [],
     mood:           raw.mood,
     location:       raw.location ?? '',
@@ -493,11 +639,11 @@ function toAppStory(raw: any): Story {
     savedCount:     raw.savedCount     ?? raw.saved_count     ?? 0,
     stickerCount:   raw.stickerCount   ?? 0,
     pageLayoutKey:  raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
-    pages:          Array.isArray(raw.pages) ? raw.pages : undefined,
+    pages:          Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
   };
 }
 
-function toAppOutfit(raw: any): Outfit {
+function toAppOutfit(raw: RawOutfitResponse): Outfit {
   return {
     id:          raw.id,
     date:        typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
@@ -512,7 +658,7 @@ function toAppOutfit(raw: any): Outfit {
 
 type RawDiscoverItem = Omit<DiscoverPost, 'saved' | 'isFollowing'>;
 
-function toRawDiscoverPost(raw: any): RawDiscoverItem {
+function toRawDiscoverPost(raw: RawDiscoverApiItem): RawDiscoverItem {
   return {
     id:               raw.id,
     authorUserId:     raw.authorUserId ?? '',
@@ -520,10 +666,10 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
     authorHandle:     raw.authorUsername
       ? `@${raw.authorUsername}`
       : `@${(raw.authorName ?? 'sky').toLowerCase().replace(/\s+/g, '')}`,
-    authorAvatarUri:  resolveUri(raw.authorAvatarUri) ?? null,
+    authorAvatarUri:  resolveUri(raw.authorAvatarUri ?? undefined) ?? null,
     chapterTitle:     raw.chapterTitle ?? '',
     storySnippet:     raw.storySnippet ?? '',
-    imageUri:         resolveUri(raw.imageUri),
+    imageUri:         resolveUri(raw.imageUri ?? undefined),
     mood:           raw.mood ?? 'Hopeful',
     witnessedCount: raw.witnessedCount ?? 0,
     savedCount:     raw.savedCount ?? 0,
@@ -532,12 +678,12 @@ function toRawDiscoverPost(raw: any): RawDiscoverItem {
     date:           raw.date ?? raw.createdAt ?? new Date().toISOString(),
     chapterNumber:  raw.chapterNumber ?? 1,
     vibe:           raw.mood ?? 'Hopeful',
-    panels:         Array.isArray(raw.panels) ? raw.panels.map((p: any) => ({
+    panels:         Array.isArray(raw.panels) ? raw.panels.map(p => ({
       text:     p.text     ?? '',
-      imageUri: resolveUri(p.imageUri),
-      overlays: Array.isArray(p.overlays) ? p.overlays : undefined,
+      imageUri: resolveUri(p.imageUri ?? undefined),
+      overlays: Array.isArray(p.overlays) ? (p.overlays as PanelOverlay[]) : undefined,
     })) : [],
-    pages:          Array.isArray(raw.pages) ? raw.pages : undefined,
+    pages:          Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
     pageLayoutKey:  raw.pageLayoutKey ?? undefined,
   };
 }
@@ -727,31 +873,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw, guidesRaw,
         rewardBalanceRaw, constellationRaw, shopRaw, savedIdsRaw,
       ] = await Promise.all([
-        apiFetch<any>('/character').catch(() => null),
-        apiFetch<any[]>('/journal-entries').catch(() => null),
-        apiFetch<any[]>('/stories').catch(() => null),
-        apiFetch<any[]>('/outfits').catch(() => null),
-        apiFetch<any[]>('/gallery').catch(() => []),
-        apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
-        apiFetch<any[]>('/discover').catch(() => null),
+        apiFetch<RawCharacterResponse>('/character').catch(() => null),
+        apiFetch<RawJournalEntryResponse[]>('/journal-entries').catch(() => null),
+        apiFetch<RawStoryResponse[]>('/stories').catch(() => null),
+        apiFetch<RawOutfitResponse[]>('/outfits').catch(() => null),
+        apiFetch<RawGalleryPhoto[]>('/gallery').catch(() => [] as RawGalleryPhoto[]),
+        apiFetch<RawGalleryUsage>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
+        apiFetch<RawDiscoverApiItem[]>('/discover').catch(() => null),
         apiFetch<string[]>('/follows/following').catch(() => []),
-        apiFetch<any[]>('/notifications').catch(() => []),
+        apiFetch<RawNotification[]>('/notifications').catch(() => [] as RawNotification[]),
         apiFetch<FriendSummary[]>('/friends').catch(() => []),
         apiFetch<GuideProfile[]>('/guides?following=true').catch(() => []),
         apiFetch<RewardBalance>('/rewards').catch(() => null),
         apiFetch<ConstellationState>('/constellation').catch(() => null),
-        apiFetch<{ catalog?: ShopItem[]; purchasedIds: string[]; activeCosmetics: Record<string, string> }>('/rewards/shop').catch(() => null),
+        apiFetch<RawShopResponse>('/rewards/shop').catch(() => null),
         apiFetch<string[]>('/stories/saved/ids').catch(() => null),
       ]);
+
+      // Validate core API responses against the OpenAPI contract at runtime.
+      // Logs a warning on shape mismatch without disrupting the load flow.
+      if (charRaw)    { const r = GetCharacterResponse.passthrough().safeParse(charRaw);   if (!r.success) console.warn('[AppContext] /character shape:', r.error.issues.slice(0, 3)); }
+      if (entriesRaw) { const r = ListJournalEntriesResponse.safeParse(entriesRaw);         if (!r.success) console.warn('[AppContext] /journal-entries shape:', r.error.issues.slice(0, 3)); }
+      if (storiesRaw) { const r = ListStoriesResponse.safeParse(storiesRaw);                if (!r.success) console.warn('[AppContext] /stories shape:', r.error.issues.slice(0, 3)); }
+      if (outfitsRaw) { const r = ListOutfitsResponse.safeParse(outfitsRaw);                if (!r.success) console.warn('[AppContext] /outfits shape:', r.error.issues.slice(0, 3)); }
 
       // Process core data
       const char    = charRaw    ? toAppCharacter(charRaw)    : DEFAULT_CHARACTER;
       const entries = (entriesRaw  ?? []).map(toAppJournalEntry);
       const stors   = (storiesRaw  ?? []).map(toAppStory);
       const outs    = (outfitsRaw  ?? []).map(toAppOutfit);
-      const gal     = (galleryRaw  ?? []).map((r: any): GalleryPhoto => ({
+      const gal     = (galleryRaw  ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
         id:        r.id,
-        imageUri:  resolveUri(r.imageUri) ?? r.imageUri,
+        imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
         caption:   r.caption ?? '',
         createdAt: r.createdAt,
       }));
@@ -762,7 +915,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const guides  = (guidesRaw   ?? []) as GuideProfile[];
 
       // Process notifications
-      const notifs = (notifRaw ?? []).map((r: any): ServerNotification => ({
+      const notifs = (notifRaw ?? []).map((r: RawNotification): ServerNotification => ({
         id:        r.id,
         actorId:   r.actorId,
         actorName: r.actorName,
@@ -806,7 +959,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
       if (shopRaw?.catalog && Array.isArray(shopRaw.catalog)) {
-        setShopCatalog(shopRaw.catalog as ShopItem[]);
+        setShopCatalog(shopRaw.catalog);
       }
       setApiOnline(true);
       setJournalLoadError(entriesRaw === null);
@@ -849,7 +1002,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         cacheWrites.push(
           AsyncStorage.setItem('shop_catalog_v1', JSON.stringify({
             catalog:         shopRaw.catalog,
-            seasonalPreview: (shopRaw as any).seasonalPreview ?? [],
+            seasonalPreview: shopRaw.seasonalPreview ?? [],
           })),
         );
       }
@@ -871,9 +1024,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadNotificationsData() {
     try {
-      const raw = await apiFetch<any[]>('/notifications').catch(() => []);
+      const raw = await apiFetch<RawNotification[]>('/notifications').catch(() => [] as RawNotification[]);
       setServerNotifications(
-        (raw ?? []).map(r => ({
+        (raw ?? []).map((r: RawNotification) => ({
           id:        r.id,
           actorId:   r.actorId,
           actorName: r.actorName,
@@ -897,7 +1050,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   async function loadSocialData() {
     try {
       const [discoverRaw, followingRaw, friendsRaw] = await Promise.all([
-        apiFetch<any[]>('/discover').catch(() => null),
+        apiFetch<RawDiscoverApiItem[]>('/discover').catch(() => null),
         apiFetch<string[]>('/follows/following').catch(() => []),
         apiFetch<FriendSummary[]>('/friends').catch(() => []),
       ]);
@@ -927,21 +1080,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const [charRaw, entriesRaw, storiesRaw, outfitsRaw, galleryRaw, usageRaw] = await Promise.all([
-        apiFetch<any>('/character'),
-        apiFetch<any[]>('/journal-entries'),
-        apiFetch<any[]>('/stories'),
-        apiFetch<any[]>('/outfits'),
-        apiFetch<any[]>('/gallery').catch(() => []),
-        apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
+        apiFetch<RawCharacterResponse>('/character'),
+        apiFetch<RawJournalEntryResponse[]>('/journal-entries'),
+        apiFetch<RawStoryResponse[]>('/stories'),
+        apiFetch<RawOutfitResponse[]>('/outfits'),
+        apiFetch<RawGalleryPhoto[]>('/gallery').catch(() => [] as RawGalleryPhoto[]),
+        apiFetch<RawGalleryUsage>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
       ]);
 
       const char    = toAppCharacter(charRaw);
       const entries = (entriesRaw ?? []).map(toAppJournalEntry);
       const stors   = (storiesRaw ?? []).map(toAppStory);
       const outs    = (outfitsRaw ?? []).map(toAppOutfit);
-      const gal     = (galleryRaw ?? []).map((r: any): GalleryPhoto => ({
+      const gal     = (galleryRaw ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
         id:        r.id,
-        imageUri:  resolveUri(r.imageUri) ?? r.imageUri,
+        imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
         caption:   r.caption ?? '',
         createdAt: r.createdAt,
       }));
@@ -1500,8 +1653,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const resolved = { ...created, imageUri: resolveUri(created.imageUri) ?? created.imageUri };
       setGallery(prev => [resolved, ...prev]);
       setGalleryUsage(prev => ({ ...prev, count: prev.count + 1 }));
-    } catch (err: any) {
-      if (err?.status === 429) {
+    } catch (err: unknown) {
+      if (typeof err === 'object' && err !== null && 'status' in err && (err as { status: number }).status === 429) {
         throw new Error('Gallery limit reached');
       }
       throw err;
