@@ -173,13 +173,14 @@ export interface Story {
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
 
 export interface JournalEntry {
-  id:          string;
-  date:        string;
-  type:        JournalEntryType;
-  text:        string;
-  mood:        string;
-  imageUri?:   string;
-  friendName?: string;
+  id:           string;
+  date:         string;
+  type:         JournalEntryType;
+  text:         string;
+  mood:         string;
+  imageUri?:    string;
+  friendName?:  string;
+  stickerCount?: number;
 }
 
 export interface Outfit {
@@ -459,13 +460,14 @@ function toAppCharacter(raw: any): Character {
 
 function toAppJournalEntry(raw: any): JournalEntry {
   return {
-    id:         raw.id,
-    date:       typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
-    type:       raw.type as JournalEntryType,
-    text:       raw.text,
-    mood:       raw.mood,
-    imageUri:   resolveUri(raw.imageUri ?? raw.image_uri),
-    friendName: raw.friendName ?? raw.friend_name ?? undefined,
+    id:           raw.id,
+    date:         typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
+    type:         raw.type as JournalEntryType,
+    text:         raw.text,
+    mood:         raw.mood,
+    imageUri:     resolveUri(raw.imageUri ?? raw.image_uri),
+    friendName:   raw.friendName ?? raw.friend_name ?? undefined,
+    stickerCount: raw.stickerCount ?? 0,
   };
 }
 

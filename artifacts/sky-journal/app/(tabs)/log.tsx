@@ -212,9 +212,14 @@ function TimelineCard({ entry, onDelete, index = 0, theme }: { entry: JournalEnt
           )}
         </View>
 
-        {/* ─ Footer: mood + delete ─ */}
+        {/* ─ Footer: mood + sticker count + type pill + delete ─ */}
         <View style={tc.footer}>
           <MoodBadge mood={entry.mood} size="sm" />
+          {(entry.stickerCount ?? 0) > 0 && (
+            <View style={tc.stickerBadge}>
+              <Text style={tc.stickerText}>✦ {entry.stickerCount}</Text>
+            </View>
+          )}
           {entry.type === 'friend' && !!entry.friendName && (
             <View style={[tc.typePill, { backgroundColor:'rgba(74,104,152,0.22)', borderColor:'rgba(74,104,152,0.38)' }]}>
               <Icon name="users" size={10} color="#7AAAE0" />
@@ -262,8 +267,10 @@ const tc = StyleSheet.create({
   footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap' },
   typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, borderWidth:1 },
   typePillText: { fontSize:10, fontFamily:'Satoshi-Medium' },
-  deleteBtn: { height:28, paddingHorizontal:8, borderRadius:9, alignItems:'center', justifyContent:'center' },
+  deleteBtn:     { height:28, paddingHorizontal:8, borderRadius:9, alignItems:'center', justifyContent:'center' },
   deleteBtnText: { color:'#fff', fontSize:11, fontFamily:'Satoshi-Bold' },
+  stickerBadge:  { paddingHorizontal:7, paddingVertical:2, borderRadius:8, backgroundColor:'rgba(200,168,75,0.10)', borderWidth:1, borderColor:'rgba(200,168,75,0.25)' },
+  stickerText:   { fontSize:10, fontFamily:'Satoshi-Bold', color:'#C8A84B' },
 });
 
 // ── Mini calendar ─────────────────────────────────────────────────────────────

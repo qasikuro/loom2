@@ -70,6 +70,41 @@ const MOOD_COLOR: Record<string, string> = {
 };
 const DEF_ACCENT = '#9B78E8';
 
+// ─── Daily Spark prompts (rotate by day-of-month) ────────────────────────────
+const DAILY_SPARKS = [
+  'What made you feel alive today?',
+  'Describe a moment of unexpected beauty you noticed.',
+  'What are you carrying that you could set down?',
+  'Who in your circle made you smile recently?',
+  'Write the first three words that come to mind right now.',
+  'What sound captures your mood today?',
+  'What would you tell your past self from one year ago?',
+  'Describe your perfect quiet evening.',
+  'What fear felt smaller today?',
+  'What are you grateful for that you rarely mention?',
+  'Where do you feel most like yourself?',
+  'What story would you tell about today in ten years?',
+  'What are you avoiding thinking about?',
+  'Name something you did today that took courage.',
+  'What does your heart feel heavy about right now?',
+  'Describe the sky outside your window.',
+  'Who do you wish you could call right now?',
+  'What would make tomorrow feel magical?',
+  'Write about a smell that takes you somewhere.',
+  'What are you learning about yourself lately?',
+  'What do you want more of in your life?',
+  'What does home feel like to you?',
+  'Describe a kindness you received or gave.',
+  'What chapter of your life are you in right now?',
+  'What truth are you afraid to say out loud?',
+  'What would you create if you knew no one was watching?',
+  'What colour is today?',
+  'Describe a dream you remember.',
+  'What are you becoming?',
+  'Name something ordinary that felt extraordinary today.',
+  'What do you want to remember about this moment?',
+] as const;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
@@ -211,6 +246,56 @@ function BreathRing({ accent, r = 46 }: { accent: string; r?: number }) {
 }
 
 // ─── Friend bubble — story-ring style "who's around" row ─────────────────────
+// ─── Daily Spark card ────────────────────────────────────────────────────────
+function DailySpark({ onWrite }: { onWrite: () => void }) {
+  const today  = new Date();
+  const prompt = DAILY_SPARKS[(today.getDate() - 1) % DAILY_SPARKS.length]!;
+  const date   = today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return (
+    <TouchableOpacity
+      style={ds.card}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onWrite(); }}
+      activeOpacity={0.84}
+    >
+      <LinearGradient
+        colors={['rgba(200,168,75,0.15)', 'rgba(200,168,75,0.04)', 'transparent']}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      {/* Top row: label + date */}
+      <View style={ds.eyebrow}>
+        <Text style={ds.sparkEmoji}>✨</Text>
+        <Text style={ds.label}>DAILY SPARK</Text>
+        <Text style={ds.date}>{date}</Text>
+      </View>
+      {/* Prompt */}
+      <Text style={ds.prompt}>{prompt}</Text>
+      {/* Write CTA */}
+      <View style={ds.cta}>
+        <Icon name="edit-3" size={12} color="#C8A84B" />
+        <Text style={ds.ctaTxt}>Write  →</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+const ds = StyleSheet.create({
+  card: {
+    marginHorizontal: 16, marginTop: 4, marginBottom: 2,
+    paddingHorizontal: 18, paddingVertical: 16,
+    borderRadius: 22, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.022)',
+    borderWidth: 1, borderColor: 'rgba(200,168,75,0.26)',
+  },
+  eyebrow:   { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
+  sparkEmoji:{ fontSize: 14, lineHeight: 17 },
+  label:     { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, color: '#C8A84B', flex: 1 },
+  date:      { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,168,75,0.42)' },
+  prompt:    { fontSize: 16, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(240,228,255,0.90)', lineHeight: 25, letterSpacing: -0.1, marginBottom: 14 },
+  cta:       { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  ctaTxt:    { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.4 },
+});
+
 function FriendBubble({ post }: { post: DiscoverPost }) {
   const mc = MOOD_COLOR[post.mood] ?? DEF_ACCENT;
   const label = post.authorHandle ? post.authorHandle.replace('@', '') : post.authorName.split(' ')[0];
@@ -930,7 +1015,7 @@ export default function HomeScreen() {
 
   const circleStories = discoverPosts.filter(p => p.isFollowing).slice(0, 10);
 
-  // Unique friends with recent stories (for the "Who's Around" row)
+  // Unique friends with recent stories (for the story-ring row)
   const circleAuthors = (() => {
     const seen = new Set<string>();
     return circleStories.filter(p => {
@@ -938,6 +1023,12 @@ export default function HomeScreen() {
       seen.add(p.authorUserId); return true;
     }).slice(0, 10);
   })();
+
+  // Top 3 non-circle posts for the Discover Preview section
+  const discoverPreview = useMemo(
+    () => discoverPosts.filter(p => !p.isFollowing).slice(0, 3),
+    [discoverPosts],
+  );
 
   // ── Activity digest — what changed in the world while you were away ──────────
   const witnessedNotifs   = serverNotifications.filter(n => n.type === 'witness').length;
@@ -1245,6 +1336,13 @@ export default function HomeScreen() {
         </View>
 
         {/* ══════════════════════════════════════════════════
+            DAILY SPARK — rotating daily writing prompt
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
+          <DailySpark onWrite={() => router.push('/create-journal-entry' as any)} />
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
             YOUR CONSTELLATION — emotional centrepiece
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }] }}>
@@ -1370,25 +1468,6 @@ export default function HomeScreen() {
           </Animated.View>
         )}
 
-        {/* ══════════════════════════════════════════════════
-            WHO'S AROUND — friends with recent stories
-        ══════════════════════════════════════════════════ */}
-        {circleAuthors.length > 0 && (
-          <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
-            <View style={{ paddingTop: 8, paddingBottom: 4 }}>
-              <SectionHeader
-                label="Your Circle"
-                accent={accent}
-                count={circleAuthors.length}
-                onPress={() => router.push('/(tabs)/discover')}
-                action="See all"
-              />
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={fr.row}>
-                {circleAuthors.map(post => <FriendBubble key={post.authorUserId} post={post} />)}
-              </ScrollView>
-            </View>
-          </Animated.View>
-        )}
 
         {/* ══════════════════════════════════════════════════
             LUMI — immersive companion card
@@ -1527,7 +1606,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
-            YOUR CIRCLE — stories from people you follow
+            YOUR CIRCLE — story rings + masonry (merged)
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s2, transform: [{ translateY: s2.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <View style={s.section}>
@@ -1536,7 +1615,15 @@ export default function HomeScreen() {
             accent={accent}
             count={circleStories.length}
             onPress={() => router.push('/(tabs)/discover')}
+            action={circleStories.length > 0 ? 'See all' : undefined}
           />
+          {/* Friend story-ring rail */}
+          {circleAuthors.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[fr.row, { marginBottom: 14 }]}>
+              {circleAuthors.map(post => <FriendBubble key={post.authorUserId} post={post} />)}
+            </ScrollView>
+          )}
+          {/* Masonry grid */}
           <View style={s.masonry}>{renderCircleStories()}</View>
         </View>
         </Animated.View>
@@ -1665,6 +1752,54 @@ export default function HomeScreen() {
           <Icon name="chevron-right" size={14} color="rgba(160,140,200,0.40)" />
         </TouchableOpacity>
         </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            DISCOVER PREVIEW — trending posts not in circle
+        ══════════════════════════════════════════════════ */}
+        {discoverPreview.length > 0 && (
+          <Animated.View style={{ opacity: s5, transform: [{ translateY: s5.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+          <View style={s.section}>
+            <SectionHeader
+              label="Trending Today"
+              accent="#60C8F8"
+              onPress={() => router.push('/(tabs)/discover')}
+              action="See all"
+            />
+            <View style={{ paddingHorizontal: 16, gap: 8 }}>
+              {discoverPreview.map(post => {
+                const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
+                return (
+                  <TouchableOpacity
+                    key={post.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.034)', borderWidth: 1, borderColor: `${mc}22` }}
+                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }}
+                    activeOpacity={0.82}
+                  >
+                    <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: `${mc}20`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${mc}30`, flexShrink: 0 }}>
+                      <Text style={{ fontSize: 9.5, color: mc, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2, textTransform: 'uppercase', textAlign: 'center' }}>{post.mood?.slice(0, 6) ?? post.vibe?.slice(0, 6)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.90)', letterSpacing: -0.2 }} numberOfLines={1}>{post.chapterTitle}</Text>
+                      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,160,230,0.52)', marginTop: 2 }} numberOfLines={1}>
+                        {post.authorHandle ? `@${post.authorHandle}` : post.authorName}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end', gap: 3 }}>
+                      {post.witnessedCount > 0 && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                          <Icon name="eye" size={10} color="rgba(200,184,232,0.38)" />
+                          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.38)' }}>{post.witnessedCount}</Text>
+                        </View>
+                      )}
+                      <Icon name="chevron-right" size={13} color="rgba(160,140,200,0.35)" />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          </Animated.View>
+        )}
 
         {/* ══════════════════════════════════════════════════
             FIND FRIENDS — ambient, low-pressure CTA
