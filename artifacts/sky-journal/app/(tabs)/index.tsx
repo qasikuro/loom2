@@ -1120,19 +1120,31 @@ export default function HomeScreen() {
   const liveCampfireCount = campfires.filter(c =>
     c.guide.isAvailableNow || liveNow(c.guide.guideAvailability ?? null)).length;
 
+  // ── Greeting helpers ─────────────────────────────────────────────────────
+  const greetingWord  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : hour < 20 ? 'Good evening' : 'Good night';
+  const greetingEmoji = hour < 12 ? '☀️' : hour < 17 ? '🌤' : hour < 20 ? '✨' : '🌙';
+  const headerSubtitle = (() => {
+    if (witnessedNotifs > 0) return `${witnessedNotifs} soul${witnessedNotifs > 1 ? 's' : ''} witnessed your story`;
+    if (circleStories.length > 0) return `${circleStories.length} new ${circleStories.length === 1 ? 'story' : 'stories'} from your circle`;
+    if (liveCampfireCount > 0) return `${liveCampfireCount} campfire${liveCampfireCount > 1 ? 's' : ''} burning right now`;
+    if (hour < 12) return 'What will today hold?';
+    if (hour < 17) return 'The afternoon sky is yours';
+    if (hour < 20) return 'Take a deep breath and reflect.';
+    return 'A perfect time to write something';
+  })();
+
   return (
     <Animated.View style={[s.root, { opacity: fadeIn }]}>
-      {/* ── Deep space void — near-black with purple undertone ── */}
+      {/* ── Deep space void ── */}
       <LinearGradient
         colors={['#100A28', '#08061A', '#04030C']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
         pointerEvents="none"
       />
-      {/* ── Twinkling star field ── */}
       <StarField density="high" />
 
-      {/* ── Reward banner queue — one at a time, anti-stack gate prevents overlap ── */}
+      {/* ── Reward banner — one at a time, anti-stack gate ── */}
       {!bannerGate && displayedReward && (
         <View style={{ position: 'absolute', top: topPad + 8, left: 16, right: 16, zIndex: 999 }} pointerEvents="box-none">
           <RewardBanner
@@ -1162,9 +1174,9 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
 
-        {/* ══════════════════════════════════════════════════
-            HERO — compact identity card
-        ══════════════════════════════════════════════════ */}
+        {/* ════════════════════════════════════════════════
+            HEADER — greeting + stats chips
+        ════════════════════════════════════════════════ */}
         <View style={[s.hero, { paddingTop: topPad + 6 }]}>
           {/* ── Base mood nebula ── */}
           <LinearGradient
