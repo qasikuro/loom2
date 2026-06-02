@@ -1265,6 +1265,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Stories ────────────────────────────────────────────────────────────────
 
   const addStory = useCallback(async (story: Story): Promise<boolean> => {
+    const storyPostBody = JSON.stringify({
+      id:            story.id,
+      date:          story.date,
+      chapterTitle:  story.chapterTitle,
+      description:   story.description ?? '',
+      panels:        story.panels,
+      mood:          story.mood,
+      location:      story.location,
+      isPublic:      story.isPublic,
+      pageLayoutKey: story.pageLayoutKey ?? null,
+      pages:         story.pages ?? null,
+    });
+
     // Optimistic local update
     setStories(prev => {
       const updated = [story, ...prev.filter(s => s.id !== story.id)];
@@ -1278,21 +1291,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const res = await apiFetch<{ rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
-        '/stories', {
-          method: 'POST',
-          body:   JSON.stringify({
-            id:            story.id,
-            date:          story.date,
-            chapterTitle:  story.chapterTitle,
-            description:   story.description ?? '',
-            panels:        story.panels,
-            mood:          story.mood,
-            location:      story.location,
-            isPublic:      story.isPublic,
-            pageLayoutKey: story.pageLayoutKey ?? null,
-            pages:         story.pages ?? null,
-          }),
-        },
+        '/stories', { method: 'POST', body: storyPostBody },
       );
       if (res?.rewardGranted && res.rewardAmounts) {
         fireToast('Story created', res.rewardAmounts);
@@ -1313,7 +1312,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
         return reverted;
       });
-      showToastGlobal("Story couldn't be published — please try again", 'error');
+      // Retry: re-add to local state and re-post to API
+      showToastGlobal("Story couldn't be published — please try again", 'error', () => {
+        setStories(prev => {
+          if (prev.some(s => s.id === story.id)) return prev;
+          const updated = [story, ...prev];
+          const slim = updated.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
+          AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
+          return updated;
+        });
+        apiFetch('/stories', { method: 'POST', body: storyPostBody })
+          .then(() => loadSocialData())
+          .catch(() => showToastGlobal("Story still couldn't be published", 'error'));
+      });
       return false;
     }
   }, [fireToast, reloadRewards, reloadConstellation]);
@@ -1538,6 +1549,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+        showToastGlobal("Couldn't follow user", 'warning');
       });
   }, [fireToast, reloadRewards, reloadConstellation]);
 
@@ -1549,6 +1561,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         prev.includes(targetUserId) ? prev : [...prev, targetUserId],
       );
       fetchFriends();
+      showToastGlobal("Couldn't unfollow user", 'warning');
     });
   }, []);
 
@@ -1562,7 +1575,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const markServerNotificationsRead = useCallback(() => {
     setServerNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => null);
+    apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => {
+      showToastGlobal("Couldn't mark notifications read", 'warning');
+    });
   }, []);
 
   const deleteServerNotification = useCallback((id: string) => {
