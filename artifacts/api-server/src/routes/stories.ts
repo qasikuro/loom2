@@ -277,6 +277,7 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
       .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
+    invalidateFollowerDiscoverCaches(userId).catch(() => null);
     return res.json(serializeStory(updated));
   } catch (err) {
     req.log.error({ err }, "Failed to update story");
@@ -291,6 +292,7 @@ router.delete("/stories/:id", requireAuth, async (req, res) => {
     await db
       .delete(storiesTable)
       .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)));
+    invalidateFollowerDiscoverCaches(userId).catch(() => null);
     return res.status(204).send();
   } catch (err) {
     req.log.error({ err }, "Failed to delete story");
