@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showToastGlobal } from '@/components/Toast';
-import { GetCharacterResponse, ListJournalEntriesResponse, ListOutfitsResponse, ListStoriesResponse } from '@workspace/api-zod';
+import { ApiCharacterSchema, ApiJournalEntriesSchema, ApiOutfitsSchema, ApiStoriesSchema } from '@workspace/api-zod';
 import Constants from 'expo-constants';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -688,6 +688,22 @@ function toRawDiscoverPost(raw: RawDiscoverApiItem): RawDiscoverItem {
   };
 }
 
+// ── Zod validation helper ─────────────────────────────────────────────────────
+// Validates `raw` against a Zod schema (for OpenAPI-covered endpoints).
+// On success: returns the original raw value — preserving server-side extras
+//   not yet described in the spec (e.g. panel bgPreset/overlays in stories).
+// On failure: logs a warning and returns `fallback` — callers MUST NOT map null.
+type SafeSchema = { safeParse(d: unknown): { success: boolean; error?: { issues: unknown[] } } };
+function parseOrDefault<F>(schema: SafeSchema, raw: unknown, fallback: F, endpoint: string): unknown | F {
+  if (raw === null || raw === undefined) return fallback;
+  const result = schema.safeParse(raw);
+  if (!result.success) {
+    console.warn(`[AppContext] ${endpoint} schema mismatch:`, result.error?.issues.slice(0, 3));
+    return fallback;
+  }
+  return raw;
+}
+
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -869,14 +885,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Fire EVERYTHING in one parallel batch: core + social + notifications.
       // Previously social was a second sequential wave, doubling the wait for Discover.
       const [
-        charRaw, entriesRaw, storiesRaw, outfitsRaw,
+        _charFetch, _entriesFetch, _storiesFetch, _outfitsFetch,
         galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw, guidesRaw,
         rewardBalanceRaw, constellationRaw, shopRaw, savedIdsRaw,
       ] = await Promise.all([
-        apiFetch<RawCharacterResponse>('/character').catch(() => null),
-        apiFetch<RawJournalEntryResponse[]>('/journal-entries').catch(() => null),
-        apiFetch<RawStoryResponse[]>('/stories').catch(() => null),
-        apiFetch<RawOutfitResponse[]>('/outfits').catch(() => null),
+        apiFetch<unknown>('/character').catch(() => null),
+        apiFetch<unknown>('/journal-entries').catch(() => null),
+        apiFetch<unknown>('/stories').catch(() => null),
+        apiFetch<unknown>('/outfits').catch(() => null),
         apiFetch<RawGalleryPhoto[]>('/gallery').catch(() => [] as RawGalleryPhoto[]),
         apiFetch<RawGalleryUsage>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
         apiFetch<RawDiscoverApiItem[]>('/discover').catch(() => null),
@@ -890,18 +906,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<string[]>('/stories/saved/ids').catch(() => null),
       ]);
 
-      // Validate core API responses against the OpenAPI contract at runtime.
-      // Logs a warning on shape mismatch without disrupting the load flow.
-      if (charRaw)    { const r = GetCharacterResponse.passthrough().safeParse(charRaw);   if (!r.success) console.warn('[AppContext] /character shape:', r.error.issues.slice(0, 3)); }
-      if (entriesRaw) { const r = ListJournalEntriesResponse.safeParse(entriesRaw);         if (!r.success) console.warn('[AppContext] /journal-entries shape:', r.error.issues.slice(0, 3)); }
-      if (storiesRaw) { const r = ListStoriesResponse.safeParse(storiesRaw);                if (!r.success) console.warn('[AppContext] /stories shape:', r.error.issues.slice(0, 3)); }
-      if (outfitsRaw) { const r = ListOutfitsResponse.safeParse(outfitsRaw);                if (!r.success) console.warn('[AppContext] /outfits shape:', r.error.issues.slice(0, 3)); }
+      // Validate OpenAPI-covered endpoints against generated Zod schemas.
+      // Returns the original raw value on success (preserving server-side extras),
+      // or null on mismatch — no malformed data reaches mapper functions.
+      const charRaw    = parseOrDefault(ApiCharacterSchema,      _charFetch,    null, '/character')      as RawCharacterResponse    | null;
+      const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
+      const storiesRaw = parseOrDefault(ApiStoriesSchema,        _storiesFetch, null, '/stories')         as RawStoryResponse[]       | null;
+      const outfitsRaw = parseOrDefault(ApiOutfitsSchema,        _outfitsFetch, null, '/outfits')         as RawOutfitResponse[]      | null;
 
-      // Process core data
-      const char    = charRaw    ? toAppCharacter(charRaw)    : DEFAULT_CHARACTER;
-      const entries = (entriesRaw  ?? []).map(toAppJournalEntry);
-      const stors   = (storiesRaw  ?? []).map(toAppStory);
-      const outs    = (outfitsRaw  ?? []).map(toAppOutfit);
+      // Process core data — safe defaults already guaranteed by parseOrDefault above
+      const char    = charRaw    ? toAppCharacter(charRaw)           : DEFAULT_CHARACTER;
+      const entries = entriesRaw ? entriesRaw.map(toAppJournalEntry) : [];
+      const stors   = storiesRaw ? storiesRaw.map(toAppStory)        : [];
+      const outs    = outfitsRaw ? outfitsRaw.map(toAppOutfit)       : [];
       const gal     = (galleryRaw  ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
         id:        r.id,
         imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
@@ -1079,19 +1096,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     try {
-      const [charRaw, entriesRaw, storiesRaw, outfitsRaw, galleryRaw, usageRaw] = await Promise.all([
-        apiFetch<RawCharacterResponse>('/character'),
-        apiFetch<RawJournalEntryResponse[]>('/journal-entries'),
-        apiFetch<RawStoryResponse[]>('/stories'),
-        apiFetch<RawOutfitResponse[]>('/outfits'),
+      const [_charFetch, _entriesFetch, _storiesFetch, _outfitsFetch, galleryRaw, usageRaw] = await Promise.all([
+        apiFetch<unknown>('/character'),
+        apiFetch<unknown>('/journal-entries'),
+        apiFetch<unknown>('/stories'),
+        apiFetch<unknown>('/outfits'),
         apiFetch<RawGalleryPhoto[]>('/gallery').catch(() => [] as RawGalleryPhoto[]),
         apiFetch<RawGalleryUsage>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
       ]);
 
-      const char    = toAppCharacter(charRaw);
-      const entries = (entriesRaw ?? []).map(toAppJournalEntry);
-      const stors   = (storiesRaw ?? []).map(toAppStory);
-      const outs    = (outfitsRaw ?? []).map(toAppOutfit);
+      // Validate against generated Zod schemas; null on mismatch → safe default
+      const charRaw    = parseOrDefault(ApiCharacterSchema,      _charFetch,    null, '/character')      as RawCharacterResponse    | null;
+      const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
+      const storiesRaw = parseOrDefault(ApiStoriesSchema,        _storiesFetch, null, '/stories')         as RawStoryResponse[]       | null;
+      const outfitsRaw = parseOrDefault(ApiOutfitsSchema,        _outfitsFetch, null, '/outfits')         as RawOutfitResponse[]      | null;
+
+      const char    = charRaw    ? toAppCharacter(charRaw)           : DEFAULT_CHARACTER;
+      const entries = entriesRaw ? entriesRaw.map(toAppJournalEntry) : [];
+      const stors   = storiesRaw ? storiesRaw.map(toAppStory)        : [];
+      const outs    = outfitsRaw ? outfitsRaw.map(toAppOutfit)       : [];
       const gal     = (galleryRaw ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
         id:        r.id,
         imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
