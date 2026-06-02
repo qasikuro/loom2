@@ -6,6 +6,7 @@ import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
 import { sendPushNotification } from "../services/pushService";
+import * as cache from "../lib/cache";
 
 const router: IRouter = Router();
 
@@ -114,6 +115,8 @@ router.post("/stories", requireAuth, async (req, res) => {
     // Fan-out notifications to followers (fire & forget, non-blocking)
     if (rest.isPublic) {
       fanOutStoryNotification(userId, created.id, rest.chapterTitle, req).catch(() => null);
+      // Invalidate discover cache for all followers — they may now see this new story
+      invalidateFollowerDiscoverCaches(userId).catch(() => null);
     }
 
     // Grant story creation reward (once per story ID) — await for client feedback
@@ -153,6 +156,16 @@ async function notifyAuthor(
     });
   } catch (err) {
     req.log.error({ err }, `Failed to send ${type} notification`);
+  }
+}
+
+async function invalidateFollowerDiscoverCaches(authorId: string): Promise<void> {
+  const followers = await db
+    .select({ followerId: followsTable.followerId })
+    .from(followsTable)
+    .where(eq(followsTable.followingId, authorId));
+  for (const { followerId } of followers) {
+    cache.invalidate(`discover:${followerId}`);
   }
 }
 

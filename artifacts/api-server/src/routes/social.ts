@@ -5,6 +5,7 @@ import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
 import { sendPushNotification } from "../services/pushService";
+import * as cache from "../lib/cache";
 
 const router: IRouter = Router();
 
@@ -368,6 +369,9 @@ router.post("/follows/:targetUserId", requireAuth, async (req, res) => {
       .values({ followerId: userId, followingId: targetUserId })
       .onConflictDoNothing();
 
+    // Invalidate discover cache — following someone changes feed scoring
+    cache.invalidate(`discover:${userId}`);
+
     // Reward follower for their social generosity (once per target) — await for client feedback
     const { granted: rewardGranted, amounts: rewardAmounts } =
       await grantReward(db as any, userId, "follow_given", targetUserId);
@@ -419,6 +423,10 @@ router.delete("/follows/:targetUserId", requireAuth, async (req, res) => {
           eq(followsTable.followingId, targetUserId),
         ),
       );
+
+    // Invalidate discover cache — unfollowing changes feed scoring
+    cache.invalidate(`discover:${userId}`);
+
     return res.status(200).json({ following: false });
   } catch (err) {
     req.log.error({ err }, "Failed to unfollow");
@@ -445,7 +453,15 @@ router.get("/follows/following", requireAuth, async (req, res) => {
 // ── Discover feed (ranked, excludes own posts, public profiles only) ──────────
 
 router.get("/discover", requireAuth, async (req, res) => {
-  const userId = getUserId(req);
+  const userId   = getUserId(req);
+  const cacheKey = `discover:${userId}`;
+
+  const cached = cache.get<object[]>(cacheKey);
+  if (cached) {
+    res.setHeader("X-Cache", "HIT");
+    return res.json(cached);
+  }
+
   try {
     const [myCharRows, followingRows, stories] = await Promise.all([
       db.select({ mood: characterTable.mood })
@@ -519,36 +535,38 @@ router.get("/discover", requireAuth, async (req, res) => {
       stickerRows.forEach(r => { stickerCountMap[r.storyId] = Number(r.cnt); });
     }
 
-    return res.json(
-      top50.map(({ row, isFollowing }) => {
-        const rawPanels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
-        const panels = rawPanels.map(p => ({
-          ...p,
-          imageUri: safeDiscoverUri(p.imageUri),
-        }));
-        return {
-          id:              row.id,
-          authorUserId:    row.userId,
-          authorName:      row.authorName,
-          authorUsername:  row.authorUsername ?? null,
-          authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
-          chapterTitle:    row.chapterTitle,
-          description:     row.description ?? '',
-          storySnippet:    panels[0]?.text ?? "",
-          imageUri:        panels[0]?.imageUri ?? null,
-          mood:            row.mood,
-          location:        row.location,
-          witnessedCount:  row.witnessedCount,
-          savedCount:      row.savedCount,
-          stickerCount:    stickerCountMap[row.id] ?? 0,
-          date:            row.date.toISOString(),
-          panels,
-          pageLayoutKey:   row.pageLayoutKey ?? undefined,
-          pages:           row.pages ?? undefined,
-          isFollowing,
-        };
-      }),
-    );
+    const result = top50.map(({ row, isFollowing }) => {
+      const rawPanels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
+      const panels = rawPanels.map(p => ({
+        ...p,
+        imageUri: safeDiscoverUri(p.imageUri),
+      }));
+      return {
+        id:              row.id,
+        authorUserId:    row.userId,
+        authorName:      row.authorName,
+        authorUsername:  row.authorUsername ?? null,
+        authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
+        chapterTitle:    row.chapterTitle,
+        description:     row.description ?? '',
+        storySnippet:    panels[0]?.text ?? "",
+        imageUri:        panels[0]?.imageUri ?? null,
+        mood:            row.mood,
+        location:        row.location,
+        witnessedCount:  row.witnessedCount,
+        savedCount:      row.savedCount,
+        stickerCount:    stickerCountMap[row.id] ?? 0,
+        date:            row.date.toISOString(),
+        panels,
+        pageLayoutKey:   row.pageLayoutKey ?? undefined,
+        pages:           row.pages ?? undefined,
+        isFollowing,
+      };
+    });
+
+    cache.set(cacheKey, result, 2 * 60 * 1000);
+    res.setHeader("X-Cache", "MISS");
+    return res.json(result);
   } catch (err) {
     req.log.error({ err }, "Failed to get discover feed");
     return res.status(500).json({ error: "Internal server error" });
