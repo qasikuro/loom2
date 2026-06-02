@@ -6,7 +6,11 @@ import { z } from "zod";
 
 const router: IRouter = Router();
 
-const VALID_EXPRESSIONS = ["candle", "spark", "lantern", "hush"] as const;
+const VALID_EXPRESSIONS = [
+  "bomb", "stone", "mirror", "kiss", "stars", "fire",
+  "snow", "confetti", "candle", "spark", "lantern", "hush",
+  "donkey", "wolf",
+] as const;
 
 const SendMessageSchema = z.object({
   content:    z.string().min(1).max(2000).optional(),
@@ -54,8 +58,20 @@ router.get("/messages", requireAuth, async (req, res) => {
     }
 
     const EXPR_LABELS: Record<string, string> = {
-      candle: 'offered a candle 🕯️', spark: 'sent a spark ✦',
-      lantern: 'lit a lantern 🌙',   hush:  'fell silent 🤫',
+      bomb:     'threw a bomb 💥',
+      stone:    'threw a stone 🪨',
+      mirror:   'broke the mirror ✦',
+      kiss:     'sent you a kiss 💕',
+      stars:    'scattered stars ✦',
+      fire:     'lit a fire 🔥',
+      snow:     'cast a blizzard ❄️',
+      confetti: 'celebrated 🎉',
+      candle:   'offered a candle 🕯️',
+      spark:    'sent a spark ✦',
+      lantern:  'lit a lantern 🌙',
+      hush:     'fell silent 🤫',
+      donkey:   'sent the donkey 🫏',
+      wolf:     'howled at the moon 🌕',
     };
 
     const threads = Array.from(seen.entries()).map(([partner, lastMsg]) => ({
