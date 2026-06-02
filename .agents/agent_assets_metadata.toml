@@ -131,3 +131,9 @@ id = "vSVocvDVhoyPrw1t-T40S"
 uri = "file://screenshots/mockup_profile.jpg"
 type = "image"
 title = "Profile Screen"
+
+[[outputs]]
+id = "2zKpx5vqy1UUsOk41WJMi"
+uri = "file://SKY_JOURNAL_RECOMMENDATIONS.md"
+type = "text"
+title = "Sky Journal — Recommendations (39 tasks)"
