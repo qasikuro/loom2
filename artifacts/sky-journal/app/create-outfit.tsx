@@ -144,7 +144,9 @@ export default function CreateOutfitScreen() {
 
   function handleSheetLibrary() {
     setShowSheet(false);
-    pickImage();
+    // iOS requires the sheet modal to fully finish dismissing before a new
+    // system modal (photo library) can be presented — otherwise the app stalls.
+    setTimeout(() => pickImage(), Platform.OS === 'ios' ? 400 : 50);
   }
 
   async function handleCropDone(croppedUri: string, _aspectRatio?: number) {

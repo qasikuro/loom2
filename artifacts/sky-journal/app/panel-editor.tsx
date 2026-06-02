@@ -519,8 +519,11 @@ export default function PanelEditorScreen() {
   }
 
   function handleSheetLibrary() {
+    const idx = sheetTargetIdx;
     setShowSheet(false);
-    pickPanelImage(sheetTargetIdx);
+    // iOS requires the sheet modal to fully finish dismissing before a new
+    // system modal (photo library) can be presented — otherwise the app stalls.
+    setTimeout(() => pickPanelImage(idx), Platform.OS === 'ios' ? 400 : 50);
   }
 
   function handleSheetRemove() {

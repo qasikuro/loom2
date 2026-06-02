@@ -1,3 +1,4 @@
+- [iOS modal stacking — picker stall](ios-modal-stacking.md) — setTimeout 400ms before launchImageLibraryAsync after Modal dismiss; iOS blocks new modal while one is still dismissing
 - [Express ETag 304 bypass](express-304-bypass.md) — add _ts:Date.now() to response body; URL ?t= trick doesn't help; Cache-Control:no-store alone is insufficient
 - [RewardBanner exit animation](reward-banner-exit.md) — isExiting prop triggers slide-up+fade; parent must gate next banner with bannerGate after 300ms delay
 - [StarNode animKey replay](star-node-animkey.md) — animKey prop causes scaleAnim.setValue(0)+spring on each tab return; must be passed from ConstellationMap down to each StarNode
