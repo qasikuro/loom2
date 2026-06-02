@@ -407,6 +407,10 @@ interface AppContextValue {
   activeCosmetics:   Record<string, string>;
   setActiveCosmetic: (itemId: string) => void;
 
+  journalLoadError:  boolean;
+  storiesLoadError:  boolean;
+  discoverLoadError: boolean;
+
   reloadData:    () => Promise<void>;
   refreshFeed:   () => Promise<void>;
   clearUserData: () => Promise<void>;
@@ -560,6 +564,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
   const [galleryUsage, setGalleryUsage] = useState<GalleryUsage>({ count: 0, limit: 200 });
+
+  const [journalLoadError,  setJournalLoadError]  = useState(false);
+  const [storiesLoadError,  setStoriesLoadError]  = useState(false);
+  const [discoverLoadError, setDiscoverLoadError] = useState(false);
 
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
@@ -723,7 +731,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<any[]>('/outfits').catch(() => null),
         apiFetch<any[]>('/gallery').catch(() => []),
         apiFetch<any>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
-        apiFetch<any[]>('/discover').catch(() => []),
+        apiFetch<any[]>('/discover').catch(() => null),
         apiFetch<string[]>('/follows/following').catch(() => []),
         apiFetch<any[]>('/notifications').catch(() => []),
         apiFetch<FriendSummary[]>('/friends').catch(() => []),
@@ -799,6 +807,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setShopCatalog(shopRaw.catalog as ShopItem[]);
       }
       setApiOnline(true);
+      setJournalLoadError(entriesRaw === null);
+      setStoriesLoadError(storiesRaw === null);
+      setDiscoverLoadError(discoverRaw === null);
 
       // Restore active outfit across sessions.
       if (outs.length > 0) {
@@ -844,6 +855,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Unexpected error — restore from cache rather than leaving a blank screen.
       if (!dataReadyRef.current) await loadFromCache();
       setApiOnline(false);
+      setJournalLoadError(true);
+      setStoriesLoadError(true);
+      setDiscoverLoadError(true);
     } finally {
       dataReadyRef.current  = true;
       isLoadingRef.current  = false;
@@ -879,10 +893,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   async function loadSocialData() {
     try {
       const [discoverRaw, followingRaw, friendsRaw] = await Promise.all([
-        apiFetch<any[]>('/discover').catch(() => []),
+        apiFetch<any[]>('/discover').catch(() => null),
         apiFetch<string[]>('/follows/following').catch(() => []),
         apiFetch<FriendSummary[]>('/friends').catch(() => []),
       ]);
+
+      setDiscoverLoadError(discoverRaw === null);
 
       const feed    = (discoverRaw  ?? []).map(toRawDiscoverPost);
       const follows = followingRaw ?? [];
@@ -1057,30 +1073,30 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setCharacter = useCallback((c: Character) => {
     setCharacterState(c);
     AsyncStorage.setItem('character_v2', JSON.stringify(c));
-    apiFetch('/character', {
-      method: 'PUT',
-      body:   JSON.stringify({
-        name:              c.name,
-        bio:               c.bio,
-        mood:              c.mood,
-        traits:            c.traits,
-        isPublic:          c.isPublic,
-        username:          c.username          ?? null,
-        avatarUri:         c.avatarUri         ?? null,
-        activeOutfitId:    c.activeOutfitId    ?? null,
-        birthday:          c.birthday          ?? null,
-        country:           c.country           ?? null,
-        role:              c.role              ?? null,
-        timezone:          c.timezone          ?? null,
-        pushToken:         c.pushToken         ?? null,
-        links:             c.links             ?? null,
-        isGuide:           c.isGuide           ?? false,
-        guideBio:          c.guideBio          ?? '',
-        guideTopics:       c.guideTopics       ?? [],
-        guideAvailability: c.guideAvailability ?? null,
-      }),
-    }).catch(() => {
-      showToastGlobal("Couldn't sync profile — saved locally", 'warning');
+    const characterBody = JSON.stringify({
+      name:              c.name,
+      bio:               c.bio,
+      mood:              c.mood,
+      traits:            c.traits,
+      isPublic:          c.isPublic,
+      username:          c.username          ?? null,
+      avatarUri:         c.avatarUri         ?? null,
+      activeOutfitId:    c.activeOutfitId    ?? null,
+      birthday:          c.birthday          ?? null,
+      country:           c.country           ?? null,
+      role:              c.role              ?? null,
+      timezone:          c.timezone          ?? null,
+      pushToken:         c.pushToken         ?? null,
+      links:             c.links             ?? null,
+      isGuide:           c.isGuide           ?? false,
+      guideBio:          c.guideBio          ?? '',
+      guideTopics:       c.guideTopics       ?? [],
+      guideAvailability: c.guideAvailability ?? null,
+    });
+    apiFetch('/character', { method: 'PUT', body: characterBody }).catch(() => {
+      showToastGlobal("Couldn't sync profile — saved locally", 'warning', () => {
+        apiFetch('/character', { method: 'PUT', body: characterBody }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1218,7 +1234,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Always sync constellation so memory count & star progress update immediately
       reloadConstellation().catch(() => null);
     } catch {
-      showToastGlobal("Entry saved locally — couldn't sync to server", 'warning');
+      const retryBody = JSON.stringify({
+        id:         entry.id,
+        date:       entry.date,
+        type:       entry.type,
+        text:       entry.text,
+        mood:       entry.mood,
+        imageUri:   entry.imageUri   ?? null,
+        friendName: entry.friendName ?? null,
+      });
+      showToastGlobal("Entry saved locally — couldn't sync to server", 'warning', () => {
+        apiFetch('/journal-entries', { method: 'POST', body: retryBody }).catch(() => null);
+      });
     }
   }, [fireToast, reloadRewards, reloadConstellation]);
 
@@ -1229,7 +1256,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     apiFetch(`/journal-entries/${id}`, { method: 'DELETE' }).catch(() => {
-      showToastGlobal("Couldn't delete entry", 'error');
+      showToastGlobal("Couldn't delete entry", 'error', () => {
+        apiFetch(`/journal-entries/${id}`, { method: 'DELETE' }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1296,20 +1325,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
       return updated;
     });
-    apiFetch(`/stories/${id}`, {
-      method: 'PATCH',
-      body:   JSON.stringify({
-        chapterTitle:  updates.chapterTitle,
-        description:   updates.description ?? '',
-        panels:        updates.panels,
-        mood:          updates.mood,
-        location:      updates.location,
-        isPublic:      updates.isPublic,
-        pageLayoutKey: updates.pageLayoutKey ?? null,
-        pages:         updates.pages ?? null,
-      }),
-    }).catch(() => {
-      showToastGlobal("Couldn't save story changes", 'error');
+    const storyPatchBody = JSON.stringify({
+      chapterTitle:  updates.chapterTitle,
+      description:   updates.description ?? '',
+      panels:        updates.panels,
+      mood:          updates.mood,
+      location:      updates.location,
+      isPublic:      updates.isPublic,
+      pageLayoutKey: updates.pageLayoutKey ?? null,
+      pages:         updates.pages ?? null,
+    });
+    apiFetch(`/stories/${id}`, { method: 'PATCH', body: storyPatchBody }).catch(() => {
+      showToastGlobal("Couldn't save story changes", 'error', () => {
+        apiFetch(`/stories/${id}`, { method: 'PATCH', body: storyPatchBody }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1320,7 +1349,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     apiFetch(`/stories/${id}`, { method: 'DELETE' }).catch(() => {
-      showToastGlobal("Couldn't delete story", 'error');
+      showToastGlobal("Couldn't delete story", 'error', () => {
+        apiFetch(`/stories/${id}`, { method: 'DELETE' }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1332,22 +1363,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));
       return updated;
     });
-    apiFetch('/outfits', {
-      method: 'POST',
-      body:   JSON.stringify({
-        id:          outfit.id,
-        date:        outfit.date,
-        name:        outfit.name,
-        description: outfit.description,
-        story:       outfit.story ?? '',
-        imageUri:    outfit.imageUri ?? null,
-        tags:        outfit.tags,
-        isPublic:    outfit.isPublic,
-      }),
-    })
+    const outfitBody = JSON.stringify({
+      id:          outfit.id,
+      date:        outfit.date,
+      name:        outfit.name,
+      description: outfit.description,
+      story:       outfit.story ?? '',
+      imageUri:    outfit.imageUri ?? null,
+      tags:        outfit.tags,
+      isPublic:    outfit.isPublic,
+    });
+    apiFetch('/outfits', { method: 'POST', body: outfitBody })
     .then(() => reloadConstellation().catch(() => null))
     .catch(() => {
-      showToastGlobal("Outfit saved locally — couldn't sync to server", 'warning');
+      showToastGlobal("Outfit saved locally — couldn't sync to server", 'warning', () => {
+        apiFetch('/outfits', { method: 'POST', body: outfitBody }).catch(() => null);
+      });
     });
   }, [reloadConstellation]);
 
@@ -1357,11 +1388,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('outfits_v1', JSON.stringify(updated)).catch(() => null);
       return updated;
     });
-    apiFetch(`/outfits/${id}`, {
-      method: 'PATCH',
-      body:   JSON.stringify(updates),
-    }).catch(() => {
-      showToastGlobal("Couldn't save outfit changes", 'error');
+    const outfitUpdateBody = JSON.stringify(updates);
+    apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody }).catch(() => {
+      showToastGlobal("Couldn't save outfit changes", 'error', () => {
+        apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1379,7 +1410,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return prev;
     });
     apiFetch(`/outfits/${id}`, { method: 'DELETE' }).catch(() => {
-      showToastGlobal("Couldn't delete outfit", 'error');
+      showToastGlobal("Couldn't delete outfit", 'error', () => {
+        apiFetch(`/outfits/${id}`, { method: 'DELETE' }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1393,10 +1426,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next = { ...prev, [category]: itemId };
       AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
       // Persist to server (fire-and-forget)
-      apiFetch('/rewards/active-cosmetics', {
-        method: 'PUT',
-        body:   JSON.stringify({ activeCosmetics: next }),
-      }).catch(() => null);
+      const cosmeticsBody = JSON.stringify({ activeCosmetics: next });
+      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody }).catch(() => {
+        showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
+          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody }).catch(() => null);
+        });
+      });
       return next;
     });
   }, []);
@@ -1413,10 +1448,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
       // Persist to server (fire-and-forget)
-      apiFetch('/rewards/active-cosmetics', {
-        method: 'PUT',
-        body:   JSON.stringify({ activeCosmetics: next }),
-      }).catch(() => null);
+      const cosmeticsToggleBody = JSON.stringify({ activeCosmetics: next });
+      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody }).catch(() => {
+        showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
+          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody }).catch(() => null);
+        });
+      });
       return next;
     });
   }, []);
@@ -1429,10 +1466,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
     }
     // Sync to server so other users can see the selected outfit
-    apiFetch('/character/active-outfit', {
-      method: 'PATCH',
-      body:   JSON.stringify({ activeOutfitId: id }),
-    }).catch(() => null);
+    const outfitSyncBody = JSON.stringify({ activeOutfitId: id });
+    apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody }).catch(() => {
+      showToastGlobal("Couldn't sync outfit choice", 'warning', () => {
+        apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody }).catch(() => null);
+      });
+    });
   }, []);
 
   // ── Gallery ────────────────────────────────────────────────────────────────
@@ -1457,7 +1496,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteGalleryPhoto = useCallback((id: string) => {
     setGallery(prev => prev.filter(p => p.id !== id));
     setGalleryUsage(prev => ({ ...prev, count: Math.max(0, prev.count - 1) }));
-    apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => null);
+    apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => {
+      showToastGlobal("Couldn't remove photo", 'error', () => {
+        apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => null);
+      });
+    });
   }, []);
 
   // ── Discover / Save ────────────────────────────────────────────────────────
@@ -1468,7 +1511,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const wasSaved = next.has(id);
       if (wasSaved) next.delete(id); else next.add(id);
       AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
-      apiFetch(`/stories/${id}/save`, { method: wasSaved ? 'DELETE' : 'POST' }).catch(() => null);
+      apiFetch(`/stories/${id}/save`, { method: wasSaved ? 'DELETE' : 'POST' }).catch(() => {
+        showToastGlobal("Couldn't save story", 'warning');
+      });
       return next;
     });
   }, []);
@@ -1522,7 +1567,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteServerNotification = useCallback((id: string) => {
     setServerNotifications(prev => prev.filter(n => n.id !== id));
-    apiFetch(`/notifications/${id}`, { method: 'DELETE' }).catch(() => null);
+    apiFetch(`/notifications/${id}`, { method: 'DELETE' }).catch(() => {
+      showToastGlobal("Couldn't remove notification", 'warning');
+    });
   }, []);
 
   const reloadData = useCallback(async () => {
@@ -1536,6 +1583,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       isLoading, apiOnline,
+      journalLoadError, storiesLoadError, discoverLoadError,
       character, setCharacter,
       stories, addStory, updateStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,

@@ -680,7 +680,7 @@ export default function CharacterScreen() {
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
   const { character, setCharacter, outfits, stories, activeOutfitId, setActiveOutfitId, deleteOutfit,
-          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading, apiOnline, reloadData,
+          gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto, isLoading, apiOnline, storiesLoadError, reloadData,
           constellation, rewardBalance, reloadConstellation, activeCosmetics,
           shopCatalog, purchasedIds, setActiveCosmetic } = useApp();
   const activeFrame  = activeCosmetics['frame']  as string | undefined;
@@ -1205,10 +1205,10 @@ export default function CharacterScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* ── Offline / error banner ─────────────────────────────────── */}
-      {!apiOnline && !isLoading && (
+      {(!apiOnline || storiesLoadError) && !isLoading && (
         <View style={profileOfflineS.row}>
           <View style={profileOfflineS.dot} />
-          <Text style={profileOfflineS.msg}>Offline — saved locally</Text>
+          <Text style={profileOfflineS.msg}>{storiesLoadError && apiOnline ? "Couldn't load some data" : "Offline — saved locally"}</Text>
           <TouchableOpacity style={profileOfflineS.btn} onPress={reloadData} activeOpacity={0.75}>
             <Text style={profileOfflineS.btnText}>Retry</Text>
           </TouchableOpacity>

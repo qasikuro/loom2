@@ -103,7 +103,7 @@ export default function DiscoverScreen() {
   const insets    = useSafeAreaInsets();
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
-          apiOnline, reloadData,
+          apiOnline, discoverLoadError, reloadData,
           showRewardToast, reloadRewards, reloadConstellation } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
@@ -328,11 +328,11 @@ export default function DiscoverScreen() {
       </LinearGradient>
 
       {/* ── Offline / error banner ──────────────────────────────────── */}
-      {!apiOnline && !isLoading && (
+      {(!apiOnline || discoverLoadError) && !isLoading && (
         <View style={offlineBannerS.row}>
           <View style={offlineBannerS.dot} />
-          <Text style={offlineBannerS.msg}>Offline — showing cached stories</Text>
-          <TouchableOpacity style={offlineBannerS.btn} onPress={reloadData} activeOpacity={0.75}>
+          <Text style={offlineBannerS.msg}>{discoverLoadError && apiOnline ? "Couldn't load stories" : "Offline — showing cached stories"}</Text>
+          <TouchableOpacity style={offlineBannerS.btn} onPress={discoverLoadError && apiOnline ? refreshFeed : reloadData} activeOpacity={0.75}>
             <Text style={offlineBannerS.btnText}>Retry</Text>
           </TouchableOpacity>
         </View>
