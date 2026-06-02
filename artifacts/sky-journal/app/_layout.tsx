@@ -5,7 +5,6 @@ import { ClerkLoaded, ClerkLoading, ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import Constants from 'expo-constants';
 import * as Font from 'expo-font';
-import * as Notifications from 'expo-notifications';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -23,9 +22,15 @@ import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
 
+// expo-notifications throws at import time in Expo Go SDK 53+ because Android push
+// notifications were removed. Lazy-require it so the error can't crash _layout.tsx
+// and prevent ClerkProvider from mounting.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+let Notifications: typeof import('expo-notifications') | null = null;
+try { Notifications = require('expo-notifications'); } catch { /* not available in Expo Go */ }
+
 // Configure how notifications appear when the app is in the foreground.
-// Guarded by platform check — expo-notifications has no-op stubs on web.
-if (Platform.OS !== 'web') {
+if (Platform.OS !== 'web' && Notifications) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
@@ -64,15 +69,15 @@ function AuthTokenBridge() {
     });
     if (isSignedIn && prevSignedIn.current !== true) {
       reloadData();
-      if (Platform.OS !== 'web') {
+      if (Platform.OS !== 'web' && Notifications) {
         (async () => {
           try {
-            const perms = await Notifications.requestPermissionsAsync();
+            const perms = await Notifications!.requestPermissionsAsync();
             const granted = perms.granted ?? (perms.ios?.status === 1);
             if (!granted) return;
             const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
             if (!projectId) return;
-            const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+            const tokenData = await Notifications!.getExpoPushTokenAsync({ projectId });
             const authToken = await getToken();
             if (!authToken) return;
             const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | null;
@@ -140,7 +145,7 @@ function NotificationDeepLinkHandler() {
   }, [router]);
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || !Notifications) return;
 
     // Handle notification taps when the app is already open
     const sub = Notifications.addNotificationResponseReceivedListener(response => {
