@@ -19,6 +19,57 @@ import Constants from 'expo-constants';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
+// ── Pure mapper functions (no RN/Expo deps — testable in plain Node.js) ──────
+import {
+  resolveUri as _resolveUri,
+  toAppCharacter,
+  toAppJournalEntry,
+  toAppStory,
+  toAppOutfit,
+  toRawDiscoverPost,
+  DEFAULT_CHARACTER,
+} from './mappers';
+import type {
+  ProfileLink,
+  GuideAvailability,
+  BubbleStyle,
+  PanelOverlay,
+  StoryPanel,
+  StoryPage,
+  Character,
+  JournalEntryType,
+  JournalEntry,
+  Story,
+  Outfit,
+  DiscoverPost,
+  RawCharacterResponse,
+  RawJournalEntryResponse,
+  RawStoryPanel,
+  RawStoryResponse,
+  RawOutfitResponse,
+  RawDiscoverApiItem,
+} from './mappers';
+export type {
+  ProfileLink,
+  GuideAvailability,
+  BubbleStyle,
+  PanelOverlay,
+  StoryPanel,
+  StoryPage,
+  Character,
+  JournalEntryType,
+  JournalEntry,
+  Story,
+  Outfit,
+  DiscoverPost,
+  RawCharacterResponse,
+  RawJournalEntryResponse,
+  RawStoryPanel,
+  RawStoryResponse,
+  RawOutfitResponse,
+  RawDiscoverApiItem,
+} from './mappers';
+
 // ── API base URL (baked in at build time via app.config.ts) ───────────────────
 
 function resolveApiBase(): string {
@@ -30,20 +81,9 @@ function resolveApiBase(): string {
 
 const API_BASE = resolveApiBase();
 
-// ── Resolve a possibly-relative API image path to an absolute URI ─────────────
-// Stored paths look like "/api/images/<file>". On native Expo there is no
-// implicit base, so we must prefix the domain root. HTTPS / data / blob URIs
-// pass through unchanged.
-//
-// IMPORTANT: API_BASE ends in "/api" (e.g. "https://domain/api") but stored
-// paths already start with "/api/images/…". Strip the trailing "/api" from the
-// base before concatenating to avoid the double-prefix bug.
+// Bind resolveUri to the runtime API_BASE so call-sites stay zero-arg.
 function resolveUri(uri: string | null | undefined): string | undefined {
-  if (!uri) return undefined;
-  if (/^https?:/.test(uri) || uri.startsWith('data:') || uri.startsWith('blob:')) return uri;
-  // Strip trailing /api so "/api/images/…" paths are not doubled.
-  const domainBase = API_BASE.replace(/\/api$/, '');
-  return `${domainBase}${uri}`;
+  return _resolveUri(uri, API_BASE);
 }
 
 // ── Fetch-staleness tracking ──────────────────────────────────────────────────
@@ -120,19 +160,9 @@ export async function apiFetch<T>(
 }
 
 // ── Models ────────────────────────────────────────────────────────────────────
-
-export interface ProfileLink {
-  label:     string;
-  url:       string;
-  platform?: string;
-}
-
-export interface GuideAvailability {
-  days:      number[];   // 0 = Sun … 6 = Sat
-  timeFrom:  string;    // "HH:MM" 24-h
-  timeTo:    string;    // "HH:MM" 24-h
-  timezone?: string;    // IANA timezone e.g. "Asia/Singapore"
-}
+// ProfileLink, GuideAvailability, BubbleStyle, PanelOverlay, StoryPanel,
+// StoryPage, Character, JournalEntryType, JournalEntry, Story, Outfit,
+// DiscoverPost — all re-exported from './mappers' at the top of this file.
 
 export interface GuideProfile {
   userId:            string;
@@ -154,98 +184,6 @@ export interface GuideProfile {
   isAvailableNow:    boolean;
 }
 
-export interface Character {
-  name:              string;
-  bio:               string;
-  mood:              string;
-  traits:            string[];
-  isPublic:          boolean;
-  username?:         string;
-  avatarUri?:        string;
-  activeOutfitId?:   string | null;
-  birthday?:         string;
-  country?:          string;
-  role?:             string;
-  timezone?:         string;
-  pushToken?:        string;
-  links?:            ProfileLink[];
-  // Constellation Guides
-  isGuide?:          boolean;
-  guideBio?:         string;
-  guideTopics?:      string[];
-  guideAvailability?: GuideAvailability | null;
-}
-
-export type BubbleStyle = 'rounded' | 'sharp' | 'oval';
-
-export interface PanelOverlay {
-  id:          string;
-  type:        'bubble' | 'text' | 'sticker';
-  content:     string;
-  xPct:        number;       // 0-1 of panel width
-  yPct:        number;       // 0-1 of panel height
-  fontFamily?: string;
-  fontSize?:   number;
-  bubbleStyle?:BubbleStyle;
-  color?:      string;       // text / bubble bg color key
-}
-
-export interface StoryPanel {
-  id:               string;
-  imageUri?:        string;
-  bgPreset?:        string;       // 'bg1' | 'bg2' | 'bg3' | 'char'
-  text:             string;       // narration / caption text (legacy)
-  bubbleText?:      string;       // legacy speech-bubble text
-  overlays?:        PanelOverlay[];
-  imageAspectRatio?: number;      // width/height — set from CropImageModal at save time
-}
-
-export interface StoryPage {
-  id:        string;
-  layoutKey: string;
-  panels:    StoryPanel[];
-}
-
-export interface Story {
-  id:              string;
-  date:            string;
-  chapterTitle:    string;
-  description:     string;
-  panels:          StoryPanel[];
-  mood:            string;
-  location:        string;
-  isPublic:        boolean;
-  witnessedCount:  number;
-  savedCount:      number;
-  stickerCount:    number;
-  pageLayoutKey?:  string;
-  pages?:          StoryPage[];
-}
-
-export type JournalEntryType = 'diary' | 'friend' | 'moment';
-
-export interface JournalEntry {
-  id:           string;
-  date:         string;
-  type:         JournalEntryType;
-  text:         string;
-  mood:         string;
-  imageUri?:    string;
-  friendName?:  string;
-  stickerCount?: number;
-}
-
-export interface Outfit {
-  id:          string;
-  date:        string;
-  name:        string;
-  description: string;
-  story:       string;
-  imageUri?:   string;
-  tags:        string[];
-  isPublic:    boolean;
-}
-
 export interface GalleryPhoto {
   id:        string;
   imageUri:  string;
@@ -256,31 +194,6 @@ export interface GalleryPhoto {
 export interface GalleryUsage {
   count: number;
   limit: number;
-}
-
-export interface DiscoverPost {
-  id:               string;
-  authorUserId:     string;
-  authorName:       string;
-  authorHandle:     string;
-  authorAvatarUri?: string | null;
-  chapterTitle:     string;
-  description?:     string;
-  storySnippet:     string;
-  imageUri?:        string;
-  mood:             string;
-  witnessedCount:   number;
-  savedCount:       number;
-  stickerCount:     number;
-  timeAgo:          string;
-  date:             string;
-  chapterNumber:    number;
-  vibe:             string;
-  saved:            boolean;
-  isFollowing:      boolean;
-  panels?:          { text: string; imageUri?: string; overlays?: PanelOverlay[] }[];
-  pages?:           StoryPage[];
-  pageLayoutKey?:   string;
 }
 
 export interface Reward {
@@ -395,108 +308,9 @@ export interface FriendSummary {
 // Explicit typed interfaces for every API boundary — replace all `any` params
 // in mapper functions and `apiFetch<any>` call sites.
 
-interface RawCharacterResponse {
-  name?: string;
-  bio?: string;
-  mood?: string;
-  traits?: unknown;
-  isPublic?: boolean;
-  is_public?: boolean;
-  username?: string;
-  avatarUri?: string;
-  activeOutfitId?: string;
-  active_outfit_id?: string;
-  birthday?: string;
-  country?: string;
-  role?: string;
-  timezone?: string;
-  pushToken?: string;
-  push_token?: string;
-  links?: unknown;
-  isGuide?: boolean;
-  guideBio?: string;
-  guideTopics?: unknown;
-  guideAvailability?: unknown;
-}
-
-interface RawJournalEntryResponse {
-  id: string;
-  date: string | Date;
-  type: string;
-  text: string;
-  mood: string;
-  imageUri?: string | null;
-  image_uri?: string | null;
-  friendName?: string | null;
-  friend_name?: string | null;
-  stickerCount?: number;
-}
-
-interface RawStoryPanel {
-  id?: string;
-  text?: string;
-  imageUri?: string | null;
-  bgPreset?: string;
-  overlays?: unknown[];
-  imageAspectRatio?: number;
-  bubbleText?: string;
-}
-
-interface RawStoryResponse {
-  id: string;
-  date: string | Date;
-  chapterTitle?: string;
-  chapter_title?: string;
-  description?: string;
-  panels?: RawStoryPanel[];
-  mood: string;
-  location?: string;
-  isPublic?: boolean;
-  is_public?: boolean;
-  witnessedCount?: number;
-  witnessed_count?: number;
-  savedCount?: number;
-  saved_count?: number;
-  stickerCount?: number;
-  pageLayoutKey?: string;
-  page_layout_key?: string;
-  pages?: unknown[];
-}
-
-interface RawOutfitResponse {
-  id: string;
-  date: string | Date;
-  name: string;
-  description?: string;
-  story?: string;
-  imageUri?: string | null;
-  image_uri?: string | null;
-  tags?: unknown;
-  isPublic?: boolean;
-  is_public?: boolean;
-}
-
-interface RawDiscoverApiItem {
-  id: string;
-  authorUserId?: string;
-  authorName?: string;
-  authorUsername?: string;
-  authorAvatarUri?: string | null;
-  chapterTitle?: string;
-  description?: string;
-  storySnippet?: string;
-  imageUri?: string | null;
-  mood?: string;
-  witnessedCount?: number;
-  savedCount?: number;
-  stickerCount?: number;
-  date?: string;
-  createdAt?: string;
-  chapterNumber?: number;
-  panels?: Array<{ text?: string; imageUri?: string | null; overlays?: unknown[] }>;
-  pages?: unknown[];
-  pageLayoutKey?: string;
-}
+// RawCharacterResponse, RawJournalEntryResponse, RawStoryPanel, RawStoryResponse,
+// RawOutfitResponse, RawDiscoverApiItem — all re-exported from './mappers' at
+// the top of this file.
 
 interface RawGalleryPhoto {
   id: string;
@@ -605,138 +419,11 @@ interface AppContextValue {
   clearUserData: () => Promise<void>;
 }
 
-// ── Defaults ──────────────────────────────────────────────────────────────────
-
-const DEFAULT_CHARACTER: Character = {
-  name:     'Sky Child',
-  bio:      'A wandering light, chasing memories across the sky.',
-  mood:     'Hopeful',
-  traits:   ['Dreamer', 'Curious', 'Kind'],
-  isPublic: true,
-};
-
-function relativeTimeDiscover(dateStr: string): string {
-  const diff  = Date.now() - new Date(dateStr).getTime();
-  const mins  = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days  = Math.floor(diff / 86_400_000);
-  if (mins  < 1)   return 'just now';
-  if (mins  < 60)  return `${mins}m ago`;
-  if (hours < 24)  return `${hours}h ago`;
-  if (days  === 1) return 'yesterday';
-  return `${days}d ago`;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function toAppCharacter(raw: RawCharacterResponse): Character {
-  return {
-    name:              raw.name          ?? DEFAULT_CHARACTER.name,
-    bio:               raw.bio           ?? DEFAULT_CHARACTER.bio,
-    mood:              raw.mood          ?? DEFAULT_CHARACTER.mood,
-    traits:            Array.isArray(raw.traits) ? (raw.traits as string[]) : [],
-    isPublic:          raw.isPublic      ?? raw.is_public      ?? true,
-    username:          raw.username      ?? undefined,
-    avatarUri:         raw.avatarUri     ?? undefined,
-    activeOutfitId:    raw.activeOutfitId ?? raw.active_outfit_id ?? undefined,
-    birthday:          raw.birthday      ?? undefined,
-    country:           raw.country       ?? undefined,
-    role:              raw.role          ?? undefined,
-    timezone:          raw.timezone      ?? undefined,
-    pushToken:         raw.pushToken     ?? raw.push_token ?? undefined,
-    links:             Array.isArray(raw.links) ? (raw.links as ProfileLink[]) : undefined,
-    isGuide:           raw.isGuide          ?? false,
-    guideBio:          raw.guideBio         ?? '',
-    guideTopics:       Array.isArray(raw.guideTopics) ? (raw.guideTopics as string[]) : [],
-    guideAvailability: (raw.guideAvailability as GuideAvailability | null | undefined) ?? null,
-  };
-}
-
-function toAppJournalEntry(raw: RawJournalEntryResponse): JournalEntry {
-  return {
-    id:           raw.id,
-    date:         typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
-    type:         raw.type as JournalEntryType,
-    text:         raw.text,
-    mood:         raw.mood,
-    imageUri:     resolveUri(raw.imageUri ?? raw.image_uri),
-    friendName:   raw.friendName ?? raw.friend_name ?? undefined,
-    stickerCount: raw.stickerCount ?? 0,
-  };
-}
-
-function toAppStory(raw: RawStoryResponse): Story {
-  return {
-    id:             raw.id,
-    date:           typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
-    chapterTitle:   raw.chapterTitle ?? raw.chapter_title ?? '',
-    description:    raw.description ?? '',
-    panels:         Array.isArray(raw.panels)
-      ? raw.panels.map((p: RawStoryPanel): StoryPanel => ({
-          id:               p.id ?? '',
-          text:             p.text ?? '',
-          imageUri:         resolveUri(p.imageUri ?? undefined),
-          bgPreset:         p.bgPreset,
-          overlays:         p.overlays as PanelOverlay[] | undefined,
-          imageAspectRatio: p.imageAspectRatio,
-          bubbleText:       p.bubbleText,
-        }))
-      : [],
-    mood:           raw.mood,
-    location:       raw.location ?? '',
-    isPublic:       raw.isPublic ?? raw.is_public ?? false,
-    witnessedCount: raw.witnessedCount ?? raw.witnessed_count ?? 0,
-    savedCount:     raw.savedCount     ?? raw.saved_count     ?? 0,
-    stickerCount:   raw.stickerCount   ?? 0,
-    pageLayoutKey:  raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
-    pages:          Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
-  };
-}
-
-function toAppOutfit(raw: RawOutfitResponse): Outfit {
-  return {
-    id:          raw.id,
-    date:        typeof raw.date === 'string' ? raw.date : new Date(raw.date).toISOString(),
-    name:        raw.name,
-    description: raw.description ?? '',
-    story:       raw.story ?? '',
-    imageUri:    resolveUri(raw.imageUri ?? raw.image_uri),
-    tags:        Array.isArray(raw.tags) ? raw.tags : [],
-    isPublic:    raw.isPublic ?? raw.is_public ?? false,
-  };
-}
+// ── Defaults / Helpers — imported from './mappers' at the top of this file ────
+// DEFAULT_CHARACTER, toAppCharacter, toAppJournalEntry, toAppStory,
+// toAppOutfit, toRawDiscoverPost — all bound via _resolveUri(…, API_BASE).
 
 type RawDiscoverItem = Omit<DiscoverPost, 'saved' | 'isFollowing'>;
-
-function toRawDiscoverPost(raw: RawDiscoverApiItem): RawDiscoverItem {
-  return {
-    id:               raw.id,
-    authorUserId:     raw.authorUserId ?? '',
-    authorName:       raw.authorName ?? 'Sky Child',
-    authorHandle:     raw.authorUsername
-      ? `@${raw.authorUsername}`
-      : `@${(raw.authorName ?? 'sky').toLowerCase().replace(/\s+/g, '')}`,
-    authorAvatarUri:  resolveUri(raw.authorAvatarUri ?? undefined) ?? null,
-    chapterTitle:     raw.chapterTitle ?? '',
-    storySnippet:     raw.storySnippet ?? '',
-    imageUri:         resolveUri(raw.imageUri ?? undefined),
-    mood:           raw.mood ?? 'Hopeful',
-    witnessedCount: raw.witnessedCount ?? 0,
-    savedCount:     raw.savedCount ?? 0,
-    stickerCount:   raw.stickerCount ?? 0,
-    timeAgo:        relativeTimeDiscover(raw.date ?? raw.createdAt ?? new Date().toISOString()),
-    date:           raw.date ?? raw.createdAt ?? new Date().toISOString(),
-    chapterNumber:  raw.chapterNumber ?? 1,
-    vibe:           raw.mood ?? 'Hopeful',
-    panels:         Array.isArray(raw.panels) ? raw.panels.map(p => ({
-      text:     p.text     ?? '',
-      imageUri: resolveUri(p.imageUri ?? undefined),
-      overlays: Array.isArray(p.overlays) ? (p.overlays as PanelOverlay[]) : undefined,
-    })) : [],
-    pages:          Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
-    pageLayoutKey:  raw.pageLayoutKey ?? undefined,
-  };
-}
 
 // ── Zod validation helper ─────────────────────────────────────────────────────
 // Validates `raw` against a Zod schema (for OpenAPI-covered endpoints).
@@ -975,10 +662,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const shopRaw          = parseOrDefault(ApiShopSchema,           _shopFetch,          null, '/rewards/shop')       as RawShopResponse          | null;
 
       // Process core data — safe defaults already guaranteed by parseOrDefault above
-      const char    = charRaw    ? toAppCharacter(charRaw)           : DEFAULT_CHARACTER;
-      const entries = entriesRaw ? entriesRaw.map(toAppJournalEntry) : [];
-      const stors   = storiesRaw ? storiesRaw.map(toAppStory)        : [];
-      const outs    = outfitsRaw ? outfitsRaw.map(toAppOutfit)       : [];
+      const char    = charRaw    ? toAppCharacter(charRaw, API_BASE)                     : DEFAULT_CHARACTER;
+      const entries = entriesRaw ? entriesRaw.map(r => toAppJournalEntry(r, API_BASE)) : [];
+      const stors   = storiesRaw ? storiesRaw.map(r => toAppStory(r, API_BASE))        : [];
+      const outs    = outfitsRaw ? outfitsRaw.map(r => toAppOutfit(r, API_BASE))       : [];
       const gal     = (galleryRaw  ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
         id:        r.id,
         imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
@@ -987,7 +674,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
 
       // Process social data
-      const feed   = (discoverRaw  ?? []).map(toRawDiscoverPost);
+      const feed   = (discoverRaw  ?? []).map(r => toRawDiscoverPost(r, API_BASE));
       const follows = followingRaw ?? [];
       const guides  = (guidesRaw   ?? []) as GuideProfile[];
 
@@ -1152,7 +839,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setDiscoverLoadError(discoverRaw === null);
 
-      const feed    = (discoverRaw  ?? []).map(toRawDiscoverPost);
+      const feed    = (discoverRaw  ?? []).map(r => toRawDiscoverPost(r, API_BASE));
       const follows = followingRaw ?? [];
 
       setDiscoverFeedRaw(feed);
@@ -1221,7 +908,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (needsChar) {
         const charRaw = parseOrDefault(ApiCharacterSchema, _charFetch, null, '/character') as RawCharacterResponse | null;
         if (charRaw !== null) {
-          const char = toAppCharacter(charRaw);
+          const char = toAppCharacter(charRaw, API_BASE);
           setCharacterState(char);
           cacheWrites.push(AsyncStorage.setItem('character_v2', JSON.stringify(char)));
           tsUpdates.character = now;
@@ -1231,7 +918,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (needsJournal) {
         const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
         if (entriesRaw !== null) {
-          const entries = entriesRaw.map(toAppJournalEntry);
+          const entries = entriesRaw.map(r => toAppJournalEntry(r, API_BASE));
           setJournalEntries(entries);
           cacheWrites.push(AsyncStorage.setItem('journal_v2', JSON.stringify(entries)));
           tsUpdates['journal-entries'] = now;
@@ -1241,7 +928,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (needsStories) {
         const storiesRaw = parseOrDefault(ApiStoriesSchema, _storiesFetch, null, '/stories') as RawStoryResponse[] | null;
         if (storiesRaw !== null) {
-          const stors = storiesRaw.map(toAppStory);
+          const stors = storiesRaw.map(r => toAppStory(r, API_BASE));
           setStories(stors);
           cacheWrites.push(AsyncStorage.setItem('stories_v1', JSON.stringify(stors)));
           tsUpdates.stories = now;
@@ -1251,7 +938,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (needsOutfits) {
         const outfitsRaw = parseOrDefault(ApiOutfitsSchema, _outfitsFetch, null, '/outfits') as RawOutfitResponse[] | null;
         if (outfitsRaw !== null) {
-          const outs = outfitsRaw.map(toAppOutfit);
+          const outs = outfitsRaw.map(r => toAppOutfit(r, API_BASE));
           setOutfits(outs);
           cacheWrites.push(AsyncStorage.setItem('outfits_v1', JSON.stringify(outs)));
           tsUpdates.outfits = now;
