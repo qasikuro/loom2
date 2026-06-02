@@ -116,3 +116,123 @@ export interface OutfitInput {
   tags: string[];
   isPublic: boolean;
 }
+
+export interface GalleryPhoto {
+  id: string;
+  imageUri: string;
+  caption: string;
+  createdAt: string;
+}
+
+export interface GalleryUsage {
+  count: number;
+  limit: number;
+}
+
+export interface Notification {
+  id: string;
+  actorId: string;
+  actorName: string;
+  type: string;
+  refId?: string | null;
+  title?: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export type DiscoverPostPanelsItem = { [key: string]: unknown };
+
+export interface DiscoverPost {
+  id: string;
+  authorUserId: string;
+  authorName: string;
+  authorUsername?: string | null;
+  authorAvatarUri?: string | null;
+  chapterTitle: string;
+  description: string;
+  storySnippet: string;
+  imageUri?: string | null;
+  mood: string;
+  location: string;
+  witnessedCount: number;
+  savedCount: number;
+  stickerCount: number;
+  date: string;
+  panels: DiscoverPostPanelsItem[];
+  isFollowing: boolean;
+}
+
+export interface RewardBalance {
+  stars: number;
+  auraEnergy: number;
+  memoryShards: number;
+  lifetimeStars: number;
+}
+
+export interface ShopItemCost {
+  stars?: number;
+  aura?: number;
+  shards?: number;
+}
+
+export type ShopItemCategory =
+  (typeof ShopItemCategory)[keyof typeof ShopItemCategory];
+
+export const ShopItemCategory = {
+  frame: "frame",
+  accent: "accent",
+  theme: "theme",
+  effect: "effect",
+} as const;
+
+export interface ShopItem {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: ShopItemCategory;
+  cost: ShopItemCost;
+  seasonal?: boolean | null;
+  seasonalLabel?: string | null;
+  seasonalMonths?: number[] | null;
+}
+
+export type ShopResponseActiveCosmetics = { [key: string]: string };
+
+export interface ShopResponse {
+  catalog: ShopItem[];
+  seasonalPreview: ShopItem[];
+  purchasedIds: string[];
+  activeCosmetics: ShopResponseActiveCosmetics;
+}
+
+export type ConstellationStateStarUnlockDates = { [key: string]: unknown };
+
+export interface ConstellationState {
+  socialCount: number;
+  memoryCount: number;
+  quietStreak: number;
+  helpingCount: number;
+  creativeCount: number;
+  seasonalCount: number;
+  unlockedStars: string[];
+  starUnlockDates: ConstellationStateStarUnlockDates;
+  activeTitle?: string | null;
+  newlyUnlocked: string[];
+}
+
+export type FriendSummaryLinksItem = { [key: string]: unknown };
+
+export interface FriendSummary {
+  userId: string;
+  name: string;
+  username?: string | null;
+  bio: string;
+  mood: string;
+  traits: string[];
+  avatarUri?: string | null;
+  birthday?: string | null;
+  country?: string | null;
+  links: FriendSummaryLinksItem[];
+  isPublic: boolean;
+}

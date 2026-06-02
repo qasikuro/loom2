@@ -1,6 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showToastGlobal } from '@/components/Toast';
-import { ApiCharacterSchema, ApiJournalEntriesSchema, ApiOutfitsSchema, ApiStoriesSchema } from '@workspace/api-zod';
+import {
+  ApiCharacterSchema,
+  ApiJournalEntriesSchema,
+  ApiOutfitsSchema,
+  ApiStoriesSchema,
+  ApiGallerySchema,
+  ApiGalleryUsageSchema,
+  ApiNotificationsSchema,
+  ApiDiscoverSchema,
+  ApiRewardBalanceSchema,
+  ApiShopSchema,
+  ApiConstellationSchema,
+  ApiFriendsSchema,
+  ApiFollowingSchema,
+} from '@workspace/api-zod';
 import Constants from 'expo-constants';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -886,33 +900,42 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Previously social was a second sequential wave, doubling the wait for Discover.
       const [
         _charFetch, _entriesFetch, _storiesFetch, _outfitsFetch,
-        galleryRaw, usageRaw, discoverRaw, followingRaw, notifRaw, friendsRaw, guidesRaw,
-        rewardBalanceRaw, constellationRaw, shopRaw, savedIdsRaw,
+        _galleryFetch, _usageFetch, _discoverFetch, _followingFetch, _notifFetch, _friendsFetch, guidesRaw,
+        _rewardsFetch, _constellationFetch, _shopFetch, savedIdsRaw,
       ] = await Promise.all([
         apiFetch<unknown>('/character').catch(() => null),
         apiFetch<unknown>('/journal-entries').catch(() => null),
         apiFetch<unknown>('/stories').catch(() => null),
         apiFetch<unknown>('/outfits').catch(() => null),
-        apiFetch<RawGalleryPhoto[]>('/gallery').catch(() => [] as RawGalleryPhoto[]),
-        apiFetch<RawGalleryUsage>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
-        apiFetch<RawDiscoverApiItem[]>('/discover').catch(() => null),
-        apiFetch<string[]>('/follows/following').catch(() => []),
-        apiFetch<RawNotification[]>('/notifications').catch(() => [] as RawNotification[]),
-        apiFetch<FriendSummary[]>('/friends').catch(() => []),
+        apiFetch<unknown>('/gallery').catch(() => null),
+        apiFetch<unknown>('/gallery/usage').catch(() => null),
+        apiFetch<unknown>('/discover').catch(() => null),
+        apiFetch<unknown>('/follows/following').catch(() => null),
+        apiFetch<unknown>('/notifications').catch(() => null),
+        apiFetch<unknown>('/friends').catch(() => null),
         apiFetch<GuideProfile[]>('/guides?following=true').catch(() => []),
-        apiFetch<RewardBalance>('/rewards').catch(() => null),
-        apiFetch<ConstellationState>('/constellation').catch(() => null),
-        apiFetch<RawShopResponse>('/rewards/shop').catch(() => null),
+        apiFetch<unknown>('/rewards').catch(() => null),
+        apiFetch<unknown>('/constellation').catch(() => null),
+        apiFetch<unknown>('/rewards/shop').catch(() => null),
         apiFetch<string[]>('/stories/saved/ids').catch(() => null),
       ]);
 
-      // Validate OpenAPI-covered endpoints against generated Zod schemas.
+      // Validate all endpoints against generated Zod schemas.
       // Returns the original raw value on success (preserving server-side extras),
       // or null on mismatch — no malformed data reaches mapper functions.
-      const charRaw    = parseOrDefault(ApiCharacterSchema,      _charFetch,    null, '/character')      as RawCharacterResponse    | null;
-      const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
-      const storiesRaw = parseOrDefault(ApiStoriesSchema,        _storiesFetch, null, '/stories')         as RawStoryResponse[]       | null;
-      const outfitsRaw = parseOrDefault(ApiOutfitsSchema,        _outfitsFetch, null, '/outfits')         as RawOutfitResponse[]      | null;
+      const charRaw          = parseOrDefault(ApiCharacterSchema,      _charFetch,          null, '/character')         as RawCharacterResponse    | null;
+      const entriesRaw       = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch,       null, '/journal-entries')    as RawJournalEntryResponse[] | null;
+      const storiesRaw       = parseOrDefault(ApiStoriesSchema,        _storiesFetch,       null, '/stories')            as RawStoryResponse[]       | null;
+      const outfitsRaw       = parseOrDefault(ApiOutfitsSchema,        _outfitsFetch,       null, '/outfits')            as RawOutfitResponse[]      | null;
+      const galleryRaw       = parseOrDefault(ApiGallerySchema,        _galleryFetch,       null, '/gallery')            as RawGalleryPhoto[]        | null;
+      const usageRaw         = parseOrDefault(ApiGalleryUsageSchema,   _usageFetch,         null, '/gallery/usage')      as RawGalleryUsage          | null;
+      const discoverRaw      = parseOrDefault(ApiDiscoverSchema,       _discoverFetch,      null, '/discover')           as RawDiscoverApiItem[]     | null;
+      const followingRaw     = parseOrDefault(ApiFollowingSchema,      _followingFetch,     null, '/follows/following')  as string[]                 | null;
+      const notifRaw         = parseOrDefault(ApiNotificationsSchema,  _notifFetch,         null, '/notifications')      as RawNotification[]        | null;
+      const friendsRaw       = parseOrDefault(ApiFriendsSchema,        _friendsFetch,       null, '/friends')            as FriendSummary[]          | null;
+      const rewardBalanceRaw = parseOrDefault(ApiRewardBalanceSchema,  _rewardsFetch,       null, '/rewards')            as RewardBalance            | null;
+      const constellationRaw = parseOrDefault(ApiConstellationSchema,  _constellationFetch, null, '/constellation')      as ConstellationState       | null;
+      const shopRaw          = parseOrDefault(ApiShopSchema,           _shopFetch,          null, '/rewards/shop')       as RawShopResponse          | null;
 
       // Process core data — safe defaults already guaranteed by parseOrDefault above
       const char    = charRaw    ? toAppCharacter(charRaw)           : DEFAULT_CHARACTER;
@@ -1096,20 +1119,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!token) return;
 
     try {
-      const [_charFetch, _entriesFetch, _storiesFetch, _outfitsFetch, galleryRaw, usageRaw] = await Promise.all([
+      const [_charFetch, _entriesFetch, _storiesFetch, _outfitsFetch, _galleryFetch, _usageFetch] = await Promise.all([
         apiFetch<unknown>('/character'),
         apiFetch<unknown>('/journal-entries'),
         apiFetch<unknown>('/stories'),
         apiFetch<unknown>('/outfits'),
-        apiFetch<RawGalleryPhoto[]>('/gallery').catch(() => [] as RawGalleryPhoto[]),
-        apiFetch<RawGalleryUsage>('/gallery/usage').catch(() => ({ count: 0, limit: 200 })),
+        apiFetch<unknown>('/gallery').catch(() => null),
+        apiFetch<unknown>('/gallery/usage').catch(() => null),
       ]);
 
       // Validate against generated Zod schemas; null on mismatch → safe default
-      const charRaw    = parseOrDefault(ApiCharacterSchema,      _charFetch,    null, '/character')      as RawCharacterResponse    | null;
+      const charRaw    = parseOrDefault(ApiCharacterSchema,    _charFetch,    null, '/character')      as RawCharacterResponse    | null;
       const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
-      const storiesRaw = parseOrDefault(ApiStoriesSchema,        _storiesFetch, null, '/stories')         as RawStoryResponse[]       | null;
-      const outfitsRaw = parseOrDefault(ApiOutfitsSchema,        _outfitsFetch, null, '/outfits')         as RawOutfitResponse[]      | null;
+      const storiesRaw = parseOrDefault(ApiStoriesSchema,      _storiesFetch, null, '/stories')         as RawStoryResponse[]       | null;
+      const outfitsRaw = parseOrDefault(ApiOutfitsSchema,      _outfitsFetch, null, '/outfits')         as RawOutfitResponse[]      | null;
+      const galleryRaw = parseOrDefault(ApiGallerySchema,      _galleryFetch, null, '/gallery')         as RawGalleryPhoto[]        | null;
+      const usageRaw   = parseOrDefault(ApiGalleryUsageSchema, _usageFetch,   null, '/gallery/usage')   as RawGalleryUsage          | null;
 
       const char    = charRaw    ? toAppCharacter(charRaw)           : DEFAULT_CHARACTER;
       const entries = entriesRaw ? entriesRaw.map(toAppJournalEntry) : [];

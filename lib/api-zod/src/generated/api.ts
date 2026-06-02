@@ -223,3 +223,155 @@ export const CreateOutfitBody = zod.object({
 export const DeleteOutfitParams = zod.object({
   id: zod.coerce.string(),
 });
+
+/**
+ * @summary List all gallery photos newest first
+ */
+export const ListGalleryResponseItem = zod.object({
+  id: zod.string(),
+  imageUri: zod.string(),
+  caption: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListGalleryResponse = zod.array(ListGalleryResponseItem);
+
+/**
+ * @summary Get gallery storage usage
+ */
+export const GetGalleryUsageResponse = zod.object({
+  count: zod.number(),
+  limit: zod.number(),
+});
+
+/**
+ * @summary List activity notifications newest first
+ */
+export const ListNotificationsResponseItem = zod.object({
+  id: zod.string(),
+  actorId: zod.string(),
+  actorName: zod.string(),
+  type: zod.string(),
+  refId: zod.string().nullish(),
+  title: zod.string().nullish(),
+  isRead: zod.boolean(),
+  createdAt: zod.coerce.date(),
+});
+export const ListNotificationsResponse = zod.array(
+  ListNotificationsResponseItem,
+);
+
+/**
+ * @summary Ranked discovery feed of public stories
+ */
+export const ListDiscoverFeedResponseItem = zod.object({
+  id: zod.string(),
+  authorUserId: zod.string(),
+  authorName: zod.string(),
+  authorUsername: zod.string().nullish(),
+  authorAvatarUri: zod.string().nullish(),
+  chapterTitle: zod.string(),
+  description: zod.string(),
+  storySnippet: zod.string(),
+  imageUri: zod.string().nullish(),
+  mood: zod.string(),
+  location: zod.string(),
+  witnessedCount: zod.number(),
+  savedCount: zod.number(),
+  stickerCount: zod.number(),
+  date: zod.coerce.date(),
+  panels: zod.array(zod.object({}).passthrough()),
+  isFollowing: zod.boolean(),
+});
+export const ListDiscoverFeedResponse = zod.array(ListDiscoverFeedResponseItem);
+
+/**
+ * @summary Get current reward currency balances
+ */
+export const GetRewardBalanceResponse = zod.object({
+  stars: zod.number(),
+  auraEnergy: zod.number(),
+  memoryShards: zod.number(),
+  lifetimeStars: zod.number(),
+});
+
+/**
+ * @summary Get shop catalog, purchased IDs and active cosmetics
+ */
+export const GetRewardsShopResponse = zod.object({
+  catalog: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      description: zod.string(),
+      icon: zod.string(),
+      category: zod.enum(["frame", "accent", "theme", "effect"]),
+      cost: zod.object({
+        stars: zod.number().optional(),
+        aura: zod.number().optional(),
+        shards: zod.number().optional(),
+      }),
+      seasonal: zod.boolean().nullish(),
+      seasonalLabel: zod.string().nullish(),
+      seasonalMonths: zod.array(zod.number()).nullish(),
+    }),
+  ),
+  seasonalPreview: zod.array(
+    zod.object({
+      id: zod.string(),
+      name: zod.string(),
+      description: zod.string(),
+      icon: zod.string(),
+      category: zod.enum(["frame", "accent", "theme", "effect"]),
+      cost: zod.object({
+        stars: zod.number().optional(),
+        aura: zod.number().optional(),
+        shards: zod.number().optional(),
+      }),
+      seasonal: zod.boolean().nullish(),
+      seasonalLabel: zod.string().nullish(),
+      seasonalMonths: zod.array(zod.number()).nullish(),
+    }),
+  ),
+  purchasedIds: zod.array(zod.string()),
+  activeCosmetics: zod.record(zod.string(), zod.string()),
+});
+
+/**
+ * @summary Get constellation progress
+ */
+export const GetConstellationResponse = zod.object({
+  socialCount: zod.number(),
+  memoryCount: zod.number(),
+  quietStreak: zod.number(),
+  helpingCount: zod.number(),
+  creativeCount: zod.number(),
+  seasonalCount: zod.number(),
+  unlockedStars: zod.array(zod.string()),
+  starUnlockDates: zod.object({}).passthrough(),
+  activeTitle: zod.string().nullish(),
+  newlyUnlocked: zod.array(zod.string()),
+});
+
+/**
+ * @summary List profiles of users I follow
+ */
+export const ListFriendsResponseItem = zod.object({
+  userId: zod.string(),
+  name: zod.string(),
+  username: zod.string().nullish(),
+  bio: zod.string(),
+  mood: zod.string(),
+  traits: zod.array(zod.string()),
+  avatarUri: zod.string().nullish(),
+  birthday: zod.string().nullish(),
+  country: zod.string().nullish(),
+  links: zod.array(zod.object({}).passthrough()),
+  isPublic: zod.boolean(),
+});
+export const ListFriendsResponse = zod.array(ListFriendsResponseItem);
+
+/**
+ * @summary Get IDs of users I follow
+ */
+export const ListFollowingResponseItem = zod.string();
+export const ListFollowingResponse = zod.array(ListFollowingResponseItem);

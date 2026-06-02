@@ -18,6 +18,14 @@ tags:
     description: Manga-style stories
   - name: outfits
     description: Outfit logs
+  - name: gallery
+    description: Photo gallery
+  - name: social
+    description: Follows, friends, and discover feed
+  - name: notifications
+    description: Activity notifications
+  - name: rewards
+    description: Rewards, shop, and constellation
 
 paths:
   /healthz:
@@ -242,6 +250,133 @@ paths:
         "204":
           description: Deleted
 
+  /gallery:
+    get:
+      operationId: listGallery
+      tags: [gallery]
+      summary: List all gallery photos newest first
+      responses:
+        "200":
+          description: List of gallery photos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GalleryPhoto"
+
+  /gallery/usage:
+    get:
+      operationId: getGalleryUsage
+      tags: [gallery]
+      summary: Get gallery storage usage
+      responses:
+        "200":
+          description: Gallery usage stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GalleryUsage"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List activity notifications newest first
+      responses:
+        "200":
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /discover:
+    get:
+      operationId: listDiscoverFeed
+      tags: [social]
+      summary: Ranked discovery feed of public stories
+      responses:
+        "200":
+          description: List of discover posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DiscoverPost"
+
+  /rewards:
+    get:
+      operationId: getRewardBalance
+      tags: [rewards]
+      summary: Get current reward currency balances
+      responses:
+        "200":
+          description: Reward balances
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RewardBalance"
+
+  /rewards/shop:
+    get:
+      operationId: getRewardsShop
+      tags: [rewards]
+      summary: Get shop catalog, purchased IDs and active cosmetics
+      responses:
+        "200":
+          description: Shop data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShopResponse"
+
+  /constellation:
+    get:
+      operationId: getConstellation
+      tags: [rewards]
+      summary: Get constellation progress
+      responses:
+        "200":
+          description: Constellation state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConstellationState"
+
+  /friends:
+    get:
+      operationId: listFriends
+      tags: [social]
+      summary: List profiles of users I follow
+      responses:
+        "200":
+          description: List of friend profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendSummary"
+
+  /follows/following:
+    get:
+      operationId: listFollowing
+      tags: [social]
+      summary: Get IDs of users I follow
+      responses:
+        "200":
+          description: List of user IDs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
 components:
   schemas:
     HealthStatus:
@@ -455,3 +590,233 @@ components:
         isPublic:
           type: boolean
       required: [date, name, description, tags, isPublic]
+
+    GalleryPhoto:
+      type: object
+      properties:
+        id:
+          type: string
+        imageUri:
+          type: string
+        caption:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, imageUri, caption, createdAt]
+
+    GalleryUsage:
+      type: object
+      properties:
+        count:
+          type: integer
+        limit:
+          type: integer
+      required: [count, limit]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+        actorId:
+          type: string
+        actorName:
+          type: string
+        type:
+          type: string
+        refId:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, actorId, actorName, type, isRead, createdAt]
+
+    DiscoverPost:
+      type: object
+      properties:
+        id:
+          type: string
+        authorUserId:
+          type: string
+        authorName:
+          type: string
+        authorUsername:
+          type: string
+          nullable: true
+        authorAvatarUri:
+          type: string
+          nullable: true
+        chapterTitle:
+          type: string
+        description:
+          type: string
+        storySnippet:
+          type: string
+        imageUri:
+          type: string
+          nullable: true
+        mood:
+          type: string
+        location:
+          type: string
+        witnessedCount:
+          type: integer
+        savedCount:
+          type: integer
+        stickerCount:
+          type: integer
+        date:
+          type: string
+          format: date-time
+        panels:
+          type: array
+          items:
+            type: object
+        isFollowing:
+          type: boolean
+      required: [id, authorUserId, authorName, chapterTitle, description, storySnippet, mood, location, witnessedCount, savedCount, stickerCount, date, panels, isFollowing]
+
+    RewardBalance:
+      type: object
+      properties:
+        stars:
+          type: integer
+        auraEnergy:
+          type: integer
+        memoryShards:
+          type: integer
+        lifetimeStars:
+          type: integer
+      required: [stars, auraEnergy, memoryShards, lifetimeStars]
+
+    ShopItemCost:
+      type: object
+      properties:
+        stars:
+          type: integer
+        aura:
+          type: integer
+        shards:
+          type: integer
+
+    ShopItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        category:
+          type: string
+          enum: [frame, accent, theme, effect]
+        cost:
+          $ref: "#/components/schemas/ShopItemCost"
+        seasonal:
+          type: boolean
+          nullable: true
+        seasonalLabel:
+          type: string
+          nullable: true
+        seasonalMonths:
+          type: array
+          items:
+            type: integer
+          nullable: true
+      required: [id, name, description, icon, category, cost]
+
+    ShopResponse:
+      type: object
+      properties:
+        catalog:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopItem"
+        seasonalPreview:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopItem"
+        purchasedIds:
+          type: array
+          items:
+            type: string
+        activeCosmetics:
+          type: object
+          additionalProperties:
+            type: string
+      required: [catalog, seasonalPreview, purchasedIds, activeCosmetics]
+
+    ConstellationState:
+      type: object
+      properties:
+        socialCount:
+          type: integer
+        memoryCount:
+          type: integer
+        quietStreak:
+          type: integer
+        helpingCount:
+          type: integer
+        creativeCount:
+          type: integer
+        seasonalCount:
+          type: integer
+        unlockedStars:
+          type: array
+          items:
+            type: string
+        starUnlockDates:
+          type: object
+        activeTitle:
+          type: string
+          nullable: true
+        newlyUnlocked:
+          type: array
+          items:
+            type: string
+      required: [socialCount, memoryCount, quietStreak, helpingCount, creativeCount, seasonalCount, unlockedStars, starUnlockDates, newlyUnlocked]
+
+    FriendSummary:
+      type: object
+      properties:
+        userId:
+          type: string
+        name:
+          type: string
+        username:
+          type: string
+          nullable: true
+        bio:
+          type: string
+        mood:
+          type: string
+        traits:
+          type: array
+          items:
+            type: string
+        avatarUri:
+          type: string
+          nullable: true
+        birthday:
+          type: string
+          nullable: true
+        country:
+          type: string
+          nullable: true
+        links:
+          type: array
+          items:
+            type: object
+        isPublic:
+          type: boolean
+      required: [userId, name, bio, mood, traits, links, isPublic]

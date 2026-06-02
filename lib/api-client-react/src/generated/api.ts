@@ -19,11 +19,19 @@ import type {
 import type {
   Character,
   CharacterInput,
+  ConstellationState,
+  DiscoverPost,
+  FriendSummary,
+  GalleryPhoto,
+  GalleryUsage,
   HealthStatus,
   JournalEntry,
   JournalEntryInput,
+  Notification,
   Outfit,
   OutfitInput,
+  RewardBalance,
+  ShopResponse,
   Story,
   StoryInput,
 } from "./api.schemas";
@@ -1172,3 +1180,678 @@ export const useDeleteOutfit = <
 > => {
   return useMutation(getDeleteOutfitMutationOptions(options));
 };
+
+/**
+ * @summary List all gallery photos newest first
+ */
+export const getListGalleryUrl = () => {
+  return `/api/gallery`;
+};
+
+export const listGallery = async (
+  options?: RequestInit,
+): Promise<GalleryPhoto[]> => {
+  return customFetch<GalleryPhoto[]>(getListGalleryUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGalleryQueryKey = () => {
+  return [`/api/gallery`] as const;
+};
+
+export const getListGalleryQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGallery>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listGallery>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListGalleryQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listGallery>>> = ({
+    signal,
+  }) => listGallery({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGallery>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGalleryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGallery>>
+>;
+export type ListGalleryQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all gallery photos newest first
+ */
+
+export function useListGallery<
+  TData = Awaited<ReturnType<typeof listGallery>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listGallery>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGalleryQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get gallery storage usage
+ */
+export const getGetGalleryUsageUrl = () => {
+  return `/api/gallery/usage`;
+};
+
+export const getGalleryUsage = async (
+  options?: RequestInit,
+): Promise<GalleryUsage> => {
+  return customFetch<GalleryUsage>(getGetGalleryUsageUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGalleryUsageQueryKey = () => {
+  return [`/api/gallery/usage`] as const;
+};
+
+export const getGetGalleryUsageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGalleryUsage>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGalleryUsage>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGalleryUsageQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGalleryUsage>>> = ({
+    signal,
+  }) => getGalleryUsage({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGalleryUsage>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGalleryUsageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGalleryUsage>>
+>;
+export type GetGalleryUsageQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get gallery storage usage
+ */
+
+export function useGetGalleryUsage<
+  TData = Awaited<ReturnType<typeof getGalleryUsage>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getGalleryUsage>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGalleryUsageQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List activity notifications newest first
+ */
+export const getListNotificationsUrl = () => {
+  return `/api/notifications`;
+};
+
+export const listNotifications = async (
+  options?: RequestInit,
+): Promise<Notification[]> => {
+  return customFetch<Notification[]>(getListNotificationsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListNotificationsQueryKey = () => {
+  return [`/api/notifications`] as const;
+};
+
+export const getListNotificationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listNotifications>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listNotifications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListNotificationsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listNotifications>>
+  > = ({ signal }) => listNotifications({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listNotifications>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListNotificationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listNotifications>>
+>;
+export type ListNotificationsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List activity notifications newest first
+ */
+
+export function useListNotifications<
+  TData = Awaited<ReturnType<typeof listNotifications>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listNotifications>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListNotificationsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Ranked discovery feed of public stories
+ */
+export const getListDiscoverFeedUrl = () => {
+  return `/api/discover`;
+};
+
+export const listDiscoverFeed = async (
+  options?: RequestInit,
+): Promise<DiscoverPost[]> => {
+  return customFetch<DiscoverPost[]>(getListDiscoverFeedUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDiscoverFeedQueryKey = () => {
+  return [`/api/discover`] as const;
+};
+
+export const getListDiscoverFeedQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDiscoverFeed>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDiscoverFeed>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDiscoverFeedQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listDiscoverFeed>>
+  > = ({ signal }) => listDiscoverFeed({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDiscoverFeed>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListDiscoverFeedQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDiscoverFeed>>
+>;
+export type ListDiscoverFeedQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Ranked discovery feed of public stories
+ */
+
+export function useListDiscoverFeed<
+  TData = Awaited<ReturnType<typeof listDiscoverFeed>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listDiscoverFeed>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListDiscoverFeedQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get current reward currency balances
+ */
+export const getGetRewardBalanceUrl = () => {
+  return `/api/rewards`;
+};
+
+export const getRewardBalance = async (
+  options?: RequestInit,
+): Promise<RewardBalance> => {
+  return customFetch<RewardBalance>(getGetRewardBalanceUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRewardBalanceQueryKey = () => {
+  return [`/api/rewards`] as const;
+};
+
+export const getGetRewardBalanceQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRewardBalance>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardBalance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRewardBalanceQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getRewardBalance>>
+  > = ({ signal }) => getRewardBalance({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardBalance>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRewardBalanceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRewardBalance>>
+>;
+export type GetRewardBalanceQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get current reward currency balances
+ */
+
+export function useGetRewardBalance<
+  TData = Awaited<ReturnType<typeof getRewardBalance>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardBalance>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRewardBalanceQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get shop catalog, purchased IDs and active cosmetics
+ */
+export const getGetRewardsShopUrl = () => {
+  return `/api/rewards/shop`;
+};
+
+export const getRewardsShop = async (
+  options?: RequestInit,
+): Promise<ShopResponse> => {
+  return customFetch<ShopResponse>(getGetRewardsShopUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRewardsShopQueryKey = () => {
+  return [`/api/rewards/shop`] as const;
+};
+
+export const getGetRewardsShopQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRewardsShop>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardsShop>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRewardsShopQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRewardsShop>>> = ({
+    signal,
+  }) => getRewardsShop({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardsShop>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRewardsShopQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRewardsShop>>
+>;
+export type GetRewardsShopQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get shop catalog, purchased IDs and active cosmetics
+ */
+
+export function useGetRewardsShop<
+  TData = Awaited<ReturnType<typeof getRewardsShop>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getRewardsShop>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRewardsShopQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get constellation progress
+ */
+export const getGetConstellationUrl = () => {
+  return `/api/constellation`;
+};
+
+export const getConstellation = async (
+  options?: RequestInit,
+): Promise<ConstellationState> => {
+  return customFetch<ConstellationState>(getGetConstellationUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetConstellationQueryKey = () => {
+  return [`/api/constellation`] as const;
+};
+
+export const getGetConstellationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getConstellation>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getConstellation>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetConstellationQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getConstellation>>
+  > = ({ signal }) => getConstellation({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getConstellation>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetConstellationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getConstellation>>
+>;
+export type GetConstellationQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get constellation progress
+ */
+
+export function useGetConstellation<
+  TData = Awaited<ReturnType<typeof getConstellation>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getConstellation>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetConstellationQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List profiles of users I follow
+ */
+export const getListFriendsUrl = () => {
+  return `/api/friends`;
+};
+
+export const listFriends = async (
+  options?: RequestInit,
+): Promise<FriendSummary[]> => {
+  return customFetch<FriendSummary[]>(getListFriendsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFriendsQueryKey = () => {
+  return [`/api/friends`] as const;
+};
+
+export const getListFriendsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFriends>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFriends>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFriendsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFriends>>> = ({
+    signal,
+  }) => listFriends({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFriends>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFriendsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFriends>>
+>;
+export type ListFriendsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List profiles of users I follow
+ */
+
+export function useListFriends<
+  TData = Awaited<ReturnType<typeof listFriends>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFriends>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFriendsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get IDs of users I follow
+ */
+export const getListFollowingUrl = () => {
+  return `/api/follows/following`;
+};
+
+export const listFollowing = async (
+  options?: RequestInit,
+): Promise<string[]> => {
+  return customFetch<string[]>(getListFollowingUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFollowingQueryKey = () => {
+  return [`/api/follows/following`] as const;
+};
+
+export const getListFollowingQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFollowing>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFollowing>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFollowingQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFollowing>>> = ({
+    signal,
+  }) => listFollowing({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFollowing>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFollowingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFollowing>>
+>;
+export type ListFollowingQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get IDs of users I follow
+ */
+
+export function useListFollowing<
+  TData = Awaited<ReturnType<typeof listFollowing>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listFollowing>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFollowingQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
