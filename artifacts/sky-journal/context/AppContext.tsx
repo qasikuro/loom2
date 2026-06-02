@@ -46,6 +46,42 @@ function resolveUri(uri: string | null | undefined): string | undefined {
   return `${domainBase}${uri}`;
 }
 
+// ── Fetch-staleness tracking ──────────────────────────────────────────────────
+// softLoadData() uses these TTLs to skip endpoints whose cached data is still
+// fresh, removing unnecessary fetches and the brief "old → new" flicker on
+// fast app resume.  loadData() (forced refresh) always bypasses these checks.
+
+const FETCH_TIMESTAMPS_KEY = 'fetch_timestamps_v1';
+
+const RESOURCE_TTL_MS: Record<string, number> = {
+  character:         5 * 60_000,
+  'journal-entries': 2 * 60_000,
+  stories:           2 * 60_000,
+  outfits:           2 * 60_000,
+  gallery:           5 * 60_000,
+  discover:          2 * 60_000,
+  following:         5 * 60_000,
+};
+
+async function readFetchTimestamps(): Promise<Record<string, number>> {
+  try {
+    const raw = await AsyncStorage.getItem(FETCH_TIMESTAMPS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+  } catch { return {}; }
+}
+
+async function writeFetchTimestamps(updates: Record<string, number>): Promise<void> {
+  try {
+    const existing = await readFetchTimestamps();
+    await AsyncStorage.setItem(FETCH_TIMESTAMPS_KEY, JSON.stringify({ ...existing, ...updates }));
+  } catch { /* silent */ }
+}
+
+function isFetchStale(timestamps: Record<string, number>, key: string): boolean {
+  const ttl = RESOURCE_TTL_MS[key] ?? 2 * 60_000;
+  return Date.now() - (timestamps[key] ?? 0) > ttl;
+}
+
 // ── Auth token getter (injected from Clerk context in _layout) ────────────────
 
 type TokenGetter = () => Promise<string | null>;
@@ -841,6 +877,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
     'discover_v1', 'following_v1', 'saved_stories_v1', 'collection_v1',
     'shop_catalog_v1', 'reward_balance_v1',
+    FETCH_TIMESTAMPS_KEY,
     // active_outfit_v1 is intentionally NOT cleared on logout so the outfit
     // preference survives a logout/login cycle. loadData() validates the saved
     // ID against the freshly loaded outfit list before applying it.
@@ -1047,6 +1084,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         );
       }
       await Promise.allSettled(cacheWrites);
+
+      // Only advance a resource's timestamp when its data actually parsed
+      // successfully.  Stamping failed/null resources would make softLoadData()
+      // skip them on the next resume even though the data is stale or missing.
+      const now = Date.now();
+      const tsUpdates: Record<string, number> = {};
+      if (charRaw    !== null) tsUpdates.character           = now;
+      if (entriesRaw !== null) tsUpdates['journal-entries']  = now;
+      if (storiesRaw !== null) tsUpdates.stories             = now;
+      if (outfitsRaw !== null) tsUpdates.outfits             = now;
+      if (galleryRaw !== null) tsUpdates.gallery             = now;
+      if (discoverRaw !== null) tsUpdates.discover           = now;
+      if (followingRaw !== null) tsUpdates.following         = now;
+      if (Object.keys(tsUpdates).length > 0) {
+        writeFetchTimestamps(tsUpdates).catch(() => null);
+      }
     } catch {
       // Unexpected error — restore from cache rather than leaving a blank screen.
       if (!dataReadyRef.current) await loadFromCache();
@@ -1091,7 +1144,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const [discoverRaw, followingRaw, friendsRaw] = await Promise.all([
         apiFetch<RawDiscoverApiItem[]>('/discover').catch(() => null),
-        apiFetch<string[]>('/follows/following').catch(() => []),
+        // catch(() => null) so a failed fetch is distinguishable from a genuine
+        // empty following list — only a non-null result advances the timestamp.
+        apiFetch<string[]>('/follows/following').catch(() => null),
         apiFetch<FriendSummary[]>('/friends').catch(() => []),
       ]);
 
@@ -1104,65 +1159,133 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setFollowingIds(follows);
       setFriends(friendsRaw ?? []);
 
-      await Promise.allSettled([
-        AsyncStorage.setItem('discover_v1',  JSON.stringify(feed)),
-        AsyncStorage.setItem('following_v1', JSON.stringify(follows)),
-      ]);
+      const now = Date.now();
+      const cacheWrites: Promise<void>[] = [];
+      const tsUpdates: Record<string, number> = {};
+
+      if (discoverRaw !== null) {
+        cacheWrites.push(AsyncStorage.setItem('discover_v1', JSON.stringify(feed)));
+        tsUpdates.discover = now;
+      }
+      if (followingRaw !== null) {
+        cacheWrites.push(AsyncStorage.setItem('following_v1', JSON.stringify(follows)));
+        tsUpdates.following = now;
+      }
+
+      if (cacheWrites.length > 0) await Promise.allSettled(cacheWrites);
+      if (Object.keys(tsUpdates).length > 0) writeFetchTimestamps(tsUpdates).catch(() => null);
     } catch { /* silently skip */ }
   }
 
   // Silent foreground refresh — fetches fresh data without resetting state first
   // so there is no UI flash. Admin deletions/amendments take effect the moment
   // the user brings the app back to the foreground.
+  //
+  // Staleness model: each resource has a TTL defined in RESOURCE_TTL_MS.
+  // Resources whose cached data is still fresh are skipped entirely, avoiding
+  // unnecessary network round-trips and the brief "old → new" flicker that
+  // occurred when the entire batch was always re-fetched on resume.
+  // Forced refresh paths (pull-to-refresh, explicit reloadData()) call
+  // loadData() directly and always bypass these checks.
   async function softLoadData() {
     const token = await _getToken();
     if (!token) return;
 
     try {
+      const timestamps = await readFetchTimestamps();
+
+      const needsChar    = isFetchStale(timestamps, 'character');
+      const needsJournal = isFetchStale(timestamps, 'journal-entries');
+      const needsStories = isFetchStale(timestamps, 'stories');
+      const needsOutfits = isFetchStale(timestamps, 'outfits');
+      // Treat gallery + usage as a unit — their TTLs match and they depend on each other
+      const needsGallery = isFetchStale(timestamps, 'gallery');
+      const needsSocial  = isFetchStale(timestamps, 'discover') || isFetchStale(timestamps, 'following');
+
+      // Nothing is stale — skip all network calls entirely
+      if (!needsChar && !needsJournal && !needsStories && !needsOutfits && !needsGallery && !needsSocial) return;
+
       const [_charFetch, _entriesFetch, _storiesFetch, _outfitsFetch, _galleryFetch, _usageFetch] = await Promise.all([
-        apiFetch<unknown>('/character'),
-        apiFetch<unknown>('/journal-entries'),
-        apiFetch<unknown>('/stories'),
-        apiFetch<unknown>('/outfits'),
-        apiFetch<unknown>('/gallery').catch(() => null),
-        apiFetch<unknown>('/gallery/usage').catch(() => null),
+        needsChar    ? apiFetch<unknown>('/character')                       : Promise.resolve(null),
+        needsJournal ? apiFetch<unknown>('/journal-entries')                 : Promise.resolve(null),
+        needsStories ? apiFetch<unknown>('/stories')                         : Promise.resolve(null),
+        needsOutfits ? apiFetch<unknown>('/outfits')                         : Promise.resolve(null),
+        needsGallery ? apiFetch<unknown>('/gallery').catch(() => null)       : Promise.resolve(null),
+        needsGallery ? apiFetch<unknown>('/gallery/usage').catch(() => null) : Promise.resolve(null),
       ]);
 
-      // Validate against generated Zod schemas; null on mismatch → safe default
-      const charRaw    = parseOrDefault(ApiCharacterSchema,    _charFetch,    null, '/character')      as RawCharacterResponse    | null;
-      const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
-      const storiesRaw = parseOrDefault(ApiStoriesSchema,      _storiesFetch, null, '/stories')         as RawStoryResponse[]       | null;
-      const outfitsRaw = parseOrDefault(ApiOutfitsSchema,      _outfitsFetch, null, '/outfits')         as RawOutfitResponse[]      | null;
-      const galleryRaw = parseOrDefault(ApiGallerySchema,      _galleryFetch, null, '/gallery')         as RawGalleryPhoto[]        | null;
-      const usageRaw   = parseOrDefault(ApiGalleryUsageSchema, _usageFetch,   null, '/gallery/usage')   as RawGalleryUsage          | null;
+      const now = Date.now();
+      const tsUpdates: Record<string, number> = {};
+      const cacheWrites: Promise<void>[] = [];
 
-      const char    = charRaw    ? toAppCharacter(charRaw)           : DEFAULT_CHARACTER;
-      const entries = entriesRaw ? entriesRaw.map(toAppJournalEntry) : [];
-      const stors   = storiesRaw ? storiesRaw.map(toAppStory)        : [];
-      const outs    = outfitsRaw ? outfitsRaw.map(toAppOutfit)       : [];
-      const gal     = (galleryRaw ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
-        id:        r.id,
-        imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
-        caption:   r.caption ?? '',
-        createdAt: r.createdAt,
-      }));
+      if (needsChar) {
+        const charRaw = parseOrDefault(ApiCharacterSchema, _charFetch, null, '/character') as RawCharacterResponse | null;
+        if (charRaw !== null) {
+          const char = toAppCharacter(charRaw);
+          setCharacterState(char);
+          cacheWrites.push(AsyncStorage.setItem('character_v2', JSON.stringify(char)));
+          tsUpdates.character = now;
+        }
+      }
 
-      setCharacterState(char);
-      setJournalEntries(entries);
-      setStories(stors);
-      setOutfits(outs);
-      setGallery(gal);
-      setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
+      if (needsJournal) {
+        const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
+        if (entriesRaw !== null) {
+          const entries = entriesRaw.map(toAppJournalEntry);
+          setJournalEntries(entries);
+          cacheWrites.push(AsyncStorage.setItem('journal_v2', JSON.stringify(entries)));
+          tsUpdates['journal-entries'] = now;
+        }
+      }
+
+      if (needsStories) {
+        const storiesRaw = parseOrDefault(ApiStoriesSchema, _storiesFetch, null, '/stories') as RawStoryResponse[] | null;
+        if (storiesRaw !== null) {
+          const stors = storiesRaw.map(toAppStory);
+          setStories(stors);
+          cacheWrites.push(AsyncStorage.setItem('stories_v1', JSON.stringify(stors)));
+          tsUpdates.stories = now;
+        }
+      }
+
+      if (needsOutfits) {
+        const outfitsRaw = parseOrDefault(ApiOutfitsSchema, _outfitsFetch, null, '/outfits') as RawOutfitResponse[] | null;
+        if (outfitsRaw !== null) {
+          const outs = outfitsRaw.map(toAppOutfit);
+          setOutfits(outs);
+          cacheWrites.push(AsyncStorage.setItem('outfits_v1', JSON.stringify(outs)));
+          tsUpdates.outfits = now;
+        }
+      }
+
+      if (needsGallery) {
+        const galleryRaw = parseOrDefault(ApiGallerySchema,      _galleryFetch, null, '/gallery')       as RawGalleryPhoto[] | null;
+        const usageRaw   = parseOrDefault(ApiGalleryUsageSchema, _usageFetch,   null, '/gallery/usage') as RawGalleryUsage   | null;
+        if (galleryRaw !== null) {
+          const gal = galleryRaw.map((r: RawGalleryPhoto): GalleryPhoto => ({
+            id:        r.id,
+            imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
+            caption:   r.caption ?? '',
+            createdAt: r.createdAt,
+          }));
+          setGallery(gal);
+          setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
+          tsUpdates.gallery = now;
+        }
+      }
+
+      if (cacheWrites.length > 0) {
+        await Promise.allSettled(cacheWrites);
+      }
+
+      if (Object.keys(tsUpdates).length > 0) {
+        writeFetchTimestamps(tsUpdates).catch(() => null);
+      }
+
       setApiOnline(true);
 
-      await Promise.allSettled([
-        AsyncStorage.setItem('character_v2', JSON.stringify(char)),
-        AsyncStorage.setItem('journal_v2',   JSON.stringify(entries)),
-        AsyncStorage.setItem('stories_v1',   JSON.stringify(stors)),
-        AsyncStorage.setItem('outfits_v1',   JSON.stringify(outs)),
-      ]);
-
-      loadSocialData();
+      // loadSocialData() writes its own timestamps on success
+      if (needsSocial) loadSocialData();
     } catch { /* silently fail — keep showing cached data */ }
   }
 
