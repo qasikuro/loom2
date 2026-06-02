@@ -8,6 +8,7 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -219,10 +220,12 @@ export default function CharacterScreen() {
           <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
             <TouchableOpacity style={[s.outfitHero, { borderColor: `${moodAccent}35` }]} onPress={() => openOutfit(activeOutfit.id)} activeOpacity={0.88}>
               {activeOutfit.imageUri
-                ? <LinearGradient colors={['transparent', 'rgba(8,6,22,0.88)']} start={{ x: 0, y: 0.35 }} end={{ x: 0, y: 1 }} style={[s.outfitHeroImg, { position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, zIndex: 1 }]} pointerEvents="none" />
-                : null}
-              {activeOutfit.imageUri
-                ? <View style={s.outfitHeroImg}><LinearGradient colors={['transparent', 'rgba(8,6,22,0.88)']} start={{ x: 0, y: 0.35 }} end={{ x: 0, y: 1 }} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 130, zIndex: 1 }} pointerEvents="none" /></View>
+                ? (
+                  <View style={s.outfitHeroImg}>
+                    <Image source={{ uri: activeOutfit.imageUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
+                    <LinearGradient colors={['transparent', 'rgba(8,6,22,0.88)']} start={{ x: 0, y: 0.35 }} end={{ x: 0, y: 1 }} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 130 }} pointerEvents="none" />
+                  </View>
+                )
                 : <View style={[s.outfitHeroImg, { backgroundColor: 'rgba(200,184,232,0.07)', alignItems: 'center', justifyContent: 'center' }]}><Text style={{ fontSize: 52 }}>✨</Text></View>}
               <View style={[s.outfitHeroBadge, { backgroundColor: `${moodAccent}22`, borderColor: `${moodAccent}55` }]}>
                 <Text style={[{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4 }, { color: moodAccent }]}>CURRENTLY WORN</Text>

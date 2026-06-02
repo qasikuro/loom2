@@ -63,6 +63,8 @@ export function usePingState(country?: string) {
         if (status !== 'granted') { if (country) setWeatherQuery(country); return; }
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         setWeatherQuery(`${loc.coords.latitude.toFixed(2)},${loc.coords.longitude.toFixed(2)}`);
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        apiFetch('/character', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timezone: tz }) }).catch(() => {});
       } catch { if (country) setWeatherQuery(country); }
     })();
   }, []);

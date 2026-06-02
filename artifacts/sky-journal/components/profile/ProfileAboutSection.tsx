@@ -4,6 +4,7 @@ import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useUser } from '@clerk/expo';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SHADOW } from '@/constants/colors';
@@ -19,6 +20,7 @@ interface Props {
 
 export function ProfileAboutSection({ character, setCharacter }: Props) {
   const colors = useColors();
+  const { user } = useUser();
 
   const [editingBirthday,  setEditingBirthday]  = useState(false);
   const [birthdayVal,      setBirthdayVal]      = useState(character.birthday ?? '');
@@ -354,7 +356,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               </View>
               <TouchableOpacity
                 style={[s.guidePreviewBtn, { borderColor: `${colors.primary}30`, backgroundColor: `${colors.primary}0C` }]}
-                onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: '' } } as any)}
+                onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: user?.id ?? '' } } as any)}
                 activeOpacity={0.8}
               >
                 <Icon name="eye" size={14} color={colors.primary} />
