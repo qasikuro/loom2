@@ -17,9 +17,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as Haptics from 'expo-haptics';
+import { useAuth } from '@clerk/expo';
 
 import { Icon } from '@/components/Icon';
 import { apiFetch, useApp } from '@/context/AppContext';
+import { useSSE } from '@/hooks/useSSE';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -353,12 +355,13 @@ const eb = StyleSheet.create({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-const POLL_MS = 5000;
+const POLL_MS = 30_000;
 
 export default function CampfireRoom() {
   const insets        = useSafeAreaInsets();
   const { character, markCampfireRoomRead } = useApp();
   const { roomId }    = useLocalSearchParams<{ roomId: string }>();
+  const { userId: myUserId } = useAuth();
 
   const [data,    setData]    = useState<RoomData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -394,12 +397,56 @@ export default function CampfireRoom() {
 
   useEffect(() => {
     fetchData();
-    if (roomId) markCampfireRoomRead(roomId); // mark as read on enter
+    if (roomId) markCampfireRoomRead(roomId);
+    // Slow fallback poll — SSE handles the live updates
     pollRef.current = setInterval(() => fetchData(true), POLL_MS);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchData, roomId, markCampfireRoomRead]);
 
+  // ── SSE: live push for campfire messages and presence ────────────────────
+  useSSE(
+    roomId ? [`campfire:${roomId}`] : [],
+    useCallback((_channel: string, raw: unknown) => {
+      const payload = raw as {
+        type: string;
+        message?: {
+          id: string; userId: string; authorName: string;
+          content: string | null; expression: string | null; createdAt: string;
+        };
+        soulCount?: number;
+      };
+
+      if (payload?.type === 'new_message' && payload.message) {
+        const m = payload.message;
+        setData(prev => {
+          if (!prev) return prev;
+          if (prev.messages.find(x => x.id === m.id)) return prev;
+          const newMsg: CampfireMsg = { ...m, isMine: m.userId === myUserId };
+          return { ...prev, messages: [...prev.messages, newMsg] };
+        });
+        lastIdRef.current = m.id;
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+        return;
+      }
+
+      if (payload?.type === 'presence_update' && typeof payload.soulCount === 'number') {
+        setData(prev => prev ? { ...prev, soulCount: payload.soulCount! } : prev);
+        return;
+      }
+    }, [myUserId]),
+  );
+
   // ── Send message ───────────────────────────────────────────────────────────
+
+  function appendOwnMessage(msg: CampfireMsg) {
+    setData(prev => {
+      if (!prev) return prev;
+      if (prev.messages.find(x => x.id === msg.id)) return prev;
+      return { ...prev, messages: [...prev.messages, msg] };
+    });
+    lastIdRef.current = msg.id;
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+  }
 
   async function sendText() {
     const trimmed = text.trim();
@@ -408,11 +455,11 @@ export default function CampfireRoom() {
     setText('');
     setShowInput(false);
     try {
-      await apiFetch(`/campfire/${roomId}/messages`, {
+      const sent = await apiFetch<CampfireMsg>(`/campfire/${roomId}/messages`, {
         method: 'POST',
         body: JSON.stringify({ content: trimmed, authorName: character.name || 'Wanderer' }),
       });
-      await fetchData(true);
+      if (sent) appendOwnMessage(sent);
     } finally {
       setSending(false);
     }
@@ -421,11 +468,11 @@ export default function CampfireRoom() {
   async function sendExpression(id: string) {
     if (!roomId) return;
     try {
-      await apiFetch(`/campfire/${roomId}/messages`, {
+      const sent = await apiFetch<CampfireMsg>(`/campfire/${roomId}/messages`, {
         method: 'POST',
         body: JSON.stringify({ expression: id, authorName: character.name || 'Wanderer' }),
       });
-      await fetchData(true);
+      if (sent) appendOwnMessage(sent);
     } catch { /* silent */ }
   }
 

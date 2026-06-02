@@ -18,6 +18,7 @@ import stickersRouter from "./stickers";
 import rewardsRouter from "./rewards";
 import adminEventsRouter from "./admin-events";
 import campfireRouter from "./campfire";
+import streamRouter from "./stream";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(stickersRouter);
 router.use(rewardsRouter);
 router.use(adminEventsRouter);
 router.use(campfireRouter);
+router.use(streamRouter);
 
 export default router;

@@ -8,6 +8,7 @@ import {
   characterTable,
 } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { emitSSEEvent } from "../lib/sseEmitter";
 
 const router = Router();
 
@@ -226,15 +227,19 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
     })
     .returning();
 
-  return res.status(201).json({
+  const payload = {
     id:         msg.id,
     userId:     msg.userId,
     authorName: msg.authorName,
     content:    msg.content,
     expression: msg.expression,
     createdAt:  msg.createdAt,
-    isMine:     true,
-  });
+  };
+
+  // Notify all SSE clients watching this campfire room
+  emitSSEEvent(`campfire:${roomId}`, { type: "new_message", message: payload });
+
+  return res.status(201).json({ ...payload, isMine: true });
 });
 
 export default router;

@@ -4,6 +4,7 @@ import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { z } from "zod";
 import { sendPushNotification } from "../services/pushService";
+import { emitSSEEvent } from "../lib/sseEmitter";
 
 const router: IRouter = Router();
 
@@ -181,6 +182,19 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
 
     // Fire-and-forget: push notification to recipient
     sendPushForMessage(fromId, toId, content ?? null, expression ?? null).catch(() => null);
+
+    // Emit SSE event to the recipient's message channel so their open chat updates live
+    emitSSEEvent(`messages:${toId}`, {
+      type:       "new_message",
+      id:         msg.id,
+      fromUserId: msg.fromUserId,
+      toUserId:   msg.toUserId,
+      content:    msg.content    ?? null,
+      expression: msg.expression ?? null,
+      isRead:     msg.isRead,
+      createdAt:  msg.createdAt,
+      isOwn:      false,
+    });
 
     return res.status(201).json({
       id:         msg.id,

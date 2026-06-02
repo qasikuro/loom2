@@ -3,6 +3,8 @@ import { Icon } from '@/components/Icon';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useSound } from '@/context/SoundContext';
+import { useSSE } from '@/hooks/useSSE';
+import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -193,6 +195,7 @@ export default function MessagesScreen() {
   const insets = useSafeAreaInsets();
   const { markDmThreadRead } = useApp();
   const { playStickerSound } = useSound();
+  const { userId: myUserId } = useAuth();
 
   const [messages,   setMessages]   = useState<Message[]>([]);
   const [loading,    setLoading]    = useState(true);
@@ -286,9 +289,37 @@ export default function MessagesScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ── SSE: live push for incoming messages ──────────────────────────────────
+  // Subscribe to our own userId channel — the server emits to it when anyone
+  // sends us a message, so we can append without polling.
+  useSSE(
+    myUserId ? [`messages:${myUserId}`] : [],
+    useCallback((_channel: string, data: unknown) => {
+      const ev = data as {
+        type: string; id: string; fromUserId: string; toUserId: string;
+        content: string | null; expression: string | null;
+        isRead: boolean; createdAt: string; isOwn: boolean;
+      };
+      // Only append if it's from the person we're currently chatting with
+      if (ev?.type !== 'new_message' || ev.fromUserId !== userId) return;
+      setMessages(prev => {
+        if (prev.find(m => m.id === ev.id)) return prev; // deduplicate
+        const newMsg: Message = { ...ev, isOwn: false };
+        lastMsgIdRef.current = ev.id;
+        // Animate incoming sticker
+        if (ev.expression) {
+          const def = getSticker(ev.expression);
+          queueSticker(def);
+        }
+        markDmThreadRead(userId ?? '');
+        return [...prev, newMsg];
+      });
+    }, [userId, markDmThreadRead, queueSticker]),
+  );
+
+  // Slow background poll as a fallback (catches anything SSE misses)
   useFocusEffect(useCallback(() => {
-    // 3.5 s poll — fast enough to feel near-real-time without hammering the server
-    const interval = setInterval(() => { load().catch(() => null); }, 3500);
+    const interval = setInterval(() => { load().catch(() => null); }, 30_000);
     return () => clearInterval(interval);
   }, [load]));
 
