@@ -253,24 +253,34 @@ function DailySpark({ onWrite }: { onWrite: () => void }) {
   return (
     <View style={ds.card}>
       <LinearGradient
-        colors={['rgba(200,168,75,0.10)', 'rgba(200,168,75,0.03)', 'transparent']}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        colors={['rgba(200,168,75,0.09)', 'rgba(200,168,75,0.02)', 'transparent']}
+        start={{ x: 0, y: 0 }} end={{ x: 1.2, y: 1 }}
         style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      {/* Top accent line */}
+      <LinearGradient
+        colors={['rgba(200,168,75,0.55)', 'rgba(200,168,75,0.10)', 'transparent']}
+        start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1 }}
         pointerEvents="none"
       />
       <View style={ds.left}>
         <View style={ds.eyebrow}>
-          <Text style={ds.sparkEmoji}>✦</Text>
+          <Text style={ds.sparkGlyph}>✦</Text>
           <Text style={ds.label}>Daily Spark</Text>
+          <View style={ds.datePill}>
+            <Text style={ds.dateTxt}>{today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+          </View>
         </View>
         <Text style={ds.prompt}>{prompt}</Text>
       </View>
       <TouchableOpacity
         style={ds.writeBtn}
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onWrite(); }}
-        activeOpacity={0.84}
+        activeOpacity={0.80}
       >
-        <Icon name="edit-2" size={13} color="#fff" />
+        <Icon name="feather" size={12} color="rgba(245,235,200,0.90)" />
         <Text style={ds.writeBtnTxt}>Write</Text>
       </TouchableOpacity>
     </View>
@@ -279,19 +289,21 @@ function DailySpark({ onWrite }: { onWrite: () => void }) {
 const ds = StyleSheet.create({
   card: {
     marginHorizontal: 16, marginTop: 4, marginBottom: 2,
-    paddingHorizontal: 18, paddingVertical: 16,
-    borderRadius: 22, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.022)',
-    borderWidth: 1, borderColor: 'rgba(200,168,75,0.26)',
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 20, paddingVertical: 18,
+    borderRadius: 26, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.018)',
+    borderWidth: 1, borderColor: 'rgba(200,168,75,0.18)',
+    flexDirection: 'row', alignItems: 'center', gap: 14,
   },
   left:       { flex: 1 },
-  eyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
-  sparkEmoji: { fontSize: 12, lineHeight: 15, color: '#C8A84B' },
-  label:      { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, color: '#C8A84B' },
-  prompt:     { fontSize: 15, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(240,228,255,0.90)', lineHeight: 22, letterSpacing: -0.1 },
-  writeBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#6B5B95', flexShrink: 0 },
-  writeBtnTxt:{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: 0.2 },
+  eyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 10 },
+  sparkGlyph: { fontSize: 11, lineHeight: 14, color: 'rgba(200,168,75,0.70)' },
+  label:      { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2.0, color: 'rgba(200,168,75,0.65)', textTransform: 'uppercase' },
+  datePill:   { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(200,168,75,0.10)' },
+  dateTxt:    { fontSize: 9, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,75,0.50)', letterSpacing: 0.3 },
+  prompt:     { fontSize: 15.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(242,232,255,0.88)', lineHeight: 23, letterSpacing: -0.2 },
+  writeBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 15, paddingVertical: 10, borderRadius: 22, backgroundColor: 'rgba(107,91,149,0.40)', borderWidth: 1, borderColor: 'rgba(160,136,220,0.30)', flexShrink: 0 },
+  writeBtnTxt:{ fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(235,220,255,0.92)', letterSpacing: 0.3 },
   date: {},
   cta: {},
   ctaTxt: {},
@@ -328,15 +340,15 @@ function FriendBubble({ post }: { post: DiscoverPost }) {
 const fr = StyleSheet.create({
   row:    { paddingHorizontal: 16, paddingBottom: 6, gap: 4 },
   wrap:   { alignItems: 'center', width: 70, gap: 6 },
-  ring:   { width: 62, height: 62, borderRadius: 31, padding: 2.5 },
-  inner:  { flex: 1, borderRadius: 29, overflow: 'hidden', backgroundColor: '#0E0B28',
+  ring:   { width: 60, height: 60, borderRadius: 30, padding: 2 },
+  inner:  { flex: 1, borderRadius: 28, overflow: 'hidden', backgroundColor: '#0E0B28',
             alignItems: 'center', justifyContent: 'center' },
-  initial:{ fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.90)' },
-  newDot: { position: 'absolute', top: 44, right: 8, width: 11, height: 11, borderRadius: 6, borderWidth: 2.5, borderColor: '#080614' },
-  name:   { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.65)', textAlign: 'center', maxWidth: 66 },
+  initial:{ fontSize: 20, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.88)' },
+  newDot: { position: 'absolute', top: 43, right: 8, width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: '#06040E' },
+  name:   { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.55)', textAlign: 'center', maxWidth: 66 },
   addWrap:  { alignItems: 'center', width: 58, gap: 5 },
-  addCircle:{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(168,136,248,0.10)', borderWidth: 1.5, borderColor: 'rgba(168,136,248,0.22)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  addLabel: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(180,160,240,0.42)', textAlign: 'center' },
+  addCircle:{ width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(168,136,248,0.08)', borderWidth: 1.5, borderColor: 'rgba(168,136,248,0.18)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  addLabel: { fontSize: 9.5, fontFamily: 'Satoshi-Medium', color: 'rgba(180,160,240,0.38)', textAlign: 'center' },
 });
 
 // ─── Campfire bubble (stories-style circle) ──────────────────────────────────
@@ -461,11 +473,11 @@ function SectionHeader({ label, accent, count, onPress, action }: {
 }
 const sh = StyleSheet.create({
   row:    { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, marginBottom: 14 },
-  bar:    { width: 3, height: 13, borderRadius: 2 },
-  label:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, color: 'rgba(200,185,255,0.50)', textTransform: 'uppercase' },
+  bar:    { width: 2.5, height: 11, borderRadius: 2 },
+  label:  { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, color: 'rgba(200,185,255,0.42)', textTransform: 'uppercase' },
   badge:  { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
-  badgeN: { fontSize: 10.5, fontFamily: 'Satoshi-Bold' },
-  action: { fontSize: 12.5, fontFamily: 'Satoshi-Medium' },
+  badgeN: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  action: { fontSize: 12, fontFamily: 'Satoshi-Medium', opacity: 0.65 },
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1908,13 +1920,13 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#04030C' },
 
   // ── Hero — compact identity card ───────────────────────────────────────────
-  hero:        { paddingHorizontal: 0, paddingBottom: 0, overflow: 'hidden', borderBottomLeftRadius: 32, borderBottomRightRadius: 32, marginBottom: 4 },
+  hero:        { paddingHorizontal: 0, paddingBottom: 0, overflow: 'hidden', borderBottomLeftRadius: 36, borderBottomRightRadius: 36, marginBottom: 6 },
 
   // Top bar: label left, buttons right
-  heroBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, marginBottom: 14 },
-  heroAppLabel:{ fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, color: 'rgba(200,184,232,0.40)', textTransform: 'uppercase' },
-  heroBtn:     { width: 34, height: 34, alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 17, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
-  heroBadge:   { position: 'absolute', top: 6, right: 6, width: 7, height: 7, borderRadius: 3.5 },
+  heroBar:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, marginBottom: 10 },
+  heroAppLabel:{ fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 2.2, color: 'rgba(200,184,232,0.35)', textTransform: 'uppercase' },
+  heroBtn:     { width: 33, height: 33, alignItems: 'center', justifyContent: 'center', position: 'relative', backgroundColor: 'rgba(255,255,255,0.045)', borderRadius: 16.5, borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  heroBadge:   { position: 'absolute', top: 7, right: 7, width: 6.5, height: 6.5, borderRadius: 3.5 },
 
   // Identity row: avatar left, info right
   heroIdentityRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, marginBottom: 14 },
@@ -1962,11 +1974,11 @@ const s = StyleSheet.create({
   statSep:  { width: 0.5, height: 32, backgroundColor: 'rgba(255,255,255,0.08)' },
 
   // ── Sections ───────────────────────────────────────────────────────────────
-  section:     { paddingVertical: 18 },
+  section:     { paddingVertical: 16 },
   sectionRow:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, marginBottom: 14 },
   // Mixed-case editorial label — softer hierarchy signal
-  sectionLabel:{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: 'rgba(200,185,240,0.38)', flex: 1, paddingHorizontal: 20 },
-  sectionAll:  { fontSize: 12.5, fontFamily: 'Satoshi-Medium' },
+  sectionLabel:{ fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: 'rgba(200,185,240,0.35)', flex: 1, paddingHorizontal: 20 },
+  sectionAll:  { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
   // ── Campfires ──────────────────────────────────────────────────────────────
   fireRow:     { flexDirection: 'row', gap: 18, paddingHorizontal: 20 },
@@ -1984,34 +1996,34 @@ const s = StyleSheet.create({
 
   // ── Lumi companion card — immersive night-sky design ─────────────────────
   lumiCard: {
-    marginHorizontal: 16, marginTop: 4, marginBottom: 4,
-    borderRadius: 24, overflow: 'hidden',
-    backgroundColor: '#0D0820',
-    borderWidth: 1, borderColor: 'rgba(155,120,255,0.18)',
-    shadowColor: '#6B3FD8', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.40, shadowRadius: 28, elevation: 10,
-    minHeight: 148,
+    marginHorizontal: 16, marginTop: 4, marginBottom: 6,
+    borderRadius: 28, overflow: 'hidden',
+    backgroundColor: '#0A0618',
+    borderWidth: 1, borderColor: 'rgba(155,120,255,0.14)',
+    shadowColor: '#5820C0', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.45, shadowRadius: 32, elevation: 12,
+    minHeight: 155,
   },
-  lumiContent:    { padding: 20, paddingTop: 18 },
-  lumiOrb1:       { position: 'absolute', top: -50, right: -40, width: 180, height: 180, borderRadius: 90, opacity: 0.14 },
-  lumiOrb2:       { position: 'absolute', bottom: -30, left: -30, width: 140, height: 140, borderRadius: 70, opacity: 0.09, backgroundColor: '#2A60C8' },
-  lumiStar:       { position: 'absolute', width: 2.5, height: 2.5, borderRadius: 2, backgroundColor: '#E8DCFF' },
-  lumiEyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 14 },
-  lumiDot:        { width: 7, height: 7, borderRadius: 4 },
-  lumiEyebrowTxt: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 2.5 },
-  lumiPill:       { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  lumiPillTxt:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
-  lumiMsgV2:      { fontSize: 17, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(238,228,255,0.93)', lineHeight: 26, letterSpacing: -0.15 },
-  lumiHint:       { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(180,160,240,0.32)', marginTop: 16, letterSpacing: 0.4 },
+  lumiContent:    { padding: 22, paddingTop: 20 },
+  lumiOrb1:       { position: 'absolute', top: -55, right: -44, width: 190, height: 190, borderRadius: 95, opacity: 0.13 },
+  lumiOrb2:       { position: 'absolute', bottom: -32, left: -32, width: 150, height: 150, borderRadius: 75, opacity: 0.08, backgroundColor: '#2A60C8' },
+  lumiStar:       { position: 'absolute', width: 2, height: 2, borderRadius: 2, backgroundColor: '#E8DCFF' },
+  lumiEyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
+  lumiDot:        { width: 6, height: 6, borderRadius: 3 },
+  lumiEyebrowTxt: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2.8 },
+  lumiPill:       { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
+  lumiPillTxt:    { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
+  lumiMsgV2:      { fontSize: 15, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(230,220,255,0.72)', lineHeight: 23, letterSpacing: -0.1 },
+  lumiHint:       { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(180,160,240,0.28)', marginTop: 14, letterSpacing: 0.4 },
 
   // ── Star journey nudge card ────────────────────────────────────────────────
   nudgeCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     marginHorizontal: 16, marginTop: 6, marginBottom: 4,
     paddingHorizontal: 16, paddingVertical: 14,
-    borderRadius: 20, overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.025)',
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 14, elevation: 4,
+    borderRadius: 24, overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.020)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.055)',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.40, shadowRadius: 18, elevation: 5,
   },
   nudgeOrb: {
     width: 7, height: 7, borderRadius: 4,
@@ -2044,17 +2056,17 @@ const s = StyleSheet.create({
   heroMoodArc: { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.42)', marginTop: 5, textAlign: 'center' },
 
   // ── Activity digest strip ──────────────────────────────────────────────────
-  digestRow:   { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 14 },
-  digestPill:  { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20 },
-  digestTxt:   { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  digestRow:   { flexDirection: 'row', gap: 7, paddingHorizontal: 16, paddingBottom: 14 },
+  digestPill:  { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20 },
+  digestTxt:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
   // ── Find Friends — ambient, at bottom ─────────────────────────────────────
-  findFriends:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 12, marginTop: 4, paddingHorizontal: 16, paddingVertical: 13, borderRadius: 16 },
-  findFriendsIcon:  { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(96,200,168,0.14)', alignItems: 'center', justifyContent: 'center' },
-  findFriendsTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(190,230,215,0.80)' },
-  findFriendsSub:   { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(130,180,160,0.50)', marginTop: 1 },
-  findFriendsBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 11, backgroundColor: 'rgba(96,200,168,0.15)' },
-  findFriendsBadgeText: { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#5EC8A0' },
+  findFriends:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 16, marginBottom: 12, marginTop: 4, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.018)', borderWidth: 1, borderColor: 'rgba(96,200,168,0.12)' },
+  findFriendsIcon:  { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(96,200,168,0.12)', alignItems: 'center', justifyContent: 'center' },
+  findFriendsTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(180,225,208,0.78)' },
+  findFriendsSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(120,170,150,0.45)', marginTop: 1 },
+  findFriendsBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, backgroundColor: 'rgba(96,200,168,0.12)', borderWidth: 1, borderColor: 'rgba(96,200,168,0.20)' },
+  findFriendsBadgeText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(94,200,160,0.85)' },
   communityFire:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginHorizontal: 20, marginBottom: 12, marginTop: 4, paddingHorizontal: 16, paddingVertical: 14, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(184,120,255,0.14)' },
   communityFireIcon:  { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(184,120,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   communityFireTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(220,200,255,0.85)' },
@@ -2062,75 +2074,75 @@ const s = StyleSheet.create({
 
   // ── Hero redesign styles ──────────────────────────────────────────────────
   heroAvatarSmallWrap:  { position: 'relative', marginLeft: 4 },
-  heroAvatarSmallRing:  { width: 38, height: 38, borderRadius: 19, padding: 2 },
-  heroAvatarSmallInner: { flex: 1, borderRadius: 17, overflow: 'hidden', backgroundColor: '#0E0B28' },
-  heroGreetBlock:  { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 20 },
-  heroGreetText:   { fontSize: 26, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.97)', letterSpacing: -0.8, lineHeight: 32, marginBottom: 4 },
-  heroGreetSub:    { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,185,255,0.48)', lineHeight: 19, marginBottom: 14 },
-  heroPillRow:     { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  heroPillFire:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(232,120,40,0.14)', borderWidth: 1, borderColor: 'rgba(232,120,40,0.28)' },
-  heroPillStar:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(200,168,75,0.14)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.28)' },
-  heroPillTxt:     { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(235,220,200,0.78)', letterSpacing: 0.1 },
+  heroAvatarSmallRing:  { width: 36, height: 36, borderRadius: 18, padding: 1.5 },
+  heroAvatarSmallInner: { flex: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: '#0E0B28' },
+  heroGreetBlock:  { paddingHorizontal: 22, paddingTop: 6, paddingBottom: 22 },
+  heroGreetText:   { fontSize: 30, fontFamily: 'Satoshi-Bold', color: 'rgba(242,232,255,0.97)', letterSpacing: -1.2, lineHeight: 36, marginBottom: 6 },
+  heroGreetSub:    { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,185,255,0.40)', lineHeight: 18, marginBottom: 16 },
+  heroPillRow:     { flexDirection: 'row', gap: 7, flexWrap: 'wrap' },
+  heroPillFire:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: 'rgba(232,120,40,0.11)', borderWidth: 1, borderColor: 'rgba(232,120,40,0.22)' },
+  heroPillStar:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, backgroundColor: 'rgba(200,168,75,0.11)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.22)' },
+  heroPillTxt:     { fontSize: 11.5, fontFamily: 'Satoshi-Medium', color: 'rgba(235,218,195,0.72)', letterSpacing: 0.1 },
 
   // ── LUMI card enhanced styles ─────────────────────────────────────────────
-  lumiCharImg:  { position: 'absolute', bottom: 0, right: -8, width: 130, height: 155 },
-  lumiTitle:    { fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.97)', letterSpacing: -0.5, lineHeight: 28, marginBottom: 8 },
-  lumiCTABtn:   { alignSelf: 'flex-start', marginTop: 14, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: 'rgba(168,136,248,0.22)', borderWidth: 1, borderColor: 'rgba(168,136,248,0.40)' },
-  lumiCTATxt:   { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(210,185,255,0.90)', letterSpacing: 0.3 },
+  lumiCharImg:  { position: 'absolute', bottom: 0, right: -6, width: 134, height: 160 },
+  lumiTitle:    { fontSize: 24, fontFamily: 'Satoshi-Bold', color: 'rgba(242,232,255,0.97)', letterSpacing: -0.8, lineHeight: 30, marginBottom: 6 },
+  lumiCTABtn:   { alignSelf: 'flex-start', marginTop: 16, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 22, backgroundColor: 'rgba(168,136,248,0.18)', borderWidth: 1, borderColor: 'rgba(168,136,248,0.32)' },
+  lumiCTATxt:   { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(210,185,255,0.85)', letterSpacing: 0.4 },
 
   // ── Your Circle compact recent cards ─────────────────────────────────────
-  circleRecentLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase', color: 'rgba(180,165,230,0.38)', marginLeft: 20, marginBottom: 8 },
-  circleRecentCard:   { flexDirection: 'row', alignItems: 'center', gap: 10, width: 220, padding: 10, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(200,185,255,0.08)' },
-  circleRecentAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
-  circleRecentAuthor: { fontSize: 10.5, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.45)', marginBottom: 2 },
-  circleRecentTitle:  { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(225,215,255,0.85)', letterSpacing: -0.1 },
-  circleRecentTime:   { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,210,0.35)', marginTop: 3 },
-  circleRecentThumb:  { width: 36, height: 36, borderRadius: 10, flexShrink: 0, overflow: 'hidden' },
+  circleRecentLabel:  { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, textTransform: 'uppercase', color: 'rgba(180,165,230,0.32)', marginLeft: 20, marginBottom: 9 },
+  circleRecentCard:   { flexDirection: 'row', alignItems: 'center', gap: 10, width: 228, paddingHorizontal: 12, paddingVertical: 11, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.025)', borderWidth: 1, borderColor: 'rgba(200,185,255,0.07)' },
+  circleRecentAvatar: { width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  circleRecentAuthor: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.38)', marginBottom: 2 },
+  circleRecentTitle:  { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.88)', letterSpacing: -0.2 },
+  circleRecentTime:   { fontSize: 9.5, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,210,0.30)', marginTop: 3 },
+  circleRecentThumb:  { width: 38, height: 38, borderRadius: 11, flexShrink: 0, overflow: 'hidden' },
 
   // ── Campfire Tonight banner ───────────────────────────────────────────────
-  campfireBanner:        { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginBottom: 8, marginTop: 4, paddingHorizontal: 18, paddingVertical: 16, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(200,120,50,0.22)', backgroundColor: 'rgba(10,6,20,0.60)' },
-  campfireBannerEyebrow: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(232,164,80,0.70)' },
-  campfireBannerTitle:   { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(245,225,200,0.95)', letterSpacing: -0.3, lineHeight: 20 },
-  campfireBannerSub:     { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(220,185,150,0.48)', marginTop: 3 },
-  campfireJoinBtn:       { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 16, backgroundColor: 'rgba(200,120,40,0.22)', borderWidth: 1, borderColor: 'rgba(200,120,40,0.38)', flexShrink: 0 },
-  campfireJoinTxt:       { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(245,200,140,0.90)', letterSpacing: 0.2 },
+  campfireBanner:        { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginBottom: 8, marginTop: 4, paddingHorizontal: 20, paddingVertical: 18, borderRadius: 26, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(200,120,50,0.18)', backgroundColor: 'rgba(8,4,16,0.70)' },
+  campfireBannerEyebrow: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2.0, textTransform: 'uppercase', color: 'rgba(232,164,80,0.60)' },
+  campfireBannerTitle:   { fontSize: 17, fontFamily: 'Satoshi-Bold', color: 'rgba(248,228,205,0.96)', letterSpacing: -0.5, lineHeight: 22 },
+  campfireBannerSub:     { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(220,185,150,0.42)', marginTop: 3, lineHeight: 16 },
+  campfireJoinBtn:       { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18, backgroundColor: 'rgba(200,120,40,0.18)', borderWidth: 1, borderColor: 'rgba(200,120,40,0.30)', flexShrink: 0 },
+  campfireJoinTxt:       { fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: 'rgba(248,205,145,0.88)', letterSpacing: 0.3 },
 
   // ── Stats grid (constellation + season side by side) ─────────────────────
-  statsGrid:     { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 8, paddingTop: 4 },
-  statsGridCard: { flex: 1, borderRadius: 20, overflow: 'hidden', padding: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(200,185,255,0.08)', minHeight: 170 },
-  statsGridLabel:{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.0, textTransform: 'uppercase', color: 'rgba(200,185,255,0.45)', marginBottom: 2 },
-  statsGridStar: { width: 9, height: 9, borderRadius: 5 },
-  statsGridSub:  { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4, marginBottom: 4 },
-  statsGridTrack:{ height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 3 },
-  statsGridFill: { height: 3, borderRadius: 2 },
-  statsGridHint: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.40)', marginBottom: 8 },
-  statsGridCTA:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(180,160,240,0.55)', letterSpacing: 0.2, marginTop: 'auto' as any },
-  statsGridPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 4 },
+  statsGrid:     { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 10, paddingTop: 4 },
+  statsGridCard: { flex: 1, borderRadius: 24, overflow: 'hidden', padding: 16, backgroundColor: 'rgba(255,255,255,0.025)', borderWidth: 1, borderColor: 'rgba(200,185,255,0.07)', minHeight: 175 },
+  statsGridLabel:{ fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, textTransform: 'uppercase', color: 'rgba(200,185,255,0.38)', marginBottom: 2 },
+  statsGridStar: { width: 8, height: 8, borderRadius: 4 },
+  statsGridSub:  { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, marginBottom: 4 },
+  statsGridTrack:{ height: 2.5, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginBottom: 3 },
+  statsGridFill: { height: 2.5, borderRadius: 2 },
+  statsGridHint: { fontSize: 9.5, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.35)', marginBottom: 10 },
+  statsGridCTA:  { fontSize: 10.5, fontFamily: 'Satoshi-Bold', color: 'rgba(180,160,240,0.48)', letterSpacing: 0.3, marginTop: 'auto' as any },
+  statsGridPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 6 },
   statsGridCTAPill:{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, marginTop: 'auto' as any },
 
   // ── Explore horizontal cards ──────────────────────────────────────────────
-  exploreCard:      { width: 130, height: 175, borderRadius: 18, overflow: 'hidden', backgroundColor: '#0D0820', position: 'relative' },
-  exploreCardGrad:  { position: 'absolute', bottom: 0, left: 0, right: 0, height: 95 },
-  exploreCardMeta:  { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 },
-  exploreCardMoodDot:{ width: 5, height: 5, borderRadius: 3 },
-  exploreCardMood:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase' },
-  exploreCardTitle: { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.93)', letterSpacing: -0.2, lineHeight: 17, marginBottom: 3 },
-  exploreCardAuthor:{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.45)' },
+  exploreCard:      { width: 140, height: 200, borderRadius: 22, overflow: 'hidden', backgroundColor: '#0A0618', position: 'relative' },
+  exploreCardGrad:  { position: 'absolute', bottom: 0, left: 0, right: 0, height: 115 },
+  exploreCardMeta:  { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 13 },
+  exploreCardMoodDot:{ width: 4.5, height: 4.5, borderRadius: 2.5 },
+  exploreCardMood:  { fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.0, textTransform: 'uppercase' },
+  exploreCardTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(242,232,255,0.94)', letterSpacing: -0.3, lineHeight: 17.5, marginBottom: 3 },
+  exploreCardAuthor:{ fontSize: 9.5, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.40)' },
 
   // ── Drift invitation card ──────────────────────────────────────────────────
-  driftSection:    { paddingHorizontal: 16, paddingBottom: 8 },
-  driftCard:       { borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(40,18,110,0.38)', position: 'relative', borderWidth: 1, borderColor: 'rgba(168,136,248,0.12)' },
-  driftLumi:       { position: 'absolute', top: -10, right: -6, width: 110, height: 110 },
-  driftContent:    { padding: 22, paddingRight: 96 },
+  driftSection:    { paddingHorizontal: 16, paddingBottom: 10 },
+  driftCard:       { borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(28,12,80,0.42)', position: 'relative', borderWidth: 1, borderColor: 'rgba(168,136,248,0.10)' },
+  driftLumi:       { position: 'absolute', top: -12, right: -4, width: 115, height: 115 },
+  driftContent:    { padding: 24, paddingRight: 100 },
   driftEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
-  driftEyebrow:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.5, color: 'rgba(200,168,255,0.55)', textTransform: 'uppercase' },
-  driftTitle:      { fontSize: 24, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.97)', letterSpacing: -0.6, marginBottom: 10, lineHeight: 28 },
-  driftDesc:       { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.55)', lineHeight: 19.5, marginBottom: 18 },
-  driftChips:      { flexDirection: 'row', gap: 8, marginBottom: 20, flexWrap: 'wrap' },
-  driftChip:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(160,128,248,0.16)' },
-  driftChipTxt:    { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,175,255,0.72)' },
+  driftEyebrow:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2.0, color: 'rgba(200,168,255,0.45)', textTransform: 'uppercase' },
+  driftTitle:      { fontSize: 26, fontFamily: 'Satoshi-Bold', color: 'rgba(242,232,255,0.97)', letterSpacing: -0.8, marginBottom: 10, lineHeight: 31 },
+  driftDesc:       { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.48)', lineHeight: 20, marginBottom: 18 },
+  driftChips:      { flexDirection: 'row', gap: 7, marginBottom: 20, flexWrap: 'wrap' },
+  driftChip:       { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, backgroundColor: 'rgba(160,128,248,0.13)', borderWidth: 1, borderColor: 'rgba(160,128,248,0.16)' },
+  driftChipTxt:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium', color: 'rgba(200,175,255,0.65)' },
   driftCTA:        { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  driftCTATxt:     { fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,255,0.55)', fontStyle: 'italic' },
+  driftCTATxt:     { fontSize: 12.5, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,255,0.45)', fontStyle: 'italic' },
 });
 
 // ── Event banner styles ────────────────────────────────────────────────────────
