@@ -345,30 +345,47 @@ export default function CreateScreen() {
 
   // ── Render ───────────────────────────────────────────────────────────────
 
+  const moodColor = currentMood?.color ?? '#6B5B95';
+
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      {/* Header gradient */}
+    <View style={c.root}>
+      {/* Ambient mood tint — shifts with selected mood */}
       <LinearGradient
-        colors={['#0A0616', '#06040F', colors.background]}
-        style={[styles.headerGrad, { height: topPad + 80 }]}
+        colors={[`${moodColor}22`, `${moodColor}08`, 'transparent']}
+        style={c.moodAmbient}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        pointerEvents="none"
+      />
+      {/* Top dark header scrim */}
+      <LinearGradient
+        colors={['#060410', '#040310', 'transparent']}
+        style={[c.headerGrad, { height: topPad + 88 }]}
+        start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+        pointerEvents="none"
       />
 
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 14 }]}>
-        <TouchableOpacity onPress={() => router.push('/(tabs)')} style={styles.headerBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Icon name="arrow-left" size={20} color="rgba(255,255,255,0.85)" />
-        </TouchableOpacity>
-        <View>
-          <Text style={styles.headerTitle}>{tr('create.title')}</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{pages.length === 1 ? tr('create.pages', { n: 1 }) : tr('create.pagesPlural', { n: pages.length })}</Text>
-        </View>
+      {/* ── Header ─────────────────────────────────────────────── */}
+      <View style={[c.header, { paddingTop: topPad + 10 }]}>
         <TouchableOpacity
-          style={[styles.headerBtn, showMeta && { backgroundColor: `${colors.primary}22` }]}
+          onPress={() => router.push('/(tabs)')}
+          style={c.navBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.78)" />
+        </TouchableOpacity>
+
+        <View style={c.headerCenter}>
+          <View style={[c.headerMoodDot, { backgroundColor: moodColor, shadowColor: moodColor }]} />
+          <Text style={c.headerTitle}>{editId ? 'Edit Chapter' : 'New Chapter'}</Text>
+          <Text style={c.headerPageCount}>{pages.length}/{MAX_PAGES}</Text>
+        </View>
+
+        <TouchableOpacity
+          style={[c.navBtn, showMeta && { backgroundColor: `${moodColor}22`, borderColor: `${moodColor}38` }]}
           onPress={() => setShowMeta(v => !v)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Icon name="sliders" size={18} color={showMeta ? colors.primary : 'rgba(255,255,255,0.85)'} />
+          <Icon name="map-pin" size={16} color={showMeta ? moodColor : 'rgba(255,255,255,0.78)'} />
         </TouchableOpacity>
       </View>
 
@@ -376,150 +393,175 @@ export default function CreateScreen() {
         bottomOffset={20}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[c.scroll, { paddingBottom: bottomPad }]}
       >
-        {/* ── Draft banner ─────────────────────────────────────── */}
+
+        {/* ── Draft banner ───────────────────────────────────── */}
         {hasDraft && !editId && (
-          <View style={[styles.draftBanner, { backgroundColor: 'rgba(107,91,149,0.10)', borderColor: 'rgba(107,91,149,0.28)' }]}>
-            <View style={styles.draftLeft}>
-              <Icon name="edit-3" size={14} color="#8B70C8" />
+          <View style={c.draftBanner}>
+            <View style={c.draftLeft}>
+              <View style={c.draftIconWrap}>
+                <Icon name="edit-3" size={13} color="#8B70C8" />
+              </View>
               <View>
-                <Text style={[styles.draftTitle, { color: '#FDFAF7' }]}>Unfinished story</Text>
-                <Text style={[styles.draftSub, { color: 'rgba(255,255,255,0.45)' }]}>You have a draft saved</Text>
+                <Text style={c.draftTitle}>Unfinished story</Text>
+                <Text style={c.draftSub}>You have a draft saved</Text>
               </View>
             </View>
-            <View style={styles.draftActions}>
+            <View style={c.draftActions}>
               <TouchableOpacity
                 onPress={loadDraft}
-                style={[styles.draftBtn, { backgroundColor: 'rgba(107,91,149,0.22)', borderColor: 'rgba(107,91,149,0.50)' }]}
+                style={[c.draftBtn, { backgroundColor: 'rgba(107,91,149,0.22)', borderColor: 'rgba(107,91,149,0.50)' }]}
               >
-                <Text style={[styles.draftBtnText, { color: '#C8B8E8' }]}>Resume</Text>
+                <Text style={[c.draftBtnTxt, { color: '#C8B8E8' }]}>Resume</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={discardDraft}
-                style={[styles.draftBtn, { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' }]}
+                style={[c.draftBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.10)' }]}
               >
-                <Text style={[styles.draftBtnText, { color: 'rgba(255,255,255,0.45)' }]}>Discard</Text>
+                <Text style={[c.draftBtnTxt, { color: 'rgba(255,255,255,0.38)' }]}>Discard</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
 
-        {/* ── Title + Description ──────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('create.titleLabel')}</Text>
-          <TextInput
-            style={[styles.titleInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: `rgba(255,255,255,0.04)` }]}
-            placeholder={tr('create.titlePlaceholder')}
-            placeholderTextColor={colors.mutedForeground}
-            value={title}
-            onChangeText={t => { setTitle(t); if (error) setError(null); }}
-            returnKeyType="next"
-          />
+        {/* ── Story identity — title, mood, desc ─────────────── */}
+        <View style={c.identityBlock}>
+          {/* Mood accent side strip */}
+          <View style={[c.moodStrip, { backgroundColor: moodColor, shadowColor: moodColor }]} />
 
-          <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>{tr('create.descLabel')}</Text>
-          <View style={styles.descWrapper}>
+          <View style={c.identityInner}>
+            {/* Mood picker — always visible */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={c.moodRow}
+            >
+              {MOODS.map(m => {
+                const active = mood === m.label;
+                return (
+                  <TouchableOpacity
+                    key={m.label}
+                    style={[c.moodPill, {
+                      borderColor:     active ? m.color : 'rgba(255,255,255,0.07)',
+                      backgroundColor: active ? `${m.color}1C` : 'rgba(255,255,255,0.03)',
+                    }]}
+                    onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
+                  >
+                    <Icon name={m.icon} size={12} color={active ? m.color : 'rgba(200,185,255,0.32)'} />
+                    <Text style={[c.moodPillTxt, { color: active ? m.color : 'rgba(200,185,255,0.32)' }]}>
+                      {tr(`moods.${m.label}` as any)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Chapter title — large borderless input */}
             <TextInput
-              style={[styles.descInput, { color: colors.foreground }]}
-              placeholder={tr('create.descPlaceholder')}
-              placeholderTextColor={colors.mutedForeground}
+              style={c.titleInput}
+              placeholder="Chapter title…"
+              placeholderTextColor="rgba(200,185,255,0.18)"
+              value={title}
+              onChangeText={t => { setTitle(t); if (error) setError(null); }}
+              returnKeyType="next"
+              maxLength={80}
+            />
+            <View style={c.titleFooter}>
+              <View style={[c.titleUnderline, { backgroundColor: moodColor, opacity: title.length > 0 ? 0.40 : 0.12 }]} />
+              <Text style={c.charCount}>{title.length}/80</Text>
+            </View>
+
+            {/* Description — soft italic */}
+            <TextInput
+              style={c.descInput}
+              placeholder="A brief scene-setter…"
+              placeholderTextColor="rgba(200,185,255,0.15)"
               value={desc}
               onChangeText={setDesc}
               multiline
               textAlignVertical="top"
-              returnKeyType="default"
             />
-            <Image source={Images.character_default} style={styles.descIllustration} contentFit="contain" />
           </View>
         </View>
 
-        {/* ── Visibility (always visible) ───────────────────────── */}
-        <View style={[styles.visibilityBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.visibilityLeft}>
-            <Icon name={isPublic ? 'globe' : 'lock'} size={14} color={isPublic ? '#78C8A0' : colors.mutedForeground} />
-            <View>
-              <Text style={[styles.visibilityTitle, { color: colors.foreground }]}>
-                {isPublic ? tr('common.public') : tr('common.private')}
-              </Text>
-              <Text style={[styles.visibilitySub, { color: colors.mutedForeground }]}>
-                {isPublic ? tr('create.visibilityPublicHint') : tr('create.visibilityPrivateHint')}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.privRow}>
-            {(['Public', 'Private'] as const).map(opt => {
-              const active = opt === 'Public' ? isPublic : !isPublic;
-              return (
-                <TouchableOpacity
-                  key={opt}
-                  style={[styles.privBtn, {
-                    backgroundColor: active ? (opt === 'Public' ? 'rgba(120,200,160,0.16)' : `${colors.primary}18`) : colors.muted,
-                    borderColor:     active ? (opt === 'Public' ? 'rgba(120,200,160,0.40)' : `${colors.primary}45`) : colors.border,
-                    borderWidth:     active ? 1.5 : 1,
-                  }]}
-                  onPress={() => { setIsPublic(opt === 'Public'); Haptics.selectionAsync(); }}
-                >
-                  <Icon name={opt === 'Public' ? 'globe' : 'lock'} size={12} color={active ? (opt === 'Public' ? '#78C8A0' : colors.primary) : colors.mutedForeground} />
-                  <Text style={[styles.chipText, { color: active ? (opt === 'Public' ? '#78C8A0' : colors.primary) : colors.mutedForeground }]}>
-                    {opt === 'Public' ? tr('common.public') : tr('common.private')}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+        {/* ── Visibility + location row ──────────────────────── */}
+        <View style={c.metaRow}>
+          {(['Public', 'Private'] as const).map(opt => {
+            const active   = opt === 'Public' ? isPublic : !isPublic;
+            const optColor = opt === 'Public' ? '#78C8A0' : '#9B7FE8';
+            return (
+              <TouchableOpacity
+                key={opt}
+                style={[c.visBtn, {
+                  borderColor:     active ? `${optColor}45` : 'rgba(255,255,255,0.07)',
+                  backgroundColor: active ? `${optColor}14` : 'rgba(255,255,255,0.03)',
+                }]}
+                onPress={() => { setIsPublic(opt === 'Public'); Haptics.selectionAsync(); }}
+              >
+                <Icon
+                  name={opt === 'Public' ? 'globe' : 'lock'}
+                  size={12}
+                  color={active ? optColor : 'rgba(200,185,255,0.28)'}
+                />
+                <Text style={[c.visBtnTxt, { color: active ? optColor : 'rgba(200,185,255,0.28)' }]}>
+                  {opt === 'Public' ? tr('common.public') : tr('common.private')}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+          <Text style={c.visHint}>
+            {isPublic ? 'Visible in Discover' : 'Only you can see this'}
+          </Text>
         </View>
 
-        {/* ── Settings (expandable) ─────────────────────────────── */}
+        {/* ── Location (expandable) ──────────────────────────── */}
         {showMeta && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('create.moodLabel')}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-              {MOODS.map(m => (
-                <TouchableOpacity
-                  key={m.label}
-                  style={[styles.chip, {
-                    backgroundColor: mood === m.label ? `${m.color}22` : `${m.color}0C`,
-                    borderColor:     mood === m.label ? `${m.color}55` : `${m.color}18`,
-                    borderWidth:     mood === m.label ? 1.5 : 1,
-                  }]}
-                  onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
-                >
-                  <Icon name={m.icon} size={13} color={m.color} />
-                  <Text style={[styles.chipText, { color: m.color }]}>{tr(`moods.${m.label}` as any)}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground, marginTop: 14 }]}>{tr('create.locationLabel')}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-              {LOCATIONS.map(loc => (
-                <TouchableOpacity
-                  key={loc}
-                  style={[styles.chip, {
-                    backgroundColor: location === loc ? `${colors.primary}18` : `${colors.primary}08`,
-                    borderColor:     location === loc ? `${colors.primary}45` : `${colors.primary}15`,
-                    borderWidth:     location === loc ? 1.5 : 1,
-                  }]}
-                  onPress={() => setLocation(loc)}
-                >
-                  <Icon name="map-pin" size={12} color={location === loc ? colors.primary : colors.mutedForeground} />
-                  <Text style={[styles.chipText, { color: location === loc ? colors.primary : colors.mutedForeground }]}>{loc}</Text>
-                </TouchableOpacity>
-              ))}
+          <View style={c.locationSection}>
+            <Text style={c.locationLabel}>LOCATION</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={c.locationRow}>
+              {LOCATIONS.map(loc => {
+                const active = location === loc;
+                return (
+                  <TouchableOpacity
+                    key={loc}
+                    style={[c.locationPill, {
+                      borderColor:     active ? `${colors.primary}50` : 'rgba(255,255,255,0.07)',
+                      backgroundColor: active ? `${colors.primary}16` : 'rgba(255,255,255,0.03)',
+                    }]}
+                    onPress={() => setLocation(loc)}
+                  >
+                    <Icon name="map-pin" size={11} color={active ? colors.primary : 'rgba(200,185,255,0.28)'} />
+                    <Text style={[c.locationPillTxt, { color: active ? colors.primary : 'rgba(200,185,255,0.28)' }]}>
+                      {loc}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </ScrollView>
           </View>
         )}
 
-        {/* ── Pages ────────────────────────────────────────────── */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Pages</Text>
-              <Text style={[styles.sectionSub, { color: colors.mutedForeground }]}>Each page is a manga spread</Text>
+        {/* ── Pages ──────────────────────────────────────────── */}
+        <View style={c.pagesSection}>
+          <View style={c.pagesSectionHeader}>
+            <Text style={c.pagesSectionTitle}>Pages</Text>
+            <View style={[c.pagesCountBadge, { backgroundColor: `${moodColor}14`, borderColor: `${moodColor}28` }]}>
+              <Text style={[c.pagesCountTxt, { color: moodColor }]}>{pages.length} / {MAX_PAGES}</Text>
             </View>
-            <View style={[styles.badge, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}>
-              <Text style={[styles.badgeText, { color: colors.primary }]}>{pages.length} / {MAX_PAGES}</Text>
-            </View>
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity
+              style={[c.addPageInlineBtn, {
+                opacity:         pages.length >= MAX_PAGES ? 0.4 : 1,
+                backgroundColor: `${moodColor}16`,
+                borderColor:     `${moodColor}32`,
+              }]}
+              onPress={addPage}
+              disabled={pages.length >= MAX_PAGES}
+            >
+              <Icon name="plus" size={13} color={moodColor} />
+              <Text style={[c.addPageInlineTxt, { color: moodColor }]}>Add page</Text>
+            </TouchableOpacity>
           </View>
 
           {pages.map((page, i) => {
@@ -528,270 +570,264 @@ export default function CreateScreen() {
             const filledCount = page.panels.filter(p => p.text || p.bubbleText || p.imageUri || p.bgPreset).length;
 
             return (
-              <View key={page.id}>
-                {i > 0 && <View style={[styles.divider, { backgroundColor: colors.border }]} />}
-                <View style={styles.pageRow}>
-                  {/* Mini layout grid */}
-                  <MiniPageGrid page={page} getPanelImg={getPanelImageSource} />
+              <View
+                key={page.id}
+                style={[c.pageCard, { borderColor: filledCount > 0 ? `${moodColor}18` : 'rgba(200,185,255,0.06)' }]}
+              >
+                {/* Mini grid thumbnail */}
+                <MiniPageGrid page={page} getPanelImg={getPanelImageSource} />
 
-                  {/* Info */}
-                  <View style={styles.pageInfo}>
-                    <View style={styles.pageInfoTop}>
-                      <Text style={[styles.pageNum, { color: colors.foreground }]}>Page {i + 1}</Text>
-                      <View style={[styles.layoutBadge, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
-                        <Text style={[styles.layoutBadgeText, { color: colors.primary }]}>{layoutDef.label}</Text>
-                      </View>
+                {/* Info */}
+                <View style={c.pageCardInfo}>
+                  <View style={c.pageCardTopRow}>
+                    <Text style={c.pageCardNum}>Page {i + 1}</Text>
+                    <View style={[c.pageLayoutTag, { backgroundColor: `${moodColor}10`, borderColor: `${moodColor}20` }]}>
+                      <Text style={[c.pageLayoutTagTxt, { color: `${moodColor}CC` }]}>{layoutDef.label}</Text>
                     </View>
-                    <Text
-                      style={[styles.pagePreview, { color: preview ? colors.mutedForeground : `${colors.mutedForeground}55`, fontStyle: preview ? 'italic' : 'normal' }]}
-                      numberOfLines={2}
-                    >
-                      {preview || 'Empty — tap Edit to add content'}
-                    </Text>
-                    <Text style={[styles.panelCount, { color: `${colors.primary}70` }]}>
-                      {filledCount}/{layoutDef.count} panels filled
-                    </Text>
                   </View>
+                  <Text
+                    style={[c.pageCardPreview, !preview && c.pageCardPreviewEmpty]}
+                    numberOfLines={2}
+                  >
+                    {preview || 'Tap Edit to add content'}
+                  </Text>
+                  {/* Filled-panel dot track */}
+                  <View style={c.pageCardDotRow}>
+                    {Array.from({ length: layoutDef.count }).map((_, di) => (
+                      <View
+                        key={di}
+                        style={[c.pageCardDot, {
+                          backgroundColor: di < filledCount
+                            ? moodColor
+                            : 'rgba(255,255,255,0.08)',
+                          opacity: di < filledCount ? 0.75 : 1,
+                        }]}
+                      />
+                    ))}
+                  </View>
+                </View>
 
-                  {/* Actions */}
-                  <View style={styles.pageActions}>
+                {/* Action buttons */}
+                <View style={c.pageCardActions}>
+                  <TouchableOpacity
+                    style={[c.pageActionBtn, { backgroundColor: `${moodColor}18`, borderColor: `${moodColor}30` }]}
+                    onPress={() => editPage(page.id, page.panels)}
+                  >
+                    <Icon name="edit-2" size={14} color={moodColor} />
+                  </TouchableOpacity>
+                  {pages.length > 1 && (
                     <TouchableOpacity
-                      style={[styles.actionBtn, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}
-                      onPress={() => editPage(page.id, page.panels)}
+                      style={[c.pageActionBtn, { backgroundColor: 'rgba(224,85,104,0.10)', borderColor: 'rgba(224,85,104,0.22)' }]}
+                      onPress={() => deletePage(page.id)}
                     >
-                      <Icon name="edit-2" size={14} color={colors.primary} />
+                      <Icon name="trash-2" size={13} color="#E05568" />
                     </TouchableOpacity>
-                    {pages.length > 1 && (
-                      <TouchableOpacity
-                        style={[styles.actionBtn, { backgroundColor: 'rgba(224,85,104,0.12)', borderColor: 'rgba(224,85,104,0.25)' }]}
-                        onPress={() => deletePage(page.id)}
-                      >
-                        <Icon name="trash-2" size={13} color="#E05568" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+                  )}
                 </View>
               </View>
             );
           })}
         </View>
 
-        {/* ── Add Page button ───────────────────────────────────── */}
-        <TouchableOpacity
-          style={[styles.addPageBtn, { borderColor: `${colors.primary}30`, opacity: pages.length >= MAX_PAGES ? 0.4 : 1 }]}
-          onPress={addPage}
-          activeOpacity={0.8}
-          disabled={pages.length >= MAX_PAGES}
-        >
-          <LinearGradient
-            colors={[`${colors.primary}1A`, `${colors.primary}0A`, 'transparent']}
-            style={styles.addPageGrad}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <View style={[styles.addPageIconWrap, { backgroundColor: `${colors.primary}22` }]}>
-              <Icon name="plus" size={20} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.addPageTitle, { color: colors.foreground }]}>Add Page</Text>
-              <Text style={[styles.addPageSub, { color: colors.mutedForeground }]}>New set of manga panels</Text>
-            </View>
-            <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
-          </LinearGradient>
-        </TouchableOpacity>
-
         {/* Error */}
         {error && (
-          <View style={styles.errorBanner}>
+          <View style={c.errorBanner}>
             <Icon name="alert-circle" size={14} color="#E05C5C" />
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={c.errorTxt}>{error}</Text>
           </View>
         )}
 
-        {/* ── Publish button ───────────────────────────────────── */}
+        {/* ── Publish / Save button ──────────────────────────── */}
         <TouchableOpacity
-          style={[styles.publishBtn, { opacity: posting ? 0.6 : 1 }]}
+          style={[c.publishBtn, { opacity: posting ? 0.65 : 1 }]}
           onPress={handlePublish}
           disabled={posting}
-          activeOpacity={0.85}
+          activeOpacity={0.88}
         >
           <LinearGradient
-            colors={[colors.primary, '#6040E8', '#4A2ED0']}
-            style={styles.publishGrad}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+            colors={[moodColor, `${moodColor}CC`, '#3018A8']}
+            style={c.publishGrad}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
           >
-            <Icon name={editId ? 'check' : 'send'} size={15} color="#fff" />
-            <Text style={styles.publishText}>
-              {posting ? (editId ? 'Saving…' : 'Publishing…') : (editId ? 'Save Changes' : 'Publish Story')}
+            <Icon name={editId ? 'check' : 'send'} size={17} color="#fff" />
+            <Text style={c.publishTxt}>
+              {posting
+                ? (editId ? 'Saving…' : 'Publishing…')
+                : (editId ? 'Save Changes' : 'Publish Story')}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
+
+        {/* Soft bottom note */}
+        <Text style={c.bottomNote}>
+          {isPublic ? '✦ Your story will appear in Discover' : '✦ Only visible to you'}
+        </Text>
+
       </KeyboardAwareScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root:       { flex: 1 },
-  headerGrad: { position: 'absolute', top: 0, left: 0, right: 0 },
+const c = StyleSheet.create({
+  root:        { flex: 1, backgroundColor: '#04030C' },
+  moodAmbient: { position: 'absolute', top: 0, left: 0, right: 0, height: 360 },
+  headerGrad:  { position: 'absolute', top: 0, left: 0, right: 0 },
 
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
-    flexDirection:    'row',
-    alignItems:       'center',
-    justifyContent:   'space-between',
-    paddingHorizontal: 20,
-    paddingBottom:    16,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18, paddingBottom: 10,
   },
-  headerBtn: {
-    width: 40, height: 40,
-    borderRadius: 20,
+  navBtn: {
+    width: 38, height: 38, borderRadius: 19,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.07)',
-    borderWidth: 1, borderColor: 'rgba(200,184,232,0.10)',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)',
   },
-  headerTitle: {
-    fontSize: 18, fontFamily: 'Satoshi-Bold',
-    color: '#FFFFFF', letterSpacing: -0.4,
-    textAlign: 'center',
-  },
-  headerSub: {
-    fontSize: 11, fontFamily: 'Satoshi-Regular',
-    textAlign: 'center', marginTop: 1,
-  },
+  headerCenter:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerMoodDot:   { width: 8, height: 8, borderRadius: 4, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 6 },
+  headerTitle:     { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.92)', letterSpacing: -0.3 },
+  headerPageCount: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,185,255,0.28)', letterSpacing: 0.2 },
 
-  scroll: { paddingHorizontal: 16, paddingTop: 12 },
+  scroll: { paddingHorizontal: 16, paddingTop: 8 },
 
-  card: {
-    borderRadius: 16, borderWidth: 1,
-    padding: 16, marginBottom: 12,
+  // ── Draft banner ──────────────────────────────────────────────────────────
+  draftBanner: {
+    borderRadius: 18, borderWidth: 1,
+    borderColor: 'rgba(107,91,149,0.30)',
+    backgroundColor: 'rgba(107,91,149,0.10)',
+    padding: 14, marginBottom: 14,
   },
+  draftLeft:    { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 },
+  draftIconWrap:{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(107,91,149,0.20)', alignItems: 'center', justifyContent: 'center' },
+  draftTitle:   { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.90)' },
+  draftSub:     { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(255,255,255,0.40)', marginTop: 2 },
+  draftActions: { flexDirection: 'row', gap: 8 },
+  draftBtn:     { borderRadius: 10, borderWidth: 1, paddingVertical: 7, paddingHorizontal: 14 },
+  draftBtnTxt:  { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
-  fieldLabel: {
-    fontSize: 10, fontFamily: 'Satoshi-Bold',
-    letterSpacing: 1.6, textTransform: 'uppercase', marginBottom: 10,
+  // ── Story identity block ──────────────────────────────────────────────────
+  identityBlock: { flexDirection: 'row', marginBottom: 16 },
+  moodStrip: {
+    width: 3, borderRadius: 2, marginRight: 14,
+    marginTop: 6, marginBottom: 6,
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 8,
   },
+  identityInner: { flex: 1 },
 
-  titleInput: {
-    fontSize: 17, fontFamily: 'Satoshi-Medium',
-    borderWidth: 1, borderRadius: 12,
-    paddingHorizontal: 13, paddingVertical: 12,
-  },
-
-  descWrapper:     { position: 'relative', minHeight: 80 },
-  descInput: {
-    fontSize: 13, fontFamily: 'Satoshi-Regular',
-    lineHeight: 20, minHeight: 80, paddingRight: 72,
-    color: '#fff',
-  },
-  descIllustration: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 64, height: 64, opacity: 0.28,
-  },
-
-  chipRow: { marginBottom: 4 },
-  chip: {
+  // Mood pills
+  moodRow: { flexDirection: 'row', gap: 6, paddingBottom: 14, paddingRight: 12 },
+  moodPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 11, paddingVertical: 5,
-    borderRadius: 20, marginRight: 7,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 18, borderWidth: 1,
   },
-  chipText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  moodPillTxt: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
-  visibilityBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10,
-    marginBottom: 12, gap: 12,
+  // Title
+  titleInput: {
+    fontSize: 28, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(248,244,255,0.97)',
+    letterSpacing: -0.9, lineHeight: 34,
+    paddingVertical: 2, marginBottom: 6,
   },
-  visibilityLeft: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
-  visibilityTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-  visibilitySub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 1 },
+  titleFooter: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  titleUnderline: { flex: 1, height: 1.5, borderRadius: 1 },
+  charCount: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,185,255,0.22)', marginLeft: 10 },
 
-  privRow: { flexDirection: 'row', gap: 8 },
-  privBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 5,
-    paddingHorizontal: 11, height: 32, borderRadius: 16,
-  },
-
-  sectionHeader: {
-    flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between', marginBottom: 14,
-  },
-  sectionTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-  sectionSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2, fontStyle: 'italic' },
-  badge: {
-    paddingHorizontal: 9, paddingVertical: 3,
-    borderRadius: 10, borderWidth: 1,
-  },
-  badgeText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-
-  divider: { height: 1, marginHorizontal: -2, opacity: 0.4, marginVertical: 2 },
-
-  pageRow: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: 10, paddingVertical: 12,
+  // Description
+  descInput: {
+    fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
+    color: 'rgba(220,210,255,0.62)',
+    lineHeight: 22, minHeight: 55,
+    paddingVertical: 2,
   },
 
-  pageInfo:    { flex: 1, gap: 4 },
-  pageInfoTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  pageNum:     { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-  layoutBadge: {
-    paddingHorizontal: 8, paddingVertical: 2,
-    borderRadius: 10, borderWidth: 1,
+  // ── Visibility + meta row ─────────────────────────────────────────────────
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12, flexWrap: 'wrap' },
+  visBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 18, borderWidth: 1,
   },
-  layoutBadgeText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  pagePreview: { fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 18 },
-  panelCount:  { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  visBtnTxt: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  visHint:   { fontSize: 10.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.25)', fontStyle: 'italic', marginLeft: 2 },
 
-  pageActions: { gap: 6 },
-  actionBtn: {
-    width: 34, height: 34, borderRadius: 10,
+  // ── Location ──────────────────────────────────────────────────────────────
+  locationSection: { marginBottom: 12 },
+  locationLabel: {
+    fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8,
+    textTransform: 'uppercase', color: 'rgba(200,185,255,0.32)',
+    marginBottom: 8,
+  },
+  locationRow: { flexDirection: 'row', gap: 6, paddingRight: 12 },
+  locationPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 18, borderWidth: 1,
+  },
+  locationPillTxt: { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
+
+  // ── Pages section ─────────────────────────────────────────────────────────
+  pagesSection:       { marginBottom: 12 },
+  pagesSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  pagesSectionTitle:  { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.80)', letterSpacing: -0.2 },
+  pagesCountBadge:    { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 9, borderWidth: 1 },
+  pagesCountTxt:      { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  addPageInlineBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 11, paddingVertical: 6,
+    borderRadius: 16, borderWidth: 1,
+  },
+  addPageInlineTxt: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+
+  // Page card row
+  pageCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 12, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.022)',
+    borderWidth: 1,
+    marginBottom: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 4,
+  },
+  pageCardInfo:        { flex: 1, gap: 5 },
+  pageCardTopRow:      { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  pageCardNum:         { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.86)' },
+  pageLayoutTag:       { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
+  pageLayoutTagTxt:    { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  pageCardPreview:     { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,185,255,0.52)', lineHeight: 17 },
+  pageCardPreviewEmpty:{ color: 'rgba(200,185,255,0.22)', fontStyle: 'normal' },
+  pageCardDotRow:      { flexDirection: 'row', gap: 4, marginTop: 2 },
+  pageCardDot:         { width: 16, height: 3, borderRadius: 2 },
+  pageCardActions:     { gap: 6, alignItems: 'center' },
+  pageActionBtn: {
+    width: 36, height: 36, borderRadius: 12,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
   },
 
-  addPageBtn: {
-    borderWidth: 1, borderRadius: 16,
-    overflow: 'hidden', marginBottom: 12,
-    height: 64,
-  },
-  addPageGrad: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
-    gap: 12, paddingHorizontal: 16, paddingVertical: 0, borderRadius: 16,
-  },
-  addPageIconWrap: {
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  addPageTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  addPageSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 1 },
-
+  // ── Error ─────────────────────────────────────────────────────────────────
   errorBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: 'rgba(224,92,92,0.12)', borderWidth: 1,
-    borderColor: 'rgba(224,92,92,0.28)', borderRadius: 12,
+    backgroundColor: 'rgba(224,92,92,0.10)', borderWidth: 1,
+    borderColor: 'rgba(224,92,92,0.25)', borderRadius: 14,
     padding: 12, marginBottom: 10,
   },
-  errorText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#E05C5C' },
+  errorTxt: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#E05C5C' },
 
-  publishBtn:  { borderRadius: 20, overflow: 'hidden', marginTop: 8 },
+  // ── Publish button ────────────────────────────────────────────────────────
+  publishBtn:  { borderRadius: 24, overflow: 'hidden', marginBottom: 8 },
   publishGrad: {
     flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 8, paddingVertical: 16, paddingHorizontal: 24,
+    justifyContent: 'center', gap: 8,
+    paddingVertical: 20, paddingHorizontal: 24,
   },
-  publishText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  publishTxt: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: -0.2 },
 
-  draftBanner: {
-    borderRadius: 14, borderWidth: 1, padding: 14,
-    marginBottom: 12, gap: 10,
+  bottomNote: {
+    fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
+    color: 'rgba(200,185,255,0.22)', textAlign: 'center',
+    marginBottom: 8,
   },
-  draftLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  draftTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
-  draftSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2 },
-  draftActions: { flexDirection: 'row', gap: 8 },
-  draftBtn: {
-    borderRadius: 8, borderWidth: 1,
-    paddingVertical: 7, paddingHorizontal: 13,
-  },
-  draftBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 });

@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import CropImageModal from '@/components/CropImageModal';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { persistImageUri } from '@/utils/persistImage';
 import { Image } from 'expo-image';
@@ -13,8 +14,6 @@ import {
   View,
 } from 'react-native';
 
-import { useColors } from '@/hooks/useColors';
-import { SHADOW } from '@/constants/colors';
 import type { StoryPanel } from '@/context/AppContext';
 
 interface MangaPanelEditorProps {
@@ -26,11 +25,10 @@ interface MangaPanelEditorProps {
 }
 
 export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: MangaPanelEditorProps) {
-  const colors = useColors();
-  const [pendingUri, setPendingUri]     = useState<string | null>(null);
-  const [uploading, setUploading]       = useState(false);
-  const [uploadError, setUploadError]   = useState<string | null>(null);
-  const [failedUri, setFailedUri]       = useState<string | null>(null);
+  const [pendingUri, setPendingUri]   = useState<string | null>(null);
+  const [uploading, setUploading]     = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [failedUri, setFailedUri]     = useState<string | null>(null);
 
   async function pickImage() {
     setUploadError(null);
@@ -70,107 +68,120 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
     if (failedUri) await doUpload(failedUri);
   }
 
+  const wordCount = panel.text.trim() ? panel.text.trim().split(/\s+/).filter(Boolean).length : 0;
+
   return (
     <>
-      <View style={[styles.container, { borderColor: colors.border, backgroundColor: colors.card }, SHADOW.xs]}>
-        {/* Panel header */}
-        <View style={[styles.header, { borderBottomColor: colors.border }]}>
-          <View style={styles.panelNumRow}>
-            <View style={[styles.panelNum, { backgroundColor: `${colors.primary}12` }]}>
-              <Text style={[styles.panelNumText, { color: colors.primary }]}>{index + 1}</Text>
-            </View>
-            <Text style={[styles.panelLabel, { color: colors.mutedForeground }]}>Panel {index + 1}</Text>
-          </View>
-          {total > 1 && (
-            <TouchableOpacity
-              onPress={onDelete}
-              style={[styles.deleteBtn, { backgroundColor: `${colors.destructive}0F` }]}
-              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-            >
-              <Icon name="trash-2" size={13} color={colors.destructive} />
-            </TouchableOpacity>
-          )}
-        </View>
+      <View style={pm.container}>
 
-        {/* Image area */}
+        {/* ── Image area ────────────────────────────────────── */}
         <TouchableOpacity
-          style={[
-            styles.imageArea,
-            {
-              backgroundColor: panel.imageUri ? 'transparent' : colors.muted,
-              borderColor: uploadError ? colors.destructive : panel.imageUri ? 'transparent' : colors.border,
-              borderStyle: panel.imageUri ? 'solid' : 'dashed',
-            },
-          ]}
+          style={pm.imageArea}
           onPress={uploadError ? handleRetry : pickImage}
-          activeOpacity={0.8}
+          activeOpacity={0.88}
           disabled={uploading}
         >
+          {panel.imageUri ? (
+            <Image
+              source={{ uri: panel.imageUri }}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <LinearGradient
+              colors={['#16112E', '#0D0A22', '#060412']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0.3, y: 0 }}
+              end={{ x: 0.7, y: 1 }}
+            />
+          )}
+
+          {/* Bottom scrim for text legibility */}
+          <LinearGradient
+            colors={['transparent', 'rgba(4,3,12,0.70)']}
+            style={pm.bottomScrim}
+            pointerEvents="none"
+          />
+
+          {/* Panel number badge — top left */}
+          <View style={pm.numBadge}>
+            <Text style={pm.numBadgeTxt}>{index + 1}</Text>
+          </View>
+
+          {/* Delete button — top right */}
+          {total > 1 && (
+            <TouchableOpacity
+              style={pm.deleteBtn}
+              onPress={onDelete}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            >
+              <Icon name="trash-2" size={12} color="rgba(255,160,160,0.75)" />
+            </TouchableOpacity>
+          )}
+
+          {/* State overlays */}
           {uploading ? (
-            <View style={styles.imagePlaceholder}>
-              <ActivityIndicator color={colors.primary} size="large" />
-              <Text style={[styles.placeholderSub, { color: colors.mutedForeground }]}>Uploading…</Text>
+            <View style={pm.stateOverlay}>
+              <ActivityIndicator color="rgba(220,205,255,0.85)" size="large" />
+              <Text style={pm.stateOverlayTxt}>Uploading…</Text>
             </View>
           ) : uploadError ? (
-            <View style={styles.imagePlaceholder}>
-              <View style={[styles.cameraIconBg, { backgroundColor: `${colors.destructive}15` }]}>
-                <Icon name="wifi-off" size={28} color={`${colors.destructive}90`} />
+            <View style={pm.stateOverlay}>
+              <View style={pm.stateIconWrap}>
+                <Icon name="wifi-off" size={26} color="rgba(255,120,120,0.80)" />
               </View>
-              <Text style={[styles.placeholderTitle, { color: colors.destructive }]}>Upload failed</Text>
-              <Text style={[styles.placeholderSub, { color: colors.mutedForeground }]}>Tap to retry</Text>
+              <Text style={[pm.stateOverlayTxt, { color: 'rgba(255,140,140,0.90)' }]}>Upload failed</Text>
+              <Text style={pm.stateOverlaySub}>Tap to retry</Text>
             </View>
-          ) : panel.imageUri ? (
-            <>
-              <Image source={{ uri: panel.imageUri }} style={styles.panelImage} contentFit="cover" cachePolicy="memory-disk" />
-              <View style={styles.imageEditOverlay}>
-                <View style={[styles.editChip, { backgroundColor: 'rgba(255,255,255,0.92)' }]}>
-                  <Icon name="camera" size={12} color="#1E1830" />
-                  <Text style={[styles.editChipText, { color: '#1E1830' }]}>Change photo</Text>
-                </View>
+          ) : !panel.imageUri ? (
+            <View style={pm.stateOverlay}>
+              <View style={pm.addImgIcon}>
+                <Icon name="camera" size={24} color="rgba(200,184,232,0.55)" />
               </View>
-            </>
+              <Text style={pm.stateOverlayTxt}>Add scene</Text>
+              <Text style={pm.stateOverlaySub}>Tap to choose from gallery</Text>
+            </View>
           ) : (
-            <View style={styles.imagePlaceholder}>
-              <View style={[styles.cameraIconBg, { backgroundColor: `${colors.primary}12` }]}>
-                <Icon name="image" size={28} color={`${colors.primary}90`} />
+            <View style={pm.imageEditOverlay}>
+              <View style={pm.editChip}>
+                <Icon name="camera" size={11} color="rgba(255,255,255,0.88)" />
+                <Text style={pm.editChipTxt}>Change</Text>
               </View>
-              <Text style={[styles.placeholderTitle, { color: colors.mutedForeground }]}>Add panel image</Text>
-              <Text style={[styles.placeholderSub, { color: `${colors.mutedForeground}80` }]}>Tap to choose from gallery</Text>
             </View>
           )}
         </TouchableOpacity>
 
-        {/* Error banner with retry */}
+        {/* Upload error banner */}
         {uploadError && !uploading && (
-          <View style={[styles.errorRow, { backgroundColor: `${colors.destructive}10`, borderTopColor: `${colors.destructive}25` }]}>
-            <Icon name="alert-circle" size={13} color={colors.destructive} />
-            <Text style={[styles.errorText, { color: colors.destructive }]} numberOfLines={2}>{uploadError}</Text>
-            <TouchableOpacity onPress={handleRetry} style={[styles.retryBtn, { borderColor: `${colors.destructive}40`, backgroundColor: `${colors.destructive}12` }]}>
-              <Text style={[styles.retryText, { color: colors.destructive }]}>Retry</Text>
+          <View style={pm.errorRow}>
+            <Icon name="alert-circle" size={12} color="#E05C5C" />
+            <Text style={pm.errorTxt} numberOfLines={1}>{uploadError}</Text>
+            <TouchableOpacity onPress={handleRetry} style={pm.retryBtn}>
+              <Text style={pm.retryTxt}>Retry</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        {/* Narration text */}
-        <View style={[styles.textSection, { borderTopColor: colors.border }]}>
-          <Text style={[styles.textLabel, { color: colors.mutedForeground }]}>NARRATION</Text>
+        {/* ── Narration area ───────────────────────────────── */}
+        <View style={pm.narrationArea}>
           <TextInput
-            style={[
-              styles.textInput,
-              { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.background },
-            ]}
-            placeholder="Write what happens in this panel..."
-            placeholderTextColor={`${colors.mutedForeground}70`}
+            style={pm.narrationInput}
+            placeholder="What unfolds in this scene..."
+            placeholderTextColor="rgba(180,165,230,0.22)"
             value={panel.text}
             onChangeText={t => onChange({ ...panel, text: t })}
             multiline
             textAlignVertical="top"
             returnKeyType="default"
           />
+          {wordCount > 0 && (
+            <Text style={pm.wordCount}>{wordCount}w</Text>
+          )}
         </View>
+
       </View>
 
-      {/* Crop modal — rendered outside the card so it covers the full screen */}
       {pendingUri && (
         <CropImageModal
           visible
@@ -183,42 +194,112 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
   );
 }
 
-const styles = StyleSheet.create({
+const pm = StyleSheet.create({
   container: {
-    borderRadius: 18,
-    borderWidth: 1,
+    borderRadius: 24,
     overflow: 'hidden',
+    backgroundColor: '#08060F',
+    borderWidth: 1,
+    borderColor: 'rgba(200,185,255,0.08)',
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.55,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    borderBottomWidth: 1,
-  },
-  panelNumRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  panelNum: {
-    width: 26, height: 26, borderRadius: 8,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  panelNumText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
-  panelLabel: { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 0.2 },
-  deleteBtn: { padding: 7, borderRadius: 9 },
+
   imageArea: {
     width: '100%',
     aspectRatio: 3 / 4,
-    borderTopWidth: 0,
-    borderBottomWidth: 1,
+    position: 'relative',
     overflow: 'hidden',
   },
-  panelImage: { width: '100%', height: '100%' },
-  imageEditOverlay: {
+
+  bottomScrim: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+  },
+
+  numBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: 'rgba(0,0,0,0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  numBadgeTxt: {
+    fontSize: 13,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(255,255,255,0.82)',
+  },
+
+  deleteBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0,0,0,0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,100,100,0.20)',
+  },
+
+  stateOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  stateIconWrap: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: 'rgba(255,100,100,0.10)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  stateOverlayTxt: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,210,255,0.70)',
+  },
+  stateOverlaySub: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,185,255,0.38)',
+  },
+
+  addImgIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(200,184,232,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,184,232,0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+
+  imageEditOverlay: {
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'flex-end',
-    paddingBottom: 14,
+    alignItems: 'center',
+    paddingBottom: 16,
   },
   editChip: {
     flexDirection: 'row',
@@ -227,57 +308,68 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
-  editChipText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
-  imagePlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
+  editChipTxt: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(255,255,255,0.88)',
   },
-  cameraIconBg: {
-    width: 64, height: 64, borderRadius: 32,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  placeholderTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  placeholderSub: { fontSize: 12, fontFamily: 'Satoshi-Regular' },
+
   errorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    backgroundColor: 'rgba(224,92,92,0.08)',
     borderTopWidth: 1,
+    borderTopColor: 'rgba(224,92,92,0.16)',
   },
-  errorText: {
+  errorTxt: {
     flex: 1,
     fontSize: 12,
     fontFamily: 'Satoshi-Regular',
+    color: '#E05C5C',
     lineHeight: 16,
   },
   retryBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9,
     borderWidth: 1,
-    flexShrink: 0,
+    borderColor: 'rgba(224,92,92,0.35)',
+    backgroundColor: 'rgba(224,92,92,0.10)',
   },
-  retryText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
-  textSection: {
-    padding: 14,
-    gap: 9,
+  retryTxt: {
+    fontSize: 11.5,
+    fontFamily: 'Satoshi-Bold',
+    color: '#E05C5C',
+  },
+
+  narrationArea: {
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 16,
     borderTopWidth: 1,
+    borderTopColor: 'rgba(200,185,255,0.06)',
+    gap: 0,
   },
-  textLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase' },
-  textInput: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
+  narrationInput: {
     fontSize: 14,
     fontFamily: 'Satoshi-Regular',
-    lineHeight: 22,
-    minHeight: 90,
     fontStyle: 'italic',
+    color: 'rgba(230,220,255,0.82)',
+    lineHeight: 22,
+    minHeight: 72,
+  },
+  wordCount: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Medium',
+    color: 'rgba(180,165,230,0.28)',
+    textAlign: 'right',
+    marginTop: 6,
   },
 });
