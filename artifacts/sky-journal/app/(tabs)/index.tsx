@@ -250,33 +250,30 @@ function BreathRing({ accent, r = 46 }: { accent: string; r?: number }) {
 function DailySpark({ onWrite }: { onWrite: () => void }) {
   const today  = new Date();
   const prompt = DAILY_SPARKS[(today.getDate() - 1) % DAILY_SPARKS.length]!;
-  const date   = today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   return (
-    <TouchableOpacity
-      style={ds.card}
-      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onWrite(); }}
-      activeOpacity={0.84}
-    >
+    <View style={ds.card}>
       <LinearGradient
-        colors={['rgba(200,168,75,0.15)', 'rgba(200,168,75,0.04)', 'transparent']}
+        colors={['rgba(200,168,75,0.10)', 'rgba(200,168,75,0.03)', 'transparent']}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      {/* Top row: label + date */}
-      <View style={ds.eyebrow}>
-        <Text style={ds.sparkEmoji}>✨</Text>
-        <Text style={ds.label}>DAILY SPARK</Text>
-        <Text style={ds.date}>{date}</Text>
+      <View style={ds.left}>
+        <View style={ds.eyebrow}>
+          <Text style={ds.sparkEmoji}>✦</Text>
+          <Text style={ds.label}>Daily Spark</Text>
+        </View>
+        <Text style={ds.prompt}>{prompt}</Text>
       </View>
-      {/* Prompt */}
-      <Text style={ds.prompt}>{prompt}</Text>
-      {/* Write CTA */}
-      <View style={ds.cta}>
-        <Icon name="edit-3" size={12} color="#C8A84B" />
-        <Text style={ds.ctaTxt}>Write  →</Text>
-      </View>
-    </TouchableOpacity>
+      <TouchableOpacity
+        style={ds.writeBtn}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onWrite(); }}
+        activeOpacity={0.84}
+      >
+        <Icon name="edit-2" size={13} color="#fff" />
+        <Text style={ds.writeBtnTxt}>Write</Text>
+      </TouchableOpacity>
+    </View>
   );
 }
 const ds = StyleSheet.create({
@@ -286,14 +283,18 @@ const ds = StyleSheet.create({
     borderRadius: 22, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.022)',
     borderWidth: 1, borderColor: 'rgba(200,168,75,0.26)',
+    flexDirection: 'row', alignItems: 'center', gap: 12,
   },
-  eyebrow:   { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 12 },
-  sparkEmoji:{ fontSize: 14, lineHeight: 17 },
-  label:     { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8, color: '#C8A84B', flex: 1 },
-  date:      { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,168,75,0.42)' },
-  prompt:    { fontSize: 16, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(240,228,255,0.90)', lineHeight: 25, letterSpacing: -0.1, marginBottom: 14 },
-  cta:       { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  ctaTxt:    { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.4 },
+  left:       { flex: 1 },
+  eyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
+  sparkEmoji: { fontSize: 12, lineHeight: 15, color: '#C8A84B' },
+  label:      { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, color: '#C8A84B' },
+  prompt:     { fontSize: 15, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(240,228,255,0.90)', lineHeight: 22, letterSpacing: -0.1 },
+  writeBtn:   { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#6B5B95', flexShrink: 0 },
+  writeBtnTxt:{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: 0.2 },
+  date: {},
+  cta: {},
+  ctaTxt: {},
 });
 
 function FriendBubble({ post }: { post: DiscoverPost }) {
@@ -333,6 +334,9 @@ const fr = StyleSheet.create({
   initial:{ fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.90)' },
   newDot: { position: 'absolute', top: 44, right: 8, width: 11, height: 11, borderRadius: 6, borderWidth: 2.5, borderColor: '#080614' },
   name:   { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.65)', textAlign: 'center', maxWidth: 66 },
+  addWrap:  { alignItems: 'center', width: 58, gap: 5 },
+  addCircle:{ width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(168,136,248,0.10)', borderWidth: 1.5, borderColor: 'rgba(168,136,248,0.22)', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  addLabel: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(180,160,240,0.42)', textAlign: 'center' },
 });
 
 // ─── Campfire bubble (stories-style circle) ──────────────────────────────────
@@ -1201,10 +1205,9 @@ export default function HomeScreen() {
             pointerEvents="none"
           />
 
-          {/* ── Top bar: app label left · bell + settings right ── */}
-          <View style={s.heroBar}>
-            <Text style={s.heroAppLabel}>Sky Journal</Text>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
+          {/* ── Top bar: icons + avatar on the right ── */}
+          <View style={[s.heroBar, { justifyContent: 'flex-end' }]}>
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <TouchableOpacity
                 onPress={() => { router.push('/messages' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -1223,120 +1226,65 @@ export default function HomeScreen() {
                 <Icon name="bell" size={16} color="rgba(220,210,255,0.75)" />
                 {hasNotifs && <View style={[s.heroBadge, { backgroundColor: accent }]} />}
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/profile')}
+                style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
                 <Icon name="settings" size={16} color="rgba(220,210,255,0.75)" />
               </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* ── Identity row: avatar left · info right ── */}
-          <View style={s.heroIdentityRow}>
-            {/* Avatar — smaller, with breathing ring */}
-            <TouchableOpacity
-              style={s.heroAvatarWrap}
-              onPress={() => router.push('/(tabs)/profile')}
-              onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfits(true); }}
-              activeOpacity={0.88}
-            >
-              <BreathRing accent={accent} r={38} />
-              <LinearGradient
-                colors={[accent, '#A880F8', '#60C8F8', accent]}
-                style={s.heroAvatarRing}
-                start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}
-              >
-                <View style={s.heroAvatarInner}>
-                  <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" />
-                </View>
-              </LinearGradient>
-              {character.role && (
-                <View style={[s.roleTag, { backgroundColor: accent }]}>
-                  <Text style={s.roleText}>{character.role.slice(0, 1)}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
-            {/* Info column */}
-            <View style={s.heroInfoCol}>
-              <Text style={s.heroName} numberOfLines={1}>{character.name || 'Sky Child'}</Text>
-
-              {/* Mood + handle row */}
-              <View style={s.heroSubRow}>
-                {character.mood && (
-                  <>
-                    <View style={[s.moodDot, { backgroundColor: mc }]} />
-                    <Text style={[s.heroMood, { color: mc }]}>{character.mood}</Text>
-                  </>
-                )}
-                {character.username && (
-                  <Text style={s.heroHandle}>{character.mood ? ' · ' : ''}@{character.username}</Text>
-                )}
-              </View>
-
-              {/* Compact inline stats */}
-              <View style={s.heroStatInlineRow}>
-                {([
-                  { n: journalEntries.length, l: 'entries',  press: () => router.push('/(tabs)/log') },
-                  { n: stories.length,        l: 'stories',  press: () => router.push('/(tabs)/create') },
-                  { n: friends.length,        l: 'circle',   press: () => router.push('/(tabs)/discover') },
-                ] as const).map((item, i) => (
-                  <React.Fragment key={item.l}>
-                    {i > 0 && <Text style={s.heroStatDot}>·</Text>}
-                    <TouchableOpacity onPress={item.press} hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}>
-                      <Text style={s.heroStatInline}>
-                        <Text style={s.heroStatInlineN}>{item.n}</Text>
-                        {' '}{item.l}
-                      </Text>
-                    </TouchableOpacity>
-                  </React.Fragment>
-                ))}
-                {unread > 0 && (
-                  <>
-                    <Text style={s.heroStatDot}>·</Text>
-                    <TouchableOpacity onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}>
-                      <Text style={[s.heroStatInlineN, { color: accent }]}>{unread} new</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* ── Quick action pills ── */}
-          <View style={s.heroActionRow}>
-            <TouchableOpacity
-              style={[s.heroActionPill, { borderColor: `${accent}38`, backgroundColor: `${accent}12` }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/create-journal-entry' as any); }}
-              activeOpacity={0.75}
-            >
-              <Icon name="edit-3" size={12} color={accent} />
-              <Text style={[s.heroActionTxt, { color: accent }]}>Write</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.heroActionPill, { borderColor: 'rgba(168,136,248,0.32)', backgroundColor: 'rgba(168,136,248,0.10)' }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/create'); }}
-              activeOpacity={0.75}
-            >
-              <Icon name="layers" size={12} color="#A880F8" />
-              <Text style={[s.heroActionTxt, { color: '#A880F8' }]}>Create</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[s.heroActionPill, { borderColor: 'rgba(96,200,248,0.28)', backgroundColor: 'rgba(96,200,248,0.08)' }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }}
-              activeOpacity={0.75}
-            >
-              <Icon name="compass" size={12} color="#60C8F8" />
-              <Text style={[s.heroActionTxt, { color: '#60C8F8' }]}>Discover</Text>
-            </TouchableOpacity>
-            {rewardBalance && (
+              {/* Small avatar circle */}
               <TouchableOpacity
-                style={[s.heroActionPill, { borderColor: 'rgba(200,168,75,0.30)', backgroundColor: 'rgba(200,168,75,0.08)' }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
-                activeOpacity={0.75}
+                style={s.heroAvatarSmallWrap}
+                onPress={() => router.push('/(tabs)/profile')}
+                onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowOutfits(true); }}
+                activeOpacity={0.88}
               >
-                <Text style={{ fontSize: 11, lineHeight: 13 }}>⭐</Text>
-                <Text style={[s.heroActionTxt, { color: '#C8A84B' }]}>{rewardBalance.stars}</Text>
+                <LinearGradient
+                  colors={[accent, '#A880F8', '#60C8F8', accent]}
+                  style={s.heroAvatarSmallRing}
+                  start={{ x: 0, y: 1 }} end={{ x: 1, y: 0 }}
+                >
+                  <View style={s.heroAvatarSmallInner}>
+                    <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  </View>
+                </LinearGradient>
+                {character.role && (
+                  <View style={[s.roleTag, { backgroundColor: accent }]}>
+                    <Text style={s.roleText}>{character.role.slice(0, 1)}</Text>
+                  </View>
+                )}
               </TouchableOpacity>
-            )}
+            </View>
+          </View>
+
+          {/* ── Greeting block: big text + subtitle + stat pills ── */}
+          <View style={s.heroGreetBlock}>
+            <Text style={s.heroGreetText}>
+              {greetingWord}, {character.name || 'Sky Child'} {greetingEmoji}
+            </Text>
+            <Text style={s.heroGreetSub}>{headerSubtitle}</Text>
+            <View style={s.heroPillRow}>
+              {constellation && constellation.quietStreak > 0 && (
+                <TouchableOpacity
+                  style={s.heroPillFire}
+                  onPress={() => router.push('/(tabs)/profile')}
+                  activeOpacity={0.78}
+                >
+                  <Text style={{ fontSize: 12, lineHeight: 15 }}>🔥</Text>
+                  <Text style={s.heroPillTxt}>{constellation.quietStreak} day streak</Text>
+                </TouchableOpacity>
+              )}
+              {rewardBalance && (
+                <TouchableOpacity
+                  style={s.heroPillStar}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
+                  activeOpacity={0.78}
+                >
+                  <Text style={{ fontSize: 12, lineHeight: 15 }}>⭐</Text>
+                  <Text style={s.heroPillTxt}>{rewardBalance.stars}/6 stars</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* Bottom fade to deep void */}
@@ -1348,6 +1296,161 @@ export default function HomeScreen() {
         </View>
 
         {/* ══════════════════════════════════════════════════
+            LUMI — featured companion card (top of feed)
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
+        <TouchableOpacity
+          style={s.lumiCard}
+          onPress={() => { if (hasNotifs) { setShowNotifs(true); markServerNotificationsRead(); } else router.push('/(tabs)/create'); }}
+          activeOpacity={0.88}
+        >
+          <LinearGradient colors={['#1E0E48', '#100828', '#080518']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+          <View pointerEvents="none" style={{ position: 'absolute', bottom: -24, left: -20, right: -20, height: 90, backgroundColor: 'rgba(80,60,160,0.22)', borderRadius: 45 }} />
+          <View pointerEvents="none" style={[s.lumiOrb1, { backgroundColor: accent }]} />
+          <View pointerEvents="none" style={s.lumiOrb2} />
+          {[{top:12,left:20},{top:6,left:'58%'},{top:20,right:16},{top:36,left:'36%'},{bottom:14,left:48},{bottom:10,right:'26%'}].map((pos,i)=>(
+            <View key={i} pointerEvents="none" style={[s.lumiStar, pos as any, { opacity: 0.15 + (i % 3) * 0.10 }]} />
+          ))}
+          <Image source={Images.character_default} style={s.lumiCharImg} contentFit="contain" />
+          <View style={[s.lumiContent, { paddingRight: 110 }]}>
+            <View style={s.lumiEyebrow}>
+              <Text style={{ fontSize: 10, lineHeight: 13, color: 'rgba(200,185,255,0.60)' }}>✦</Text>
+              <Text style={[s.lumiEyebrowTxt, { color: 'rgba(200,185,255,0.65)' }]}>LUMI</Text>
+              {hasNotifs && (
+                <View style={[s.lumiPill, { backgroundColor: `${accent}20`, borderColor: `${accent}45`, marginLeft: 8 }]}>
+                  <Text style={[s.lumiPillTxt, { color: accent }]}>
+                    {witnessedNotifs > 0 ? `${witnessedNotifs} witnessed you` : savedNotifs > 0 ? `${savedNotifs} saved your work` : `${rewards.length + unread} new`}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={s.lumiTitle}>
+              {`Continue your\n${greetingWord === 'Good morning' ? 'morning' : greetingWord === 'Good afternoon' ? 'afternoon' : greetingWord === 'Good evening' ? 'evening' : 'night'} journey`}
+            </Text>
+            <Text style={s.lumiMsgV2}>
+              {lumiAwareness(character.name, witnessedNotifs, savedNotifs, circleStories.length, liveCampfireCount, journalEntries, stories, hour, constellation, rewardBalance)}
+            </Text>
+            <TouchableOpacity style={s.lumiCTABtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/create'); }} activeOpacity={0.84}>
+              <Text style={s.lumiCTATxt}>Begin something  →</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            ACTIVITY DIGEST — what changed while you were away
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+        {hasDigest && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.digestRow}>
+            {witnessedNotifs > 0 && (
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(200,168,75,0.14)' }]} onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }} activeOpacity={0.78}>
+                <Icon name="eye" size={13} color="#C8A84B" /><Text style={[s.digestTxt, { color: '#C8A84B' }]}>{witnessedNotifs} witnessed you</Text>
+              </TouchableOpacity>
+            )}
+            {savedNotifs > 0 && (
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(168,128,248,0.14)' }]} onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }} activeOpacity={0.78}>
+                <Icon name="bookmark" size={13} color="#A880F8" /><Text style={[s.digestTxt, { color: '#A880F8' }]}>{savedNotifs} saved your work</Text>
+              </TouchableOpacity>
+            )}
+            {circleStories.length > 0 && (
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(96,200,248,0.14)' }]} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
+                <Icon name="book-open" size={13} color="#60C8F8" /><Text style={[s.digestTxt, { color: '#60C8F8' }]}>{circleStories.length} new {circleStories.length === 1 ? 'story' : 'stories'}</Text>
+              </TouchableOpacity>
+            )}
+            {liveCampfireCount > 0 && (
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(232,164,80,0.14)' }]} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
+                <Text style={{ fontSize: 13, lineHeight: 16 }}>🔥</Text><Text style={[s.digestTxt, { color: '#E8A450' }]}>{liveCampfireCount} campfire{liveCampfireCount > 1 ? 's' : ''} live</Text>
+              </TouchableOpacity>
+            )}
+            {newStoryNotifs > 0 && witnessedNotifs === 0 && savedNotifs === 0 && (
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(96,200,168,0.14)' }]} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
+                <Icon name="users" size={13} color="#60C8A8" /><Text style={[s.digestTxt, { color: '#60C8A8' }]}>{newStoryNotifs} circle update{newStoryNotifs > 1 ? 's' : ''}</Text>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
+        )}
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            YOUR CIRCLE — avatar rail + recent stories
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s2, transform: [{ translateY: s2.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+        <View style={s.section}>
+          <SectionHeader label="Your Circle" accent={accent} count={circleStories.length} onPress={() => router.push('/(tabs)/discover')} action={circleStories.length > 0 ? 'See all' : undefined} />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[fr.row, { paddingHorizontal: 16, marginBottom: 14 }]}>
+            <TouchableOpacity style={fr.addWrap} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }} activeOpacity={0.80}>
+              <View style={fr.addCircle}><Icon name="plus" size={20} color="rgba(180,160,255,0.70)" /></View>
+              <Text style={fr.addLabel}>Add</Text>
+            </TouchableOpacity>
+            {circleAuthors.map(post => <FriendBubble key={post.authorUserId} post={post} />)}
+          </ScrollView>
+          {circleStories.length > 0 ? (
+            <>
+              <Text style={s.circleRecentLabel}>Recent from your circle</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10, paddingBottom: 8 }}>
+                {circleStories.slice(0, 5).map(post => {
+                  const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
+                  const timeAgo = (() => {
+                    const diff = Date.now() - new Date(post.date).getTime();
+                    const h = Math.floor(diff / 3600000);
+                    if (h < 1) return 'just now';
+                    if (h < 24) return `${h}h ago`;
+                    return `${Math.floor(h / 24)}d ago`;
+                  })();
+                  return (
+                    <TouchableOpacity key={post.id} style={s.circleRecentCard} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }} activeOpacity={0.82}>
+                      <View style={[s.circleRecentAvatar, { backgroundColor: `${mc}20`, borderColor: `${mc}40` }]}>
+                        {post.authorAvatarUri
+                          ? <Image source={{ uri: post.authorAvatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                          : <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: mc }}>{post.authorName.charAt(0).toUpperCase()}</Text>
+                        }
+                      </View>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={s.circleRecentAuthor} numberOfLines={1}>{post.authorHandle ? `@${post.authorHandle}` : post.authorName} shared</Text>
+                        <Text style={s.circleRecentTitle} numberOfLines={1}>{post.chapterTitle || 'Untitled'}</Text>
+                        <Text style={s.circleRecentTime}>{timeAgo}</Text>
+                      </View>
+                      {post.imageUri
+                        ? <Image source={{ uri: post.imageUri }} style={s.circleRecentThumb} contentFit="cover" cachePolicy="memory-disk" />
+                        : <View style={[s.circleRecentThumb, { backgroundColor: `${mc}20` }]} />
+                      }
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </>
+          ) : (
+            <TouchableOpacity style={s.emptyStories} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.8}>
+              <Text style={s.emptyStoriesText}>No stories from your circle yet</Text>
+              <Text style={s.emptyStoriesSub}>Find people in Discover →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            CAMPFIRE TONIGHT — community campfire banner
+        ══════════════════════════════════════════════════ */}
+        <Animated.View style={{ opacity: s3, transform: [{ translateY: s3.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+        <TouchableOpacity style={s.campfireBanner} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/campfire' as any); }} activeOpacity={0.82}>
+          <LinearGradient colors={['rgba(180,90,20,0.28)', 'rgba(100,45,8,0.18)', 'rgba(20,10,4,0.12)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <View pointerEvents="none" style={{ position: 'absolute', bottom: -28, right: 70, width: 110, height: 110, borderRadius: 55, backgroundColor: '#E87828', opacity: 0.14 }} />
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+              <Text style={{ fontSize: 14, lineHeight: 18 }}>🔥</Text>
+              <Text style={s.campfireBannerEyebrow}>Campfire Tonight</Text>
+            </View>
+            <Text style={s.campfireBannerTitle}>Whisper Campfire</Text>
+            <Text style={s.campfireBannerSub}>{liveCampfireCount > 0 ? `${liveCampfireCount} live now · Come gather` : 'Gather · Whisper · Wander'}</Text>
+          </View>
+          <View style={s.campfireJoinBtn}>
+            <Text style={s.campfireJoinTxt}>Join Campfire</Text>
+          </View>
+        </TouchableOpacity>
+        </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
             DAILY SPARK — rotating daily writing prompt
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
@@ -1355,91 +1458,67 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
-            YOUR CONSTELLATION — emotional centrepiece
-        ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [10,0] }) }] }}>
-          <ConstellationMini constellation={constellation} onPress={() => router.push('/(tabs)/profile')} />
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════
-            CONTINUE JOURNEY — primary CTA
-        ══════════════════════════════════════════════════ */}
-        {nextStar && (
-          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
-          <TouchableOpacity
-            style={s.nudgeCard}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={[`${nextStar.color}1A`, `${nextStar.color}08`, 'transparent']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={[s.nudgeOrb, { backgroundColor: nextStar.color }]} />
-
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>NEXT STAR</Text>
-                <View style={[s.nudgeDot, { backgroundColor: nextStar.color }]} />
-                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>{nextStar.label}</Text>
-              </View>
-
-              <View style={s.nudgeTrack}>
-                <View style={[s.nudgeFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} />
-              </View>
-
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
-                <Text style={s.nudgeAction}>{nextStar.action}</Text>
-                <Text style={[s.nudgeFraction, { color: nextStar.color }]}>
-                  {nextStarCount} / {nextStar.threshold} {nextStar.unit}
-                </Text>
-              </View>
-              {nextStar.key === 'creative' && stories.length > 0 && (
-                <Text style={s.nudgePublicNote}>
-                  {publicStoryCount} of {stories.length} {stories.length === 1 ? 'story is' : 'stories are'} public
-                </Text>
-              )}
-              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: nextStar.color, marginTop: 7, letterSpacing: 0.4 }}>
-                Continue Journey →
-              </Text>
-            </View>
-          </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {constellation && constellation.unlockedStars.length === 6 && (
-          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
-          <TouchableOpacity
-            style={s.nudgeCard}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }}
-            activeOpacity={0.85}
-          >
-            <LinearGradient
-              colors={['rgba(168,136,248,0.12)', 'rgba(96,200,248,0.08)', 'transparent']}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={[s.nudgeEyebrow, { color: '#A888F8', marginBottom: 3 }]}>CONSTELLATION COMPLETE</Text>
-              <Text style={{ fontSize: 13, color: 'rgba(220,210,255,0.80)', fontWeight: '500', letterSpacing: 0.1 }}>
-                ✦ ✦ ✦ ✦ ✦ ✦{'  '}All six stars glow in your sky
-              </Text>
-            </View>
-            <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
-          </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* ══════════════════════════════════════════════════
-            SEASON JOURNEY CARD
+            STATS GRID — constellation + season side by side
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
-          <SeasonCard
-            activeEvent={activeEvent}
-            constellation={constellation}
-            onPress={() => activeEvent ? setShowEventSheet(true) : router.push('/(tabs)/profile')}
-          />
+          <View style={s.statsGrid}>
+            {constellation && (
+              <TouchableOpacity style={s.statsGridCard} onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.85}>
+                <LinearGradient colors={['rgba(168,136,248,0.14)', 'rgba(96,168,248,0.06)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+                <Text style={s.statsGridLabel}>Your Constellation</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginVertical: 8 }}>
+                  {MINI_STARS.map(star => (
+                    <View key={star.key} style={[s.statsGridStar, { backgroundColor: constellation.unlockedStars.includes(star.key) ? star.color : 'rgba(255,255,255,0.09)' }]} />
+                  ))}
+                </View>
+                {nextStar && (
+                  <>
+                    <Text style={[s.statsGridSub, { color: nextStar.color }]}>{nextStar.label} Star</Text>
+                    <View style={s.statsGridTrack}>
+                      <View style={[s.statsGridFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} />
+                    </View>
+                    <Text style={s.statsGridHint}>{nextStarCount < nextStar.threshold ? `${nextStar.threshold - nextStarCount} more ${nextStar.unit}` : 'Ready!'}</Text>
+                  </>
+                )}
+                <Text style={s.statsGridCTA}>Continue Journey →</Text>
+              </TouchableOpacity>
+            )}
+            {(() => {
+              const month = new Date().getMonth();
+              const sd    = SEASON_BY_MONTH[month]!;
+              const th    = activeEvent ? (EVENT_THEME[activeEvent.theme] ?? null) : null;
+              const color = th?.color ?? sd.color;
+              const icon  = th?.icon  ?? sd.icon;
+              const name  = activeEvent?.title ?? sd.name;
+              const bgA   = th ? th.bgStart : sd.bgA;
+              const bgB   = th ? th.bgEnd   : sd.bgB;
+              const end   = new Date(); end.setMonth(sd.endMonth, 1); end.setHours(0,0,0,0);
+              if (end <= new Date()) end.setFullYear(end.getFullYear() + 1);
+              const daysLeft = Math.max(1, Math.ceil((end.getTime() - Date.now()) / 86400000));
+              const stars = constellation?.unlockedStars.length ?? 0;
+              const pct   = stars / 6;
+              return (
+                <TouchableOpacity style={s.statsGridCard} onPress={() => activeEvent ? setShowEventSheet(true) : router.push('/(tabs)/profile')} activeOpacity={0.84}>
+                  <LinearGradient colors={[bgA, bgB, 'transparent'] as unknown as [string, string, ...string[]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 13 }}>{icon}</Text>
+                    <Text style={{ fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.1, color, textTransform: 'uppercase' as const }}>Current Season</Text>
+                  </View>
+                  <View style={[s.statsGridPill, { backgroundColor: `${color}1E` }]}>
+                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color }}>{daysLeft}d left</Text>
+                  </View>
+                  <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EEE8FF', letterSpacing: 0.1, marginVertical: 8, lineHeight: 20 }} numberOfLines={2}>{name}</Text>
+                  <View style={{ height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden', marginBottom: 5 }}>
+                    <View style={{ height: 4, borderRadius: 2, width: `${Math.round(pct * 100)}%` as any, backgroundColor: color }} />
+                  </View>
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: `${color}AA`, marginBottom: 8 }}>{stars}/6 stars collected</Text>
+                  <View style={[s.statsGridCTAPill, { borderColor: `${color}45` }]}>
+                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color, letterSpacing: 0.3 }}>Continue Journey →</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })()}
+          </View>
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
@@ -1482,163 +1561,45 @@ export default function HomeScreen() {
 
 
         {/* ══════════════════════════════════════════════════
-            LUMI — immersive companion card
+            CONTINUE JOURNEY — next star nudge
         ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
-        <TouchableOpacity
-          style={s.lumiCard}
-          onPress={() => {
-            if (hasNotifs) { setShowNotifs(true); markServerNotificationsRead(); }
-            else router.push('/(tabs)/create');
-          }}
-          activeOpacity={0.88}
-        >
-          {/* Deep sky background */}
-          <LinearGradient
-            colors={['#12082E', '#0A061C', '#08050F']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          {/* Nebula glow orbs */}
-          <View pointerEvents="none" style={[s.lumiOrb1, { backgroundColor: accent }]} />
-          <View pointerEvents="none" style={s.lumiOrb2} />
-          {/* Star flecks */}
-          {[{top:14,left:24},{top:8,left:'62%'},{top:22,right:18},{top:38,left:'38%'},{bottom:16,left:52},{bottom:12,right:'28%'}].map((pos,i)=>(
-            <View key={i} pointerEvents="none" style={[s.lumiStar, pos as any, { opacity: 0.18 + (i % 3) * 0.10 }]} />
-          ))}
-          {/* Card content */}
-          <View style={s.lumiContent}>
-            {/* Eyebrow row */}
-            <View style={s.lumiEyebrow}>
-              <View style={[s.lumiDot, { backgroundColor: accent }]} />
-              <Text style={[s.lumiEyebrowTxt, { color: accent }]}>LUMI</Text>
-              <View style={{ flex: 1 }} />
-              {hasNotifs && (
-                <View style={[s.lumiPill, { backgroundColor: `${accent}20`, borderColor: `${accent}45` }]}>
-                  <Text style={[s.lumiPillTxt, { color: accent }]}>
-                    {witnessedNotifs > 0
-                      ? `${witnessedNotifs} witnessed you`
-                      : savedNotifs > 0
-                      ? `${savedNotifs} saved your work`
-                      : `${rewards.length + unread} new`}
-                  </Text>
-                </View>
+        {nextStar && (
+          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
+          <TouchableOpacity style={s.nudgeCard} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }} activeOpacity={0.85}>
+            <LinearGradient colors={[`${nextStar.color}1A`, `${nextStar.color}08`, 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <View style={[s.nudgeOrb, { backgroundColor: nextStar.color }]} />
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>NEXT STAR</Text>
+                <View style={[s.nudgeDot, { backgroundColor: nextStar.color }]} />
+                <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>{nextStar.label}</Text>
+              </View>
+              <View style={s.nudgeTrack}><View style={[s.nudgeFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} /></View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
+                <Text style={s.nudgeAction}>{nextStar.action}</Text>
+                <Text style={[s.nudgeFraction, { color: nextStar.color }]}>{nextStarCount} / {nextStar.threshold} {nextStar.unit}</Text>
+              </View>
+              {nextStar.key === 'creative' && stories.length > 0 && (
+                <Text style={s.nudgePublicNote}>{publicStoryCount} of {stories.length} {stories.length === 1 ? 'story is' : 'stories are'} public</Text>
               )}
+              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: nextStar.color, marginTop: 7, letterSpacing: 0.4 }}>Continue Journey →</Text>
             </View>
-            {/* Main message */}
-            <Text style={s.lumiMsgV2}>
-              {lumiAwareness(
-                character.name, witnessedNotifs, savedNotifs,
-                circleStories.length, liveCampfireCount,
-                journalEntries, stories, hour,
-                constellation, rewardBalance,
-              )}{' '}
-              <Text style={{ color: accent, fontSize: 14 }}>✦</Text>
-            </Text>
-            {/* CTA hint */}
-            <Text style={s.lumiHint}>
-              {hasNotifs ? 'Tap to view  →' : 'Begin something  →'}
-            </Text>
-          </View>
-        </TouchableOpacity>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════
-            ACTIVITY DIGEST — what changed while you were away
-        ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
-        {hasDigest && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.digestRow}
-          >
-            {witnessedNotifs > 0 && (
-              <TouchableOpacity
-                style={[s.digestPill, { backgroundColor: 'rgba(200,168,75,0.14)' }]}
-                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}
-                activeOpacity={0.78}
-              >
-                <Icon name="eye" size={13} color="#C8A84B" />
-                <Text style={[s.digestTxt, { color: '#C8A84B' }]}>
-                  {witnessedNotifs} witnessed you
-                </Text>
-              </TouchableOpacity>
-            )}
-            {savedNotifs > 0 && (
-              <TouchableOpacity
-                style={[s.digestPill, { backgroundColor: 'rgba(168,128,248,0.14)' }]}
-                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}
-                activeOpacity={0.78}
-              >
-                <Icon name="bookmark" size={13} color="#A880F8" />
-                <Text style={[s.digestTxt, { color: '#A880F8' }]}>
-                  {savedNotifs} saved your work
-                </Text>
-              </TouchableOpacity>
-            )}
-            {circleStories.length > 0 && (
-              <TouchableOpacity
-                style={[s.digestPill, { backgroundColor: 'rgba(96,200,248,0.14)' }]}
-                onPress={() => router.push('/(tabs)/discover')}
-                activeOpacity={0.78}
-              >
-                <Icon name="book-open" size={13} color="#60C8F8" />
-                <Text style={[s.digestTxt, { color: '#60C8F8' }]}>
-                  {circleStories.length} new {circleStories.length === 1 ? 'story' : 'stories'}
-                </Text>
-              </TouchableOpacity>
-            )}
-            {liveCampfireCount > 0 && (
-              <TouchableOpacity
-                style={[s.digestPill, { backgroundColor: 'rgba(232,164,80,0.14)' }]}
-                onPress={() => router.push('/(tabs)/discover')}
-                activeOpacity={0.78}
-              >
-                <Text style={{ fontSize: 13, lineHeight: 16 }}>🔥</Text>
-                <Text style={[s.digestTxt, { color: '#E8A450' }]}>
-                  {liveCampfireCount} campfire{liveCampfireCount > 1 ? 's' : ''} live
-                </Text>
-              </TouchableOpacity>
-            )}
-            {newStoryNotifs > 0 && witnessedNotifs === 0 && savedNotifs === 0 && (
-              <TouchableOpacity
-                style={[s.digestPill, { backgroundColor: 'rgba(96,200,168,0.14)' }]}
-                onPress={() => router.push('/(tabs)/discover')}
-                activeOpacity={0.78}
-              >
-                <Icon name="users" size={13} color="#60C8A8" />
-                <Text style={[s.digestTxt, { color: '#60C8A8' }]}>
-                  {newStoryNotifs} circle update{newStoryNotifs > 1 ? 's' : ''}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </ScrollView>
+          </TouchableOpacity>
+          </Animated.View>
         )}
-        </Animated.View>
 
-        {/* ══════════════════════════════════════════════════
-            YOUR CIRCLE — story rings + masonry (merged)
-        ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s2, transform: [{ translateY: s2.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
-        <View style={s.section}>
-          <SectionHeader
-            label="Your Circle"
-            accent={accent}
-            count={circleStories.length}
-            onPress={() => router.push('/(tabs)/discover')}
-            action={circleStories.length > 0 ? 'See all' : undefined}
-          />
-          {/* Friend story-ring rail */}
-          {circleAuthors.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[fr.row, { marginBottom: 14 }]}>
-              {circleAuthors.map(post => <FriendBubble key={post.authorUserId} post={post} />)}
-            </ScrollView>
-          )}
-          {/* Masonry grid */}
-          <View style={s.masonry}>{renderCircleStories()}</View>
-        </View>
-        </Animated.View>
+        {constellation && constellation.unlockedStars.length === 6 && (
+          <Animated.View style={{ opacity: s7, transform: [{ translateY: s7.interpolate({ inputRange: [0,1], outputRange: [14,0] }) }] }}>
+          <TouchableOpacity style={s.nudgeCard} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/profile'); }} activeOpacity={0.85}>
+            <LinearGradient colors={['rgba(168,136,248,0.12)', 'rgba(96,200,248,0.08)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.nudgeEyebrow, { color: '#A888F8', marginBottom: 3 }]}>CONSTELLATION COMPLETE</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(220,210,255,0.80)', fontWeight: '500', letterSpacing: 0.1 }}>✦ ✦ ✦ ✦ ✦ ✦{'  '}All six stars glow in your sky</Text>
+            </View>
+            <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.28)" style={{ marginLeft: 4 }} />
+          </TouchableOpacity>
+          </Animated.View>
+        )}
 
         {/* ══════════════════════════════════════════════════
             DRIFT — Lumi's sanctuary, a real invitation
@@ -1740,75 +1701,34 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
-            COMMUNITY CAMPFIRES — group sky chat
-        ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s4, transform: [{ translateY: s4.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
-        <TouchableOpacity
-          style={s.communityFire}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/campfire' as any); }}
-          activeOpacity={0.80}
-        >
-          <LinearGradient
-            colors={['rgba(184,144,255,0.10)', 'rgba(120,196,232,0.06)']}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            pointerEvents="none"
-          />
-          <View style={s.communityFireIcon}>
-            <Text style={{ fontSize: 20 }}>🔥</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.communityFireTitle}>Community Campfires</Text>
-            <Text style={s.communityFireSub}>Gather around the fire · Whisper · Wander</Text>
-          </View>
-          <Icon name="chevron-right" size={14} color="rgba(160,140,200,0.40)" />
-        </TouchableOpacity>
-        </Animated.View>
-
-        {/* ══════════════════════════════════════════════════
-            DISCOVER PREVIEW — trending posts not in circle
+            EXPLORE — trending discover preview
         ══════════════════════════════════════════════════ */}
         {discoverPreview.length > 0 && (
           <Animated.View style={{ opacity: s5, transform: [{ translateY: s5.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
           <View style={s.section}>
-            <SectionHeader
-              label="Trending Today"
-              accent="#60C8F8"
-              onPress={() => router.push('/(tabs)/discover')}
-              action="See all"
-            />
-            <View style={{ paddingHorizontal: 16, gap: 8 }}>
+            <SectionHeader label="Explore" accent="#60C8F8" onPress={() => router.push('/(tabs)/discover')} action="See all" />
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10, paddingBottom: 4 }}>
               {discoverPreview.map(post => {
                 const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
                 return (
-                  <TouchableOpacity
-                    key={post.id}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.034)', borderWidth: 1, borderColor: `${mc}22` }}
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }}
-                    activeOpacity={0.82}
-                  >
-                    <View style={{ width: 44, height: 44, borderRadius: 13, backgroundColor: `${mc}20`, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: `${mc}30`, flexShrink: 0 }}>
-                      <Text style={{ fontSize: 9.5, color: mc, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2, textTransform: 'uppercase', textAlign: 'center' }}>{post.mood?.slice(0, 6) ?? post.vibe?.slice(0, 6)}</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.90)', letterSpacing: -0.2 }} numberOfLines={1}>{post.chapterTitle}</Text>
-                      <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,160,230,0.52)', marginTop: 2 }} numberOfLines={1}>
-                        {post.authorHandle ? `@${post.authorHandle}` : post.authorName}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end', gap: 3 }}>
-                      {post.witnessedCount > 0 && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                          <Icon name="eye" size={10} color="rgba(200,184,232,0.38)" />
-                          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.38)' }}>{post.witnessedCount}</Text>
-                        </View>
-                      )}
-                      <Icon name="chevron-right" size={13} color="rgba(160,140,200,0.35)" />
+                  <TouchableOpacity key={post.id} style={s.exploreCard} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }} activeOpacity={0.82}>
+                    {post.imageUri
+                      ? <Image source={{ uri: post.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                      : <LinearGradient colors={[`${mc}60`, `${mc}28`, '#06040E']} style={StyleSheet.absoluteFill} />
+                    }
+                    <LinearGradient colors={['transparent', 'rgba(4,3,18,0.94)']} style={s.exploreCardGrad} pointerEvents="none" />
+                    <View style={s.exploreCardMeta}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 2 }}>
+                        <View style={[s.exploreCardMoodDot, { backgroundColor: mc }]} />
+                        <Text style={[s.exploreCardMood, { color: mc }]}>{post.mood}</Text>
+                      </View>
+                      <Text style={s.exploreCardTitle} numberOfLines={2}>{post.chapterTitle || 'Untitled'}</Text>
+                      <Text style={s.exploreCardAuthor} numberOfLines={1}>{post.witnessedCount > 0 ? `${post.witnessedCount} witnessed` : post.authorName}</Text>
                     </View>
                   </TouchableOpacity>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
           </Animated.View>
         )}
@@ -2139,6 +2059,63 @@ const s = StyleSheet.create({
   communityFireIcon:  { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(184,120,255,0.12)', alignItems: 'center', justifyContent: 'center' },
   communityFireTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(220,200,255,0.85)' },
   communityFireSub:   { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(180,150,220,0.45)', marginTop: 1 },
+
+  // ── Hero redesign styles ──────────────────────────────────────────────────
+  heroAvatarSmallWrap:  { position: 'relative', marginLeft: 4 },
+  heroAvatarSmallRing:  { width: 38, height: 38, borderRadius: 19, padding: 2 },
+  heroAvatarSmallInner: { flex: 1, borderRadius: 17, overflow: 'hidden', backgroundColor: '#0E0B28' },
+  heroGreetBlock:  { paddingHorizontal: 22, paddingTop: 10, paddingBottom: 20 },
+  heroGreetText:   { fontSize: 26, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.97)', letterSpacing: -0.8, lineHeight: 32, marginBottom: 4 },
+  heroGreetSub:    { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,185,255,0.48)', lineHeight: 19, marginBottom: 14 },
+  heroPillRow:     { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  heroPillFire:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(232,120,40,0.14)', borderWidth: 1, borderColor: 'rgba(232,120,40,0.28)' },
+  heroPillStar:    { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: 'rgba(200,168,75,0.14)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.28)' },
+  heroPillTxt:     { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(235,220,200,0.78)', letterSpacing: 0.1 },
+
+  // ── LUMI card enhanced styles ─────────────────────────────────────────────
+  lumiCharImg:  { position: 'absolute', bottom: 0, right: -8, width: 130, height: 155 },
+  lumiTitle:    { fontSize: 22, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.97)', letterSpacing: -0.5, lineHeight: 28, marginBottom: 8 },
+  lumiCTABtn:   { alignSelf: 'flex-start', marginTop: 14, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: 'rgba(168,136,248,0.22)', borderWidth: 1, borderColor: 'rgba(168,136,248,0.40)' },
+  lumiCTATxt:   { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(210,185,255,0.90)', letterSpacing: 0.3 },
+
+  // ── Your Circle compact recent cards ─────────────────────────────────────
+  circleRecentLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase', color: 'rgba(180,165,230,0.38)', marginLeft: 20, marginBottom: 8 },
+  circleRecentCard:   { flexDirection: 'row', alignItems: 'center', gap: 10, width: 220, padding: 10, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(200,185,255,0.08)' },
+  circleRecentAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', flexShrink: 0 },
+  circleRecentAuthor: { fontSize: 10.5, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.45)', marginBottom: 2 },
+  circleRecentTitle:  { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(225,215,255,0.85)', letterSpacing: -0.1 },
+  circleRecentTime:   { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(160,145,210,0.35)', marginTop: 3 },
+  circleRecentThumb:  { width: 36, height: 36, borderRadius: 10, flexShrink: 0, overflow: 'hidden' },
+
+  // ── Campfire Tonight banner ───────────────────────────────────────────────
+  campfireBanner:        { flexDirection: 'row', alignItems: 'center', gap: 14, marginHorizontal: 16, marginBottom: 8, marginTop: 4, paddingHorizontal: 18, paddingVertical: 16, borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(200,120,50,0.22)', backgroundColor: 'rgba(10,6,20,0.60)' },
+  campfireBannerEyebrow: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(232,164,80,0.70)' },
+  campfireBannerTitle:   { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(245,225,200,0.95)', letterSpacing: -0.3, lineHeight: 20 },
+  campfireBannerSub:     { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(220,185,150,0.48)', marginTop: 3 },
+  campfireJoinBtn:       { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 16, backgroundColor: 'rgba(200,120,40,0.22)', borderWidth: 1, borderColor: 'rgba(200,120,40,0.38)', flexShrink: 0 },
+  campfireJoinTxt:       { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(245,200,140,0.90)', letterSpacing: 0.2 },
+
+  // ── Stats grid (constellation + season side by side) ─────────────────────
+  statsGrid:     { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 8, paddingTop: 4 },
+  statsGridCard: { flex: 1, borderRadius: 20, overflow: 'hidden', padding: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(200,185,255,0.08)', minHeight: 170 },
+  statsGridLabel:{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.0, textTransform: 'uppercase', color: 'rgba(200,185,255,0.45)', marginBottom: 2 },
+  statsGridStar: { width: 9, height: 9, borderRadius: 5 },
+  statsGridSub:  { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4, marginBottom: 4 },
+  statsGridTrack:{ height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden', marginBottom: 3 },
+  statsGridFill: { height: 3, borderRadius: 2 },
+  statsGridHint: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.40)', marginBottom: 8 },
+  statsGridCTA:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(180,160,240,0.55)', letterSpacing: 0.2, marginTop: 'auto' as any },
+  statsGridPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 4 },
+  statsGridCTAPill:{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, marginTop: 'auto' as any },
+
+  // ── Explore horizontal cards ──────────────────────────────────────────────
+  exploreCard:      { width: 130, height: 175, borderRadius: 18, overflow: 'hidden', backgroundColor: '#0D0820', position: 'relative' },
+  exploreCardGrad:  { position: 'absolute', bottom: 0, left: 0, right: 0, height: 95 },
+  exploreCardMeta:  { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12 },
+  exploreCardMoodDot:{ width: 5, height: 5, borderRadius: 3 },
+  exploreCardMood:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase' },
+  exploreCardTitle: { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(235,225,255,0.93)', letterSpacing: -0.2, lineHeight: 17, marginBottom: 3 },
+  exploreCardAuthor:{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.45)' },
 
   // ── Drift invitation card ──────────────────────────────────────────────────
   driftSection:    { paddingHorizontal: 16, paddingBottom: 8 },
