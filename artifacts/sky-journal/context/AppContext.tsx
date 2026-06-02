@@ -409,6 +409,7 @@ interface AppContextValue {
 
   journalLoadError:  boolean;
   storiesLoadError:  boolean;
+  outfitsLoadError:  boolean;
   discoverLoadError: boolean;
 
   reloadData:    () => Promise<void>;
@@ -567,6 +568,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [journalLoadError,  setJournalLoadError]  = useState(false);
   const [storiesLoadError,  setStoriesLoadError]  = useState(false);
+  const [outfitsLoadError,  setOutfitsLoadError]  = useState(false);
   const [discoverLoadError, setDiscoverLoadError] = useState(false);
 
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
@@ -809,6 +811,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setApiOnline(true);
       setJournalLoadError(entriesRaw === null);
       setStoriesLoadError(storiesRaw === null);
+      setOutfitsLoadError(outfitsRaw === null);
       setDiscoverLoadError(discoverRaw === null);
 
       // Restore active outfit across sessions.
@@ -857,6 +860,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setApiOnline(false);
       setJournalLoadError(true);
       setStoriesLoadError(true);
+      setOutfitsLoadError(true);
       setDiscoverLoadError(true);
     } finally {
       dataReadyRef.current  = true;
@@ -1522,8 +1526,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const wasSaved = next.has(id);
       if (wasSaved) next.delete(id); else next.add(id);
       AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
-      apiFetch(`/stories/${id}/save`, { method: wasSaved ? 'DELETE' : 'POST' }).catch(() => {
-        showToastGlobal("Couldn't save story", 'warning');
+      const saveMethod = wasSaved ? 'DELETE' : 'POST';
+      apiFetch(`/stories/${id}/save`, { method: saveMethod }).catch(() => {
+        showToastGlobal("Couldn't save story", 'warning', () => {
+          apiFetch(`/stories/${id}/save`, { method: saveMethod }).catch(() => null);
+        });
       });
       return next;
     });
@@ -1549,7 +1556,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         setFollowingIds(prev => prev.filter(id => id !== targetUserId));
-        showToastGlobal("Couldn't follow user", 'warning');
+        showToastGlobal("Couldn't follow user", 'warning', () => {
+          setFollowingIds(prev => prev.includes(targetUserId) ? prev : [...prev, targetUserId]);
+          apiFetch(`/follows/${targetUserId}`, { method: 'POST' }).catch(() => {
+            setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+          });
+        });
       });
   }, [fireToast, reloadRewards, reloadConstellation]);
 
@@ -1561,7 +1573,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         prev.includes(targetUserId) ? prev : [...prev, targetUserId],
       );
       fetchFriends();
-      showToastGlobal("Couldn't unfollow user", 'warning');
+      showToastGlobal("Couldn't unfollow user", 'warning', () => {
+        setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+        setFriends(prev => prev.filter(f => f.userId !== targetUserId));
+        apiFetch(`/follows/${targetUserId}`, { method: 'DELETE' }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1576,14 +1592,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const markServerNotificationsRead = useCallback(() => {
     setServerNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => {
-      showToastGlobal("Couldn't mark notifications read", 'warning');
+      showToastGlobal("Couldn't mark notifications read", 'warning', () => {
+        apiFetch('/notifications/read-all', { method: 'PUT' }).catch(() => null);
+      });
     });
   }, []);
 
   const deleteServerNotification = useCallback((id: string) => {
     setServerNotifications(prev => prev.filter(n => n.id !== id));
     apiFetch(`/notifications/${id}`, { method: 'DELETE' }).catch(() => {
-      showToastGlobal("Couldn't remove notification", 'warning');
+      showToastGlobal("Couldn't remove notification", 'warning', () => {
+        apiFetch(`/notifications/${id}`, { method: 'DELETE' }).catch(() => null);
+      });
     });
   }, []);
 
@@ -1598,7 +1618,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{
       isLoading, apiOnline,
-      journalLoadError, storiesLoadError, discoverLoadError,
+      journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
       character, setCharacter,
       stories, addStory, updateStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,
