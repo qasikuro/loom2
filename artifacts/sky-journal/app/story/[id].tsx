@@ -466,7 +466,7 @@ export default function StoryScreen() {
           {isOwnStory && !confirmingDelete && (
             <TouchableOpacity
               style={[styles.editBtn, { top: topPad + 12 }]}
-              onPress={() => router.push({ pathname: '/(tabs)/create', params: { editId: id } } as any)}
+              onPress={() => router.push({ pathname: '/chapter-editor', params: { editId: id } } as any)}
               activeOpacity={0.78}
             >
               <Icon name="edit-2" size={18} color="rgba(200,184,232,0.9)" />

@@ -298,6 +298,18 @@ export default function RootLayout() {
                               options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
                             />
                             <Stack.Screen
+                              name="chapter-editor"
+                              options={{ presentation: 'card', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="quick-moment"
+                              options={{ presentation: 'card', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="vibe-post"
+                              options={{ presentation: 'card', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
                               name="panel-editor"
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />
