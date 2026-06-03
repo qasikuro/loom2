@@ -108,13 +108,14 @@ function AuthTokenBridge() {
 }
 
 function AppOverlays() {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, userId } = useAuth();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const checkedRef = useRef(false);
+  // Keyed by userId so a new account signing into the same device always runs the check.
+  const checkedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || checkedRef.current) return;
-    checkedRef.current = true;
+    if (!isLoaded || !isSignedIn || !userId || checkedRef.current === userId) return;
+    checkedRef.current = userId;
 
     (async () => {
       // 1. Fast local check — most returning users exit here
@@ -141,7 +142,7 @@ function AppOverlays() {
 
       setShowOnboarding(true);
     })();
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, userId]);
 
   function handleComplete() {
     setShowOnboarding(false);

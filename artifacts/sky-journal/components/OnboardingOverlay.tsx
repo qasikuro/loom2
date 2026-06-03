@@ -275,27 +275,41 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       return;
     }
 
-    // Journal POST is best-effort (user may have left it blank intentionally)
+    // Journal POST: required when user typed something (retry once); empty → skipped intentionally.
     const trimmedText = journalText.trim();
     if (trimmedText) {
-      try {
-        const entryId = crypto.randomUUID();
-        const entry: JournalEntry = {
-          id:         entryId,
-          date:       new Date().toISOString().slice(0, 10),
-          type:       'diary',
-          text:       trimmedText,
-          mood,
-          imageUri:   undefined,
-          friendName: undefined,
-        };
-        addJournalEntry(entry);
-        await apiFetch('/journal-entries', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ id: entryId, date: entry.date, type: 'diary', text: entry.text, mood: entry.mood }),
-        });
-      } catch { /* best-effort — journal is optional */ }
+      const entryId = crypto.randomUUID();
+      const entry: JournalEntry = {
+        id:         entryId,
+        date:       new Date().toISOString().slice(0, 10),
+        type:       'diary',
+        text:       trimmedText,
+        mood,
+        imageUri:   undefined,
+        friendName: undefined,
+      };
+      // Optimistic local insert so profile shows the entry immediately after completion.
+      addJournalEntry(entry);
+
+      let journalOk = false;
+      for (let attempt = 0; attempt < 2 && !journalOk; attempt++) {
+        try {
+          await apiFetch('/journal-entries', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ id: entryId, date: entry.date, type: 'diary', text: entry.text, mood: entry.mood }),
+          });
+          journalOk = true;
+        } catch {
+          if (attempt === 0) await new Promise(r => setTimeout(r, 800));
+        }
+      }
+
+      if (!journalOk) {
+        setSaving(false);
+        setSeedError(true);
+        return;
+      }
     }
 
     // All required writes done — clear draft and complete
