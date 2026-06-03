@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { persistImageUri } from '@/utils/persistImage';
+import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
@@ -208,12 +208,11 @@ export default function CreateJournalEntryScreen() {
       setUploadingImage(true);
       try {
         const persisted = await persistImageUri(result.assets[0].uri);
-        if (persisted) {
-          setImageUri(persisted);
-          setError(null);
-        } else {
-          setError('Photo upload failed — check your connection and try again.');
-        }
+        setImageUri(persisted);
+        setError(null);
+      } catch (err: unknown) {
+        const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — try again.';
+        setError(msg);
       } finally {
         setUploadingImage(false);
       }

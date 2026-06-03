@@ -33,9 +33,11 @@ try { Notifications = require('expo-notifications'); } catch { /* not available 
 if (Platform.OS !== 'web' && Notifications) {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge:  false,
+      shouldShowAlert:  true,
+      shouldShowBanner: true,
+      shouldShowList:   true,
+      shouldPlaySound:  true,
+      shouldSetBadge:   false,
     }),
   });
 }
@@ -73,7 +75,10 @@ function AuthTokenBridge() {
         (async () => {
           try {
             const perms = await Notifications!.requestPermissionsAsync();
-            const granted = perms.granted ?? (perms.ios?.status === 1);
+            // PermissionResponse base type doesn't resolve cleanly in this TS config;
+            // cast to access the runtime-present `granted` field.
+            const granted = (perms as unknown as { granted?: boolean }).granted
+              ?? (perms.ios?.status === 1 || perms.ios?.status === 3);
             if (!granted) return;
             const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
             if (!projectId) return;
@@ -82,7 +87,7 @@ function AuthTokenBridge() {
             if (!authToken) return;
             const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | null;
             if (!apiUrl) return;
-            await fetch(`${apiUrl}/push-token`, {
+            await fetch(`${apiUrl}/push/register`, {
               method:  'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
               body:    JSON.stringify({ token: tokenData.data }),

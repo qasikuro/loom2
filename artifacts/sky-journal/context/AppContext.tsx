@@ -286,7 +286,7 @@ export interface ServerNotification {
   id:        string;
   actorId:   string;
   actorName: string;
-  type:      'new_story' | 'new_outfit' | 'witness' | 'save';
+  type:      'new_story' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'message';
   refId:     string;
   title:     string;
   isRead:    boolean;
@@ -1227,6 +1227,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
       return updated;
     });
+    writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
     try {
       const res = await apiFetch<{ rewardGranted: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
         '/journal-entries', {
@@ -1265,6 +1266,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [fireToast, reloadRewards, reloadConstellation]);
 
   const deleteJournalEntry = useCallback((id: string) => {
+    writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
     setJournalEntries(prev => {
       const updated = prev.filter(e => e.id !== id);
       AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
@@ -1294,6 +1296,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Optimistic local update
+    writeFetchTimestamps({ stories: 0 }).catch(() => null);
     setStories(prev => {
       const updated = [story, ...prev.filter(s => s.id !== story.id)];
       const slim = updated.map(s => ({
@@ -1369,6 +1372,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteStory = useCallback((id: string) => {
+    writeFetchTimestamps({ stories: 0 }).catch(() => null);
     setStories(prev => {
       const updated = prev.filter(s => s.id !== id);
       AsyncStorage.setItem('stories_v1', JSON.stringify(updated));
@@ -1384,6 +1388,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Outfits ────────────────────────────────────────────────────────────────
 
   const addOutfit = useCallback((outfit: Outfit) => {
+    writeFetchTimestamps({ outfits: 0 }).catch(() => null);
     setOutfits(prev => {
       const updated = [outfit, ...prev.filter(o => o.id !== outfit.id)];
       AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));
@@ -1423,6 +1428,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteOutfit = useCallback((id: string) => {
+    writeFetchTimestamps({ outfits: 0 }).catch(() => null);
     setOutfits(prev => {
       const updated = prev.filter(o => o.id !== id);
       AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));

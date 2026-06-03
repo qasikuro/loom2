@@ -511,6 +511,25 @@ export default function CampfireRoom() {
             {data ? (
               <>
                 <Text style={R.roomName} numberOfLines={1}>{data.room.name}</Text>
+                {data.soulCount > 0 && (
+                  <View style={R.soulOrbs}>
+                    {Array.from({ length: Math.min(data.soulCount, 8) }).map((_, i) => (
+                      <View
+                        key={i}
+                        style={[R.soulOrb, {
+                          backgroundColor: palette.ember,
+                          shadowColor: palette.ember,
+                          opacity: 0.55 + (i === 0 ? 0.35 : 0),
+                        }]}
+                      />
+                    ))}
+                    {data.soulCount > 8 && (
+                      <Text style={[R.soulOrbMore, { color: `${palette.ember}80` }]}>
+                        +{data.soulCount - 8}
+                      </Text>
+                    )}
+                  </View>
+                )}
                 <Text style={[R.soulPill, { color: `${palette.ember}AA` }]}>
                   {data.soulCount > 0
                     ? `${data.soulCount} soul${data.soulCount !== 1 ? 's' : ''} gathered`
@@ -631,6 +650,9 @@ const R = StyleSheet.create({
   },
   headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
   roomName:     { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.92)', letterSpacing: -0.2 },
+  soulOrbs:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
+  soulOrb:      { width: 6, height: 6, borderRadius: 3, shadowOpacity: 0.9, shadowRadius: 4, shadowOffset: { width: 0, height: 0 }, elevation: 2 },
+  soulOrbMore:  { fontSize: 8, fontFamily: 'Satoshi-Bold', marginLeft: 2 },
   soulPill:     { fontSize: 9.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
   expiryPill:   { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', flexShrink: 0 },
   expiryText:   { fontSize: 9, fontFamily: 'Satoshi-Bold' },

@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getAuthToken } from '@/context/AppContext';
 import Constants from 'expo-constants';
@@ -139,6 +139,19 @@ export function useSSE(
       return disconnect;
     }, [enabled, connect, disconnect]),
   );
+
+  // Reconnect when the app returns from background (OS-level, not just tab focus)
+  useEffect(() => {
+    if (!enabled) return;
+    const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        connect();
+      } else if (nextState === 'background' || nextState === 'inactive') {
+        disconnect();
+      }
+    });
+    return () => sub.remove();
+  }, [enabled, connect, disconnect]);
 
   // Also disconnect when the component unmounts entirely
   useEffect(() => () => disconnect(), [disconnect]);

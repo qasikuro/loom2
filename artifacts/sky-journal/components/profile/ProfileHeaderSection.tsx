@@ -11,7 +11,7 @@ import {
   ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { persistImageUri } from '@/utils/persistImage';
+import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import {
   BreathingAvatarRing, FrameRing, MoodOrbPicker,
   ACCENT_CONFIGS, FRAME_CONFIGS,
@@ -114,8 +114,10 @@ export function ProfileHeaderSection({
     setAvatarUploading(true); setAvatarError(null);
     try {
       const uri = await persistImageUri(result.assets[0].uri);
-      if (uri) setCharacter({ ...character, avatarUri: uri });
-      else setAvatarError('Upload failed — check your connection');
+      setCharacter({ ...character, avatarUri: uri });
+    } catch (err: unknown) {
+      const msg = err instanceof ImageUploadError ? err.userMessage : 'Upload failed — check your connection.';
+      setAvatarError(msg);
     } finally { setAvatarUploading(false); }
   }
 

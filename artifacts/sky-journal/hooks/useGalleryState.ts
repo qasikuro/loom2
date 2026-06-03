@@ -32,7 +32,6 @@ export function useGalleryState({ galleryUsage, addGalleryPhoto, deleteGalleryPh
       const { persistImageUri } = await import('@/utils/persistImage');
       const results = await Promise.allSettled(result.assets.map(async asset => {
         const uri = await persistImageUri(asset.uri);
-        if (!uri) throw new Error('Upload failed');
         await addGalleryPhoto(uri, '');
       }));
       const failed = results.filter(r => r.status === 'rejected').length;

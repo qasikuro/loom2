@@ -1,9 +1,40 @@
 import { db, characterTable, followsTable } from "@workspace/db";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { Router, type IRouter } from "express";
+import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 
 const router: IRouter = Router();
+
+// ── Response shape validation ─────────────────────────────────────────────────
+const GuideAvailabilitySchema = z.object({
+  days:      z.array(z.number()),
+  timeFrom:  z.string(),
+  timeTo:    z.string(),
+  timezone:  z.string().optional(),
+});
+
+const GuideResponseSchema = z.object({
+  userId:            z.string(),
+  name:              z.string().nullable(),
+  username:          z.string().nullable(),
+  bio:               z.string().nullable(),
+  guideBio:          z.string().nullable(),
+  guideTopics:       z.array(z.string()),
+  guideAvailability: GuideAvailabilitySchema.nullable(),
+  peaceRating:       z.number(),
+  dreamersGuided:    z.number(),
+  followerCount:     z.number(),
+  avatarUri:         z.string().nullable(),
+  mood:              z.string().nullable(),
+  traits:            z.array(z.string()),
+  role:              z.string().nullable(),
+  country:           z.string().nullable(),
+  isFollowing:       z.boolean(),
+  isAvailableNow:    z.boolean(),
+});
+
+type GuideResponse = z.infer<typeof GuideResponseSchema>;
 
 export interface GuideAvailability {
   days:      number[];
@@ -128,11 +159,17 @@ router.get("/guides", requireAuth, async (req, res) => {
       followerCount[r.followingId] = (followerCount[r.followingId] ?? 0) + 1;
     }
 
-    return res.json(
-      guideRows.map(g =>
-        serializeGuide(g, followerCount[g.userId] ?? 0, followingSet.has(g.userId)),
-      ),
-    );
+    const serialized: GuideResponse[] = [];
+    for (const g of guideRows) {
+      const raw    = serializeGuide(g, followerCount[g.userId] ?? 0, followingSet.has(g.userId));
+      const parsed = GuideResponseSchema.safeParse(raw);
+      if (parsed.success) {
+        serialized.push(parsed.data);
+      } else {
+        req.log.warn({ userId: g.userId, issues: parsed.error.issues }, "Guide row failed validation — skipped");
+      }
+    }
+    return res.json(serialized);
   } catch (err) {
     req.log.error({ err }, "Failed to list guides");
     return res.status(500).json({ error: "Internal server error" });
@@ -175,9 +212,13 @@ router.get("/guides/:userId", requireAuth, async (req, res) => {
         .where(and(eq(followsTable.followerId, viewerId), eq(followsTable.followingId, targetId))),
     ]);
 
-    return res.json(
-      serializeGuide(guideRow, followers.length, isFollowingRows.length > 0),
-    );
+    const raw    = serializeGuide(guideRow, followers.length, isFollowingRows.length > 0);
+    const parsed = GuideResponseSchema.safeParse(raw);
+    if (!parsed.success) {
+      req.log.warn({ userId: targetId, issues: parsed.error.issues }, "Guide row failed validation");
+      return res.status(500).json({ error: "Guide data is malformed" });
+    }
+    return res.json(parsed.data);
   } catch (err) {
     req.log.error({ err }, "Failed to get guide");
     return res.status(500).json({ error: "Internal server error" });

@@ -19,6 +19,7 @@ import rewardsRouter from "./rewards";
 import adminEventsRouter from "./admin-events";
 import campfireRouter from "./campfire";
 import streamRouter from "./stream";
+import pushRouter from "./push";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(rewardsRouter);
 router.use(adminEventsRouter);
 router.use(campfireRouter);
 router.use(streamRouter);
+router.use(pushRouter);
 
 export default router;

@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { DraftStore } from '@/utils/draftStore';
 import type { BubbleStyle, PanelOverlay, StoryPanel } from '@/context/AppContext';
-import { persistImageUri } from '@/utils/persistImage';
+import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
 import { ImageSourceSheet } from '@/components/ImageSourceSheet';
@@ -367,15 +367,14 @@ export default function PanelEditorScreen() {
     targetIndices.forEach(async (panelIdx, i) => {
       try {
         const uri = await persistImageUri(res.assets[i].uri);
-        if (uri) {
-          setPanels(prev => {
-            const next = prev.map((p, pi) => pi === panelIdx ? { ...p, imageUri: uri, bgPreset: undefined } : p);
-            DraftStore.updatePanel(panelIdx, { imageUri: uri, bgPreset: undefined });
-            return next;
-          });
-        } else {
-          setUploadError('Photo upload failed — check your connection and try again.');
-        }
+        setPanels(prev => {
+          const next = prev.map((p, pi) => pi === panelIdx ? { ...p, imageUri: uri, bgPreset: undefined } : p);
+          DraftStore.updatePanel(panelIdx, { imageUri: uri, bgPreset: undefined });
+          return next;
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — check your connection and try again.';
+        setUploadError(msg);
       } finally {
         setUploadingSet(prev => { const s = new Set(prev); s.delete(panelIdx); return s; });
       }
@@ -388,11 +387,10 @@ export default function PanelEditorScreen() {
     setUploadingSet(new Set([idx]));
     try {
       const uri = await persistImageUri(croppedUri);
-      if (uri) {
-        updatePanel(idx, { imageUri: uri, bgPreset: undefined, imageAspectRatio: aspectRatio });
-      } else {
-        setUploadError('Photo upload failed — check your connection and try again.');
-      }
+      updatePanel(idx, { imageUri: uri, bgPreset: undefined, imageAspectRatio: aspectRatio });
+    } catch (err: unknown) {
+      const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — check your connection and try again.';
+      setUploadError(msg);
     } finally {
       setUploadingSet(new Set());
     }

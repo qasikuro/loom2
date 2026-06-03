@@ -6,7 +6,7 @@ import { ImageSourceSheet } from '@/components/ImageSourceSheet';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { persistImageUri } from '@/utils/persistImage';
+import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
@@ -159,16 +159,15 @@ export default function CreateOutfitScreen() {
     }).start();
     try {
       const persisted = await persistImageUri(croppedUri);
-      if (persisted) {
-        Animated.timing(uploadProgress, {
-          toValue: 1, duration: 300, useNativeDriver: false,
-        }).start(() => setTimeout(() => uploadProgress.setValue(0), 500));
-        setImageUri(persisted);
-        setError(null);
-      } else {
-        uploadProgress.setValue(0);
-        setError('Photo upload failed — check your connection and try again.');
-      }
+      Animated.timing(uploadProgress, {
+        toValue: 1, duration: 300, useNativeDriver: false,
+      }).start(() => setTimeout(() => uploadProgress.setValue(0), 500));
+      setImageUri(persisted);
+      setError(null);
+    } catch (err: unknown) {
+      uploadProgress.setValue(0);
+      const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — try again.';
+      setError(msg);
     } finally {
       setUploading(false);
     }

@@ -3,7 +3,7 @@ import CropImageModal from '@/components/CropImageModal';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
-import { persistImageUri } from '@/utils/persistImage';
+import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
@@ -48,12 +48,11 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
     setUploading(true);
     try {
       const persisted = await persistImageUri(uri);
-      if (persisted) {
-        onChange({ ...panel, imageUri: persisted });
-      } else {
-        setUploadError('Upload failed — check your connection and tap Retry.');
-        setFailedUri(uri);
-      }
+      onChange({ ...panel, imageUri: persisted });
+    } catch (err: unknown) {
+      const msg = err instanceof ImageUploadError ? err.userMessage : 'Upload failed — check your connection and tap Retry.';
+      setUploadError(msg);
+      setFailedUri(uri);
     } finally {
       setUploading(false);
     }

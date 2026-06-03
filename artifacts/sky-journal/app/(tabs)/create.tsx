@@ -119,7 +119,7 @@ export default function CreateScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { t: tr } = useTranslation();
-  const { addStory, updateStory, stories } = useApp();
+  const { addStory, updateStory, stories, storiesLoadError, apiOnline, isLoading, reloadData } = useApp();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
@@ -363,6 +363,20 @@ export default function CreateScreen() {
         start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
         pointerEvents="none"
       />
+
+      {/* ── Stories load error banner ───────────────────────────── */}
+      {(storiesLoadError || (!apiOnline && !isLoading)) && (
+        <View style={[c.offlineBar, { top: topPad + 4 }]}>
+          <Text style={c.offlineBarText} numberOfLines={1}>
+            {storiesLoadError && apiOnline
+              ? "Couldn't load stories"
+              : "Offline — showing cached"}
+          </Text>
+          <TouchableOpacity onPress={reloadData} activeOpacity={0.7} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <Text style={c.offlineBarBtn}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Header ─────────────────────────────────────────────── */}
       <View style={[c.header, { paddingTop: topPad + 10 }]}>
@@ -806,6 +820,17 @@ const c = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1,
   },
+
+  // ── Offline / load-error bar ──────────────────────────────────────────────
+  offlineBar: {
+    position: 'absolute', left: 16, right: 16, zIndex: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(6,4,18,0.82)', borderWidth: 1,
+    borderColor: 'rgba(224,92,92,0.30)', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  offlineBarText: { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(224,92,92,0.90)' },
+  offlineBarBtn:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,168,232,0.90)' },
 
   // ── Error ─────────────────────────────────────────────────────────────────
   errorBanner: {
