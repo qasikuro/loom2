@@ -148,7 +148,12 @@ function AppOverlays() {
     markOnboardingDone();
   }
 
-  return <OnboardingOverlay visible={showOnboarding} onComplete={handleComplete} />;
+  function handleDismiss() {
+    // User skipped — just hide for this session; draft preserved for next open
+    setShowOnboarding(false);
+  }
+
+  return <OnboardingOverlay visible={showOnboarding} onComplete={handleComplete} onDismiss={handleDismiss} />;
 }
 
 function NotificationDeepLinkHandler() {

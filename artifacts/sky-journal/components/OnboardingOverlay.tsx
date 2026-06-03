@@ -113,10 +113,11 @@ function earliestIncomplete(d: DraftState): number {
 
 interface OnboardingOverlayProps {
   visible:    boolean;
-  onComplete: () => void;
+  onComplete: () => void;  // called after successful seeding — marks onboarding done
+  onDismiss:  () => void;  // called on skip — just hides overlay, draft preserved
 }
 
-export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProps) {
+export function OnboardingOverlay({ visible, onComplete, onDismiss }: OnboardingOverlayProps) {
   const { playSound }               = useSound();
   const { reloadData, addJournalEntry } = useApp();
 
@@ -305,16 +306,15 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
     Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }).start(onComplete);
   }, [selectedMood, selectedType, journalText, addJournalEntry, reloadData, onComplete, playSound]);
 
-  // ── Skip — closes overlay but does NOT mark onboarding done or clear draft.
-  //          The draft is preserved so the user resumes from this step on next
-  //          sign-in. `onComplete` here only means "hide the overlay for this
-  //          session"; the _layout gate will re-check on next open.
+  // ── Skip — hides overlay for this session; does NOT mark onboarding done.
+  //          Draft is preserved so the user resumes from this step on next sign-in.
+  //          onDismiss (not onComplete) is called so _layout does NOT call markOnboardingDone.
   const handleSkip = useCallback(() => {
     playSound('tap');
     Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
-      onComplete();
+      onDismiss();
     });
-  }, [playSound, onComplete]);
+  }, [playSound, onDismiss]);
 
   // ── Per-step "next" logic ──────────────────────────────────────────────────
   function handleNext() {
