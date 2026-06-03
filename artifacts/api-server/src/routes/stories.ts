@@ -1,4 +1,4 @@
-import { db, storiesTable, storySavesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable } from "@workspace/db";
+import { db, storiesTable, storySavesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable, userPurchasesTable } from "@workspace/db";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
@@ -302,11 +302,11 @@ router.delete("/stories/:id", requireAuth, async (req, res) => {
 
 // ── Milestone definitions ─────────────────────────────────────────────────────
 const MILESTONE_THRESHOLDS = [10, 50, 100, 500] as const;
-const MILESTONE_DATA: Record<number, { titleName: string; aura: number; stars: number }> = {
-  10:  { titleName: 'Resonant',    aura: 20,  stars: 10 },
-  50:  { titleName: 'Storyteller', aura: 50,  stars: 20 },
-  100: { titleName: 'Illuminated', aura: 80,  stars: 30 },
-  500: { titleName: 'Legend',      aura: 150, stars: 60 },
+const MILESTONE_DATA: Record<number, { titleName: string; rewardType: string; aura: number; stars: number }> = {
+  10:  { titleName: 'Resonant',    rewardType: 'aura_boost',        aura: 20,  stars: 10 },
+  50:  { titleName: 'Storyteller', rewardType: 'storyteller',       aura: 50,  stars: 20 },
+  100: { titleName: 'Illuminated', rewardType: 'featured_eligible', aura: 80,  stars: 30 },
+  500: { titleName: 'Legend',      rewardType: 'legend',            aura: 150, stars: 60 },
 };
 
 router.post("/stories/:id/witness", requireAuth, async (req, res) => {
@@ -321,31 +321,39 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
 
     if (!updated) return res.status(404).json({ error: "Not found" });
 
-    // ── Milestone detection (only for story author, not self-witness) ──────────
+    // ── Milestone detection (only when witnessing another author's story) ──────
+    let milestonePayload: { threshold: number; titleName: string; rewardType: string; aura: number; stars: number } | null = null;
+
     if (updated.userId !== actorId) {
       const newCount = updated.witnessedCount;
-      const candidateThreshold = MILESTONE_THRESHOLDS.find(t => newCount >= t);
+      const currentMilestones = (updated.witnessMilestones ?? []) as number[];
 
-      if (candidateThreshold) {
-        const mData = MILESTONE_DATA[candidateThreshold]!;
-        // Atomic: only update if threshold not already in the array (prevents race-condition duplicate grants)
-        const [claimed] = await db.execute(sql`
+      // Find ALL thresholds the story has crossed but not yet claimed — ascending order
+      const unclaimedThresholds = MILESTONE_THRESHOLDS.filter(
+        t => newCount >= t && !currentMilestones.includes(t),
+      );
+
+      for (const threshold of unclaimedThresholds) {
+        const mData = MILESTONE_DATA[threshold]!;
+
+        // Atomic claim: UPDATE only when milestone is not already recorded (prevents double-grant on concurrent witnesses)
+        const claimResult = await db.execute(sql`
           UPDATE stories
-          SET witness_milestones = witness_milestones || ${JSON.stringify([candidateThreshold])}::jsonb
+          SET witness_milestones = witness_milestones || ${JSON.stringify([threshold])}::jsonb
           WHERE id = ${storyId}
-            AND NOT (witness_milestones @> ${JSON.stringify([candidateThreshold])}::jsonb)
+            AND NOT (witness_milestones @> ${JSON.stringify([threshold])}::jsonb)
           RETURNING id
-        `).catch(() => ({ rows: [] })) as unknown as [{ rows: { id: string }[] }];
+        `).catch(() => ({ rows: [] })) as unknown as { rows: { id: string }[] };
 
-        if (claimed?.rows?.length) {
-          // Grant milestone currency reward to story author (idempotent via reward_events)
+        if (claimResult?.rows?.length) {
+          // Grant currency reward to story author
           grantReward(
             db as any, updated.userId, "witness_milestone",
-            `${storyId}:${candidateThreshold}`,
+            `${storyId}:${threshold}`,
             { aura: mData.aura, stars: mData.stars },
           ).catch(() => null);
 
-          // Append title to character traits (idempotent — skip if already present)
+          // Append title to character traits (idempotent)
           db.execute(sql`
             UPDATE character
             SET traits = CASE
@@ -354,22 +362,43 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
             END
             WHERE user_id = ${updated.userId}
           `).catch(() => null);
+
+          // 500-milestone: grant profile shimmer cosmetic (free — no currency spent)
+          if (threshold === 500) {
+            db.insert(userPurchasesTable)
+              .values({ userId: updated.userId, itemId: 'shimmer_profile', itemName: 'Profile Shimmer', starsSpent: 0, auraSpent: 0, shardsSpent: 0 })
+              .onConflictDoNothing()
+              .catch(() => null);
+          }
+
+          // Track the highest claimed for response
+          if (!milestonePayload || threshold > milestonePayload.threshold) {
+            milestonePayload = { threshold, titleName: mData.titleName, rewardType: mData.rewardType, aura: mData.aura, stars: mData.stars };
+          }
         }
       }
 
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "witness", req).catch(() => null);
       sendPushForWitness(actorId, updated.userId, storyId, updated.chapterTitle).catch(() => null);
-      // Reward story owner for receiving a witness
       grantReward(db as any, updated.userId, "story_witnessed", `${storyId}:${actorId}`).catch(() => null);
       syncConstellation(db as any, updated.userId).catch(() => null);
     }
-    // Reward witness for their daily presence — await for client feedback
+
+    // Reward witness for their daily presence — awaited for client feedback
     const today = new Date().toISOString().slice(0, 10);
     const { granted: rewardGranted, amounts: rewardAmounts } =
       await grantReward(db as any, actorId, "daily_presence", today);
     syncConstellation(db as any, actorId).catch(() => null);
 
-    return res.json({ ...serializeStory(updated), rewardGranted, rewardAmounts });
+    // Re-fetch story so response includes freshly appended witnessMilestones
+    const [fresh] = await db.select().from(storiesTable).where(eq(storiesTable.id, storyId));
+
+    return res.json({
+      ...(fresh ? serializeStory(fresh) : serializeStory(updated)),
+      rewardGranted,
+      rewardAmounts,
+      milestone: milestonePayload,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to witness story");
     return res.status(500).json({ error: "Internal server error" });

@@ -303,7 +303,7 @@ export default function StoryScreen() {
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
   const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory,
-          showRewardToast, reloadRewards, reloadConstellation } = useApp();
+          showRewardToast, reloadRewards, reloadConstellation, reloadData } = useApp();
 
   const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
@@ -419,14 +419,18 @@ export default function StoryScreen() {
       Animated.timing(witnessGlow, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(witnessGlow, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
     ]).start();
-    apiFetch<{ rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
-      `/stories/${id}/witness`, { method: 'POST' },
-    ).then(res => {
+    apiFetch<{
+      rewardGranted?: boolean;
+      rewardAmounts?: { stars?: number; aura?: number; shards?: number };
+      milestone?: { threshold: number; titleName: string; rewardType: string; aura: number; stars: number } | null;
+    }>(`/stories/${id}/witness`, { method: 'POST' }).then(res => {
       if (res?.rewardGranted && res.rewardAmounts) {
         showRewardToast('Daily witness', res.rewardAmounts);
         reloadRewards().catch(() => null);
         reloadConstellation().catch(() => null);
       }
+      // Refresh stories so the creator's witnessMilestones are up-to-date next time they open their story
+      if (res?.milestone) reloadData().catch(() => null);
     }).catch(() => null);
   }
 
