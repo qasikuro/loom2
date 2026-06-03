@@ -1043,6 +1043,33 @@ export default function HomeScreen() {
   const [showEventSheet, setShowEventSheet] = useState(false);
   const [showShop,       setShowShop]       = useState(false);
 
+  // ── Witness delta card: only shown when witness counts increased since last open ──
+  const [newWitnessData, setNewWitnessData] = useState<{ count: number; title: string } | null>(null);
+  useEffect(() => {
+    if (!stories.length) return;
+    const SNAP_KEY = 'witness_snapshot_v1';
+    AsyncStorage.getItem(SNAP_KEY).then(raw => {
+      const snapshot: Record<string, number> = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+      let totalNew = 0;
+      let topTitle = '';
+      let topNew   = 0;
+      stories.forEach(s => {
+        const prev = snapshot[s.id] ?? 0;
+        const curr = s.witnessedCount ?? 0;
+        const diff = curr - prev;
+        if (diff > 0) {
+          totalNew += diff;
+          if (diff > topNew) { topNew = diff; topTitle = s.chapterTitle || 'your story'; }
+        }
+      });
+      if (totalNew > 0) setNewWitnessData({ count: totalNew, title: topTitle });
+      // Advance snapshot to current counts so next open starts from here
+      const next: Record<string, number> = {};
+      stories.forEach(s => { next[s.id] = s.witnessedCount ?? 0; });
+      return AsyncStorage.setItem(SNAP_KEY, JSON.stringify(next));
+    }).catch(() => null);
+  }, [stories]);
+
   // ── Banner anti-stack gate (#13) ───────────────────────────────────────────
   const [bannerGate,    setBannerGate]    = useState(false);
   const [bannerExiting, setBannerExiting] = useState(false);
@@ -1454,21 +1481,21 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
-            WITNESS SUMMARY CARD — more prominent than pill
+            WITNESS SUMMARY CARD — delta-based: only if count rose since last open
         ══════════════════════════════════════════════════ */}
-        {witnessedNotifs > 0 && (() => {
-          const topNotif = serverNotifications.find(n => n.type === 'witness');
-          const storyTitle = topNotif?.title || 'your story';
-          return (
-            <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
-              <WitnessSummaryCard
-                count={witnessedNotifs}
-                storyTitle={storyTitle}
-                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}
-              />
-            </Animated.View>
-          );
-        })()}
+        {newWitnessData && (
+          <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+            <WitnessSummaryCard
+              count={newWitnessData.count}
+              storyTitle={newWitnessData.title}
+              onPress={() => {
+                setNewWitnessData(null);
+                setShowNotifs(true);
+                markServerNotificationsRead();
+              }}
+            />
+          </Animated.View>
+        )}
 
         {/* ══════════════════════════════════════════════════
             ACTIVITY DIGEST — what changed while you were away

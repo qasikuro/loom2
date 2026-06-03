@@ -15,28 +15,93 @@ import { router } from 'expo-router';
 const { width: W, height: H } = Dimensions.get('window');
 
 export interface MilestoneInfo {
-  threshold:  number;
-  titleName:  string;
-  flavour:    string;
-  accent:     string;
-  rewardType: string;
+  threshold:   number;
+  titleName:   string;
+  flavour:     string;
+  accent:      string;
+  rewardType:  'aura_boost' | 'storyteller' | 'featured_eligible' | 'legend';
+  rewardLabel: string;
+  emoji:       string;
+  aura:        number;
+  stars:       number;
 }
 
-const MILESTONE_COPY: Record<number, { flavour: string; accent: string; emoji: string }> = {
-  10:  { flavour: 'Your words resonated. Ten souls heard you.',              accent: '#9B78E8', emoji: '◐' },
-  50:  { flavour: 'Fifty hearts carried your story into the sky.',           accent: '#C8A84B', emoji: '◈' },
-  100: { flavour: 'A hundred witnesses. Your story lives in the collective.', accent: '#78C8A8', emoji: '⬡' },
-  500: { flavour: 'Five hundred souls. You are legend.',                     accent: '#E878B0', emoji: '✦' },
+interface MilestoneDef {
+  titleName:   string;
+  flavour:     string;
+  accent:      string;
+  rewardType:  MilestoneInfo['rewardType'];
+  rewardLabel: string;
+  emoji:       string;
+  aura:        number;
+  stars:       number;
+}
+
+const MILESTONE_MAP: Record<number, MilestoneDef> = {
+  10: {
+    titleName:   'Resonant',
+    flavour:     'Your words resonated. Ten souls heard you.',
+    accent:      '#9B78E8',
+    rewardType:  'aura_boost',
+    rewardLabel: 'Aura Boost',
+    emoji:       '◐',
+    aura:        20,
+    stars:       10,
+  },
+  50: {
+    titleName:   'Storyteller',
+    flavour:     'Fifty hearts carried your story into the sky.',
+    accent:      '#C8A84B',
+    rewardType:  'storyteller',
+    rewardLabel: 'Stars & Aura',
+    emoji:       '◈',
+    aura:        50,
+    stars:       20,
+  },
+  100: {
+    titleName:   'Illuminated',
+    flavour:     'A hundred witnesses. Your story lives in the collective.',
+    accent:      '#78C8A8',
+    rewardType:  'featured_eligible',
+    rewardLabel: 'Featured Eligible',
+    emoji:       '⬡',
+    aura:        80,
+    stars:       30,
+  },
+  500: {
+    titleName:   'Legend',
+    flavour:     'Five hundred souls. You are legend.',
+    accent:      '#E878B0',
+    rewardType:  'legend',
+    rewardLabel: 'Profile Shimmer',
+    emoji:       '✦',
+    aura:        150,
+    stars:       60,
+  },
 };
+
+export function buildMilestoneInfo(threshold: number, titleName: string): MilestoneInfo {
+  const def = MILESTONE_MAP[threshold] ?? MILESTONE_MAP[10]!;
+  return {
+    threshold,
+    titleName:   def.titleName ?? titleName,
+    flavour:     def.flavour,
+    accent:      def.accent,
+    rewardType:  def.rewardType,
+    rewardLabel: def.rewardLabel,
+    emoji:       def.emoji,
+    aura:        def.aura,
+    stars:       def.stars,
+  };
+}
 
 const NUM_PARTICLES = 18;
 
 interface BurstParticle {
-  angle:  Animated.Value;
-  dist:   Animated.Value;
+  dist:    Animated.Value;
   opacity: Animated.Value;
-  scale:  Animated.Value;
-  icon:   string;
+  scale:   Animated.Value;
+  icon:    string;
 }
 
 const PARTICLE_ICONS = ['✦', '◈', '◇', '◐', '⬡', '✿', '△', '◉', '★', '◆'];
@@ -44,7 +109,6 @@ const PARTICLE_ICONS = ['✦', '◈', '◇', '◐', '⬡', '✿', '△', '◉', 
 function useBurstParticles(): BurstParticle[] {
   return useRef<BurstParticle[]>(
     Array.from({ length: NUM_PARTICLES }, (_, i) => ({
-      angle:   new Animated.Value((i / NUM_PARTICLES) * Math.PI * 2),
       dist:    new Animated.Value(0),
       opacity: new Animated.Value(0),
       scale:   new Animated.Value(0),
@@ -59,37 +123,25 @@ interface Props {
   onDismiss: () => void;
 }
 
-export function buildMilestoneInfo(threshold: number, titleName: string): MilestoneInfo {
-  const copy = MILESTONE_COPY[threshold] ?? { flavour: 'A new milestone reached.', accent: '#9B78E8', emoji: '✦' };
-  return { threshold, titleName, flavour: copy.flavour, accent: copy.accent, rewardType: 'title' };
-}
-
 export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
   const particles  = useBurstParticles();
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const scaleAnim  = useRef(new Animated.Value(0.7)).current;
   const shineAnim  = useRef(new Animated.Value(0)).current;
-  const numAnim    = useRef(new Animated.Value(0)).current;
-
-  const copy = milestone ? (MILESTONE_COPY[milestone.threshold] ?? MILESTONE_COPY[10]!) : MILESTONE_COPY[10]!;
 
   useEffect(() => {
     if (!visible) return;
 
-    // Reset
     fadeAnim.setValue(0);
     scaleAnim.setValue(0.7);
     shineAnim.setValue(0);
-    numAnim.setValue(0);
     particles.forEach(p => { p.dist.setValue(0); p.opacity.setValue(0); p.scale.setValue(0); });
 
-    // Fade in backdrop + card
     Animated.parallel([
       Animated.timing(fadeAnim,  { toValue: 1, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.spring(scaleAnim, { toValue: 1, tension: 55, friction: 8, useNativeDriver: true }),
     ]).start();
 
-    // Burst particles
     particles.forEach((p, i) => {
       Animated.sequence([
         Animated.delay(i * 25),
@@ -102,7 +154,6 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
       ]).start();
     });
 
-    // Shine sweep
     Animated.sequence([
       Animated.delay(400),
       Animated.loop(
@@ -110,14 +161,16 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
         { iterations: 4 },
       ),
     ]).start();
-
-    // Number count-up
-    Animated.timing(numAnim, { toValue: 1, duration: 1200, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
   }, [visible, milestone]);
 
   if (!visible || !milestone) return null;
 
-  const accent = milestone.accent;
+  const { accent, emoji, threshold, titleName, flavour, rewardType, rewardLabel, aura, stars } = milestone;
+
+  const rewardBadgeLabel = rewardType === 'aura_boost'       ? `+${aura} Aura`
+                         : rewardType === 'featured_eligible' ? 'Featured Eligible'
+                         : rewardType === 'legend'            ? 'Profile Shimmer Unlocked'
+                         : `+${stars} Stars, +${aura} Aura`;
 
   return (
     <Modal transparent animationType="none" visible={visible} statusBarTranslucent>
@@ -152,14 +205,6 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
 
         {/* Card */}
         <Animated.View style={[s.card, { transform: [{ scale: scaleAnim }] }]}>
-          {/* Card glow border */}
-          <LinearGradient
-            colors={[`${accent}40`, `${accent}10`, 'transparent', `${accent}10`]}
-            style={s.cardBorder}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          />
-
-          {/* Shine sweep */}
           <Animated.View
             pointerEvents="none"
             style={[s.shineSweep, {
@@ -168,21 +213,23 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
             }]}
           />
 
-          {/* Big emoji */}
-          <Text style={[s.bigIcon, { color: accent }]}>{copy.emoji}</Text>
-
-          {/* Threshold */}
-          <Text style={[s.threshold, { color: accent }]}>{milestone.threshold}</Text>
+          <Text style={[s.bigIcon, { color: accent }]}>{emoji}</Text>
+          <Text style={[s.threshold, { color: accent }]}>{threshold}</Text>
           <Text style={s.thresholdLabel}>witnesses</Text>
 
           {/* Title unlock */}
           <View style={[s.titleBadge, { borderColor: `${accent}45`, backgroundColor: `${accent}12` }]}>
             <Text style={s.titleBadgeLabel}>Title unlocked</Text>
-            <Text style={[s.titleName, { color: accent }]}>"{milestone.titleName}"</Text>
+            <Text style={[s.titleName, { color: accent }]}>"{titleName}"</Text>
+          </View>
+
+          {/* Reward pill */}
+          <View style={[s.rewardPill, { borderColor: `${accent}30`, backgroundColor: `${accent}09` }]}>
+            <Text style={[s.rewardPillTxt, { color: `${accent}BB` }]}>{rewardBadgeLabel}</Text>
           </View>
 
           {/* Flavour */}
-          <Text style={s.flavour}>{milestone.flavour}</Text>
+          <Text style={s.flavour}>{flavour}</Text>
 
           {/* CTAs */}
           <TouchableOpacity
@@ -221,21 +268,13 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.7, shadowRadius: 40, elevation: 40,
   },
-  cardBorder: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 28,
-    borderWidth: 1, borderColor: 'transparent',
-  },
   shineSweep: {
     position: 'absolute', top: 0, bottom: 0, width: 60,
     backgroundColor: 'rgba(255,255,255,1)',
     transform: [{ skewX: '-20deg' }],
   },
-  bigIcon: {
-    fontSize: 52, marginBottom: 4,
-  },
-  threshold: {
-    fontSize: 56, fontFamily: 'Satoshi-Bold', letterSpacing: -2, lineHeight: 60,
-  },
+  bigIcon: { fontSize: 52, marginBottom: 4 },
+  threshold: { fontSize: 56, fontFamily: 'Satoshi-Bold', letterSpacing: -2, lineHeight: 60 },
   thresholdLabel: {
     fontSize: 14, fontFamily: 'Satoshi-Regular',
     color: 'rgba(200,185,255,0.45)', letterSpacing: 2, textTransform: 'uppercase',
@@ -244,30 +283,28 @@ const s = StyleSheet.create({
   titleBadge: {
     borderWidth: 1, borderRadius: 16,
     paddingHorizontal: 18, paddingVertical: 10,
-    alignItems: 'center', gap: 4, marginBottom: 8,
+    alignItems: 'center', gap: 4,
   },
   titleBadgeLabel: {
     fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2, textTransform: 'uppercase',
     color: 'rgba(200,185,255,0.40)',
   },
-  titleName: {
-    fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4,
+  titleName: { fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
+  rewardPill: {
+    borderWidth: 1, borderRadius: 12,
+    paddingHorizontal: 14, paddingVertical: 6,
   },
+  rewardPillTxt: { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3 },
   flavour: {
     fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
     color: 'rgba(200,185,255,0.60)', textAlign: 'center', lineHeight: 21,
-    paddingHorizontal: 8, marginBottom: 16,
+    paddingHorizontal: 8, marginBottom: 12,
   },
   primaryBtn: {
     width: '100%', borderRadius: 18,
     paddingVertical: 18, alignItems: 'center',
   },
-  primaryBtnTxt: {
-    fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: -0.2,
-  },
+  primaryBtnTxt: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: -0.2 },
   laterBtn: { paddingVertical: 8 },
-  laterBtnTxt: {
-    fontSize: 13, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,185,255,0.32)',
-  },
+  laterBtnTxt: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.32)' },
 });

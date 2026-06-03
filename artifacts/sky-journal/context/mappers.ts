@@ -82,19 +82,20 @@ export interface JournalEntry {
 }
 
 export interface Story {
-  id:             string;
-  date:           string;
-  chapterTitle:   string;
-  description:    string;
-  panels:         StoryPanel[];
-  mood:           string;
-  location:       string;
-  isPublic:       boolean;
-  witnessedCount: number;
-  savedCount:     number;
-  stickerCount:   number;
-  pageLayoutKey?: string;
-  pages?:         StoryPage[];
+  id:                 string;
+  date:               string;
+  chapterTitle:       string;
+  description:        string;
+  panels:             StoryPanel[];
+  mood:               string;
+  location:           string;
+  isPublic:           boolean;
+  witnessedCount:     number;
+  savedCount:         number;
+  stickerCount:       number;
+  witnessMilestones?: number[];
+  pageLayoutKey?:     string;
+  pages?:             StoryPage[];
 }
 
 export interface Outfit {
@@ -185,24 +186,25 @@ export interface RawStoryPanel {
 }
 
 export interface RawStoryResponse {
-  id:               string;
-  date:             string | Date;
-  chapterTitle?:    string;
-  chapter_title?:   string;
-  description?:     string;
-  panels?:          RawStoryPanel[];
-  mood:             string;
-  location?:        string;
-  isPublic?:        boolean;
-  is_public?:       boolean;
-  witnessedCount?:  number;
-  witnessed_count?: number;
-  savedCount?:      number;
-  saved_count?:     number;
-  stickerCount?:    number;
-  pageLayoutKey?:   string;
-  page_layout_key?: string;
-  pages?:           unknown[];
+  id:                 string;
+  date:               string | Date;
+  chapterTitle?:      string;
+  chapter_title?:     string;
+  description?:       string;
+  panels?:            RawStoryPanel[];
+  mood:               string;
+  location?:          string;
+  isPublic?:          boolean;
+  is_public?:         boolean;
+  witnessedCount?:    number;
+  witnessed_count?:   number;
+  savedCount?:        number;
+  saved_count?:       number;
+  stickerCount?:      number;
+  witnessMilestones?: number[];
+  pageLayoutKey?:     string;
+  page_layout_key?:   string;
+  pages?:             unknown[];
 }
 
 export interface RawOutfitResponse {
@@ -338,11 +340,12 @@ export function toAppStory(raw: RawStoryResponse, apiBase?: string): Story {
     mood:           raw.mood,
     location:       raw.location ?? '',
     isPublic:       raw.isPublic ?? raw.is_public ?? false,
-    witnessedCount: raw.witnessedCount ?? raw.witnessed_count ?? 0,
-    savedCount:     raw.savedCount     ?? raw.saved_count     ?? 0,
-    stickerCount:   raw.stickerCount   ?? 0,
-    pageLayoutKey:  raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
-    pages:          Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
+    witnessedCount:    raw.witnessedCount ?? raw.witnessed_count ?? 0,
+    savedCount:        raw.savedCount     ?? raw.saved_count     ?? 0,
+    stickerCount:      raw.stickerCount   ?? 0,
+    witnessMilestones: Array.isArray(raw.witnessMilestones) ? raw.witnessMilestones : [],
+    pageLayoutKey:     raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
+    pages:             Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
   };
 }
 

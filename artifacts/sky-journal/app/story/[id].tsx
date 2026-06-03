@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import {
   Animated,
@@ -327,6 +328,28 @@ export default function StoryScreen() {
   const post  = discoverPosts.find(p => p.id === id) ?? null;
   const isOwnStory = !!story;
 
+  // ── Creator-facing milestone check: show modal for unshown milestones ──────
+  const shownKey = `shown_milestones_v1_${id ?? ''}`;
+  useEffect(() => {
+    if (!isOwnStory || !story?.witnessMilestones?.length) return;
+    AsyncStorage.getItem(shownKey).then(raw => {
+      const shown: number[] = raw ? (JSON.parse(raw) as number[]) : [];
+      const unshown = story.witnessMilestones!.find(t => !shown.includes(t));
+      if (unshown != null) setActiveMilestone(buildMilestoneInfo(unshown, ''));
+    }).catch(() => null);
+  }, [isOwnStory, id, (story?.witnessMilestones ?? []).join(',')]);
+
+  function handleMilestoneDismiss() {
+    if (activeMilestone && id) {
+      AsyncStorage.getItem(shownKey).then(raw => {
+        const shown: number[] = raw ? (JSON.parse(raw) as number[]) : [];
+        shown.push(activeMilestone.threshold);
+        return AsyncStorage.setItem(shownKey, JSON.stringify(shown));
+      }).catch(() => null);
+    }
+    setActiveMilestone(null);
+  }
+
   const title      = story?.chapterTitle ?? post?.chapterTitle ?? t('discover.untitledChapter');
   const mood       = story?.mood         ?? post?.mood         ?? 'Peaceful';
   const authorName = post?.authorName    ?? t('common.you');
@@ -396,20 +419,13 @@ export default function StoryScreen() {
       Animated.timing(witnessGlow, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(witnessGlow, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
     ]).start();
-    apiFetch<{
-      rewardGranted?: boolean;
-      rewardAmounts?: { stars?: number; aura?: number; shards?: number };
-      milestone?: { threshold: number; titleName: string } | null;
-    }>(
+    apiFetch<{ rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
       `/stories/${id}/witness`, { method: 'POST' },
     ).then(res => {
       if (res?.rewardGranted && res.rewardAmounts) {
         showRewardToast('Daily witness', res.rewardAmounts);
         reloadRewards().catch(() => null);
         reloadConstellation().catch(() => null);
-      }
-      if (res?.milestone) {
-        setActiveMilestone(buildMilestoneInfo(res.milestone.threshold, res.milestone.titleName));
       }
     }).catch(() => null);
   }
@@ -653,7 +669,7 @@ export default function StoryScreen() {
       <MilestoneModal
         visible={activeMilestone !== null}
         milestone={activeMilestone}
-        onDismiss={() => setActiveMilestone(null)}
+        onDismiss={handleMilestoneDismiss}
       />
     </View>
   );

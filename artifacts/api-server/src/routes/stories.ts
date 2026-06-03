@@ -322,40 +322,39 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
     if (!updated) return res.status(404).json({ error: "Not found" });
 
     // ── Milestone detection (only for story author, not self-witness) ──────────
-    let milestonePayload: { threshold: number; titleName: string } | null = null;
     if (updated.userId !== actorId) {
-      const currentMilestones = (updated.witnessMilestones ?? []) as number[];
       const newCount = updated.witnessedCount;
-      const newThreshold = MILESTONE_THRESHOLDS.find(
-        t => newCount >= t && !currentMilestones.includes(t),
-      );
+      const candidateThreshold = MILESTONE_THRESHOLDS.find(t => newCount >= t);
 
-      if (newThreshold) {
-        const mData = MILESTONE_DATA[newThreshold]!;
-        // Persist milestone as reached (fire-and-forget to not block response)
-        db.update(storiesTable)
-          .set({ witnessMilestones: [...currentMilestones, newThreshold] as any })
-          .where(eq(storiesTable.id, storyId))
-          .catch(() => null);
+      if (candidateThreshold) {
+        const mData = MILESTONE_DATA[candidateThreshold]!;
+        // Atomic: only update if threshold not already in the array (prevents race-condition duplicate grants)
+        const [claimed] = await db.execute(sql`
+          UPDATE stories
+          SET witness_milestones = witness_milestones || ${JSON.stringify([candidateThreshold])}::jsonb
+          WHERE id = ${storyId}
+            AND NOT (witness_milestones @> ${JSON.stringify([candidateThreshold])}::jsonb)
+          RETURNING id
+        `).catch(() => ({ rows: [] })) as unknown as [{ rows: { id: string }[] }];
 
-        // Grant milestone currency reward to story author
-        grantReward(
-          db as any, updated.userId, "witness_milestone",
-          `${storyId}:${newThreshold}`,
-          { aura: mData.aura, stars: mData.stars },
-        ).catch(() => null);
+        if (claimed?.rows?.length) {
+          // Grant milestone currency reward to story author (idempotent via reward_events)
+          grantReward(
+            db as any, updated.userId, "witness_milestone",
+            `${storyId}:${candidateThreshold}`,
+            { aura: mData.aura, stars: mData.stars },
+          ).catch(() => null);
 
-        // Append title to character traits (idempotent — skip if already present)
-        db.execute(sql`
-          UPDATE character
-          SET traits = CASE
-            WHEN traits @> ${JSON.stringify([mData.titleName])}::jsonb THEN traits
-            ELSE traits || ${JSON.stringify([mData.titleName])}::jsonb
-          END
-          WHERE user_id = ${updated.userId}
-        `).catch(() => null);
-
-        milestonePayload = { threshold: newThreshold, titleName: mData.titleName };
+          // Append title to character traits (idempotent — skip if already present)
+          db.execute(sql`
+            UPDATE character
+            SET traits = CASE
+              WHEN traits @> ${JSON.stringify([mData.titleName])}::jsonb THEN traits
+              ELSE traits || ${JSON.stringify([mData.titleName])}::jsonb
+            END
+            WHERE user_id = ${updated.userId}
+          `).catch(() => null);
+        }
       }
 
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "witness", req).catch(() => null);
@@ -370,7 +369,7 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
       await grantReward(db as any, actorId, "daily_presence", today);
     syncConstellation(db as any, actorId).catch(() => null);
 
-    return res.json({ ...serializeStory(updated), rewardGranted, rewardAmounts, milestone: milestonePayload });
+    return res.json({ ...serializeStory(updated), rewardGranted, rewardAmounts });
   } catch (err) {
     req.log.error({ err }, "Failed to witness story");
     return res.status(500).json({ error: "Internal server error" });
@@ -550,20 +549,21 @@ async function fetchStickerCounts(storyIds: string[]): Promise<Record<string, nu
 
 function serializeStory(row: typeof storiesTable.$inferSelect, stickerCount = 0) {
   return {
-    id:             row.id,
-    date:           row.date.toISOString(),
-    chapterTitle:   row.chapterTitle,
-    description:    row.description ?? '',
-    panels:         sanitizePanels(row.panels),
-    mood:           row.mood,
-    location:       row.location,
-    isPublic:       row.isPublic,
-    witnessedCount: row.witnessedCount,
-    savedCount:     row.savedCount,
+    id:                row.id,
+    date:              row.date.toISOString(),
+    chapterTitle:      row.chapterTitle,
+    description:       row.description ?? '',
+    panels:            sanitizePanels(row.panels),
+    mood:              row.mood,
+    location:          row.location,
+    isPublic:          row.isPublic,
+    witnessedCount:    row.witnessedCount,
+    savedCount:        row.savedCount,
     stickerCount,
-    pageLayoutKey:  row.pageLayoutKey ?? undefined,
-    pages:          row.pages ?? undefined,
-    createdAt:      row.createdAt.toISOString(),
+    witnessMilestones: (row.witnessMilestones ?? []) as number[],
+    pageLayoutKey:     row.pageLayoutKey ?? undefined,
+    pages:             row.pages ?? undefined,
+    createdAt:         row.createdAt.toISOString(),
   };
 }
 
