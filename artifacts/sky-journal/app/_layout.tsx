@@ -121,12 +121,19 @@ function AppOverlays() {
       const localDone = await hasCompletedOnboarding();
       if (localDone) return;
 
-      // 2. Server-backed fallback: if the character already has a
-      //    constellationType, the user completed onboarding on another device
-      //    or their local flag was cleared. Auto-mark and skip.
+      // 2. Server-backed fallback: auto-mark done for users who have already
+      //    customised their profile (pre-feature users or other-device completions).
+      //    Heuristics: constellationType set OR non-default name/bio/traits.
       try {
-        const char = await apiFetch<{ constellationType?: string | null }>('/character');
-        if (char?.constellationType) {
+        type CharHint = { constellationType?: string | null; name?: string; bio?: string; traits?: unknown[] };
+        const char = await apiFetch<CharHint>('/character');
+        const isExisting = !!(
+          char?.constellationType ||
+          (char?.name && char.name !== 'Sky Child') ||
+          (char?.bio  && char.bio.trim().length > 0) ||
+          (Array.isArray(char?.traits) && char.traits.length > 0)
+        );
+        if (isExisting) {
           await markOnboardingDone();
           return;
         }

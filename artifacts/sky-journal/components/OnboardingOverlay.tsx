@@ -305,11 +305,15 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
     Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }).start(onComplete);
   }, [selectedMood, selectedType, journalText, addJournalEntry, reloadData, onComplete, playSound]);
 
-  // ── Skip ───────────────────────────────────────────────────────────────────
+  // ── Skip — closes overlay but does NOT mark onboarding done or clear draft.
+  //          The draft is preserved so the user resumes from this step on next
+  //          sign-in. `onComplete` here only means "hide the overlay for this
+  //          session"; the _layout gate will re-check on next open.
   const handleSkip = useCallback(() => {
     playSound('tap');
-    clearDraft();
-    Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(onComplete);
+    Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
+      onComplete();
+    });
   }, [playSound, onComplete]);
 
   // ── Per-step "next" logic ──────────────────────────────────────────────────

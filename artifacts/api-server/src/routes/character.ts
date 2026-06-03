@@ -89,7 +89,9 @@ router.put("/character", requireAuth, async (req, res) => {
       .where(eq(characterTable.userId, userId))
       .limit(1);
 
-    if (existing?.username && parsed.data.username !== existing.username) {
+    // Only block if the caller is explicitly trying to CHANGE an existing username.
+    // Omitting username (undefined) is always fine — used by onboarding partial updates.
+    if (existing?.username && parsed.data.username !== undefined && parsed.data.username !== existing.username) {
       return res.status(409).json({ error: "Username cannot be changed once set" });
     }
 
