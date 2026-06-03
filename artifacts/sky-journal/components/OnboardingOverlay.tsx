@@ -15,12 +15,14 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@clerk/expo';
 import { useSound } from '@/context/SoundContext';
 import { apiFetch, useApp } from '@/context/AppContext';
 import type { JournalEntry } from '@/context/AppContext';
 
-const DONE_KEY  = 'onboarding_v1';
-const DRAFT_KEY = 'onboarding_draft_v1';   // persists step + all selections
+// Keys are scoped per userId so different accounts on the same device are isolated.
+const doneKey  = (uid: string) => `onboarding_v1:${uid}`;
+const draftKey = (uid: string) => `onboarding_draft_v1:${uid}`;
 const { width: W, height: H } = Dimensions.get('window');
 
 // ── Moods ──────────────────────────────────────────────────────────────────────
@@ -86,20 +88,20 @@ const TOTAL_STEPS        = 5;
 
 // ── Draft helpers ──────────────────────────────────────────────────────────────
 
-async function loadDraft(): Promise<DraftState | null> {
+async function loadDraft(uid: string): Promise<DraftState | null> {
   try {
-    const raw = await AsyncStorage.getItem(DRAFT_KEY);
+    const raw = await AsyncStorage.getItem(draftKey(uid));
     if (!raw) return null;
     return JSON.parse(raw) as DraftState;
   } catch { return null; }
 }
 
-async function saveDraft(d: DraftState): Promise<void> {
-  try { await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch { /* ignore */ }
+async function saveDraft(uid: string, d: DraftState): Promise<void> {
+  try { await AsyncStorage.setItem(draftKey(uid), JSON.stringify(d)); } catch { /* ignore */ }
 }
 
-async function clearDraft(): Promise<void> {
-  try { await AsyncStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+async function clearDraft(uid: string): Promise<void> {
+  try { await AsyncStorage.removeItem(draftKey(uid)); } catch { /* ignore */ }
 }
 
 /** Earliest step that still needs a selection (used for invalid resume). */
@@ -118,6 +120,7 @@ interface OnboardingOverlayProps {
 }
 
 export function OnboardingOverlay({ visible, onComplete, onDismiss }: OnboardingOverlayProps) {
+  const { userId }                  = useAuth();
   const { playSound }               = useSound();
   const { reloadData, addJournalEntry } = useApp();
 
@@ -145,7 +148,8 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
     if (!visible) return;
     setSeedError(false);
 
-    loadDraft().then(draft => {
+    if (!userId) return;
+    loadDraft(userId).then(draft => {
       let startStep = STEP_WELCOME;
       if (draft) {
         // Restore all saved selections
@@ -171,7 +175,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       entranceEmoji();
       if (startStep === STEP_REVEAL) fireSparks();
     });
-  }, [visible]);
+  }, [visible, userId]);
 
   // ── Emoji entrance spring ──────────────────────────────────────────────────
   function entranceEmoji() {
@@ -216,7 +220,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         type:    overrides?.type    ?? selectedType,
         journal: overrides?.journal ?? journalText,
       };
-      saveDraft(draft);
+      if (userId) saveDraft(userId, draft);
       slideAnim.setValue(W);
       entranceEmoji();
       if (next === STEP_REVEAL) fireSparks();
@@ -224,25 +228,25 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true,
       }).start();
     });
-  }, [playSound, selectedMood, selectedType, journalText]);
+  }, [playSound, selectedMood, selectedType, journalText, userId]);
 
   // ── Selection handlers (persist draft immediately) ─────────────────────────
   const pickMood = useCallback((id: MoodId) => {
     playSound('tap');
     setSelectedMood(id);
-    saveDraft({ step, mood: id, type: selectedType, journal: journalText });
-  }, [playSound, step, selectedType, journalText]);
+    if (userId) saveDraft(userId, { step, mood: id, type: selectedType, journal: journalText });
+  }, [playSound, step, selectedType, journalText, userId]);
 
   const pickType = useCallback((id: ConstellationType) => {
     playSound('tap');
     setSelectedType(id);
-    saveDraft({ step, mood: selectedMood, type: id, journal: journalText });
-  }, [playSound, step, selectedMood, journalText]);
+    if (userId) saveDraft(userId, { step, mood: selectedMood, type: id, journal: journalText });
+  }, [playSound, step, selectedMood, journalText, userId]);
 
   const changeJournal = useCallback((text: string) => {
     setJournalText(text);
-    saveDraft({ step, mood: selectedMood, type: selectedType, journal: text });
-  }, [step, selectedMood, selectedType]);
+    if (userId) saveDraft(userId, { step, mood: selectedMood, type: selectedType, journal: text });
+  }, [step, selectedMood, selectedType, userId]);
 
   // ── Completion: seed profile + create journal entry (transactional) ────────
   const handleFinish = useCallback(async () => {
@@ -250,8 +254,17 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
     setSeedError(false);
     Keyboard.dismiss();
 
-    const mood = selectedMood  ?? 'Dreamy';
-    const type = selectedType  ?? 'dreamer';
+    const mood = selectedMood ?? 'Dreamy';
+    const type = selectedType ?? 'dreamer';
+
+    // Fetch existing character fields so the PUT doesn't overwrite unrelated data
+    // (e.g. username, bio, traits set before this feature).
+    type CharMerge = { name?: string | null; bio?: string | null; traits?: string[] | null };
+    let mergeBase: CharMerge = {};
+    try {
+      const existing = await apiFetch<CharMerge>('/character');
+      if (existing) mergeBase = existing;
+    } catch { /* ok — fall back to schema defaults if fetch fails */ }
 
     // Character PUT is required — retry once on failure
     let characterOk = false;
@@ -260,7 +273,13 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         await apiFetch('/character', {
           method:  'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ mood, constellationType: type }),
+          body:    JSON.stringify({
+            name:              mergeBase.name  ?? 'Sky Child',
+            bio:               mergeBase.bio   ?? '',
+            traits:            Array.isArray(mergeBase.traits) ? mergeBase.traits : [],
+            mood,
+            constellationType: type,
+          }),
         });
         characterOk = true;
       } catch {
@@ -269,18 +288,18 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
     }
 
     if (!characterOk) {
-      // Surface inline error so user can retry — do NOT mark onboarding done
       setSaving(false);
       setSeedError(true);
       return;
     }
 
-    // Journal POST: required when user typed something (retry once); empty → skipped intentionally.
+    // Journal: use addJournalEntry as the single authoritative write path.
+    // It updates local state optimistically and POSTs to the server.
+    // Journal is optional if the user left the field blank.
     const trimmedText = journalText.trim();
     if (trimmedText) {
-      const entryId = crypto.randomUUID();
       const entry: JournalEntry = {
-        id:         entryId,
+        id:         crypto.randomUUID(),
         date:       new Date().toISOString().slice(0, 10),
         type:       'diary',
         text:       trimmedText,
@@ -288,37 +307,16 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         imageUri:   undefined,
         friendName: undefined,
       };
-      // Optimistic local insert so profile shows the entry immediately after completion.
       addJournalEntry(entry);
-
-      let journalOk = false;
-      for (let attempt = 0; attempt < 2 && !journalOk; attempt++) {
-        try {
-          await apiFetch('/journal-entries', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ id: entryId, date: entry.date, type: 'diary', text: entry.text, mood: entry.mood }),
-          });
-          journalOk = true;
-        } catch {
-          if (attempt === 0) await new Promise(r => setTimeout(r, 800));
-        }
-      }
-
-      if (!journalOk) {
-        setSaving(false);
-        setSeedError(true);
-        return;
-      }
     }
 
     // All required writes done — clear draft and complete
-    await clearDraft();
+    if (userId) await clearDraft(userId);
     reloadData().catch(() => null);
     setSaving(false);
     playSound('chime');
     Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }).start(onComplete);
-  }, [selectedMood, selectedType, journalText, addJournalEntry, reloadData, onComplete, playSound]);
+  }, [selectedMood, selectedType, journalText, userId, addJournalEntry, reloadData, onComplete, playSound]);
 
   // ── Skip — hides overlay for this session; does NOT mark onboarding done.
   //          Draft is preserved so the user resumes from this step on next sign-in.
@@ -647,15 +645,15 @@ function RevealStep({
 
 // ── Async helpers (public API for _layout.tsx) ─────────────────────────────────
 
-export async function hasCompletedOnboarding(): Promise<boolean> {
+export async function hasCompletedOnboarding(uid: string): Promise<boolean> {
   try {
-    const v = await AsyncStorage.getItem(DONE_KEY);
+    const v = await AsyncStorage.getItem(doneKey(uid));
     return v === 'done';
   } catch { return false; }
 }
 
-export async function markOnboardingDone(): Promise<void> {
-  try { await AsyncStorage.setItem(DONE_KEY, 'done'); } catch { /* ignore */ }
+export async function markOnboardingDone(uid: string): Promise<void> {
+  try { await AsyncStorage.setItem(doneKey(uid), 'done'); } catch { /* ignore */ }
 }
 
 // ── Static star field ──────────────────────────────────────────────────────────

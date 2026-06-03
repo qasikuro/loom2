@@ -119,7 +119,7 @@ function AppOverlays() {
 
     (async () => {
       // 1. Fast local check — most returning users exit here
-      const localDone = await hasCompletedOnboarding();
+      const localDone = await hasCompletedOnboarding(userId);
       if (localDone) return;
 
       // 2. Server-backed fallback: auto-mark done for users who have already
@@ -135,7 +135,7 @@ function AppOverlays() {
           (Array.isArray(char?.traits) && char.traits.length > 0)
         );
         if (isExisting) {
-          await markOnboardingDone();
+          await markOnboardingDone(userId);
           return;
         }
       } catch { /* ignore — show onboarding if server is unreachable */ }
@@ -146,7 +146,7 @@ function AppOverlays() {
 
   function handleComplete() {
     setShowOnboarding(false);
-    markOnboardingDone();
+    if (userId) markOnboardingDone(userId);
   }
 
   function handleDismiss() {
