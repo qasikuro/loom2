@@ -6,7 +6,6 @@ import {
   Keyboard,
   Modal,
   Platform,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -28,6 +27,7 @@ export async function hasCompletedFirstPublish(): Promise<boolean> {
   } catch { return false; }
 }
 
+/** Call this ONLY after addStory / the publish API call succeeds. */
 export async function markFirstPublishDone(): Promise<void> {
   try { await AsyncStorage.setItem(DONE_KEY, 'done'); } catch {}
 }
@@ -52,18 +52,18 @@ const STEP_CONFIRM = 2;
 interface FirstPublishOverlayProps {
   visible:      boolean;
   initialMood?: string;
+  /** Called when user taps the final "Publish" button — the parent does the actual addStory call and must call markFirstPublishDone() on success. */
   onPublish:    (mood: string, openingLine: string) => void;
 }
 
 export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPublishOverlayProps) {
   const { playSound } = useSound();
 
-  const [step, setStep]           = useState(STEP_MOOD);
-  const [mood, setMood]           = useState<MoodId | null>(
+  const [step, setStep]   = useState(STEP_MOOD);
+  const [mood, setMood]   = useState<MoodId | null>(
     (initialMood as MoodId | undefined) ?? null,
   );
-  const [line, setLine]           = useState('');
-  const [publishing, setPublishing] = useState(false);
+  const [line, setLine]   = useState('');
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
@@ -76,7 +76,6 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
     setStep(STEP_MOOD);
     setMood((initialMood as MoodId | undefined) ?? null);
     setLine('');
-    setPublishing(false);
     fadeAnim.setValue(0);
     slideAnim.setValue(40);
     emojiAnim.setValue(0);
@@ -98,12 +97,11 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
     });
   }, [playSound]);
 
-  const handlePublish = useCallback(async () => {
+  const handleConfirm = useCallback(() => {
     Keyboard.dismiss();
-    setPublishing(true);
     playSound('chime');
-    await markFirstPublishDone();
-    Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }).start(() => {
+    // Animate out, then hand control back to the parent for the actual publish + markFirstPublishDone
+    Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
       onPublish(mood ?? 'Dreamy', line.trim());
     });
   }, [mood, line, onPublish, playSound]);
@@ -231,12 +229,11 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
               ) : null}
 
               <TouchableOpacity
-                style={[s.publishBtn, { backgroundColor: accentColor, opacity: publishing ? 0.65 : 1 }]}
-                onPress={handlePublish}
-                disabled={publishing}
+                style={[s.publishBtn, { backgroundColor: accentColor }]}
+                onPress={handleConfirm}
                 activeOpacity={0.88}
               >
-                <Text style={s.publishBtnTxt}>{publishing ? 'Sending to the sky…' : 'Publish to the sky ✦'}</Text>
+                <Text style={s.publishBtnTxt}>Publish to the sky ✦</Text>
               </TouchableOpacity>
             </>
           )}
@@ -264,7 +261,6 @@ const s = StyleSheet.create({
   },
   stepDot: {
     height: 6, borderRadius: 3,
-    transitionDuration: '200ms' as any,
   },
   emoji: {
     fontSize: 48, marginBottom: 12,

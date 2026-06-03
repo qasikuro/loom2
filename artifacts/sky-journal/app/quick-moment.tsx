@@ -25,6 +25,7 @@ import { persistImageUri } from '@/utils/persistImage';
 import {
   FirstPublishOverlay,
   hasCompletedFirstPublish,
+  markFirstPublishDone,
 } from '@/components/FirstPublishOverlay';
 import { CompletionMoment } from '@/components/CompletionMoment';
 
@@ -143,6 +144,7 @@ export default function QuickMomentScreen() {
       setError("Couldn't publish — check your connection and try again");
       return;
     }
+    await markFirstPublishDone();
     setShowCompletion(true);
   }
 

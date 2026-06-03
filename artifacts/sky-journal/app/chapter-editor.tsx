@@ -26,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import {
   FirstPublishOverlay,
   hasCompletedFirstPublish,
+  markFirstPublishDone,
 } from '@/components/FirstPublishOverlay';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
@@ -339,6 +340,7 @@ export default function ChapterEditorScreen() {
       setError(tr('create.saveFailed') || "Story couldn't be saved — check your connection and try again");
       return;
     }
+    await markFirstPublishDone();
     await AsyncStorage.removeItem(DRAFT_KEY).catch(() => null);
     setTitle('');
     setDesc('');
