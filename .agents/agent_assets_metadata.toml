@@ -149,3 +149,9 @@ id = "KZ8Ma_bu-Ke0KYfHbqjkw"
 uri = "file://SKY_JOURNAL_ROADMAP.md"
 type = "text"
 title = "Sky Journal — Product Roadmap & Quality Reference"
+
+[[outputs]]
+id = "p3iQ7HGnYho2CoKiD9W6u"
+uri = "file://SKY_JOURNAL_PRODUCT_STRATEGY.md"
+type = "text"
+title = "Sky Journal — Product Strategy"
