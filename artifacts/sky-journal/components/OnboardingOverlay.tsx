@@ -20,7 +20,7 @@ import { apiFetch, useApp } from '@/context/AppContext';
 import type { JournalEntry } from '@/context/AppContext';
 
 const DONE_KEY  = 'onboarding_v1';
-const STEP_KEY  = 'onboarding_step_v1';
+const DRAFT_KEY = 'onboarding_draft_v1';   // persists step + all selections
 const { width: W, height: H } = Dimensions.get('window');
 
 // ── Moods ──────────────────────────────────────────────────────────────────────
@@ -69,13 +69,45 @@ const CONSTELLATION_TYPES = [
 
 type ConstellationType = typeof CONSTELLATION_TYPES[number]['id'];
 
+interface DraftState {
+  step:    number;
+  mood:    MoodId | null;
+  type:    ConstellationType | null;
+  journal: string;
+}
+
 // ── Step indices ───────────────────────────────────────────────────────────────
-const STEP_WELCOME        = 0;
-const STEP_MOOD           = 1;
-const STEP_CONSTELLATION  = 2;
-const STEP_JOURNAL        = 3;
-const STEP_REVEAL         = 4;
-const TOTAL_STEPS         = 5;
+const STEP_WELCOME       = 0;
+const STEP_MOOD          = 1;
+const STEP_CONSTELLATION = 2;
+const STEP_JOURNAL       = 3;
+const STEP_REVEAL        = 4;
+const TOTAL_STEPS        = 5;
+
+// ── Draft helpers ──────────────────────────────────────────────────────────────
+
+async function loadDraft(): Promise<DraftState | null> {
+  try {
+    const raw = await AsyncStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as DraftState;
+  } catch { return null; }
+}
+
+async function saveDraft(d: DraftState): Promise<void> {
+  try { await AsyncStorage.setItem(DRAFT_KEY, JSON.stringify(d)); } catch { /* ignore */ }
+}
+
+async function clearDraft(): Promise<void> {
+  try { await AsyncStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
+}
+
+/** Earliest step that still needs a selection (used for invalid resume). */
+function earliestIncomplete(d: DraftState): number {
+  if (!d.mood) return STEP_MOOD;
+  if (!d.type) return STEP_CONSTELLATION;
+  return STEP_REVEAL;
+}
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
@@ -85,19 +117,20 @@ interface OnboardingOverlayProps {
 }
 
 export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProps) {
-  const { playSound }                         = useSound();
-  const { reloadData, addJournalEntry }       = useApp();
+  const { playSound }               = useSound();
+  const { reloadData, addJournalEntry } = useApp();
 
-  const [step, setStep]                       = useState(STEP_WELCOME);
-  const [selectedMood, setSelectedMood]       = useState<MoodId | null>(null);
-  const [selectedType, setSelectedType]       = useState<ConstellationType | null>(null);
-  const [journalText, setJournalText]         = useState('');
-  const [saving, setSaving]                   = useState(false);
+  const [step, setStep]             = useState(STEP_WELCOME);
+  const [selectedMood, setSelectedMood]   = useState<MoodId | null>(null);
+  const [selectedType, setSelectedType]   = useState<ConstellationType | null>(null);
+  const [journalText, setJournalText]     = useState('');
+  const [saving, setSaving]               = useState(false);
+  const [seedError, setSeedError]         = useState(false);
 
-  const fadeAnim    = useRef(new Animated.Value(0)).current;
-  const slideAnim   = useRef(new Animated.Value(0)).current;
-  const emojiScale  = useRef(new Animated.Value(0)).current;
-  const sparkAnims  = useRef(
+  const fadeAnim   = useRef(new Animated.Value(0)).current;
+  const slideAnim  = useRef(new Animated.Value(0)).current;
+  const emojiScale = useRef(new Animated.Value(0)).current;
+  const sparkAnims = useRef(
     Array.from({ length: 12 }, () => ({
       x:  new Animated.Value(0),
       y:  new Animated.Value(0),
@@ -106,17 +139,36 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
     }))
   ).current;
 
-  // ── Load saved step on open ────────────────────────────────────────────────
+  // ── Load saved draft on open ───────────────────────────────────────────────
   useEffect(() => {
     if (!visible) return;
-    AsyncStorage.getItem(STEP_KEY).then(v => {
-      const saved = v ? parseInt(v, 10) : STEP_WELCOME;
-      const start = isNaN(saved) ? STEP_WELCOME : Math.min(saved, STEP_REVEAL);
-      setStep(start);
+    setSeedError(false);
+
+    loadDraft().then(draft => {
+      let startStep = STEP_WELCOME;
+      if (draft) {
+        // Restore all saved selections
+        if (draft.mood) setSelectedMood(draft.mood);
+        if (draft.type) setSelectedType(draft.type);
+        if (draft.journal) setJournalText(draft.journal);
+
+        // Validate resume position: if at reveal but selections are missing,
+        // route back to earliest incomplete step so user re-picks intentionally.
+        if (draft.step === STEP_REVEAL && (!draft.mood || !draft.type)) {
+          startStep = earliestIncomplete(draft);
+        } else {
+          startStep = Math.min(draft.step, STEP_REVEAL);
+        }
+      }
+
+      setStep(startStep);
       slideAnim.setValue(0);
       fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, { toValue: 1, duration: 480, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      Animated.timing(fadeAnim, {
+        toValue: 1, duration: 480, easing: Easing.out(Easing.quad), useNativeDriver: true,
+      }).start();
       entranceEmoji();
+      if (startStep === STEP_REVEAL) fireSparks();
     });
   }, [visible]);
 
@@ -131,7 +183,7 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
     });
   }
 
-  // ── Spark burst for reveal screen ──────────────────────────────────────────
+  // ── Spark burst ────────────────────────────────────────────────────────────
   function fireSparks() {
     sparkAnims.forEach((p, i) => {
       p.x.setValue(0); p.y.setValue(0); p.op.setValue(0); p.sc.setValue(1);
@@ -149,43 +201,90 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
     });
   }
 
-  // ── Navigate to step ───────────────────────────────────────────────────────
-  const goToStep = useCallback((next: number) => {
+  // ── Navigate to step (also persists full draft) ────────────────────────────
+  const goToStep = useCallback((next: number, overrides?: Partial<DraftState>) => {
     playSound('navigate');
-    Animated.timing(slideAnim, { toValue: -W, duration: 240, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
+    Animated.timing(slideAnim, {
+      toValue: -W, duration: 240, easing: Easing.in(Easing.quad), useNativeDriver: true,
+    }).start(() => {
       setStep(next);
-      AsyncStorage.setItem(STEP_KEY, String(next)).catch(() => null);
+      // Persist draft with latest state + new step
+      const draft: DraftState = {
+        step:    next,
+        mood:    overrides?.mood    ?? selectedMood,
+        type:    overrides?.type    ?? selectedType,
+        journal: overrides?.journal ?? journalText,
+      };
+      saveDraft(draft);
       slideAnim.setValue(W);
       entranceEmoji();
       if (next === STEP_REVEAL) fireSparks();
-      Animated.timing(slideAnim, { toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+      Animated.timing(slideAnim, {
+        toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true,
+      }).start();
     });
-  }, [playSound]);
+  }, [playSound, selectedMood, selectedType, journalText]);
 
-  // ── Completion: seed profile + create journal entry ────────────────────────
+  // ── Selection handlers (persist draft immediately) ─────────────────────────
+  const pickMood = useCallback((id: MoodId) => {
+    playSound('tap');
+    setSelectedMood(id);
+    saveDraft({ step, mood: id, type: selectedType, journal: journalText });
+  }, [playSound, step, selectedType, journalText]);
+
+  const pickType = useCallback((id: ConstellationType) => {
+    playSound('tap');
+    setSelectedType(id);
+    saveDraft({ step, mood: selectedMood, type: id, journal: journalText });
+  }, [playSound, step, selectedMood, journalText]);
+
+  const changeJournal = useCallback((text: string) => {
+    setJournalText(text);
+    saveDraft({ step, mood: selectedMood, type: selectedType, journal: text });
+  }, [step, selectedMood, selectedType]);
+
+  // ── Completion: seed profile + create journal entry (transactional) ────────
   const handleFinish = useCallback(async () => {
     setSaving(true);
+    setSeedError(false);
     Keyboard.dismiss();
-    try {
-      await apiFetch('/character', {
-        method:  'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-          mood:              selectedMood  ?? 'Dreamy',
-          constellationType: selectedType ?? 'dreamer',
-        }),
-      });
-    } catch { /* best-effort — don't block completion */ }
 
-    if (journalText.trim()) {
+    const mood = selectedMood  ?? 'Dreamy';
+    const type = selectedType  ?? 'dreamer';
+
+    // Character PUT is required — retry once on failure
+    let characterOk = false;
+    for (let attempt = 0; attempt < 2 && !characterOk; attempt++) {
+      try {
+        await apiFetch('/character', {
+          method:  'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ mood, constellationType: type }),
+        });
+        characterOk = true;
+      } catch {
+        if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    if (!characterOk) {
+      // Surface inline error so user can retry — do NOT mark onboarding done
+      setSaving(false);
+      setSeedError(true);
+      return;
+    }
+
+    // Journal POST is best-effort (user may have left it blank intentionally)
+    const trimmedText = journalText.trim();
+    if (trimmedText) {
       try {
         const entryId = crypto.randomUUID();
         const entry: JournalEntry = {
           id:         entryId,
           date:       new Date().toISOString().slice(0, 10),
           type:       'diary',
-          text:       journalText.trim(),
-          mood:       selectedMood ?? 'Dreamy',
+          text:       trimmedText,
+          mood,
           imageUri:   undefined,
           friendName: undefined,
         };
@@ -195,10 +294,11 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ id: entryId, date: entry.date, type: 'diary', text: entry.text, mood: entry.mood }),
         });
-      } catch { /* best-effort */ }
+      } catch { /* best-effort — journal is optional */ }
     }
 
-    await AsyncStorage.removeItem(STEP_KEY).catch(() => null);
+    // All required writes done — clear draft and complete
+    await clearDraft();
     reloadData().catch(() => null);
     setSaving(false);
     playSound('chime');
@@ -208,7 +308,7 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
   // ── Skip ───────────────────────────────────────────────────────────────────
   const handleSkip = useCallback(() => {
     playSound('tap');
-    AsyncStorage.removeItem(STEP_KEY).catch(() => null);
+    clearDraft();
     Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(onComplete);
   }, [playSound, onComplete]);
 
@@ -226,14 +326,14 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
     goToStep(step + 1);
   }
 
-  const moodDef    = MOODS.find(m => m.id === selectedMood);
-  const typeDef    = CONSTELLATION_TYPES.find(t => t.id === selectedType);
-  const accentNow  = step === STEP_MOOD        ? (moodDef?.color  ?? '#C8A84B')
-                   : step === STEP_CONSTELLATION ? (typeDef?.accent ?? '#9B78E8')
-                   : step === STEP_REVEAL       ? (typeDef?.accent ?? '#C8A84B')
-                   : '#C8A84B';
+  const moodDef   = MOODS.find(m => m.id === selectedMood);
+  const typeDef   = CONSTELLATION_TYPES.find(t => t.id === selectedType);
+  const accentNow = step === STEP_MOOD          ? (moodDef?.color  ?? '#C8A84B')
+                  : step === STEP_CONSTELLATION  ? (typeDef?.accent ?? '#9B78E8')
+                  : step === STEP_REVEAL         ? (typeDef?.accent ?? '#C8A84B')
+                  : '#C8A84B';
 
-  const canAdvance = step === STEP_MOOD        ? !!selectedMood
+  const canAdvance = step === STEP_MOOD         ? !!selectedMood
                    : step === STEP_CONSTELLATION ? !!selectedType
                    : true;
 
@@ -251,7 +351,7 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
           ))}
         </View>
 
-        {/* Skip (top-right, shown on all but reveal) */}
+        {/* Skip (top-right, all steps except reveal) */}
         {step !== STEP_REVEAL && (
           <Pressable style={s.earlySkip} onPress={handleSkip} hitSlop={16}>
             <Text style={s.earlySkipText}>Skip</Text>
@@ -263,53 +363,35 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
           <LinearGradient
             colors={
               step === STEP_CONSTELLATION && typeDef ? typeDef.gradient
-              : step === STEP_MOOD && moodDef       ? ['#1A0E38', '#2A1560', '#1A0E38'] as const
+              : step === STEP_MOOD && moodDef        ? ['#1A0E38', '#2A1560', '#1A0E38'] as const
               : ['#0E0B20', '#2A1560', '#1A0E38'] as const
             }
             style={StyleSheet.absoluteFill}
             start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
           />
 
-          {/* ── STEP 0: Welcome ─────────────────────────────────────────── */}
-          {step === STEP_WELCOME && <WelcomeStep emojiScale={emojiScale} />}
-
-          {/* ── STEP 1: Mood ────────────────────────────────────────────── */}
-          {step === STEP_MOOD && (
-            <MoodStep
-              emojiScale={emojiScale}
-              selectedMood={selectedMood}
-              onSelect={id => { playSound('tap'); setSelectedMood(id); }}
-            />
+          {step === STEP_WELCOME       && <WelcomeStep emojiScale={emojiScale} />}
+          {step === STEP_MOOD          && (
+            <MoodStep emojiScale={emojiScale} selectedMood={selectedMood} onSelect={pickMood} />
           )}
-
-          {/* ── STEP 2: Constellation type ──────────────────────────────── */}
           {step === STEP_CONSTELLATION && (
-            <ConstellationStep
-              emojiScale={emojiScale}
-              selectedType={selectedType}
-              onSelect={id => { playSound('tap'); setSelectedType(id); }}
-            />
+            <ConstellationStep emojiScale={emojiScale} selectedType={selectedType} onSelect={pickType} />
           )}
-
-          {/* ── STEP 3: Journal line ────────────────────────────────────── */}
-          {step === STEP_JOURNAL && (
-            <JournalStep
-              emojiScale={emojiScale}
-              value={journalText}
-              onChange={setJournalText}
-              mood={selectedMood}
-            />
+          {step === STEP_JOURNAL       && (
+            <JournalStep emojiScale={emojiScale} value={journalText} onChange={changeJournal} mood={selectedMood} />
           )}
-
-          {/* ── STEP 4: Reveal ──────────────────────────────────────────── */}
-          {step === STEP_REVEAL && (
+          {step === STEP_REVEAL        && (
             <RevealStep
-              emojiScale={emojiScale}
-              sparkAnims={sparkAnims}
-              selectedMood={selectedMood}
-              selectedType={selectedType}
-              accent={accentNow}
+              emojiScale={emojiScale} sparkAnims={sparkAnims}
+              selectedMood={selectedMood} selectedType={selectedType} accent={accentNow}
             />
+          )}
+
+          {/* Seed error banner */}
+          {seedError && (
+            <View style={s.errorBanner}>
+              <Text style={s.errorText}>Couldn't reach the sky. Check your connection and try again.</Text>
+            </View>
           )}
 
           {/* Progress dots */}
@@ -319,17 +401,15 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
                 key={i}
                 style={[
                   s.dot,
-                  i === step
-                    ? [s.dotActive, { backgroundColor: accentNow }]
-                    : i < step
-                    ? { backgroundColor: `${accentNow}55`, width: 10 }
-                    : { backgroundColor: 'rgba(255,255,255,0.15)' },
+                  i === step   ? [s.dotActive, { backgroundColor: accentNow }]
+                  : i < step   ? { backgroundColor: `${accentNow}55`, width: 10 }
+                  : { backgroundColor: 'rgba(255,255,255,0.15)' },
                 ]}
               />
             ))}
           </View>
 
-          {/* Next button */}
+          {/* Buttons */}
           <View style={s.btnRow}>
             {step > STEP_WELCOME && step !== STEP_REVEAL && (
               <TouchableOpacity style={s.backBtn} onPress={() => goToStep(step - 1)} activeOpacity={0.7}>
@@ -337,17 +417,24 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
               </TouchableOpacity>
             )}
             <TouchableOpacity
-              style={[s.nextBtn, { backgroundColor: canAdvance ? accentNow : 'rgba(255,255,255,0.10)', flex: step <= STEP_WELCOME || step === STEP_REVEAL ? 1 : 0 }]}
+              style={[
+                s.nextBtn,
+                {
+                  backgroundColor: (canAdvance && !saving) ? accentNow : 'rgba(255,255,255,0.10)',
+                  flex: (step <= STEP_WELCOME || step === STEP_REVEAL) ? 1 : 0,
+                },
+              ]}
               onPress={handleNext}
               activeOpacity={0.85}
               disabled={!canAdvance || saving}
             >
-              <Text style={[s.nextBtnText, { color: canAdvance ? '#0E0B20' : 'rgba(220,210,240,0.40)' }]}>
+              <Text style={[s.nextBtnText, { color: (canAdvance && !saving) ? '#0E0B20' : 'rgba(220,210,240,0.40)' }]}>
                 {step === STEP_WELCOME      ? 'Begin your sky →'
                 : step === STEP_MOOD        ? 'Choose your mood →'
                 : step === STEP_CONSTELLATION ? 'This is me →'
                 : step === STEP_JOURNAL     ? (journalText.trim() ? 'Save my first line →' : 'Skip for now →')
-                : saving                    ? 'Setting your sky…'
+                : saving && !seedError      ? 'Setting your sky…'
+                : seedError                 ? 'Retry →'
                 : 'Enter your sky ✦'}
               </Text>
             </TouchableOpacity>
@@ -450,7 +537,11 @@ function ConstellationStep({
               <Text style={[s.typeName, { color: selectedType === ct.id ? ct.accent : '#EDE8FF' }]}>{ct.name}</Text>
               <Text style={s.typeDesc} numberOfLines={2}>{ct.desc}</Text>
             </View>
-            {selectedType === ct.id && <View style={[s.typeCheck, { backgroundColor: ct.accent }]}><Text style={{ fontSize: 10, color: '#0E0B20' }}>✓</Text></View>}
+            {selectedType === ct.id && (
+              <View style={[s.typeCheck, { backgroundColor: ct.accent }]}>
+                <Text style={{ fontSize: 10, color: '#0E0B20' }}>✓</Text>
+              </View>
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -536,7 +627,7 @@ function RevealStep({
   );
 }
 
-// ── Async helpers ──────────────────────────────────────────────────────────────
+// ── Async helpers (public API for _layout.tsx) ─────────────────────────────────
 
 export async function hasCompletedOnboarding(): Promise<boolean> {
   try {
@@ -587,7 +678,7 @@ const s = StyleSheet.create({
 
   card: {
     width:             Math.min(W - 32, 400),
-    maxHeight:         H * 0.88,
+    maxHeight:         H * 0.90,
     borderRadius:      28,
     paddingTop:        36,
     paddingBottom:     32,
@@ -636,6 +727,24 @@ const s = StyleSheet.create({
     borderRadius: 3,
   },
 
+  // Error banner
+  errorBanner: {
+    width:             '100%',
+    marginBottom:      12,
+    paddingHorizontal: 14,
+    paddingVertical:   10,
+    borderRadius:      12,
+    borderWidth:       1,
+    borderColor:       'rgba(200,80,80,0.40)',
+    backgroundColor:   'rgba(200,60,60,0.12)',
+  },
+  errorText: {
+    fontSize:    12,
+    fontFamily:  'Satoshi-Medium',
+    color:       '#F08080',
+    textAlign:   'center',
+  },
+
   // Text
   stepLabel: {
     fontSize:      10,
@@ -653,11 +762,11 @@ const s = StyleSheet.create({
     lineHeight:    30,
   },
   desc: {
-    fontSize:    14,
-    fontFamily:  'Satoshi-Regular',
-    color:       'rgba(220,210,240,0.75)',
-    textAlign:   'center',
-    lineHeight:  21,
+    fontSize:     14,
+    fontFamily:   'Satoshi-Regular',
+    color:        'rgba(220,210,240,0.75)',
+    textAlign:    'center',
+    lineHeight:   21,
     marginBottom: 16,
   },
 
@@ -669,49 +778,49 @@ const s = StyleSheet.create({
     marginBottom:      16,
   },
   hintText: {
-    fontSize:    12,
-    fontFamily:  'Satoshi-Medium',
+    fontSize:      12,
+    fontFamily:    'Satoshi-Medium',
     letterSpacing: 0.3,
   },
 
   // Mood grid
   moodGrid: {
-    flexDirection: 'row',
-    flexWrap:      'wrap',
-    gap:           8,
-    width:         '100%',
-    marginBottom:  16,
+    flexDirection:  'row',
+    flexWrap:       'wrap',
+    gap:            8,
+    width:          '100%',
+    marginBottom:   16,
     justifyContent: 'center',
   },
   moodChip: {
-    width:          '22%',
-    alignItems:     'center',
+    width:           '22%',
+    alignItems:      'center',
     paddingVertical: 10,
-    borderRadius:   14,
-    borderWidth:    1,
-    borderColor:    'rgba(200,184,232,0.14)',
+    borderRadius:    14,
+    borderWidth:     1,
+    borderColor:     'rgba(200,184,232,0.14)',
     backgroundColor: 'rgba(255,255,255,0.03)',
-    gap:            4,
+    gap:             4,
   },
   moodEmoji: { fontSize: 22 },
   moodLabel: {
-    fontSize:    9,
-    fontFamily:  'Satoshi-Bold',
+    fontSize:      9,
+    fontFamily:    'Satoshi-Bold',
     letterSpacing: 0.4,
     textTransform: 'uppercase',
   },
 
   // Constellation type cards
   typeCard: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    gap:            12,
-    paddingVertical: 12,
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               12,
+    paddingVertical:   12,
     paddingHorizontal: 14,
-    borderRadius:   16,
-    borderWidth:    1,
-    borderColor:    'rgba(200,184,232,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.02)',
+    borderRadius:      16,
+    borderWidth:       1,
+    borderColor:       'rgba(200,184,232,0.12)',
+    backgroundColor:   'rgba(255,255,255,0.02)',
   },
   typeEmoji: { fontSize: 26 },
   typeName:  { fontSize: 14, fontFamily: 'Satoshi-Bold', marginBottom: 2 },
@@ -735,10 +844,10 @@ const s = StyleSheet.create({
     marginBottom:      6,
   },
   charCount: {
-    alignSelf:  'flex-end',
-    fontSize:   11,
-    fontFamily: 'Satoshi-Medium',
-    color:      'rgba(200,184,232,0.35)',
+    alignSelf:    'flex-end',
+    fontSize:     11,
+    fontFamily:   'Satoshi-Medium',
+    color:        'rgba(200,184,232,0.35)',
     marginBottom: 16,
   },
 
@@ -762,13 +871,13 @@ const s = StyleSheet.create({
     width:         '100%',
   },
   backBtn: {
-    height:         50,
+    height:            50,
     paddingHorizontal: 16,
-    borderRadius:   14,
-    alignItems:     'center',
-    justifyContent: 'center',
-    borderWidth:    1,
-    borderColor:    'rgba(255,255,255,0.10)',
+    borderRadius:      14,
+    alignItems:        'center',
+    justifyContent:    'center',
+    borderWidth:       1,
+    borderColor:       'rgba(255,255,255,0.10)',
   },
   backBtnText: {
     fontSize:   14,
@@ -776,11 +885,11 @@ const s = StyleSheet.create({
     color:      'rgba(220,210,240,0.55)',
   },
   nextBtn: {
-    height:         50,
-    borderRadius:   14,
+    height:            50,
+    borderRadius:      14,
     paddingHorizontal: 20,
-    alignItems:     'center',
-    justifyContent: 'center',
+    alignItems:        'center',
+    justifyContent:    'center',
   },
   nextBtnText: {
     fontSize:   15,
