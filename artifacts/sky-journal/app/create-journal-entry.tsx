@@ -21,6 +21,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CompletionMoment } from '@/components/CompletionMoment';
 import { useApp, type JournalEntryType } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useSound } from '@/context/SoundContext';
@@ -101,6 +102,7 @@ export default function CreateJournalEntryScreen() {
   const [mood,            setMood]            = useState('Peaceful');
   const [imageUri,        setImageUri]        = useState<string | undefined>();
   const [saving,          setSaving]          = useState(false);
+  const [showCompletion,  setShowCompletion]  = useState(false);
   const [uploadingImage,  setUploadingImage]  = useState(false);
   const [error,           setError]           = useState<string | null>(null);
   const [fontSize,        setFontSize]        = useState(16);
@@ -238,7 +240,7 @@ export default function CreateJournalEntryScreen() {
       friendName: entryType === 'friend' ? friendName.trim() : undefined,
     });
     setSaving(false);
-    router.back();
+    setShowCompletion(true);
   }
 
   const isToday     = isSameDay(entryDate, today);
@@ -509,6 +511,7 @@ export default function CreateJournalEntryScreen() {
           </Text>
         </View>
       </KeyboardAwareScrollView>
+      <CompletionMoment visible={showCompletion} variant="journal" onFinish={() => router.back()} />
     </View>
   );
 }

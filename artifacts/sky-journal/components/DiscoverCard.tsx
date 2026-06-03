@@ -186,6 +186,9 @@ export function DiscoverCard({
               </View>
               <View style={styles.authorMeta}>
                 <Text style={styles.authorName}>{post.authorName}</Text>
+                {!!post.authorTitle && (
+                  <Text style={styles.authorTitle}>{post.authorTitle}</Text>
+                )}
                 <Text style={styles.authorSub}>
                   {post.authorHandle ? `${post.authorHandle} · ` : ''}{post.timeAgo}
                 </Text>
@@ -346,6 +349,7 @@ const styles = StyleSheet.create({
   avatarText:   { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#E8E0FF' },
   authorMeta:   { flex: 1, gap: 1 },
   authorName:   { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#F0ECFF', letterSpacing: 0.1 },
+  authorTitle:  { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.55)', letterSpacing: 0.7, fontStyle: 'italic', marginTop: 1 },
   authorSub:    { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(220,210,255,0.65)' },
 
   chapterBadge: {

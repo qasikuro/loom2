@@ -1184,6 +1184,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const fireStarUnlockToast = useCallback((starKey: string) => {
     starUnlockQueueRef.current.push(starKey);
     drainStarUnlockQueue();
+    // Sensory confirmation: strong success haptic when a star unlocks
+    import('expo-haptics').then(H => H.notificationAsync(H.NotificationFeedbackType.Success)).catch(() => {});
   }, [drainStarUnlockQueue]);
 
   // ── Reload helpers — defined before mutations so callbacks can call them ────
@@ -1249,6 +1251,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       // Always sync constellation so memory count & star progress update immediately
       reloadConstellation().catch(() => null);
+      import('@/utils/xpFlash').then(m => m.fireXPFlash('Memory grows in the night sky')).catch(() => {});
     } catch {
       const retryBody = JSON.stringify({
         id:         entry.id,
@@ -1317,6 +1320,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       // Always sync constellation so creative count updates immediately
       reloadConstellation().catch(() => null);
+      import('@/utils/xpFlash').then(m => m.fireXPFlash('Creative light brightens')).catch(() => {});
       loadSocialData();
       return true;
     } catch {
@@ -1405,7 +1409,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isPublic:    outfit.isPublic,
     });
     apiFetch('/outfits', { method: 'POST', body: outfitBody })
-    .then(() => reloadConstellation().catch(() => null))
+    .then(() => {
+      reloadConstellation().catch(() => null);
+      import('@/utils/xpFlash').then(m => m.fireXPFlash('Style memory recorded')).catch(() => {});
+    })
     .catch(() => {
       showToastGlobal("Outfit saved locally — couldn't sync to server", 'warning', () => {
         apiFetch('/outfits', { method: 'POST', body: outfitBody }).catch(() => null);

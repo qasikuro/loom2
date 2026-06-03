@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CompletionMoment } from '@/components/CompletionMoment';
 import { MoodBadge } from '@/components/MoodBadge';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -303,6 +304,7 @@ export default function StoryScreen() {
 
   const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
+  const [showWitnessFlash, setShowWitnessFlash] = useState(false);
   const [savedOffset,      setSavedOffset]      = useState(0);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -381,6 +383,7 @@ export default function StoryScreen() {
     if (witnessed) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setWitnessed(true);
+    setShowWitnessFlash(true);
     // Bounce + glow animation
     Animated.sequence([
       Animated.spring(witnessScale, { toValue: 1.28, useNativeDriver: true, tension: 200, friction: 5 }),
@@ -632,6 +635,7 @@ export default function StoryScreen() {
           </Animated.View>
         </View>
       </View>
+      <CompletionMoment visible={showWitnessFlash} variant="witness" onFinish={() => setShowWitnessFlash(false)} />
     </View>
   );
 }

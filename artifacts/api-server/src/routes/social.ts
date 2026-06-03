@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable } from "@workspace/db";
 import { and, count, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -489,9 +489,11 @@ router.get("/discover", requireAuth, async (req, res) => {
         authorName:      characterTable.name,
         authorUsername:  characterTable.username,
         authorAvatarUri: characterTable.avatarUri,
+        authorTitle:     constellationProgressTable.activeTitle,
       })
         .from(storiesTable)
         .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+        .leftJoin(constellationProgressTable, eq(constellationProgressTable.userId, storiesTable.userId))
         .where(
           and(
             eq(storiesTable.isPublic, true),
@@ -546,6 +548,7 @@ router.get("/discover", requireAuth, async (req, res) => {
         authorUserId:    row.userId,
         authorName:      row.authorName,
         authorUsername:  row.authorUsername ?? null,
+        authorTitle:     row.authorTitle ?? null,
         authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
         chapterTitle:    row.chapterTitle,
         description:     row.description ?? '',

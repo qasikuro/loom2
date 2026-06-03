@@ -18,6 +18,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CompletionMoment } from '@/components/CompletionMoment';
 import { useApp, type StoryPanel, type StoryPage } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { DraftStore } from '@/utils/draftStore';
@@ -130,6 +131,7 @@ export default function CreateScreen() {
   const [isPublic, setIsPublic] = useState(true);
   const [pages,    setPages]    = useState<StoryPage[]>([makePage()]);
   const [posting,  setPosting]  = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
   const [error,    setError]    = useState<string | null>(null);
   const [showMeta, setShowMeta] = useState(false);
   const [hasDraft, setHasDraft] = useState(false);
@@ -318,7 +320,7 @@ export default function CreateScreen() {
       setTitle('');
       setDesc('');
       setPages([makePage()]);
-      router.push('/(tabs)');
+      setShowCompletion(true);
     }
   }
 
@@ -678,6 +680,7 @@ export default function CreateScreen() {
         </Text>
 
       </KeyboardAwareScrollView>
+      <CompletionMoment visible={showCompletion} variant="story" onFinish={() => router.push('/(tabs)' as any)} />
     </View>
   );
 }

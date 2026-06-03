@@ -783,6 +783,15 @@ const SEASON_BY_MONTH: Record<number, { name: string; icon: string; color: strin
   11: { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.20)', bgB: 'rgba(80,140,200,0.08)',  endMonth: 2  },
 };
 
+function getSeasonStart(): Date {
+  const now = new Date(), m = now.getMonth(), y = now.getFullYear();
+  if (m >= 11) return new Date(y, 11, 1);
+  if (m >= 8)  return new Date(y, 8, 1);
+  if (m >= 5)  return new Date(y, 5, 1);
+  if (m >= 2)  return new Date(y, 2, 1);
+  return new Date(y - 1, 11, 1);
+}
+
 function SeasonCard({ activeEvent, constellation, onPress }: {
   activeEvent: ActiveEvent | null;
   constellation: ConstellationState | null;
@@ -800,6 +809,7 @@ function SeasonCard({ activeEvent, constellation, onPress }: {
   const end = new Date(); end.setMonth(sd.endMonth, 1); end.setHours(0, 0, 0, 0);
   if (end <= new Date()) end.setFullYear(end.getFullYear() + 1);
   const daysLeft = Math.max(1, Math.ceil((end.getTime() - Date.now()) / 86400000));
+  const dayN     = Math.max(1, Math.ceil((Date.now() - getSeasonStart().getTime()) / 86400000));
 
   const stars = constellation?.unlockedStars.length ?? 0;
   const pct   = stars / 6;
@@ -824,6 +834,7 @@ function SeasonCard({ activeEvent, constellation, onPress }: {
         </View>
       </View>
       <Text style={sc.seasonName}>{name}</Text>
+      <Text style={sc.dayLabel}>Day {dayN} of your season</Text>
       <View style={sc.progBlock}>
         <View style={sc.progTrack}>
           <View style={[sc.progFill, { width: `${Math.round(pct * 100)}%` as DimensionValue, backgroundColor: color }]} />
@@ -846,7 +857,8 @@ const sc = StyleSheet.create({
   pillTxt:    { fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3 },
   badge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, borderWidth: 1, marginLeft: 3 },
   badgeTxt:   { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.6 },
-  seasonName: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#EEE8FF', letterSpacing: 0.2, marginBottom: 14 },
+  seasonName: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#EEE8FF', letterSpacing: 0.2, marginBottom: 4 },
+  dayLabel:   { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', fontStyle: 'italic', marginBottom: 14 },
   progBlock:  { gap: 7, marginBottom: 14 },
   progTrack:  { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' },
   progFill:   { height: 5, borderRadius: 3 },

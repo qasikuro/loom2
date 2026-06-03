@@ -15,6 +15,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppSplashScreen } from '@/components/AppSplashScreen';
+import { XPFlash } from '@/components/XPFlash';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
 import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
@@ -300,6 +301,7 @@ export default function RootLayout() {
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />
                           </Stack>
+                          <XPFlash />
                         </KeyboardProvider>
                       </GestureHandlerRootView>
                       </ToastProvider>

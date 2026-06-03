@@ -451,6 +451,7 @@ export default function CampfireRoom() {
   async function sendText() {
     const trimmed = text.trim();
     if (!trimmed || sending || !roomId) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSending(true);
     setText('');
     setShowInput(false);

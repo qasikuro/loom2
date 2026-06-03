@@ -112,6 +112,7 @@ export interface DiscoverPost {
   authorUserId:     string;
   authorName:       string;
   authorHandle:     string;
+  authorTitle?:     string | null;
   authorAvatarUri?: string | null;
   chapterTitle:     string;
   description?:     string;
@@ -220,6 +221,7 @@ export interface RawDiscoverApiItem {
   authorUserId?:    string;
   authorName?:      string;
   authorUsername?:  string;
+  authorTitle?:     string | null;
   authorAvatarUri?: string | null;
   chapterTitle?:    string;
   description?:     string;
@@ -364,6 +366,7 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     authorHandle:     raw.authorUsername
       ? `@${raw.authorUsername}`
       : `@${(raw.authorName ?? 'sky').toLowerCase().replace(/\s+/g, '')}`,
+    authorTitle:      raw.authorTitle ?? null,
     authorAvatarUri:  resolveUri(raw.authorAvatarUri ?? undefined, apiBase) ?? null,
     chapterTitle:     raw.chapterTitle ?? '',
     storySnippet:     raw.storySnippet ?? '',
