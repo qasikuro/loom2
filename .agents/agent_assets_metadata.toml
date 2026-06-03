@@ -155,3 +155,9 @@ id = "p3iQ7HGnYho2CoKiD9W6u"
 uri = "file://SKY_JOURNAL_PRODUCT_STRATEGY.md"
 type = "text"
 title = "Sky Journal — Product Strategy"
+
+[[outputs]]
+id = "c5zQf5CBl_DDFDnZ6qegM"
+uri = "file://SKY_JOURNAL_TASK_OVERVIEW.md"
+type = "text"
+title = "Sky Journal — Task Overview & Roadmap"
