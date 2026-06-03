@@ -28,7 +28,7 @@ const GuideAvailabilitySchema = z.object({
 }).nullable().optional();
 
 const CharacterInputSchema = z.object({
-  name:              z.string().min(1).max(100),
+  name:              z.string().min(1).max(100).default("Sky Child"),
   bio:               z.string().max(500).default(""),
   mood:              z.string().max(100).default("Hopeful"),
   traits:            z.array(z.string()).default([]),
@@ -47,6 +47,8 @@ const CharacterInputSchema = z.object({
   guideBio:          z.string().max(1000).optional(),
   guideTopics:       z.array(z.string().max(80)).max(12).optional(),
   guideAvailability: GuideAvailabilitySchema,
+  // Onboarding
+  constellationType: z.enum(['wanderer', 'keeper', 'dreamer']).nullable().optional(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {
@@ -100,6 +102,7 @@ router.put("/character", requireAuth, async (req, res) => {
       guideBio:          parsed.data.guideBio          ?? undefined,
       guideTopics:       parsed.data.guideTopics       ?? undefined,
       guideAvailability: parsed.data.guideAvailability ?? undefined,
+      constellationType: parsed.data.constellationType ?? undefined,
     };
     const [updated] = await db
       .insert(characterTable)

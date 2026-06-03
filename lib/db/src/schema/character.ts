@@ -30,9 +30,11 @@ export const characterTable = pgTable("character", {
   guideBio:          text("guide_bio").notNull().default(""),
   guideTopics:       jsonb("guide_topics").$type<string[]>().notNull().default([]),
   guideAvailability: jsonb("guide_availability").$type<{ days: number[]; timeFrom: string; timeTo: string } | null>().default(null),
-  peaceRating:       real("peace_rating").notNull().default(5.0),
-  dreamersGuided:    integer("dreamers_guided").notNull().default(0),
-  updatedAt:         timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  peaceRating:          real("peace_rating").notNull().default(5.0),
+  dreamersGuided:       integer("dreamers_guided").notNull().default(0),
+  // ── Onboarding ───────────────────────────────────────────────────────────
+  constellationType:    text("constellation_type"),   // 'wanderer' | 'keeper' | 'dreamer'
+  updatedAt:            timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Character      = typeof characterTable.$inferSelect;
