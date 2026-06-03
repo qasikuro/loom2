@@ -143,3 +143,9 @@ id = "7rnObAtMHN2Qh0ovJojrB"
 uri = "file://SKY_JOURNAL_AAA_ANALYSIS.md"
 type = "text"
 title = "Sky Journal — CTO + IX Engineer AAA Analysis"
+
+[[outputs]]
+id = "KZ8Ma_bu-Ke0KYfHbqjkw"
+uri = "file://SKY_JOURNAL_ROADMAP.md"
+type = "text"
+title = "Sky Journal — Product Roadmap & Quality Reference"
