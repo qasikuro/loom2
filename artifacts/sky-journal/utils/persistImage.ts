@@ -28,6 +28,45 @@ export class ImageUploadError extends Error {
 }
 
 /**
+ * Returns true for errors that should NOT be retried (auth, quota, format issues).
+ */
+function isNonRetryable(err: unknown): boolean {
+  if (!(err instanceof ImageUploadError)) return false;
+  const msg = err.userMessage;
+  return (
+    msg.includes('signed in') ||
+    msg.includes('Session expired') ||
+    msg.includes('too large') ||
+    msg.includes('Unsupported image') ||
+    msg.includes('No image')
+  );
+}
+
+/**
+ * Retry wrapper — attempts `fn` up to `maxAttempts` times.
+ * Waits `delayMs` between each attempt. Skips retry for non-transient errors.
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number,
+  delayMs: number,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (isNonRetryable(err)) throw err;
+      if (attempt < maxAttempts) {
+        await new Promise<void>(r => setTimeout(r, delayMs));
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
  * Resize a native file:// URI to at most MAX_DIM px on the longest edge.
  * Returns a new file:// URI (from ImageManipulator cache). Falls back to the
  * original URI if manipulation fails so the upload can still be attempted.
@@ -146,7 +185,8 @@ async function uploadWeb(base64Data: string, ext: string): Promise<string> {
 
 /**
  * Uploads a local/blob/data URI to the server and returns the permanent https URL.
- * Throws `ImageUploadError` on failure — callers should catch and display `err.userMessage`.
+ * Retries up to 3 times (1 s back-off) for transient network/server errors.
+ * Throws `ImageUploadError` on final failure — callers should catch and display `err.userMessage`.
  *
  * Native (Android/iOS):
  *   Resize to ≤1200 px → upload as binary multipart (no base64 overhead).
@@ -176,19 +216,19 @@ export async function persistImageUri(uri: string): Promise<string> {
         throw new ImageUploadError('Could not read the selected image. Please try again.', err);
       }
       const ext = (dataUrl.match(/data:[^/]+\/([a-z0-9]+);/) ?? [])[1] ?? 'jpg';
-      return await uploadWeb(dataUrl, ext);
+      return withRetry(() => uploadWeb(dataUrl, ext), 3, 1000);
     }
 
     if (uri.startsWith('data:')) {
       const ext = (uri.match(/data:[^/]+\/([a-z0-9]+);/) ?? [])[1] ?? 'jpg';
-      return await uploadWeb(uri, ext);
+      return withRetry(() => uploadWeb(uri, ext), 3, 1000);
     }
 
     throw new ImageUploadError('Unsupported image format.');
   }
 
   const resized = await resizeIfNeeded(uri);
-  return await uploadNative(resized);
+  return withRetry(() => uploadNative(resized), 3, 1000);
 }
 
 /**

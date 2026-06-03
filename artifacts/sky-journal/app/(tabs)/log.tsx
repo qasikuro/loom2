@@ -496,7 +496,7 @@ export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { t }   = useTranslation();
-  const { journalEntries, deleteJournalEntry, isLoading, apiOnline, journalLoadError, reloadData, constellation, activeCosmetics } = useApp();
+  const { journalEntries, deleteJournalEntry, isLoading, apiOnline, journalLoadError, reloadData, constellation, activeCosmetics, isRefreshing } = useApp();
   const activeTheme = activeCosmetics['theme'] as string | undefined;
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
@@ -558,9 +558,17 @@ export default function JournalScreen() {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.title}>{t('profile.journal')}</Text>
-            <View style={styles.privateBadge}>
-              <Icon name="lock" size={10} color="rgba(200,184,232,0.7)" />
-              <Text style={styles.privateBadgeText}>{t('common.private')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <View style={styles.privateBadge}>
+                <Icon name="lock" size={10} color="rgba(200,184,232,0.7)" />
+                <Text style={styles.privateBadgeText}>{t('common.private')}</Text>
+              </View>
+              {isRefreshing && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.10)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 7 }}>
+                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.45)' }} />
+                  <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)' }}>Updating</Text>
+                </View>
+              )}
             </View>
           </View>
           <View style={styles.headerRight}>

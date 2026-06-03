@@ -404,7 +404,7 @@ export default function CampfireRoom() {
   }, [fetchData, roomId, markCampfireRoomRead]);
 
   // ── SSE: live push for campfire messages and presence ────────────────────
-  useSSE(
+  const { connected: sseConnected } = useSSE(
     roomId ? [`campfire:${roomId}`] : [],
     useCallback((_channel: string, raw: unknown) => {
       const payload = raw as {
@@ -512,6 +512,14 @@ export default function CampfireRoom() {
             {data ? (
               <>
                 <Text style={R.roomName} numberOfLines={1}>{data.room.name}</Text>
+                {!sseConnected && !loading && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: `${palette.ember}60` }} />
+                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: `${palette.ember}70`, fontStyle: 'italic' }}>
+                      Reconnecting…
+                    </Text>
+                  </View>
+                )}
                 {data.soulCount > 0 && (
                   <View style={R.soulOrbs}>
                     {Array.from({ length: Math.min(data.soulCount, 8) }).map((_, i) => (

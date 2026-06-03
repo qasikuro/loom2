@@ -103,7 +103,7 @@ export default function DiscoverScreen() {
   const insets    = useSafeAreaInsets();
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
-          apiOnline, discoverLoadError, reloadData,
+          apiOnline, discoverLoadError, reloadData, isRefreshing,
           showRewardToast, reloadRewards, reloadConstellation } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
@@ -270,7 +270,15 @@ export default function DiscoverScreen() {
         {/* Title row */}
         <View style={styles.headerRow}>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>{t('discover.title')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+              <Text style={styles.headerTitle}>{t('discover.title')}</Text>
+              {isRefreshing && !refreshing && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.12)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+                  <ActivityIndicator size="small" color="rgba(200,184,232,0.55)" style={{ transform: [{ scale: 0.55 }] }} />
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' }}>Updating</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.headerSub}>{t('discover.subTitle')}</Text>
           </View>
           <View style={{ flexDirection: 'row', gap: 8 }}>

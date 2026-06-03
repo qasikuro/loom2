@@ -417,6 +417,8 @@ interface AppContextValue {
   reloadData:    () => Promise<void>;
   refreshFeed:   () => Promise<void>;
   clearUserData: () => Promise<void>;
+
+  isRefreshing: boolean;
 }
 
 // ── Defaults / Helpers — imported from './mappers' at the top of this file ────
@@ -469,6 +471,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [storiesLoadError,  setStoriesLoadError]  = useState(false);
   const [outfitsLoadError,  setOutfitsLoadError]  = useState(false);
   const [discoverLoadError, setDiscoverLoadError] = useState(false);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
@@ -878,6 +882,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const token = await _getToken();
     if (!token) return;
 
+    setIsRefreshing(true);
     try {
       const timestamps = await readFetchTimestamps();
 
@@ -974,6 +979,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // loadSocialData() writes its own timestamps on success
       if (needsSocial) loadSocialData();
     } catch { /* silently fail — keep showing cached data */ }
+    finally { setIsRefreshing(false); }
   }
 
   // ── Campfire unread polling ───────────────────────────────────────────────────
@@ -1636,7 +1642,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshFeed = useCallback(async () => {
-    await loadSocialData();
+    setIsRefreshing(true);
+    try {
+      await loadSocialData();
+    } finally {
+      setIsRefreshing(false);
+    }
   }, []);
 
   return (
@@ -1659,6 +1670,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reloadData,
       refreshFeed,
       clearUserData,
+      isRefreshing,
     }}>
       {children}
     </AppContext.Provider>

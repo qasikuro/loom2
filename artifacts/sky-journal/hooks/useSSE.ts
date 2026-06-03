@@ -7,15 +7,18 @@
  * On focus:  opens the connection.
  * On blur:   closes the connection.
  * On error:  reconnects after an exponential backoff (max 30 s).
+ * On resume: tears down the old connection and opens a fresh one within 2 s.
+ *
+ * Returns { connected } — true while the stream is actively reading.
  *
  * Usage:
- *   useSSE(
+ *   const { connected } = useSSE(
  *     ['messages:myUserId', 'campfire:roomId'],
  *     (channel, data) => { ... }
  *   );
  */
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getAuthToken } from '@/context/AppContext';
@@ -65,12 +68,13 @@ export function useSSE(
   channels: string[],
   onEvent: OnEventFn,
   enabled = true,
-): void {
+): { connected: boolean } {
   const abortRef    = useRef<AbortController | null>(null);
   const backoffRef  = useRef(BASE_BACKOFF_MS);
   const retryRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onEventRef  = useRef(onEvent);
   const channelsRef = useRef(channels);
+  const [connected, setConnected] = useState(false);
 
   // Keep refs in sync so the reconnect loop always uses fresh values
   onEventRef.current  = onEvent;
@@ -79,10 +83,12 @@ export function useSSE(
   const disconnect = useCallback(() => {
     if (retryRef.current)  { clearTimeout(retryRef.current); retryRef.current = null; }
     if (abortRef.current)  { abortRef.current.abort(); abortRef.current = null; }
+    setConnected(false);
   }, []);
 
   const connect = useCallback(async () => {
     disconnect();
+    setConnected(false);
 
     const token = await getAuthToken();
     if (!token) return;
@@ -106,7 +112,9 @@ export function useSSE(
         throw new Error(`SSE ${res.status}`);
       }
 
+      // Stream is live — signal connected and reset backoff
       backoffRef.current = BASE_BACKOFF_MS;
+      setConnected(true);
 
       const reader  = res.body.getReader();
       const decoder = new TextDecoder();
@@ -126,6 +134,8 @@ export function useSSE(
       if (err?.name === 'AbortError') return;
     }
 
+    setConnected(false);
+
     // Connection closed or errored — schedule reconnect
     const delay = backoffRef.current;
     backoffRef.current = Math.min(backoffRef.current * 2, MAX_BACKOFF_MS);
@@ -140,19 +150,28 @@ export function useSSE(
     }, [enabled, connect, disconnect]),
   );
 
-  // Reconnect when the app returns from background (OS-level, not just tab focus)
+  // Reconnect when the app returns from background (OS-level, not just tab focus).
+  // Debounced by 400 ms so a brief flicker to inactive doesn't fire two connects.
   useEffect(() => {
     if (!enabled) return;
+    let debounce: ReturnType<typeof setTimeout> | null = null;
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (nextState === 'active') {
-        connect();
+        if (debounce) clearTimeout(debounce);
+        debounce = setTimeout(() => { connect(); }, 400);
       } else if (nextState === 'background' || nextState === 'inactive') {
+        if (debounce) { clearTimeout(debounce); debounce = null; }
         disconnect();
       }
     });
-    return () => sub.remove();
+    return () => {
+      if (debounce) clearTimeout(debounce);
+      sub.remove();
+    };
   }, [enabled, connect, disconnect]);
 
   // Also disconnect when the component unmounts entirely
   useEffect(() => () => disconnect(), [disconnect]);
+
+  return { connected };
 }
