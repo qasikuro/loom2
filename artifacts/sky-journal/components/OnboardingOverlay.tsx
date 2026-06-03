@@ -293,22 +293,26 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       return;
     }
 
-    // Journal: use addJournalEntry as the single authoritative write path.
-    // It updates local state optimistically and POSTs to the server.
-    // Journal is optional if the user left the field blank.
-    const trimmedText = journalText.trim();
-    if (trimmedText) {
-      const entry: JournalEntry = {
-        id:         crypto.randomUUID(),
-        date:       new Date().toISOString().slice(0, 10),
-        type:       'diary',
-        text:       trimmedText,
-        mood,
-        imageUri:   undefined,
-        friendName: undefined,
-      };
-      addJournalEntry(entry);
-    }
+    // Journal: always create a first entry (required by onboarding done-condition).
+    // If user left the field blank, use a gentle default sentence so the profile
+    // is never hollow. addJournalEntry is the single authoritative write path —
+    // it updates local state optimistically AND POSTs to the server.
+    // We await it before reloadData() to prevent reload racing the POST and
+    // overwriting optimistic state before the entry lands on the server.
+    const journalLineText =
+      journalText.trim() ||
+      'The sky called to me today. This is where my story begins.';
+
+    const firstEntry: JournalEntry = {
+      id:         crypto.randomUUID(),
+      date:       new Date().toISOString().slice(0, 10),
+      type:       'diary',
+      text:       journalLineText,
+      mood,
+      imageUri:   undefined,
+      friendName: undefined,
+    };
+    await addJournalEntry(firstEntry);
 
     // All required writes done — clear draft and complete
     if (userId) await clearDraft(userId);
