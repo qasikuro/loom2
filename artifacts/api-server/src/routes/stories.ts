@@ -300,6 +300,15 @@ router.delete("/stories/:id", requireAuth, async (req, res) => {
   }
 });
 
+// ── Milestone definitions ─────────────────────────────────────────────────────
+const MILESTONE_THRESHOLDS = [10, 50, 100, 500] as const;
+const MILESTONE_DATA: Record<number, { titleName: string; aura: number; stars: number }> = {
+  10:  { titleName: 'Resonant',    aura: 20,  stars: 10 },
+  50:  { titleName: 'Storyteller', aura: 50,  stars: 20 },
+  100: { titleName: 'Illuminated', aura: 80,  stars: 30 },
+  500: { titleName: 'Legend',      aura: 150, stars: 60 },
+};
+
 router.post("/stories/:id/witness", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
   const actorId = getUserId(req);
@@ -312,8 +321,43 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
 
     if (!updated) return res.status(404).json({ error: "Not found" });
 
-    // Notify the story author (fire-and-forget, skip if own story)
+    // ── Milestone detection (only for story author, not self-witness) ──────────
+    let milestonePayload: { threshold: number; titleName: string } | null = null;
     if (updated.userId !== actorId) {
+      const currentMilestones = (updated.witnessMilestones ?? []) as number[];
+      const newCount = updated.witnessedCount;
+      const newThreshold = MILESTONE_THRESHOLDS.find(
+        t => newCount >= t && !currentMilestones.includes(t),
+      );
+
+      if (newThreshold) {
+        const mData = MILESTONE_DATA[newThreshold]!;
+        // Persist milestone as reached (fire-and-forget to not block response)
+        db.update(storiesTable)
+          .set({ witnessMilestones: [...currentMilestones, newThreshold] as any })
+          .where(eq(storiesTable.id, storyId))
+          .catch(() => null);
+
+        // Grant milestone currency reward to story author
+        grantReward(
+          db as any, updated.userId, "witness_milestone",
+          `${storyId}:${newThreshold}`,
+          { aura: mData.aura, stars: mData.stars },
+        ).catch(() => null);
+
+        // Append title to character traits (idempotent — skip if already present)
+        db.execute(sql`
+          UPDATE character
+          SET traits = CASE
+            WHEN traits @> ${JSON.stringify([mData.titleName])}::jsonb THEN traits
+            ELSE traits || ${JSON.stringify([mData.titleName])}::jsonb
+          END
+          WHERE user_id = ${updated.userId}
+        `).catch(() => null);
+
+        milestonePayload = { threshold: newThreshold, titleName: mData.titleName };
+      }
+
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "witness", req).catch(() => null);
       sendPushForWitness(actorId, updated.userId, storyId, updated.chapterTitle).catch(() => null);
       // Reward story owner for receiving a witness
@@ -326,7 +370,7 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
       await grantReward(db as any, actorId, "daily_presence", today);
     syncConstellation(db as any, actorId).catch(() => null);
 
-    return res.json({ ...serializeStory(updated), rewardGranted, rewardAmounts });
+    return res.json({ ...serializeStory(updated), rewardGranted, rewardAmounts, milestone: milestonePayload });
   } catch (err) {
     req.log.error({ err }, "Failed to witness story");
     return res.status(500).json({ error: "Internal server error" });

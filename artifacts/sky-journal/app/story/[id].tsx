@@ -21,6 +21,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CompletionMoment } from '@/components/CompletionMoment';
 import { MoodBadge } from '@/components/MoodBadge';
+import { MilestoneModal, buildMilestoneInfo, type MilestoneInfo } from '@/components/MilestoneModal';
+import { WitnessMosaic } from '@/components/WitnessMosaic';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import type { PanelOverlay } from '@/context/AppContext';
@@ -307,6 +309,7 @@ export default function StoryScreen() {
   const [showWitnessFlash, setShowWitnessFlash] = useState(false);
   const [savedOffset,      setSavedOffset]      = useState(0);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [activeMilestone,  setActiveMilestone]  = useState<MilestoneInfo | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
   // Witness button bounce animation
@@ -393,13 +396,20 @@ export default function StoryScreen() {
       Animated.timing(witnessGlow, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(witnessGlow, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
     ]).start();
-    apiFetch<{ rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
+    apiFetch<{
+      rewardGranted?: boolean;
+      rewardAmounts?: { stars?: number; aura?: number; shards?: number };
+      milestone?: { threshold: number; titleName: string } | null;
+    }>(
       `/stories/${id}/witness`, { method: 'POST' },
     ).then(res => {
       if (res?.rewardGranted && res.rewardAmounts) {
         showRewardToast('Daily witness', res.rewardAmounts);
         reloadRewards().catch(() => null);
         reloadConstellation().catch(() => null);
+      }
+      if (res?.milestone) {
+        setActiveMilestone(buildMilestoneInfo(res.milestone.threshold, res.milestone.titleName));
       }
     }).catch(() => null);
   }
@@ -576,6 +586,10 @@ export default function StoryScreen() {
               </Animated.View>
             )}
           </View>
+          {/* Witness mosaic — own story view only */}
+          {isOwnStory && witnessedCount > 0 && (
+            <WitnessMosaic count={witnessedCount} accent={gradient[1]} />
+          )}
           {/* Follow author CTA for discover posts */}
           {post?.authorUserId && (
             <TouchableOpacity
@@ -636,6 +650,11 @@ export default function StoryScreen() {
         </View>
       </View>
       <CompletionMoment visible={showWitnessFlash} variant="witness" onFinish={() => setShowWitnessFlash(false)} />
+      <MilestoneModal
+        visible={activeMilestone !== null}
+        milestone={activeMilestone}
+        onDismiss={() => setActiveMilestone(null)}
+      />
     </View>
   );
 }

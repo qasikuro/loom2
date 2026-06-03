@@ -449,6 +449,98 @@ const sp = StyleSheet.create({
   witnessN:{ fontSize: 9.5, fontFamily: 'Satoshi-Medium', color: 'rgba(255,255,255,0.65)' },
 });
 
+// ─── Witness Summary Card — shown on home when stories receive new witnesses ──
+function WitnessSummaryCard({
+  count, storyTitle, onPress,
+}: { count: number; storyTitle: string; onPress: () => void }) {
+  const stars = useRef(
+    Array.from({ length: 6 }, () => ({
+      x:   new Animated.Value(0),
+      y:   new Animated.Value(0),
+      op:  new Animated.Value(0),
+      sc:  new Animated.Value(0.4),
+    })),
+  ).current;
+
+  useEffect(() => {
+    function launch(i: number) {
+      const s = stars[i]!;
+      s.x.setValue(0); s.y.setValue(0); s.op.setValue(0); s.sc.setValue(0.4);
+      const angle = (i / stars.length) * Math.PI * 2 + Math.random() * 0.6;
+      const dist  = 28 + Math.random() * 18;
+      Animated.sequence([
+        Animated.delay(i * 180 + Math.random() * 120),
+        Animated.parallel([
+          Animated.timing(s.op, { toValue: 1,    duration: 220, useNativeDriver: true }),
+          Animated.spring(s.sc, { toValue: 1,    tension: 80, friction: 7, useNativeDriver: true }),
+          Animated.timing(s.x,  { toValue: Math.cos(angle) * dist, duration: 900, useNativeDriver: true }),
+          Animated.timing(s.y,  { toValue: Math.sin(angle) * dist, duration: 900, useNativeDriver: true }),
+        ]),
+        Animated.timing(s.op, { toValue: 0, duration: 500, useNativeDriver: true }),
+      ]).start(() => setTimeout(() => launch(i), 1400 + Math.random() * 800));
+    }
+    stars.forEach((_, i) => setTimeout(() => launch(i), i * 200));
+  }, []);
+
+  const ICONS = ['✦', '◈', '◇', '⬡', '◐', '△'];
+  const label = count === 1
+    ? `1 soul witnessed "${storyTitle}"`
+    : `${count} souls witnessed "${storyTitle}"`;
+
+  return (
+    <TouchableOpacity
+      style={wsc.card}
+      onPress={onPress}
+      activeOpacity={0.82}
+    >
+      <LinearGradient
+        colors={['rgba(200,168,75,0.10)', 'rgba(200,168,75,0.04)']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      />
+      {/* Floating star particles */}
+      <View style={wsc.particleAnchor} pointerEvents="none">
+        {stars.map((s, i) => (
+          <Animated.Text
+            key={i}
+            style={[wsc.particle, {
+              opacity:   s.op,
+              transform: [{ translateX: s.x }, { translateY: s.y }, { scale: s.sc }],
+            }]}
+          >
+            {ICONS[i]}
+          </Animated.Text>
+        ))}
+      </View>
+      <View style={wsc.inner}>
+        <Icon name="eye" size={15} color="#C8A84B" />
+        <Text style={wsc.label} numberOfLines={2}>{label}</Text>
+        <Icon name="chevron-right" size={13} color="rgba(200,168,75,0.40)" />
+      </View>
+    </TouchableOpacity>
+  );
+}
+const wsc = StyleSheet.create({
+  card: {
+    marginHorizontal: 16, marginBottom: 10, borderRadius: 18, borderWidth: 1,
+    borderColor: 'rgba(200,168,75,0.22)', overflow: 'hidden', position: 'relative',
+  },
+  particleAnchor: {
+    position: 'absolute', top: '50%', left: 28, width: 0, height: 0,
+  },
+  particle: {
+    position: 'absolute', fontSize: 12, color: '#C8A84B',
+  },
+  inner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  label: {
+    flex: 1, fontSize: 13, fontFamily: 'Satoshi-Medium',
+    color: 'rgba(200,168,75,0.90)', lineHeight: 18,
+  },
+});
+
 // ─── Section header with accent bar + optional count badge ───────────────────
 function SectionHeader({ label, accent, count, onPress, action }: {
   label: string; accent: string; count?: number; onPress?: () => void; action?: string;
@@ -1360,6 +1452,23 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
         </Animated.View>
+
+        {/* ══════════════════════════════════════════════════
+            WITNESS SUMMARY CARD — more prominent than pill
+        ══════════════════════════════════════════════════ */}
+        {witnessedNotifs > 0 && (() => {
+          const topNotif = serverNotifications.find(n => n.type === 'witness');
+          const storyTitle = topNotif?.title || 'your story';
+          return (
+            <Animated.View style={{ opacity: s1, transform: [{ translateY: s1.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+              <WitnessSummaryCard
+                count={witnessedNotifs}
+                storyTitle={storyTitle}
+                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }}
+              />
+            </Animated.View>
+          );
+        })()}
 
         {/* ══════════════════════════════════════════════════
             ACTIVITY DIGEST — what changed while you were away
