@@ -136,7 +136,7 @@ async function notifyAuthor(
   authorId:     string,
   storyId:      string,
   chapterTitle: string,
-  type:         "witness" | "save",
+  type:         "witness" | "save" | "milestone",
   req:          any,
 ) {
   try {
@@ -336,24 +336,36 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
       for (const threshold of unclaimedThresholds) {
         const mData = MILESTONE_DATA[threshold]!;
 
-        // Atomic claim: UPDATE only when milestone is not already recorded (prevents double-grant on concurrent witnesses)
+        // ── Step 1: Grant reward FIRST (idempotent via unique refId in reward_events).
+        //    If this throws, we skip the claim entirely so the milestone can be retried
+        //    on the next witness — prevents a permanently-claimed-but-unrewarded state.
+        try {
+          await grantReward(
+            db as any, updated.userId, "witness_milestone",
+            `${storyId}:${threshold}`,
+            { aura: mData.aura, stars: mData.stars },
+          );
+        } catch (grantErr) {
+          req.log.warn({ grantErr, storyId, threshold }, "Milestone reward grant failed; will retry on next witness");
+          continue; // Do NOT mark claimed — allows retry when next witness arrives
+        }
+
+        // ── Step 2: Atomically mark milestone as claimed.
+        //    Uses jsonb containment check to be safe against concurrent witnesses.
+        //    grantReward is already idempotent, so even if two witnesses race here,
+        //    the reward is granted exactly once by the unique reward_events index.
         const claimResult = await db.execute(sql`
           UPDATE stories
           SET witness_milestones = witness_milestones || ${JSON.stringify([threshold])}::jsonb
           WHERE id = ${storyId}
             AND NOT (witness_milestones @> ${JSON.stringify([threshold])}::jsonb)
           RETURNING id
-        `).catch(() => ({ rows: [] })) as unknown as { rows: { id: string }[] };
+        `).catch(err => { req.log.warn({ err, storyId, threshold }, "Milestone claim update failed"); return { rows: [] }; }) as unknown as { rows: { id: string }[] };
 
         if (claimResult?.rows?.length) {
-          // Grant currency reward to story author
-          grantReward(
-            db as any, updated.userId, "witness_milestone",
-            `${storyId}:${threshold}`,
-            { aura: mData.aura, stars: mData.stars },
-          ).catch(() => null);
+          // ── Step 3: Best-effort side-effects (non-critical — already rewarded above) ──
 
-          // Append title to character traits (idempotent)
+          // Append milestone title to character traits (idempotent)
           db.execute(sql`
             UPDATE character
             SET traits = CASE
@@ -361,17 +373,20 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
               ELSE traits || ${JSON.stringify([mData.titleName])}::jsonb
             END
             WHERE user_id = ${updated.userId}
-          `).catch(() => null);
+          `).catch(err => req.log.warn({ err }, "Failed to append milestone title to traits"));
 
           // 500-milestone: grant profile shimmer cosmetic (free — no currency spent)
           if (threshold === 500) {
             db.insert(userPurchasesTable)
               .values({ userId: updated.userId, itemId: 'shimmer_profile', itemName: 'Profile Shimmer', starsSpent: 0, auraSpent: 0, shardsSpent: 0 })
               .onConflictDoNothing()
-              .catch(() => null);
+              .catch(err => req.log.warn({ err }, "Failed to grant shimmer cosmetic"));
           }
 
-          // Track the highest claimed for response
+          // Send milestone notification to creator so they can open the story and see the modal
+          notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "milestone", req).catch(() => null);
+
+          // Track the highest newly claimed threshold for the response payload
           if (!milestonePayload || threshold > milestonePayload.threshold) {
             milestonePayload = { threshold, titleName: mData.titleName, rewardType: mData.rewardType, aura: mData.aura, stars: mData.stars };
           }
