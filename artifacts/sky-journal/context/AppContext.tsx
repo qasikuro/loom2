@@ -977,7 +977,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setApiOnline(true);
 
       // loadSocialData() writes its own timestamps on success
-      if (needsSocial) loadSocialData();
+      if (needsSocial) await loadSocialData();
     } catch { /* silently fail — keep showing cached data */ }
     finally { setIsRefreshing(false); }
   }

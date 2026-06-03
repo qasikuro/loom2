@@ -270,7 +270,7 @@ export default function PanelEditorScreen() {
   const [pendingIdx,    setPendingIdx]    = useState<number>(0);
   const [uploadingSet,   setUploadingSet]   = useState<Set<number>>(new Set());
   const [uploadError,    setUploadError]    = useState<string | null>(null);
-  const [retryFn,        setRetryFn]        = useState<(() => void) | null>(null);
+  const [failedPanels,   setFailedPanels]   = useState<Map<number, string>>(new Map()); // panelIdx → localUri
   const [showSheet,      setShowSheet]      = useState(false);
   const [sheetTargetIdx, setSheetTargetIdx] = useState(0);
   const uploadPulse = useRef(new Animated.Value(1)).current;
@@ -356,43 +356,37 @@ export default function PanelEditorScreen() {
     const bestLayout = LAYOUTS.slice().sort((a, b) => a.count - b.count).find(l => l.count >= finalCount)
       ?? LAYOUTS[LAYOUTS.length - 1];
 
-    setLayoutKey(bestLayout.key);
-    setPanels(expandedPanels);
-    DraftStore.set({ panels: expandedPanels, activePanelIndex: idx, onSave: d.onSave });
-
-    // Determine which panel slots to fill (starting at idx)
+    // Determine which panel slots to fill (starting at idx) — computed before
+    // setPanels so we can build the optimistic preview in the same pass.
     const targetIndices = res.assets.map((_, i) => idx + i).filter(i => i < finalCount);
+
+    // Show local images immediately (optimistic preview) while uploads run in background
+    const optimisticPanels = expandedPanels.map((p, pi) => {
+      const ai = targetIndices.indexOf(pi);
+      return ai >= 0 ? { ...p, imageUri: res.assets[ai].uri, bgPreset: undefined } : p;
+    });
+
+    setLayoutKey(bestLayout.key);
+    setPanels(optimisticPanels);
+    DraftStore.set({ panels: optimisticPanels, activePanelIndex: idx, onSave: d.onSave });
     setUploadingSet(new Set(targetIndices));
 
-    // Upload all in parallel
+    // Upload all in parallel; on success replace local URI with server URL
     targetIndices.forEach(async (panelIdx, i) => {
       const srcUri = res.assets[i].uri;
-      async function doUpload() {
+      try {
         const uri = await persistImageUri(srcUri);
         setPanels(prev => {
           const next = prev.map((p, pi) => pi === panelIdx ? { ...p, imageUri: uri, bgPreset: undefined } : p);
           DraftStore.updatePanel(panelIdx, { imageUri: uri, bgPreset: undefined });
           return next;
         });
-      }
-      try {
-        await doUpload();
+        setFailedPanels(prev => { const m = new Map(prev); m.delete(panelIdx); return m; });
       } catch (err: unknown) {
-        const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — check your connection and try again.';
+        const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — tap the panel to retry.';
         setUploadError(msg);
-        setRetryFn(() => () => {
-          setUploadError(null);
-          setRetryFn(null);
-          setUploadingSet(prev => new Set([...prev, panelIdx]));
-          doUpload()
-            .catch((retryErr: unknown) => {
-              const retryMsg = retryErr instanceof ImageUploadError ? retryErr.userMessage : 'Upload failed again — please try a different photo.';
-              setUploadError(retryMsg);
-            })
-            .finally(() => {
-              setUploadingSet(prev => { const s = new Set(prev); s.delete(panelIdx); return s; });
-            });
-        });
+        // store srcUri so retryPanel() can re-run the upload later
+        setFailedPanels(prev => { const m = new Map(prev); m.set(panelIdx, srcUri); return m; });
       } finally {
         setUploadingSet(prev => { const s = new Set(prev); s.delete(panelIdx); return s; });
       }
@@ -402,29 +396,41 @@ export default function PanelEditorScreen() {
   async function handleCropDone(croppedUri: string, aspectRatio: number) {
     const idx = pendingIdx;
     setPendingUri(null);
+    // Show cropped local image immediately (optimistic preview)
+    updatePanel(idx, { imageUri: croppedUri, bgPreset: undefined, imageAspectRatio: aspectRatio });
     setUploadingSet(new Set([idx]));
-    async function doUpload() {
+    try {
       const uri = await persistImageUri(croppedUri);
       updatePanel(idx, { imageUri: uri, bgPreset: undefined, imageAspectRatio: aspectRatio });
-    }
-    try {
-      await doUpload();
+      setFailedPanels(prev => { const m = new Map(prev); m.delete(idx); return m; });
     } catch (err: unknown) {
-      const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — check your connection and try again.';
+      const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — tap the panel to retry.';
       setUploadError(msg);
-      setRetryFn(() => () => {
-        setUploadError(null);
-        setRetryFn(null);
-        setUploadingSet(new Set([idx]));
-        doUpload()
-          .catch((retryErr: unknown) => {
-            const retryMsg = retryErr instanceof ImageUploadError ? retryErr.userMessage : 'Upload failed again — please try a different photo.';
-            setUploadError(retryMsg);
-          })
-          .finally(() => { setUploadingSet(new Set()); });
-      });
+      setFailedPanels(prev => { const m = new Map(prev); m.set(idx, croppedUri); return m; });
     } finally {
       setUploadingSet(new Set());
+    }
+  }
+
+  async function retryPanel(panelIdx: number) {
+    const srcUri = failedPanels.get(panelIdx);
+    if (!srcUri) return;
+    setFailedPanels(prev => { const m = new Map(prev); m.delete(panelIdx); return m; });
+    setUploadError(null);
+    setUploadingSet(prev => new Set([...prev, panelIdx]));
+    try {
+      const uri = await persistImageUri(srcUri);
+      setPanels(prev => {
+        const next = prev.map((p, pi) => pi === panelIdx ? { ...p, imageUri: uri, bgPreset: undefined } : p);
+        DraftStore.updatePanel(panelIdx, { imageUri: uri, bgPreset: undefined });
+        return next;
+      });
+    } catch (err: unknown) {
+      const msg = err instanceof ImageUploadError ? err.userMessage : 'Upload failed again — tap to retry.';
+      setUploadError(msg);
+      setFailedPanels(prev => { const m = new Map(prev); m.set(panelIdx, srcUri); return m; });
+    } finally {
+      setUploadingSet(prev => { const s = new Set(prev); s.delete(panelIdx); return s; });
     }
   }
 
@@ -670,6 +676,18 @@ export default function PanelEditorScreen() {
                             </Animated.View>
                           )}
 
+                          {/* Per-panel retry overlay (shown after final upload failure) */}
+                          {failedPanels.has(pIdx) && !uploadingSet.has(pIdx) && (
+                            <TouchableOpacity
+                              style={[styles.uploadOverlay, { backgroundColor: 'rgba(180,30,30,0.60)' }]}
+                              onPress={() => retryPanel(pIdx)}
+                              activeOpacity={0.8}
+                            >
+                              <Icon name="refresh-cw" size={22} color="rgba(255,220,220,0.92)" />
+                              <Text style={styles.uploadOverlayText}>Tap to retry</Text>
+                            </TouchableOpacity>
+                          )}
+
                           {/* Draggable overlays (active panel) */}
                           {isActive && panel?.overlays?.map(ov => (
                             <DraggableOverlay
@@ -718,20 +736,13 @@ export default function PanelEditorScreen() {
 
         {/* ── Upload error banner ───────────────────────────── */}
         {uploadError ? (
-          <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            onPress={() => setUploadError(null)}
+            style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
             <Text style={{ color: '#DC2626', fontSize: 12, fontFamily: 'Satoshi-Regular', flex: 1 }}>{uploadError}</Text>
-            {retryFn ? (
-              <TouchableOpacity
-                onPress={retryFn}
-                style={{ backgroundColor: '#DC2626', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}
-              >
-                <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'Satoshi-Bold' }}>Retry</Text>
-              </TouchableOpacity>
-            ) : null}
-            <TouchableOpacity onPress={() => { setUploadError(null); setRetryFn(null); }}>
-              <Text style={{ color: '#DC2626', fontSize: 12 }}>✕</Text>
-            </TouchableOpacity>
-          </View>
+            <Text style={{ color: '#DC2626', fontSize: 12 }}>✕</Text>
+          </TouchableOpacity>
         ) : null}
 
         {/* ── Toolbar ───────────────────────────────────────── */}
