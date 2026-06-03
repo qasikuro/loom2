@@ -205,10 +205,6 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
               >
                 <Text style={s.nextBtnTxt}>Next →</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity onPress={goNext} style={s.skipLink}>
-                <Text style={s.skipLinkTxt}>Skip for now</Text>
-              </TouchableOpacity>
             </>
           )}
 
@@ -303,11 +299,6 @@ const s = StyleSheet.create({
   },
   nextBtnTxt: {
     fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: -0.2,
-  },
-  skipLink: { marginTop: 14 },
-  skipLinkTxt: {
-    fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.30)',
-    textDecorationLine: 'underline',
   },
   preview: {
     width: '100%', borderRadius: 16, borderWidth: 1,
