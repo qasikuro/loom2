@@ -18,7 +18,7 @@ import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { XPFlash } from '@/components/XPFlash';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
-import { AppProvider, setAuthTokenGetter, useApp } from '@/context/AppContext';
+import { AppProvider, setAuthTokenGetter, useApp, apiFetch } from '@/context/AppContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
@@ -115,9 +115,25 @@ function AppOverlays() {
   useEffect(() => {
     if (!isLoaded || !isSignedIn || checkedRef.current) return;
     checkedRef.current = true;
-    hasCompletedOnboarding().then(done => {
-      if (!done) setShowOnboarding(true);
-    });
+
+    (async () => {
+      // 1. Fast local check — most returning users exit here
+      const localDone = await hasCompletedOnboarding();
+      if (localDone) return;
+
+      // 2. Server-backed fallback: if the character already has a
+      //    constellationType, the user completed onboarding on another device
+      //    or their local flag was cleared. Auto-mark and skip.
+      try {
+        const char = await apiFetch<{ constellationType?: string | null }>('/character');
+        if (char?.constellationType) {
+          await markOnboardingDone();
+          return;
+        }
+      } catch { /* ignore — show onboarding if server is unreachable */ }
+
+      setShowOnboarding(true);
+    })();
   }, [isLoaded, isSignedIn]);
 
   function handleComplete() {

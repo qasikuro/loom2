@@ -179,20 +179,21 @@ export function OnboardingOverlay({ visible, onComplete }: OnboardingOverlayProp
 
     if (journalText.trim()) {
       try {
+        const entryId = crypto.randomUUID();
         const entry: JournalEntry = {
-          id:        `${Date.now()}-onboarding`,
-          date:      new Date().toISOString().slice(0, 10),
-          type:      'diary',
-          text:      journalText.trim(),
-          mood:      selectedMood ?? 'Dreamy',
-          imageUri:  undefined,
+          id:         entryId,
+          date:       new Date().toISOString().slice(0, 10),
+          type:       'diary',
+          text:       journalText.trim(),
+          mood:       selectedMood ?? 'Dreamy',
+          imageUri:   undefined,
           friendName: undefined,
         };
         addJournalEntry(entry);
         await apiFetch('/journal-entries', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ id: entry.id, date: entry.date, type: 'diary', text: entry.text, mood: entry.mood }),
+          body:    JSON.stringify({ id: entryId, date: entry.date, type: 'diary', text: entry.text, mood: entry.mood }),
         });
       } catch { /* best-effort */ }
     }

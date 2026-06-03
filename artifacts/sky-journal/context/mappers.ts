@@ -61,10 +61,11 @@ export interface Character {
   timezone?:          string;
   pushToken?:         string;
   links?:             ProfileLink[];
-  isGuide?:           boolean;
-  guideBio?:          string;
-  guideTopics?:       string[];
-  guideAvailability?: GuideAvailability | null;
+  isGuide?:              boolean;
+  guideBio?:             string;
+  guideTopics?:          string[];
+  guideAvailability?:    GuideAvailability | null;
+  constellationType?:    string | null;
 }
 
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
@@ -153,10 +154,11 @@ export interface RawCharacterResponse {
   pushToken?:          string;
   push_token?:         string;
   links?:              unknown;
-  isGuide?:            boolean;
-  guideBio?:           string;
-  guideTopics?:        unknown;
-  guideAvailability?:  unknown;
+  isGuide?:              boolean;
+  guideBio?:             string;
+  guideTopics?:          unknown;
+  guideAvailability?:    unknown;
+  constellationType?:    string | null;
 }
 
 export interface RawJournalEntryResponse {
@@ -295,10 +297,11 @@ export function toAppCharacter(raw: RawCharacterResponse, apiBase?: string): Cha
     timezone:          raw.timezone      ?? undefined,
     pushToken:         raw.pushToken     ?? raw.push_token ?? undefined,
     links:             Array.isArray(raw.links) ? (raw.links as ProfileLink[]) : undefined,
-    isGuide:           raw.isGuide          ?? false,
-    guideBio:          raw.guideBio         ?? '',
-    guideTopics:       Array.isArray(raw.guideTopics) ? (raw.guideTopics as string[]) : [],
-    guideAvailability: (raw.guideAvailability as GuideAvailability | null | undefined) ?? null,
+    isGuide:              raw.isGuide          ?? false,
+    guideBio:             raw.guideBio         ?? '',
+    guideTopics:          Array.isArray(raw.guideTopics) ? (raw.guideTopics as string[]) : [],
+    guideAvailability:    (raw.guideAvailability as GuideAvailability | null | undefined) ?? null,
+    constellationType:    (raw.constellationType ?? null) as string | null,
   };
 }
 
