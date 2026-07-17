@@ -413,8 +413,9 @@ interface AppContextValue {
   storiesLoadError:     boolean;
   outfitsLoadError:     boolean;
   discoverLoadError:    boolean;
-  hasCorruptedJournals: boolean;
-  hasCorruptedStories:  boolean;
+  hasCorruptedJournals:  boolean;
+  hasCorruptedStories:   boolean;
+  hasCorruptedDiscover:  boolean;
 
   discoverMoodFilter:    string | null;
   setDiscoverMoodFilter: (mood: string | null) => void;
@@ -451,6 +452,15 @@ function isValidJournalRecord(r: RawJournalEntryResponse): boolean {
     typeof r.text === 'string' && r.text.length > 0 &&
     typeof r.date === 'string' &&
     (r.type === 'diary' || r.type === 'friend' || r.type === 'moment')
+  );
+}
+
+function isValidDiscoverPost(r: RawDiscoverApiItem): boolean {
+  return (
+    typeof r.id === 'string' && r.id.length > 0 &&
+    typeof r.authorUserId === 'string' && r.authorUserId.length > 0 &&
+    typeof r.chapterTitle === 'string' && r.chapterTitle.trim().length > 0 &&
+    Array.isArray(r.panels) && r.panels.every(p => p !== null && typeof p === 'object')
   );
 }
 
@@ -498,8 +508,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [storiesLoadError,     setStoriesLoadError]     = useState(false);
   const [outfitsLoadError,     setOutfitsLoadError]     = useState(false);
   const [discoverLoadError,    setDiscoverLoadError]    = useState(false);
-  const [hasCorruptedJournals, setHasCorruptedJournals] = useState(false);
-  const [hasCorruptedStories,  setHasCorruptedStories]  = useState(false);
+  const [hasCorruptedJournals,  setHasCorruptedJournals]  = useState(false);
+  const [hasCorruptedStories,   setHasCorruptedStories]   = useState(false);
+  const [hasCorruptedDiscover,  setHasCorruptedDiscover]  = useState(false);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -717,7 +728,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
 
       // Process social data
-      const feed   = (discoverRaw  ?? []).map(r => toRawDiscoverPost(r, API_BASE));
+      const discoverRawValid = (discoverRaw ?? []).filter(isValidDiscoverPost);
+      const discoverCorrupted = discoverRaw !== null && discoverRawValid.length < (discoverRaw ?? []).length;
+      if (discoverCorrupted) console.warn(`[AppContext] Dropped ${(discoverRaw ?? []).length - discoverRawValid.length} malformed discover posts client-side`);
+      const feed   = discoverRawValid.map(r => toRawDiscoverPost(r, API_BASE));
       const follows = followingRaw ?? [];
       const guides  = (guidesRaw   ?? []) as GuideProfile[];
 
@@ -775,6 +789,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setDiscoverLoadError(discoverRaw === null);
       setHasCorruptedJournals(journalsCorrupted);
       setHasCorruptedStories(storiesCorrupted);
+      setHasCorruptedDiscover(discoverCorrupted);
 
       // Restore active outfit across sessions.
       if (outs.length > 0) {
@@ -884,7 +899,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setDiscoverLoadError(discoverRaw === null);
 
-      const feed    = (discoverRaw  ?? []).map(r => toRawDiscoverPost(r, API_BASE));
+      const discoverValid = (discoverRaw ?? []).filter(isValidDiscoverPost);
+      const socialCorrupted = discoverRaw !== null && discoverValid.length < (discoverRaw ?? []).length;
+      if (socialCorrupted) console.warn(`[AppContext] loadSocialData: dropped ${(discoverRaw ?? []).length - discoverValid.length} malformed discover posts`);
+      setHasCorruptedDiscover(socialCorrupted);
+
+      const feed    = discoverValid.map(r => toRawDiscoverPost(r, API_BASE));
       const follows = followingRaw ?? [];
 
       setDiscoverFeedRaw(feed);
@@ -1708,7 +1728,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       isLoading, apiOnline,
       journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
-      hasCorruptedJournals, hasCorruptedStories,
+      hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
       character, setCharacter,
       stories, addStory, updateStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,

@@ -104,7 +104,8 @@ export default function DiscoverScreen() {
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
           apiOnline, discoverLoadError, reloadData, isRefreshing,
-          discoverMoodFilter, setDiscoverMoodFilter } = useApp();
+          discoverMoodFilter, setDiscoverMoodFilter,
+          hasCorruptedDiscover } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
   const [storiesSort,   setStoriesSort]   = useState<'for-you' | 'new'>('for-you');
@@ -378,6 +379,14 @@ export default function DiscoverScreen() {
                     </TouchableOpacity>
                   </View>
                   <Text style={styles.moodFilterLabel}>stories</Text>
+                </View>
+              )}
+              {hasCorruptedDiscover && (
+                <View style={corruptBannerS.row}>
+                  <Icon name="alert-triangle" size={13} color="#C8A84B" />
+                  <Text style={corruptBannerS.msg}>
+                    Some stories couldn't be loaded — they may have been removed or corrupted.
+                  </Text>
                 </View>
               )}
             </View>
@@ -1230,4 +1239,16 @@ const offlineBannerS = StyleSheet.create({
     borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)',
   },
   btnText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9B78E8' },
+});
+
+const corruptBannerS = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 10, borderWidth: 1,
+    backgroundColor: 'rgba(200, 168, 75, 0.08)',
+    borderColor: 'rgba(200, 168, 75, 0.25)',
+  },
+  msg: { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(220, 210, 190, 0.65)' },
 });
