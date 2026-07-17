@@ -596,7 +596,6 @@ export function ChatStickerAnimation({ type, mainEmoji, onComplete }: Props) {
 
   useEffect(() => {
     runAnimation(type, particles, mainScale, mainOpacity, flashOpacity, onComplete);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

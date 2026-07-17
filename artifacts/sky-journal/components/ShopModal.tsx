@@ -510,7 +510,6 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
 
     return () => { cancelled = true; };
     // Re-run whenever the tab becomes visible or a purchase invalidates the cache
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, purchaseVersion]);
 
   if (initialLoading) {

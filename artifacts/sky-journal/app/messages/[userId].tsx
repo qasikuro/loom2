@@ -139,7 +139,6 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
       Animated.spring(scaleA, { toValue: 1, tension: 150, friction: 7, useNativeDriver: true }),
       Animated.timing(opA, { toValue: 1, duration: 200, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
     ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const label = msg.isOwn ? def.ownLabel : def.otherLabel;

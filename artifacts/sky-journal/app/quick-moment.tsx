@@ -68,7 +68,6 @@ export default function QuickMomentScreen() {
       const m = MOODS.find(x => x.id === eventMood);
       if (m) setMood(m.id);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isPublic,      setIsPublic]      = useState(true);
   const [uploading,     setUploading]     = useState(false);

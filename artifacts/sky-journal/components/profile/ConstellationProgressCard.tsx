@@ -45,7 +45,6 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
         easing: Easing.out(Easing.cubic), useNativeDriver: false,
       })),
     ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerAnim]);
 
   return (

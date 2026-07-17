@@ -78,7 +78,7 @@ function IntentionStalenessGuard() {
       // Intention is current — no clear needed; mark done so we don't re-check.
       clearedRef.current = true;
     }
-  }, [character.intentionDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [character.intentionDate]);
   return null;
 }
 

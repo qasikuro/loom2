@@ -1606,7 +1606,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGalleryUsage(prev => ({ ...prev, count: prev.count + 1 }));
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'status' in err && (err as { status: number }).status === 429) {
-        throw new Error('Gallery limit reached');
+        throw new Error('Gallery limit reached', { cause: err });
       }
       throw err;
     }

@@ -62,7 +62,6 @@ export function DiscoverCard({
         toValue: 0, delay, tension: 65, friction: 11, useNativeDriver: true,
       }),
     ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handlePressIn() {

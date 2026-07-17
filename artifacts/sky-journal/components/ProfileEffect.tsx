@@ -206,7 +206,6 @@ function Particle({ def, idx, width, height }: ParticleProps) {
       running = false;
       clearTimeout(timer);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height]);
 
   const rotDeg = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });

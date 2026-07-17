@@ -86,7 +86,6 @@ function FireOrb({ room, onPress }: { room: CampfireRoom; onPress: () => void })
     ]));
     p.start(); g.start();
     return () => { p.stop(); g.stop(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const lastPreview = room.lastMessage

@@ -180,7 +180,6 @@ export default function ChapterEditorScreen() {
       const m = MOODS.find(x => x.label === eventMood);
       if (m) setMood(m.label);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Draft persistence ─────────────────────────────────────────────────────

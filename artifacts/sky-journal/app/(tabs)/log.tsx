@@ -138,7 +138,6 @@ function TimelineCard({ entry, onDelete, index = 0, theme }: { entry: JournalEnt
         useNativeDriver: true, tension: 65, friction: 11,
       }),
     ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handlePressIn() {

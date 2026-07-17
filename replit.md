@@ -2,6 +2,19 @@
 
 A dreamy, minimalist mobile app inspired by Sky: Children of the Light. Three focused areas: a private journal, a public manga story creator, and a character customisation page with outfit log.
 
+## Quality Gates
+
+Two registered validation steps keep the codebase healthy:
+
+| Step | Command | What it checks |
+|------|---------|---------------|
+| `typecheck` | `pnpm run typecheck` | TypeScript types across all workspace packages (libs built first, then artifacts) |
+| `lint` | `pnpm run lint` | ESLint across all `.ts`/`.tsx` sources — unused vars, explicit `any`, unsafe imports |
+
+Run them locally with `pnpm run typecheck` or `pnpm run lint`. Generated files (`lib/api-client-react/src`, `lib/api-zod/src`) and build outputs are excluded from linting.
+
+ESLint config: `eslint.config.mjs` at the repo root (ESLint v10 flat config, `typescript-eslint` recommended preset).
+
 ## Architecture
 
 **Monorepo** managed by pnpm workspaces:

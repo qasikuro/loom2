@@ -109,7 +109,6 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
       friction: 11,
       useNativeDriver: true,
     }).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animKey]);
 
   return (
@@ -187,7 +186,6 @@ export function ConstellationMap({ state, onStarPress, animKey }: ConstellationM
         useNativeDriver: true,
       }),
     ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animKey]);
 
   function onLayout(e: LayoutChangeEvent) {
