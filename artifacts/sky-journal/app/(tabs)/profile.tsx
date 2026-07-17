@@ -37,6 +37,23 @@ const STAR_TITLES: Record<number, string> = {
 };
 const XP_PER_LEVEL = 300;
 
+function CorruptionBanner({ onRefresh }: { onRefresh: () => void }) {
+  const [dismissed, setDismissed] = useState(false);
+  if (dismissed) return null;
+  return (
+    <View style={offlineS.row}>
+      <View style={[offlineS.dot, { backgroundColor: '#9B78E8' }]} />
+      <Text style={offlineS.msg}>Some stories couldn't be loaded — pull to refresh</Text>
+      <TouchableOpacity style={offlineS.btn} onPress={() => { onRefresh(); setDismissed(true); }} activeOpacity={0.75}>
+        <Text style={offlineS.btnText}>Refresh</Text>
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => setDismissed(true)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }} activeOpacity={0.75}>
+        <Icon name="x" size={13} color="rgba(200,184,232,0.5)" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function CharacterScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
@@ -48,7 +65,7 @@ export default function CharacterScreen() {
     character, setCharacter, outfits, stories, journalEntries,
     activeOutfitId, setActiveOutfitId, deleteOutfit,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
-    isLoading, apiOnline, storiesLoadError, outfitsLoadError, reloadData,
+    isLoading, apiOnline, storiesLoadError, outfitsLoadError, hasCorruptedStories, reloadData,
     constellation, rewardBalance, reloadConstellation,
     activeCosmetics, shopCatalog, purchasedIds, setActiveCosmetic,
   } = useApp();
@@ -175,6 +192,10 @@ export default function CharacterScreen() {
             <Text style={offlineS.btnText}>Retry</Text>
           </TouchableOpacity>
         </View>
+      )}
+
+      {hasCorruptedStories && !isLoading && (
+        <CorruptionBanner onRefresh={reloadData} />
       )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad + 40 }} scrollEventThrottle={16}>

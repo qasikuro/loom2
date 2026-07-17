@@ -394,6 +394,39 @@ export default function StoryScreen() {
     };
   }
 
+  // ── Full-screen error state — must run before any panel/page derivation ───
+  // Guards against crash when panels is missing or wrong type.
+  const storyNotFound  = !story && !post;
+  const storyCorrupted = (story != null && (!story.chapterTitle || !Array.isArray(story.panels))) ||
+                         (post  != null && !post.chapterTitle);
+
+  if (storyNotFound || storyCorrupted) {
+    return (
+      <View style={[errState.container, { backgroundColor: '#0D0B1A' }]}>
+        <TouchableOpacity
+          style={[errState.backBtn, { top: topPad + 12 }]}
+          onPress={() => router.back()}
+          activeOpacity={0.78}
+        >
+          <Icon name="chevron-left" size={20} color="rgba(200,184,232,0.9)" />
+        </TouchableOpacity>
+        <View style={errState.content}>
+          <Text style={errState.icon}>✦</Text>
+          <Text style={errState.title}>This story couldn't be opened</Text>
+          <Text style={errState.sub}>
+            {storyCorrupted
+              ? 'The story data appears to be incomplete.'
+              : 'This story may have been removed or is no longer available.'}
+          </Text>
+          <TouchableOpacity style={errState.btn} onPress={() => router.back()} activeOpacity={0.82}>
+            <Icon name="chevron-left" size={15} color="rgba(200,184,232,0.9)" />
+            <Text style={errState.btnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   type RenderPage = { layoutKey: string; panels: CellPanel[] };
   let renderPages: RenderPage[];
 
@@ -869,6 +902,22 @@ export default function StoryScreen() {
     </View>
   );
 }
+
+const errState = StyleSheet.create({
+  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  backBtn: {
+    position: 'absolute', left: 16,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  content: { alignItems: 'center', paddingHorizontal: 40, gap: 14 },
+  icon:  { fontSize: 40, color: 'rgba(200,184,232,0.6)', marginBottom: 8 },
+  title: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,248,0.92)', textAlign: 'center', letterSpacing: -0.3 },
+  sub:   { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.55)', textAlign: 'center', lineHeight: 22 },
+  btn:   { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 20, paddingVertical: 11, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(139,122,181,0.45)', backgroundColor: 'rgba(139,122,181,0.12)' },
+  btnText: { fontSize: 14, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.9)' },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

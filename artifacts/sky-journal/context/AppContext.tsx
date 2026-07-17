@@ -409,12 +409,12 @@ interface AppContextValue {
   activeCosmetics:   Record<string, string>;
   setActiveCosmetic: (itemId: string) => void;
 
-  journalLoadError:    boolean;
-  storiesLoadError:    boolean;
-  outfitsLoadError:    boolean;
-  discoverLoadError:   boolean;
-  hasCorruptedJournal: boolean;
-  hasCorruptedStories: boolean;
+  journalLoadError:     boolean;
+  storiesLoadError:     boolean;
+  outfitsLoadError:     boolean;
+  discoverLoadError:    boolean;
+  hasCorruptedJournals: boolean;
+  hasCorruptedStories:  boolean;
 
   discoverMoodFilter:    string | null;
   setDiscoverMoodFilter: (mood: string | null) => void;
@@ -431,6 +431,28 @@ interface AppContextValue {
 // toAppOutfit, toRawDiscoverPost — all bound via _resolveUri(…, API_BASE).
 
 type RawDiscoverItem = Omit<DiscoverPost, 'saved' | 'isFollowing'>;
+
+// ── Per-item corruption guards ────────────────────────────────────────────────
+// These run client-side as a safety net after server-side filtering.
+// Any item missing required fields is dropped and the corruption flag is set.
+
+function isValidStoryRecord(r: RawStoryResponse): boolean {
+  return (
+    typeof r.id === 'string' && r.id.length > 0 &&
+    typeof r.chapterTitle === 'string' && r.chapterTitle.trim().length > 0 &&
+    Array.isArray(r.panels) && r.panels.length > 0 &&
+    typeof r.date === 'string'
+  );
+}
+
+function isValidJournalRecord(r: RawJournalEntryResponse): boolean {
+  return (
+    typeof r.id === 'string' && r.id.length > 0 &&
+    typeof r.text === 'string' && r.text.length > 0 &&
+    typeof r.date === 'string' &&
+    (r.type === 'diary' || r.type === 'friend' || r.type === 'moment')
+  );
+}
 
 // ── Zod validation helper ─────────────────────────────────────────────────────
 // Validates `raw` against a Zod schema (for OpenAPI-covered endpoints).
@@ -472,12 +494,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
   const [galleryUsage, setGalleryUsage] = useState<GalleryUsage>({ count: 0, limit: 200 });
 
-  const [journalLoadError,    setJournalLoadError]    = useState(false);
-  const [storiesLoadError,    setStoriesLoadError]    = useState(false);
-  const [outfitsLoadError,    setOutfitsLoadError]    = useState(false);
-  const [discoverLoadError,   setDiscoverLoadError]   = useState(false);
-  const [hasCorruptedJournal, setHasCorruptedJournal] = useState(false);
-  const [hasCorruptedStories, setHasCorruptedStories] = useState(false);
+  const [journalLoadError,     setJournalLoadError]     = useState(false);
+  const [storiesLoadError,     setStoriesLoadError]     = useState(false);
+  const [outfitsLoadError,     setOutfitsLoadError]     = useState(false);
+  const [discoverLoadError,    setDiscoverLoadError]    = useState(false);
+  const [hasCorruptedJournals, setHasCorruptedJournals] = useState(false);
+  const [hasCorruptedStories,  setHasCorruptedStories]  = useState(false);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -675,22 +697,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const shopRaw          = parseOrDefault(ApiShopSchema,           _shopFetch,          null, '/rewards/shop')       as RawShopResponse          | null;
 
       // Process core data — safe defaults already guaranteed by parseOrDefault above
-      const char    = charRaw    ? toAppCharacter(charRaw, API_BASE)                     : DEFAULT_CHARACTER;
-      let corruptedJournal = false;
-      let corruptedStories = false;
+      const char = charRaw ? toAppCharacter(charRaw, API_BASE) : DEFAULT_CHARACTER;
 
-      const entries = entriesRaw ? entriesRaw.reduce<JournalEntry[]>((acc, r) => {
-        try { acc.push(toAppJournalEntry(r, API_BASE)); }
-        catch { corruptedJournal = true; }
-        return acc;
-      }, []) : [];
+      const validEntryRecs    = entriesRaw ? entriesRaw.filter(isValidJournalRecord) : [];
+      const validStoryRecs    = storiesRaw ? storiesRaw.filter(isValidStoryRecord)   : [];
+      const journalsCorrupted = entriesRaw !== null && validEntryRecs.length < entriesRaw.length;
+      const storiesCorrupted  = storiesRaw !== null && validStoryRecs.length < storiesRaw.length;
+      if (journalsCorrupted) console.warn(`[AppContext] Dropped ${entriesRaw!.length - validEntryRecs.length} malformed journal entries client-side`);
+      if (storiesCorrupted)  console.warn(`[AppContext] Dropped ${storiesRaw!.length - validStoryRecs.length} malformed stories client-side`);
 
-      const stors = storiesRaw ? storiesRaw.reduce<Story[]>((acc, r) => {
-        try { acc.push(toAppStory(r, API_BASE)); }
-        catch { corruptedStories = true; }
-        return acc;
-      }, []) : [];
-      const outs    = outfitsRaw ? outfitsRaw.map(r => toAppOutfit(r, API_BASE))       : [];
+      const entries = validEntryRecs.map(r => toAppJournalEntry(r, API_BASE));
+      const stors   = validStoryRecs.map(r => toAppStory(r, API_BASE));
+      const outs    = outfitsRaw ? outfitsRaw.map(r => toAppOutfit(r, API_BASE)) : [];
       const gal     = (galleryRaw  ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
         id:        r.id,
         imageUri:  resolveUri(r.imageUri ?? undefined) ?? r.imageUri ?? '',
@@ -753,10 +771,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setApiOnline(true);
       setJournalLoadError(entriesRaw === null);
       setStoriesLoadError(storiesRaw === null);
-      setHasCorruptedJournal(corruptedJournal);
-      setHasCorruptedStories(corruptedStories);
       setOutfitsLoadError(outfitsRaw === null);
       setDiscoverLoadError(discoverRaw === null);
+      setHasCorruptedJournals(journalsCorrupted);
+      setHasCorruptedStories(storiesCorrupted);
 
       // Restore active outfit across sessions.
       if (outs.length > 0) {
@@ -946,7 +964,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (needsJournal) {
         const entriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
         if (entriesRaw !== null) {
-          const entries = entriesRaw.map(r => toAppJournalEntry(r, API_BASE));
+          const validRecs = entriesRaw.filter(isValidJournalRecord);
+          if (validRecs.length < entriesRaw.length) {
+            setHasCorruptedJournals(true);
+            console.warn(`[AppContext] softLoad: dropped ${entriesRaw.length - validRecs.length} malformed journal entries`);
+          }
+          const entries = validRecs.map(r => toAppJournalEntry(r, API_BASE));
           setJournalEntries(entries);
           cacheWrites.push(AsyncStorage.setItem('journal_v2', JSON.stringify(entries)));
           tsUpdates['journal-entries'] = now;
@@ -956,7 +979,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (needsStories) {
         const storiesRaw = parseOrDefault(ApiStoriesSchema, _storiesFetch, null, '/stories') as RawStoryResponse[] | null;
         if (storiesRaw !== null) {
-          const stors = storiesRaw.map(r => toAppStory(r, API_BASE));
+          const validRecs = storiesRaw.filter(isValidStoryRecord);
+          if (validRecs.length < storiesRaw.length) {
+            setHasCorruptedStories(true);
+            console.warn(`[AppContext] softLoad: dropped ${storiesRaw.length - validRecs.length} malformed stories`);
+          }
+          const stors = validRecs.map(r => toAppStory(r, API_BASE));
           setStories(stors);
           cacheWrites.push(AsyncStorage.setItem('stories_v1', JSON.stringify(stors)));
           tsUpdates.stories = now;
@@ -1680,7 +1708,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       isLoading, apiOnline,
       journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
-      hasCorruptedJournal, hasCorruptedStories,
+      hasCorruptedJournals, hasCorruptedStories,
       character, setCharacter,
       stories, addStory, updateStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,

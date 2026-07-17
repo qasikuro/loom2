@@ -18,11 +18,15 @@ const JournalEntryInputSchema = z.object({
   friendName: z.string().nullable().optional(),
 });
 
-// Minimal output schema — filters corrupt DB rows before they leave the API
-const JournalRowOutputSchema = z.object({
-  id:   z.string().uuid(),
-  text: z.string().min(1),
-  date: z.union([z.string(), z.date()]),
+const JournalEntryOutputSchema = z.object({
+  id:         z.string().uuid(),
+  date:       z.string(),
+  type:       z.enum(["diary", "friend", "moment"]),
+  text:       z.string().min(1),
+  mood:       z.string().min(1),
+  imageUri:   z.string().optional().nullable(),
+  friendName: z.string().optional().nullable(),
+  createdAt:  z.string(),
 });
 
 router.get("/journal-entries", requireAuth, async (req, res) => {
@@ -34,16 +38,17 @@ router.get("/journal-entries", requireAuth, async (req, res) => {
       .where(eq(journalEntriesTable.userId, userId))
       .orderBy(desc(journalEntriesTable.date));
 
-    const validRows = rows.filter(r => {
-      const check = JournalRowOutputSchema.safeParse(r);
-      if (!check.success) {
-        req.log.warn({ userId, entryId: r.id }, "Skipping corrupt journal entry row before serialisation");
-        return false;
+    const serialized = rows.map(serializeEntry);
+    const valid: typeof serialized = [];
+    for (const entry of serialized) {
+      const result = JournalEntryOutputSchema.safeParse(entry);
+      if (result.success) {
+        valid.push(entry);
+      } else {
+        req.log.warn({ entryId: entry.id, userId, issues: result.error.issues }, "Dropping malformed journal entry from response");
       }
-      return true;
-    });
-
-    return res.json(validRows.map(serializeEntry));
+    }
+    return res.json(valid);
   } catch (err) {
     req.log.error({ err }, "Failed to list journal entries");
     return res.status(500).json({ error: "Internal server error" });

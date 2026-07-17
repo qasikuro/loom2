@@ -496,7 +496,7 @@ export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { t }   = useTranslation();
-  const { journalEntries, deleteJournalEntry, isLoading, apiOnline, journalLoadError, hasCorruptedJournal, reloadData, constellation, activeCosmetics, isRefreshing } = useApp();
+  const { journalEntries, deleteJournalEntry, isLoading, apiOnline, journalLoadError, hasCorruptedJournals, reloadData, constellation, activeCosmetics, isRefreshing } = useApp();
   const activeTheme = activeCosmetics['theme'] as string | undefined;
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
@@ -510,6 +510,7 @@ export default function JournalScreen() {
   const [showSearch,   setShowSearch]   = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [corruptionBannerDismissed, setCorruptionBannerDismissed] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
   const sectionY  = useRef<Record<string, number>>({});
@@ -657,6 +658,20 @@ export default function JournalScreen() {
           </Text>
           <TouchableOpacity style={offlineBanner.btn} onPress={reloadData} activeOpacity={0.75}>
             <Text style={offlineBanner.btnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ── Corruption banner ─────────────────────────────────────── */}
+      {hasCorruptedJournals && !corruptionBannerDismissed && !isLoading && (
+        <View style={offlineBanner.row}>
+          <View style={[offlineBanner.dot, { backgroundColor: '#9B78E8' }]} />
+          <Text style={offlineBanner.msg}>Some entries couldn't be loaded — pull to refresh</Text>
+          <TouchableOpacity style={offlineBanner.btn} onPress={() => { reloadData(); setCorruptionBannerDismissed(true); }} activeOpacity={0.75}>
+            <Text style={offlineBanner.btnText}>Refresh</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setCorruptionBannerDismissed(true)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }} activeOpacity={0.75}>
+            <Icon name="x" size={13} color="rgba(200,184,232,0.5)" />
           </TouchableOpacity>
         </View>
       )}
