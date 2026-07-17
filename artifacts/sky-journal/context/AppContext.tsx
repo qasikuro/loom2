@@ -414,6 +414,9 @@ interface AppContextValue {
   outfitsLoadError:  boolean;
   discoverLoadError: boolean;
 
+  discoverMoodFilter:    string | null;
+  setDiscoverMoodFilter: (mood: string | null) => void;
+
   reloadData:    () => Promise<void>;
   refreshFeed:   () => Promise<void>;
   clearUserData: () => Promise<void>;
@@ -473,6 +476,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [discoverLoadError, setDiscoverLoadError] = useState(false);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const [discoverMoodFilter, setDiscoverMoodFilter] = useState<string | null>(null);
 
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
@@ -1670,6 +1675,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
       campfireUnread, unreadCampfireRooms, markCampfireRoomRead,
       dmUnread, unreadDmThreads, markDmThreadRead,
+      discoverMoodFilter, setDiscoverMoodFilter,
       reloadData,
       refreshFeed,
       clearUserData,

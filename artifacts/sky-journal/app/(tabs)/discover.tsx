@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import { DiscoverCard } from '@/components/DiscoverCard';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { ReportSheet } from '@/components/ReportSheet';
+import { MoodDoorModal } from '@/components/MoodDoorModal';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { VibeStickerPicker, type StickerType } from '@/components/VibeStickerPicker';
 import { useColors } from '@/hooks/useColors';
@@ -104,7 +105,8 @@ export default function DiscoverScreen() {
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
           apiOnline, discoverLoadError, reloadData, isRefreshing,
-          showRewardToast, reloadRewards, reloadConstellation } = useApp();
+          showRewardToast, reloadRewards, reloadConstellation,
+          discoverMoodFilter, setDiscoverMoodFilter } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
   const [storiesSort,   setStoriesSort]   = useState<'for-you' | 'new'>('for-you');
@@ -122,20 +124,29 @@ export default function DiscoverScreen() {
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
   const [guideTopicFilter, setGuideTopicFilter] = useState<string | null>(null);
   const [guideAvailNow,    setGuideAvailNow]    = useState(false);
-  const searchTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastFetchRef   = useRef<number>(0);
-  const guidesLoaded   = useRef(false);
+  const [moodDoorVisible, setMoodDoorVisible] = useState(false);
+  const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastFetchRef     = useRef<number>(0);
+  const guidesLoaded     = useRef(false);
+  const moodDoorShown    = useRef(false);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
 
   // Refresh the discover feed when the tab comes into focus,
   // but at most once every 2 minutes to avoid hammering the API.
+  // Also show the mood door on the first focus of each app session.
   useFocusEffect(useCallback(() => {
     const now = Date.now();
     if (now - lastFetchRef.current > 2 * 60 * 1000) {
       lastFetchRef.current = now;
       refreshFeed().catch(() => null);
+    }
+    if (!moodDoorShown.current) {
+      moodDoorShown.current = true;
+      // Small delay so the tab transition finishes before overlay appears
+      const t = setTimeout(() => setMoodDoorVisible(true), 350);
+      return () => clearTimeout(t);
     }
   }, [refreshFeed]));
 
@@ -243,13 +254,17 @@ export default function DiscoverScreen() {
     else followUser(g.userId);
   }
 
-  const sortedByNew = [...discoverPosts].sort((a, b) =>
+  const filteredByMoodDoor = discoverMoodFilter
+    ? discoverPosts.filter(p => p.mood === discoverMoodFilter || p.vibe === discoverMoodFilter)
+    : discoverPosts;
+
+  const sortedByNew = [...filteredByMoodDoor].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
   const vibePosts = selectedVibe
-    ? discoverPosts.filter(p => p.vibe === selectedVibe || p.mood === selectedVibe)
-    : discoverPosts;
-  const activePosts = storiesSort === 'new' ? sortedByNew : discoverPosts;
+    ? filteredByMoodDoor.filter(p => p.vibe === selectedVibe || p.mood === selectedVibe)
+    : filteredByMoodDoor;
+  const activePosts = storiesSort === 'new' ? sortedByNew : filteredByMoodDoor;
 
   const CARD_W = (SCREEN_W - 48) / 2;
 
@@ -356,21 +371,47 @@ export default function DiscoverScreen() {
           data={activePosts}
           keyExtractor={item => item.id}
           ListHeaderComponent={
-            <View style={styles.storiesSortRow}>
-              <TouchableOpacity
-                style={[styles.sortChip, storiesSort === 'for-you' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
-                onPress={() => { setStoriesSort('for-you'); Haptics.selectionAsync(); }}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.sortChipText, { color: storiesSort === 'for-you' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>✦ For You</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sortChip, storiesSort === 'new' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
-                onPress={() => { setStoriesSort('new'); Haptics.selectionAsync(); }}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.sortChipText, { color: storiesSort === 'new' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>◎ New</Text>
-              </TouchableOpacity>
+            <View>
+              <View style={styles.storiesSortRow}>
+                <TouchableOpacity
+                  style={[styles.sortChip, storiesSort === 'for-you' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
+                  onPress={() => { setStoriesSort('for-you'); Haptics.selectionAsync(); }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.sortChipText, { color: storiesSort === 'for-you' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>✦ For You</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.sortChip, storiesSort === 'new' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
+                  onPress={() => { setStoriesSort('new'); Haptics.selectionAsync(); }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.sortChipText, { color: storiesSort === 'new' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>◎ New</Text>
+                </TouchableOpacity>
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity
+                  style={styles.moodDoorBtn}
+                  onPress={() => { Haptics.selectionAsync(); setMoodDoorVisible(true); }}
+                  activeOpacity={0.75}
+                >
+                  <Icon name="eye" size={12} color="rgba(200,184,232,0.55)" />
+                  <Text style={styles.moodDoorBtnTxt}>Mood</Text>
+                </TouchableOpacity>
+              </View>
+              {discoverMoodFilter && (
+                <View style={styles.moodFilterRow}>
+                  <Text style={styles.moodFilterLabel}>Showing</Text>
+                  <View style={styles.moodFilterChip}>
+                    <Text style={styles.moodFilterChipTxt}>{discoverMoodFilter}</Text>
+                    <TouchableOpacity
+                      onPress={() => { setDiscoverMoodFilter(null); Haptics.selectionAsync(); }}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    >
+                      <Icon name="x" size={11} color="rgba(200,184,232,0.65)" />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.moodFilterLabel}>stories</Text>
+                </View>
+              )}
             </View>
           }
           renderItem={({ item, index }) => (
@@ -496,6 +537,19 @@ export default function DiscoverScreen() {
         targetType="story"
         targetId={reportTargetId ?? ''}
         onClose={() => setReportTargetId(null)}
+      />
+
+      {/* ── Mood door overlay ─────────────────────────────── */}
+      <MoodDoorModal
+        visible={moodDoorVisible}
+        onSelect={(mood) => {
+          setDiscoverMoodFilter(mood);
+          setMoodDoorVisible(false);
+        }}
+        onDismiss={() => {
+          setDiscoverMoodFilter(null);
+          setMoodDoorVisible(false);
+        }}
       />
 
       {/* ── Sticker picker overlay — rendered at screen level to escape card overflow:hidden ── */}
@@ -1180,6 +1234,37 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   ctaBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
+
+  moodDoorBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 14, borderWidth: 1,
+    backgroundColor: 'rgba(200,184,232,0.06)',
+    borderColor: 'rgba(200,184,232,0.14)',
+  },
+  moodDoorBtnTxt: {
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(200,184,232,0.50)', letterSpacing: 0.4,
+  },
+  moodFilterRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 16, paddingBottom: 10,
+  },
+  moodFilterLabel: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.40)',
+  },
+  moodFilterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: 12, borderWidth: 1,
+    backgroundColor: 'rgba(155,120,232,0.15)',
+    borderColor: 'rgba(155,120,232,0.35)',
+  },
+  moodFilterChipTxt: {
+    fontSize: 12, fontFamily: 'Satoshi-Bold',
+    color: '#C8B0FF', letterSpacing: 0.2,
+  },
 });
 
 const offlineBannerS = StyleSheet.create({

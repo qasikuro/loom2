@@ -85,7 +85,7 @@ export default function CreateJournalEntryScreen() {
   const insets  = useSafeAreaInsets();
   const { t: tr } = useTranslation();
   const { addJournalEntry, character } = useApp();
-  const { type: typeParam } = useLocalSearchParams<{ type?: string }>();
+  const { type: typeParam, initialPrompt, initialMood } = useLocalSearchParams<{ type?: string; initialPrompt?: string; initialMood?: string }>();
 
   const entryType: JournalEntryType =
     typeParam === 'friend' ? 'friend' : typeParam === 'moment' ? 'moment' : 'diary';
@@ -97,9 +97,12 @@ export default function CreateJournalEntryScreen() {
 
   const today = startOfDay(new Date());
 
-  const [text,            setText]            = useState('');
+  const validMoods = MOODS.map(m => m.label);
+  const resolvedInitialMood = initialMood && validMoods.includes(initialMood) ? initialMood : null;
+
+  const [text,            setText]            = useState(typeof initialPrompt === 'string' ? initialPrompt : '');
   const [friendName,      setFriendName]      = useState('');
-  const [mood,            setMood]            = useState('Peaceful');
+  const [mood,            setMood]            = useState(resolvedInitialMood ?? 'Peaceful');
   const [imageUri,        setImageUri]        = useState<string | undefined>();
   const [saving,          setSaving]          = useState(false);
   const [showCompletion,  setShowCompletion]  = useState(false);

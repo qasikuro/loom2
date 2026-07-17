@@ -1,6 +1,7 @@
 import { StarField } from '@/components/StarField';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
+import { getDailyPrompt } from '@/constants/prompts';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -70,40 +71,6 @@ const MOOD_COLOR: Record<string, string> = {
 };
 const DEF_ACCENT = '#9B78E8';
 
-// ─── Daily Spark prompts (rotate by day-of-month) ────────────────────────────
-const DAILY_SPARKS = [
-  'What made you feel alive today?',
-  'Describe a moment of unexpected beauty you noticed.',
-  'What are you carrying that you could set down?',
-  'Who in your circle made you smile recently?',
-  'Write the first three words that come to mind right now.',
-  'What sound captures your mood today?',
-  'What would you tell your past self from one year ago?',
-  'Describe your perfect quiet evening.',
-  'What fear felt smaller today?',
-  'What are you grateful for that you rarely mention?',
-  'Where do you feel most like yourself?',
-  'What story would you tell about today in ten years?',
-  'What are you avoiding thinking about?',
-  'Name something you did today that took courage.',
-  'What does your heart feel heavy about right now?',
-  'Describe the sky outside your window.',
-  'Who do you wish you could call right now?',
-  'What would make tomorrow feel magical?',
-  'Write about a smell that takes you somewhere.',
-  'What are you learning about yourself lately?',
-  'What do you want more of in your life?',
-  'What does home feel like to you?',
-  'Describe a kindness you received or gave.',
-  'What chapter of your life are you in right now?',
-  'What truth are you afraid to say out loud?',
-  'What would you create if you knew no one was watching?',
-  'What colour is today?',
-  'Describe a dream you remember.',
-  'What are you becoming?',
-  'Name something ordinary that felt extraordinary today.',
-  'What do you want to remember about this moment?',
-] as const;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -246,67 +213,80 @@ function BreathRing({ accent, r = 46 }: { accent: string; r?: number }) {
 }
 
 // ─── Friend bubble — story-ring style "who's around" row ─────────────────────
-// ─── Daily Spark card ────────────────────────────────────────────────────────
-function DailySpark({ onWrite }: { onWrite: () => void }) {
+// ─── Daily Invitation card ───────────────────────────────────────────────────
+function DailyInvitation({ onWrite, userMood }: { onWrite: (prompt: string, mood: string) => void; userMood?: string | null }) {
   const today  = new Date();
-  const prompt = DAILY_SPARKS[(today.getDate() - 1) % DAILY_SPARKS.length]!;
+  const daily  = getDailyPrompt(userMood);
+  const accent = MOOD_ACCENT[daily.mood] ?? '#C8A84B';
+  const accentRgb = daily.mood === 'Dreamy' ? '168,136,248'
+    : daily.mood === 'Peaceful' ? '96,168,200'
+    : daily.mood === 'Soft'    ? '190,160,220'
+    : daily.mood === 'Hopeful' ? '200,168,75'
+    : daily.mood === 'Chaotic' ? '220,120,70'
+    : '200,168,75';
   return (
-    <View style={ds.card}>
+    <TouchableOpacity
+      style={[ds.card, { borderColor: `rgba(${accentRgb},0.22)` }]}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onWrite(daily.text, daily.mood); }}
+      activeOpacity={0.85}
+    >
       <LinearGradient
-        colors={['rgba(200,168,75,0.09)', 'rgba(200,168,75,0.02)', 'transparent']}
+        colors={[`rgba(${accentRgb},0.11)`, `rgba(${accentRgb},0.03)`, 'transparent']}
         start={{ x: 0, y: 0 }} end={{ x: 1.2, y: 1 }}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      {/* Top accent line */}
       <LinearGradient
-        colors={['rgba(200,168,75,0.55)', 'rgba(200,168,75,0.10)', 'transparent']}
+        colors={[`rgba(${accentRgb},0.60)`, `rgba(${accentRgb},0.12)`, 'transparent']}
         start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
         style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 1 }}
         pointerEvents="none"
       />
       <View style={ds.left}>
         <View style={ds.eyebrow}>
-          <Text style={ds.sparkGlyph}>✦</Text>
-          <Text style={ds.label}>Daily Spark</Text>
-          <View style={ds.datePill}>
-            <Text style={ds.dateTxt}>{today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</Text>
+          <Text style={[ds.sparkGlyph, { color: `rgba(${accentRgb},0.70)` }]}>✦</Text>
+          <Text style={[ds.label, { color: `rgba(${accentRgb},0.65)` }]}>Daily Invitation</Text>
+          <View style={[ds.datePill, { backgroundColor: `rgba(${accentRgb},0.10)` }]}>
+            <Text style={[ds.dateTxt, { color: `rgba(${accentRgb},0.50)` }]}>
+              {today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </Text>
           </View>
+          {daily.mood !== 'general' && (
+            <View style={[ds.moodPill, { backgroundColor: `rgba(${accentRgb},0.12)`, borderColor: `rgba(${accentRgb},0.25)` }]}>
+              <Text style={[ds.moodPillTxt, { color: accent }]}>{daily.mood}</Text>
+            </View>
+          )}
         </View>
-        <Text style={ds.prompt}>{prompt}</Text>
+        <Text style={ds.prompt}>{daily.text}</Text>
+        <Text style={[ds.cta, { color: `rgba(${accentRgb},0.55)` }]}>Begin writing →</Text>
       </View>
-      <TouchableOpacity
-        style={ds.writeBtn}
-        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onWrite(); }}
-        activeOpacity={0.80}
-      >
-        <Icon name="feather" size={12} color="rgba(245,235,200,0.90)" />
-        <Text style={ds.writeBtnTxt}>Write</Text>
-      </TouchableOpacity>
-    </View>
+      <View style={[ds.writeBtn, { backgroundColor: `rgba(${accentRgb},0.16)`, borderColor: `rgba(${accentRgb},0.28)` }]}>
+        <Icon name="feather" size={13} color={accent} />
+      </View>
+    </TouchableOpacity>
   );
 }
 const ds = StyleSheet.create({
   card: {
     marginHorizontal: 16, marginTop: 3, marginBottom: 2,
-    paddingHorizontal: 16, paddingVertical: 14,
+    paddingHorizontal: 16, paddingVertical: 16,
     borderRadius: 22, overflow: 'hidden',
     backgroundColor: 'rgba(255,255,255,0.016)',
-    borderWidth: 1, borderColor: 'rgba(200,168,75,0.16)',
+    borderWidth: 1,
     flexDirection: 'row', alignItems: 'center', gap: 12,
   },
   left:       { flex: 1 },
-  eyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 7 },
-  sparkGlyph: { fontSize: 10, lineHeight: 13, color: 'rgba(200,168,75,0.65)' },
-  label:      { fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 2.0, color: 'rgba(200,168,75,0.60)', textTransform: 'uppercase' },
-  datePill:   { paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 5, backgroundColor: 'rgba(200,168,75,0.09)' },
-  dateTxt:    { fontSize: 8.5, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,75,0.45)', letterSpacing: 0.3 },
-  prompt:     { fontSize: 13.5, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(242,232,255,0.84)', lineHeight: 20, letterSpacing: -0.15 },
-  writeBtn:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18, backgroundColor: 'rgba(107,91,149,0.35)', borderWidth: 1, borderColor: 'rgba(160,136,220,0.25)', flexShrink: 0 },
+  eyebrow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 9, flexWrap: 'wrap' },
+  sparkGlyph: { fontSize: 10, lineHeight: 13 },
+  label:      { fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 2.0, textTransform: 'uppercase' },
+  datePill:   { paddingHorizontal: 5, paddingVertical: 1.5, borderRadius: 5 },
+  dateTxt:    { fontSize: 8.5, fontFamily: 'Satoshi-Medium', letterSpacing: 0.3 },
+  moodPill:   { paddingHorizontal: 6, paddingVertical: 1.5, borderRadius: 6, borderWidth: 1 },
+  moodPillTxt:{ fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5 },
+  prompt:     { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(242,232,255,0.88)', lineHeight: 21, letterSpacing: -0.15, marginBottom: 8 },
+  cta:        { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.2 },
+  writeBtn:   { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   writeBtnTxt:{ fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: 'rgba(235,220,255,0.88)', letterSpacing: 0.2 },
-  date: {},
-  cta: {},
-  ctaTxt: {},
 });
 
 function FriendBubble({ post }: { post: DiscoverPost }) {
@@ -1614,7 +1594,13 @@ export default function HomeScreen() {
             DAILY SPARK — rotating daily writing prompt
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
-          <DailySpark onWrite={() => router.push('/create-journal-entry' as any)} />
+          <DailyInvitation
+            userMood={character.mood}
+            onWrite={(prompt, mood) => router.push({
+              pathname: '/create-journal-entry',
+              params: { initialPrompt: prompt, initialMood: mood },
+            } as any)}
+          />
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
