@@ -702,7 +702,7 @@ export default function UserProfileScreen() {
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={[styles.statNum, { color: '#6BA57A' }]}>{totalWitnessed}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Witnessed</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Likes</Text>
             </View>
           </View>
 

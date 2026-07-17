@@ -1023,11 +1023,11 @@ function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string })
         </Animated.Text>
         <Animated.View style={{ opacity: enter, backgroundColor: 'rgba(176,144,255,0.07)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(176,144,255,0.16)', paddingHorizontal: 20, paddingVertical: 14, marginBottom: 32, width: '100%' }}>
           <Text style={{ fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: 'rgba(190,170,255,0.72)', textAlign: 'center', lineHeight: 20 }}>
-            ✦ A quick vibe check — 6 questions — personalises your journey.{'\n'}Your responses stay on your device. Always.
+            ✦ A quick check-in — 6 questions — personalises your session.{'\n'}Your responses stay on your device. Always.
           </Text>
         </Animated.View>
         <Animated.View style={{ opacity: enter, alignItems: 'center', gap: 12, width: '100%' }}>
-          <PrimaryBtn label="Start Journey ✦" onPress={onStart} color="#7050C8" />
+          <PrimaryBtn label="Get Started ✦" onPress={onStart} color="#7050C8" />
           <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(176,144,255,0.45)' }}>
             6 drift modes · Lumi companion · Session quests
           </Text>
@@ -1116,7 +1116,7 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
 function AnalyzingScreen({ confidence }: { confidence: number }) {
   const spin   = useRef(new Animated.Value(0)).current;
   const [pct, setPct] = useState(0);
-  const labels = ['Reading the stars of your answers', 'Mapping your constellation', 'Almost there...'];
+  const labels = ['Reading through your answers', 'Personalising your session', 'Almost there...'];
   const [labelIdx, setLabelIdx] = useState(0);
 
   useEffect(() => {
@@ -1978,7 +1978,7 @@ const FALLBACK_QUESTS: Record<string, DriftQuest[]> = {
   social: [
     { title: 'Say something kind to someone', description: 'One genuine message to another person — a player, a friend, anyone in your world.', type: 'connection' },
     { title: 'Do something alongside someone', description: 'A quest, a walk, anything. Just be present with another person for a moment.', type: 'connection' },
-    { title: 'Write what you value about your circle', description: 'One sentence about someone who makes your experience better. Just notice it.', type: 'creation' },
+    { title: 'Write what you value about someone close to you', description: 'One sentence about someone who makes your experience better. Just notice it.', type: 'creation' },
   ],
   clarity: [
     { title: 'Write your biggest open question', description: 'The thing you\'re still figuring out. Get it out of your head and somewhere real.', type: 'creation' },
@@ -2138,7 +2138,7 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
 // ════════════════════════════════════════════════════════════════════════════
 export default function DriftScreen() {
   const { character } = useApp();
-  const displayName   = character?.name && character.name !== 'Sky Child' ? character.name : 'Drift Mode';
+  const displayName   = character?.name && character.name !== 'Sky Child' ? character.name : 'Calm Space';
 
   const [step,            setStep]           = useState<FlowStep>('welcome');
   const [questionIdx,     setQuestionIdx]    = useState(0);

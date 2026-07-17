@@ -32,8 +32,8 @@ import { useGalleryState } from '@/hooks/useGalleryState';
 import { usePingState } from '@/hooks/usePingState';
 
 const STAR_TITLES: Record<number, string> = {
-  1: 'Star Wanderer', 2: 'Memory Keeper',   3: 'Sky Child',
-  4: 'Constellation Dreamer', 5: 'Guiding Light', 6: 'Child of the Sky',
+  1: 'Star Wanderer', 2: 'Memory Keeper',   3: 'Rising Star',
+  4: 'Dreamer', 5: 'Guiding Light', 6: 'Legend',
 };
 const XP_PER_LEVEL = 300;
 
@@ -86,7 +86,7 @@ export default function CharacterScreen() {
   const profileTitle    = constellation?.activeTitle ?? (
     (constellation?.unlockedStars.length ?? 0) >= 5 ? 'Guiding Light'  :
     (constellation?.unlockedStars.length ?? 0) >= 3 ? 'Dreamwalker'    :
-    (constellation?.unlockedStars.length ?? 0) >= 1 ? 'Star Wanderer'  : 'Sky Child'
+    (constellation?.unlockedStars.length ?? 0) >= 1 ? 'Star Wanderer'  : 'Newcomer'
   );
   const availableTitles = constellation
     ? (Array.from({ length: constellation.unlockedStars.length }, (_, i) => STAR_TITLES[i + 1]).filter(Boolean) as string[])
@@ -216,7 +216,7 @@ export default function CharacterScreen() {
           {[
             { icon: 'book-open', count: stories.length,   label: 'Stories',   tab: 'journey' },
             { icon: 'star',      count: outfits.length,   label: 'Outfits',   tab: 'style'   },
-            { icon: 'eye',       count: totalWitnessed,   label: 'Witnessed', tab: null       },
+            { icon: 'eye',       count: totalWitnessed,   label: 'Likes',     tab: null       },
           ].map((item, i) => (
             <React.Fragment key={item.label}>
               {i > 0 && <View style={s.statDot} />}
@@ -234,7 +234,7 @@ export default function CharacterScreen() {
           {(['journey', 'style', 'about'] as const).map(tab => (
             <TouchableOpacity key={tab} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab(tab); }} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', backgroundColor: profileTab === tab ? 'rgba(107,91,149,0.60)' : 'transparent' }} activeOpacity={0.75}>
               <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: profileTab === tab ? '#fff' : 'rgba(200,184,232,0.50)' }}>
-                {tab === 'journey' ? '✦ Journey' : tab === 'style' ? '✨ Style' : '◌ About'}
+                {tab === 'journey' ? '✦ Progress' : tab === 'style' ? '✨ Style' : '◌ About'}
               </Text>
             </TouchableOpacity>
           ))}

@@ -360,8 +360,8 @@ export default function CampfireLobby() {
           <Icon name="arrow-left" size={16} color="rgba(200,184,232,0.75)" />
         </TouchableOpacity>
         <View style={L.headerCenter}>
-          <Text style={L.headerTitle}>Sky Campfires</Text>
-          <Text style={L.headerSub}>Gather · Whisper · Wander</Text>
+          <Text style={L.headerTitle}>Live Campfires</Text>
+          <Text style={L.headerSub}>Join a live chat room</Text>
         </View>
         <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setKindle(true); }} style={L.kindleBtn} activeOpacity={0.8}>
           <Text style={L.kindleBtnText}>✦ Kindle</Text>

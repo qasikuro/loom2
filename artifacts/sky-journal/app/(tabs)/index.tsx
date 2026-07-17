@@ -107,7 +107,7 @@ const STAR_DEFS = [
   { key: 'quiet',    label: 'Quiet',    getCount: (c: ConstellationState) => c.quietStreak,   threshold: 7,  unit: 'day streak',   color: '#7890C8', action: 'Journal every day to build your streak' },
   { key: 'creative', label: 'Creative', getCount: (c: ConstellationState) => c.creativeCount, threshold: 5,  unit: 'stories',      color: '#C87AA8', action: 'Create and share a few more stories' },
   { key: 'helping',  label: 'Helping',  getCount: (c: ConstellationState) => c.helpingCount,  threshold: 20, unit: 'stickers sent',color: '#C8A84B', action: 'Send stickers to stories you love in Discover' },
-  { key: 'seasonal', label: 'Seasonal', getCount: (c: ConstellationState) => c.seasonalCount, threshold: 6,  unit: 'outfits',      color: '#68B8B0', action: 'Log 6 outfits to your Sky Wardrobe' },
+  { key: 'seasonal', label: 'Seasonal', getCount: (c: ConstellationState) => c.seasonalCount, threshold: 6,  unit: 'outfits',      color: '#68B8B0', action: 'Log 6 outfits to your Wardrobe' },
 ] as const;
 
 /** Returns the locked star closest to its unlock threshold (0–1), or null if all unlocked */
@@ -134,63 +134,63 @@ function lumiAwareness(
   constellation?: ConstellationState | null,
   rewardBalance?: RewardBalanceData | null,
 ): string {
-  const n = name || 'sky child';
+  const n = name || 'there';
   const todayEntries = entries.filter((e: any) =>
     new Date(e.date).toDateString() === new Date().toDateString()).length;
 
   // Social activity — highest priority
   if (witnessed > 0 && saved > 0 && newCircleStories > 0)
-    return `${witnessed} souls witnessed you, ${saved} carried your story — and your circle wrote ${newCircleStories} new chapter${newCircleStories > 1 ? 's' : ''} while you were away`;
+    return `${witnessed} people liked your story, ${saved} saved it — and ${newCircleStories} new ${newCircleStories > 1 ? 'stories' : 'story'} from people you follow`;
   if (witnessed > 0 && newCircleStories > 0)
-    return `${witnessed} soul${witnessed > 1 ? 's' : ''} found your story, and ${newCircleStories} new chapter${newCircleStories > 1 ? 's' : ''} glow from your circle`;
+    return `${witnessed} ${witnessed > 1 ? 'people' : 'person'} liked your story, and ${newCircleStories} new ${newCircleStories > 1 ? 'posts' : 'post'} from people you follow`;
   if (witnessed > 0 && liveCampfires > 0)
-    return `${witnessed} soul${witnessed > 1 ? 's' : ''} witnessed you while you were away — and ${liveCampfires} campfire${liveCampfires > 1 ? 's are' : ' is'} burning right now`;
+    return `${witnessed} ${witnessed > 1 ? 'people' : 'person'} liked your story — and ${liveCampfires} live chat${liveCampfires > 1 ? 's are' : ' is'} active right now`;
   if (witnessed > 0 && saved > 0)
-    return `${witnessed} witnessed your story. ${saved} person${saved > 1 ? 's' : ''} saved it — your words are travelling`;
+    return `${witnessed} liked your story and ${saved} ${saved > 1 ? 'people' : 'person'} saved it — your words are reaching people`;
   if (witnessed > 0)
-    return `${witnessed} soul${witnessed > 1 ? 's' : ''} witnessed your story while you were in the clouds, ${n}`;
+    return `${witnessed} ${witnessed > 1 ? 'people' : 'person'} liked your story while you were away, ${n}`;
   if (saved > 0 && newCircleStories > 0)
-    return `${saved} person${saved > 1 ? 's' : ''} saved what you made. Your circle added ${newCircleStories} new chapter${newCircleStories > 1 ? 's' : ''}`;
+    return `${saved} ${saved > 1 ? 'people' : 'person'} saved what you made, and ${newCircleStories} new ${newCircleStories > 1 ? 'posts' : 'post'} from people you follow`;
   if (saved > 0)
-    return `${saved} person${saved > 1 ? 's' : ''} saved your story — your words stayed with them`;
+    return `${saved} ${saved > 1 ? 'people' : 'person'} saved your story — your words stayed with them`;
   if (newCircleStories > 0 && liveCampfires > 0)
-    return `${newCircleStories} new ${newCircleStories === 1 ? 'chapter' : 'chapters'} from your circle, and ${liveCampfires} campfire${liveCampfires > 1 ? 's are' : ' is'} lit — the sky has been alive`;
+    return `${newCircleStories} new ${newCircleStories === 1 ? 'post' : 'posts'} from people you follow, and ${liveCampfires} live chat${liveCampfires > 1 ? 's' : ''} happening now`;
   if (newCircleStories > 0)
     return newCircleStories === 1
-      ? 'Someone in your circle wrote a new chapter — the sky has been busy'
-      : `${newCircleStories} new chapters from your circle — go see what they made`;
+      ? 'Someone you follow posted a new story — go check it out'
+      : `${newCircleStories} new stories from people you follow`;
   if (liveCampfires > 0)
-    return `${liveCampfires} campfire${liveCampfires > 1 ? 's are' : ' is'} lit right now — someone is waiting in the warmth`;
+    return `${liveCampfires} live chat${liveCampfires > 1 ? 's are' : ' is'} active right now — join the conversation`;
 
-  // ── Constellation awareness — when the world is quiet, Lumi reflects on your journey ──
+  // Progress awareness — when the world is quiet, Lumi reflects on your progress
   if (constellation) {
     const unlocked = constellation.unlockedStars.length;
     if (unlocked === 6)
-      return `All six stars shine in your sky, ${n}. You are a Child of the Sky — the journey never ends`;
+      return `You've unlocked all six progress milestones, ${n}. Keep going — there's always more to explore`;
     if (unlocked >= 4)
-      return `${unlocked} stars glow in your constellation, ${n}. Only ${6 - unlocked} more wait for your light`;
+      return `${unlocked} of 6 milestones unlocked, ${n}. Only ${6 - unlocked} more to go`;
     if (unlocked >= 2)
-      return `${unlocked} stars glow in your sky, ${n} — you are becoming luminous`;
+      return `${unlocked} milestones unlocked, ${n} — you're making great progress`;
     if (unlocked === 1)
-      return `Your first star glows, ${n}${constellation.activeTitle ? ` — ${constellation.activeTitle}` : ''}. Keep showing up`;
+      return `First milestone unlocked, ${n}${constellation.activeTitle ? ` — ${constellation.activeTitle}` : ''}. Keep it up`;
     if (constellation.quietStreak >= 5 && !constellation.unlockedStars.includes('quiet'))
-      return `${constellation.quietStreak} days of writing in a row, ${n} — your Quiet Star is almost within reach`;
+      return `${constellation.quietStreak} days journalling in a row, ${n} — almost at your next milestone`;
     if (rewardBalance && rewardBalance.stars >= 6)
-      return `✦ ${rewardBalance.stars} stars gathered so far, ${n}. You are building something luminous`;
+      return `✦ ${rewardBalance.stars} stars collected so far, ${n}. You're on a roll`;
   }
 
-  // Poetic time-aware fallback
-  if (hour < 6)  return `The stars have been keeping watch, ${n}. The sky is all yours right now`;
+  // Time-aware fallback
+  if (hour < 6)  return `Up late, ${n}? The app is all yours right now`;
   if (hour < 12) return todayEntries
-    ? `Good morning, ${n} — you already wrote ${todayEntries} ${todayEntries === 1 ? 'memory' : 'memories'} today`
-    : `The morning sky is fresh, ${n} — what will today hold?`;
+    ? `Good morning, ${n} — you already wrote ${todayEntries} ${todayEntries === 1 ? 'entry' : 'entries'} today`
+    : `Good morning, ${n} — what's on your mind today?`;
   if (hour < 17) return stories.length
-    ? `${stories.length} ${stories.length === 1 ? 'story glows' : 'stories glow'} out there — the afternoon is still yours`
-    : `The afternoon sky is all yours, ${n} — begin something`;
-  if (hour < 20) return 'Golden hour. Someone out there is always watching the sky';
+    ? `You have ${stories.length} ${stories.length === 1 ? 'story' : 'stories'} out there — the afternoon is still yours`
+    : `Good afternoon, ${n} — start something new today`;
+  if (hour < 20) return 'The evening is a great time to write or explore stories';
   return todayEntries === 0
-    ? `The night is soft, ${n} — a perfect time to write something small`
-    : `Tonight's sky is yours — you wrote ${todayEntries} ${todayEntries === 1 ? 'memory' : 'memories'} today`;
+    ? `Good evening, ${n} — a quiet moment to write something`
+    : `Good evening — you wrote ${todayEntries} ${todayEntries === 1 ? 'entry' : 'entries'} today`;
 }
 
 // ─── Breathing ring ──────────────────────────────────────────────────────────
@@ -246,7 +246,7 @@ function DailyInvitation({ onWrite, userMood }: { onWrite: (prompt: string, mood
       <View style={ds.left}>
         <View style={ds.eyebrow}>
           <Text style={[ds.sparkGlyph, { color: `rgba(${accentRgb},0.70)` }]}>✦</Text>
-          <Text style={[ds.label, { color: `rgba(${accentRgb},0.65)` }]}>Daily Invitation</Text>
+          <Text style={[ds.label, { color: `rgba(${accentRgb},0.65)` }]}>Daily Prompt</Text>
           <View style={[ds.datePill, { backgroundColor: `rgba(${accentRgb},0.10)` }]}>
             <Text style={[ds.dateTxt, { color: `rgba(${accentRgb},0.50)` }]}>
               {today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -465,8 +465,8 @@ function WitnessSummaryCard({
 
   const ICONS = ['✦', '◈', '◇', '⬡', '◐', '△'];
   const label = count === 1
-    ? `1 soul witnessed "${storyTitle}"`
-    : `${count} souls witnessed "${storyTitle}"`;
+    ? `1 person liked "${storyTitle}"`
+    : `${count} people liked "${storyTitle}"`;
 
   return (
     <TouchableOpacity
@@ -1274,7 +1274,7 @@ export default function HomeScreen() {
         onPress={() => router.push('/(tabs)/discover')}
         activeOpacity={0.8}
       >
-        <Text style={s.emptyStoriesText}>No stories from your circle yet</Text>
+        <Text style={s.emptyStoriesText}>No stories from people you follow yet</Text>
         <Text style={s.emptyStoriesSub}>Find people in Discover →</Text>
       </TouchableOpacity>
     );
@@ -1315,11 +1315,11 @@ export default function HomeScreen() {
   const greetingWord  = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : hour < 20 ? 'Good evening' : 'Good night';
   const greetingEmoji = hour < 12 ? '☀️' : hour < 17 ? '🌤' : hour < 20 ? '✨' : '🌙';
   const headerSubtitle = (() => {
-    if (witnessedNotifs > 0) return `${witnessedNotifs} soul${witnessedNotifs > 1 ? 's' : ''} witnessed your story`;
-    if (circleStories.length > 0) return `${circleStories.length} new ${circleStories.length === 1 ? 'story' : 'stories'} from your circle`;
-    if (liveCampfireCount > 0) return `${liveCampfireCount} campfire${liveCampfireCount > 1 ? 's' : ''} burning right now`;
+    if (witnessedNotifs > 0) return `${witnessedNotifs} ${witnessedNotifs > 1 ? 'people' : 'person'} liked your story`;
+    if (circleStories.length > 0) return `${circleStories.length} new ${circleStories.length === 1 ? 'story' : 'stories'} from people you follow`;
+    if (liveCampfireCount > 0) return `${liveCampfireCount} live chat${liveCampfireCount > 1 ? 's' : ''} active right now`;
     if (hour < 12) return 'What will today hold?';
-    if (hour < 17) return 'The afternoon sky is yours';
+    if (hour < 17) return 'The afternoon is yours';
     if (hour < 20) return 'Take a deep breath and reflect.';
     return 'A perfect time to write something';
   })();
@@ -1564,7 +1564,7 @@ export default function HomeScreen() {
             )}
             {liveCampfireCount > 0 && (
               <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(232,164,80,0.14)' }]} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
-                <Text style={{ fontSize: 13, lineHeight: 16 }}>🔥</Text><Text style={[s.digestTxt, { color: '#E8A450' }]}>{liveCampfireCount} campfire{liveCampfireCount > 1 ? 's' : ''} live</Text>
+                <Text style={{ fontSize: 13, lineHeight: 16 }}>🔥</Text><Text style={[s.digestTxt, { color: '#E8A450' }]}>{liveCampfireCount} live chat{liveCampfireCount > 1 ? 's' : ''}</Text>
               </TouchableOpacity>
             )}
             {newStoryNotifs > 0 && witnessedNotifs === 0 && savedNotifs === 0 && (
@@ -1591,7 +1591,7 @@ export default function HomeScreen() {
           </ScrollView>
           {circleStories.length > 0 ? (
             <>
-              <Text style={s.circleRecentLabel}>Recent from your circle</Text>
+              <Text style={s.circleRecentLabel}>Recent from friends</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10, paddingBottom: 8 }}>
                 {circleStories.slice(0, 5).map(post => {
                   const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
@@ -1626,7 +1626,7 @@ export default function HomeScreen() {
             </>
           ) : (
             <TouchableOpacity style={s.emptyStories} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.8}>
-              <Text style={s.emptyStoriesText}>No stories from your circle yet</Text>
+              <Text style={s.emptyStoriesText}>No stories from people you follow yet</Text>
               <Text style={s.emptyStoriesSub}>Find people in Discover →</Text>
             </TouchableOpacity>
           )}
@@ -1634,7 +1634,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ══════════════════════════════════════════════════
-            CAMPFIRE TONIGHT — community campfire banner
+            LIVE CHAT — community live chat banner
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s3, transform: [{ translateY: s3.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <TouchableOpacity style={s.campfireBanner} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/campfire' as any); }} activeOpacity={0.82}>
@@ -1643,13 +1643,13 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}>
               <Text style={{ fontSize: 14, lineHeight: 18 }}>🔥</Text>
-              <Text style={s.campfireBannerEyebrow}>Campfire Tonight</Text>
+              <Text style={s.campfireBannerEyebrow}>Live Now</Text>
             </View>
-            <Text style={s.campfireBannerTitle}>Whisper Campfire</Text>
-            <Text style={s.campfireBannerSub}>{liveCampfireCount > 0 ? `${liveCampfireCount} live now · Come gather` : 'Gather · Whisper · Wander'}</Text>
+            <Text style={s.campfireBannerTitle}>Live Campfire</Text>
+            <Text style={s.campfireBannerSub}>{liveCampfireCount > 0 ? `${liveCampfireCount} active now · Come join` : 'Join the conversation'}</Text>
           </View>
           <View style={s.campfireJoinBtn}>
-            <Text style={s.campfireJoinTxt}>Join Campfire</Text>
+            <Text style={s.campfireJoinTxt}>Join Now</Text>
           </View>
         </TouchableOpacity>
         </Animated.View>
@@ -1882,7 +1882,7 @@ export default function HomeScreen() {
         {campfires.length > 0 && (
           <View style={s.section}>
             <SectionHeader
-              label="Campfires"
+              label="Live Chats"
               accent="#E8A450"
               count={liveCampfireCount > 0 ? liveCampfireCount : undefined}
               action={liveCampfireCount > 0 ? `${liveCampfireCount} live` : undefined}
