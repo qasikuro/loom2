@@ -646,11 +646,11 @@ export default function JournalScreen() {
       </LinearGradient>
 
       {/* ── Offline / error banner ─────────────────────────────────── */}
-      {(!apiOnline || journalLoadError || hasCorruptedJournal) && !isLoading && (
+      {(!apiOnline || journalLoadError || hasCorruptedJournals) && !isLoading && (
         <View style={offlineBanner.row}>
           <View style={offlineBanner.dot} />
           <Text style={offlineBanner.msg}>
-            {hasCorruptedJournal && !journalLoadError
+            {hasCorruptedJournals && !journalLoadError
               ? "Some entries couldn't be loaded — pull to refresh"
               : journalLoadError && apiOnline
                 ? "Couldn't load entries"
