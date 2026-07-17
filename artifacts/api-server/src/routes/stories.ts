@@ -501,6 +501,36 @@ router.get("/stories/saved", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/stories/:id/resonate", requireAuth, async (req, res) => {
+  const storyId = String(req.params.id);
+  const actorId = getUserId(req);
+  try {
+    const [updated] = await db
+      .update(storiesTable)
+      .set({ resonatedCount: sql`${storiesTable.resonatedCount} + 1` })
+      .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "Not found" });
+
+    if (updated.userId !== actorId) {
+      db.insert(notificationsTable).values({
+        userId:    updated.userId,
+        actorId,
+        actorName: "Someone",
+        type:      "resonate",
+        refId:     storyId,
+        title:     `Someone resonated with your story — ${updated.chapterTitle}`,
+      }).catch(() => null);
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to resonate story");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/stories/:id/save", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
   const actorId = getUserId(req);

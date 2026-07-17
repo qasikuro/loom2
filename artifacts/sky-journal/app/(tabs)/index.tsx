@@ -2064,7 +2064,7 @@ export default function HomeScreen() {
                 {serverNotifications.map(n => (
                   <View key={n.id} style={[m.notif, { backgroundColor: n.isRead ? colors.muted : `${accent}14`, borderColor: n.isRead ? 'transparent' : `${accent}28` }]}>
                     <View style={[m.notifIcon, { backgroundColor: `${accent}18` }]}>
-                      <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : n.type === 'new_story' ? 'book-open' : 'star'} size={13} color={accent} />
+                      <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : n.type === 'new_story' ? 'book-open' : n.type === 'resonate' ? 'activity' : 'star'} size={13} color={accent} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={2}>{n.title}</Text>

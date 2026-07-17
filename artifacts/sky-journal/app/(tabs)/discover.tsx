@@ -4,7 +4,6 @@ import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { ReportSheet } from '@/components/ReportSheet';
 import { MoodDoorModal } from '@/components/MoodDoorModal';
 import { apiFetch, useApp } from '@/context/AppContext';
-import { VibeStickerPicker, type StickerType } from '@/components/VibeStickerPicker';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
@@ -105,7 +104,6 @@ export default function DiscoverScreen() {
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
           apiOnline, discoverLoadError, reloadData, isRefreshing,
-          showRewardToast, reloadRewards, reloadConstellation,
           discoverMoodFilter, setDiscoverMoodFilter } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
@@ -117,8 +115,6 @@ export default function DiscoverScreen() {
   const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const [refreshing,    setRefreshing]    = useState(false);
-  const [stickerCounts,        setStickerCounts]        = useState<Record<string, { type: string; count: number }[]>>({});
-  const [activeStickerStoryId, setActiveStickerStoryId] = useState<string | null>(null);
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
@@ -180,34 +176,6 @@ export default function DiscoverScreen() {
         setPeopleLoading(false);
       }
     }, 400);
-  }
-
-  async function handleSendSticker(storyId: string, stickerType: StickerType) {
-    // Optimistic update
-    setStickerCounts(prev => {
-      const existing = prev[storyId] ?? [];
-      const idx = existing.findIndex(s => s.type === stickerType);
-      if (idx >= 0) {
-        const updated = existing.map((s, i) => i === idx ? { ...s, count: s.count + 1 } : s);
-        return { ...prev, [storyId]: updated };
-      }
-      return { ...prev, [storyId]: [...existing, { type: stickerType, count: 1 }] };
-    });
-    // Fire API call — show reward toast only if server confirms a new grant
-    try {
-      const res = await apiFetch<{ ok: boolean; rewardGranted?: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
-        '/stickers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ storyId, stickerType }),
-        },
-      );
-      if (res?.rewardGranted && res.rewardAmounts) {
-        showRewardToast('Sticker sent', res.rewardAmounts);
-        reloadRewards().catch(() => null);
-        reloadConstellation().catch(() => null);
-      }
-    } catch { /* silent — optimistic already applied */ }
   }
 
   function handleToggleFollow(item: UserSearchResult) {
@@ -422,9 +390,6 @@ export default function DiscoverScreen() {
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
               onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
-              onStickerToggle={() => setActiveStickerStoryId(prev => prev === item.id ? null : item.id)}
-              stickerPickerOpen={activeStickerStoryId === item.id}
-              stickerCounts={stickerCounts[item.id] ?? []}
             />
           )}
           contentContainerStyle={[styles.listPad, { paddingBottom: bottomPad }]}
@@ -551,24 +516,6 @@ export default function DiscoverScreen() {
           setMoodDoorVisible(false);
         }}
       />
-
-      {/* ── Sticker picker overlay — rendered at screen level to escape card overflow:hidden ── */}
-      {activeStickerStoryId !== null && (
-        <View style={styles.stickerOverlay} pointerEvents="box-none">
-          <TouchableOpacity
-            style={styles.stickerBackdrop}
-            activeOpacity={1}
-            onPress={() => setActiveStickerStoryId(null)}
-          />
-          <VibeStickerPicker
-            visible={true}
-            onSelect={(type) => {
-              handleSendSticker(activeStickerStoryId, type);
-            }}
-            onClose={() => setActiveStickerStoryId(null)}
-          />
-        </View>
-      )}
 
       {/* ── Guides ─────────────────────────────────────────── */}
       {activeTab === 'Guides' && (
@@ -936,15 +883,6 @@ function PeopleNoResults({ colors }: { colors: any }) {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-
-  // Sticker picker overlay — screen-level so it's never clipped by card overflow:hidden
-  stickerOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    zIndex: 999,
-  },
-  stickerBackdrop: {
-    position: 'absolute', top: -2000, left: 0, right: 0, bottom: 0,
-  },
 
   // Header
   headerRow: {

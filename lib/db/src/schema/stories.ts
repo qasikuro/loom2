@@ -23,6 +23,7 @@ export const storiesTable = pgTable("stories", {
   pageLayoutKey:   text("page_layout_key"),
   pages:           jsonb("pages").$type<StoryPageDB[]>(),
   witnessMilestones: jsonb("witness_milestones").$type<number[]>().notNull().default([]),
+  resonatedCount:  integer("resonated_count").notNull().default(0),
   date:            timestamp("date", { withTimezone: true }).notNull(),
   createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

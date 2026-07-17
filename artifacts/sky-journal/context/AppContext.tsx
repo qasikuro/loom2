@@ -286,7 +286,7 @@ export interface ServerNotification {
   id:        string;
   actorId:   string;
   actorName: string;
-  type:      'new_story' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'message';
+  type:      'new_story' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'message' | 'resonate';
   refId:     string;
   title:     string;
   isRead:    boolean;

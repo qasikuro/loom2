@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { Animated, Easing, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { MoodBadge } from '@/components/MoodBadge';
-import { STICKERS, type StickerType } from '@/components/VibeStickerPicker';
+import { ResonateButton } from '@/components/ResonateButton';
 import { useColors } from '@/hooks/useColors';
 import type { DiscoverPost } from '@/context/AppContext';
 import { extractPullQuote } from '@/utils/storyUtils';
@@ -25,8 +25,6 @@ function getGradient(mood: string): [string, string, string] {
   return MOOD_GRADIENTS[mood] ?? ['#131028', '#1E1A50', '#181440'];
 }
 
-interface StickerCount { type: string; count: number }
-
 interface DiscoverCardProps {
   post:              DiscoverPost;
   onPress?:          () => void;
@@ -34,47 +32,18 @@ interface DiscoverCardProps {
   onDelete?:         () => void;
   onReport?:         () => void;
   onAuthorPress?:    () => void;
-  /** Called when the ✦ sticker button is tapped — parent controls the picker */
-  onStickerToggle?:  () => void;
-  /** Whether this card's sticker picker is currently open (controlled externally) */
-  stickerPickerOpen?: boolean;
-  stickerCounts?:    StickerCount[];
   delay?:            number;
 }
 
 export function DiscoverCard({
-  post, onPress, onSave, onDelete, onReport, onAuthorPress,
-  onStickerToggle, stickerPickerOpen = false, stickerCounts = [], delay = 0,
+  post, onPress, onSave, onDelete, onReport, onAuthorPress, delay = 0,
 }: DiscoverCardProps) {
   const colors   = useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
 
-  // Pull quote: extracted client-side from panel narrations; fallback to server snippet
   const pullQuote = extractPullQuote(post.panels ?? []) || post.storySnippet || '';
-
-  // Hero image: first panel's imageUri only; no imageUri → mood gradient
   const heroPanelImage = post.panels?.[0]?.imageUri ?? null;
-
-  // Combine server count with locally-sent stickers so the badge
-  // reflects the optimistic update and the animation fires immediately.
-  const localExtra          = stickerCounts.reduce((sum, s) => sum + s.count, 0);
-  const displayStickerCount = (post.stickerCount ?? 0) + localExtra;
-
-  // Bounce the ✦ badge whenever the combined stickerCount increases
-  const stickerBounce    = useRef(new Animated.Value(1)).current;
-  const prevStickerCount = useRef(displayStickerCount);
-  useEffect(() => {
-    if (displayStickerCount > prevStickerCount.current) {
-      prevStickerCount.current = displayStickerCount;
-      stickerBounce.setValue(0.7);
-      Animated.spring(stickerBounce, {
-        toValue: 1, friction: 4, tension: 160, useNativeDriver: true,
-      }).start();
-    } else {
-      prevStickerCount.current = displayStickerCount;
-    }
-  }, [displayStickerCount]);
 
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,11 +81,6 @@ export function DiscoverCard({
       deleteTimer.current = setTimeout(() => setConfirmingDelete(false), 3000);
     }
   }
-
-  // Show top-4 sticker types by count
-  const topStickers = [...stickerCounts]
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 4);
 
   return (
     <Animated.View style={{ opacity: mountOpacity, transform: [{ translateY: mountY }, { scale: pressScale }] }}>
@@ -214,7 +178,7 @@ export function DiscoverCard({
 
         {/* ── Action bar ── */}
         <View style={styles.actionBar}>
-          {/* Left: witness count + sticker counts */}
+          {/* Left: witness count */}
           <View style={styles.statsGroup}>
             <View style={styles.statPill}>
               <Icon name="eye" size={10} color="rgba(200,184,232,0.55)" />
@@ -224,25 +188,6 @@ export function DiscoverCard({
                   : post.witnessedCount}
               </Text>
             </View>
-            {displayStickerCount > 0 && (
-              <Animated.View style={[styles.statPill, { transform: [{ scale: stickerBounce }] }]}>
-                <Text style={styles.stickerTotalIcon}>✦</Text>
-                <Text style={styles.statText}>{displayStickerCount}</Text>
-              </Animated.View>
-            )}
-            {topStickers.length > 0 && (
-              <View style={styles.stickerCountRow}>
-                {topStickers.map(sc => {
-                  const s = STICKERS.find(x => x.type === sc.type);
-                  return s ? (
-                    <View key={sc.type} style={styles.stickerCountPill}>
-                      <Text style={styles.stickerCountEmoji}>{s.emoji}</Text>
-                      <Text style={styles.stickerCountNum}>{sc.count}</Text>
-                    </View>
-                  ) : null;
-                })}
-              </View>
-            )}
           </View>
 
           {/* Right: actions */}
@@ -264,16 +209,7 @@ export function DiscoverCard({
               </TouchableOpacity>
             )}
 
-            {onStickerToggle && (
-              <TouchableOpacity
-                onPress={onStickerToggle}
-                style={[styles.iconBtn, stickerPickerOpen && styles.iconBtnActive]}
-                hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-                activeOpacity={0.75}
-              >
-                <Text style={styles.stickerBtnIcon}>✦</Text>
-              </TouchableOpacity>
-            )}
+            <ResonateButton storyId={post.id} />
 
             <TouchableOpacity
               onPress={onSave}
@@ -410,17 +346,6 @@ const styles = StyleSheet.create({
   statPill:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
   statText:   { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' },
 
-  stickerCountRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  stickerCountPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 2,
-    backgroundColor: 'rgba(107,91,149,0.15)',
-    borderRadius: 8, paddingHorizontal: 5, paddingVertical: 2,
-    borderWidth: 0.5, borderColor: 'rgba(107,91,149,0.25)',
-  },
-  stickerCountEmoji: { fontSize: 10 },
-  stickerCountNum:   { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.6)' },
-  stickerTotalIcon:  { fontSize: 9, color: 'rgba(200,184,232,0.55)' },
-
   actionsGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   iconBtn: {
     width: 30, height: 30, borderRadius: 9,
@@ -428,12 +353,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderWidth: 0.75, borderColor: 'rgba(107,91,149,0.25)',
   },
-  iconBtnActive: {
-    backgroundColor: 'rgba(107,91,149,0.22)',
-    borderColor:     'rgba(155,135,200,0.55)',
-  },
-  deleteText:    { color: '#E04455', fontSize: 9, fontFamily: 'Satoshi-Bold' },
-  stickerBtnIcon: { fontSize: 13, color: 'rgba(200,184,232,0.55)' },
+  deleteText: { color: '#E04455', fontSize: 9, fontFamily: 'Satoshi-Bold' },
 
   readBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 2,
