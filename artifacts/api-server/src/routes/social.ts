@@ -149,6 +149,9 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         role:           characterTable.role,
         timezone:       characterTable.timezone,
         links:          characterTable.links,
+        activeTitle:    characterTable.activeTitle,
+        intention:      characterTable.intention,
+        intentionDate:  characterTable.intentionDate,
       })
         .from(characterTable)
         .where(eq(characterTable.userId, targetId))
@@ -221,6 +224,9 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       timezone:      char.timezone           ?? null,
       links:         Array.isArray((char as any).links) ? (char as any).links : [],
       isFollowing:   followingSet.has(targetId),
+      activeTitle:   char.activeTitle   ?? null,
+      intention:     char.intention     ?? null,
+      intentionDate: char.intentionDate ?? null,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get user profile");

@@ -108,18 +108,6 @@ export default function CharacterScreen() {
     setCharacter({ ...character, activeTitle: title });
   }, [character, setCharacter]);
 
-  // Clear stale intention on tab focus (if date has changed since it was set)
-  useFocusEffect(useCallback(() => {
-    if (character.intention && character.intentionDate) {
-      const d = new Date();
-      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (character.intentionDate !== today) {
-        setCharacter({ ...character, intention: null, intentionDate: null });
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [character.intentionDate, character.intention]));
-
   // ── Settings drawer ────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerWidth = screenW * 0.82;

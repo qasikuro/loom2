@@ -373,6 +373,9 @@ interface PublicProfile {
   activeOutfitId: string | null;
   activeOutfit:   ActiveOutfit | null;
   isFollowing:    boolean;
+  activeTitle:    string | null;
+  intention:      string | null;
+  intentionDate:  string | null;
 }
 
 interface PublicStory {
@@ -576,6 +579,24 @@ export default function UserProfileScreen() {
           {/* @handle */}
           {profile.username ? (
             <Text style={[styles.handle, { color: aura.accent }]}>@{profile.username}</Text>
+          ) : null}
+
+          {/* Active title */}
+          {profile.activeTitle ? (
+            <Text style={{ fontSize: 11, color: '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, marginTop: 3 }}>
+              ✦ {profile.activeTitle}
+            </Text>
+          ) : null}
+
+          {/* Today's intention (only shown if set today) */}
+          {profile.intention && profile.intentionDate && (() => {
+            const d = new Date();
+            const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return profile.intentionDate === today;
+          })() ? (
+            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.60)', marginTop: 4 }} numberOfLines={2}>
+              ◌ {profile.intention}
+            </Text>
           ) : null}
 
           {/* ── Meta row: role + weather/time ─────────────────── */}

@@ -59,6 +59,21 @@ const queryClient = new QueryClient();
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 const clerkProxyUrl  = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
+function IntentionStalenessGuard() {
+  const { character, setCharacter } = useApp();
+  useEffect(() => {
+    if (!character.intention || !character.intentionDate) return;
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    if (character.intentionDate !== today) {
+      setCharacter({ ...character, intention: null, intentionDate: null });
+    }
+  // Run once on mount (app open) — character ref is stable at that point
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
 function AuthTokenBridge() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
   const { reloadData, clearUserData } = useApp();
@@ -268,6 +283,7 @@ export default function RootLayout() {
                     <SoundProvider>
                       <AppProvider>
                         <AuthTokenBridge />
+                        <IntentionStalenessGuard />
                         <NotificationDeepLinkHandler />
                         <AuthNavigator />
                         <AppOverlays />

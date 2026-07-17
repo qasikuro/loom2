@@ -1113,6 +1113,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       guideBio:          c.guideBio          ?? '',
       guideTopics:       c.guideTopics       ?? [],
       guideAvailability: c.guideAvailability ?? null,
+      activeTitle:       c.activeTitle       ?? null,
+      intention:         c.intention         ?? null,
+      intentionDate:     c.intentionDate     ?? null,
     });
     apiFetch('/character', { method: 'PUT', body: characterBody }).catch(() => {
       showToastGlobal("Couldn't sync profile — saved locally", 'warning', () => {
