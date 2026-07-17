@@ -305,7 +305,7 @@ export default function StoryScreen() {
   const insets = useSafeAreaInsets();
   const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
   const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory,
-          showRewardToast, reloadRewards, reloadConstellation, reloadData } = useApp();
+          showRewardToast, reloadRewards, reloadConstellation, reloadData, isLoading } = useApp();
 
   const { width: screenW } = useWindowDimensions();
   const [witnessed,        setWitnessed]        = useState(false);
@@ -406,10 +406,24 @@ export default function StoryScreen() {
       ? story.panels.map(toCellPanel)
       : post
         ? (post.panels ?? [{ text: post.storySnippet }]).map(toCellPanel)
-        : [{ text: 'Story not found.', imageUri: undefined, bgPreset: undefined, bubbleText: undefined, overlays: undefined }];
+        : [];
     const fallbackKey = story?.pageLayoutKey ?? post?.pageLayoutKey ?? '1';
     const fallbackLayout = getLayout(fallbackKey);
     renderPages = chunkPanels(flatPanels, fallbackLayout.count).map(chunk => ({ layoutKey: fallbackKey, panels: chunk }));
+  }
+
+  // Full-screen error: story not found or contains no valid panels
+  if (!isLoading && (renderPages.length === 0 || (!story && !post))) {
+    return (
+      <View style={[errStyles.wrap, { backgroundColor: colors.background, paddingTop: topPad + 12 }]}>
+        <BackButton style={errStyles.back} />
+        <Text style={errStyles.glyph}>✦</Text>
+        <Text style={[errStyles.title, { color: colors.text }]}>This story couldn't be opened</Text>
+        <Text style={[errStyles.sub, { color: colors.secondary }]}>
+          It may have been removed or contains invalid data.
+        </Text>
+      </View>
+    );
   }
 
   const gradient   = getGradient(mood);
@@ -1054,5 +1068,38 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'Satoshi-Regular',
     color: 'rgba(200,184,232,0.55)',
+  },
+});
+
+const errStyles = StyleSheet.create({
+  wrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  back: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+  },
+  glyph: {
+    fontSize: 48,
+    color: '#C8B8E8',
+    marginBottom: 20,
+    opacity: 0.7,
+  },
+  title: {
+    fontSize: 20,
+    fontFamily: 'Satoshi-Bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  sub: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Regular',
+    textAlign: 'center',
+    lineHeight: 21,
+    opacity: 0.7,
   },
 });

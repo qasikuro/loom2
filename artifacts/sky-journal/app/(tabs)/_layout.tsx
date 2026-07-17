@@ -8,6 +8,7 @@ import {
   Easing,
   Platform,
   StyleSheet,
+  Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 import { useSound } from '@/context/SoundContext';
+import { useApp } from '@/context/AppContext';
 
 const BAR_HEIGHT = 66;
 const BTN_SIZE   = 56;
@@ -141,6 +143,24 @@ function CreateIcon() {
   );
 }
 
+function OfflinePill() {
+  const { apiOnline, isLoading } = useApp();
+  const insets = useSafeAreaInsets();
+
+  if (isLoading || apiOnline) return null;
+
+  const topOffset = Platform.OS === 'web' ? 56 : insets.top + 6;
+
+  return (
+    <View style={[offlinePill.wrap, { top: topOffset }]} pointerEvents="none">
+      <View style={offlinePill.pill}>
+        <View style={offlinePill.dot} />
+        <Text style={offlinePill.label}>Offline</Text>
+      </View>
+    </View>
+  );
+}
+
 function ClassicTabLayout() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -151,6 +171,7 @@ function ClassicTabLayout() {
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 10);
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -242,6 +263,8 @@ function ClassicTabLayout() {
         }}
       />
     </Tabs>
+    <OfflinePill />
+    </View>
   );
 }
 
@@ -311,5 +334,38 @@ const styles = StyleSheet.create({
     shadowRadius: 26,
     shadowOffset: { width: 0, height: 8 },
     elevation: 24,
+  },
+});
+
+const offlinePill = StyleSheet.create({
+  wrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(30,24,50,0.88)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(200,184,232,0.15)',
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#E04455',
+  },
+  label: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Medium',
+    color: 'rgba(220,210,240,0.85)',
+    letterSpacing: 0.3,
   },
 });

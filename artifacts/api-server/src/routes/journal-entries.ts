@@ -18,6 +18,13 @@ const JournalEntryInputSchema = z.object({
   friendName: z.string().nullable().optional(),
 });
 
+// Minimal output schema — filters corrupt DB rows before they leave the API
+const JournalRowOutputSchema = z.object({
+  id:   z.string().uuid(),
+  text: z.string().min(1),
+  date: z.union([z.string(), z.date()]),
+});
+
 router.get("/journal-entries", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   try {
@@ -26,7 +33,17 @@ router.get("/journal-entries", requireAuth, async (req, res) => {
       .from(journalEntriesTable)
       .where(eq(journalEntriesTable.userId, userId))
       .orderBy(desc(journalEntriesTable.date));
-    return res.json(rows.map(serializeEntry));
+
+    const validRows = rows.filter(r => {
+      const check = JournalRowOutputSchema.safeParse(r);
+      if (!check.success) {
+        req.log.warn({ userId, entryId: r.id }, "Skipping corrupt journal entry row before serialisation");
+        return false;
+      }
+      return true;
+    });
+
+    return res.json(validRows.map(serializeEntry));
   } catch (err) {
     req.log.error({ err }, "Failed to list journal entries");
     return res.status(500).json({ error: "Internal server error" });

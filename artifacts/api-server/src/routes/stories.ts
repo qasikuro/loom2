@@ -48,6 +48,13 @@ const StoryInputSchema = z.object({
   })).optional().nullable(),
 });
 
+// Minimal output schema — filters corrupt DB rows before they leave the API
+const StoryRowOutputSchema = z.object({
+  id:           z.string().uuid(),
+  chapterTitle: z.string(),
+  panels:       z.array(z.any()),
+});
+
 router.get("/stories", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   try {
@@ -57,8 +64,17 @@ router.get("/stories", requireAuth, async (req, res) => {
       .where(and(eq(storiesTable.userId, userId), eq(storiesTable.isHidden, false)))
       .orderBy(desc(storiesTable.date));
 
-    const stickerCounts = await fetchStickerCounts(rows.map(r => r.id));
-    return res.json(rows.map(r => serializeStory(r, stickerCounts[r.id] ?? 0)));
+    const validRows = rows.filter(r => {
+      const check = StoryRowOutputSchema.safeParse(r);
+      if (!check.success) {
+        req.log.warn({ userId, storyId: r.id }, "Skipping corrupt story row before serialisation");
+        return false;
+      }
+      return true;
+    });
+
+    const stickerCounts = await fetchStickerCounts(validRows.map(r => r.id));
+    return res.json(validRows.map(r => serializeStory(r, stickerCounts[r.id] ?? 0)));
   } catch (err) {
     req.log.error({ err }, "Failed to list stories");
     return res.status(500).json({ error: "Internal server error" });

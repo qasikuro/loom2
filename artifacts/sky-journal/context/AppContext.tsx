@@ -409,10 +409,12 @@ interface AppContextValue {
   activeCosmetics:   Record<string, string>;
   setActiveCosmetic: (itemId: string) => void;
 
-  journalLoadError:  boolean;
-  storiesLoadError:  boolean;
-  outfitsLoadError:  boolean;
-  discoverLoadError: boolean;
+  journalLoadError:    boolean;
+  storiesLoadError:    boolean;
+  outfitsLoadError:    boolean;
+  discoverLoadError:   boolean;
+  hasCorruptedJournal: boolean;
+  hasCorruptedStories: boolean;
 
   discoverMoodFilter:    string | null;
   setDiscoverMoodFilter: (mood: string | null) => void;
@@ -470,10 +472,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [gallery, setGallery]           = useState<GalleryPhoto[]>([]);
   const [galleryUsage, setGalleryUsage] = useState<GalleryUsage>({ count: 0, limit: 200 });
 
-  const [journalLoadError,  setJournalLoadError]  = useState(false);
-  const [storiesLoadError,  setStoriesLoadError]  = useState(false);
-  const [outfitsLoadError,  setOutfitsLoadError]  = useState(false);
-  const [discoverLoadError, setDiscoverLoadError] = useState(false);
+  const [journalLoadError,    setJournalLoadError]    = useState(false);
+  const [storiesLoadError,    setStoriesLoadError]    = useState(false);
+  const [outfitsLoadError,    setOutfitsLoadError]    = useState(false);
+  const [discoverLoadError,   setDiscoverLoadError]   = useState(false);
+  const [hasCorruptedJournal, setHasCorruptedJournal] = useState(false);
+  const [hasCorruptedStories, setHasCorruptedStories] = useState(false);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -672,8 +676,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // Process core data — safe defaults already guaranteed by parseOrDefault above
       const char    = charRaw    ? toAppCharacter(charRaw, API_BASE)                     : DEFAULT_CHARACTER;
-      const entries = entriesRaw ? entriesRaw.map(r => toAppJournalEntry(r, API_BASE)) : [];
-      const stors   = storiesRaw ? storiesRaw.map(r => toAppStory(r, API_BASE))        : [];
+      let corruptedJournal = false;
+      let corruptedStories = false;
+
+      const entries = entriesRaw ? entriesRaw.reduce<JournalEntry[]>((acc, r) => {
+        try { acc.push(toAppJournalEntry(r, API_BASE)); }
+        catch { corruptedJournal = true; }
+        return acc;
+      }, []) : [];
+
+      const stors = storiesRaw ? storiesRaw.reduce<Story[]>((acc, r) => {
+        try { acc.push(toAppStory(r, API_BASE)); }
+        catch { corruptedStories = true; }
+        return acc;
+      }, []) : [];
       const outs    = outfitsRaw ? outfitsRaw.map(r => toAppOutfit(r, API_BASE))       : [];
       const gal     = (galleryRaw  ?? []).map((r: RawGalleryPhoto): GalleryPhoto => ({
         id:        r.id,
@@ -737,6 +753,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setApiOnline(true);
       setJournalLoadError(entriesRaw === null);
       setStoriesLoadError(storiesRaw === null);
+      setHasCorruptedJournal(corruptedJournal);
+      setHasCorruptedStories(corruptedStories);
       setOutfitsLoadError(outfitsRaw === null);
       setDiscoverLoadError(discoverRaw === null);
 
@@ -1662,6 +1680,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       isLoading, apiOnline,
       journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
+      hasCorruptedJournal, hasCorruptedStories,
       character, setCharacter,
       stories, addStory, updateStory, deleteStory,
       journalEntries, addJournalEntry, deleteJournalEntry,
