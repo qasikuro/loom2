@@ -159,6 +159,9 @@ router.get("/guides", requireAuth, async (req, res) => {
       followerCount[r.followingId] = (followerCount[r.followingId] ?? 0) + 1;
     }
 
+    // Validate every guide row against GuideResponseSchema before returning.
+    // Invalid records are excluded from the response and logged as warnings so
+    // ops can detect malformed database rows without the app ever seeing them.
     const serialized: GuideResponse[] = [];
     for (const g of guideRows) {
       const raw    = serializeGuide(g, followerCount[g.userId] ?? 0, followingSet.has(g.userId));
@@ -168,6 +171,10 @@ router.get("/guides", requireAuth, async (req, res) => {
       } else {
         req.log.warn({ userId: g.userId, issues: parsed.error.issues }, "Guide row failed validation — skipped");
       }
+    }
+    const skipped = guideRows.length - serialized.length;
+    if (skipped > 0) {
+      req.log.info({ returned: serialized.length, skipped }, "Guides response: some records excluded due to validation failures");
     }
     return res.json(serialized);
   } catch (err) {

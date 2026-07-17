@@ -590,12 +590,21 @@ export default function DiscoverScreen() {
               <View style={[styles.emptyIconBox, { backgroundColor: 'rgba(155,120,232,0.12)' }]}>
                 <Icon name="star" size={30} color="rgba(155,120,232,0.6)" />
               </View>
-              <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>No guides yet</Text>
-              <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
-                {guideTopicFilter
-                  ? `No guides for "${guideTopicFilter}" yet — check another topic`
-                  : 'Be the first to become a Constellation Guide on your profile'}
-              </Text>
+              {guideTopicFilter ? (
+                <>
+                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>No guides here</Text>
+                  <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
+                    {`No guides for "${guideTopicFilter}" yet — try another topic`}
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>Some guides are unavailable</Text>
+                  <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
+                    Some guides are resting for now — check back soon
+                  </Text>
+                </>
+              )}
             </View>
           ) : (
             <View style={{ paddingHorizontal: 16, gap: 12, paddingTop: 8 }}>

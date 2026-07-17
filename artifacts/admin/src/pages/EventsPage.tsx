@@ -34,6 +34,27 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
+function timeRemaining(endsAt: string | null): string {
+  if (!endsAt) return "";
+  const ms = new Date(endsAt).getTime() - Date.now();
+  if (ms <= 0) return "Ending now";
+  const totalSec = Math.floor(ms / 1000);
+  const days    = Math.floor(totalSec / 86400);
+  const hours   = Math.floor((totalSec % 86400) / 3600);
+  const minutes = Math.floor((totalSec % 3600) / 60);
+  if (days > 0)  return `${days}d ${hours}h remaining`;
+  if (hours > 0) return `${hours}h ${minutes}m remaining`;
+  return `${minutes}m remaining`;
+}
+
+function isLiveNow(ev: AdminEvent): boolean {
+  if (ev.status !== "active") return false;
+  const now = Date.now();
+  if (ev.startsAt && now < new Date(ev.startsAt).getTime()) return false;
+  if (ev.endsAt   && now > new Date(ev.endsAt).getTime())   return false;
+  return true;
+}
+
 function blankBody(): EventBody {
   return {
     title:       "",
@@ -512,6 +533,137 @@ function EventCard({
   );
 }
 
+// ── Live Now section ──────────────────────────────────────────────────────────
+
+function LiveNowSection({
+  events,
+  onEndEarly,
+  onEdit,
+}: {
+  events:     AdminEvent[];
+  onEndEarly: (ev: AdminEvent) => Promise<void>;
+  onEdit:     (ev: AdminEvent) => void;
+}) {
+  const [now,       setNow]       = useState(Date.now());
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [endingId,  setEndingId]  = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  if (events.length === 0) return null;
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <span className="relative flex h-2.5 w-2.5">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+        </span>
+        <h2 className="text-xs font-semibold text-green-700 uppercase tracking-wider">Live Now</h2>
+      </div>
+
+      {events.map((ev) => {
+        const ms       = ev.endsAt ? new Date(ev.endsAt).getTime() - now : null;
+        const timeLeft = timeRemaining(ev.endsAt);
+        const isUrgent = ms !== null && ms > 0 && ms < 3_600_000;
+        const theme    = THEME_META[ev.theme as Theme] ?? THEME_META.special;
+
+        return (
+          <div
+            key={ev.id}
+            className="bg-green-50 border border-green-200 rounded-xl p-5 space-y-4 hover:shadow-sm transition-shadow"
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="text-2xl flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                {theme.icon}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-semibold text-foreground truncate">{ev.title}</h3>
+                  <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">Active</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${theme.color}`}>{theme.label}</span>
+                </div>
+                {timeLeft && (
+                  <p className={`text-xs mt-0.5 font-medium ${isUrgent ? "text-red-600" : "text-green-700"}`}>
+                    ⏱ {timeLeft}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {fmtDate(ev.startsAt)} → {fmtDate(ev.endsAt)}
+                </p>
+              </div>
+            </div>
+
+            {/* Inventory preview */}
+            {ev.inventory.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {ev.inventory.map((it, i) =>
+                  it.type === "item" ? (
+                    <span key={i} className="text-xs px-2 py-1 bg-pink-50 text-pink-700 rounded-full">
+                      🎁 {it.itemName || it.label}
+                    </span>
+                  ) : (
+                    <span key={i} className="text-xs px-2 py-1 bg-white border border-green-200 rounded-full">
+                      {ITEM_TYPE_META[it.type]?.icon} {it.label}
+                    </span>
+                  )
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 pt-1 border-t border-green-200 flex-wrap">
+              <button
+                onClick={() => onEdit(ev)}
+                className="text-xs px-3 py-1.5 bg-white border border-green-200 text-green-800 rounded-lg hover:bg-green-50 transition-colors"
+              >
+                Edit
+              </button>
+
+              <div className="ml-auto flex items-center gap-2">
+                {confirmId === ev.id ? (
+                  <>
+                    <span className="text-xs text-muted-foreground">End this event now?</span>
+                    <button
+                      onClick={async () => {
+                        setEndingId(ev.id);
+                        setConfirmId(null);
+                        try { await onEndEarly(ev); } finally { setEndingId(null); }
+                      }}
+                      disabled={endingId === ev.id}
+                      className="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                    >
+                      {endingId === ev.id ? "Ending…" : "Confirm End"}
+                    </button>
+                    <button
+                      onClick={() => setConfirmId(null)}
+                      className="text-xs px-3 py-1.5 bg-secondary text-secondary-foreground rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setConfirmId(ev.id)}
+                    disabled={endingId === ev.id}
+                    className="text-xs px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+                  >
+                    ⏹ End Early
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 type View = "list" | "create" | { editing: AdminEvent };
@@ -560,8 +712,26 @@ export default function EventsPage() {
     load();
   };
 
-  // Split by status
-  const active  = events.filter((e) => e.status === "active");
+  const handleEndEarly = async (ev: AdminEvent) => {
+    const body: EventBody = {
+      title:       ev.title,
+      description: ev.description,
+      theme:       ev.theme,
+      status:      "ended",
+      startsAt:    ev.startsAt,
+      endsAt:      ev.endsAt,
+      inventory:   ev.inventory,
+      aiPrompt:    ev.aiPrompt,
+    };
+    await api.updateEvent(ev.id, body);
+    showToast("Event ended");
+    load();
+  };
+
+  // Split by status — liveNow = active + within the startsAt/endsAt window
+  const liveNow = events.filter(isLiveNow);
+  const liveNowIds = new Set(liveNow.map((e) => e.id));
+  const active  = events.filter((e) => e.status === "active" && !liveNowIds.has(e.id));
   const draft   = events.filter((e) => e.status === "draft");
   const ended   = events.filter((e) => e.status === "ended");
 
@@ -657,6 +827,14 @@ export default function EventsPage() {
               <div className="text-4xl mb-3">✦</div>
               <p className="text-sm">No events yet — create your first one!</p>
             </div>
+          )}
+
+          {!loading && (
+            <LiveNowSection
+              events={liveNow}
+              onEndEarly={handleEndEarly}
+              onEdit={(ev) => setView({ editing: ev })}
+            />
           )}
 
           {!loading && active.length > 0 && (
