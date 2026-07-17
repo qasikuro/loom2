@@ -61,16 +61,24 @@ const clerkProxyUrl  = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
 
 function IntentionStalenessGuard() {
   const { character, setCharacter } = useApp();
+  const clearedRef = useRef(false);
+
   useEffect(() => {
+    // Run whenever intentionDate becomes available (cache load or server load).
+    // clearedRef ensures we only fire the PUT once per app session even if the
+    // character object is replaced multiple times during hydration.
     if (!character.intention || !character.intentionDate) return;
+    if (clearedRef.current) return;
     const d = new Date();
     const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     if (character.intentionDate !== today) {
+      clearedRef.current = true;
       setCharacter({ ...character, intention: null, intentionDate: null });
+    } else {
+      // Intention is current — no clear needed; mark done so we don't re-check.
+      clearedRef.current = true;
     }
-  // Run once on mount (app open) — character ref is stable at that point
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [character.intentionDate]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
 }
 
