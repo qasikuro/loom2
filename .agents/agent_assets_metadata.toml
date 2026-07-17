@@ -161,3 +161,9 @@ id = "c5zQf5CBl_DDFDnZ6qegM"
 uri = "file://SKY_JOURNAL_TASK_OVERVIEW.md"
 type = "text"
 title = "Sky Journal — Task Overview & Roadmap"
+
+[[outputs]]
+id = "0qhUetA5JsxzpOlLmUfXn"
+uri = "file://exports/sky-journal-work-plan.zip"
+type = "unspecified"
+title = "Sky Journal — Remaining Work Plan"
