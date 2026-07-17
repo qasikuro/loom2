@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { fmtDate } from './profileConstants';
+import { shareOutfit } from '@/utils/shareContent';
 
 interface Props {
   outfit: Outfit | null;
@@ -154,6 +155,25 @@ export function OutfitDetailModal({
                       <MoodBadge mood={character.mood} />
                     </View>
                   )}
+
+                  <TouchableOpacity
+                    style={[s.actionBtn, {
+                      backgroundColor: `${colors.primary}08`,
+                      borderColor: `${colors.primary}40`,
+                      marginBottom: 4,
+                    }]}
+                    onPress={() => {
+                      shareOutfit({
+                        name:        outfit.name,
+                        tags:        outfit.tags ?? [],
+                        description: outfit.description ?? '',
+                        imageUri:    outfit.imageUri,
+                      }).catch(() => null);
+                    }}
+                  >
+                    <Icon name="share-2" size={14} color={colors.primary} />
+                    <Text style={[s.actionBtnText, { color: colors.primary }]}>Share outfit</Text>
+                  </TouchableOpacity>
 
                   <TouchableOpacity
                     style={[s.actionBtn, {

@@ -28,6 +28,7 @@ import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import type { PanelOverlay } from '@/context/AppContext';
 import { useTranslation } from 'react-i18next';
+import { shareStory } from '@/utils/shareContent';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -405,6 +406,11 @@ export default function StoryScreen() {
   const heroImgSrc = getPanelImageSource(firstPanel?.imageUri, firstPanel?.bgPreset);
   const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
 
+  function handleShare() {
+    const panels = story?.panels ?? post?.panels ?? [];
+    shareStory({ title, mood, authorName, panels }).catch(() => null);
+  }
+
   function handleWitness() {
     if (witnessed) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -644,6 +650,15 @@ export default function StoryScreen() {
 
         <View style={styles.actionRow}>
           <TouchableOpacity
+            style={[styles.shareIconBtn]}
+            onPress={handleShare}
+            activeOpacity={0.72}
+            accessibilityLabel="Share story"
+          >
+            <Icon name="share-2" size={16} color="rgba(200,184,232,0.75)" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: isSaved ? 'rgba(139,122,181,0.25)' : 'rgba(255,255,255,0.08)', borderColor: isSaved ? '#8B7AB5' : 'rgba(255,255,255,0.18)' }]}
             onPress={handleSave}
           >
@@ -801,7 +816,13 @@ const styles = StyleSheet.create({
   witnessedNum: { color: 'rgba(240,234,248,0.6)', fontSize: 14, fontFamily: 'Satoshi-Regular' },
   dotDivider: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(240,234,248,0.3)', marginHorizontal: 4 },
   bottomStickerIcon: { fontSize: 12, color: 'rgba(240,234,248,0.6)' },
-  actionRow: { flexDirection: 'row', gap: 8 },
+  actionRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  shareIconBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1,
