@@ -18,6 +18,11 @@ import {
 } from './CharacterAuraHeader';
 import { ATTRIBUTE_SUGGESTIONS, USERNAME_REGEX } from './profileConstants';
 
+function todayISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 interface Props {
   character: Character;
   setCharacter: (c: Character) => void;
@@ -49,6 +54,8 @@ export function ProfileHeaderSection({
 
   const [editingName,       setEditingName]       = useState(false);
   const [nameVal,           setNameVal]           = useState(character.name);
+  const [editingIntention,  setEditingIntention]  = useState(false);
+  const [intentionVal,      setIntentionVal]      = useState('');
   const [editingUsername,   setEditingUsername]   = useState(false);
   const [usernameVal,       setUsernameVal]       = useState('');
   const [usernameError,     setUsernameError]     = useState<string | null>(null);
@@ -214,17 +221,50 @@ export function ProfileHeaderSection({
           )}
           {usernameError && <Text style={[s.usernameError, { color: colors.destructive }]}>{usernameError}</Text>}
 
-          {constellation?.activeTitle && (
-            <TouchableOpacity
-              style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', gap: 4 }}
-              onPress={() => availableTitles.length > 1 && setShowTitlePicker(true)}
-              activeOpacity={availableTitles.length > 1 ? 0.7 : 1}
-              disabled={availableTitles.length <= 1}
-            >
+          {(character.activeTitle || constellation?.activeTitle) && (
+            <View style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <Text style={{ fontSize: 11, color: '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 }}>
-                ✦ {constellation.activeTitle}
+                ✦ {character.activeTitle ?? constellation!.activeTitle}
               </Text>
-              {availableTitles.length > 1 && <Icon name="chevron-down" size={9} color="rgba(200,168,75,0.55)" />}
+            </View>
+          )}
+
+          {/* Today's Intention */}
+          {editingIntention ? (
+            <View style={[s.intentionEditWrap, { borderColor: colors.primary, backgroundColor: 'rgba(255,255,255,0.07)' }]}>
+              <TextInput
+                style={[s.intentionInput, { color: '#FFFFFF' }]}
+                value={intentionVal}
+                onChangeText={v => setIntentionVal(v.slice(0, 80))}
+                placeholder="Set an intention for today…"
+                placeholderTextColor="rgba(200,184,232,0.38)"
+                autoFocus
+                returnKeyType="done"
+                maxLength={80}
+                onSubmitEditing={() => {
+                  setCharacter({ ...character, intention: intentionVal.trim() || null, intentionDate: intentionVal.trim() ? todayISO() : null });
+                  setEditingIntention(false);
+                }}
+                onBlur={() => {
+                  setCharacter({ ...character, intention: intentionVal.trim() || null, intentionDate: intentionVal.trim() ? todayISO() : null });
+                  setEditingIntention(false);
+                }}
+              />
+              <Text style={s.intentionCharCount}>{80 - intentionVal.length}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+              onPress={() => { setIntentionVal(character.intentionDate === todayISO() ? (character.intention ?? '') : ''); setEditingIntention(true); }}
+              activeOpacity={0.75}
+            >
+              {character.intentionDate === todayISO() && character.intention ? (
+                <Text style={s.intentionText} numberOfLines={1}>
+                  ◌ {character.intention}
+                </Text>
+              ) : (
+                <Text style={s.intentionPlaceholder}>◌ Set an intention for today…</Text>
+              )}
             </TouchableOpacity>
           )}
 
@@ -373,4 +413,9 @@ const s = StyleSheet.create({
   suggChips:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   suggChip:         { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.18)' },
   suggText:         { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.5)' },
+  intentionEditWrap:{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, marginTop: 5 },
+  intentionInput:   { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
+  intentionCharCount:{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.35)', marginLeft: 2 },
+  intentionText:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.65)', flex: 1 },
+  intentionPlaceholder:{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.28)' },
 });

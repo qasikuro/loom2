@@ -34,6 +34,10 @@ export const characterTable = pgTable("character", {
   dreamersGuided:       integer("dreamers_guided").notNull().default(0),
   // ── Onboarding ───────────────────────────────────────────────────────────
   constellationType:    text("constellation_type"),   // 'wanderer' | 'keeper' | 'dreamer'
+  // ── Title & Intention ─────────────────────────────────────────────────────
+  activeTitle:          text("active_title"),          // user's chosen displayed title
+  intention:            text("intention"),             // today's intention (max 80 chars)
+  intentionDate:        text("intention_date"),        // ISO date string (YYYY-MM-DD)
   updatedAt:            timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

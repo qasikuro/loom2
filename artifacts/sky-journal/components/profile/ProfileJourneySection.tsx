@@ -1,7 +1,8 @@
 import { Icon } from '@/components/Icon';
 import { ConstellationMap, type ConstellationState } from '@/components/ConstellationMap';
-import type { Story } from '@/context/AppContext';
+import type { Story, JournalEntry, Character } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { TitlesGallerySection } from './TitlesGallerySection';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,21 +15,25 @@ import { getCover } from './profileConstants';
 interface Props {
   constellation: ConstellationState | null;
   stories: Story[];
+  journalEntries: JournalEntry[];
+  character: Character;
   animTrigger: number;
   setSelectedStarKey: (k: string | null) => void;
   setShowTitlePicker: (v: boolean) => void;
   availableTitles: string[];
+  onSetActiveTitle: (title: string | null) => void;
 }
 
 export function ProfileJourneySection({
-  constellation, stories, animTrigger,
-  setSelectedStarKey, setShowTitlePicker, availableTitles,
+  constellation, stories, journalEntries, character, animTrigger,
+  setSelectedStarKey, setShowTitlePicker, availableTitles, onSetActiveTitle,
 }: Props) {
   const colors = useColors();
 
   return (
     <>
       {/* ── My Constellation ─── */}
+
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -69,6 +74,15 @@ export function ProfileJourneySection({
           </View>
         )}
       </View>
+
+      {/* ── Titles gallery ─── */}
+      <TitlesGallerySection
+        character={character}
+        stories={stories}
+        journalEntries={journalEntries}
+        constellation={constellation}
+        onSetActiveTitle={onSetActiveTitle}
+      />
 
       {/* ── My Stories ─── */}
       <View style={s.section}>

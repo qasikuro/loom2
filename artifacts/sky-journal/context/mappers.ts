@@ -66,6 +66,9 @@ export interface Character {
   guideTopics?:          string[];
   guideAvailability?:    GuideAvailability | null;
   constellationType?:    string | null;
+  activeTitle?:          string | null;
+  intention?:            string | null;
+  intentionDate?:        string | null;
 }
 
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
@@ -160,6 +163,9 @@ export interface RawCharacterResponse {
   guideTopics?:          unknown;
   guideAvailability?:    unknown;
   constellationType?:    string | null;
+  activeTitle?:          string | null;
+  intention?:            string | null;
+  intentionDate?:        string | null;
 }
 
 export interface RawJournalEntryResponse {
@@ -304,6 +310,9 @@ export function toAppCharacter(raw: RawCharacterResponse, apiBase?: string): Cha
     guideTopics:          Array.isArray(raw.guideTopics) ? (raw.guideTopics as string[]) : [],
     guideAvailability:    (raw.guideAvailability as GuideAvailability | null | undefined) ?? null,
     constellationType:    (raw.constellationType ?? null) as string | null,
+    activeTitle:          raw.activeTitle      ?? null,
+    intention:            raw.intention        ?? null,
+    intentionDate:        raw.intentionDate    ?? null,
   };
 }
 

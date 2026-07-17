@@ -45,7 +45,7 @@ export default function CharacterScreen() {
   const { user }    = useUser();
 
   const {
-    character, setCharacter, outfits, stories,
+    character, setCharacter, outfits, stories, journalEntries,
     activeOutfitId, setActiveOutfitId, deleteOutfit,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
     isLoading, apiOnline, storiesLoadError, outfitsLoadError, reloadData,
@@ -103,6 +103,22 @@ export default function CharacterScreen() {
     } catch { /* skip */ }
     setSavingTitle(false); setShowTitlePicker(false);
   }, [reloadConstellation]);
+
+  const handleSetActiveTitle = useCallback((title: string | null) => {
+    setCharacter({ ...character, activeTitle: title });
+  }, [character, setCharacter]);
+
+  // Clear stale intention on tab focus (if date has changed since it was set)
+  useFocusEffect(useCallback(() => {
+    if (character.intention && character.intentionDate) {
+      const d = new Date();
+      const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (character.intentionDate !== today) {
+        setCharacter({ ...character, intention: null, intentionDate: null });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [character.intentionDate, character.intention]));
 
   // ── Settings drawer ────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -257,9 +273,10 @@ export default function CharacterScreen() {
           )}
           {profileTab === 'journey' && (!isLoading || character.name !== 'Sky Child') && (
             <ProfileJourneySection
-              constellation={constellation} stories={stories} animTrigger={animTrigger}
+              constellation={constellation} stories={stories} journalEntries={journalEntries}
+              character={character} animTrigger={animTrigger}
               setSelectedStarKey={setSelectedStarKey} setShowTitlePicker={setShowTitlePicker}
-              availableTitles={availableTitles}
+              availableTitles={availableTitles} onSetActiveTitle={handleSetActiveTitle}
             />
           )}
           {profileTab === 'style' && (!isLoading || character.name !== 'Sky Child') && (
