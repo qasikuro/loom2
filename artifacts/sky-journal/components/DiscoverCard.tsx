@@ -8,6 +8,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { STICKERS, type StickerType } from '@/components/VibeStickerPicker';
 import { useColors } from '@/hooks/useColors';
 import type { DiscoverPost } from '@/context/AppContext';
+import { extractPullQuote } from '@/utils/storyUtils';
 
 const MOOD_GRADIENTS: Record<string, [string, string, string]> = {
   Hopeful:     ['#1C1A50', '#2A2870', '#221E5C'],
@@ -49,9 +50,15 @@ export function DiscoverCard({
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
 
+  // Pull quote: extracted client-side from panel narrations; fallback to server snippet
+  const pullQuote = extractPullQuote(post.panels ?? []) || post.storySnippet || '';
+
+  // Hero image: first panel's imageUri only; no imageUri → mood gradient
+  const heroPanelImage = post.panels?.[0]?.imageUri ?? null;
+
   // Combine server count with locally-sent stickers so the badge
   // reflects the optimistic update and the animation fires immediately.
-  const localExtra       = stickerCounts.reduce((sum, s) => sum + s.count, 0);
+  const localExtra          = stickerCounts.reduce((sum, s) => sum + s.count, 0);
   const displayStickerCount = (post.stickerCount ?? 0) + localExtra;
 
   // Bounce the ✦ badge whenever the combined stickerCount increases
@@ -62,10 +69,7 @@ export function DiscoverCard({
       prevStickerCount.current = displayStickerCount;
       stickerBounce.setValue(0.7);
       Animated.spring(stickerBounce, {
-        toValue: 1,
-        friction: 4,
-        tension: 160,
-        useNativeDriver: true,
+        toValue: 1, friction: 4, tension: 160, useNativeDriver: true,
       }).start();
     } else {
       prevStickerCount.current = displayStickerCount;
@@ -122,11 +126,11 @@ export function DiscoverCard({
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
       >
-        {/* ── Image hero area ── */}
+        {/* ── Full-bleed hero image (16:9) ── */}
         <View style={styles.imageWrap}>
-          {post.imageUri ? (
+          {heroPanelImage ? (
             <Image
-              source={{ uri: post.imageUri }}
+              source={{ uri: heroPanelImage }}
               style={styles.image}
               contentFit="cover"
               cachePolicy="memory-disk"
@@ -151,67 +155,66 @@ export function DiscoverCard({
             </LinearGradient>
           )}
 
-          {/* Top gradient scrim */}
+          {/* Gradient scrim — top */}
           <LinearGradient
-            colors={['rgba(0,0,0,0.58)', 'rgba(0,0,0,0.18)', 'transparent']}
-            style={[StyleSheet.absoluteFill, { height: '55%' }]}
-            pointerEvents="none"
-          />
-          {/* Bottom gradient scrim */}
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.25)', 'rgba(0,0,0,0.72)']}
-            style={[StyleSheet.absoluteFill, { top: '45%' }]}
+            colors={['rgba(0,0,0,0.42)', 'rgba(0,0,0,0.08)', 'transparent']}
+            style={[StyleSheet.absoluteFill, { height: '45%' }]}
             pointerEvents="none"
           />
 
-          {/* Author row */}
-          <View style={styles.imageHeader}>
-            <TouchableOpacity
-              style={styles.avatarRow}
-              onPress={onAuthorPress}
-              activeOpacity={onAuthorPress ? 0.75 : 1}
-              disabled={!onAuthorPress}
-            >
-              <View style={styles.avatar}>
-                {post.authorAvatarUri ? (
-                  <Image
-                    source={{ uri: post.authorAvatarUri }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="cover"
-                    cachePolicy="memory-disk"
-                  />
-                ) : (
-                  <Text style={styles.avatarText}>{initial}</Text>
-                )}
-              </View>
-              <View style={styles.authorMeta}>
-                <Text style={styles.authorName}>{post.authorName}</Text>
-                {!!post.authorTitle && (
-                  <Text style={styles.authorTitle}>{post.authorTitle}</Text>
-                )}
-                <Text style={styles.authorSub}>
-                  {post.authorHandle ? `${post.authorHandle} · ` : ''}{post.timeAgo}
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <View style={styles.chapterBadge}>
-              <Text style={styles.chapterText}>Ch. {post.chapterNumber}</Text>
+          {/* Author avatar + name overlay at top-left of image */}
+          <TouchableOpacity
+            style={styles.imageAuthorRow}
+            onPress={onAuthorPress}
+            activeOpacity={onAuthorPress ? 0.75 : 1}
+            disabled={!onAuthorPress}
+          >
+            <View style={styles.avatar}>
+              {post.authorAvatarUri ? (
+                <Image
+                  source={{ uri: post.authorAvatarUri }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{initial}</Text>
+              )}
             </View>
+            <Text style={styles.imageAuthorName} numberOfLines={1}>{post.authorName}</Text>
+          </TouchableOpacity>
+
+          {/* Chapter badge at top-right */}
+          <View style={styles.chapterBadge}>
+            <Text style={styles.chapterText}>Ch. {post.chapterNumber}</Text>
+          </View>
+        </View>
+
+        {/* ── Below-image content block ── */}
+        <View style={styles.contentBlock}>
+          {/* Title */}
+          <Text style={styles.chapterTitle} numberOfLines={2}>{post.chapterTitle}</Text>
+
+          {/* @handle row */}
+          <Text style={styles.handleText} numberOfLines={1}>
+            {post.authorHandle || post.authorName}
+            {!!post.authorTitle && <Text style={styles.titleBadge}> · {post.authorTitle}</Text>}
+          </Text>
+
+          {/* Mood badge */}
+          <View style={styles.moodRow}>
+            <MoodBadge mood={post.vibe} size="sm" />
           </View>
 
-          {/* Title + snippet */}
-          <View style={styles.imageFooter}>
-            <Text style={styles.titleOverlay} numberOfLines={2}>{post.chapterTitle}</Text>
-            {!!post.storySnippet && (
-              <Text style={styles.snippetOverlay} numberOfLines={1}>{post.storySnippet}</Text>
-            )}
-          </View>
+          {/* Pull quote */}
+          {!!pullQuote && (
+            <Text style={styles.pullQuote} numberOfLines={2}>{pullQuote}</Text>
+          )}
         </View>
 
         {/* ── Action bar ── */}
         <View style={styles.actionBar}>
-          {/* Left: stats + sticker counts */}
+          {/* Left: witness count + sticker counts */}
           <View style={styles.statsGroup}>
             <View style={styles.statPill}>
               <Icon name="eye" size={10} color="rgba(200,184,232,0.55)" />
@@ -227,7 +230,6 @@ export function DiscoverCard({
                 <Text style={styles.statText}>{displayStickerCount}</Text>
               </Animated.View>
             )}
-            <MoodBadge mood={post.vibe} size="sm" />
             {topStickers.length > 0 && (
               <View style={styles.stickerCountRow}>
                 {topStickers.map(sc => {
@@ -262,7 +264,6 @@ export function DiscoverCard({
               </TouchableOpacity>
             )}
 
-            {/* Sticker button — picker is rendered by parent to avoid overflow:hidden clipping */}
             {onStickerToggle && (
               <TouchableOpacity
                 onPress={onStickerToggle}
@@ -323,36 +324,33 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
 
+  // ── Hero image ──
   imageWrap: { position: 'relative' },
-  image:     { width: '100%', aspectRatio: 4 / 3 },
+  image:     { width: '100%', aspectRatio: 16 / 9 },
 
-  imageHeader: {
+  imageAuthorRow: {
     position: 'absolute',
-    top: 0, left: 0, right: 0,
+    top: 10, left: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingTop: 12,
-    paddingBottom: 8,
-    gap: 8,
+    gap: 7,
   },
-
-  avatarRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
   avatar: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 30, height: 30, borderRadius: 15,
     backgroundColor: 'rgba(107,91,149,0.5)',
     borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden',
   },
-  avatarText:   { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#E8E0FF' },
-  authorMeta:   { flex: 1, gap: 1 },
-  authorName:   { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#F0ECFF', letterSpacing: 0.1 },
-  authorTitle:  { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.55)', letterSpacing: 0.7, fontStyle: 'italic', marginTop: 1 },
-  authorSub:    { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(220,210,255,0.65)' },
+  avatarText:       { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#E8E0FF' },
+  imageAuthorName:  {
+    fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#F0ECFF',
+    textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
+  },
 
   chapterBadge: {
+    position: 'absolute',
+    top: 10, right: 10,
     backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 4,
@@ -360,37 +358,51 @@ const styles = StyleSheet.create({
   },
   chapterText: { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.9)', letterSpacing: 0.3 },
 
-  imageFooter: {
-    position: 'absolute',
-    bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 13,
-    paddingBottom: 13,
-    paddingTop: 24,
-    gap: 3,
+  // ── Below-image content block ──
+  contentBlock: {
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+    gap: 5,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(107,91,149,0.18)',
   },
-  titleOverlay: {
-    fontSize: 16,
+  chapterTitle: {
+    fontSize: 17,
     fontFamily: 'Satoshi-Bold',
-    color: '#F8F4FF',
+    color: '#F0EAFF',
     letterSpacing: -0.3,
-    lineHeight: 21,
+    lineHeight: 22,
   },
-  snippetOverlay: {
-    fontSize: 11,
+  handleText: {
+    fontSize: 12,
     fontFamily: 'Satoshi-Regular',
-    color: 'rgba(210,200,255,0.65)',
+    color: 'rgba(200,184,232,0.65)',
+  },
+  titleBadge: {
     fontStyle: 'italic',
-    lineHeight: 15,
+    color: 'rgba(200,184,232,0.45)',
+  },
+  moodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pullQuote: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(210,198,255,0.70)',
+    fontStyle: 'italic',
+    lineHeight: 17,
+    marginTop: 2,
   },
 
+  // ── Action bar ──
   actionBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderTopWidth: 0.5,
-    borderTopColor: 'rgba(107,91,149,0.2)',
+    paddingVertical: 9,
     backgroundColor: 'rgba(255,255,255,0.025)',
   },
 

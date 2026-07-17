@@ -4,12 +4,13 @@ import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
 import {
   Animated,
   Easing,
+  PanResponder,
   Platform,
   ScrollView,
   StyleSheet,
@@ -312,7 +313,17 @@ export default function StoryScreen() {
   const [savedOffset,      setSavedOffset]      = useState(0);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [activeMilestone,  setActiveMilestone]  = useState<MilestoneInfo | null>(null);
+  const [continuePost,     setContinuePost]     = useState<typeof discoverPosts[number] | null>(null);
+  const [continueDismissed, setContinueDismissed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Continue Reading card slide-in animation
+  const continueSlideY   = useRef(new Animated.Value(180)).current;
+  const continueOpacity  = useRef(new Animated.Value(0)).current;
+  const continueDragY    = useRef(new Animated.Value(0)).current;
+  const continueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const endReachedRef    = useRef(false);
 
   // Witness button bounce animation
   const witnessScale = useRef(new Animated.Value(1)).current;
@@ -406,6 +417,82 @@ export default function StoryScreen() {
   const heroImgSrc = getPanelImageSource(firstPanel?.imageUri, firstPanel?.bgPreset);
   const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
 
+  // ── Continue Reading logic ────────────────────────────────────────────────────
+
+  // Swipe-down pan responder for the Continue card
+  const continuePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 6 && gs.dy > 0,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) continueDragY.setValue(gs.dy);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dy > 50 || gs.vy > 0.6) {
+          // Flicked or dragged far enough — dismiss
+          if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
+          setContinueDismissed(true);
+          Animated.parallel([
+            Animated.timing(continueSlideY,  { toValue: 220, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+            Animated.timing(continueOpacity, { toValue: 0,   duration: 180, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+            Animated.timing(continueDragY,   { toValue: 0,   duration: 0, useNativeDriver: true }),
+          ]).start(() => setContinuePost(null));
+        } else {
+          // Snap back
+          Animated.spring(continueDragY, { toValue: 0, tension: 180, friction: 12, useNativeDriver: true }).start();
+        }
+      },
+    }),
+  ).current;
+
+  function showContinueCard() {
+    if (endReachedRef.current || continueDismissed) return;
+    endReachedRef.current = true;
+
+    // Find next mood-matched story from discover feed (exclude current)
+    const candidates = discoverPosts.filter(p => p.id !== id && (p.mood === mood || p.vibe === mood));
+    const fallback   = discoverPosts.filter(p => p.id !== id);
+    const next       = candidates[0] ?? fallback[0] ?? null;
+    if (!next) return;
+
+    setContinuePost(next);
+    continueTimerRef.current = setTimeout(() => {
+      continueDragY.setValue(0);
+      Animated.parallel([
+        Animated.spring(continueSlideY,  { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }),
+        Animated.timing(continueOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start();
+      // Auto-dismiss after 10s of no interaction
+      autoDismissTimer.current = setTimeout(dismissContinueCard, 10_000);
+    }, 1500);
+  }
+
+  function dismissContinueCard() {
+    if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
+    setContinueDismissed(true);
+    Animated.parallel([
+      Animated.timing(continueSlideY,  { toValue: 180, duration: 260, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(continueOpacity, { toValue: 0,   duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+    ]).start(() => setContinuePost(null));
+  }
+
+  // End-of-story detection: fires when scroll settles at the bottom (tight threshold)
+  const handleScrollEnd = useCallback((e: { nativeEvent: { contentOffset: { y: number }; layoutMeasurement: { height: number }; contentSize: { height: number } } }) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    if (distanceFromBottom < 120 && !endReachedRef.current && !continueDismissed) {
+      showContinueCard();
+    }
+  }, [id, mood, discoverPosts, continueDismissed]);
+
+  // Clear timers on unmount so card doesn't appear after navigating away
+  useEffect(() => {
+    return () => {
+      if (continueTimerRef.current) clearTimeout(continueTimerRef.current);
+      if (autoDismissTimer.current)  clearTimeout(autoDismissTimer.current);
+    };
+  }, []);
+
   function handleShare() {
     const panels = story?.panels ?? post?.panels ?? [];
     shareStory({ title, mood, authorName, panels }).catch(() => null);
@@ -471,6 +558,8 @@ export default function StoryScreen() {
         ref={scrollRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomPad + 90 }}
+        onMomentumScrollEnd={handleScrollEnd}
+        onScrollEndDrag={handleScrollEnd}
       >
         {/* ── Hero cover ─────────────────────────────────── */}
         <View style={[styles.hero, { height: topPad + 300 }]}>
@@ -690,6 +779,79 @@ export default function StoryScreen() {
         milestone={activeMilestone}
         onDismiss={handleMilestoneDismiss}
       />
+
+      {/* ── Continue Reading slide-in card ─────────────── */}
+      {!!continuePost && (
+        <Animated.View
+          style={[
+            styles.continueWrap,
+            {
+              bottom: bottomPad + 88,
+              transform: [
+                { translateY: Animated.add(continueSlideY, continueDragY) },
+              ],
+              opacity: continueOpacity,
+            },
+          ]}
+          pointerEvents="box-none"
+        >
+          <Animated.View
+            style={styles.continueCard}
+            {...continuePanResponder.panHandlers}
+          >
+            {/* Dismiss button */}
+            <TouchableOpacity
+              style={styles.continueDismissBtn}
+              onPress={dismissContinueCard}
+              hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              activeOpacity={0.75}
+            >
+              <Icon name="x" size={13} color="rgba(200,184,232,0.6)" />
+            </TouchableOpacity>
+
+            <Text style={styles.continueLabel}>Continue Reading</Text>
+
+            <TouchableOpacity
+              style={styles.continueInner}
+              onPress={() => {
+                dismissContinueCard();
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push({ pathname: '/story/[id]', params: { id: continuePost.id, source: 'discover' } });
+              }}
+              activeOpacity={0.82}
+            >
+              {/* Thumbnail */}
+              <View style={styles.continueThumbnail}>
+                {continuePost.imageUri ? (
+                  <Image
+                    source={{ uri: continuePost.imageUri }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                ) : (
+                  <LinearGradient
+                    colors={getGradient(continuePost.mood ?? continuePost.vibe ?? 'Peaceful')}
+                    style={StyleSheet.absoluteFill}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  />
+                )}
+              </View>
+
+              {/* Text info */}
+              <View style={styles.continueMeta}>
+                <Text style={styles.continueTitle} numberOfLines={2}>{continuePost.chapterTitle}</Text>
+                <Text style={styles.continueAuthor} numberOfLines={1}>
+                  {continuePost.authorHandle ?? continuePost.authorName}
+                </Text>
+              </View>
+
+              <Icon name="chevron-right" size={16} color="rgba(200,184,232,0.5)" />
+            </TouchableOpacity>
+          </Animated.View>
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -832,4 +994,65 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, borderWidth: 1,
   },
   actionBtnText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+
+  continueWrap: {
+    position: 'absolute',
+    left: 16, right: 16,
+  },
+  continueCard: {
+    backgroundColor: 'rgba(22,18,40,0.97)',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(139,122,181,0.35)',
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 14,
+    gap: 10,
+  },
+  continueDismissBtn: {
+    position: 'absolute',
+    top: 10, right: 12,
+    width: 26, height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  continueLabel: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Bold',
+    color: 'rgba(200,184,232,0.45)',
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+  },
+  continueInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  continueThumbnail: {
+    width: 52, height: 52,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#1A1630',
+  },
+  continueMeta: {
+    flex: 1,
+    gap: 3,
+  },
+  continueTitle: {
+    fontSize: 14,
+    fontFamily: 'Satoshi-Bold',
+    color: '#F0EAFF',
+    lineHeight: 18,
+  },
+  continueAuthor: {
+    fontSize: 11,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.55)',
+  },
 });
