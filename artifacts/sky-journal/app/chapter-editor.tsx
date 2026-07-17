@@ -146,7 +146,7 @@ export default function ChapterEditorScreen() {
 
   const currentMood = MOODS.find(m => m.label === mood);
 
-  const { editId } = useLocalSearchParams<{ editId?: string }>();
+  const { editId, eventPrompt, eventMood } = useLocalSearchParams<{ editId?: string; eventPrompt?: string; eventMood?: string }>();
   const prevEditIdRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -171,6 +171,17 @@ export default function ChapterEditorScreen() {
       prevEditIdRef.current = null;
     }
   }, [editId, stories]);
+
+  // Pre-fill from event params (only for new stories, not edits)
+  useEffect(() => {
+    if (editId) return;
+    if (eventPrompt) setDesc(String(eventPrompt));
+    if (eventMood) {
+      const m = MOODS.find(x => x.label === eventMood);
+      if (m) setMood(m.label);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Draft persistence ─────────────────────────────────────────────────────
   const DRAFT_KEY = 'story_draft_v2';

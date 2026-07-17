@@ -11,7 +11,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
@@ -54,6 +54,9 @@ export default function CreateScreen() {
   const insets  = useSafeAreaInsets();
   const botPad  = Platform.OS === 'web' ? 32 : insets.bottom + 16;
 
+  const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
+  const hasEventContext = !!eventPrompt;
+
   const sheetY    = useRef(new Animated.Value(SHEET_H)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
 
@@ -83,7 +86,11 @@ export default function CreateScreen() {
       Animated.timing(sheetY,    { toValue: SHEET_H, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
       Animated.timing(bgOpacity, { toValue: 0,        duration: 160,                                 useNativeDriver: true }),
     ]).start(() => {
-      router.push(route as any);
+      if (hasEventContext) {
+        router.push({ pathname: route as any, params: { eventPrompt, eventMood } });
+      } else {
+        router.push(route as any);
+      }
     });
   }
 
@@ -113,7 +120,14 @@ export default function CreateScreen() {
             <Icon name="x" size={16} color="rgba(200,185,255,0.50)" />
           </TouchableOpacity>
         </View>
-        <Text style={s.sheetSub}>What kind of story today?</Text>
+        {hasEventContext ? (
+          <View style={s.eventCtx}>
+            <Text style={s.eventCtxLabel}>✦  Event prompt</Text>
+            <Text style={s.eventCtxText} numberOfLines={3}>{eventPrompt}</Text>
+          </View>
+        ) : (
+          <Text style={s.sheetSub}>What kind of story today?</Text>
+        )}
 
         {/* Mode tiles */}
         <View style={s.tiles}>
@@ -211,6 +225,21 @@ const s = StyleSheet.create({
     fontFamily: 'Satoshi-Regular',
     color:      'rgba(200,185,255,0.40)',
     marginBottom: 18,
+  },
+
+  eventCtx: {
+    backgroundColor: 'rgba(168,136,248,0.09)',
+    borderWidth: 1, borderColor: 'rgba(168,136,248,0.20)',
+    borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10,
+    marginBottom: 16,
+  },
+  eventCtxLabel: {
+    fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.6,
+    textTransform: 'uppercase', color: 'rgba(168,136,248,0.65)', marginBottom: 4,
+  },
+  eventCtxText: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
+    color: 'rgba(220,210,255,0.72)', lineHeight: 18,
   },
 
   tiles: { gap: 10 },

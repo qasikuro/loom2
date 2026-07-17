@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
@@ -49,10 +49,24 @@ export default function VibePostScreen() {
   const botPad = Platform.OS === 'web' ? 24 : insets.bottom + 16;
 
   const { addStory } = useApp();
+  const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
 
   const [step,          setStep]           = useState(STEP_MOOD);
   const [mood,          setMood]           = useState<MoodId | null>(null);
   const [text,          setText]           = useState('');
+
+  // Pre-fill from event params — skip to text step if mood is pre-selected
+  useEffect(() => {
+    if (eventMood) {
+      const m = MOODS.find(x => x.id === eventMood);
+      if (m) {
+        setMood(m.id);
+        setStep(STEP_TEXT);
+      }
+    }
+    if (eventPrompt) setText(String(eventPrompt));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isPublic,      setIsPublic]       = useState(true);
   const [posting,       setPosting]        = useState(false);
   const [error,         setError]          = useState<string | null>(null);

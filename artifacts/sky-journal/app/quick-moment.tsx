@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
@@ -54,11 +54,22 @@ export default function QuickMomentScreen() {
   const botPad  = Platform.OS === 'web' ? 24 : insets.bottom + 16;
 
   const { addStory } = useApp();
+  const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
 
   const [step,          setStep]          = useState(STEP_IMAGE);
   const [imageUri,      setImageUri]      = useState<string | null>(null);
   const [caption,       setCaption]       = useState('');
   const [mood,          setMood]          = useState<MoodId>('Dreamy');
+
+  // Pre-fill from event params
+  useEffect(() => {
+    if (eventPrompt) setCaption(String(eventPrompt));
+    if (eventMood) {
+      const m = MOODS.find(x => x.id === eventMood);
+      if (m) setMood(m.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [isPublic,      setIsPublic]      = useState(true);
   const [uploading,     setUploading]     = useState(false);
   const [posting,       setPosting]       = useState(false);

@@ -35,6 +35,7 @@ interface ActiveEvent {
   theme: string; status: string;
   startsAt: string | null; endsAt: string | null;
   inventory: EventInventoryItem[];
+  aiPrompt: string;
 }
 const EVENT_THEME: Record<string, { color: string; bgStart: string; bgEnd: string; icon: string }> = {
   spring:  { color: '#F4A0C0', bgStart: 'rgba(244,160,192,0.16)', bgEnd: 'rgba(244,160,192,0.04)', icon: '🌸' },
@@ -575,14 +576,26 @@ function eventCountdown(endsAt: string | null): { label: string; dateStr: string
   if (!endsAt) return null;
   const ms = new Date(endsAt).getTime() - Date.now();
   if (ms <= 0) return null;
-  const d = Math.ceil(ms / 86400000);
-  const label = d === 1 ? '1 day left' : `${d} days left`;
+  const totalHours = Math.floor(ms / 3600000);
+  const days  = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  let label: string;
+  if (days === 0) {
+    label = totalHours <= 1 ? '1 hour left' : `${totalHours}h left`;
+  } else if (hours === 0) {
+    label = days === 1 ? '1 day left' : `${days} days left`;
+  } else {
+    label = `${days}d ${hours}h left`;
+  }
   const dateStr = new Date(endsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   return { label, dateStr };
 }
 
 // ─── Event Detail Sheet ───────────────────────────────────────────────────────
-function EventDetailSheet({ event, visible, onClose }: { event: ActiveEvent; visible: boolean; onClose: () => void }) {
+function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
+  event: ActiveEvent; visible: boolean; onClose: () => void;
+  onCreateStory?: (prompt: string, mood: string) => void;
+}) {
   const insets = useSafeAreaInsets();
   const slideY = useRef(new Animated.Value(600)).current;
   const th     = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
@@ -752,12 +765,11 @@ function EventDetailSheet({ event, visible, onClose }: { event: ActiveEvent; vis
                           const color  = REWARD_COLOR[item.type]  ?? '#C8B8E8';
                           const bg     = REWARD_BG[item.type]     ?? 'rgba(200,184,232,0.10)';
                           const border = REWARD_BORDER[item.type] ?? 'rgba(200,184,232,0.20)';
+                          const label  = item.type === 'stars' ? 'Stars' : item.type === 'aura' ? 'Aura' : 'Shards';
                           return (
                             <View key={i} style={[ev.currChip, { backgroundColor: bg, borderColor: border }]}>
                               <Text style={ev.currChipEmoji}>{ITEM_ICONS[item.type] ?? '✦'}</Text>
-                              <Text style={[ev.currChipNum, { color }]}>
-                                {item.amount != null ? `+${item.amount}` : ''} {item.type === 'stars' ? 'Stars' : item.type === 'aura' ? 'Aura' : 'Shards'}
-                              </Text>
+                              <Text style={[ev.currChipNum, { color }]}>{label}</Text>
                             </View>
                           );
                         })}
@@ -767,6 +779,22 @@ function EventDetailSheet({ event, visible, onClose }: { event: ActiveEvent; vis
                 </>
               );
             })()}
+
+            {/* Create a story CTA */}
+            {(event.aiPrompt || event.description) && (
+              <TouchableOpacity
+                style={[ev.ctaBtn, { backgroundColor: `${th.color}18`, borderColor: `${th.color}38` }]}
+                onPress={() => {
+                  onClose();
+                  const mood = THEME_TO_MOOD[event.theme] ?? 'Dreamy';
+                  onCreateStory?.(event.aiPrompt || event.description, mood);
+                }}
+                activeOpacity={0.84}
+              >
+                <Icon name="book-open" size={15} color={th.color} />
+                <Text style={[ev.ctaBtnTxt, { color: th.color }]}>Create a story for this event  →</Text>
+              </TouchableOpacity>
+            )}
 
             {/* Admin-grant note */}
             <View style={ev.sheetNote}>
@@ -781,61 +809,78 @@ function EventDetailSheet({ event, visible, onClose }: { event: ActiveEvent; vis
   );
 }
 
+// ─── Theme → Mood mapping ─────────────────────────────────────────────────────
+const THEME_TO_MOOD: Record<string, string> = {
+  spring:  'Soft',
+  summer:  'Hopeful',
+  autumn:  'Romantic',
+  winter:  'Peaceful',
+  special: 'Dreamy',
+};
+
 // ─── Event Banner (tappable) ──────────────────────────────────────────────────
-function EventBanner({ event, onPress }: { event: ActiveEvent; onPress: () => void }) {
+function EventBanner({ event, onPress, onDismiss }: { event: ActiveEvent; onPress: () => void; onDismiss: () => void }) {
   const th = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
   const cd = eventCountdown(event.endsAt);
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.82}
-      style={[ev.card, { borderColor: `${th.color}28` }]}
-    >
+    <View style={[ev.card, { borderColor: `${th.color}28` }]}>
       <LinearGradient
         colors={[th.bgStart, th.bgEnd, 'transparent']}
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-      {/* Eyebrow */}
-      <View style={ev.eyebrowRow}>
-        <Text style={ev.themeIcon}>{th.icon}</Text>
-        <Text style={[ev.eyebrow, { color: th.color }]}>EVENT</Text>
-        {cd && (
-          <View style={[ev.pill, { backgroundColor: `${th.color}1E`, marginLeft: 'auto' as any }]}>
-            <Text style={[ev.pillTxt, { color: th.color }]}>{cd.label}</Text>
-          </View>
-        )}
-        <Icon name="chevron-right" size={12} color={`${th.color}80`} />
-      </View>
+      {/* Dismiss button */}
+      <TouchableOpacity
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onDismiss(); }}
+        style={ev.dismissBtn}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Icon name="x" size={11} color={`${th.color}80`} />
+      </TouchableOpacity>
 
-      {/* Title */}
-      <Text style={ev.title}>{event.title}</Text>
-
-      {/* Description */}
-      {!!event.description && (
-        <Text style={ev.desc} numberOfLines={2}>{event.description}</Text>
-      )}
-
-      {/* Reward chips (up to 4) */}
-      {event.inventory.length > 0 && (
-        <View style={ev.chips}>
-          {event.inventory.slice(0, 4).map((item, i) => (
-            <View key={i} style={[ev.chip, { backgroundColor: `${th.color}16` }]}>
-              <Text style={ev.chipIcon}>{ITEM_ICONS[item.type] ?? '🎁'}</Text>
-              <Text style={[ev.chipTxt, { color: th.color }]}>{item.label}</Text>
-            </View>
-          ))}
-          {event.inventory.length > 4 && (
-            <View style={[ev.chip, { backgroundColor: `${th.color}0E` }]}>
-              <Text style={[ev.chipTxt, { color: th.color, opacity: 0.60 }]}>
-                +{event.inventory.length - 4} more  →
-              </Text>
+      {/* Tappable content area */}
+      <TouchableOpacity onPress={onPress} activeOpacity={0.82}>
+        {/* Eyebrow */}
+        <View style={ev.eyebrowRow}>
+          <Text style={ev.themeIcon}>{th.icon}</Text>
+          <Text style={[ev.eyebrow, { color: th.color }]}>EVENT</Text>
+          {cd && (
+            <View style={[ev.pill, { backgroundColor: `${th.color}1E`, marginLeft: 'auto' as any }]}>
+              <Text style={[ev.pillTxt, { color: th.color }]}>{cd.label}</Text>
             </View>
           )}
+          <Icon name="chevron-right" size={12} color={`${th.color}80`} />
         </View>
-      )}
-    </TouchableOpacity>
+
+        {/* Title */}
+        <Text style={ev.title}>{event.title}</Text>
+
+        {/* Description */}
+        {!!event.description && (
+          <Text style={ev.desc} numberOfLines={2}>{event.description}</Text>
+        )}
+
+        {/* Reward chips (up to 4) */}
+        {event.inventory.length > 0 && (
+          <View style={ev.chips}>
+            {event.inventory.slice(0, 4).map((item, i) => (
+              <View key={i} style={[ev.chip, { backgroundColor: `${th.color}16` }]}>
+                <Text style={ev.chipIcon}>{ITEM_ICONS[item.type] ?? '🎁'}</Text>
+                <Text style={[ev.chipTxt, { color: th.color }]}>{item.label}</Text>
+              </View>
+            ))}
+            {event.inventory.length > 4 && (
+              <View style={[ev.chip, { backgroundColor: `${th.color}0E` }]}>
+                <Text style={[ev.chipTxt, { color: th.color, opacity: 0.60 }]}>
+                  +{event.inventory.length - 4} more  →
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 }
 
@@ -1019,7 +1064,8 @@ export default function HomeScreen() {
   const [showOutfits, setShowOutfits] = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
   const [showConstellationIntro, setShowConstellationIntro] = useState(false);
-  const [activeEvent, setActiveEvent] = useState<ActiveEvent | null>(null);
+  const [activeEvent,    setActiveEvent]    = useState<ActiveEvent | null>(null);
+  const [eventDismissed, setEventDismissed] = useState(false);
   const [showEventSheet, setShowEventSheet] = useState(false);
   const [showShop,       setShowShop]       = useState(false);
 
@@ -1067,6 +1113,24 @@ export default function HomeScreen() {
       .then(d => setActiveEvent(d.event ?? null))
       .catch(() => {});
   }, []);
+
+  // Check dismiss flag when activeEvent changes — always reset to false first
+  // so a new day or a new event reliably un-hides the banner.
+  useEffect(() => {
+    setEventDismissed(false);
+    if (!activeEvent) return;
+    const today = new Date().toISOString().split('T')[0];
+    AsyncStorage.getItem(`event_dismissed_${activeEvent.id}_${today}`)
+      .then(val => { setEventDismissed(!!val); })
+      .catch(() => {});
+  }, [activeEvent?.id]);
+
+  function dismissEvent() {
+    if (!activeEvent) return;
+    const today = new Date().toISOString().split('T')[0];
+    AsyncStorage.setItem(`event_dismissed_${activeEvent.id}_${today}`, '1').catch(() => {});
+    setEventDismissed(true);
+  }
 
   // Lock the displayed reward ID during exit + gate — prevents the new reward from
   // remounting and starting its entrance animation before the old one finishes.
@@ -1699,9 +1763,13 @@ export default function HomeScreen() {
         {/* ══════════════════════════════════════════════════
             ACTIVE EVENT BANNER
         ══════════════════════════════════════════════════ */}
-        {activeEvent && (
+        {activeEvent && !eventDismissed && (
           <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
-            <EventBanner event={activeEvent} onPress={() => setShowEventSheet(true)} />
+            <EventBanner
+              event={activeEvent}
+              onPress={() => setShowEventSheet(true)}
+              onDismiss={dismissEvent}
+            />
           </Animated.View>
         )}
 
@@ -2040,6 +2108,13 @@ export default function HomeScreen() {
           event={activeEvent}
           visible={showEventSheet}
           onClose={() => setShowEventSheet(false)}
+          onCreateStory={(prompt, mood) => {
+            setShowEventSheet(false);
+            setTimeout(() => router.push({
+              pathname: '/(tabs)/create',
+              params: { eventPrompt: prompt, eventMood: mood },
+            } as any), 260);
+          }}
         />
       )}
 
@@ -2380,6 +2455,25 @@ const ev = StyleSheet.create({
   currChip:   { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 11, borderWidth: 1 },
   currChipEmoji: { fontSize: 14, lineHeight: 17 },
   currChipNum:   { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+
+  // Dismiss button (top-right of banner card)
+  dismissBtn: {
+    position: 'absolute', top: 10, right: 10, zIndex: 10,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Create-a-story CTA button in event detail sheet
+  ctaBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    paddingHorizontal: 16, paddingVertical: 13,
+    borderRadius: 16, borderWidth: 1,
+    marginTop: 18, marginBottom: 4,
+  },
+  ctaBtnTxt: {
+    fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1, flex: 1,
+  },
 });
 
 // Modal styles
