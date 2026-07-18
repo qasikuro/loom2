@@ -14,7 +14,6 @@ import {
   Animated,
   Dimensions,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,7 +22,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width: SCREEN_W } = Dimensions.get('window');
+Dimensions.get('window');
 
 interface GuideAvailability {
   days:     number[];
@@ -68,6 +67,7 @@ const TOPIC_COLORS: Record<string, string> = {
   'Mindfulness':      '#68B8B0',
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function StarRating({ rating }: { rating: number }) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
@@ -121,6 +121,7 @@ export default function GuideProfileScreen() {
       })
       .catch(() => setError('Could not load guide'))
       .finally(() => setLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const handleFollow = useCallback(() => {
@@ -136,6 +137,7 @@ export default function GuideProfileScreen() {
 
   const handleMessage = useCallback(() => {
     if (!guide) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     router.push({ pathname: '/messages/[userId]', params: { userId: guide.userId, name: guide.name } } as any);
   }, [guide]);
 

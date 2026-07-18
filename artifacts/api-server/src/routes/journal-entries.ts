@@ -83,8 +83,8 @@ router.post("/journal-entries", requireAuth, async (req, res) => {
     // return granted status to the client for feedback display
     const today = new Date().toISOString().slice(0, 10);
     const { granted: rewardGranted, amounts: rewardAmounts } =
-      await grantReward(db as any, userId, "journal_daily", today);
-    syncConstellation(db as any, userId).catch(() => null);
+      await grantReward(userId, "journal_daily", today);
+    syncConstellation(userId).catch(() => null);
 
     return res.status(201).json({ ...serializeEntry(created), rewardGranted, rewardAmounts });
   } catch (err) {

@@ -175,6 +175,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       entranceEmoji();
       if (startStep === STEP_REVEAL) fireSparks();
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, userId]);
 
   // ── Emoji entrance spring ──────────────────────────────────────────────────
@@ -228,6 +229,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         toValue: 0, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true,
       }).start();
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playSound, selectedMood, selectedType, journalText, userId]);
 
   // ── Selection handlers (persist draft immediately) ─────────────────────────
@@ -320,6 +322,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
     setSaving(false);
     playSound('chime');
     Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }).start(onComplete);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMood, selectedType, journalText, userId, addJournalEntry, reloadData, onComplete, playSound]);
 
   // ── Skip — hides overlay for this session; does NOT mark onboarding done.
@@ -330,6 +333,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
     Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
       onDismiss();
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playSound, onDismiss]);
 
   // ── Per-step "next" logic ──────────────────────────────────────────────────

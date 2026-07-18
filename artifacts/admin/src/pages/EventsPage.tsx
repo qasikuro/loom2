@@ -183,6 +183,7 @@ function EventForm({
         extra:       extraPrompt,
       });
       set({ inventory });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError("AI generation failed: " + e.message);
     } finally {
@@ -196,6 +197,7 @@ function EventForm({
     setError("");
     try {
       await onSave(status ? { ...form, status } : form);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -393,6 +395,7 @@ function EventCard({
       setGrantResult(r.message + ` (⭐${r.stars} 🔵${r.aura} 💎${r.shards})`);
       setGrantState("done");
       onGrant();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setGrantResult("Failed: " + e.message);
       setGrantState("done");
@@ -683,6 +686,7 @@ export default function EventsPage() {
     try {
       const data = await api.getEvents();
       setEvents(data.events);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -690,6 +694,7 @@ export default function EventsPage() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
 
   const handleCreate = async (body: EventBody) => {

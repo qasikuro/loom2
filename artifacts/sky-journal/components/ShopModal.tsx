@@ -118,6 +118,7 @@ function PurchaseToast({ message, type, visible }: ToastProps) {
         Animated.timing(translateY, { toValue: 8, duration: 220, useNativeDriver: true }),
       ]).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const bg   = type === 'success' ? 'rgba(104,200,160,0.96)'
@@ -199,6 +200,7 @@ function ItemPreview({ category, icon, color }: { category: string; color: strin
       {category === 'theme' && (
         <View style={pv.themeWrap}>
           {[80, 100, 60, 90].map((w, l) => (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <View key={l} style={[pv.themeLine, { backgroundColor: `${color}26`, width: `${w}%` as any }]} />
           ))}
           <View style={[pv.themeIconBadge, { backgroundColor: `${color}18`, borderColor: `${color}35` }]}>
@@ -569,6 +571,7 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
 
 type ActiveTab = 'shop' | 'collection';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function TabSwitcher({ active, onChange, colors }: { active: ActiveTab; onChange: (t: ActiveTab) => void; colors: any }) {
   return (
     <View style={[styles.tabSwitcher, { backgroundColor: colors.muted, borderColor: colors.border }]}>
@@ -661,12 +664,14 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
     fetchCatalog();
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   useEffect(() => {
     if (!visible) {
       Animated.timing(slideY, { toValue: 600, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   function showToast(message: string, type: ToastProps['type']) {
@@ -692,6 +697,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
         reloadRewards();
         setPurchaseVersion(v => v + 1);
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       const msg = err?.message ?? '';
       if (msg.includes('already_owned')) {

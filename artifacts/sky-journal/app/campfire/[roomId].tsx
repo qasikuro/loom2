@@ -4,7 +4,6 @@ import {
   Easing,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -168,6 +167,7 @@ function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
       loop1.stop(); loop2.stop(); loop3.stop();
       emberAnimations.forEach(a => a.stop());
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const cx = width / 2;
@@ -178,6 +178,7 @@ function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
       {STARS.map(st => (
         <View key={st.key} style={{
           position: 'absolute',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           left: `${st.x}%` as any, top: `${st.y}%` as any,
           width: st.r * 2, height: st.r * 2, borderRadius: st.r,
           backgroundColor: `rgba(220,210,255,${st.o})`,
@@ -278,6 +279,7 @@ function MessageRow({ msg, palette, opacity }: {
       Animated.timing(fadeIn,  { toValue: 1, duration: 360, easing: Easing.out(Easing.quad), useNativeDriver: true }),
       Animated.timing(slideUp, { toValue: 0, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (msg.expression) {
@@ -508,6 +510,7 @@ export default function CampfireRoom() {
       <View style={R.root}>
         {/* Sky background */}
         <LinearGradient
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           colors={palette.sky as any}
           style={StyleSheet.absoluteFill}
           start={{ x: 0.3, y: 0 }} end={{ x: 0.7, y: 1 }}

@@ -59,6 +59,7 @@ function Twinkle({ s }: { s: StarDef }) {
     );
     loop.start();
     return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -66,7 +67,9 @@ function Twinkle({ s }: { s: StarDef }) {
       pointerEvents="none"
       style={{
         position:        'absolute',
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         left:            s.left as any,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         top:             s.top as any,
         width:           s.size,
         height:          s.size,

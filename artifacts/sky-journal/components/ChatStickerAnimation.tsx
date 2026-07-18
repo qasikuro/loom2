@@ -3,7 +3,7 @@
  * Uses pure React Native Animated (nativeDriver) — no extra deps.
  */
 import React, { useEffect } from 'react';
-import { Animated, Dimensions, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Dimensions, Easing, StyleSheet, View } from 'react-native';
 
 const { width: W, height: H } = Dimensions.get('window');
 const CX = W / 2;
@@ -596,6 +596,7 @@ export function ChatStickerAnimation({ type, mainEmoji, onComplete }: Props) {
 
   useEffect(() => {
     runAnimation(type, particles, mainScale, mainOpacity, flashOpacity, onComplete);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

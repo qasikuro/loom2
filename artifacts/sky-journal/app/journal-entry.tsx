@@ -6,7 +6,7 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { Image } from 'expo-image';
 import {
@@ -14,16 +14,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const MONTHS_FULL = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
-const DAYS_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 function formatFullDate(iso: string) {
   const d = new Date(iso);
@@ -87,8 +81,6 @@ export default function JournalEntryScreen() {
   }
 
   const cfg     = TYPE_CFG[entry.type];
-  const isAlone = entry.type !== 'friend';
-  const displayName = entry.type === 'friend' ? (entry.friendName ?? 'Someone') : cfg.label;
   const initial = entry.type === 'friend' ? (entry.friendName?.[0] ?? '?').toUpperCase() : null;
 
   // Apply journal theme only to diary entries (same rule as timeline card)

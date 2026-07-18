@@ -47,6 +47,7 @@ export function XPFlash() {
       }, DISPLAY_MS);
     });
     return () => { unsub(); if (timerRef.current) clearTimeout(timerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!msg) return null;

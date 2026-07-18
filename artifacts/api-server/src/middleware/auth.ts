@@ -38,7 +38,7 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
       return;
     }
     next();
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Internal server error" });
   }
 }

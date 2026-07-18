@@ -68,6 +68,7 @@ export default function CreateScreen() {
       Animated.spring(sheetY,    { toValue: 0,   tension: 48, friction: 9,                         useNativeDriver: true }),
       Animated.timing(bgOpacity, { toValue: 1,   duration: 260, easing: Easing.out(Easing.quad),   useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only entrance animation; Animated.Value refs are stable
   }, []));
 
   function dismiss() {
@@ -76,6 +77,7 @@ export default function CreateScreen() {
       Animated.timing(bgOpacity, { toValue: 0,        duration: 180,                                 useNativeDriver: true }),
     ]).start(() => {
       // Navigate back to the Home tab
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace('/(tabs)' as any);
     });
   }
@@ -87,8 +89,10 @@ export default function CreateScreen() {
       Animated.timing(bgOpacity, { toValue: 0,        duration: 160,                                 useNativeDriver: true }),
     ]).start(() => {
       if (hasEventContext) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         router.push({ pathname: route as any, params: { eventPrompt, eventMood } });
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         router.push(route as any);
       }
     });

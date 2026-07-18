@@ -57,6 +57,7 @@ function ToastBanner({
     const ms = toast.retry ? 6000 : 4000;
     const t  = setTimeout(dismiss, ms);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

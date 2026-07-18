@@ -156,6 +156,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
 
         {/* Social links */}
         {(character.links ?? []).map((link, idx) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const plat = getPlatform((link as any).platform);
           return (
             <View key={idx} style={[s.aboutLinkRow, { borderTopColor: colors.border }]}>
@@ -256,6 +257,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                       <Text style={[s.guideCompletionPct, { color: pct === 100 ? '#60D890' : colors.primary }]}>{pct}%</Text>
                     </View>
                     <View style={[s.guideProgressBg, { backgroundColor: `${colors.border}90` }]}>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       <View style={[s.guideProgressFill, { width: `${pct}%` as any, backgroundColor: pct === 100 ? '#60D890' : colors.primary }]} />
                     </View>
                     {pct < 100 && <Text style={[s.guideCompletionHint, { color: colors.mutedForeground }]}>Add: {missing.join(' · ')}</Text>}
@@ -356,6 +358,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               </View>
               <TouchableOpacity
                 style={[s.guidePreviewBtn, { borderColor: `${colors.primary}30`, backgroundColor: `${colors.primary}0C` }]}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: user?.id ?? '' } } as any)}
                 activeOpacity={0.8}
               >
@@ -380,6 +383,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                 ].map(b => (
                   <View key={b.label} style={s.guideInviteBenefit}>
                     <View style={[s.guideInviteBenefitIcon, { backgroundColor: `${colors.primary}14` }]}>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       <Icon name={b.icon as any} size={12} color={colors.primary} />
                     </View>
                     <Text style={[s.guideInviteBenefitText, { color: colors.mutedForeground }]}>{b.label}</Text>

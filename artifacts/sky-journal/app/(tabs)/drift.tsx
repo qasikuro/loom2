@@ -323,9 +323,11 @@ function StarDot({ s }: { s: typeof STAR_DATA[0] }) {
       Animated.timing(op, { toValue: 0.85,  duration: s.dur, useNativeDriver: true }),
       Animated.timing(op, { toValue: 0.05, duration: s.dur, useNativeDriver: true }),
     ])).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <Animated.View style={{
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       position: 'absolute', left: s.left as any, top: s.top as any,
       width: s.size, height: s.size, borderRadius: s.size,
       backgroundColor: '#ffffff', opacity: op,
@@ -370,6 +372,7 @@ function Constellation({ color = '#B090FF' }: { color?: string }) {
       ])
     );
     Animated.stagger(280, seq).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -483,6 +486,7 @@ function LumiCharacter({ color = '#B090FF', size = 80, onTap, emotion = 'neutral
       Animated.timing(eyeOp, { toValue: 0.05, duration: 75,  useNativeDriver: true }),
       Animated.timing(eyeOp, { toValue: 1,    duration: 75,  useNativeDriver: true }),
     ])).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Animate face to new emotion
@@ -500,6 +504,7 @@ function LumiCharacter({ color = '#B090FF', size = 80, onTap, emotion = 'neutral
         Animated.spring(bodyBounce,  { toValue: 0,   useNativeDriver: true, bounciness: 12 }),
       ]).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [emotion]);
 
   function handleTap() {
@@ -623,6 +628,7 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip, emotion = 'n
   useEffect(() => {
     msgFade.setValue(0);
     Animated.timing(msgFade, { toValue: 1, duration: 600, delay: 150, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message]);
 
   useEffect(() => {
@@ -633,6 +639,7 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip, emotion = 'n
       Animated.delay(2800),
       Animated.timing(quipFade, { toValue: 0, duration: 400, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tapQuip]);
 
   useEffect(() => {
@@ -643,6 +650,7 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip, emotion = 'n
       Animated.delay(2800),
       Animated.timing(whisperFade, { toValue: 0, duration: 700, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [whisper]);
 
   return (
@@ -706,6 +714,7 @@ function BreathingGame({ color, onDone }: { color: string; onDone: () => void })
 
   useEffect(() => {
     Animated.timing(cardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function doInhale() {
@@ -796,6 +805,7 @@ function JournalSpark({ color, mode, onDone }: { color: string; mode: string; on
 
   useEffect(() => {
     Animated.timing(cardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const MOOD_MAP: Record<string, string> = {
@@ -889,6 +899,7 @@ function StoryVibeCard({ cfg, onDismiss }: { cfg: ModeConfig; onDismiss: () => v
 
   useEffect(() => {
     Animated.timing(cardFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const color = cfg.color ?? '#B090FF';
@@ -1001,6 +1012,7 @@ function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string })
   const enterY = enter.interpolate({ inputRange: [0, 1], outputRange: [36, 0] });
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 900, delay: 150, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
@@ -1047,6 +1059,7 @@ function SurveyScreen({ question, qIdx, total, onAnswer, answers }: {
   const progAnim = useRef(new Animated.Value((qIdx) / total)).current;
   useEffect(() => {
     Animated.timing(progAnim, { toValue: (qIdx + 1) / total, duration: 420, useNativeDriver: false }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qIdx]);
   const progW = progAnim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
   return (
@@ -1080,6 +1093,7 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
   const enter  = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const points = [
     'Your drift mode will be personalised to your vibe',
@@ -1132,6 +1146,7 @@ function AnalyzingScreen({ confidence }: { confidence: number }) {
     }, stepMs);
     const lbl = setInterval(() => setLabelIdx(i => Math.min(i + 1, labels.length - 1)), 1100);
     return () => { clearInterval(id); clearInterval(lbl); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
@@ -1162,6 +1177,7 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
       Animated.timing(enter,    { toValue: 1, duration: 800, useNativeDriver: true }),
       Animated.spring(archScale,{ toValue: 1, tension: 70, friction: 8, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
@@ -1227,6 +1243,7 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
         Animated.timing(symbolP, { toValue: 1, duration: 700, useNativeDriver: true }),
       ]),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const circleS = expand.interpolate({ inputRange: [0, 1], outputRange: [0.01, 20] });
   const stats   = [
@@ -1276,6 +1293,7 @@ function ModePerksScreen({ cfg, onGotIt }: { cfg: ModeConfig; onGotIt: () => voi
   const enter  = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
@@ -1320,6 +1338,7 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (dur
   const [selectedMins, setSelectedMins] = useState(15);
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 800, delay: 150, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
@@ -1417,7 +1436,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
     : [cfg.lumiSession, 'You\'re doing great.', 'I\'m watching the stars with you.', 'This moment is yours.', 'Still here with you.'];
 
   // Spread 5 messages across 4 phases; cycle within current phase's message
-  const phaseMsg = allLumiMsgs[Math.min(phase, allLumiMsgs.length - 1)];
+  const _phaseMsg = allLumiMsgs[Math.min(phase, allLumiMsgs.length - 1)];
   const windDownMsgs = [
     'You\'re almost at the end. Let that feel like something.',
     'This is the part where you take a breath and look back.',
@@ -1437,6 +1456,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
     const interval = Math.max(60000, (duration * 1000) / (allLumiMsgs.length + 1));
     const id = setInterval(() => setLumiIdx(i => i + 1), interval);
     return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duration]);
 
   // Soft tip at 35% of session
@@ -1446,6 +1466,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
       Animated.timing(softFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     }, duration * 0.35 * 1000);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duration]);
 
   // Lumi nudge at 60% of session
@@ -1455,6 +1476,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
       Animated.timing(lumiNudgeFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
     }, duration * 0.6 * 1000);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duration]);
 
   // Phase → emotion
@@ -1505,6 +1527,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
       Animated.timing(timeUpFade, { toValue: 1, duration: 600, useNativeDriver: true }).start();
     }, duration * 1000);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duration]);
 
   const showEvent = () => {
@@ -1524,6 +1547,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
     const first = setTimeout(showEvent, Math.min(20000, duration * 0.15 * 1000));
     const repeat = setInterval(showEvent, Math.min(90000, duration * 0.4 * 1000));
     return () => { clearTimeout(first); clearInterval(repeat); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [duration]);
 
   // Countdown display
@@ -1780,6 +1804,7 @@ function SummaryScreen({ cfg, result, onReflect }: { cfg: ModeConfig; result: Se
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }).start();
     Animated.timing(stabAnim, { toValue: cfg.stability, duration: 1800, delay: 400, useNativeDriver: false, easing: Easing.out(Easing.cubic) }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const achievements = [
     `Drifted for ${formatDuration(result.elapsed)}`,
@@ -1839,6 +1864,7 @@ function ReflectionScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: ()
   const enter  = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 800, delay: 100, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
@@ -1867,6 +1893,7 @@ function BreakPromptScreen({ cfg, onBreak, onContinue }: { cfg: ModeConfig; onBr
   const enter  = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 700, delay: 100, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const evol = cfg.evolution;
   return (
@@ -1937,6 +1964,7 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
   const enter  = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 900, delay: 150, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
@@ -2012,6 +2040,7 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
 
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -2183,7 +2212,7 @@ export default function DriftScreen() {
         } else {
           AsyncStorage.removeItem('drift_session_v1');
         }
-      } catch {}
+      } catch { /* ignore */ }
     }).catch(() => {});
   }, []);
 

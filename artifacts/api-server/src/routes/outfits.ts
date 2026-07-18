@@ -1,6 +1,6 @@
 import { db, outfitsTable, followsTable, characterTable, notificationsTable } from "@workspace/db";
 import { and, desc, eq } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { syncConstellation } from "../services/constellationService";
@@ -72,7 +72,7 @@ router.post("/outfits", requireAuth, async (req, res) => {
       fanOutOutfitNotification(userId, created.id, rest.name, req).catch(() => null);
     }
     // Sync constellation progress — outfit count drives the Seasonal star
-    syncConstellation(db as any, userId).catch(() => null);
+    syncConstellation(userId).catch(() => null);
 
     return res.status(201).json(serializeOutfit(created));
   } catch (err) {
@@ -85,7 +85,7 @@ async function fanOutOutfitNotification(
   userId: string,
   outfitId: string,
   outfitName: string,
-  req: any,
+  req: Request,
 ) {
   try {
     const [followers, actorRows] = await Promise.all([
@@ -136,7 +136,7 @@ router.patch("/outfits/:id", requireAuth, async (req, res) => {
 
     const [updated] = await db
       .update(outfitsTable)
-      .set(updateSet as any)
+      .set(updateSet as Partial<typeof outfitsTable.$inferInsert>)
       .where(and(eq(outfitsTable.id, outfitId), eq(outfitsTable.userId, userId)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });

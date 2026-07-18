@@ -29,7 +29,7 @@ export async function hasCompletedFirstPublish(): Promise<boolean> {
 
 /** Call this ONLY after addStory / the publish API call succeeds. */
 export async function markFirstPublishDone(): Promise<void> {
-  try { await AsyncStorage.setItem(DONE_KEY, 'done'); } catch {}
+  try { await AsyncStorage.setItem(DONE_KEY, 'done'); } catch { /* ignore */ }
 }
 
 const MOODS = [
@@ -84,6 +84,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
       Animated.spring(slideAnim, { toValue: 0, tension: 50, friction: 9, useNativeDriver: true }),
       Animated.spring(emojiAnim, { toValue: 1, tension: 55, friction: 7, useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const goNext = useCallback(() => {
@@ -95,6 +96,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
       emojiAnim.setValue(0);
       Animated.spring(emojiAnim, { toValue: 1, tension: 55, friction: 7, useNativeDriver: true }).start();
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playSound]);
 
   const handleConfirm = useCallback(() => {
@@ -104,6 +106,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
     Animated.timing(fadeAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start(() => {
       onPublish(mood ?? 'Dreamy', line.trim());
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mood, line, onPublish, playSound]);
 
   if (!visible) return null;

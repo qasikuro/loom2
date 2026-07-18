@@ -369,6 +369,7 @@ describe('toAppStory', () => {
   });
 
   it('returns empty panels array when panels is null/absent', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(toAppStory({ ...base, panels: null as any }).panels).toEqual([]);
     expect(toAppStory(base).panels).toEqual([]);
   });
@@ -462,8 +463,9 @@ describe('toAppOutfit', () => {
 
 describe('toRawDiscoverPost', () => {
   const NOW_ISO = new Date().toISOString();
+  void NOW_ISO;
 
-  const base = {
+  const base = { // eslint-disable-line @typescript-eslint/no-unused-vars
     id:       'post-1',
     date:     '2024-03-15T10:00:00.000Z',
   };

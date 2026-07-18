@@ -1,4 +1,4 @@
-import type { Character } from '@/context/AppContext';
+import type { Character as _Character } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import React from 'react';

@@ -197,6 +197,7 @@ export default function CreateJournalEntryScreen() {
     ],
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dayPrompt = tr(`journal.prompts_${today.getDate() % 6}` as any);
   const moodPrompts  = character.mood ? (MOOD_PROMPTS[character.mood] ?? []) : [];
   const moodPrompt   = moodPrompts.length > 0 ? moodPrompts[today.getDate() % moodPrompts.length] : null;

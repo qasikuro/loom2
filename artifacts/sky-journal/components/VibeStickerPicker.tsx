@@ -32,6 +32,7 @@ let webCtx: AudioContext | null = null;
 function getWebCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   if (!webCtx) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const WA = (window as any).AudioContext ?? (window as any).webkitAudioContext;
     if (WA) webCtx = new WA();
   }
@@ -60,7 +61,7 @@ function playWebStickerSound(type: StickerType) {
     const partials: [number, number, number][] = [
       [1.0, vol, 5.0], [2.756, vol * 0.4, 9.0], [5.404, vol * 0.12, 15.0],
     ];
-    partials.forEach(([ratio, amp, decay]) => {
+    partials.forEach(([ratio, amp, _decay]) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
@@ -79,17 +80,27 @@ function playWebStickerSound(type: StickerType) {
 
 // ── Native sound assets ────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const STICKER_ASSETS: Record<StickerType, any> = {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Hopeful:     require('../assets/sounds/sticker_hopeful.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Peaceful:    require('../assets/sounds/sticker_peaceful.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Lonely:      require('../assets/sounds/sticker_lonely.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Romantic:    require('../assets/sounds/sticker_romantic.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Chaotic:     require('../assets/sounds/sticker_chaotic.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Adventurous: require('../assets/sounds/sticker_adventurous.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Dreamy:      require('../assets/sounds/sticker_dreamy.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   Soft:        require('../assets/sounds/sticker_soft.wav'),
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const loadedSounds: Partial<Record<StickerType, any>> = {};
 
 async function ensureLoaded(type: StickerType) {
@@ -186,6 +197,7 @@ export function VibeStickerPicker({ visible, onSelect, onClose }: VibeStickerPic
       }).start(() => setSent(null));
     }
     return () => { if (sentTimeoutRef.current) clearTimeout(sentTimeoutRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const handleSelect = useCallback((type: StickerType) => {

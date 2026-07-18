@@ -7,6 +7,7 @@ import { getAuthToken } from '@/context/AppContext';
 const MAX_DIM = 1200;
 
 function resolveApiBase(): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const extra  = (Constants.expoConfig as any)?.extra;
   const envUrl = extra?.apiUrl as string | null | undefined;
   return envUrl ?? '/api';

@@ -122,8 +122,9 @@ router.put("/character", requireAuth, async (req, res) => {
       })
       .returning();
     return res.json(updated);
-  } catch (err: any) {
-    if (err?.code === "23505" && String(err?.constraint ?? "").includes("username")) {
+  } catch (err: unknown) {
+    const pgErr = err as { code?: string; constraint?: string };
+    if (pgErr?.code === "23505" && String(pgErr?.constraint ?? "").includes("username")) {
       return res.status(409).json({ error: "Username already taken" });
     }
     req.log.error({ err }, "Failed to update character");

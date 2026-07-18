@@ -6,7 +6,7 @@ import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { SHADOW } from '@/constants/colors';
+
 
 interface Props {
   character:    Character;

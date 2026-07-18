@@ -67,6 +67,7 @@ export function usePingState(country?: string) {
         apiFetch('/character', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ timezone: tz }) }).catch(() => {});
       } catch { if (country) setWeatherQuery(country); }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { weatherQuery, pingState, cooldownText, bellAnim, handlePing };

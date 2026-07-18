@@ -141,9 +141,9 @@ router.post("/drift/analyze", requireAuth, async (req, res) => {
     plan.stability  = Math.max(60, Math.min(92, Number(plan.stability)  || 75));
 
     return res.json(plan);
-  } catch (err: any) {
+  } catch (err: unknown) {
     req.log.error({ err }, "drift/analyze failed");
-    return res.status(500).json({ error: "Analysis failed", message: err?.message });
+    return res.status(500).json({ error: "Analysis failed", message: (err as { message?: string })?.message });
   }
 });
 
@@ -202,9 +202,9 @@ router.post("/drift/chat", requireAuth, async (req, res) => {
 
     const reply = response.content[0]?.type === "text" ? response.content[0].text.trim() : "I'm here with you.";
     return res.json({ reply });
-  } catch (err: any) {
+  } catch (err: unknown) {
     req.log.error({ err }, "drift/chat failed");
-    return res.status(500).json({ error: "Chat failed", message: err?.message });
+    return res.status(500).json({ error: "Chat failed", message: (err as { message?: string })?.message });
   }
 });
 

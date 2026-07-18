@@ -45,6 +45,7 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
         easing: Easing.out(Easing.cubic), useNativeDriver: false,
       })),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerAnim]);
 
   return (
@@ -58,6 +59,7 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
       </View>
       <View style={s.overallBarBg}>
         <Animated.View style={[s.overallBarFill, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           width: overallAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
         }]} />
       </View>
@@ -89,6 +91,7 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
               <View style={s.barBg}>
                 <Animated.View style={[s.barFill, {
                   backgroundColor: r.color, opacity: done ? 0.55 : 0.80,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   width: rowAnims[i].interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
                 }]} />
               </View>

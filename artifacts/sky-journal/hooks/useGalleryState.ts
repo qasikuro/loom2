@@ -23,6 +23,7 @@ export function useGalleryState({ galleryUsage, addGalleryPhoto, deleteGalleryPh
       setGalleryError('Photo access denied — enable it in Settings.'); return;
     }
     const result = await launchImageLibraryAsync({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mediaTypes: ['images'] as any, allowsEditing: false,
       allowsMultipleSelection: true, selectionLimit: remaining, quality: 0.85,
     });
@@ -36,6 +37,7 @@ export function useGalleryState({ galleryUsage, addGalleryPhoto, deleteGalleryPh
       }));
       const failed = results.filter(r => r.status === 'rejected').length;
       if (failed > 0) setGalleryError(`${failed} photo${failed > 1 ? 's' : ''} failed to upload.`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) { setGalleryError(err?.message ?? 'Upload failed'); }
     finally { setGalleryUploading(false); }
   }

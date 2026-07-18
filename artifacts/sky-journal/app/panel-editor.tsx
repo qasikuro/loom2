@@ -170,6 +170,7 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
   })).current;
 
   const bStyle   = BUBBLE_STYLES.find(b => b.key === (overlay.bubbleStyle ?? 'rounded')) ?? BUBBLE_STYLES[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fontFam  = (overlay.fontFamily ?? 'Satoshi-Medium') as any;
   const fontSize = overlay.fontSize ?? (overlay.type === 'sticker' ? 30 : 13);
 
@@ -215,6 +216,7 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
   const left    = overlay.xPct * panelW;
   const top     = overlay.yPct * panelH;
   const bStyle  = BUBBLE_STYLES.find(b => b.key === (overlay.bubbleStyle ?? 'rounded')) ?? BUBBLE_STYLES[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fontFam = (overlay.fontFamily ?? 'Satoshi-Medium') as any;
   const scale   = 0.58;
   const fontSize = Math.max(8, (overlay.fontSize ?? 13) * scale);
@@ -289,6 +291,7 @@ export default function PanelEditorScreen() {
     } else {
       uploadPulse.setValue(1);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadingSet.size]);
 
   const sizeHoldRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -838,6 +841,7 @@ export default function PanelEditorScreen() {
                       onPress={() => { Haptics.selectionAsync(); updateOverlay(selOverlay.id, { fontFamily: f.key }); }}
                       activeOpacity={0.75}
                     >
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       <Text style={[styles.fontBarSample, { fontFamily: f.key as any, color: active ? colors.primary : colors.foreground }]}>
                         Aa
                       </Text>
@@ -879,6 +883,7 @@ export default function PanelEditorScreen() {
             {/* Text input */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <TextInput
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border, fontFamily: (selOverlay.fontFamily ?? 'Satoshi-Medium') as any }]}
                 value={selOverlay.content}
                 onChangeText={t => updateOverlay(selOverlay.id, { content: t })}

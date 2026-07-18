@@ -11,7 +11,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiFetch } from '@/context/AppContext';
@@ -144,6 +144,7 @@ export default function CharacterScreen() {
     if (confirmingSignOut) {
       if (signOutTimer.current) clearTimeout(signOutTimer.current);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await signOut(); router.replace('/(auth)/sign-in' as any);
     } else {
       setConfirmingSignOut(true);
@@ -220,7 +221,9 @@ export default function CharacterScreen() {
           ].map((item, i) => (
             <React.Fragment key={item.label}>
               {i > 0 && <View style={s.statDot} />}
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <TouchableOpacity style={s.statPill} onPress={() => item.tab && (Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), setProfileTab(item.tab as any))} activeOpacity={item.tab ? 0.75 : 1} disabled={!item.tab}>
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 <Icon name={item.icon as any} size={13} color={moodAccent} style={{ marginBottom: 2 }} />
                 <Text style={s.statNum}>{item.count}</Text>
                 <Text style={s.statLabel}>{item.label}</Text>

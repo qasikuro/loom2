@@ -40,7 +40,7 @@ const PROMPTS = [
 ];
 
 export default function CreateMomentLogScreen() {
-  const colors = useColors();
+  useColors();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { addJournalEntry } = useApp();
@@ -79,6 +79,7 @@ export default function CreateMomentLogScreen() {
       {[{ t: 70, l: 50, s: 3 }, { t: 110, r: 70, s: 2 }, { t: 50, r: 120, s: 4 },
         { t: 160, l: 100, s: 2 }, { t: 90, r: 40, s: 3 }, { t: 140, l: 40, s: 2 }].map((star, i) => (
         <View key={i} style={[styles.star, {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           top: star.t, left: (star as any).l, right: (star as any).r,
           width: star.s, height: star.s,
           backgroundColor: `rgba(240,210,130,${0.4 + i * 0.07})`,

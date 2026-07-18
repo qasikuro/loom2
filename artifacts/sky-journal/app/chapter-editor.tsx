@@ -75,6 +75,7 @@ const GRID_H = 72;
 const GRID_W = 96;
 const GRID_G = 2;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MiniPageGrid({ page, getPanelImg }: { page: StoryPage; getPanelImg: (p: StoryPanel) => any }) {
   const layout = MINI_LAYOUTS.find(l => l.key === page.layoutKey) ?? MINI_LAYOUTS[0];
   const numRows = layout.rows.length;
@@ -180,6 +181,7 @@ export default function ChapterEditorScreen() {
       const m = MOODS.find(x => x.label === eventMood);
       if (m) setMood(m.label);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Draft persistence ─────────────────────────────────────────────────────
@@ -312,6 +314,7 @@ export default function ChapterEditorScreen() {
         pages:          filledPages,
       });
       setPosting(false);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace('/(tabs)/create' as any);
       return;
     }
@@ -363,6 +366,7 @@ export default function ChapterEditorScreen() {
   function getPanelImageSource(panel: StoryPanel) {
     if (panel.imageUri) return { uri: panel.imageUri };
     if (panel.bgPreset) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const map: Record<string, any> = {
         bg1:  Images.story_bg1,
         bg2:  Images.story_bg2,
@@ -500,6 +504,7 @@ export default function ChapterEditorScreen() {
                   >
                     <Icon name={m.icon} size={12} color={active ? m.color : 'rgba(200,185,255,0.32)'} />
                     <Text style={[c.moodPillTxt, { color: active ? m.color : 'rgba(200,185,255,0.32)' }]}>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {tr(`moods.${m.label}` as any)}
                     </Text>
                   </TouchableOpacity>
@@ -726,6 +731,7 @@ export default function ChapterEditorScreen() {
         }}
       />
 
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <CompletionMoment visible={showCompletion} variant="story" onFinish={() => router.push('/(tabs)' as any)} />
     </View>
   );

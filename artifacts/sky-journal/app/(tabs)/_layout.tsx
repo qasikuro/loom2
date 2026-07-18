@@ -48,6 +48,7 @@ function TabIcon({
       useNativeDriver: false,
       easing: Easing.out(Easing.quad),
     }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: Animated.Value refs (glow, scale) are stable; only `focused` should re-trigger
   }, [focused]);
 
   const bgOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
@@ -116,6 +117,7 @@ function CreateIcon() {
     breathe.start();
     pulse.start();
     return () => { breathe.stop(); pulse.stop(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only animation loop; Animated values are stable refs
   }, []);
 
   return (

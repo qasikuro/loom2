@@ -64,6 +64,7 @@ function chunkPanels<T>(arr: T[], size: number): T[][] {
 
 // ── Background helpers ────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const BG_PRESET_MAP: Record<string, any> = {
   bg1:  Images.story_bg1,
   bg2:  Images.story_bg2,
@@ -167,6 +168,7 @@ function PanelCell({
       {panel.overlays?.map(ov => {
         const left     = ov.xPct * cellW;
         const top      = ov.yPct * cellH;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fontFam  = (ov.fontFamily ?? 'Satoshi-Medium') as any;
         const fontSize = ov.fontSize ?? (ov.type === 'sticker' ? 24 : 12);
         const bRadius  = ov.bubbleStyle === 'sharp' ? 2 : ov.bubbleStyle === 'oval' ? 50 : 10;
@@ -303,7 +305,7 @@ export default function StoryScreen() {
   const colors = useColors();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { id, source } = useLocalSearchParams<{ id: string; source: string }>();
+  const { id } = useLocalSearchParams<{ id: string; source?: string }>();
   const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory,
           showRewardToast, reloadRewards, reloadConstellation, reloadData, isLoading } = useApp();
 
@@ -349,6 +351,7 @@ export default function StoryScreen() {
       const unshown = story.witnessMilestones!.find(t => !shown.includes(t));
       if (unshown != null) setActiveMilestone(buildMilestoneInfo(unshown, ''));
     }).catch(() => null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwnStory, id, (story?.witnessMilestones ?? []).join(',')]);
 
   function handleMilestoneDismiss() {
@@ -381,8 +384,10 @@ export default function StoryScreen() {
     } else {
       prevStickerRef.current = stickerCount;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stickerCount]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function toCellPanel(p: any): CellPanel {
     return {
       imageUri:         p.imageUri,
@@ -458,6 +463,7 @@ export default function StoryScreen() {
     if (distanceFromBottom < 120 && !endReachedRef.current && !continueDismissed) {
       showContinueCard();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, mood, discoverPosts, continueDismissed]);
 
   // Clear timers on unmount so card doesn't appear after navigating away
@@ -636,6 +642,7 @@ export default function StoryScreen() {
           {isOwnStory && !confirmingDelete && (
             <TouchableOpacity
               style={[styles.editBtn, { top: topPad + 12 }]}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => router.push({ pathname: '/chapter-editor', params: { editId: id } } as any)}
               activeOpacity={0.78}
             >
@@ -665,6 +672,7 @@ export default function StoryScreen() {
           <View style={styles.heroOverlay}>
             <View style={styles.heroMeta}>
               <TouchableOpacity
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onPress={() => post?.authorUserId && router.push({ pathname: '/user/[userId]', params: { userId: post.authorUserId } } as any)}
                 activeOpacity={post?.authorUserId ? 0.78 : 1}
                 style={styles.heroAvatarBtn}
@@ -754,6 +762,7 @@ export default function StoryScreen() {
           {post?.authorUserId && (
             <TouchableOpacity
               style={styles.endViewProfile}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: post.authorUserId } } as any)}
               activeOpacity={0.82}
             >

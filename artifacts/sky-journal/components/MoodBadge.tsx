@@ -27,7 +27,7 @@ function getMoodConfig(mood: string) {
 }
 
 export function MoodBadge({ mood, size = 'md' }: MoodBadgeProps) {
-  const colors = useColors();
+  useColors();
   const config = getMoodConfig(mood);
   const isSmall = size === 'sm';
 

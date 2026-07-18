@@ -29,6 +29,7 @@ let webCtx: AudioContext | null = null;
 function getWebCtx(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   if (!webCtx) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const WA = (window as any).AudioContext ?? (window as any).webkitAudioContext;
     if (WA) webCtx = new WA();
   }
@@ -49,7 +50,7 @@ function playWebSound(name: SoundName) {
   if (!ctx) return;
   const params = WEB_PARAMS[name];
   const now = ctx.currentTime;
-  for (const [freq, amp, decay] of params.partials) {
+  for (const [freq, amp, _decay] of params.partials) {
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sine';
@@ -202,12 +203,19 @@ function playWebStickerSound(stickerId: string) {
 
 // ── Sound asset map ────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SOUND_ASSETS: Record<SoundName, any> = {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   tap:      require('../assets/sounds/tap.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   chime:    require('../assets/sounds/chime.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   save:     require('../assets/sounds/save.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   star:     require('../assets/sounds/star.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   navigate: require('../assets/sounds/navigate.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   whoosh:   require('../assets/sounds/whoosh.wav'),
 };
 
@@ -228,8 +236,11 @@ const STICKER_NATIVE: Record<string, { name: SoundName; volume?: number }> = {
 };
 
 // Dedicated WAV assets for donkey + wolf
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const STICKER_NATIVE_ASSETS: Record<string, any> = {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   donkey: require('../assets/sounds/sticker_donkey.wav'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   wolf:   require('../assets/sounds/sticker_wolf.wav'),
 };
 
@@ -237,7 +248,9 @@ const STICKER_NATIVE_ASSETS: Record<string, any> = {
 
 export function SoundProvider({ children }: { children: React.ReactNode }) {
   const [soundEnabled, setSoundEnabledState] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const soundsRef = useRef<Partial<Record<SoundName, any>>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stickerSoundsRef = useRef<Record<string, any>>({});
   const loadedRef = useRef(false);
 
@@ -256,6 +269,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
         const { Audio } = await import('expo-av');
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         for (const [name, asset] of Object.entries(SOUND_ASSETS) as [SoundName, any][]) {
           if (cancelled) break;
           try {
@@ -280,9 +294,11 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      // eslint-disable-next-line react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any
       Object.values(soundsRef.current).forEach((s: any) =>
         s?.unloadAsync?.().catch(() => null)
       );
+      // eslint-disable-next-line react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any
       Object.values(stickerSoundsRef.current).forEach((s: any) =>
         s?.unloadAsync?.().catch(() => null)
       );

@@ -30,6 +30,7 @@ export function FrameRing({ frameId }: { frameId: string }) {
     loop.start();
     shimLoop.start();
     return () => { loop.stop(); shimLoop.stop(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frameId]);
 
   if (!cfg) return null;
@@ -161,6 +162,7 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }
       return loop;
     });
     return () => loops.forEach(l => l.stop());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mood]);
 
   const glowOpacity    = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] });

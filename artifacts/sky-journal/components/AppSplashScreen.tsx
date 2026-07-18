@@ -44,6 +44,7 @@ function StarField() {
     );
     loops.forEach(l => l.start());
     return () => loops.forEach(l => l.stop());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -102,6 +103,7 @@ export function AppSplashScreen({ onReady }: Props) {
     }, 2400);
 
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const moonScale = glowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.93, 1.06] });

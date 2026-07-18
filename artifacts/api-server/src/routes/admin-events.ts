@@ -176,6 +176,7 @@ Return 4–7 inventory items as a JSON array.`;
 
     const inventory = JSON.parse(match[0]) as EventInventoryItem[];
     return res.json({ inventory, prompt: userPrompt });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     req.log.error({ err }, "admin/events/generate-inventory failed");
     return res.status(500).json({ error: "AI generation failed", message: err?.message });

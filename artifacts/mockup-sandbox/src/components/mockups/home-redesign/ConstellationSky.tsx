@@ -107,6 +107,7 @@ export function ConstellationSky() {
           "--op": s.opacity,
           opacity: s.opacity,
           animation: `twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any} />
       ))}
 

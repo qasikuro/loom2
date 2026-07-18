@@ -64,6 +64,7 @@ export default function SignUpScreen() {
       Animated.timing(fadeAnim,  { toValue: 1, duration: 540, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 540, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGoogleSignUp = useCallback(async () => {
@@ -83,6 +84,7 @@ export default function SignUpScreen() {
           },
         });
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Google sign-in failed.');
     } finally {
@@ -97,6 +99,7 @@ export default function SignUpScreen() {
       const { error } = await signUp.password({ emailAddress: email.trim(), password });
       if (error) { setCatchError(error.longMessage ?? error.message ?? 'Could not create account.'); return; }
       await signUp.verifications.sendEmailCode();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Could not create account.');
     }
@@ -114,6 +117,7 @@ export default function SignUpScreen() {
       } else {
         setCatchError('Verification failed. Please try again.');
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Verification failed.');
     }
@@ -295,6 +299,7 @@ export default function SignUpScreen() {
 
             <View style={styles.footerRow}>
               <Text style={styles.footerText}>Already have an account?</Text>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Link href={'/(auth)/sign-in' as any} asChild>
                 <Pressable hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={styles.footerLink}>Sign in</Text>

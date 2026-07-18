@@ -47,6 +47,7 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
       showToast("Done!");
       setConfirm(null);
       onActionDone?.();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       showToast("Error: " + e.message);
       setConfirm(null);
@@ -64,6 +65,7 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
       setLimitMode(false);
       showToast("Gallery limit updated");
       onActionDone?.();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       showToast("Error: " + e.message);
     } finally {

@@ -289,7 +289,7 @@ export function relativeTimeDiscover(dateStr: string): string {
 
 // ── Mapper functions ───────────────────────────────────────────────────────────
 
-export function toAppCharacter(raw: RawCharacterResponse, apiBase?: string): Character {
+export function toAppCharacter(raw: RawCharacterResponse, _apiBase?: string): Character {
   return {
     name:              raw.name          ?? DEFAULT_CHARACTER.name,
     bio:               raw.bio           ?? DEFAULT_CHARACTER.bio,

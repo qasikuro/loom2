@@ -192,7 +192,7 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "content or expression required" });
   if (content && content.trim().length > 500)
     return res.status(400).json({ error: "Message too long (max 500 chars)" });
-  if (expression && !VALID_EXPRESSIONS.includes(expression as any))
+  if (expression && !(VALID_EXPRESSIONS as readonly string[]).includes(expression))
     return res.status(400).json({ error: "Invalid expression" });
 
   const [room] = await db

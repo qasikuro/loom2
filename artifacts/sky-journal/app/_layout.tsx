@@ -28,6 +28,7 @@ import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@
 // and prevent ClerkProvider from mounting.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 let Notifications: typeof import('expo-notifications') | null = null;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 try { Notifications = require('expo-notifications'); } catch { /* not available in Expo Go */ }
 
 // Configure how notifications appear when the app is in the foreground.
@@ -78,6 +79,7 @@ function IntentionStalenessGuard() {
       // Intention is current — no clear needed; mark done so we don't re-check.
       clearedRef.current = true;
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [character.intentionDate]);
   return null;
 }
@@ -125,6 +127,7 @@ function AuthTokenBridge() {
       clearUserData();
     }
     prevSignedIn.current = isSignedIn ?? false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn, getToken]);
 
   return null;
@@ -187,14 +190,17 @@ function NotificationDeepLinkHandler() {
     if (!data?.type) return;
     switch (data.type) {
       case 'follow':
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (data.refId) router.push(`/user/${data.refId}` as any);
         break;
       case 'witness':
       case 'save':
       case 'new_story':
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (data.refId) router.push(`/story/${data.refId}` as any);
         break;
       case 'message':
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (data.refId) router.push(`/messages/${data.refId}` as any);
         break;
       default:
@@ -244,10 +250,15 @@ export default function RootLayout() {
 
   useEffect(() => {
     Font.loadAsync({
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       'Satoshi-Regular': require('../assets/fonts/Satoshi-Regular.ttf'),
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       'Satoshi-Medium':  require('../assets/fonts/Satoshi-Medium.ttf'),
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       'Satoshi-Bold':    require('../assets/fonts/Satoshi-Bold.ttf'),
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       'Satoshi-Black':   require('../assets/fonts/Satoshi-Black.ttf'),
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       'Satoshi-Light':   require('../assets/fonts/Satoshi-Light.ttf'),
     })
       .catch(() => { /* fonts optional — app still usable */ })

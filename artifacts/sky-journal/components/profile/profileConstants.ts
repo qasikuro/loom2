@@ -1,6 +1,7 @@
 import { Images } from '@/assets/images';
 import type { Story } from '@/context/AppContext';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const BG_MAP: Record<string, any> = {
   bg1: Images.story_bg1, bg2: Images.story_bg2,
   bg3: Images.story_bg3, char: Images.character_default,

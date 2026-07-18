@@ -103,6 +103,7 @@ router.post(
   (req, res, next) => {
     const ct = req.headers["content-type"] ?? "";
     if (ct.startsWith("multipart/")) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       upload.single("file")(req as any, res as any, next);
     } else {
       next();
@@ -114,6 +115,7 @@ router.post(
       return res.status(503).json({ error: "Storage not configured" });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const multipartFile = (req as any).file as { buffer: Buffer } | undefined;
 
     if (multipartFile) {

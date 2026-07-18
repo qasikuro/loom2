@@ -161,11 +161,12 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
         { iterations: 4 },
       ),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, milestone]);
 
   if (!visible || !milestone) return null;
 
-  const { accent, emoji, threshold, titleName, flavour, rewardType, rewardLabel, aura, stars } = milestone;
+  const { accent, emoji, threshold, titleName, flavour, rewardType, aura, stars } = milestone;
 
   const rewardBadgeLabel = rewardType === 'aura_boost'       ? `+${aura} Aura`
                          : rewardType === 'featured_eligible' ? 'Featured Eligible'
@@ -234,6 +235,7 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
           {/* CTAs */}
           <TouchableOpacity
             style={[s.primaryBtn, { backgroundColor: accent }]}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onPress={() => { onDismiss(); router.push('/(tabs)/profile' as any); }}
             activeOpacity={0.88}
           >

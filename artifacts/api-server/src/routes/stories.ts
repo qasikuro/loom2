@@ -1,6 +1,6 @@
-import { db, storiesTable, storySavesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable, userPurchasesTable } from "@workspace/db";
+import { db, storiesTable, storySavesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable, userPurchasesTable, type StoryPageDB } from "@workspace/db";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
@@ -108,7 +108,7 @@ router.post("/stories", requireAuth, async (req, res) => {
       date:          new Date(date),
       panels:        sanitizedPanels,
       pageLayoutKey: rest.pageLayoutKey ?? null,
-      pages:         (rest.pages ?? null) as any,
+      pages:         (rest.pages ?? null) as StoryPageDB[] | null,
       chapterTitle:  rest.chapterTitle,
       description:   rest.description ?? '',
       mood:          rest.mood,
@@ -124,7 +124,7 @@ router.post("/stories", requireAuth, async (req, res) => {
         set: {
           userId, date: new Date(date), panels: sanitizedPanels,
           pageLayoutKey: rest.pageLayoutKey ?? null,
-          pages: (rest.pages ?? null) as any,
+          pages: (rest.pages ?? null) as StoryPageDB[] | null,
           chapterTitle: rest.chapterTitle, description: rest.description ?? '',
           mood: rest.mood, location: rest.location, isPublic: rest.isPublic,
         },
@@ -140,8 +140,8 @@ router.post("/stories", requireAuth, async (req, res) => {
 
     // Grant story creation reward (once per story ID) — await for client feedback
     const { granted: rewardGranted, amounts: rewardAmounts } =
-      await grantReward(db as any, userId, "story_created", created.id);
-    syncConstellation(db as any, userId).catch(() => null);
+      await grantReward(userId, "story_created", created.id);
+    syncConstellation(userId).catch(() => null);
 
     return res.status(201).json({ ...serializeStory(created), rewardGranted, rewardAmounts });
   } catch (err) {
@@ -156,7 +156,7 @@ async function notifyAuthor(
   storyId:      string,
   chapterTitle: string,
   type:         "witness" | "save" | "milestone",
-  req:          any,
+  req:          Request,
 ) {
   try {
     const actorRows = await db
@@ -192,7 +192,7 @@ async function fanOutStoryNotification(
   userId: string,
   storyId: string,
   chapterTitle: string,
-  req: any,
+  req: Request,
 ) {
   try {
     const [followers, actorRows] = await Promise.all([
@@ -310,7 +310,7 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
 
     const [updated] = await db
       .update(storiesTable)
-      .set(updateSet as any)
+      .set(updateSet as Partial<typeof storiesTable.$inferInsert>)
       .where(and(eq(storiesTable.id, storyId), eq(storiesTable.userId, userId)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
@@ -378,7 +378,7 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
         //    on the next witness — prevents a permanently-claimed-but-unrewarded state.
         try {
           await grantReward(
-            db as any, updated.userId, "witness_milestone",
+            updated.userId, "witness_milestone",
             `${storyId}:${threshold}`,
             { aura: mData.aura, stars: mData.stars },
           );
@@ -432,15 +432,15 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
 
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "witness", req).catch(() => null);
       sendPushForWitness(actorId, updated.userId, storyId, updated.chapterTitle).catch(() => null);
-      grantReward(db as any, updated.userId, "story_witnessed", `${storyId}:${actorId}`).catch(() => null);
-      syncConstellation(db as any, updated.userId).catch(() => null);
+      grantReward(updated.userId, "story_witnessed", `${storyId}:${actorId}`).catch(() => null);
+      syncConstellation(updated.userId).catch(() => null);
     }
 
     // Reward witness for their daily presence — awaited for client feedback
     const today = new Date().toISOString().slice(0, 10);
     const { granted: rewardGranted, amounts: rewardAmounts } =
-      await grantReward(db as any, actorId, "daily_presence", today);
-    syncConstellation(db as any, actorId).catch(() => null);
+      await grantReward(actorId, "daily_presence", today);
+    syncConstellation(actorId).catch(() => null);
 
     // Re-fetch story so response includes freshly appended witnessMilestones
     const [fresh] = await db.select().from(storiesTable).where(eq(storiesTable.id, storyId));
@@ -496,7 +496,7 @@ router.get("/stories/saved", requireAuth, async (req, res) => {
       const s = r.story;
       const sc = stickerCounts[s.id] ?? 0;
       const panels = sanitizePanels(s.panels);
-      const firstImage = (panels as any[]).find((p: any) => p.imageUri)?.imageUri ?? null;
+      const firstImage = panels.find(p => p.imageUri)?.imageUri as string | null ?? null;
       const createdAt = s.createdAt ?? new Date();
       const daysOld = (Date.now() - new Date(createdAt).getTime()) / 86_400_000;
       let timeAgo: string;
@@ -513,7 +513,7 @@ router.get("/stories/saved", requireAuth, async (req, res) => {
         authorHandle:   r.author?.username ?? '',
         chapterTitle:   s.chapterTitle,
         description:    s.description ?? '',
-        storySnippet:   (panels[0] as any)?.text ?? '',
+          storySnippet:   (panels[0] as Record<string, unknown>)?.text as string ?? '',
         imageUri:       firstImage,
         mood:           s.mood,
         witnessedCount: s.witnessedCount,
@@ -587,8 +587,8 @@ router.post("/stories/:id/save", requireAuth, async (req, res) => {
 
     if (updated.userId !== actorId) {
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "save", req).catch(() => null);
-      grantReward(db as any, updated.userId, "story_saved", `${storyId}:${actorId}`).catch(() => null);
-      syncConstellation(db as any, updated.userId).catch(() => null);
+      grantReward(updated.userId, "story_saved", `${storyId}:${actorId}`).catch(() => null);
+      syncConstellation(updated.userId).catch(() => null);
     }
 
     return res.json({ savedCount: updated.savedCount });
@@ -641,9 +641,12 @@ function safeImageUri(uri: string | null | undefined): string | null {
   return uri;
 }
 
-function sanitizePanels(panels: unknown): unknown[] {
+function sanitizePanels(panels: unknown): Array<Record<string, unknown>> {
   if (!Array.isArray(panels)) return [];
-  return panels.map((p: any) => ({ ...p, imageUri: safeImageUri(p.imageUri) }));
+  return (panels as Array<Record<string, unknown>>).map(p => ({
+    ...p,
+    imageUri: safeImageUri(p.imageUri as string | null | undefined),
+  }));
 }
 
 async function fetchStickerCounts(storyIds: string[]): Promise<Record<string, number>> {

@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NIGHT   = '#080618';
 const NIGHT2  = '#0D0926';
-const NIGHT3  = '#130B34';
+
 const PURPLE  = '#6B4EE8';
 const PURPLE2 = '#3B2A8C';
 const BORDER  = 'rgba(200,184,232,0.10)';
@@ -139,6 +139,7 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
       Animated.spring(scaleA, { toValue: 1, tension: 150, friction: 7, useNativeDriver: true }),
       Animated.timing(opA, { toValue: 1, duration: 200, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const label = msg.isOwn ? def.ownLabel : def.otherLabel;

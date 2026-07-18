@@ -218,11 +218,11 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       avatarUri:     safeDiscoverUri(char.avatarUri),
       activeOutfitId: char.activeOutfitId ?? null,
       activeOutfit,
-      birthday:      (char as any).birthday  ?? null,
-      country:       (char as any).country   ?? null,
-      role:          char.role               ?? null,
-      timezone:      char.timezone           ?? null,
-      links:         Array.isArray((char as any).links) ? (char as any).links : [],
+      birthday:      char.birthday  ?? null,
+      country:       char.country   ?? null,
+      role:          char.role      ?? null,
+      timezone:      char.timezone  ?? null,
+      links:         Array.isArray(char.links) ? char.links : [],
       isFollowing:   followingSet.has(targetId),
       activeTitle:   char.activeTitle   ?? null,
       intention:     char.intention     ?? null,
@@ -283,9 +283,9 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
       mood:           r.mood,
       location:       r.location,
       panels:         Array.isArray(r.panels)
-        ? r.panels.map((p: any) => ({
+        ? (r.panels as Array<Record<string, unknown>>).map(p => ({
             ...p,
-            imageUri: safeDiscoverUri(p.imageUri) ?? undefined,
+            imageUri: safeDiscoverUri(p.imageUri as string | undefined) ?? undefined,
           }))
         : [],
       pageLayoutKey:  r.pageLayoutKey ?? undefined,
@@ -380,8 +380,8 @@ router.post("/follows/:targetUserId", requireAuth, async (req, res) => {
 
     // Reward follower for their social generosity (once per target) — await for client feedback
     const { granted: rewardGranted, amounts: rewardAmounts } =
-      await grantReward(db as any, userId, "follow_given", targetUserId);
-    syncConstellation(db as any, userId).catch(() => null);
+      await grantReward(userId, "follow_given", targetUserId);
+    syncConstellation(userId).catch(() => null);
 
     // Fire-and-forget: notify the target that someone followed them
     db.select({ name: characterTable.name })
@@ -533,7 +533,7 @@ router.get("/discover", requireAuth, async (req, res) => {
 
     // Fetch sticker counts in bulk for the top 50 stories
     const top50Ids = top50.map(({ row }) => row.id);
-    let stickerCountMap: Record<string, number> = {};
+    const stickerCountMap: Record<string, number> = {};
     if (top50Ids.length > 0) {
       const stickerRows = await db
         .select({ storyId: stickerReactionsTable.storyId, cnt: count() })

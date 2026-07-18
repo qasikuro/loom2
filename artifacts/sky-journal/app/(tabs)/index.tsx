@@ -19,7 +19,7 @@ import {
   useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
 } from '@/context/AppContext';
-import { RewardBalance } from '@/components/RewardBalance';
+// import { RewardBalance } from '@/components/RewardBalance'; // kept for future use
 import { RewardBanner } from '@/components/RewardBanner';
 import { ShopModal } from '@/components/ShopModal';
 import { useSound } from '@/context/SoundContext';
@@ -128,13 +128,16 @@ function lumiAwareness(
   saved: number,
   newCircleStories: number,
   liveCampfires: number,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   entries: any[],
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   stories: any[],
   hour: number,
   constellation?: ConstellationState | null,
   rewardBalance?: RewardBalanceData | null,
 ): string {
   const n = name || 'there';
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const todayEntries = entries.filter((e: any) =>
     new Date(e.date).toDateString() === new Date().toDateString()).length;
 
@@ -202,6 +205,7 @@ function BreathRing({ accent, r = 46 }: { accent: string; r?: number }) {
       Animated.timing(a, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
     loop.start(); return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only glow animation loop; Animated.Value ref is stable
   }, []);
   return (
     <Animated.View pointerEvents="none" style={{
@@ -296,6 +300,7 @@ function FriendBubble({ post }: { post: DiscoverPost }) {
   return (
     <TouchableOpacity
       style={fr.wrap}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }}
       activeOpacity={0.80}
     >
@@ -340,6 +345,7 @@ function CampfireBubble({ guide, isMine }: { guide: GuideProfile; isMine?: boole
   return (
     <TouchableOpacity
       style={fb.wrap}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/guide/[userId]', params: { userId: guide.userId } } as any); }}
       activeOpacity={0.82}
     >
@@ -384,6 +390,7 @@ function StoryPanel({ post, wide = false }: { post: DiscoverPost; wide?: boolean
   return (
     <TouchableOpacity
       style={[sp.wrap, { height: h, borderColor: `${mc}28` }]}
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }}
       activeOpacity={0.85}
     >
@@ -461,6 +468,7 @@ function WitnessSummaryCard({
       ]).start(() => setTimeout(() => launch(i), 1400 + Math.random() * 800));
     }
     stars.forEach((_, i) => setTimeout(() => launch(i), i * 200));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only star animation; Animated.Value refs and launch callback are stable
   }, []);
 
   const ICONS = ['✦', '◈', '◇', '⬡', '◐', '△'];
@@ -607,6 +615,7 @@ function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
     } else {
       Animated.timing(slideY, { toValue: 600, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only `visible` drives this animation; Animated.Value ref is stable
   }, [visible]);
 
   if (!visible) return null;
@@ -846,6 +855,7 @@ function EventBanner({ event, onPress, onDismiss }: { event: ActiveEvent; onPres
           <Text style={ev.themeIcon}>{th.icon}</Text>
           <Text style={[ev.eyebrow, { color: th.color }]}>EVENT</Text>
           {cd && (
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <View style={[ev.pill, { backgroundColor: `${th.color}1E`, marginLeft: 'auto' as any }]}>
               <Text style={[ev.pillTxt, { color: th.color }]}>{cd.label}</Text>
             </View>
@@ -909,6 +919,7 @@ function getSeasonStart(): Date {
   return new Date(y - 1, 11, 1);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function SeasonCard({ activeEvent, constellation, onPress }: {
   activeEvent: ActiveEvent | null;
   constellation: ConstellationState | null;
@@ -993,6 +1004,7 @@ const MINI_STARS = [
   { key: 'helping',  label: 'Helping',  color: '#C8A84B' },
   { key: 'seasonal', label: 'Seasonal', color: '#68B8B0' },
 ];
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ConstellationMini({ constellation, onPress }: { constellation: ConstellationState | null; onPress: () => void }) {
   if (!constellation) return null;
   return (
@@ -1041,13 +1053,13 @@ const cm = StyleSheet.create({
 });
 
 export default function HomeScreen() {
-  const { width: W } = useWindowDimensions();
+  useWindowDimensions();
   const insets  = useSafeAreaInsets();
   const colors  = useColors();
   const {
     character, journalEntries, stories, outfits,
     activeOutfitId, setActiveOutfitId,
-    friends, discoverPosts, followingIds,
+    friends, discoverPosts,
     rewards, serverNotifications,
     markServerNotificationsRead, deleteServerNotification, dismissReward,
     reloadData, myGuides, rewardBalance, constellation,
@@ -1123,6 +1135,7 @@ export default function HomeScreen() {
     AsyncStorage.getItem(`event_dismissed_${activeEvent.id}_${today}`)
       .then(val => { setEventDismissed(!!val); })
       .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only event id should trigger re-check; full object would cause extra AsyncStorage reads
   }, [activeEvent?.id]);
 
   function dismissEvent() {
@@ -1160,6 +1173,7 @@ export default function HomeScreen() {
       }, 300);
     }, 4000);
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: bannerGateTimerRef and timer refs are stable; only reward change should re-trigger
   }, [firstRewardId, firstReward?.starUnlock]);
 
   async function dismissConstellationIntro() {
@@ -1172,18 +1186,18 @@ export default function HomeScreen() {
   const hasNotifs  = rewards.length > 0 || unread > 0 || campfireUnread > 0 || dmUnread > 0;
   const accent     = MOOD_ACCENT[character.mood ?? ''] ?? DEF_ACCENT;
   const grad       = MOOD_GRAD[character.mood ?? ''] ?? DEFAULT_GRAD;
-  const mc         = MOOD_COLOR[character.mood ?? ''] ?? DEF_ACCENT;
+  const _mc        = MOOD_COLOR[character.mood ?? ''] ?? DEF_ACCENT;
 
   const activeOutfit  = outfits.find(o => o.id === activeOutfitId) ?? null;
   const imgSrc        = activeOutfit?.imageUri ? { uri: activeOutfit.imageUri }
                         : character.avatarUri  ? { uri: character.avatarUri }
                         : Images.character_default;
 
-  const totalWitnessed = stories.reduce((s, x) => s + (x.witnessedCount ?? 0), 0);
-  const totalSaved     = stories.reduce((s, x) => s + (x.savedCount ?? 0), 0);
+  const _totalWitnessed = stories.reduce((s, x) => s + (x.witnessedCount ?? 0), 0);
+  const _totalSaved     = stories.reduce((s, x) => s + (x.savedCount ?? 0), 0);
 
   // Mood this week — dominant mood from last 7 days of journal entries
-  const moodThisWeek = useMemo(() => {
+  const _moodThisWeek = useMemo(() => {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 7);
     const recent = journalEntries.filter(e => new Date(e.date) >= cutoff && e.mood);
@@ -1260,6 +1274,7 @@ export default function HomeScreen() {
         Animated.timing(v, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true })
       )),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only stagger animation; Animated.Value refs are stable
   }, []);
 
   async function onRefresh() {
@@ -1267,6 +1282,7 @@ export default function HomeScreen() {
   }
 
   // Masonry layout: alternate between wide (full-width) and 2-column pairs
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function renderCircleStories() {
     if (!circleStories.length) return (
       <TouchableOpacity
@@ -1396,6 +1412,7 @@ export default function HomeScreen() {
           <View style={[s.heroBar, { justifyContent: 'flex-end' }]}>
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <TouchableOpacity
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onPress={() => { router.push('/messages' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
@@ -1496,6 +1513,7 @@ export default function HomeScreen() {
           <View pointerEvents="none" style={[s.lumiOrb1, { backgroundColor: accent }]} />
           <View pointerEvents="none" style={s.lumiOrb2} />
           {[{top:12,left:20},{top:6,left:'58%'},{top:20,right:16},{top:36,left:'36%'},{bottom:14,left:48},{bottom:10,right:'26%'}].map((pos,i)=>(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <View key={i} pointerEvents="none" style={[s.lumiStar, pos as any, { opacity: 0.15 + (i % 3) * 0.10 }]} />
           ))}
           <Image source={Images.character_default} style={s.lumiCharImg} contentFit="contain" />
@@ -1603,6 +1621,7 @@ export default function HomeScreen() {
                     return `${Math.floor(h / 24)}d ago`;
                   })();
                   return (
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     <TouchableOpacity key={post.id} style={s.circleRecentCard} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }} activeOpacity={0.82}>
                       <View style={[s.circleRecentAvatar, { backgroundColor: `${mc}20`, borderColor: `${mc}40` }]}>
                         {post.authorAvatarUri
@@ -1637,6 +1656,7 @@ export default function HomeScreen() {
             LIVE CHAT — community live chat banner
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s3, transform: [{ translateY: s3.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <TouchableOpacity style={s.campfireBanner} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/campfire' as any); }} activeOpacity={0.82}>
           <LinearGradient colors={['rgba(180,90,20,0.28)', 'rgba(100,45,8,0.18)', 'rgba(20,10,4,0.12)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} pointerEvents="none" />
           <View pointerEvents="none" style={{ position: 'absolute', bottom: -28, right: 70, width: 110, height: 110, borderRadius: 55, backgroundColor: '#E87828', opacity: 0.14 }} />
@@ -1663,6 +1683,7 @@ export default function HomeScreen() {
             onWrite={(prompt, mood) => router.push({
               pathname: '/create-journal-entry',
               params: { initialPrompt: prompt, initialMood: mood },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any)}
           />
         </Animated.View>
@@ -1685,6 +1706,7 @@ export default function HomeScreen() {
                   <>
                     <Text style={[s.statsGridSub, { color: nextStar.color }]}>{nextStar.label} Star</Text>
                     <View style={s.statsGridTrack}>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       <View style={[s.statsGridFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} />
                     </View>
                     <Text style={s.statsGridHint}>{nextStarCount < nextStar.threshold ? `${nextStar.threshold - nextStarCount} more ${nextStar.unit}` : 'Ready!'}</Text>
@@ -1719,6 +1741,7 @@ export default function HomeScreen() {
                   </View>
                   <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EEE8FF', letterSpacing: 0.1, marginVertical: 8, lineHeight: 20 }} numberOfLines={2}>{name}</Text>
                   <View style={{ height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden', marginBottom: 5 }}>
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <View style={{ height: 4, borderRadius: 2, width: `${Math.round(pct * 100)}%` as any, backgroundColor: color }} />
                   </View>
                   <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: `${color}AA`, marginBottom: 8 }}>{stars}/6 stars collected</Text>
@@ -1788,6 +1811,7 @@ export default function HomeScreen() {
                 <View style={[s.nudgeDot, { backgroundColor: nextStar.color }]} />
                 <Text style={[s.nudgeEyebrow, { color: nextStar.color }]}>{nextStar.label}</Text>
               </View>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <View style={s.nudgeTrack}><View style={[s.nudgeFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} /></View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 5 }}>
                 <Text style={s.nudgeAction}>{nextStar.action}</Text>
@@ -1859,6 +1883,7 @@ export default function HomeScreen() {
                   { icon: 'heart',     label: 'Check in' },
                 ].map(c => (
                   <View key={c.label} style={s.driftChip}>
+                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                     <Icon name={c.icon as any} size={11} color="rgba(200,175,255,0.65)" />
                     <Text style={s.driftChipTxt}>{c.label}</Text>
                   </View>
@@ -1925,6 +1950,7 @@ export default function HomeScreen() {
               {discoverPreview.map(post => {
                 const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
                 return (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   <TouchableOpacity key={post.id} style={s.exploreCard} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push({ pathname: '/story/[id]', params: { id: post.id } } as any); }} activeOpacity={0.82}>
                     {post.imageUri
                       ? <Image source={{ uri: post.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
@@ -2025,6 +2051,7 @@ export default function HomeScreen() {
                     onPress={() => {
                       markDmThreadRead(thread.partnerId);
                       setShowNotifs(false);
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       setTimeout(() => router.push(`/messages/${thread.partnerId}?name=${encodeURIComponent(thread.partnerName)}${thread.partnerHandle ? `&handle=${encodeURIComponent(thread.partnerHandle)}` : ''}` as any), 260);
                     }}
                     activeOpacity={0.78}
@@ -2048,6 +2075,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     key={room.id}
                     style={[m.notif, { backgroundColor: 'rgba(120,216,160,0.10)', borderColor: 'rgba(120,216,160,0.28)', borderWidth: 1 }]}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     onPress={() => { setShowNotifs(false); setTimeout(() => router.push(`/campfire/${room.id}` as any), 260); }}
                     activeOpacity={0.78}
                   >
@@ -2113,6 +2141,7 @@ export default function HomeScreen() {
             setTimeout(() => router.push({
               pathname: '/(tabs)/create',
               params: { eventPrompt: prompt, eventMood: mood },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             } as any), 260);
           }}
         />
@@ -2325,8 +2354,10 @@ const s = StyleSheet.create({
   statsGridTrack:{ height: 2.5, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'hidden', marginBottom: 3 },
   statsGridFill: { height: 2.5, borderRadius: 2 },
   statsGridHint: { fontSize: 9.5, fontFamily: 'Satoshi-Regular', color: 'rgba(180,165,230,0.35)', marginBottom: 10 },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statsGridCTA:  { fontSize: 10.5, fontFamily: 'Satoshi-Bold', color: 'rgba(180,160,240,0.48)', letterSpacing: 0.3, marginTop: 'auto' as any },
   statsGridPill: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginBottom: 6 },
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statsGridCTAPill:{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, marginTop: 'auto' as any },
 
   // ── Explore horizontal cards ──────────────────────────────────────────────

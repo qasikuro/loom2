@@ -127,7 +127,7 @@ router.get("/constellation", requireAuth, async (req, res) => {
     const previousStars: string[] = (before?.unlockedStars as string[]) ?? [];
 
     // Always re-sync so counts and star thresholds are current
-    await syncConstellation(db as any, userId);
+    await syncConstellation(userId);
 
     const [row] = await db
       .select()

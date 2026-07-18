@@ -43,6 +43,7 @@ export default function UsersPage() {
       const data = await api.getUsers(q, off);
       setUsers(data.users);
       setTotal(data.total);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -50,6 +51,7 @@ export default function UsersPage() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(query, offset); }, [query, offset]);
 
   const handleConfirm = async () => {
@@ -62,6 +64,7 @@ export default function UsersPage() {
       showToast("Done!");
       setConfirm(null);
       load(query, offset);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       showToast("Error: " + e.message);
       setConfirm(null);
@@ -81,6 +84,7 @@ export default function UsersPage() {
       setUsers(prev => prev.map(u => u.userId === limitEdit.userId ? { ...u, galleryLimit: n } : u));
       showToast(`Gallery limit set to ${n}`);
       setLimitEdit(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       showToast("Error: " + e.message);
     } finally {

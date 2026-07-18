@@ -54,6 +54,7 @@ function ThemeToggle() {
             onPress={() => { Haptics.selectionAsync(); setThemeMode(opt.mode); }}
             activeOpacity={0.75}
           >
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <Icon name={opt.icon as any} size={14} color={active ? colors.primary : colors.mutedForeground} />
             <Text style={[s.themeOptionText, { color: active ? colors.primary : colors.mutedForeground }]}>
               {opt.label}
@@ -76,7 +77,9 @@ interface Props {
   handleSignOut: () => void;
   confirmingSignOut: boolean;
   closeDrawer: () => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   user: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   avatarSource: any;
   topPad: number;
   colors: ReturnType<typeof useColors>;
@@ -111,6 +114,7 @@ export function ProfileSettingsDrawer({
 
           <Text style={s.drawerSectionLabel}>ACCOUNT</Text>
           <View style={s.drawerGroup}>
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/messages' as any), 260); }} activeOpacity={0.7}>
               <View style={s.drawerItemIcon}><Icon name="message-circle" size={15} color="rgba(200,184,232,0.75)" /></View>
               <Text style={[s.drawerItemLabel, { flex: 1 }]}>Messages</Text>
@@ -127,6 +131,7 @@ export function ProfileSettingsDrawer({
               </View>
             </TouchableOpacity>
             <View style={s.drawerDivider} />
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/purchase-history' as any), 260); }} activeOpacity={0.7}>
               <View style={s.drawerItemIcon}><Icon name="shopping-bag" size={15} color="rgba(200,184,232,0.75)" /></View>
               <Text style={[s.drawerItemLabel, { flex: 1 }]}>Purchase History</Text>

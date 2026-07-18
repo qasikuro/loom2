@@ -71,6 +71,7 @@ function PulseRing({ color }: { color: string }) {
     ]));
     loop.start();
     return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <Animated.View pointerEvents="none" style={{
@@ -109,6 +110,7 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
       friction: 11,
       useNativeDriver: true,
     }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animKey]);
 
   return (
@@ -132,6 +134,7 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
         activeOpacity={0.8}
       >
         <Icon
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           name={star.icon as any}
           size={13}
           color={unlocked ? star.color : 'rgba(255,255,255,0.20)'}
@@ -186,6 +189,7 @@ export function ConstellationMap({ state, onStarPress, animKey }: ConstellationM
         useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [animKey]);
 
   function onLayout(e: LayoutChangeEvent) {
@@ -256,7 +260,9 @@ export function ConstellationMap({ state, onStarPress, animKey }: ConstellationM
       ].map((dot, i) => (
         <View key={i} pointerEvents="none" style={{
           position: 'absolute',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           left: `${dot.x}%` as any,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           top:  `${dot.y}%` as any,
           width: dot.s, height: dot.s, borderRadius: dot.s,
           backgroundColor: '#C8B8E8', opacity: dot.o,

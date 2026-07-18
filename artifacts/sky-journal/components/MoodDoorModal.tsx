@@ -56,6 +56,7 @@ export function MoodDoorModal({ visible, onSelect, onDismiss }: Props) {
     } else {
       Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   function handleSelect(mood: string) {

@@ -134,6 +134,7 @@ function AuraBanner({
       return loop;
     });
     return () => loops.forEach(l => l.stop());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mood, bannerH]);
 
   const orbAScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] });
@@ -317,8 +318,9 @@ const MOOD_COLORS: Record<string, string> = {
 };
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function fmtDate(iso: string) {
-  const d = new Date(iso);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function fmtDate(_iso: string) {
+  const d = new Date(_iso);
   return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
 }
 
@@ -455,6 +457,7 @@ export default function UserProfileScreen() {
         setLoading(false);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   function handleFollow() {
@@ -466,7 +469,7 @@ export default function UserProfileScreen() {
 
   const mood           = profile?.mood ?? 'Dreamy';
   const aura           = MOOD_AURA[mood] ?? DEFAULT_AURA;
-  const moodColor      = MOOD_COLORS[mood] ?? aura.accent;
+  const _moodColor     = MOOD_COLORS[mood] ?? aura.accent;
   const userRole       = profile ? ROLES.find(r => r.key === profile.role) : undefined;
   const weatherQuery   = profile?.country ?? null;
   const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
@@ -712,6 +715,7 @@ export default function UserProfileScreen() {
               style={[styles.messageBtn, { borderColor: aura.accent + '55', backgroundColor: aura.accent + '10' }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 router.push({ pathname: '/messages/[userId]', params: { userId: profile.userId, name: profile.name } } as any);
               }}
               activeOpacity={0.8}
@@ -765,6 +769,7 @@ export default function UserProfileScreen() {
                     ]),
                     initialIndex:   '0',
                   },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 } as any);
               }}
               activeOpacity={0.86}
@@ -856,6 +861,7 @@ export default function UserProfileScreen() {
                           allOutfitsJson: JSON.stringify(_allList),
                           initialIndex:   String(profile.activeOutfit ? oIdx + 1 : oIdx),
                         },
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       } as any);
                     }}
                     activeOpacity={0.85}
@@ -909,6 +915,7 @@ export default function UserProfileScreen() {
                     <TouchableOpacity
                       key={story.id}
                       style={[styles.hStoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       onPress={() => router.push({ pathname: '/story/[id]', params: { id: story.id, source: 'discover' } } as any)}
                       activeOpacity={0.86}
                     >

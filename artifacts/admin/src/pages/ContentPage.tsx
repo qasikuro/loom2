@@ -32,6 +32,7 @@ export default function ContentPage() {
       const data = await api.getStickers(off);
       setStickers(data.stickers);
       setStickerTotal(data.total);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -41,6 +42,7 @@ export default function ContentPage() {
 
   useEffect(() => {
     if (showStickers) loadStickers(stickerOffset);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showStickers, stickerOffset]);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
@@ -58,6 +60,7 @@ export default function ContentPage() {
       const data = await api.getContent(type, off, q, from, to);
       setItems(data.items);
       setTotal(data.total);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -67,6 +70,7 @@ export default function ContentPage() {
 
   useEffect(() => {
     load(contentType, offset, authorSearch, dateFrom, dateTo);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contentType, offset, dateFrom, dateTo]);
 
   const onAuthorChange = (v: string) => {
@@ -87,6 +91,7 @@ export default function ContentPage() {
       showToast("Done!");
       setConfirm(null);
       load(contentType, offset, authorSearch, dateFrom, dateTo);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       showToast("Error: " + e.message);
       setConfirm(null);

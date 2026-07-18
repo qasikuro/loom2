@@ -32,7 +32,7 @@ export function ProfileStyleSection({
   outfits, openOutfit, gallery, openPhoto,
   handleAddGalleryPhoto, galleryUploading, galleryError,
   setShowShop, rewardBalance, purchasedIds, shopCatalog,
-  activeCosmetics, setActiveCosmetic, activeOutfitId, moodAccent,
+  activeCosmetics, setActiveCosmetic, activeOutfitId, moodAccent: _moodAccent,
 }: Props) {
   const colors = useColors();
   const { t }  = useTranslation();
@@ -80,6 +80,7 @@ export function ProfileStyleSection({
                   <Text style={[s.countPillText, { color: '#C8A84B' }]}>{owned.length}</Text>
                 </View>
               </View>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <TouchableOpacity onPress={() => router.push('/purchase-history' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.75}>
                 <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: colors.mutedForeground }}>History</Text>
               </TouchableOpacity>
@@ -125,6 +126,7 @@ export function ProfileStyleSection({
               </View>
             )}
           </View>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <TouchableOpacity style={[s.addBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]} onPress={() => router.push('/create-outfit' as any)} activeOpacity={0.75} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Icon name="plus" size={13} color={colors.primary} />
             <Text style={[s.addBtnText, { color: colors.primary }]}>New outfit</Text>
@@ -132,6 +134,7 @@ export function ProfileStyleSection({
         </View>
 
         {outfits.length === 0 ? (
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           <TouchableOpacity style={[s.emptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]} onPress={() => router.push('/create-outfit' as any)} activeOpacity={0.75}>
             <View style={[s.emptyIcon, { backgroundColor: `${colors.primary}14` }]}><Icon name="camera" size={20} color={`${colors.primary}70`} /></View>
             <Text style={[s.emptyTitle, { color: colors.foreground }]}>No outfits yet</Text>

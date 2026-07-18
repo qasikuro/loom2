@@ -21,6 +21,7 @@ export default function ReportsPage() {
       const data = await api.getReports(s, off);
       setReports(data.reports);
       setTotal(data.total);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -28,6 +29,7 @@ export default function ReportsPage() {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(status, offset); }, [status, offset]);
 
   const handle = async (id: string, action: "resolved" | "dismissed" | "delete") => {
@@ -36,6 +38,7 @@ export default function ReportsPage() {
       else await api.resolveReport(id, action);
       showToast("Done!");
       load(status, offset);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       showToast("Error: " + e.message);
     }

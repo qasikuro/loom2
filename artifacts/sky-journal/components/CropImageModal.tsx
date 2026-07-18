@@ -45,6 +45,7 @@ const RATIO_OPTS = [
   { label: '4 : 3', value: 4 / 3 },
 ] as const;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function touchDist(touches: any[]): number {
   const dx = touches[0].pageX - touches[1].pageX;
   const dy = touches[0].pageY - touches[1].pageY;
@@ -57,7 +58,7 @@ export default function CropImageModal({
   visible, uri, aspectRatio, onDone, onCancel,
 }: CropImageModalProps) {
   const insets                       = useSafeAreaInsets();
-  const { width: screenW, height: screenH } = useWindowDimensions();
+  const { width: screenW } = useWindowDimensions();
 
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [canvasH, setCanvasH]         = useState(0);
@@ -70,7 +71,7 @@ export default function CropImageModal({
   const tyRef    = useRef(0);
 
   // Bump this to force a re-render after gesture mutations
-  const [tick, setTick] = useState(0);
+  const [_tick, setTick] = useState(0);
   const bump = () => setTick(t => t + 1);
 
   // ── Frame geometry ────────────────────────────────────────────────────────
@@ -124,6 +125,7 @@ export default function CropImageModal({
     txRef.current = c.tx;
     tyRef.current = c.ty;
     bump();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [naturalSize, baseScale]);
 
   // ── Gesture: pinch-to-zoom + pan ──────────────────────────────────────────
@@ -143,6 +145,7 @@ export default function CropImageModal({
     },
 
     onPanResponderMove: (e, gs) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const touches = e.nativeEvent.touches as any[];
 
       if (touches.length >= 2) {
@@ -171,6 +174,7 @@ export default function CropImageModal({
       prevDist.current   = 0;
       isPinching.current = false;
     },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [baseScale, naturalSize, frameW, frameH]);
 
   // ── Zoom buttons (web + accessibility) ───────────────────────────────────

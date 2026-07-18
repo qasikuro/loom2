@@ -57,6 +57,7 @@ export default function SignInScreen() {
       Animated.timing(fadeAnim,  { toValue: 1, duration: 540, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       Animated.timing(slideAnim, { toValue: 0, duration: 540, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleGoogleSignIn = useCallback(async () => {
@@ -76,6 +77,7 @@ export default function SignInScreen() {
           },
         });
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Google sign-in failed.');
     } finally {
@@ -96,6 +98,7 @@ export default function SignInScreen() {
       } else {
         setCatchError('Sign-in failed. Please try again.');
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Sign-in failed.');
     }
@@ -214,6 +217,7 @@ export default function SignInScreen() {
             {/* ── Footer link ────────────────────── */}
             <View style={styles.footerRow}>
               <Text style={styles.footerText}>New here?</Text>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Link href={'/(auth)/sign-up' as any} asChild>
                 <Pressable hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={styles.footerLink}>Create account</Text>

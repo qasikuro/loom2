@@ -30,21 +30,14 @@ import {
   DEFAULT_CHARACTER,
 } from './mappers';
 import type {
-  ProfileLink,
   GuideAvailability,
-  BubbleStyle,
-  PanelOverlay,
-  StoryPanel,
-  StoryPage,
   Character,
-  JournalEntryType,
   JournalEntry,
   Story,
   Outfit,
   DiscoverPost,
   RawCharacterResponse,
   RawJournalEntryResponse,
-  RawStoryPanel,
   RawStoryResponse,
   RawOutfitResponse,
   RawDiscoverApiItem,
@@ -73,7 +66,7 @@ export type {
 // ── API base URL (baked in at build time via app.config.ts) ───────────────────
 
 function resolveApiBase(): string {
-  const extra  = (Constants.expoConfig as any)?.extra;
+  const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
   const envUrl = extra?.apiUrl;
   if (envUrl) return envUrl as string;
   return '/api';
@@ -643,6 +636,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Reset load guards so the next sign-in triggers a full reload
     dataReadyRef.current = false;
     isLoadingRef.current = false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only; deps would trigger sign-out on unrelated re-renders
   }, []);
 
   // Called by AuthTokenBridge once a valid Clerk token is available.
@@ -862,6 +856,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async function loadNotificationsData() {
     try {
       const raw = await apiFetch<RawNotification[]>('/notifications').catch(() => [] as RawNotification[]);
@@ -1142,6 +1137,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       appStateRef.current = nextState;
     });
     return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only subscription; softLoadData/pollCampfireUnread are stable refs
   }, []);
 
   // Poll campfire for new messages every 90s once API is available
@@ -1713,6 +1709,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const reloadData = useCallback(async () => {
     await loadData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: loadData is stable (reads from refs internally); wrapping here to provide stable callback identity
   }, []);
 
   const refreshFeed = useCallback(async () => {

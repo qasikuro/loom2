@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 let Notifications: typeof import('expo-notifications') | null = null;
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 try { Notifications = require('expo-notifications'); } catch { /* not available in Expo Go */ }
 
 /**
@@ -65,5 +66,6 @@ export function usePushNotifications(
         // Silently ignore — push notifications are non-critical
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn]);
 }

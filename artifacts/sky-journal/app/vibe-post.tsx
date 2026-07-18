@@ -65,6 +65,7 @@ export default function VibePostScreen() {
       }
     }
     if (eventPrompt) setText(String(eventPrompt));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isPublic,      setIsPublic]       = useState(true);
   const [posting,       setPosting]        = useState(false);
@@ -298,6 +299,7 @@ export default function VibePostScreen() {
       <CompletionMoment
         visible={showCompletion}
         variant="story"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onFinish={() => router.push('/(tabs)' as any)}
       />
     </View>

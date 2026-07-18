@@ -38,6 +38,7 @@ function StarOrb({ icon, delay, accent }: { icon: string; delay: number; accent:
     ]));
     const t = setTimeout(() => breathLoop.start(), delay + 700);
     return () => { clearTimeout(t); breathLoop.stop(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

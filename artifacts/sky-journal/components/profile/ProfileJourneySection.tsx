@@ -97,6 +97,7 @@ export function ProfileJourneySection({
           </View>
           <TouchableOpacity
             style={[s.addBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onPress={() => router.push('/my-stories' as any)}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -109,6 +110,7 @@ export function ProfileJourneySection({
         {stories.length === 0 ? (
           <TouchableOpacity
             style={[s.emptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onPress={() => router.push('/(tabs)/create' as any)}
             activeOpacity={0.75}
           >
@@ -126,6 +128,7 @@ export function ProfileJourneySection({
                 <TouchableOpacity
                   key={story.id}
                   style={[s.storyCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   onPress={() => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as any); }}
                   activeOpacity={0.85}
                 >
@@ -165,6 +168,7 @@ export function ProfileJourneySection({
             })}
             <TouchableOpacity
               style={[s.addCard, { borderColor: `${colors.primary}28`, backgroundColor: `${colors.primary}08` }]}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/create' as any); }}
               activeOpacity={0.75}
             >

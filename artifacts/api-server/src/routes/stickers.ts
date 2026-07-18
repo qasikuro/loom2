@@ -72,11 +72,11 @@ router.post("/stickers", requireAuth, async (req, res) => {
     // Reward sender for sending (aura energy) — await for client feedback
     const refKey = `${storyId}:${stickerType}`;
     const { granted: rewardGranted, amounts: rewardAmounts } =
-      await grantReward(db as any, fromUserId, "sticker_sent", refKey);
-    syncConstellation(db as any, fromUserId).catch(() => null);
+      await grantReward(fromUserId, "sticker_sent", refKey);
+    syncConstellation(fromUserId).catch(() => null);
     // Reward story owner for receiving (fire-and-forget — different user)
-    grantReward(db as any, story.userId, "sticker_received", refKey).catch(() => null);
-    syncConstellation(db as any, story.userId).catch(() => null);
+    grantReward(story.userId, "sticker_received", refKey).catch(() => null);
+    syncConstellation(story.userId).catch(() => null);
 
     return res.json({ ok: true, rewardGranted, rewardAmounts });
   } catch (err) {

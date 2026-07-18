@@ -74,6 +74,7 @@ export function CompletionMoment({ visible, variant, onFinish }: Props) {
       ]).start(() => onFinish());
     }, DISPLAY_MS);
     return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   if (!visible) return null;
@@ -98,7 +99,9 @@ export function CompletionMoment({ visible, variant, onFinish }: Props) {
           style={[
             styles.sparkle,
             {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               left:    `${12 + i * 12}%` as any,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               top:     `${18 + (i % 3) * 14}%` as any,
               opacity: s.opacity,
               transform: [{ translateY: s.y }],

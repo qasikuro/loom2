@@ -185,6 +185,7 @@ function EmptyState({ colors }: { colors: ReturnType<typeof useColors> }) {
       </Text>
       <TouchableOpacity
         style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onPress={() => { Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
       >
         <Icon name="plus" size={14} color="#fff" />
@@ -241,6 +242,7 @@ export default function WardrobeScreen() {
 
         <TouchableOpacity
           style={[styles.headerBtn, styles.headerBtnAccent]}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onPress={() => { Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
         >
           <Icon name="plus" size={20} color="rgba(235,228,255,0.9)" />

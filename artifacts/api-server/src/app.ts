@@ -115,6 +115,7 @@ app.get("/api/images/:filename", async (req: Request, res: Response) => {
     res.setHeader("Content-Type", (meta.contentType as string) || "image/jpeg");
     res.setHeader("Cache-Control", "public, max-age=604800, immutable");
     file.createReadStream().pipe(res);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     // GCS returns 404 when the object doesn't exist
     if (err?.code === 404 || err?.code === "404") return res.status(404).end();
@@ -144,6 +145,7 @@ app.use("/api", (_req: Request, res: Response) => {
 // Must have 4 parameters for Express to recognise it as an error handler.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, req: Request, res: Response, _next: NextFunction) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (req as any).log?.error({ err }, "Unhandled error");
   logger.error({ err }, "Unhandled error");
   res.status(500).json({

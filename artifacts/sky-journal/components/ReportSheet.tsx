@@ -61,6 +61,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
         Animated.timing(slideY, { toValue: 400, duration: 220, useNativeDriver: true, easing: Easing.in(Easing.quad) }),
       ]).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   async function handleSubmit() {

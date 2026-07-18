@@ -16,7 +16,9 @@ export function setTestUserId(id: string) {
  * clerkMiddleware → no-op, getAuth → returns currentTestUserId.
  */
 vi.mock("@clerk/express", () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getAuth:         (_req: any) => ({ userId: currentTestUserId }),
 }));
 

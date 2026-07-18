@@ -1,7 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import type { ConstellationState } from '@/components/ConstellationMap';
-import { apiFetch, useApp, type Character, type Outfit } from '@/context/AppContext';
+import { apiFetch, type Character, type Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -42,8 +42,8 @@ interface Props {
 
 export function ProfileHeaderSection({
   character, setCharacter,
-  constellation, availableTitles, setShowTitlePicker,
-  rewardBalance,
+  constellation, availableTitles: _availableTitles, setShowTitlePicker: _setShowTitlePicker,
+  rewardBalance: _rewardBalance,
   activeFrame, activeAccent,
   activeOutfit,
   openDrawer, toggleVisibility,
@@ -370,6 +370,7 @@ export function ProfileHeaderSection({
           </View>
         </View>
         <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
           <View style={{ height: 5, borderRadius: 3, backgroundColor: '#C8A84B', width: `${Math.round(profileXpPct * 100)}%` as any }} />
         </View>
       </View>

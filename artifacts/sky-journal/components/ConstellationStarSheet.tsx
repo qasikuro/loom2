@@ -73,6 +73,7 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
         useNativeDriver: false,
       }).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [starKey]);
 
   function handleClose() {
@@ -103,6 +104,7 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
           {/* Header */}
           <View style={styles.header}>
             <View style={[styles.iconCircle, { backgroundColor: `${star.color}18`, borderColor: `${star.color}35` }]}>
+              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Icon name={star.icon as any} size={18} color={star.color} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
@@ -168,6 +170,7 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
               <Animated.View style={[
                 styles.barFill,
                 {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   width: barAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
                   backgroundColor: star.color,
                 },

@@ -23,7 +23,7 @@ const CODE_EMOJI: Record<number, string> = {
   386: '⛈️', 389: '⛈️', 392: '⛈️', 395: '⛈️',
 };
 
-let _cache: Record<string, { data: WeatherData; fetchedAt: number }> = {};
+const _cache: Record<string, { data: WeatherData; fetchedAt: number }> = {};
 const CACHE_TTL = 15 * 60 * 1000;
 
 export function useWeather(query: string | null): { data: WeatherData | null; loading: boolean } {

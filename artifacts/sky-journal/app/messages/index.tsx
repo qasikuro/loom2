@@ -84,6 +84,7 @@ export default function MessagesInboxScreen() {
         handle:    thread.partnerHandle ?? '',
         avatarUri: thread.partnerAvatar ?? '',
       },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
   }
 
@@ -190,6 +191,7 @@ export default function MessagesInboxScreen() {
               </Text>
               <TouchableOpacity
                 style={[styles.emptyBtn, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 onPress={() => router.push('/(tabs)/discover' as any)}
                 activeOpacity={0.75}
               >

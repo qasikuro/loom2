@@ -65,6 +65,7 @@ function StarParticles({ color }: StarParticlesProps) {
     });
 
     Animated.parallel(animations).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -124,6 +125,7 @@ export function RewardBanner({ reward, onDismiss, isExiting = false }: RewardBan
         ).start();
       }
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Exit animation — slides up and fades out when parent signals dismissal
@@ -143,6 +145,7 @@ export function RewardBanner({ reward, onDismiss, isExiting = false }: RewardBan
         useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExiting]);
 
   const animStyle = {

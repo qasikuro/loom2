@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
   Easing,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -68,6 +67,7 @@ export default function QuickMomentScreen() {
       const m = MOODS.find(x => x.id === eventMood);
       if (m) setMood(m.id);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isPublic,      setIsPublic]      = useState(true);
   const [uploading,     setUploading]     = useState(false);
@@ -366,6 +366,7 @@ export default function QuickMomentScreen() {
       <CompletionMoment
         visible={showCompletion}
         variant="story"
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onFinish={() => router.push('/(tabs)' as any)}
       />
     </View>

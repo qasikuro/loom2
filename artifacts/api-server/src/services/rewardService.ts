@@ -1,5 +1,5 @@
-import { type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
+import { db } from "@workspace/db";
 import { userRewardsTable, rewardEventsTable } from "@workspace/db";
 
 export interface RewardAmounts {
@@ -31,7 +31,6 @@ export function defaultAmounts(eventType: string): RewardAmounts {
  * Returns whether the reward was newly granted and the amounts credited.
  */
 export async function grantReward(
-  db:        NodePgDatabase<any>,
   userId:    string,
   eventType: string,
   refId:     string = "",

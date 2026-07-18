@@ -14,6 +14,7 @@ function useShimmer() {
     );
     loop.start();
     return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return anim;
 }
@@ -33,6 +34,7 @@ export function SkeletonBox({
   const tx = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-300, 300] });
 
   return (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <View style={[{ width: width as any, height, borderRadius, overflow: 'hidden', backgroundColor: colors.muted }, style]}>
       <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: tx }] }]}>
         <LinearGradient

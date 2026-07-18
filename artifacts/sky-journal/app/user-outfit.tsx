@@ -130,7 +130,7 @@ export default function UserOutfitScreen() {
   const allOutfits: SlimOutfit[] = (() => {
     try {
       if (params.allOutfitsJson) return JSON.parse(params.allOutfitsJson) as SlimOutfit[];
-    } catch {}
+    } catch { /* ignore */ }
     return [{
       name:        params.outfitName  ?? '',
       description: params.outfitDesc  ?? '',
@@ -211,6 +211,7 @@ export default function UserOutfitScreen() {
     Animated.timing(entryAnim, {
       toValue: 1, duration: 1000, delay: 300, useNativeDriver: true,
     }).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Scroll hint bob
@@ -221,6 +222,7 @@ export default function UserOutfitScreen() {
         Animated.timing(hintY, { toValue: 0,   duration: 800, useNativeDriver: true }),
       ])
     ).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Ken Burns — restart each time currentIdx changes so each photo gets fresh movement
@@ -247,6 +249,7 @@ export default function UserOutfitScreen() {
     kbY.setValue(0);
     step();
     return () => { isMounted = false; kbAnim.current?.stop(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx]);
 
   // Studio light sweep
@@ -263,6 +266,7 @@ export default function UserOutfitScreen() {
     };
     doSweep();
     return () => { isMounted = false; sweepAnim.current?.stop(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Ambient color pulse
@@ -273,6 +277,7 @@ export default function UserOutfitScreen() {
         Animated.timing(ambientPulse, { toValue: 0.08, duration: 2600, useNativeDriver: true }),
       ])
     ).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Live dot blink
@@ -283,6 +288,7 @@ export default function UserOutfitScreen() {
         Animated.timing(liveDot, { toValue: 1.0,  duration: 680, useNativeDriver: true }),
       ])
     ).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Gallery navigation
@@ -353,6 +359,7 @@ export default function UserOutfitScreen() {
 
       {/* ── Main scroll ──────────────────────────────────── */}
       <Animated.ScrollView
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ref={scrollRef as any}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
@@ -624,6 +631,7 @@ export default function UserOutfitScreen() {
                 style={[styles.profileBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   router.push({ pathname: '/user/[userId]', params: { userId: params.authorUserId } } as any);
                 }}
                 activeOpacity={0.82}

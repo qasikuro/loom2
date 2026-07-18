@@ -1,6 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { MoodBadge } from '@/components/MoodBadge';
-import { Images } from '@/assets/images';
+
 import type { Character, Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Image } from 'expo-image';
@@ -18,6 +18,7 @@ interface Props {
   isActiveOutfit: boolean;
   character: Character;
   deletingConfirm: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   avatarSource: any;
   onClose: () => void;
   onSetDisplay: () => void;
@@ -90,6 +91,7 @@ export function OutfitDetailModal({
                     </Text>
                   ) : null}
 
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                   {!!(outfit as any).story && (
                     <View style={[s.storyCard, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}22` }]}>
                       <View style={s.storyHeader}>
@@ -97,6 +99,7 @@ export function OutfitDetailModal({
                         <Text style={[s.storyLabel, { color: colors.primary }]}>Character Story</Text>
                       </View>
                       <Text style={[s.storyText, { color: colors.foreground }]}>
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                         {(outfit as any).story}
                       </Text>
                     </View>
@@ -189,11 +192,13 @@ export function OutfitDetailModal({
                           editId:          outfit.id,
                           editName:        outfit.name,
                           editDescription: outfit.description ?? '',
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           editStory:       (outfit as any).story ?? '',
                           editImageUri:    outfit.imageUri ?? '',
                           editTags:        JSON.stringify(outfit.tags ?? []),
                           editIsPublic:    outfit.isPublic ? 'true' : 'false',
                         },
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       } as any);
                     }}
                   >

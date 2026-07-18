@@ -27,6 +27,7 @@ const GAP     = 8;
 const CARD_W  = (SW - GUTTER * 2 - GAP) / 2;
 const CARD_H  = CARD_W * 1.28;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const BG_MAP: Record<string, any> = {
   bg1:  Images.story_bg1,
   bg2:  Images.story_bg2,
@@ -52,7 +53,7 @@ function getMoodColor(mood: string) {
 }
 
 // ── Story card ────────────────────────────────────────────────────────────────
-function StoryCard({ story, colors }: { story: Story; colors: ReturnType<typeof useColors> }) {
+function StoryCard({ story, colors: _colors }: { story: Story; colors: ReturnType<typeof useColors> }) {
   const cover = getCover(story);
   const moodColor = getMoodColor(story.mood);
 
@@ -61,6 +62,7 @@ function StoryCard({ story, colors }: { story: Story; colors: ReturnType<typeof 
       style={[styles.card, { width: CARD_W, height: CARD_H }]}
       onPress={() => {
         Haptics.selectionAsync();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         router.push(`/story/${story.id}` as any);
       }}
       activeOpacity={0.88}
@@ -142,6 +144,7 @@ function EmptyState({ tab, colors }: { tab: string; colors: ReturnType<typeof us
       {tab === 'mine' && (
         <TouchableOpacity
           style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/create' as any); }}
         >
           <Icon name="plus" size={14} color="#fff" />
@@ -186,6 +189,7 @@ export default function MyStoriesScreen() {
         <Text style={styles.headerTitle}>{tr('profile.myStoriesTitle')}</Text>
         <TouchableOpacity
           style={styles.addBtn}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/create' as any); }}
         >
           <Icon name="plus" size={20} color="rgba(235,228,255,0.9)" />

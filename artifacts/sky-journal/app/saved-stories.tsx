@@ -1,6 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { DiscoverCard } from '@/components/DiscoverCard';
-import { Icon } from '@/components/Icon';
+
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { apiFetch, useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -24,7 +24,7 @@ export default function SavedStoriesScreen() {
   const { toggleSavePost, savedStoryIds, followingIds } = useApp();
   const insets  = useSafeAreaInsets();
   const colors  = useColors();
-  const { t }   = useTranslation();
+  useTranslation();
   const topPad  = Platform.OS === 'web' ? 48 : insets.top;
 
   const [posts,       setPosts]       = useState<DiscoverPost[]>([]);
@@ -33,7 +33,9 @@ export default function SavedStoriesScreen() {
 
   const fetchSaved = useCallback(async () => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const raw = await apiFetch<any[]>('/stories/saved');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const hydrated: DiscoverPost[] = (raw ?? []).map((p: any) => ({
         ...p,
         saved:       savedStoryIds.has(p.id),
@@ -47,6 +49,7 @@ export default function SavedStoriesScreen() {
     }
   }, [savedStoryIds, followingIds]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchSaved(); }, []);
 
   const onRefresh = useCallback(() => {
@@ -109,6 +112,7 @@ export default function SavedStoriesScreen() {
             <DiscoverCard
               post={{ ...item, saved: savedStoryIds.has(item.id), isFollowing: followingIds.includes(item.authorUserId) }}
               onSave={() => handleUnsave(item.id)}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onPress={() => router.push(`/story/${item.id}` as any)}
             />
           )}

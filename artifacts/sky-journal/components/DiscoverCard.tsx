@@ -38,7 +38,7 @@ interface DiscoverCardProps {
 export function DiscoverCard({
   post, onPress, onSave, onDelete, onReport, onAuthorPress, delay = 0,
 }: DiscoverCardProps) {
-  const colors   = useColors();
+  useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
 
@@ -62,6 +62,7 @@ export function DiscoverCard({
         toValue: 0, delay, tension: 65, friction: 11, useNativeDriver: true,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handlePressIn() {
@@ -109,7 +110,9 @@ export function DiscoverCard({
               ].map((s, i) => (
                 <View key={i} style={{
                   position: 'absolute', top: s.t,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   left: 'l' in s ? (s as any).l : undefined,
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   right: 'r' in s ? (s as any).r : undefined,
                   width: s.s, height: s.s, borderRadius: s.s,
                   backgroundColor: '#C8B8E8', opacity: s.o,

@@ -175,5 +175,6 @@ const styles = StyleSheet.create({
   overlay: {
     overflow: 'hidden',
     pointerEvents: 'none',
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any,
 });

@@ -111,6 +111,7 @@ describe("GET /api/discover", () => {
     setTestUserId(ME);
     const res = await request(app).get("/api/discover");
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const authorIds = res.body.map((p: any) => p.authorUserId);
     expect(authorIds).not.toContain(ME);
   });
@@ -119,6 +120,7 @@ describe("GET /api/discover", () => {
     setTestUserId(ME);
     const res = await request(app).get("/api/discover");
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const authorIds = res.body.map((p: any) => p.authorUserId);
     expect(authorIds).not.toContain(PRIVATE);
   });
@@ -127,6 +129,7 @@ describe("GET /api/discover", () => {
     setTestUserId(ME);
     const res = await request(app).get("/api/discover");
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = res.body.map((p: any) => p.id);
     expect(ids).toContain(storyFriendId);
     expect(ids).toContain(storyStrangerId);
@@ -137,7 +140,9 @@ describe("GET /api/discover", () => {
     const res = await request(app).get("/api/discover");
     expect(res.status).toBe(200);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const friendIdx   = res.body.findIndex((p: any) => p.id === storyFriendId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const strangerIdx = res.body.findIndex((p: any) => p.id === storyStrangerId);
 
     // Both should appear
@@ -152,7 +157,9 @@ describe("GET /api/discover", () => {
     const res = await request(app).get("/api/discover");
     expect(res.status).toBe(200);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const moodIdx    = res.body.findIndex((p: any) => p.id === storyMoodMatchId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const strangerIdx = res.body.findIndex((p: any) => p.id === storyStrangerId);
 
     expect(moodIdx).toBeGreaterThanOrEqual(0);
@@ -166,7 +173,9 @@ describe("GET /api/discover", () => {
     const res = await request(app).get("/api/discover");
     expect(res.status).toBe(200);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const strangerIdx = res.body.findIndex((p: any) => p.id === storyStrangerId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const oldIdx      = res.body.findIndex((p: any) => p.id === storyOldId);
 
     // Both should be present (old story is 35 days old — recency bonus = 0)
@@ -198,10 +207,12 @@ describe("GET /api/discover", () => {
     const res = await request(app).get("/api/discover");
     expect(res.status).toBe(200);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const friendPost = res.body.find((p: any) => p.id === storyFriendId);
     expect(friendPost).toBeDefined();
     expect(friendPost.isFollowing).toBe(true);
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const strangerPost = res.body.find((p: any) => p.id === storyStrangerId);
     expect(strangerPost).toBeDefined();
     expect(strangerPost.isFollowing).toBe(false);

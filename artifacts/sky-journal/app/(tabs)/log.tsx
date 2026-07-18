@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -50,7 +50,6 @@ function relativeTime(dateStr: string, t: TFunc): string {
   return t('common.weeksAgo', { n: weeks });
 }
 
-const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const WEEK_DAYS   = ['S','M','T','W','T','F','S'];
 
@@ -138,6 +137,7 @@ function TimelineCard({ entry, onDelete, index = 0, theme }: { entry: JournalEnt
         useNativeDriver: true, tension: 65, friction: 11,
       }),
     ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only entrance animation for card; Animated.Value refs are stable
   }, []);
 
   function handlePressIn() {
@@ -292,7 +292,9 @@ function MiniCalendar({
     return s;
   }, [entries]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   function prevMonth() { month===0 ? (setYear(y=>y-1), setMonth(11)) : setMonth(m=>m-1); }
+  // eslint-disable-next-line @typescript-eslint/no-unused-expressions
   function nextMonth() { month===11? (setYear(y=>y+1), setMonth(0))  : setMonth(m=>m+1); }
 
   const firstDOW = new Date(year, month, 1).getDay();
@@ -426,6 +428,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
     );
     loop.start();
     return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only floating animation loop; Animated.Value ref is stable
   }, []);
 
   const floatY = floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -7] });

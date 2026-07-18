@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cloud, Feather, Home, User, Users, ChevronRight, Plus } from 'lucide-react';
+import { Cloud, Home, User, Users, ChevronRight, Plus } from 'lucide-react';
 
 export function Minimal() {
   return (

@@ -1,6 +1,5 @@
 import React from "react";
 import { format } from "date-fns";
-import { Compass, PenTool, User, BookOpen } from "lucide-react";
 
 export function PaperCrane() {
   const today = new Date();

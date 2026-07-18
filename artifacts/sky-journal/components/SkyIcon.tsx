@@ -4,7 +4,7 @@
  * Built with react-native-svg (already installed).
  */
 import React from 'react';
-import Svg, { Path, Circle, Line, Ellipse, Rect, G, Defs, RadialGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Line, Rect, G } from 'react-native-svg';
 
 export type SkyIconName =
   | 'sky-home'         // Soft cloud with sparkle star

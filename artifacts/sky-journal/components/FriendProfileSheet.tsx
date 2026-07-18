@@ -7,7 +7,6 @@ import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Linking,
@@ -88,6 +87,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
       if (friend) {
         setStoryCount(null);
         setLoadingCount(true);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         apiFetch<any[]>(`/users/${friend.userId}/stories`)
           .then(rows => setStoryCount(rows.length))
           .catch(() => setStoryCount(null))
@@ -99,6 +99,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
         Animated.timing(opacity,    { toValue: 0,   duration: 200, useNativeDriver: true }),
       ]).start();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, friend]);
 
   if (!friend) return null;
@@ -289,6 +290,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
                   style={[styles.storiesBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
                   onPress={() => {
                     onClose();
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     router.push('/(tabs)/discover' as any);
                   }}
                   activeOpacity={0.82}

@@ -112,6 +112,7 @@ export default function CreateOutfitScreen() {
       } catch { setSelectedTags([]); setSelectedVibe(null); }
       setIsPublic(params.editIsPublic !== 'false');
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
 
   async function pickImage() {

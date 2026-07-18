@@ -4,7 +4,9 @@ import { inArray } from 'drizzle-orm';
 
 // ── Clerk mocks (hoisted by Vitest before any imports) ────────────────────────
 vi.mock('@clerk/express', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   clerkMiddleware: () => (_req: any, _res: any, next: any) => next(),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getAuth:         (req: any) => ({ userId: req.headers['x-test-user-id'] ?? null }),
 }));
 
@@ -198,6 +200,7 @@ describe('User isolation — cross-user access is blocked', () => {
   it('User A lists journal entries and does NOT see User B\'s entries', async () => {
     const res = await as(UID_A).get('/journal-entries');
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((e: any) => e.id);
     expect(ids).not.toContain(bJournalId);
   });
@@ -206,6 +209,7 @@ describe('User isolation — cross-user access is blocked', () => {
     const res = await as(UID_A).delete(`/journal-entries/${bJournalId}`);
     expect(res.status).toBe(204);
     const rows = await db.select().from(journalEntriesTable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .where(inArray(journalEntriesTable.id, [bJournalId as any]));
     expect(rows).toHaveLength(1);
   });
@@ -213,6 +217,7 @@ describe('User isolation — cross-user access is blocked', () => {
   it('User A lists stories and does NOT see User B\'s stories', async () => {
     const res = await as(UID_A).get('/stories');
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((s: any) => s.id);
     expect(ids).not.toContain(bStoryId);
   });
@@ -221,6 +226,7 @@ describe('User isolation — cross-user access is blocked', () => {
     const res = await as(UID_A).delete(`/stories/${bStoryId}`);
     expect(res.status).toBe(204);
     const rows = await db.select().from(storiesTable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .where(inArray(storiesTable.id, [bStoryId as any]));
     expect(rows).toHaveLength(1);
   });
@@ -233,6 +239,7 @@ describe('User isolation — cross-user access is blocked', () => {
   it('User A lists outfits and does NOT see User B\'s outfits', async () => {
     const res = await as(UID_A).get('/outfits');
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((o: any) => o.id);
     expect(ids).not.toContain(bOutfitId);
   });
@@ -241,6 +248,7 @@ describe('User isolation — cross-user access is blocked', () => {
     const res = await as(UID_A).delete(`/outfits/${bOutfitId}`);
     expect(res.status).toBe(204);
     const rows = await db.select().from(outfitsTable)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .where(inArray(outfitsTable.id, [bOutfitId as any]));
     expect(rows).toHaveLength(1);
   });
@@ -260,6 +268,7 @@ describe('Story CRUD — full lifecycle', () => {
   it('POST /stories with valid data → 201 with id, chapterTitle, mood, isPublic, witnessedCount', async () => {
     const res = await as(UID_A).post('/stories').send(newStory({ isPublic: false, mood: 'Dreamy' }));
     expect(res.status).toBe(201);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body = res.body as any;
     expect(body.id).toBeTruthy();
     expect(body.chapterTitle).toBe('The Wanderer Awakes');
@@ -281,6 +290,7 @@ describe('Story CRUD — full lifecycle', () => {
   it('GET /stories/:id returns the created story with correct fields', async () => {
     const res = await as(UID_A).get(`/stories/${createdId}`);
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const body = res.body as any;
     expect(body.id).toBe(createdId);
     expect(body.chapterTitle).toBe('The Wanderer Awakes');
@@ -299,6 +309,7 @@ describe('Story CRUD — full lifecycle', () => {
     const res = await as(UID_A).get('/stories');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((s: any) => s.id);
     expect(ids).toContain(createdId);
   });
@@ -308,6 +319,7 @@ describe('Story CRUD — full lifecycle', () => {
       .patch(`/stories/${createdId}`)
       .send({ chapterTitle: 'Revised Chapter Title' });
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect((res.body as any).chapterTitle).toBe('Revised Chapter Title');
   });
 
@@ -348,6 +360,7 @@ describe('Discover feed — exclusion and field integrity', () => {
   it('Discover feed does NOT include the requesting user\'s own stories', async () => {
     const res = await as(UID_A).get('/discover');
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((p: any) => p.id);
     expect(ids).not.toContain(ownStoryId);
   });
@@ -355,6 +368,7 @@ describe('Discover feed — exclusion and field integrity', () => {
   it('Discover feed includes User B\'s public story for User A', async () => {
     const res = await as(UID_A).get('/discover');
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((p: any) => p.id);
     expect(ids).toContain(publicBStoryId);
   });
@@ -372,6 +386,7 @@ describe('Discover feed — exclusion and field integrity', () => {
     }).returning();
 
     const res = await as(UID_A).get('/discover');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((p: any) => p.id);
     expect(ids).not.toContain(privateStory.id);
   });
@@ -379,8 +394,10 @@ describe('Discover feed — exclusion and field integrity', () => {
   it('Each discover item has required response fields', async () => {
     const res = await as(UID_A).get('/discover');
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const posts = res.body as any[];
     expect(posts.length).toBeGreaterThan(0);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const post = posts.find((p: any) => p.id === publicBStoryId);
     expect(post).toBeDefined();
     expect(post.authorUserId).toBe(UID_B);
@@ -394,6 +411,7 @@ describe('Discover feed — exclusion and field integrity', () => {
   it('Discover feed for User B also excludes B\'s own stories', async () => {
     const res = await as(UID_B).get('/discover');
     expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ids = (res.body as any[]).map((p: any) => p.id);
     expect(ids).not.toContain(publicBStoryId);
   });

@@ -25,6 +25,7 @@ import { getAuthToken } from '@/context/AppContext';
 import Constants from 'expo-constants';
 
 function resolveApiBase(): string {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const extra  = (Constants.expoConfig as any)?.extra;
   const envUrl = extra?.apiUrl;
   if (envUrl) return envUrl as string;
@@ -105,6 +106,7 @@ export function useSSE(
         signal: ctrl.signal,
         headers: { Authorization: `Bearer ${token}` },
         // React Native needs these hints to avoid buffering
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(Platform.OS !== 'web' && { reactNative: { textStreaming: true } } as any),
       });
 
@@ -130,6 +132,7 @@ export function useSSE(
           onEventRef.current(ev.channel, ev.data);
         }
       }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       if (err?.name === 'AbortError') return;
     }

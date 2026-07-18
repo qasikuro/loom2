@@ -12,6 +12,7 @@ router.get("/weather", requireAuth, async (req, res) => {
     const url = `https://wttr.in/${encodeURIComponent(q)}?format=j1`;
     const r   = await fetch(url, { headers: { 'User-Agent': 'SkyJournal/1.0' } });
     if (!r.ok) return res.status(502).json({ error: 'Weather unavailable' });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const json: any = await r.json();
     const cc        = json.current_condition?.[0];
     if (!cc) return res.status(502).json({ error: 'No data' });

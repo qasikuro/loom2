@@ -76,6 +76,7 @@ export function ImageSourceSheet({
         }),
       ]).start(() => setShown(false));
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
   const bottomPad = Platform.OS === 'web' ? 28 : insets.bottom + 10;
@@ -171,6 +172,7 @@ function Option({ iconName, iconBg, iconColor, label, labelColor, sub, onPress }
   return (
     <TouchableOpacity style={styles.option} onPress={onPress} activeOpacity={0.72}>
       <View style={[styles.optionIconBg, { backgroundColor: iconBg }]}>
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         <Icon name={iconName as any} size={21} color={iconColor} />
       </View>
       <View style={styles.optionBody}>

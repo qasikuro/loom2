@@ -1,5 +1,5 @@
-import { type NodePgDatabase } from "drizzle-orm/node-postgres";
 import { eq, sql, and } from "drizzle-orm";
+import { db } from "@workspace/db";
 import {
   constellationProgressTable,
   journalEntriesTable,
@@ -28,7 +28,6 @@ function titleForCount(count: number): string | null {
  * Uses aggregate queries — fast even for large datasets.
  */
 export async function syncConstellation(
-  db:     NodePgDatabase<any>,
   userId: string,
 ): Promise<void> {
   try {
