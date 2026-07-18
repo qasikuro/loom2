@@ -167,3 +167,9 @@ id = "0qhUetA5JsxzpOlLmUfXn"
 uri = "file://exports/sky-journal-work-plan.zip"
 type = "unspecified"
 title = "Sky Journal — Remaining Work Plan"
+
+[[outputs]]
+id = "eO3CrUlLMhDQ5zH8o6Dj0"
+uri = "file://sky-journal-docs.zip"
+type = "unspecified"
+title = "Sky Journal — Full Product Documentation"
