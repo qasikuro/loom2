@@ -99,12 +99,29 @@ function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
   const flame2 = useRef(new Animated.Value(0)).current;
   const flame3 = useRef(new Animated.Value(0)).current;
 
-  // Embers
-  const em = Array.from({ length: 5 }, () => ({
-    y: useRef(new Animated.Value(0)).current,
-    x: useRef(new Animated.Value(0)).current,
-    o: useRef(new Animated.Value(0)).current,
-  }));
+  // Embers — hooks must be called unconditionally at component top level
+  const em0y = useRef(new Animated.Value(0)).current;
+  const em0x = useRef(new Animated.Value(0)).current;
+  const em0o = useRef(new Animated.Value(0)).current;
+  const em1y = useRef(new Animated.Value(0)).current;
+  const em1x = useRef(new Animated.Value(0)).current;
+  const em1o = useRef(new Animated.Value(0)).current;
+  const em2y = useRef(new Animated.Value(0)).current;
+  const em2x = useRef(new Animated.Value(0)).current;
+  const em2o = useRef(new Animated.Value(0)).current;
+  const em3y = useRef(new Animated.Value(0)).current;
+  const em3x = useRef(new Animated.Value(0)).current;
+  const em3o = useRef(new Animated.Value(0)).current;
+  const em4y = useRef(new Animated.Value(0)).current;
+  const em4x = useRef(new Animated.Value(0)).current;
+  const em4o = useRef(new Animated.Value(0)).current;
+  const em = [
+    { y: em0y, x: em0x, o: em0o },
+    { y: em1y, x: em1x, o: em1o },
+    { y: em2y, x: em2x, o: em2o },
+    { y: em3y, x: em3x, o: em3o },
+    { y: em4y, x: em4x, o: em4o },
+  ];
 
   useEffect(() => {
     const loop1 = Animated.loop(Animated.sequence([

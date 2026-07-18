@@ -49,6 +49,7 @@ onlyBuiltDependencies:
   - unrs-resolver
 
 overrides:
+  'eslint-plugin-react-hooks>zod-validation-error': ^5.0.0
   '@esbuild-kit/esm-loader': npm:tsx@^4.21.0
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-arm64': '-'
   '@expo/ngrok-bin>@expo/ngrok-bin-darwin-x64': '-'

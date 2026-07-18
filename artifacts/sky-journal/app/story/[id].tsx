@@ -394,6 +394,80 @@ export default function StoryScreen() {
     };
   }
 
+  // ── Continue Reading logic ────────────────────────────────────────────────────
+  // These hooks must live before any early returns so they always run in the
+  // same order every render (Rules of Hooks).
+
+  // Swipe-down pan responder for the Continue card
+  const continuePanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 6 && gs.dy > 0,
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) continueDragY.setValue(gs.dy);
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dy > 50 || gs.vy > 0.6) {
+          if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
+          setContinueDismissed(true);
+          Animated.parallel([
+            Animated.timing(continueSlideY,  { toValue: 220, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+            Animated.timing(continueOpacity, { toValue: 0,   duration: 180, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+            Animated.timing(continueDragY,   { toValue: 0,   duration: 0, useNativeDriver: true }),
+          ]).start(() => setContinuePost(null));
+        } else {
+          Animated.spring(continueDragY, { toValue: 0, tension: 180, friction: 12, useNativeDriver: true }).start();
+        }
+      },
+    }),
+  ).current;
+
+  function showContinueCard() {
+    if (endReachedRef.current || continueDismissed) return;
+    endReachedRef.current = true;
+
+    const candidates = discoverPosts.filter(p => p.id !== id && (p.mood === mood || p.vibe === mood));
+    const fallback   = discoverPosts.filter(p => p.id !== id);
+    const next       = candidates[0] ?? fallback[0] ?? null;
+    if (!next) return;
+
+    setContinuePost(next);
+    continueTimerRef.current = setTimeout(() => {
+      continueDragY.setValue(0);
+      Animated.parallel([
+        Animated.spring(continueSlideY,  { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }),
+        Animated.timing(continueOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      ]).start();
+      autoDismissTimer.current = setTimeout(dismissContinueCard, 10_000);
+    }, 1500);
+  }
+
+  function dismissContinueCard() {
+    if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
+    setContinueDismissed(true);
+    Animated.parallel([
+      Animated.timing(continueSlideY,  { toValue: 180, duration: 260, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(continueOpacity, { toValue: 0,   duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+    ]).start(() => setContinuePost(null));
+  }
+
+  // End-of-story detection: fires when scroll settles at the bottom
+  const handleScrollEnd = useCallback((e: { nativeEvent: { contentOffset: { y: number }; layoutMeasurement: { height: number }; contentSize: { height: number } } }) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+    if (distanceFromBottom < 120 && !endReachedRef.current && !continueDismissed) {
+      showContinueCard();
+    }
+  }, [id, mood, discoverPosts, continueDismissed]);
+
+  // Clear timers on unmount so card doesn't appear after navigating away
+  useEffect(() => {
+    return () => {
+      if (continueTimerRef.current) clearTimeout(continueTimerRef.current);
+      if (autoDismissTimer.current)  clearTimeout(autoDismissTimer.current);
+    };
+  }, []);
+
   // ── Full-screen error state — must run before any panel/page derivation ───
   // Guards against crash when panels is missing or wrong type.
   const storyNotFound  = !story && !post;
@@ -463,82 +537,6 @@ export default function StoryScreen() {
   const firstPanel = renderPages[0]?.panels[0];
   const heroImgSrc = getPanelImageSource(firstPanel?.imageUri, firstPanel?.bgPreset);
   const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
-
-  // ── Continue Reading logic ────────────────────────────────────────────────────
-
-  // Swipe-down pan responder for the Continue card
-  const continuePanResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 6 && gs.dy > 0,
-      onPanResponderMove: (_, gs) => {
-        if (gs.dy > 0) continueDragY.setValue(gs.dy);
-      },
-      onPanResponderRelease: (_, gs) => {
-        if (gs.dy > 50 || gs.vy > 0.6) {
-          // Flicked or dragged far enough — dismiss
-          if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
-          setContinueDismissed(true);
-          Animated.parallel([
-            Animated.timing(continueSlideY,  { toValue: 220, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-            Animated.timing(continueOpacity, { toValue: 0,   duration: 180, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-            Animated.timing(continueDragY,   { toValue: 0,   duration: 0, useNativeDriver: true }),
-          ]).start(() => setContinuePost(null));
-        } else {
-          // Snap back
-          Animated.spring(continueDragY, { toValue: 0, tension: 180, friction: 12, useNativeDriver: true }).start();
-        }
-      },
-    }),
-  ).current;
-
-  function showContinueCard() {
-    if (endReachedRef.current || continueDismissed) return;
-    endReachedRef.current = true;
-
-    // Find next mood-matched story from discover feed (exclude current)
-    const candidates = discoverPosts.filter(p => p.id !== id && (p.mood === mood || p.vibe === mood));
-    const fallback   = discoverPosts.filter(p => p.id !== id);
-    const next       = candidates[0] ?? fallback[0] ?? null;
-    if (!next) return;
-
-    setContinuePost(next);
-    continueTimerRef.current = setTimeout(() => {
-      continueDragY.setValue(0);
-      Animated.parallel([
-        Animated.spring(continueSlideY,  { toValue: 0, tension: 65, friction: 11, useNativeDriver: true }),
-        Animated.timing(continueOpacity, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      ]).start();
-      // Auto-dismiss after 10s of no interaction
-      autoDismissTimer.current = setTimeout(dismissContinueCard, 10_000);
-    }, 1500);
-  }
-
-  function dismissContinueCard() {
-    if (autoDismissTimer.current) clearTimeout(autoDismissTimer.current);
-    setContinueDismissed(true);
-    Animated.parallel([
-      Animated.timing(continueSlideY,  { toValue: 180, duration: 260, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-      Animated.timing(continueOpacity, { toValue: 0,   duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
-    ]).start(() => setContinuePost(null));
-  }
-
-  // End-of-story detection: fires when scroll settles at the bottom (tight threshold)
-  const handleScrollEnd = useCallback((e: { nativeEvent: { contentOffset: { y: number }; layoutMeasurement: { height: number }; contentSize: { height: number } } }) => {
-    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
-    const distanceFromBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
-    if (distanceFromBottom < 120 && !endReachedRef.current && !continueDismissed) {
-      showContinueCard();
-    }
-  }, [id, mood, discoverPosts, continueDismissed]);
-
-  // Clear timers on unmount so card doesn't appear after navigating away
-  useEffect(() => {
-    return () => {
-      if (continueTimerRef.current) clearTimeout(continueTimerRef.current);
-      if (autoDismissTimer.current)  clearTimeout(autoDismissTimer.current);
-    };
-  }, []);
 
   function handleShare() {
     const panels = story?.panels ?? post?.panels ?? [];

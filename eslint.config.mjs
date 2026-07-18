@@ -1,5 +1,6 @@
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default tseslint.config(
   {
@@ -24,6 +25,9 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
 
   {
+    plugins: {
+      "react-hooks": reactHooks,
+    },
     linterOptions: {
       reportUnusedDisableDirectives: false,
     },
@@ -38,6 +42,8 @@ export default tseslint.config(
       "prefer-const": "warn",
       "no-empty": "warn",
       "@typescript-eslint/only-throw-error": "off",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   },
 );

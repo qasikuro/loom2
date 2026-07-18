@@ -124,9 +124,7 @@ export function VibeOverlay({ vibe }: { vibe: string }) {
   const def = VIBE_DEFS[vibe];
   const particlesRef = useRef<Particle[]>([]);
 
-  if (!def) return null;
-
-  if (particlesRef.current.length === 0) {
+  if (def && particlesRef.current.length === 0) {
     particlesRef.current = buildParticles(def);
   }
 
@@ -145,6 +143,8 @@ export function VibeOverlay({ vibe }: { vibe: string }) {
       });
     };
   }, []);
+
+  if (!def) return null;
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.overlay]}>
