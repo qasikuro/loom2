@@ -1428,7 +1428,9 @@ export default function HomeScreen() {
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon name="bell" size={16} color="rgba(220,210,255,0.75)" />
-                {hasNotifs && <View style={[s.heroBadge, { backgroundColor: accent }]} />}
+                {(unread > 0 || campfireUnread > 0 || dmUnread > 0) && (
+                  <View style={[s.heroBadge, { backgroundColor: '#FF4757' }]} />
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => router.push('/(tabs)/profile')}
