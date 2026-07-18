@@ -1424,7 +1424,7 @@ export default function HomeScreen() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onPress={() => { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon name="bell" size={16} color="rgba(220,210,255,0.75)" />
@@ -1507,7 +1507,7 @@ export default function HomeScreen() {
         <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
         <TouchableOpacity
           style={s.lumiCard}
-          onPress={() => { if (hasNotifs) { setShowNotifs(true); markServerNotificationsRead(); } else router.push('/(tabs)/create'); }}
+          onPress={() => { if (hasNotifs) { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); } else router.push('/(tabs)/create'); }}
           activeOpacity={0.88}
         >
           <LinearGradient colors={['#1E0E48', '#100828', '#080518']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -1555,7 +1555,7 @@ export default function HomeScreen() {
               onPress={() => {
                 setNewWitnessData(null);
                 setShowNotifs(true);
-                markServerNotificationsRead();
+                setTimeout(() => markServerNotificationsRead(), 500);
               }}
             />
           </Animated.View>
@@ -1568,12 +1568,12 @@ export default function HomeScreen() {
         {hasDigest && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.digestRow}>
             {witnessedNotifs > 0 && (
-              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(200,168,75,0.14)' }]} onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }} activeOpacity={0.78}>
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(200,168,75,0.14)' }]} onPress={() => { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); }} activeOpacity={0.78}>
                 <Icon name="eye" size={13} color="#C8A84B" /><Text style={[s.digestTxt, { color: '#C8A84B' }]}>{witnessedNotifs} witnessed you</Text>
               </TouchableOpacity>
             )}
             {savedNotifs > 0 && (
-              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(168,128,248,0.14)' }]} onPress={() => { setShowNotifs(true); markServerNotificationsRead(); }} activeOpacity={0.78}>
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(168,128,248,0.14)' }]} onPress={() => { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); }} activeOpacity={0.78}>
                 <Icon name="bookmark" size={13} color="#A880F8" /><Text style={[s.digestTxt, { color: '#A880F8' }]}>{savedNotifs} saved your work</Text>
               </TouchableOpacity>
             )}
