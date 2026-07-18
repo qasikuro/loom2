@@ -32,6 +32,10 @@ args = "lint"
 task = "workflow.run"
 args = "typecheck-api-server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "typecheck-libs"
+
 [[workflows.workflow]]
 name = "typecheck"
 author = "agent"
@@ -47,12 +51,12 @@ isValidation = true
 name = "typecheck-sky-journal"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/sky-journal run typecheck"
-
 [workflows.workflow.metadata]
 isValidation = true
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run typecheck:libs && pnpm --filter @workspace/sky-journal run typecheck"
 
 [[workflows.workflow]]
 name = "lint"
@@ -69,9 +73,20 @@ isValidation = true
 name = "typecheck-api-server"
 author = "agent"
 
+[workflows.workflow.metadata]
+isValidation = true
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/api-server run typecheck"
+args = "pnpm run typecheck:libs && pnpm --filter @workspace/api-server run typecheck"
+
+[[workflows.workflow]]
+name = "typecheck-libs"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm run typecheck:libs"
 
 [workflows.workflow.metadata]
 isValidation = true
