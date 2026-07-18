@@ -856,25 +856,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async function loadNotificationsData() {
-    try {
-      const raw = await apiFetch<RawNotification[]>('/notifications').catch(() => [] as RawNotification[]);
-      setServerNotifications(
-        (raw ?? []).map((r: RawNotification) => ({
-          id:        r.id,
-          actorId:   r.actorId,
-          actorName: r.actorName,
-          type:      r.type as ServerNotification['type'],
-          refId:     r.refId,
-          title:     r.title,
-          isRead:    r.isRead,
-          createdAt: r.createdAt,
-        })),
-      );
-    } catch { /* silently skip */ }
-  }
-
   async function fetchFriends() {
     try {
       const data = await apiFetch<FriendSummary[]>('/friends');
