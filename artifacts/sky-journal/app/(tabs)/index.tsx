@@ -1424,7 +1424,7 @@ export default function HomeScreen() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon name="bell" size={16} color="rgba(220,210,255,0.75)" />
