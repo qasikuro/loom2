@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
-import { sendPushNotification } from "../services/pushService";
+import { sendPushNotification, sendPushToTokens } from "../services/pushService";
 import * as cache from "../lib/cache";
 
 const router: IRouter = Router();
@@ -218,6 +218,24 @@ async function fanOutStoryNotification(
         refId:     storyId,
         title:     chapterTitle,
       })),
+    );
+
+    // Push notification to each follower — batch-fetch tokens in one query
+    const followerIds = followers.map(f => f.followerId);
+    const tokenRows   = await db
+      .select({ pushToken: characterTable.pushToken })
+      .from(characterTable)
+      .where(inArray(characterTable.userId, followerIds));
+
+    await sendPushToTokens(
+      tokenRows
+        .filter((r): r is { pushToken: string } => !!r.pushToken)
+        .map(r => ({
+          token: r.pushToken,
+          title: actorName,
+          body:  `shared a new story "${chapterTitle}" ✦`,
+          data:  { type: "new_story", refId: storyId },
+        })),
     );
   } catch (err) {
     req.log.error({ err }, "Failed to fan-out story notification");

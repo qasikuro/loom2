@@ -1,8 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, characterTable, userRewardsTable, userPurchasesTable, eventsTable } from "@workspace/db";
 import type { EventInventoryItem } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, inArray, sql } from "drizzle-orm";
 import { requireAdmin, getUserId } from "../middleware/auth";
+import { sendPushToTokens } from "../services/pushService";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 
@@ -287,6 +288,24 @@ router.post("/admin/events/:id/grant", requireAdmin, async (req: Request, res: R
     }
 
     req.log.info({ eventId: event.id, userCount: userIds.length, totalStars, totalAura, totalShards, itemsGranted }, "Event inventory granted");
+
+    // Push notification to all users with registered tokens (fire-and-forget)
+    const tokenRows = await db
+      .select({ pushToken: characterTable.pushToken })
+      .from(characterTable)
+      .where(inArray(characterTable.userId, userIds));
+
+    sendPushToTokens(
+      tokenRows
+        .filter((r): r is { pushToken: string } => !!r.pushToken)
+        .map(r => ({
+          token: r.pushToken,
+          title: "✦ " + event.title,
+          body:  "Your seasonal gifts have arrived — check your rewards!",
+          data:  { type: "event_grant", refId: event.id },
+        })),
+    ).catch(() => null);
+
     return res.json({
       granted:    userIds.length,
       stars:      totalStars,
