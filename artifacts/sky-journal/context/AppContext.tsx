@@ -389,12 +389,15 @@ interface AppContextValue {
   deleteServerNotification:    (id: string) => void;
 
   campfireUnread:       number;
-  unreadCampfireRooms:  { id: string; name: string; mood: string }[];
+  unreadCampfireRooms:  { id: string; name: string; mood: string; lastAt: string }[];
   markCampfireRoomRead: (roomId: string) => Promise<void>;
+  campfireBadgeSeenAt:  string | null;
 
   dmUnread:         number;
-  unreadDmThreads:  { partnerId: string; partnerName: string; partnerHandle: string | null }[];
+  unreadDmThreads:  { partnerId: string; partnerName: string; partnerHandle: string | null; lastAt: string }[];
   markDmThreadRead: (partnerId: string) => void;
+  dmBadgeSeenAt:    string | null;
+  markAllUnreadSeen: () => void;
 
   shopCatalog:       ShopItem[];
   purchasedIds:      string[];
@@ -516,9 +519,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [myGuides, setMyGuides]                       = useState<GuideProfile[]>([]);
 
   const [campfireUnread, setCampfireUnread]           = useState(0);
-  const [unreadCampfireRooms, setUnreadCampfireRooms] = useState<{ id: string; name: string; mood: string }[]>([]);
+  const [unreadCampfireRooms, setUnreadCampfireRooms] = useState<{ id: string; name: string; mood: string; lastAt: string }[]>([]);
+  const [campfireBadgeSeenAt, setCampfireBadgeSeenAt] = useState<string | null>(null);
   const [dmUnread,        setDmUnread]        = useState(0);
-  const [unreadDmThreads, setUnreadDmThreads] = useState<{ partnerId: string; partnerName: string; partnerHandle: string | null }[]>([]);
+  const [unreadDmThreads, setUnreadDmThreads] = useState<{ partnerId: string; partnerName: string; partnerHandle: string | null; lastAt: string }[]>([]);
+  const [dmBadgeSeenAt,   setDmBadgeSeenAt]   = useState<string | null>(null);
   const campfireToastShownRef = useRef<Set<string>>(new Set());
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
@@ -571,7 +576,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadFromCache() {
     try {
-      const [c, j, s, o, d, f, sv, ac, rb] = await Promise.all([
+      const [c, j, s, o, d, f, sv, ac, rb, cfSeen, dmSeen] = await Promise.all([
         AsyncStorage.getItem('character_v2'),
         AsyncStorage.getItem('journal_v2'),
         AsyncStorage.getItem('stories_v1'),
@@ -581,6 +586,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem('saved_stories_v1'),
         AsyncStorage.getItem('active_cosmetics_v1'),
         AsyncStorage.getItem('reward_balance_v1'),
+        AsyncStorage.getItem('campfire_badge_seen_at'),
+        AsyncStorage.getItem('dm_badge_seen_at'),
       ]);
       if (c)  setCharacterState(JSON.parse(c));
       if (j)  setJournalEntries(JSON.parse(j));
@@ -591,6 +598,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (sv) { try { setSavedStoryIds(new Set(JSON.parse(sv))); } catch { /* ignore */ } }
       if (ac) { try { setActiveCosmeticsState(JSON.parse(ac)); } catch { /* ignore */ } }
       if (rb) { try { setRewardBalance(JSON.parse(rb)); } catch { /* ignore */ } }
+      if (cfSeen) setCampfireBadgeSeenAt(cfSeen);
+      if (dmSeen) setDmBadgeSeenAt(dmSeen);
     } catch { /* use defaults */ } finally {
       dataReadyRef.current = true;
       setIsLoading(false);
@@ -1042,7 +1051,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }[]>('/campfire');
       if (!rooms || !Array.isArray(rooms)) return;
 
-      const newUnread: { id: string; name: string; mood: string }[] = [];
+      const newUnread: { id: string; name: string; mood: string; lastAt: string }[] = [];
       for (const room of rooms) {
         if (!room.lastMessage) continue;
         const seenRaw = await AsyncStorage.getItem(`campfire_seen_${room.id}`);
@@ -1050,7 +1059,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const lastSeen = new Date(seenRaw).getTime();
         const lastMsg  = new Date(room.lastMessage.createdAt).getTime();
         if (lastMsg > lastSeen) {
-          newUnread.push({ id: room.id, name: room.name, mood: room.mood });
+          newUnread.push({ id: room.id, name: room.name, mood: room.mood, lastAt: room.lastMessage.createdAt });
           // Toast once per room per app session
           if (!campfireToastShownRef.current.has(room.id)) {
             campfireToastShownRef.current.add(room.id);
@@ -1080,6 +1089,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── DM unread polling ─────────────────────────────────────────────────────
   // Polls /api/messages threads to find conversations with unread messages.
+  // The thread list is the canonical source for the notifications sheet; badge
+  // suppression (dot vs. no dot) is handled separately via dmBadgeSeenAt.
   const pollDmUnread = useCallback(async () => {
     try {
       const threads = await apiFetch<{
@@ -1087,11 +1098,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         lastMessage: string; lastAt: string; unread: boolean;
       }[]>('/messages');
       if (!threads || !Array.isArray(threads)) return;
-      const unreadThreads = threads.filter(t => t.unread).map(t => ({
-        partnerId:    t.partnerId,
-        partnerName:  t.partnerName,
-        partnerHandle:t.partnerHandle,
-      }));
+      const unreadThreads = threads
+        .filter(t => t.unread)
+        .map(t => ({
+          partnerId:    t.partnerId,
+          partnerName:  t.partnerName,
+          partnerHandle:t.partnerHandle,
+          lastAt:       t.lastAt,
+        }));
       setUnreadDmThreads(unreadThreads);
       setDmUnread(unreadThreads.length);
     } catch { /* silent */ }
@@ -1103,6 +1117,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setDmUnread(next.length);
       return next;
     });
+  }, []);
+
+  // Records when the user last opened the notifications panel — used purely
+  // for bell-dot suppression. Does NOT touch the thread arrays or counts,
+  // so the sheet can still display all unread items for the user to act on.
+  // New campfire/DM activity arriving after this timestamp will re-light the dot.
+  const markAllUnreadSeen = useCallback(() => {
+    const now = new Date().toISOString();
+    setCampfireBadgeSeenAt(now);
+    void AsyncStorage.setItem('campfire_badge_seen_at', now);
+    setDmBadgeSeenAt(now);
+    void AsyncStorage.setItem('dm_badge_seen_at', now);
   }, []);
 
   // Re-fetch from the API every time the app comes to the foreground so that
@@ -1718,8 +1744,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       rewardBalance, constellation, reloadRewards, reloadConstellation,
       shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
       serverNotifications, markServerNotificationsRead, deleteServerNotification,
-      campfireUnread, unreadCampfireRooms, markCampfireRoomRead,
-      dmUnread, unreadDmThreads, markDmThreadRead,
+      campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
+      dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
       discoverMoodFilter, setDiscoverMoodFilter,
       reloadData,
       refreshFeed,

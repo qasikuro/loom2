@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Animated, DimensionValue, Easing, Modal, Platform, Pressable,
@@ -1063,8 +1063,8 @@ export default function HomeScreen() {
     rewards, serverNotifications,
     markServerNotificationsRead, deleteServerNotification, dismissReward,
     reloadData, myGuides, rewardBalance, constellation,
-    campfireUnread, unreadCampfireRooms,
-    dmUnread, unreadDmThreads, markDmThreadRead,
+    unreadCampfireRooms, campfireBadgeSeenAt,
+    dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
   } = useApp();
   const { userId: clerkUserId } = useAuth();
   const { playSound } = useSound();
@@ -1073,6 +1073,16 @@ export default function HomeScreen() {
   const bottomPad = Platform.OS === 'web' ? 84 : insets.bottom + 90;
 
   const [showNotifs,  setShowNotifs]  = useState(false);
+
+  // Single entry point for opening the notifications sheet — ensures all
+  // unread sources (server notifications, campfire, DMs) are marked seen
+  // consistently regardless of which UI element the user taps.
+  const openNotificationsPanel = useCallback(() => {
+    setShowNotifs(true);
+    markServerNotificationsRead();
+    markAllUnreadSeen();
+  }, [markServerNotificationsRead, markAllUnreadSeen]);
+
   const [showOutfits, setShowOutfits] = useState(false);
   const [refreshing,  setRefreshing]  = useState(false);
   const [showConstellationIntro, setShowConstellationIntro] = useState(false);
@@ -1183,7 +1193,16 @@ export default function HomeScreen() {
 
   const hour       = new Date().getHours();
   const unread     = serverNotifications.filter(n => !n.isRead).length;
-  const hasNotifs  = rewards.length > 0 || unread > 0 || campfireUnread > 0 || dmUnread > 0;
+  // Bell dot for campfire/DM: only light up if there is activity that arrived
+  // AFTER the user last opened the notifications panel (badge-seen timestamps).
+  // This is separate from the thread arrays so the sheet always shows all rows.
+  const campfireDot = unreadCampfireRooms.some(r =>
+    !campfireBadgeSeenAt || new Date(r.lastAt).getTime() > new Date(campfireBadgeSeenAt).getTime()
+  );
+  const dmDot = unreadDmThreads.some(t =>
+    !dmBadgeSeenAt || new Date(t.lastAt).getTime() > new Date(dmBadgeSeenAt).getTime()
+  );
+  const hasNotifs  = rewards.length > 0 || unread > 0 || unreadCampfireRooms.length > 0 || unreadDmThreads.length > 0;
   const accent     = MOOD_ACCENT[character.mood ?? ''] ?? DEF_ACCENT;
   const grad       = MOOD_GRAD[character.mood ?? ''] ?? DEFAULT_GRAD;
   const _mc        = MOOD_COLOR[character.mood ?? ''] ?? DEF_ACCENT;
@@ -1424,11 +1443,11 @@ export default function HomeScreen() {
                 )}
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => { setShowNotifs(true); markServerNotificationsRead(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onPress={() => { openNotificationsPanel(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon name="bell" size={16} color="rgba(220,210,255,0.75)" />
-                {(unread > 0 || campfireUnread > 0 || dmUnread > 0) && (
+                {(unread > 0 || campfireDot || dmDot) && (
                   <View style={[s.heroBadge, { backgroundColor: '#FF4757' }]} />
                 )}
               </TouchableOpacity>
@@ -1507,7 +1526,7 @@ export default function HomeScreen() {
         <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
         <TouchableOpacity
           style={s.lumiCard}
-          onPress={() => { if (hasNotifs) { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); } else router.push('/(tabs)/create'); }}
+          onPress={() => { if (hasNotifs) { openNotificationsPanel(); } else router.push('/(tabs)/create'); }}
           activeOpacity={0.88}
         >
           <LinearGradient colors={['#1E0E48', '#100828', '#080518']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -1554,8 +1573,7 @@ export default function HomeScreen() {
               storyTitle={newWitnessData.title}
               onPress={() => {
                 setNewWitnessData(null);
-                setShowNotifs(true);
-                setTimeout(() => markServerNotificationsRead(), 500);
+                openNotificationsPanel();
               }}
             />
           </Animated.View>
@@ -1568,12 +1586,12 @@ export default function HomeScreen() {
         {hasDigest && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.digestRow}>
             {witnessedNotifs > 0 && (
-              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(200,168,75,0.14)' }]} onPress={() => { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); }} activeOpacity={0.78}>
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(200,168,75,0.14)' }]} onPress={() => openNotificationsPanel()} activeOpacity={0.78}>
                 <Icon name="eye" size={13} color="#C8A84B" /><Text style={[s.digestTxt, { color: '#C8A84B' }]}>{witnessedNotifs} witnessed you</Text>
               </TouchableOpacity>
             )}
             {savedNotifs > 0 && (
-              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(168,128,248,0.14)' }]} onPress={() => { setShowNotifs(true); setTimeout(() => markServerNotificationsRead(), 500); }} activeOpacity={0.78}>
+              <TouchableOpacity style={[s.digestPill, { backgroundColor: 'rgba(168,128,248,0.14)' }]} onPress={() => openNotificationsPanel()} activeOpacity={0.78}>
                 <Icon name="bookmark" size={13} color="#A880F8" /><Text style={[s.digestTxt, { color: '#A880F8' }]}>{savedNotifs} saved your work</Text>
               </TouchableOpacity>
             )}
@@ -2039,7 +2057,7 @@ export default function HomeScreen() {
                 <Icon name="x" size={15} color={colors.mutedForeground} />
               </TouchableOpacity>
             </View>
-            {rewards.length === 0 && serverNotifications.length === 0 && campfireUnread === 0 && dmUnread === 0 ? (
+            {rewards.length === 0 && serverNotifications.length === 0 && unreadCampfireRooms.length === 0 && unreadDmThreads.length === 0 ? (
               <View style={m.empty}>
                 <Icon name="bell-off" size={28} color={`${colors.mutedForeground}60`} />
                 <Text style={[m.emptyTxt, { color: colors.mutedForeground }]}>All caught up ✦</Text>
