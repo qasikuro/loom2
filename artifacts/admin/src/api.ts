@@ -47,6 +47,13 @@ export const api = {
   deleteReport:  (id: string) => apiFetch(`/admin/reports/${id}`, { method: "DELETE" }),
   getStickers:   (offset = 0) => apiFetch<{ stickers: AdminSticker[]; total: number }>(`/admin/stickers?offset=${offset}`),
 
+  // Profile Effects
+  getProfileEffects:     () => apiFetch<{ effects: ProfileEffectRow[] }>("/admin/profile-effects"),
+  createProfileEffect:   (body: EffectBody) => apiFetch<{ effect: ProfileEffectRow }>("/admin/profile-effects", { method: "POST", body: JSON.stringify(body) }),
+  updateProfileEffect:   (id: string, body: Partial<EffectBody>) => apiFetch<{ effect: ProfileEffectRow }>(`/admin/profile-effects/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteProfileEffect:   (id: string) => apiFetch(`/admin/profile-effects/${id}`, { method: "DELETE" }),
+  generateEffectConfig:  (body: GenerateEffectConfigBody) => apiFetch<{ config: EffectConfig }>("/admin/profile-effects/generate-config", { method: "POST", body: JSON.stringify(body) }),
+
   // Events
   getEvents:         () => apiFetch<{ events: AdminEvent[] }>("/admin/events"),
   createEvent:       (body: EventBody) => apiFetch<AdminEvent>("/admin/events", { method: "POST", body: JSON.stringify(body) }),
@@ -184,4 +191,53 @@ export interface Report {
   resolvedById: string | null;
   resolvedAt: string | null;
   createdAt: string;
+}
+
+// ── Profile Effects ───────────────────────────────────────────────────────────
+
+export interface EffectConfig {
+  particles:   string[];
+  count:       number;
+  mode:        "rise" | "fall" | "drift" | "glow";
+  fontSize:    number;
+  colors?:     string[];
+  speedMs:     [number, number];
+  xSwingPct:   number;
+  yTravelPct:  number;
+  corners?:    { pos: "tl" | "tr" | "bl" | "br"; emoji: string; size: number }[];
+  overlayTint?: string;
+}
+
+export interface ProfileEffectRow {
+  id:            string;
+  name:          string;
+  description:   string;
+  icon:          string;
+  theme:         string;
+  rarity:        string;
+  config:        EffectConfig;
+  isActive:      boolean;
+  shopCost:      { stars?: number; aura?: number; shards?: number };
+  previewColors: string[];
+  createdBy:     string;
+  createdAt:     string;
+}
+
+export interface EffectBody {
+  name:          string;
+  description:   string;
+  icon:          string;
+  theme:         string;
+  rarity:        string;
+  config:        EffectConfig;
+  isActive:      boolean;
+  shopCost:      { stars?: number; aura?: number; shards?: number };
+  previewColors: string[];
+}
+
+export interface GenerateEffectConfigBody {
+  name:        string;
+  description: string;
+  theme:       string;
+  extra:       string;
 }

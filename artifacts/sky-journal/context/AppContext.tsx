@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerCustomEffects, type EffectDef } from '@/components/ProfileEffect';
 import { showToastGlobal } from '@/components/Toast';
 import {
   ApiCharacterSchema,
@@ -674,7 +675,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const [
         _charFetch, _entriesFetch, _storiesFetch, _outfitsFetch,
         _galleryFetch, _usageFetch, _discoverFetch, _followingFetch, _notifFetch, _friendsFetch, guidesRaw,
-        _rewardsFetch, _constellationFetch, _shopFetch, savedIdsRaw,
+        _rewardsFetch, _constellationFetch, _shopFetch, savedIdsRaw, effectsCatalogRaw,
       ] = await Promise.all([
         apiFetch<unknown>('/character').catch(() => null),
         apiFetch<unknown>('/journal-entries').catch(() => null),
@@ -691,6 +692,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<unknown>('/constellation').catch(() => null),
         apiFetch<unknown>('/rewards/shop').catch(() => null),
         apiFetch<string[]>('/stories/saved/ids').catch(() => null),
+        apiFetch<{ effects: Array<{ id: string; config: EffectDef }> }>('/effects/catalog').catch(() => null),
       ]);
 
       // Validate all endpoints against generated Zod schemas.
@@ -785,6 +787,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (shopRaw?.catalog && Array.isArray(shopRaw.catalog)) {
         setShopCatalog(shopRaw.catalog);
       }
+
+      // Register any custom AI-generated effects so ProfileEffect can render them
+      if (effectsCatalogRaw?.effects && Array.isArray(effectsCatalogRaw.effects)) {
+        const customMap: Record<string, EffectDef> = {};
+        for (const e of effectsCatalogRaw.effects) {
+          if (e.id && e.config) customMap[e.id] = e.config;
+        }
+        if (Object.keys(customMap).length > 0) registerCustomEffects(customMap);
+      }
+
       setApiOnline(true);
       setJournalLoadError(entriesRaw === null);
       setStoriesLoadError(storiesRaw === null);

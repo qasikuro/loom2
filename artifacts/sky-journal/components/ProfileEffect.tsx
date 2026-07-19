@@ -8,15 +8,17 @@ function rng(seed: number): number {
 }
 
 // ── Effect catalogue ──────────────────────────────────────────────────────────
-interface EffectDef {
-  particles:  string[];          // emoji / chars to cycle through
-  count:      number;
-  mode:       'rise' | 'fall' | 'drift' | 'glow';
-  fontSize:   number;
-  colors?:    string[];          // for plain View dots when emoji is empty
-  speedMs:    [number, number];  // [min, max] cycle duration
-  xSwingPct:  number;            // horizontal sway as fraction of width
-  yTravelPct: number;            // vertical travel as fraction of height
+export interface EffectDef {
+  particles:   string[];
+  count:       number;
+  mode:        'rise' | 'fall' | 'drift' | 'glow';
+  fontSize:    number;
+  colors?:     string[];
+  speedMs:     [number, number];
+  xSwingPct:   number;
+  yTravelPct:  number;
+  corners?:    { pos: 'tl' | 'tr' | 'bl' | 'br'; emoji: string; size: number }[];
+  overlayTint?: string;
 }
 
 const EFFECTS: Record<string, EffectDef> = {
@@ -77,36 +79,89 @@ const EFFECTS: Record<string, EffectDef> = {
   },
 };
 
+// ── Register custom effects from DB (called by AppContext) ────────────────────
+export function registerCustomEffect(id: string, def: EffectDef) {
+  EFFECTS[id] = def;
+}
+
+export function registerCustomEffects(map: Record<string, EffectDef>) {
+  Object.assign(EFFECTS, map);
+}
+
+// ── Corner accent component ───────────────────────────────────────────────────
+
+function CornerAccent({
+  pos, emoji, size,
+}: {
+  pos:    'tl' | 'tr' | 'bl' | 'br';
+  emoji:  string;
+  size:   number;
+}) {
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1.08, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+      Animated.timing(pulse, { toValue: 0.95, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const top    = pos === 'tl' || pos === 'tr' ? -size * 0.12 : undefined;
+  const bottom = pos === 'bl' || pos === 'br' ? -size * 0.12 : undefined;
+  const left   = pos === 'tl' || pos === 'bl' ? -size * 0.12 : undefined;
+  const right  = pos === 'tr' || pos === 'br' ? -size * 0.12 : undefined;
+
+  // Mirror horizontally for right-side corners to look natural
+  const scaleX = pos === 'tr' || pos === 'br' ? -1 : 1;
+  const scaleY = pos === 'bl' || pos === 'br' ? -1 : 1;
+
+  return (
+    <Animated.Text
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top, bottom, left, right,
+        fontSize: size,
+        lineHeight: size + 4,
+        transform: [{ scale: pulse }, { scaleX }, { scaleY }],
+        zIndex: 25,
+        opacity: 0.88,
+      }}
+    >
+      {emoji}
+    </Animated.Text>
+  );
+}
+
 // ── Single particle ────────────────────────────────────────────────────────────
 
 interface ParticleProps {
-  def:       EffectDef;
-  idx:       number;
-  width:     number;
-  height:    number;
+  def:    EffectDef;
+  idx:    number;
+  width:  number;
+  height: number;
 }
 
 function Particle({ def, idx, width, height }: ParticleProps) {
-  // Deterministic positions / timing based on idx seed
   const s      = (n: number) => rng(idx * 37 + n);
   const speedMs = def.speedMs[0] + s(1) * (def.speedMs[1] - def.speedMs[0]);
   const delay   = idx * 380 + s(2) * 600;
 
-  // Starting position (% of container)
   const startXPct = s(3);
   const startYPct = def.mode === 'rise'  ? 0.55 + s(4) * 0.40 :
                     def.mode === 'fall'  ? s(4) * 0.15 :
                     def.mode === 'glow'  ? s(4) :
-                    /* drift */            s(4);
+                    s(4);
 
   const startX = startXPct * Math.max(0, width  - 30);
   const startY = startYPct * Math.max(0, height - 30);
 
-  // Travel distances (px from start)
   const xSwing  = def.xSwingPct  * width  * (s(5) * 0.6 + 0.7);
   const yTravel = def.yTravelPct * height * (s(6) * 0.4 + 0.8);
 
-  // Animated values — all JS driver (works on web + native)
   const tx      = useRef(new Animated.Value(0)).current;
   const ty      = useRef(new Animated.Value(0)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -118,94 +173,68 @@ function Particle({ def, idx, width, height }: ParticleProps) {
 
   useEffect(() => {
     if (width === 0 || height === 0) return;
-
     let running = true;
     const timer = setTimeout(() => {
       if (!running) return;
 
-      // ── X sway (all modes) ──────────────────────────────────────────────
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(tx, { toValue:  xSwing, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-          Animated.timing(tx, { toValue: -xSwing, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-        ])
-      ).start();
+      Animated.loop(Animated.sequence([
+        Animated.timing(tx, { toValue:  xSwing, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        Animated.timing(tx, { toValue: -xSwing, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+      ])).start();
 
-      // ── Y movement ──────────────────────────────────────────────────────
       if (def.mode === 'rise') {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(ty, { toValue: -yTravel, duration: speedMs, easing: Easing.out(Easing.quad), useNativeDriver: false }),
-            Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: false }),
-          ])
-        ).start();
+        Animated.loop(Animated.sequence([
+          Animated.timing(ty, { toValue: -yTravel, duration: speedMs, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+          Animated.timing(ty, { toValue: 0,        duration: 0,        useNativeDriver: false }),
+        ])).start();
       } else if (def.mode === 'fall') {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(ty, { toValue: yTravel, duration: speedMs, easing: Easing.in(Easing.quad), useNativeDriver: false }),
-            Animated.timing(ty, { toValue: 0, duration: 0, useNativeDriver: false }),
-          ])
-        ).start();
+        Animated.loop(Animated.sequence([
+          Animated.timing(ty, { toValue: yTravel, duration: speedMs, easing: Easing.in(Easing.quad), useNativeDriver: false }),
+          Animated.timing(ty, { toValue: 0,       duration: 0,       useNativeDriver: false }),
+        ])).start();
       } else if (def.mode === 'glow') {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(ty, { toValue: -yTravel, duration: speedMs * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-            Animated.timing(ty, { toValue:  yTravel, duration: speedMs * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-          ])
-        ).start();
+        Animated.loop(Animated.sequence([
+          Animated.timing(ty, { toValue: -yTravel, duration: speedMs * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(ty, { toValue:  yTravel, duration: speedMs * 0.55, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        ])).start();
       } else {
-        // drift
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(ty, { toValue: -yTravel, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-            Animated.timing(ty, { toValue:  yTravel, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-          ])
-        ).start();
+        Animated.loop(Animated.sequence([
+          Animated.timing(ty, { toValue: -yTravel, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(ty, { toValue:  yTravel, duration: speedMs * 0.5, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        ])).start();
       }
 
-      // ── Opacity ──────────────────────────────────────────────────────────
       const fadeInDur  = speedMs * 0.16;
       const holdDur    = speedMs * 0.58;
       const fadeOutDur = speedMs * 0.26;
 
       if (def.mode === 'glow') {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(opacity, { toValue: 1.0, duration: speedMs * 0.40, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-            Animated.timing(opacity, { toValue: 0.08, duration: speedMs * 0.60, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-          ])
-        ).start();
+        Animated.loop(Animated.sequence([
+          Animated.timing(opacity, { toValue: 1.0,  duration: speedMs * 0.40, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+          Animated.timing(opacity, { toValue: 0.08, duration: speedMs * 0.60, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        ])).start();
       } else {
-        Animated.loop(
-          Animated.sequence([
-            Animated.timing(opacity, { toValue: 0.95, duration: fadeInDur, useNativeDriver: false }),
-            Animated.timing(opacity, { toValue: 0.95, duration: holdDur, useNativeDriver: false }),
-            Animated.timing(opacity, { toValue: 0, duration: fadeOutDur, useNativeDriver: false }),
-            Animated.timing(opacity, { toValue: 0, duration: 0, useNativeDriver: false }),
-          ])
-        ).start();
+        Animated.loop(Animated.sequence([
+          Animated.timing(opacity, { toValue: 0.95, duration: fadeInDur,  useNativeDriver: false }),
+          Animated.timing(opacity, { toValue: 0.95, duration: holdDur,    useNativeDriver: false }),
+          Animated.timing(opacity, { toValue: 0,    duration: fadeOutDur, useNativeDriver: false }),
+          Animated.timing(opacity, { toValue: 0,    duration: 0,          useNativeDriver: false }),
+        ])).start();
       }
 
-      // ── Rotation (fall mode only) ─────────────────────────────────────────
       if (def.mode === 'fall' || def.mode === 'drift') {
         Animated.loop(
           Animated.timing(rotate, { toValue: 1, duration: speedMs * (1 + s(7) * 0.8), easing: Easing.linear, useNativeDriver: false })
         ).start();
       }
 
-      // ── Scale pulse ───────────────────────────────────────────────────────
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(scale, { toValue: 1.18, duration: speedMs * 0.48, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-          Animated.timing(scale, { toValue: 0.80, duration: speedMs * 0.52, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
-        ])
-      ).start();
+      Animated.loop(Animated.sequence([
+        Animated.timing(scale, { toValue: 1.18, duration: speedMs * 0.48, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+        Animated.timing(scale, { toValue: 0.80, duration: speedMs * 0.52, easing: Easing.inOut(Easing.sin), useNativeDriver: false }),
+      ])).start();
     }, delay);
 
-    return () => {
-      running = false;
-      clearTimeout(timer);
-    };
+    return () => { running = false; clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [width, height]);
 
@@ -214,40 +243,31 @@ function Particle({ def, idx, width, height }: ParticleProps) {
   return (
     <Animated.View
       pointerEvents="none"
-      style={{
-        position:  'absolute',
-        left:      startX,
-        top:       startY,
-        opacity,
-        transform: [
-          { translateX: tx },
-          { translateY: ty },
-          { rotate: rotDeg },
-          { scale },
-        ],
-      }}
+      style={{ position: 'absolute', left: startX, top: startY, opacity, transform: [{ translateX: tx }, { translateY: ty }, { rotate: rotDeg }, { scale }] }}
     >
-      {color ? (
-        // Firefly: colored glyph
-        <Text style={{ fontSize: def.fontSize, color, lineHeight: def.fontSize + 4 }}>
-          {emoji}
-        </Text>
-      ) : (
-        <Text style={{ fontSize: def.fontSize, lineHeight: def.fontSize + 4 }}>
-          {emoji}
-        </Text>
-      )}
+      <Text style={{ fontSize: def.fontSize, color: color ?? undefined, lineHeight: def.fontSize + 4 }}>
+        {emoji}
+      </Text>
     </Animated.View>
   );
 }
 
-// ── Canvas — rendered once dimensions are known ────────────────────────────────
+// ── Canvas ─────────────────────────────────────────────────────────────────────
 
-function EffectCanvas({ effectId, width, height }: { effectId: string; width: number; height: number }) {
-  const def = EFFECTS[effectId];
-  if (!def) return null;
+function EffectCanvas({ def, width, height }: { def: EffectDef; width: number; height: number }) {
   return (
     <>
+      {/* Overlay tint */}
+      {def.overlayTint && (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: def.overlayTint, zIndex: 18 }]} />
+      )}
+
+      {/* Corner accents */}
+      {def.corners?.map((c, i) => (
+        <CornerAccent key={i} pos={c.pos} emoji={c.emoji} size={c.size} />
+      ))}
+
+      {/* Particles */}
       {Array.from({ length: def.count }, (_, i) => (
         <Particle key={i} def={def} idx={i} width={width} height={height} />
       ))}
@@ -260,7 +280,9 @@ function EffectCanvas({ effectId, width, height }: { effectId: string; width: nu
 export function ProfileEffect({ effectId }: { effectId: string | undefined }) {
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
 
-  if (!effectId || !EFFECTS[effectId]) return null;
+  if (!effectId) return null;
+  const def = EFFECTS[effectId];
+  if (!def) return null;
 
   return (
     <View
@@ -268,14 +290,10 @@ export function ProfileEffect({ effectId }: { effectId: string | undefined }) {
       pointerEvents="none"
       onLayout={e => {
         const { width, height } = e.nativeEvent.layout;
-        setDims(prev =>
-          prev?.w === width && prev?.h === height ? prev : { w: width, h: height }
-        );
+        setDims(prev => prev?.w === width && prev?.h === height ? prev : { w: width, h: height });
       }}
     >
-      {dims && (
-        <EffectCanvas effectId={effectId} width={dims.w} height={dims.h} />
-      )}
+      {dims && <EffectCanvas def={def} width={dims.w} height={dims.h} />}
     </View>
   );
 }
