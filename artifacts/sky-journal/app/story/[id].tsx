@@ -16,12 +16,14 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CompletionMoment } from '@/components/CompletionMoment';
+import { PanelFullscreenReader, type ReaderPanel } from '@/components/PanelFullscreenReader';
 import { MoodBadge } from '@/components/MoodBadge';
 import { MilestoneModal, buildMilestoneInfo, type MilestoneInfo } from '@/components/MilestoneModal';
 import { WitnessMosaic } from '@/components/WitnessMosaic';
@@ -110,12 +112,14 @@ function PanelCell({
   cellH,
   gradient,
   onRatioDetected,
+  onPress,
 }: {
   panel:              CellPanel | undefined;
   cellW:              number;
   cellH:              number;
   gradient:           [string, string, string];
   onRatioDetected?:   (ratio: number) => void;
+  onPress?:           () => void;
 }) {
   if (!panel) {
     return (
@@ -130,6 +134,7 @@ function PanelCell({
   const fit       = panel.imageAspectRatio ? 'cover' : 'contain';
 
   return (
+    <TouchableWithoutFeedback onPress={onPress}>
     <View style={[styles.cell, { width: cellW, height: cellH }]}>
       {imgSrc ? (
         <Image
@@ -200,7 +205,15 @@ function PanelCell({
           <Text style={styles.captionText} numberOfLines={3}>{panel.text}</Text>
         </View>
       )}
+
+      {/* Tap-to-zoom hint badge (bottom-right) */}
+      {!!onPress && (
+        <View style={styles.zoomHintBadge}>
+          <Icon name="maximize-2" size={10} color="rgba(255,255,255,0.55)" />
+        </View>
+      )}
     </View>
+    </TouchableWithoutFeedback>
   );
 }
 
@@ -218,13 +231,17 @@ function MangaPage({
   pageNum,
   totalPages,
   screenW,
+  panelOffset,
+  onPanelTap,
 }: {
-  panels:     (CellPanel | undefined)[];
-  layout:     LayoutDef;
-  gradient:   [string, string, string];
-  pageNum:    number;
-  totalPages: number;
-  screenW:    number;
+  panels:       (CellPanel | undefined)[];
+  layout:       LayoutDef;
+  gradient:     [string, string, string];
+  pageNum:      number;
+  totalPages:   number;
+  screenW:      number;
+  panelOffset:  number;
+  onPanelTap?:  (flatIdx: number) => void;
 }) {
   // Detected ratios for panels that lack a stored imageAspectRatio.
   // Key: `${rowIndex}_${colIndex}` → width/height ratio
@@ -233,8 +250,9 @@ function MangaPage({
   // Pre-compute row data (panel slices per row) so we can reference them safely.
   let cellIdx = 0;
   const rowData = layout.rows.map(cols => {
+    const rowStart  = cellIdx;
     const rowPanels = cols.map(() => panels[cellIdx++]);
-    return { cols, rowPanels };
+    return { cols, rowPanels, rowStart };
   });
 
   // Compute the height for a single row given the panels it contains.
@@ -261,13 +279,14 @@ function MangaPage({
 
   return (
     <View style={styles.page}>
-      {rowData.map(({ cols, rowPanels }, ri) => {
+      {rowData.map(({ cols, rowPanels, rowStart }, ri) => {
         const totalFlex = cols.reduce((a, b) => a + b, 0);
         const rH = rowHeight(ri, cols, rowPanels);
         return (
           <View key={ri} style={[styles.pageRow, { height: rH, marginTop: ri > 0 ? GUTTER : 0 }]}>
             {cols.map((flex, ci) => {
-              const cellW = (screenW - (cols.length - 1) * GUTTER) * (flex / totalFlex);
+              const cellW   = (screenW - (cols.length - 1) * GUTTER) * (flex / totalFlex);
+              const flatIdx = panelOffset + rowStart + ci;
               return (
                 <View key={ci} style={{ width: cellW, height: rH }}>
                   <PanelCell
@@ -282,6 +301,7 @@ function MangaPage({
                             ...prev, [`${ri}_${ci}`]: ratio,
                           }))
                     }
+                    onPress={onPanelTap ? () => onPanelTap(flatIdx) : undefined}
                   />
                 </View>
               );
@@ -315,6 +335,7 @@ export default function StoryScreen() {
   const [savedOffset,      setSavedOffset]      = useState(0);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [activeMilestone,  setActiveMilestone]  = useState<MilestoneInfo | null>(null);
+  const [focusedPanelIdx,  setFocusedPanelIdx]  = useState<number | null>(null);
   const [continuePost,     setContinuePost]     = useState<typeof discoverPosts[number] | null>(null);
   const [continueDismissed, setContinueDismissed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -541,6 +562,14 @@ export default function StoryScreen() {
 
   const gradient   = getGradient(mood);
   const firstPanel = renderPages[0]?.panels[0];
+
+  // Flat panel array for the fullscreen reader
+  const allPanels: ReaderPanel[] = renderPages.flatMap(pg => pg.panels);
+  // Pre-computed start offset per page (so MangaPage can assign flat indices)
+  const pageOffsets = renderPages.reduce<number[]>((acc, pg, i) => {
+    acc.push(i === 0 ? 0 : acc[i - 1] + renderPages[i - 1].panels.length);
+    return acc;
+  }, []);
   const heroImgSrc = getPanelImageSource(firstPanel?.imageUri, firstPanel?.bgPreset);
   const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
 
@@ -730,6 +759,8 @@ export default function StoryScreen() {
                 pageNum={pi + 1}
                 totalPages={renderPages.length}
                 screenW={screenW}
+                panelOffset={pageOffsets[pi] ?? 0}
+                onPanelTap={setFocusedPanelIdx}
               />
             );
           })}
@@ -906,6 +937,16 @@ export default function StoryScreen() {
           </Animated.View>
         </Animated.View>
       )}
+
+      {/* ── Full-screen panel reader overlay ───────────── */}
+      {focusedPanelIdx !== null && (
+        <PanelFullscreenReader
+          panels={allPanels}
+          initialIndex={focusedPanelIdx}
+          gradient={gradient}
+          onClose={() => setFocusedPanelIdx(null)}
+        />
+      )}
     </View>
   );
 }
@@ -988,6 +1029,13 @@ const styles = StyleSheet.create({
   pageNumText: { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontFamily: 'Satoshi-Regular' },
 
   cell: { overflow: 'hidden', position: 'relative', backgroundColor: '#0D0B1A' },
+
+  zoomHintBadge: {
+    position: 'absolute', bottom: 7, right: 7, zIndex: 20,
+    width: 22, height: 22, borderRadius: 6,
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   speechBubble: {
     position: 'absolute', top: 12, left: 12,
