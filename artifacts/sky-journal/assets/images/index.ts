@@ -8,11 +8,13 @@ export const Images = {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   story_bg3: require('./story_bg3.png'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  splash: require('./splash.png'),
+  splash: require('./gamejo_splash.png'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  icon: require('./icon.png'),
+  icon: require('./gamejo_logo.png'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  logo: require('./logo.jpg'),
+  logo: require('./gamejo_logo.png'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  logo_full: require('./gamejo_logo_full.png'),
 } as const;
 
 export type ImageKey = keyof typeof Images;

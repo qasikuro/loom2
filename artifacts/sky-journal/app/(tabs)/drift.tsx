@@ -2167,7 +2167,7 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
 // ════════════════════════════════════════════════════════════════════════════
 export default function DriftScreen() {
   const { character } = useApp();
-  const displayName   = character?.name && character.name !== 'Sky Child' ? character.name : 'Calm Space';
+  const displayName   = character?.name && character.name !== 'Player' ? character.name : 'Calm Space';
 
   const [step,            setStep]           = useState<FlowStep>('welcome');
   const [questionIdx,     setQuestionIdx]    = useState(0);

@@ -114,7 +114,7 @@ export default function CreateFriendLogScreen() {
           </View>
           <TextInput
             style={[styles.nameInput, { color: colors.foreground }]}
-            placeholder="Friend's name or Sky ID..."
+            placeholder="Friend's name or ID..."
             placeholderTextColor={colors.mutedForeground}
             value={friendName}
             onChangeText={t => { setFriendName(t); setShowSuggestions(true); if (error) setError(null); }}

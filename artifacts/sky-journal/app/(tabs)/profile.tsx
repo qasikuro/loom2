@@ -279,11 +279,11 @@ export default function CharacterScreen() {
 
         {/* Section content */}
         <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
-          {isLoading && character.name === 'Sky Child' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
-          {profileTab === 'about' && (!isLoading || character.name !== 'Sky Child') && (
+          {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
+          {profileTab === 'about' && (!isLoading || character.name !== 'Player') && (
             <ProfileAboutSection character={character} setCharacter={setCharacter} />
           )}
-          {profileTab === 'journey' && (!isLoading || character.name !== 'Sky Child') && (
+          {profileTab === 'journey' && (!isLoading || character.name !== 'Player') && (
             <ProfileJourneySection
               constellation={constellation} stories={stories} journalEntries={journalEntries}
               character={character} animTrigger={animTrigger}
@@ -291,7 +291,7 @@ export default function CharacterScreen() {
               availableTitles={availableTitles} onSetActiveTitle={handleSetActiveTitle}
             />
           )}
-          {profileTab === 'style' && (!isLoading || character.name !== 'Sky Child') && (
+          {profileTab === 'style' && (!isLoading || character.name !== 'Player') && (
             <ProfileStyleSection
               outfits={outfits} openOutfit={openOutfit} gallery={gallery}
               openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}

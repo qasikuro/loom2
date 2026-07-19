@@ -1,12 +1,14 @@
 /**
- * Skyloom in-app animated splash screen.
- * Shown while fonts load; fades out gracefully into the app.
+ * GameJo animated splash screen.
+ * Full-screen background image with twinkling stars + animated loading bar.
  */
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
+  Easing,
   Platform,
   StyleSheet,
   Text,
@@ -20,13 +22,15 @@ function pseudoRand(seed: number): number {
   return x - Math.floor(x);
 }
 
-const STARS = Array.from({ length: 55 }, (_, i) => ({
-  id: i,
-  x:       pseudoRand(i * 3)    * width,
-  y:       pseudoRand(i * 7)    * height * 0.72,
-  size:    1.4 + pseudoRand(i * 11) * 2.6,
-  opacity: 0.2  + pseudoRand(i * 13) * 0.6,
-  delay:   Math.floor(pseudoRand(i * 17) * 2400),
+// Stars scattered across top 70% — mix of white and gold to match GameJo logo stars
+const STARS = Array.from({ length: 48 }, (_, i) => ({
+  id:      i,
+  x:       pseudoRand(i * 3)  * width,
+  y:       pseudoRand(i * 7)  * height * 0.70,
+  size:    1.2 + pseudoRand(i * 11) * 3.2,
+  opacity: 0.25 + pseudoRand(i * 13) * 0.75,
+  delay:   Math.floor(pseudoRand(i * 17) * 2200),
+  color:   pseudoRand(i * 23) > 0.55 ? '#FFD700' : '#FFFFFF',
 }));
 
 function StarField() {
@@ -37,8 +41,8 @@ function StarField() {
       Animated.loop(
         Animated.sequence([
           Animated.delay(STARS[i].delay),
-          Animated.timing(anim, { toValue: 1, duration: 1100 + (i % 7) * 190, useNativeDriver: true }),
-          Animated.timing(anim, { toValue: 0, duration: 1100 + (i % 5) * 190, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 1, duration: 700 + (i % 7) * 210, useNativeDriver: true }),
+          Animated.timing(anim, { toValue: 0, duration: 700 + (i % 5) * 210, useNativeDriver: true }),
         ])
       )
     );
@@ -53,16 +57,16 @@ function StarField() {
         <Animated.View
           key={star.id}
           style={{
-            position: 'absolute',
-            left: star.x,
-            top:  star.y,
-            width:  star.size,
-            height: star.size,
-            borderRadius: star.size / 2,
-            backgroundColor: '#E8D8FF',
+            position:        'absolute',
+            left:            star.x,
+            top:             star.y,
+            width:           star.size,
+            height:          star.size,
+            borderRadius:    star.size / 2,
+            backgroundColor: star.color,
             opacity: anims[i].interpolate({
               inputRange:  [0, 1],
-              outputRange: [star.opacity * 0.35, star.opacity],
+              outputRange: [0, star.opacity],
             }),
           }}
         />
@@ -71,6 +75,93 @@ function StarField() {
   );
 }
 
+// ── Loading bar with shimmer + pulsing dots ───────────────────────────────────
+
+const BAR_W = width * 0.62;
+
+function LoadingBar() {
+  const shimmerX    = useRef(new Animated.Value(-100)).current;
+  const barWidth    = useRef(new Animated.Value(0)).current;
+  const dot1        = useRef(new Animated.Value(0.3)).current;
+  const dot2        = useRef(new Animated.Value(0.3)).current;
+  const dot3        = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    // Fill bar to ~82% over 2.3 s
+    Animated.timing(barWidth, {
+      toValue:   BAR_W * 0.82,
+      duration:  2300,
+      easing:    Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+
+    // Shimmer loop across the fill
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmerX, { toValue: BAR_W + 100, duration: 950, useNativeDriver: true }),
+        Animated.timing(shimmerX, { toValue: -100, duration: 0, useNativeDriver: true }),
+        Animated.delay(400),
+      ])
+    ).start();
+
+    // Dot cascade
+    const pulseDots = () => {
+      Animated.sequence([
+        Animated.timing(dot1, { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.timing(dot2, { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.timing(dot3, { toValue: 1, duration: 280, useNativeDriver: true }),
+        Animated.delay(260),
+        Animated.parallel([
+          Animated.timing(dot1, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+          Animated.timing(dot2, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+          Animated.timing(dot3, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+        ]),
+        Animated.delay(180),
+      ]).start(() => pulseDots());
+    };
+    pulseDots();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <View style={styles.loadingWrap}>
+      {/* Track */}
+      <View style={[styles.barTrack, { width: BAR_W }]}>
+        {/* Animated fill */}
+        <Animated.View style={[styles.barFill, { width: barWidth }]}>
+          <LinearGradient
+            colors={['#7C3AED', '#C026D3', '#F59E0B']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {/* Shimmer sweep */}
+          <Animated.View
+            style={[styles.shimmer, { transform: [{ translateX: shimmerX }] }]}
+          >
+            <LinearGradient
+              colors={['transparent', 'rgba(255,255,255,0.50)', 'transparent']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ width: 90, height: '100%' }}
+            />
+          </Animated.View>
+        </Animated.View>
+      </View>
+
+      {/* LOADING... text */}
+      <View style={styles.loadingRow}>
+        <Text style={styles.loadingLabel}>LOADING</Text>
+        <Animated.Text style={[styles.loadingDot, { opacity: dot1 }]}>.</Animated.Text>
+        <Animated.Text style={[styles.loadingDot, { opacity: dot2 }]}>.</Animated.Text>
+        <Animated.Text style={[styles.loadingDot, { opacity: dot3 }]}>.</Animated.Text>
+      </View>
+    </View>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 interface Props {
   onReady: () => void;
 }
@@ -78,271 +169,102 @@ interface Props {
 export function AppSplashScreen({ onReady }: Props) {
   const screenFade  = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
-  const titleY      = useRef(new Animated.Value(24)).current;
-  const glowPulse   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(contentFade, { toValue: 1, duration: 800, useNativeDriver: true }),
-      Animated.spring(titleY,      { toValue: 0, tension: 42, friction: 9, useNativeDriver: true }),
-    ]).start();
+    // Fade content in
+    Animated.timing(contentFade, {
+      toValue:  1,
+      duration: 550,
+      useNativeDriver: true,
+    }).start();
 
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowPulse, { toValue: 1, duration: 1900, useNativeDriver: true }),
-        Animated.timing(glowPulse, { toValue: 0, duration: 1900, useNativeDriver: true }),
-      ])
-    ).start();
-
+    // Fade entire screen out after display duration
     const t = setTimeout(() => {
       Animated.timing(screenFade, {
-        toValue: 0,
-        duration: 650,
+        toValue:  0,
+        duration: 600,
         useNativeDriver: true,
       }).start(() => onReady());
-    }, 2400);
+    }, 2900);
 
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const moonScale = glowPulse.interpolate({ inputRange: [0, 1], outputRange: [0.93, 1.06] });
-
   return (
     <Animated.View style={[styles.root, { opacity: screenFade }]} pointerEvents="none">
-      <LinearGradient
-        colors={['#0D0B1E', '#141030', '#1C1646', '#231C54']}
-        locations={[0, 0.28, 0.62, 1]}
+      {/* Background splash image */}
+      <Image
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        source={require('../assets/images/gamejo_splash.png')}
         style={StyleSheet.absoluteFill}
+        contentFit="cover"
       />
 
-      <View style={styles.haze} />
-      <StarField />
+      {/* Twinkling stars */}
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: contentFade }]}>
+        <StarField />
+      </Animated.View>
 
-      <View style={styles.centre}>
-        {/* Moon orb */}
-        <Animated.View style={[styles.moonWrap, { transform: [{ scale: moonScale }] }]}>
-          <View style={[styles.corona, { width: MOON + 64, height: MOON + 64, borderRadius: (MOON + 64) / 2 }]} />
-          <View style={[styles.corona, styles.corona2, { width: MOON + 36, height: MOON + 36, borderRadius: (MOON + 36) / 2 }]} />
-          <View style={styles.moonDisc}>
-            <LinearGradient
-              colors={['#C8BEE0', '#B8ACDA', '#A898CC']}
-              style={StyleSheet.absoluteFill}
-            />
-            <View style={styles.craterA} />
-            <View style={styles.craterB} />
-          </View>
-        </Animated.View>
-
-        {/* Text block */}
-        <Animated.View style={[styles.textBlock, { opacity: contentFade, transform: [{ translateY: titleY }] }]}>
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerLabel}>YOUR SKY COMPANION</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* SKYLOOM wordmark */}
-          <Text style={styles.wordSky}>Sky</Text>
-          <Text style={styles.wordLoom}>LOOM</Text>
-
-          <Text style={styles.tagline}>memories bloom here</Text>
-
-          <View style={styles.dots}>
-            <View style={[styles.dot, { backgroundColor: 'rgba(200,184,232,0.22)' }]} />
-            <View style={[styles.dot, { width: 7, height: 7, borderRadius: 3.5, backgroundColor: 'rgba(200,168,75,0.65)' }]} />
-            <View style={[styles.dot, { backgroundColor: 'rgba(200,184,232,0.22)' }]} />
-          </View>
-        </Animated.View>
-      </View>
-
-      <Animated.View style={[styles.bottomStrip, { opacity: contentFade }]}>
-        <View style={styles.shimmerLine}>
-          <LinearGradient
-            colors={['transparent', 'rgba(200,184,232,0.16)', 'transparent']}
-            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </View>
-
-        <View style={styles.constellationRow}>
-          {[0,1,2,3,4,5,6].map(i => (
-            <View
-              key={i}
-              style={[
-                styles.constDot,
-                i === 3 && { width: 5, height: 5, borderRadius: 2.5, backgroundColor: 'rgba(200,168,75,0.45)' },
-              ]}
-            />
-          ))}
-        </View>
-
-        <Text style={styles.footerText}>sky: children of the light</Text>
+      {/* Loading bar pinned to bottom */}
+      <Animated.View style={[styles.bottom, { opacity: contentFade }]}>
+        <LoadingBar />
       </Animated.View>
     </Animated.View>
   );
 }
 
-const MOON = 108;
-
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 9999,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: height * 0.11,
-    paddingBottom: height * 0.08,
+    zIndex:          9999,
+    alignItems:      'center',
+    justifyContent:  'flex-end',
+  },
+  bottom: {
+    width:          '100%',
+    alignItems:     'center',
+    paddingBottom:  height * 0.09,
   },
 
-  centre: {
+  // Loading bar
+  loadingWrap: {
     alignItems: 'center',
-    flex: 1,
-    justifyContent: 'center',
+    gap:        10,
+  },
+  barTrack: {
+    height:          6,
+    borderRadius:    3,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    overflow:        'hidden',
+  },
+  barFill: {
+    height:       '100%',
+    borderRadius: 3,
+    overflow:     'hidden',
+  },
+  shimmer: {
+    position: 'absolute',
+    top:      0,
+    bottom:   0,
+    width:    90,
   },
 
-  bottomStrip: {
-    alignItems: 'center',
-    width: '100%',
-    gap: 14,
-  },
-
-  constellationRow: {
+  // LOADING... text
+  loadingRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems:    'flex-end',
   },
-  constDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(200,184,232,0.20)',
+  loadingLabel: {
+    fontSize:    11,
+    color:       'rgba(255,255,255,0.72)',
+    letterSpacing: 3.8,
+    fontFamily:  Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
-  footerText: {
-    fontSize: 10,
-    color: 'rgba(200,184,232,0.28)',
-    letterSpacing: 2.8,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    textTransform: 'uppercase',
-  },
-
-  haze: {
-    position: 'absolute',
-    bottom: height * 0.22,
-    left: -80,
-    right: -80,
-    height: 200,
-    borderRadius: 130,
-    backgroundColor: 'rgba(90,72,160,0.14)',
-  },
-
-  moonWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 36,
-  },
-  corona: {
-    position: 'absolute',
-    borderWidth: 1,
-    borderColor: 'rgba(200,184,232,0.10)',
-  },
-  corona2: {
-    borderColor: 'rgba(200,184,232,0.16)',
-  },
-  moonDisc: {
-    width: MOON,
-    height: MOON,
-    borderRadius: MOON / 2,
-    overflow: 'hidden',
-    shadowColor: '#C0B0E8',
-    shadowOpacity: 0.55,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 18,
-  },
-  craterA: {
-    position: 'absolute',
-    top: 18,
-    right: 22,
-    width: MOON * 0.45,
-    height: MOON * 0.45,
-    borderRadius: MOON * 0.225,
-    backgroundColor: 'rgba(20,16,48,0.28)',
-  },
-  craterB: {
-    position: 'absolute',
-    bottom: 20,
-    left: 16,
-    width: MOON * 0.2,
-    height: MOON * 0.2,
-    borderRadius: MOON * 0.1,
-    backgroundColor: 'rgba(20,16,48,0.18)',
-  },
-
-  textBlock: {
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    marginBottom: 10,
-  },
-  dividerLine: {
-    width: 36,
-    height: 1,
-    backgroundColor: 'rgba(200,184,232,0.18)',
-  },
-  dividerLabel: {
-    fontSize: 9.5,
-    color: 'rgba(200,184,232,0.45)',
-    letterSpacing: 3.2,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-  },
-  wordSky: {
-    fontSize: 70,
-    color: '#EDE5FF',
-    lineHeight: 74,
-    letterSpacing: -2.5,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    textShadowColor: 'rgba(180,160,240,0.65)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 22,
-  },
-  wordLoom: {
-    fontSize: 22,
-    color: 'rgba(200,168,75,0.90)',
-    letterSpacing: 8,
-    marginTop: -4,
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    textShadowColor: 'rgba(200,168,75,0.35)',
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 14,
-  },
-  tagline: {
-    fontSize: 11.5,
-    color: 'rgba(200,184,232,0.38)',
-    letterSpacing: 0.5,
-    marginTop: 16,
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
-    fontStyle: 'italic',
-  },
-  dots: {
-    flexDirection: 'row',
-    gap: 7,
-    marginTop: 22,
-    alignItems: 'center',
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-
-  shimmerLine: {
-    width: '80%',
-    height: 1,
+  loadingDot: {
+    fontSize:   14,
+    color:      'rgba(255,255,255,0.72)',
+    lineHeight: 16,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 });

@@ -181,7 +181,7 @@ function EmptyState({ colors }: { colors: ReturnType<typeof useColors> }) {
       </LinearGradient>
       <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('profile.noOutfitsYet')}</Text>
       <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-        Record your daily Sky looks and{'\n'}build your wardrobe over time.
+        Record your daily looks and{'\n'}build your wardrobe over time.
       </Text>
       <TouchableOpacity
         style={[styles.emptyBtn, { backgroundColor: colors.primary }]}

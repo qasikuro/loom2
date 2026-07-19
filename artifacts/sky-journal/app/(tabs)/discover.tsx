@@ -881,14 +881,14 @@ function PeopleEmptyStart({ colors }: { colors: any }) {
           <Icon name="users" size={30} color={`${colors.primary}70`} />
         </View>
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Find Sky Friends</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Find Friends</Text>
       <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        Search by name or @handle to find wanderers and follow their sky stories.
+        Search by name or @handle to find players and follow their stories.
       </Text>
       <View style={[styles.searchHint, { borderColor: `${colors.primary}22`, backgroundColor: `${colors.primary}08` }]}>
         <Icon name="search" size={12} color={`${colors.primary}70`} />
         <Text style={[styles.searchHintText, { color: `${colors.primary}90` }]}>
-          Try searching "sky" or any @username
+          Try searching by name or any @username
         </Text>
       </View>
     </View>

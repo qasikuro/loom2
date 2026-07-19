@@ -211,7 +211,7 @@ export default function SignUpScreen() {
             </View>
 
             <Text style={styles.title}>Begin your journey</Text>
-            <Text style={styles.subtitle}>Create your Sky Journal account</Text>
+            <Text style={styles.subtitle}>Create your GameJo account</Text>
 
             {/* ── Google button ──────────────────── */}
             <TouchableOpacity

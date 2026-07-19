@@ -898,9 +898,9 @@ function EventBanner({ event, onPress, onDismiss }: { event: ActiveEvent; onPres
 const SEASON_BY_MONTH: Record<number, { name: string; icon: string; color: string; bgA: string; bgB: string; endMonth: number }> = {
   0: { name: "Winter's Light",    icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.20)', bgB: 'rgba(80,140,200,0.08)',  endMonth: 2  },
   1: { name: "Winter's Light",    icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.20)', bgB: 'rgba(80,140,200,0.08)',  endMonth: 2  },
-  2: { name: 'Spring in the Sky', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
-  3: { name: 'Spring in the Sky', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
-  4: { name: 'Spring in the Sky', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
+  2: { name: 'Spring Season', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
+  3: { name: 'Spring Season', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
+  4: { name: 'Spring Season', icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.22)', bgB: 'rgba(168,100,180,0.08)', endMonth: 5  },
   5: { name: 'Summer Solstice',   icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.22)',  bgB: 'rgba(200,120,40,0.08)',  endMonth: 8  },
   6: { name: 'Summer Solstice',   icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.22)',  bgB: 'rgba(200,120,40,0.08)',  endMonth: 8  },
   7: { name: 'Summer Solstice',   icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.22)',  bgB: 'rgba(200,120,40,0.08)',  endMonth: 8  },
@@ -1261,7 +1261,7 @@ export default function HomeScreen() {
   const hasDigest = witnessedNotifs > 0 || savedNotifs > 0 || circleStories.length > 0 || newStoryNotifs > 0;
 
   const myCampfire: GuideProfile | null = (character.isGuide && clerkUserId) ? {
-    userId: clerkUserId, name: character.name || 'Sky Child',
+    userId: clerkUserId, name: character.name || 'Player',
     username: character.username ?? null, bio: character.bio,
     guideBio: character.guideBio ?? '', guideTopics: character.guideTopics ?? [],
     guideAvailability: character.guideAvailability ?? null,
@@ -1485,7 +1485,7 @@ export default function HomeScreen() {
           {/* ── Greeting block: big text + subtitle + stat pills ── */}
           <View style={s.heroGreetBlock}>
             <Text style={s.heroGreetText}>
-              {greetingWord}, {character.name || 'Sky Child'} {greetingEmoji}
+              {greetingWord}, {character.name || 'Player'} {greetingEmoji}
             </Text>
             <Text style={s.heroGreetSub}>{headerSubtitle}</Text>
             <View style={s.heroPillRow}>

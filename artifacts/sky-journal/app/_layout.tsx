@@ -156,7 +156,7 @@ function AppOverlays() {
         const char = await apiFetch<CharHint>('/character');
         const isExisting = !!(
           char?.constellationType ||
-          (char?.name && char.name !== 'Sky Child') ||
+          (char?.name && char.name !== 'Player') ||
           (char?.bio  && char.bio.trim().length > 0) ||
           (Array.isArray(char?.traits) && char.traits.length > 0)
         );
