@@ -43,52 +43,117 @@ interface Props {
 
 const SWIPE_DIST_RATIO = 0.22;
 const SWIPE_VEL        = 0.48;
-const MAX_ZOOM         = 3.5;
+const MAX_ZOOM         = 4.0;
+const ZOOM_IN_SCALE    = 2.5;
+
+function clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
 
 export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose }: Props) {
   const { width: screenW, height: screenH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  const [index,      setIndex]      = useState(initialIndex);
-  const [isZoomed,   setIsZoomed]   = useState(false);
-  const [captionOn,  setCaptionOn]  = useState(true);
+  const [index,     setIndex]     = useState(initialIndex);
+  const [isZoomed,  setIsZoomed]  = useState(false);
+  const [captionOn, setCaptionOn] = useState(true);
 
-  const indexRef        = useRef(initialIndex);
-  const isZoomedRef     = useRef(false);
-  const panelsRef       = useRef(panels);
-  const screenWRef      = useRef(screenW);
-  const currentScaleRef = useRef(1);
-  const baseScaleRef    = useRef(1);
-  const pinchDistRef    = useRef<number | null>(null);
-  const touchCountRef   = useRef(0);
-  const lastTapRef      = useRef(0);
+  // ── stable refs (avoid stale closure in responder) ──────────────────
+  const indexRef    = useRef(initialIndex);
+  const isZoomedRef = useRef(false);
+  const panelsRef   = useRef(panels);
+  const screenWRef  = useRef(screenW);
+  const screenHRef  = useRef(screenH);
 
-  useEffect(() => { screenWRef.current  = screenW; },  [screenW]);
-  useEffect(() => { panelsRef.current   = panels;  },  [panels]);
+  useEffect(() => { screenWRef.current = screenW; }, [screenW]);
+  useEffect(() => { screenHRef.current = screenH; }, [screenH]);
+  useEffect(() => { panelsRef.current  = panels;  }, [panels]);
 
-  const openAnim      = useRef(new Animated.Value(0)).current;
-  const contentAlpha  = useRef(new Animated.Value(1)).current;
-  const scaleAnim     = useRef(new Animated.Value(1)).current;
-  const slideX        = useRef(new Animated.Value(0)).current;
-  const captionAlpha  = useRef(new Animated.Value(1)).current;
+  // ── zoom / pan state refs ────────────────────────────────────────────
+  const scaleRef   = useRef(1);
+  const txRef      = useRef(0);
+  const tyRef      = useRef(0);
+  const txBaseRef  = useRef(0);
+  const tyBaseRef  = useRef(0);
+
+  // ── pinch gesture state ──────────────────────────────────────────────
+  const pinchStartScaleRef = useRef(1);
+  const pinchStartTXRef    = useRef(0);
+  const pinchStartTYRef    = useRef(0);
+  const pinchMidXRef       = useRef(0);
+  const pinchMidYRef       = useRef(0);
+  const pinchStartDistRef  = useRef<number | null>(null);
+  const touchCountRef      = useRef(0);
+
+  // ── double-tap detection ─────────────────────────────────────────────
+  const lastTapRef    = useRef(0);
+  const lastTapXRef   = useRef(0);
+  const lastTapYRef   = useRef(0);
+
+  // ── animated values ──────────────────────────────────────────────────
+  const openAnim     = useRef(new Animated.Value(0)).current;
+  const contentAlpha = useRef(new Animated.Value(1)).current;
+  const scaleAnim    = useRef(new Animated.Value(1)).current;
+  const txAnim       = useRef(new Animated.Value(0)).current;
+  const tyAnim       = useRef(new Animated.Value(0)).current;
+  const navSlideX    = useRef(new Animated.Value(0)).current;
+  const captionAlpha = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.spring(openAnim, { toValue: 1, tension: 65, friction: 11, useNativeDriver: true }).start();
   }, []);
 
-  function resetZoom() {
-    scaleAnim.setValue(1);
-    currentScaleRef.current = 1;
-    baseScaleRef.current    = 1;
-    isZoomedRef.current     = false;
+  // ── helpers ──────────────────────────────────────────────────────────
+  function maxTX(s: number) { return (s - 1) * screenWRef.current  / 2; }
+  function maxTY(s: number) { return (s - 1) * screenHRef.current / 2; }
+
+  function resetZoom(animated = false) {
+    scaleRef.current = 1;
+    txRef.current    = 0;
+    tyRef.current    = 0;
+    isZoomedRef.current = false;
     setIsZoomed(false);
+    if (animated) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, { toValue: 1, tension: 160, friction: 9, useNativeDriver: true }),
+        Animated.spring(txAnim,    { toValue: 0, tension: 160, friction: 9, useNativeDriver: true }),
+        Animated.spring(tyAnim,    { toValue: 0, tension: 160, friction: 9, useNativeDriver: true }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(1);
+      txAnim.setValue(0);
+      tyAnim.setValue(0);
+    }
+  }
+
+  function applyZoom(newScale: number, newTX: number, newTY: number, animated = false) {
+    const s  = clamp(newScale, 1, MAX_ZOOM);
+    const cx = clamp(newTX, -maxTX(s), maxTX(s));
+    const cy = clamp(newTY, -maxTY(s), maxTY(s));
+    scaleRef.current = s;
+    txRef.current    = cx;
+    tyRef.current    = cy;
+    const zoomed = s > 1.05;
+    isZoomedRef.current = zoomed;
+    setIsZoomed(zoomed);
+    if (animated) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, { toValue: s,  tension: 180, friction: 9, useNativeDriver: true }),
+        Animated.spring(txAnim,    { toValue: cx, tension: 180, friction: 9, useNativeDriver: true }),
+        Animated.spring(tyAnim,    { toValue: cy, tension: 180, friction: 9, useNativeDriver: true }),
+      ]).start();
+    } else {
+      scaleAnim.setValue(s);
+      txAnim.setValue(cx);
+      tyAnim.setValue(cy);
+    }
   }
 
   function navigateTo(newIdx: number, dir: 1 | -1 | 0) {
     const total = panelsRef.current.length;
     if (newIdx < 0 || newIdx >= total) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => null);
-      Animated.spring(slideX, { toValue: 0, tension: 200, friction: 10, useNativeDriver: true }).start();
+      Animated.spring(navSlideX, { toValue: 0, tension: 200, friction: 10, useNativeDriver: true }).start();
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => null);
@@ -100,15 +165,15 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
       contentAlpha.setValue(0);
       setIndex(newIdx);
       indexRef.current = newIdx;
-      slideX.setValue(dir !== 0 ? inX : 0);
-      resetZoom();
+      navSlideX.setValue(dir !== 0 ? inX : 0);
+      resetZoom(false);
       requestAnimationFrame(() => {
         const anims: Animated.CompositeAnimation[] = [
           Animated.timing(contentAlpha, { toValue: 1, duration: 120, useNativeDriver: true }),
         ];
         if (dir !== 0) {
           anims.push(
-            Animated.spring(slideX, { toValue: 0, tension: 90, friction: 12, useNativeDriver: true }),
+            Animated.spring(navSlideX, { toValue: 0, tension: 90, friction: 12, useNativeDriver: true }),
           );
         }
         Animated.parallel(anims).start();
@@ -116,93 +181,191 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
     };
 
     if (dir !== 0) {
-      Animated.timing(slideX, { toValue: outX, duration: 165, useNativeDriver: true }).start(doSwitch);
+      Animated.timing(navSlideX, { toValue: outX, duration: 165, useNativeDriver: true }).start(doSwitch);
     } else {
       Animated.timing(contentAlpha, { toValue: 0, duration: 100, useNativeDriver: true }).start(doSwitch);
     }
   }
 
-  function handleCenterTap() {
-    const now = Date.now();
-    if (now - lastTapRef.current < 290) {
-      lastTapRef.current = 0;
-      const newZoom = currentScaleRef.current > 1.1 ? 1 : 2;
-      Animated.spring(scaleAnim, { toValue: newZoom, tension: 160, friction: 9, useNativeDriver: true }).start();
-      currentScaleRef.current = newZoom;
-      isZoomedRef.current     = newZoom > 1;
-      setIsZoomed(newZoom > 1);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => null);
+  // ── double-tap (from tap-zone onPress or PanResponder release) ───────
+  function handleDoubleTap(tapX: number, tapY: number) {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => null);
+    if (scaleRef.current > 1.1) {
+      resetZoom(true);
     } else {
-      lastTapRef.current = now;
-      const newOn = !captionOn;
-      setCaptionOn(newOn);
-      Animated.timing(captionAlpha, { toValue: newOn ? 1 : 0, duration: 200, useNativeDriver: true }).start();
+      // zoom 2.5× centred on the tapped point
+      const s  = ZOOM_IN_SCALE;
+      const cx = (tapX - screenWRef.current  / 2) * (1 - s);
+      const cy = (tapY - screenHRef.current / 2) * (1 - s);
+      applyZoom(s, cx, cy, true);
     }
   }
 
+  function handleSingleTap() {
+    const newOn = !captionOn;
+    setCaptionOn(newOn);
+    Animated.timing(captionAlpha, {
+      toValue: newOn ? 1 : 0, duration: 200, useNativeDriver: true,
+    }).start();
+  }
+
+  // ── tap-zone press handler (for left / center / right zones) ─────────
+  function handleZoneTap(tapX: number, tapY: number) {
+    const now = Date.now();
+    if (now - lastTapRef.current < 290) {
+      lastTapRef.current = 0;
+      handleDoubleTap(tapX, tapY);
+    } else {
+      lastTapRef.current = now;
+      lastTapXRef.current = tapX;
+      lastTapYRef.current = tapY;
+    }
+  }
+
+  // ── PanResponder ─────────────────────────────────────────────────────
   const responder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: (evt) => {
       touchCountRef.current = evt.nativeEvent.touches.length;
-      return evt.nativeEvent.touches.length === 2;
+      // grab immediately when 2 fingers (pinch) or when zoomed (for pan)
+      return evt.nativeEvent.touches.length === 2 || isZoomedRef.current;
     },
     onMoveShouldSetPanResponder: (evt, gs) => {
       touchCountRef.current = evt.nativeEvent.touches.length;
       if (evt.nativeEvent.touches.length === 2) return true;
-      if (isZoomedRef.current) return false;
+      if (isZoomedRef.current) return Math.abs(gs.dx) > 4 || Math.abs(gs.dy) > 4;
+      // nav swipe: horizontal
       return Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.1;
     },
+
     onPanResponderGrant: (evt) => {
       touchCountRef.current = evt.nativeEvent.touches.length;
+      // save pan base
+      txBaseRef.current = txRef.current;
+      tyBaseRef.current = tyRef.current;
+
       if (touchCountRef.current === 2) {
         const t = evt.nativeEvent.touches;
         const dx = t[0].pageX - t[1].pageX;
         const dy = t[0].pageY - t[1].pageY;
-        pinchDistRef.current   = Math.sqrt(dx * dx + dy * dy);
-        baseScaleRef.current   = currentScaleRef.current;
+        pinchStartDistRef.current  = Math.sqrt(dx * dx + dy * dy);
+        pinchStartScaleRef.current = scaleRef.current;
+        pinchStartTXRef.current    = txRef.current;
+        pinchStartTYRef.current    = tyRef.current;
+        pinchMidXRef.current       = (t[0].pageX + t[1].pageX) / 2;
+        pinchMidYRef.current       = (t[0].pageY + t[1].pageY) / 2;
       }
     },
+
     onPanResponderMove: (evt, gs) => {
       touchCountRef.current = evt.nativeEvent.touches.length;
+
       if (touchCountRef.current === 2) {
-        const t = evt.nativeEvent.touches;
+        // ── pinch-to-zoom toward midpoint ─────────────────────────────
+        const t  = evt.nativeEvent.touches;
         const dx = t[0].pageX - t[1].pageX;
         const dy = t[0].pageY - t[1].pageY;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        if (pinchDistRef.current === null) { pinchDistRef.current = dist; return; }
-        const ratio    = dist / pinchDistRef.current;
-        const newScale = Math.min(MAX_ZOOM, Math.max(1, baseScaleRef.current * ratio));
+        if (pinchStartDistRef.current === null) {
+          pinchStartDistRef.current = dist;
+          return;
+        }
+        const ratio    = dist / pinchStartDistRef.current;
+        const s0       = pinchStartScaleRef.current;
+        const newScale = clamp(s0 * ratio, 1, MAX_ZOOM);
+        const mx       = pinchMidXRef.current;
+        const my       = pinchMidYRef.current;
+        const sw       = screenWRef.current;
+        const sh       = screenHRef.current;
+        // keep midpoint fixed: newTX = (mx - sw/2)*(1 - newS/s0) + tx0*(newS/s0)
+        const r = newScale / s0;
+        const newTX = clamp(
+          (mx - sw / 2) * (1 - r) + pinchStartTXRef.current * r,
+          -maxTX(newScale), maxTX(newScale),
+        );
+        const newTY = clamp(
+          (my - sh / 2) * (1 - r) + pinchStartTYRef.current * r,
+          -maxTY(newScale), maxTY(newScale),
+        );
+        scaleRef.current = newScale;
+        txRef.current    = newTX;
+        tyRef.current    = newTY;
         scaleAnim.setValue(newScale);
-        currentScaleRef.current = newScale;
-      } else if (!isZoomedRef.current) {
-        slideX.setValue(gs.dx);
+        txAnim.setValue(newTX);
+        tyAnim.setValue(newTY);
+
+      } else if (isZoomedRef.current) {
+        // ── single-finger pan when zoomed ─────────────────────────────
+        const s   = scaleRef.current;
+        const newTX = clamp(txBaseRef.current + gs.dx, -maxTX(s), maxTX(s));
+        const newTY = clamp(tyBaseRef.current + gs.dy, -maxTY(s), maxTY(s));
+        txAnim.setValue(newTX);
+        tyAnim.setValue(newTY);
+
+      } else {
+        // ── swipe-to-navigate ─────────────────────────────────────────
+        navSlideX.setValue(gs.dx);
       }
     },
-    onPanResponderRelease: (_, gs) => {
-      if (touchCountRef.current === 2 || pinchDistRef.current !== null) {
-        const s = currentScaleRef.current;
+
+    onPanResponderRelease: (evt, gs) => {
+      // ── pinch release ────────────────────────────────────────────────
+      if (touchCountRef.current === 2 || pinchStartDistRef.current !== null) {
+        const s = scaleRef.current;
         if (s < 1.15) {
-          Animated.spring(scaleAnim, { toValue: 1, tension: 160, friction: 9, useNativeDriver: true }).start();
-          currentScaleRef.current = 1; isZoomedRef.current = false; setIsZoomed(false);
+          resetZoom(true);
         } else {
-          isZoomedRef.current = true; setIsZoomed(true);
+          isZoomedRef.current = true;
+          setIsZoomed(true);
         }
-        pinchDistRef.current  = null;
+        pinchStartDistRef.current = null;
+        touchCountRef.current     = 0;
+        return;
+      }
+
+      // ── commit pan / detect double-tap when zoomed ───────────────────
+      if (isZoomedRef.current) {
+        const s   = scaleRef.current;
+        const committed_tx = clamp(txBaseRef.current + gs.dx, -maxTX(s), maxTX(s));
+        const committed_ty = clamp(tyBaseRef.current + gs.dy, -maxTY(s), maxTY(s));
+        txRef.current = committed_tx;
+        tyRef.current = committed_ty;
+        txAnim.setValue(committed_tx);
+        tyAnim.setValue(committed_ty);
+
+        // tiny movement = tap → check for double-tap to zoom out
+        if (Math.abs(gs.dx) < 8 && Math.abs(gs.dy) < 8 && gs.numberActiveTouches === 0) {
+          const now = Date.now();
+          const tapX = evt.nativeEvent.pageX;
+          const tapY = evt.nativeEvent.pageY;
+          if (now - lastTapRef.current < 290) {
+            lastTapRef.current = 0;
+            handleDoubleTap(tapX, tapY);
+          } else {
+            lastTapRef.current  = now;
+            lastTapXRef.current = tapX;
+            lastTapYRef.current = tapY;
+          }
+        }
         touchCountRef.current = 0;
         return;
       }
-      if (isZoomedRef.current) { touchCountRef.current = 0; return; }
+
+      // ── swipe navigation ─────────────────────────────────────────────
       const threshold = screenWRef.current * SWIPE_DIST_RATIO;
       if      (gs.dx < -threshold || gs.vx < -SWIPE_VEL) navigateTo(indexRef.current + 1,  1);
       else if (gs.dx >  threshold || gs.vx >  SWIPE_VEL) navigateTo(indexRef.current - 1, -1);
-      else Animated.spring(slideX, { toValue: 0, tension: 180, friction: 10, useNativeDriver: true }).start();
+      else Animated.spring(navSlideX, { toValue: 0, tension: 180, friction: 10, useNativeDriver: true }).start();
       touchCountRef.current = 0;
     },
+
     onPanResponderTerminate: () => {
-      touchCountRef.current = 0; pinchDistRef.current = null;
-      Animated.spring(slideX, { toValue: 0, tension: 180, friction: 10, useNativeDriver: true }).start();
+      touchCountRef.current     = 0;
+      pinchStartDistRef.current = null;
+      Animated.spring(navSlideX, { toValue: 0, tension: 180, friction: 10, useNativeDriver: true }).start();
     },
   })).current;
 
+  // ── derived ──────────────────────────────────────────────────────────
   const panel      = panels[index];
   const imgSrc     = panel.imageUri
     ? { uri: panel.imageUri }
@@ -225,6 +388,7 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
         },
       ]}
     >
+      {/* Ambient background */}
       <LinearGradient
         colors={[gradient[0], '#050310']}
         style={StyleSheet.absoluteFill}
@@ -232,70 +396,99 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
         end={{ x: 0.5, y: 1 }}
       />
 
+      {/* Nav slide layer — handles swipe-navigation slide */}
       <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            opacity:   contentAlpha,
-            transform: [{ translateX: slideX }, { scale: scaleAnim }],
-          },
-        ]}
+        style={[StyleSheet.absoluteFill, { transform: [{ translateX: navSlideX }] }]}
         {...responder.panHandlers}
       >
-        {imgSrc ? (
-          <Image
-            source={imgSrc}
-            style={StyleSheet.absoluteFill}
-            contentFit="contain"
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <LinearGradient colors={gradient} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
-        )}
+        {/* Zoom + pan layer */}
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              opacity:   contentAlpha,
+              transform: [
+                { translateX: txAnim  },
+                { translateY: tyAnim  },
+                { scale:      scaleAnim },
+              ],
+            },
+          ]}
+        >
+          {imgSrc ? (
+            <Image
+              source={imgSrc}
+              style={StyleSheet.absoluteFill}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <LinearGradient
+              colors={gradient}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0.1, y: 0 }}
+              end={{ x: 0.9, y: 1 }}
+            />
+          )}
 
-        {imgSrc && (
-          <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)']}
-            style={[StyleSheet.absoluteFill, { top: '55%' }]}
-          />
-        )}
+          {imgSrc && (
+            <LinearGradient
+              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)']}
+              style={[StyleSheet.absoluteFill, { top: '55%' }]}
+            />
+          )}
 
-        {!!panel.bubbleText?.trim() && (
-          <View style={[styles.bubble, { maxWidth: screenW * 0.72 }]}>
-            <Text style={styles.bubbleTxt}>{panel.bubbleText}</Text>
-            <View style={styles.bubbleTail} />
-          </View>
-        )}
-
-        {panel.overlays?.map(ov => {
-          const left    = ov.xPct * screenW;
-          const top     = ov.yPct * screenH;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const ff      = (ov.fontFamily ?? 'Satoshi-Medium') as any;
-          const fs      = Math.min((ov.fontSize ?? (ov.type === 'sticker' ? 28 : 13)) * 1.5, 34);
-          const bR      = ov.bubbleStyle === 'sharp' ? 3 : ov.bubbleStyle === 'oval' ? 50 : 14;
-          return (
-            <View key={ov.id} style={{ position: 'absolute', left, top, zIndex: 15 }}>
-              {ov.type === 'bubble' && (
-                <View style={[styles.bubble, { borderRadius: bR, position: 'relative', top: 0, left: 0, maxWidth: screenW * 0.65 }]}>
-                  <Text style={[styles.bubbleTxt, { fontFamily: ff, fontSize: fs }]}>{ov.content}</Text>
-                  {ov.bubbleStyle !== 'oval' && <View style={styles.bubbleTail} />}
-                </View>
-              )}
-              {ov.type === 'text' && (
-                <Text style={[styles.ovText, { fontFamily: ff, fontSize: fs, color: ov.color ?? '#fff' }]}>{ov.content}</Text>
-              )}
-              {ov.type === 'sticker' && <Text style={{ fontSize: fs }}>{ov.content}</Text>}
+          {!!panel.bubbleText?.trim() && (
+            <View style={[styles.bubble, { maxWidth: screenW * 0.72 }]}>
+              <Text style={styles.bubbleTxt}>{panel.bubbleText}</Text>
+              <View style={styles.bubbleTail} />
             </View>
-          );
-        })}
+          )}
+
+          {panel.overlays?.map(ov => {
+            const left = ov.xPct * screenW;
+            const top  = ov.yPct * screenH;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ff   = (ov.fontFamily ?? 'Satoshi-Medium') as any;
+            const fs   = Math.min((ov.fontSize ?? (ov.type === 'sticker' ? 28 : 13)) * 1.5, 34);
+            const bR   = ov.bubbleStyle === 'sharp' ? 3 : ov.bubbleStyle === 'oval' ? 50 : 14;
+            return (
+              <View key={ov.id} style={{ position: 'absolute', left, top, zIndex: 15 }}>
+                {ov.type === 'bubble' && (
+                  <View style={[styles.bubble, { borderRadius: bR, position: 'relative', top: 0, left: 0, maxWidth: screenW * 0.65 }]}>
+                    <Text style={[styles.bubbleTxt, { fontFamily: ff, fontSize: fs }]}>{ov.content}</Text>
+                    {ov.bubbleStyle !== 'oval' && <View style={styles.bubbleTail} />}
+                  </View>
+                )}
+                {ov.type === 'text' && (
+                  <Text style={[styles.ovText, { fontFamily: ff, fontSize: fs, color: ov.color ?? '#fff' }]}>{ov.content}</Text>
+                )}
+                {ov.type === 'sticker' && <Text style={{ fontSize: fs }}>{ov.content}</Text>}
+              </View>
+            );
+          })}
+        </Animated.View>
       </Animated.View>
 
+      {/* Tap zones — left nav / center double-tap-zoom / right nav */}
       {!isZoomed && (
         <>
           <TouchableOpacity
-            style={[styles.tapZone, { left: 0, width: screenW * 0.3 }]}
-            onPress={() => navigateTo(index - 1, -1)}
+            style={[styles.tapZone, { left: 0, width: screenW * 0.28 }]}
+            onPress={(e) => {
+              const now = Date.now();
+              const tx  = e.nativeEvent.pageX;
+              const ty  = e.nativeEvent.pageY;
+              if (now - lastTapRef.current < 290) {
+                lastTapRef.current = 0;
+                handleDoubleTap(tx, ty);
+              } else {
+                lastTapRef.current  = now;
+                lastTapXRef.current = tx;
+                lastTapYRef.current = ty;
+                navigateTo(index - 1, -1);
+              }
+            }}
             activeOpacity={0.001}
           >
             {index > 0 && (
@@ -305,15 +498,29 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
             )}
           </TouchableOpacity>
 
+          {/* Centre zone — single tap = toggle caption, double tap = zoom to point */}
           <TouchableOpacity
-            style={[styles.tapZone, { left: screenW * 0.3, width: screenW * 0.4 }]}
-            onPress={handleCenterTap}
+            style={[styles.tapZone, { left: screenW * 0.28, width: screenW * 0.44 }]}
+            onPress={(e) => handleZoneTap(e.nativeEvent.pageX, e.nativeEvent.pageY)}
             activeOpacity={0.001}
           />
 
           <TouchableOpacity
-            style={[styles.tapZone, { right: 0, width: screenW * 0.3 }]}
-            onPress={() => navigateTo(index + 1, 1)}
+            style={[styles.tapZone, { right: 0, width: screenW * 0.28 }]}
+            onPress={(e) => {
+              const now = Date.now();
+              const tx  = e.nativeEvent.pageX;
+              const ty  = e.nativeEvent.pageY;
+              if (now - lastTapRef.current < 290) {
+                lastTapRef.current = 0;
+                handleDoubleTap(tx, ty);
+              } else {
+                lastTapRef.current  = now;
+                lastTapXRef.current = tx;
+                lastTapYRef.current = ty;
+                navigateTo(index + 1, 1);
+              }
+            }}
             activeOpacity={0.001}
           >
             {index < panels.length - 1 && (
@@ -325,6 +532,7 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
         </>
       )}
 
+      {/* Header */}
       <Animated.View
         style={[styles.header, { paddingTop: topPad + 6, opacity: openAnim }]}
         pointerEvents="box-none"
@@ -340,20 +548,20 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
         {isZoomed ? (
           <TouchableOpacity
             style={styles.zoomResetBtn}
-            onPress={() => {
-              Animated.spring(scaleAnim, { toValue: 1, tension: 160, friction: 9, useNativeDriver: true }).start();
-              currentScaleRef.current = 1; isZoomedRef.current = false; setIsZoomed(false);
-            }}
+            onPress={() => resetZoom(true)}
             activeOpacity={0.75}
           >
             <Icon name="minimize-2" size={14} color="rgba(255,255,255,0.75)" />
             <Text style={styles.zoomResetTxt}>Reset</Text>
           </TouchableOpacity>
         ) : (
-          <View style={{ width: 72 }} />
+          <View style={styles.hintPill}>
+            <Text style={styles.hintTxt}>⊕ double-tap to zoom</Text>
+          </View>
         )}
       </Animated.View>
 
+      {/* Progress dots */}
       <View
         style={[styles.dotsRow, { bottom: (hasCaption && captionOn ? 92 : 22) + botPad }]}
         pointerEvents="none"
@@ -365,7 +573,7 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
               style={[
                 styles.dot,
                 {
-                  width:  i === index ? 20 : 5,
+                  width:           i === index ? 20 : 5,
                   backgroundColor: i === index ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.22)',
                 },
               ]}
@@ -378,6 +586,7 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
         )}
       </View>
 
+      {/* Caption strip */}
       {hasCaption && (
         <Animated.View
           style={[
@@ -419,9 +628,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14,
     backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)',
-    width: 72, justifyContent: 'center',
+    minWidth: 72, justifyContent: 'center',
   },
   zoomResetTxt: { color: 'rgba(255,255,255,0.72)', fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  hintPill: {
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
+    minWidth: 72, alignItems: 'center',
+  },
+  hintTxt: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontFamily: 'Satoshi-Regular' },
 
   tapZone: {
     position: 'absolute', top: 70, bottom: 80, zIndex: 50,
