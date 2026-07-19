@@ -509,7 +509,7 @@ router.get("/stories/saved", requireAuth, async (req, res) => {
       return {
         id:             s.id,
         authorUserId:   s.userId,
-        authorName:     r.author?.name ?? 'Sky Kid',
+        authorName:     r.author?.name ?? 'Game Child',
         authorHandle:   r.author?.username ?? '',
         chapterTitle:   s.chapterTitle,
         description:    s.description ?? '',
