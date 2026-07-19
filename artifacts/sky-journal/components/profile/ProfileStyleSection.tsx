@@ -42,7 +42,7 @@ export function ProfileStyleSection({
 
   return (
     <>
-      {/* ── Sky Shop entry ─── */}
+      {/* ── Shop entry ─── */}
       <View style={s.section}>
         <TouchableOpacity
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
@@ -53,7 +53,7 @@ export function ProfileStyleSection({
             <Text style={{ fontSize: 18 }}>🛍</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: colors.foreground, letterSpacing: -0.2 }}>Sky Shop</Text>
+            <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: colors.foreground, letterSpacing: -0.2 }}>Shop</Text>
             <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>Browse frames, accents & themes</Text>
           </View>
           {rewardBalance && (

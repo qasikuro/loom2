@@ -753,7 +753,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={[styles.title, { color: colors.foreground }]}>Sky Shop</Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>Shop</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
               Spend your stars on cosmetic treasures
             </Text>
