@@ -121,9 +121,12 @@ export default function CharacterScreen() {
     setSavingTitle(false); setShowTitlePicker(false);
   }, [reloadConstellation]);
 
-  const handleSetActiveTitle = useCallback((title: string | null) => {
-    setCharacter({ ...character, activeTitle: title });
-  }, [character, setCharacter]);
+  const handleSetActiveTitle = useCallback(async (title: string | null) => {
+    try {
+      await apiFetch('/constellation/title', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title ?? null }) });
+      await reloadConstellation();
+    } catch { /* skip */ }
+  }, [reloadConstellation]);
 
   // ── Settings drawer ────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);

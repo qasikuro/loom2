@@ -252,9 +252,24 @@ router.put("/rewards/active-cosmetics", requireAuth, async (req, res) => {
 //
 router.put("/constellation/title", requireAuth, async (req, res) => {
   const userId = getUserId(req);
-  const { title } = req.body as { title?: string };
-  if (!title || typeof title !== "string") {
-    return res.status(400).json({ error: "title is required" });
+  const { title } = req.body as { title?: string | null };
+
+  // Allow null/empty to clear the active title
+  if (title === null || title === "" || title === undefined) {
+    try {
+      await db
+        .update(constellationProgressTable)
+        .set({ activeTitle: null, updatedAt: sql`now()` })
+        .where(eq(constellationProgressTable.userId, userId));
+      return res.json({ activeTitle: null });
+    } catch (err) {
+      req.log.error({ err }, "Failed to clear constellation title");
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  }
+
+  if (typeof title !== "string") {
+    return res.status(400).json({ error: "title must be a string or null" });
   }
 
   // Ordered list mirrors constellationService TITLES map (index = stars needed)

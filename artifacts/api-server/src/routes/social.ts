@@ -149,11 +149,12 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         role:           characterTable.role,
         timezone:       characterTable.timezone,
         links:          characterTable.links,
-        activeTitle:    characterTable.activeTitle,
         intention:      characterTable.intention,
         intentionDate:  characterTable.intentionDate,
+        activeTitle:    constellationProgressTable.activeTitle,
       })
         .from(characterTable)
+        .leftJoin(constellationProgressTable, eq(constellationProgressTable.userId, characterTable.userId))
         .where(eq(characterTable.userId, targetId))
         .limit(1),
 

@@ -49,8 +49,7 @@ const CharacterInputSchema = z.object({
   guideAvailability: GuideAvailabilitySchema,
   // Onboarding
   constellationType: z.enum(['wanderer', 'keeper', 'dreamer']).nullable().optional(),
-  // Title & Intention
-  activeTitle:   z.string().max(60).nullable().optional(),
+  // Intention (title is server-controlled via /constellation/title)
   intention:     z.string().max(80).nullable().optional(),
   intentionDate: z.string().max(20).nullable().optional(),
 });
@@ -104,7 +103,6 @@ router.put("/character", requireAuth, async (req, res) => {
       guideTopics:       parsed.data.guideTopics       ?? undefined,
       guideAvailability: parsed.data.guideAvailability ?? undefined,
       constellationType: parsed.data.constellationType ?? undefined,
-      activeTitle:       parsed.data.activeTitle   !== undefined ? (parsed.data.activeTitle ?? null) : undefined,
       intention:         parsed.data.intention     !== undefined ? (parsed.data.intention ?? null) : undefined,
       intentionDate:     parsed.data.intentionDate !== undefined ? (parsed.data.intentionDate ?? null) : undefined,
     };
