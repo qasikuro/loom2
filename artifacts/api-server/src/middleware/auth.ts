@@ -5,10 +5,25 @@ import { eq } from "drizzle-orm";
 
 export const clerkAuth = clerkMiddleware() as RequestHandler;
 
-export function requireAuth(req: Request, res: Response, next: NextFunction) {
+export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const { userId } = getAuth(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  try {
+    const [row] = await db
+      .select({ isBanned: characterTable.isBanned })
+      .from(characterTable)
+      .where(eq(characterTable.userId, userId))
+      .limit(1);
+
+    if (row?.isBanned) {
+      res.status(403).json({ error: "Account suspended" });
+      return;
+    }
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
     return;
   }
   next();
@@ -28,11 +43,15 @@ export async function requireAdmin(req: Request, res: Response, next: NextFuncti
   }
   try {
     const [row] = await db
-      .select({ isAdmin: characterTable.isAdmin })
+      .select({ isAdmin: characterTable.isAdmin, isBanned: characterTable.isBanned })
       .from(characterTable)
       .where(eq(characterTable.userId, userId))
       .limit(1);
 
+    if (row?.isBanned) {
+      res.status(403).json({ error: "Account suspended" });
+      return;
+    }
     if (!row?.isAdmin) {
       res.status(403).json({ error: "Forbidden" });
       return;
