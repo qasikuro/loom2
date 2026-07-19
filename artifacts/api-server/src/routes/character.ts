@@ -93,15 +93,10 @@ router.put("/character", requireAuth, async (req, res) => {
       .where(eq(characterTable.userId, userId))
       .limit(1);
 
-    // Only block if the caller is explicitly trying to CHANGE an existing username.
-    // Omitting username (undefined) is always fine — used by onboarding partial updates.
-    if (existing?.username && parsed.data.username !== undefined && parsed.data.username !== existing.username) {
-      return res.status(409).json({ error: "Username cannot be changed once set" });
-    }
-
     const safeData = {
       ...parsed.data,
-      // If username already locked, always keep the existing one regardless of what was sent
+      // If username already locked, always keep the existing one regardless of what was sent.
+      // Never block the whole save just because username differs — silently preserve it.
       username:          existing?.username ?? parsed.data.username,
       avatarUri:         safeImageUri(parsed.data.avatarUri),
       activeOutfitId:    parsed.data.activeOutfitId    ?? null,
@@ -138,7 +133,7 @@ router.patch("/character/active-outfit", requireAuth, async (req, res) => {
   try {
     await db
       .insert(characterTable)
-      .values({ userId, name: "Sky Child", activeOutfitId: activeOutfitId ?? null, updatedAt: new Date() })
+      .values({ userId, name: "Player", activeOutfitId: activeOutfitId ?? null, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: characterTable.userId,
         set: { activeOutfitId: activeOutfitId ?? null, updatedAt: new Date() },
