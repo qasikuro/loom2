@@ -118,7 +118,7 @@ export default function PurchaseHistoryScreen() {
             <Icon name="shopping-bag" size={26} color="rgba(200,168,75,0.55)" />
           </View>
           <Text style={s.emptyHead}>No purchases yet</Text>
-          <Text style={s.emptySub}>Items you buy in the GameJo Shop will appear here.</Text>
+          <Text style={s.emptySub}>Items you buy in the Shop will appear here.</Text>
         </View>
       ) : (
         <ScrollView
