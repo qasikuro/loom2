@@ -575,7 +575,7 @@ export default function StoryScreen() {
 
   function handleShare() {
     const panels = story?.panels ?? post?.panels ?? [];
-    shareStory({ title, mood, authorName, panels }).catch(() => null);
+    shareStory({ id, title, mood, authorName, panels }).catch(() => null);
   }
 
   function handleWitness() {
