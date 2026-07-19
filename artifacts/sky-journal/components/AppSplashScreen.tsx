@@ -1,14 +1,14 @@
 /**
  * GameJo animated splash screen.
- * Full-screen background image with twinkling stars + animated loading bar.
+ * Uses the splash image as background with twinkling stars + animated loading bar.
  */
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
   Easing,
+  Image,
   Platform,
   StyleSheet,
   Text,
@@ -17,16 +17,19 @@ import {
 
 const { width, height } = Dimensions.get('window');
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const SPLASH_IMG = require('../assets/images/gamejo_splash.png');
+
 function pseudoRand(seed: number): number {
   const x = Math.sin(seed + 1) * 43758.5453123;
   return x - Math.floor(x);
 }
 
-// Stars scattered across top 70% — mix of white and gold to match GameJo logo stars
+// Stars — scattered across top 68% of screen, mix of gold + white
 const STARS = Array.from({ length: 48 }, (_, i) => ({
   id:      i,
   x:       pseudoRand(i * 3)  * width,
-  y:       pseudoRand(i * 7)  * height * 0.70,
+  y:       pseudoRand(i * 7)  * height * 0.68,
   size:    1.2 + pseudoRand(i * 11) * 3.2,
   opacity: 0.25 + pseudoRand(i * 13) * 0.75,
   delay:   Math.floor(pseudoRand(i * 17) * 2200),
@@ -80,22 +83,22 @@ function StarField() {
 const BAR_W = width * 0.62;
 
 function LoadingBar() {
-  const shimmerX    = useRef(new Animated.Value(-100)).current;
-  const barWidth    = useRef(new Animated.Value(0)).current;
-  const dot1        = useRef(new Animated.Value(0.3)).current;
-  const dot2        = useRef(new Animated.Value(0.3)).current;
-  const dot3        = useRef(new Animated.Value(0.3)).current;
+  const shimmerX = useRef(new Animated.Value(-100)).current;
+  const barWidth = useRef(new Animated.Value(0)).current;
+  const dot1     = useRef(new Animated.Value(0.3)).current;
+  const dot2     = useRef(new Animated.Value(0.3)).current;
+  const dot3     = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
-    // Fill bar to ~82% over 2.3 s
+    // Fill bar to ~82%
     Animated.timing(barWidth, {
-      toValue:   BAR_W * 0.82,
-      duration:  2300,
-      easing:    Easing.out(Easing.cubic),
+      toValue:  BAR_W * 0.82,
+      duration: 2300,
+      easing:   Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
 
-    // Shimmer loop across the fill
+    // Shimmer sweep loop
     Animated.loop(
       Animated.sequence([
         Animated.timing(shimmerX, { toValue: BAR_W + 100, duration: 950, useNativeDriver: true }),
@@ -171,14 +174,14 @@ export function AppSplashScreen({ onReady }: Props) {
   const contentFade = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    // Fade content in
+    // Fade overlay elements in
     Animated.timing(contentFade, {
       toValue:  1,
       duration: 550,
       useNativeDriver: true,
     }).start();
 
-    // Fade entire screen out after display duration
+    // Fade out and dismiss
     const t = setTimeout(() => {
       Animated.timing(screenFade, {
         toValue:  0,
@@ -193,12 +196,12 @@ export function AppSplashScreen({ onReady }: Props) {
 
   return (
     <Animated.View style={[styles.root, { opacity: screenFade }]} pointerEvents="none">
-      {/* Background splash image */}
+      {/* Background — react-native Image for synchronous bundled asset loading */}
       <Image
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        source={require('../assets/images/gamejo_splash.png')}
-        style={StyleSheet.absoluteFill}
-        contentFit="cover"
+        source={SPLASH_IMG}
+        style={styles.bg}
+        resizeMode="cover"
+        fadeDuration={0}
       />
 
       {/* Twinkling stars */}
@@ -217,14 +220,21 @@ export function AppSplashScreen({ onReady }: Props) {
 const styles = StyleSheet.create({
   root: {
     ...StyleSheet.absoluteFillObject,
-    zIndex:          9999,
-    alignItems:      'center',
-    justifyContent:  'flex-end',
+    zIndex:         9999,
+    alignItems:     'center',
+    justifyContent: 'flex-end',
+  },
+  bg: {
+    position: 'absolute',
+    top:      0,
+    left:     0,
+    width,
+    height,
   },
   bottom: {
-    width:          '100%',
-    alignItems:     'center',
-    paddingBottom:  height * 0.09,
+    width:         '100%',
+    alignItems:    'center',
+    paddingBottom: height * 0.09,
   },
 
   // Loading bar
@@ -256,10 +266,10 @@ const styles = StyleSheet.create({
     alignItems:    'flex-end',
   },
   loadingLabel: {
-    fontSize:    11,
-    color:       'rgba(255,255,255,0.72)',
+    fontSize:     11,
+    color:        'rgba(255,255,255,0.72)',
     letterSpacing: 3.8,
-    fontFamily:  Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily:   Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
   loadingDot: {
     fontSize:   14,

@@ -1,31 +1,31 @@
 {
   "expo": {
-    "name": "Skyloom",
+    "name": "GameJo",
     "slug": "sky-journal",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logo.jpg",
+    "icon": "./assets/images/gamejo_logo.png",
     "scheme": "sky-journal",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash.png",
+      "image": "./assets/images/gamejo_splash.png",
       "resizeMode": "cover",
-      "backgroundColor": "#1A1630"
+      "backgroundColor": "#0D0B1E"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.replit.skyjournal"
+      "bundleIdentifier": "com.gamejo.app"
     },
     "android": {
-      "package": "com.replit.skyjournal",
+      "package": "com.gamejo.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logo.jpg",
-        "backgroundColor": "#1A1630"
+        "foregroundImage": "./assets/images/gamejo_logo.png",
+        "backgroundColor": "#0D0B1E"
       }
     },
     "web": {
-      "favicon": "./assets/images/logo.jpg"
+      "favicon": "./assets/images/gamejo_logo.png"
     },
     "plugins": [
       [
@@ -38,7 +38,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Skyloom to access your photos to add images to your logs."
+          "photosPermission": "Allow GameJo to access your photos to add images to your logs."
         }
       ]
     ],
