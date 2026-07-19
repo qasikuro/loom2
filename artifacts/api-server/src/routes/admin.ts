@@ -20,8 +20,19 @@ router.get("/admin/config", (_req: Request, res: Response) => {
   res.json({ publishableKey: process.env.CLERK_PUBLISHABLE_KEY ?? "" });
 });
 
-// ── Bootstrap: claim first-admin (requires auth, only works when 0 admins exist)
+// ── Bootstrap: claim first-admin (requires auth + out-of-band setup secret)
 router.post("/admin/setup", requireAuth, async (req: Request, res: Response) => {
+  const setupSecret = process.env.ADMIN_SETUP_SECRET;
+
+  if (!setupSecret) {
+    return res.status(403).json({ error: "Admin setup is disabled. Set ADMIN_SETUP_SECRET to enable it." });
+  }
+
+  const { secret } = req.body as { secret?: string };
+  if (!secret || secret !== setupSecret) {
+    return res.status(403).json({ error: "Invalid or missing setup secret." });
+  }
+
   const userId = getUserId(req);
   try {
     const [{ adminCount }] = await db

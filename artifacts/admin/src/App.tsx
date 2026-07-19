@@ -20,22 +20,10 @@ type Page = (typeof NAV)[number]["id"];
 
 // ── Access Denied screen ─────────────────────────────────────────────────────
 
-function AccessDenied({ email, onRetry, onSetup }: {
+function AccessDenied({ email, onRetry }: {
   email?: string;
   onRetry: () => void;
-  onSetup: () => void;
 }) {
-  const [setting, setSetting] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
-
-  const handleSetup = async () => {
-    setSetting(true);
-    setError(null);
-    try { await onSetup(); }
-    catch (e: unknown) { setError(e instanceof Error ? e.message : "Failed"); }
-    finally { setSetting(false); }
-  };
-
   return (
     <div className="flex h-screen items-center justify-center bg-background">
       <div className="text-center max-w-sm w-full space-y-5 p-8 bg-card rounded-2xl border shadow-sm">
@@ -47,26 +35,9 @@ function AccessDenied({ email, onRetry, onSetup }: {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <button
-            onClick={handleSetup}
-            disabled={setting}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-          >
-            {setting ? (
-              <><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin inline-block" /> Claiming…</>
-            ) : (
-              "Claim first-admin access"
-            )}
-          </button>
-          <p className="text-xs text-muted-foreground">
-            Only works while no admin exists yet — then it's locked.
-          </p>
-        </div>
-
-        {error && (
-          <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
-        )}
+        <p className="text-sm text-muted-foreground">
+          This account does not have admin access. Contact your administrator to be granted access.
+        </p>
 
         <button onClick={onRetry} className="text-xs text-muted-foreground hover:text-foreground underline transition-colors">
           Already have access? Retry
@@ -198,12 +169,6 @@ function AdminApp() {
     return <AccessDenied
       email={user?.primaryEmailAddress?.emailAddress}
       onRetry={() => api.getMe().then(me => setIsAdmin(me.isAdmin)).catch(() => {})}
-      onSetup={() =>
-        api.setupAdmin()
-          .then(() => api.getMe())
-          .then(me => setIsAdmin(me.isAdmin))
-          .catch((err: Error) => alert(err.message))
-      }
     />;
   }
 
