@@ -16,7 +16,7 @@
     },
     "production": {
       "env": {
-        "PRODUCTION_API_URL": "https://REPLACE_WITH_DEPLOYED_URL/api"
+        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api"
       },
       "android": {
         "buildType": "app-bundle"
