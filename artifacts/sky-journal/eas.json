@@ -15,6 +15,9 @@
       }
     },
     "production": {
+      "env": {
+        "PRODUCTION_API_URL": "https://REPLACE_WITH_DEPLOYED_URL/api"
+      },
       "android": {
         "buildType": "app-bundle"
       },

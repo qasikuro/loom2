@@ -28,11 +28,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     eas: {
       projectId: config.extra?.eas?.projectId,
     },
-    // REPLIT_DEV_DOMAIN is available at bundle time in the Node.js environment.
-    // The Expo bundler bakes this value into the bundle so the native app can
-    // reach the API server via the shared Replit proxy.
-    apiUrl: process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}/api`
-      : null,
+    // Production EAS builds set PRODUCTION_API_URL to the deployed Replit URL.
+    // Development builds fall back to the Replit dev domain baked in at bundle time.
+    apiUrl: process.env.PRODUCTION_API_URL
+      ?? (process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}/api`
+        : null),
   },
 });
