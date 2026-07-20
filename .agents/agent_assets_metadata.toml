@@ -173,3 +173,9 @@ id = "eO3CrUlLMhDQ5zH8o6Dj0"
 uri = "file://sky-journal-docs.zip"
 type = "unspecified"
 title = "Sky Journal — Full Product Documentation"
+
+[[outputs]]
+id = "gQX0_HLZ7oSmkH08c2uHl"
+uri = "file://gamejo-release.zip"
+type = "unspecified"
+title = "GameJo Release Package"
