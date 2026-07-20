@@ -22,14 +22,21 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       color: '#7C3AED',
       sounds: [],
     }],
+    ['expo-build-properties', {
+      android: {
+        packagingOptions: {
+          exclude: [
+            'META-INF/versions/9/OSGI-INF/MANIFEST.MF',
+          ],
+        },
+      },
+    }],
   ],
   extra: {
     ...config.extra,
     eas: {
       projectId: config.extra?.eas?.projectId,
     },
-    // Production EAS builds set PRODUCTION_API_URL to the deployed Replit URL.
-    // Development builds fall back to the Replit dev domain baked in at bundle time.
     apiUrl: process.env.PRODUCTION_API_URL
       ?? (process.env.REPLIT_DEV_DOMAIN
         ? `https://${process.env.REPLIT_DEV_DOMAIN}/api`
