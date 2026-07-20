@@ -19,7 +19,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
 
       - name: Setup EAS
         uses: expo/expo-github-action@v8
@@ -28,7 +27,9 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          rm -f pnpm-lock.yaml
+          pnpm install
 
       - name: Build Android AAB
         working-directory: artifacts/sky-journal
