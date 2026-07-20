@@ -10,6 +10,7 @@
     "lint": "eslint ."
   },
   "private": true,
+  "packageManager": "pnpm@10.26.1",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "eslint": "^10.7.0",
