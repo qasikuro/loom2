@@ -18,7 +18,8 @@
       "node": "22.0.0",
       "pnpm": "10.26.1",
       "env": {
-        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api"
+        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bmV3LWRyYWdvbi0xNS5jbGVyay5hY2NvdW50cy5kZXYk"
       },
       "android": {
         "buildType": "app-bundle"
@@ -31,7 +32,8 @@
       "node": "22.0.0",
       "pnpm": "10.26.1",
       "env": {
-        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api"
+        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bmV3LWRyYWdvbi0xNS5jbGVyay5hY2NvdW50cy5kZXYk"
       },
       "android": {
         "buildType": "apk"
