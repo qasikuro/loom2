@@ -1,4 +1,4 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -274,12 +274,16 @@ export default function TabLayout() {
   const { isSignedIn, isLoaded } = useAuth();
   const colors = useColors();
 
-  if (!isLoaded || !isSignedIn) {
+  if (!isLoaded) {
     return (
       <View style={[styles.loader, { backgroundColor: colors.background }]}>
         <ActivityIndicator color={colors.gold} size="large" />
       </View>
     );
+  }
+
+  if (!isSignedIn) {
+    return <Redirect href="/(auth)/sign-in" />;
   }
 
   return <ClassicTabLayout />;
