@@ -2,8 +2,8 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import { useSignIn, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
 import { type Href, useRouter, Link } from 'expo-router';
+import { Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -64,9 +64,10 @@ export default function SignInScreen() {
     setGoogleLoading(true);
     setCatchError('');
     try {
-      const { createdSessionId, setActive } = await startSSOFlow({
+      const redirectUrl = Linking.createURL('oauth-native-callback');
+      const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
         strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri(),
+        redirectUrl,
       });
       if (createdSessionId && setActive) {
         await setActive({
@@ -76,6 +77,10 @@ export default function SignInScreen() {
             router.replace('/(tabs)' as Href);
           },
         });
+      } else if (signIn?.status === 'needs_first_factor' || signUp?.status === 'missing_requirements') {
+        setCatchError('Additional verification required. Please use email sign-in.');
+      } else if (!createdSessionId) {
+        setCatchError('Sign-in was cancelled or did not complete. Please try again.');
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
