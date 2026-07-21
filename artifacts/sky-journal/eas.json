@@ -26,6 +26,16 @@
       "ios": {
         "simulator": false
       }
+    },
+    "production-apk": {
+      "node": "22.0.0",
+      "pnpm": "10.26.1",
+      "env": {
+        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api"
+      },
+      "android": {
+        "buildType": "apk"
+      }
     }
   }
 }
