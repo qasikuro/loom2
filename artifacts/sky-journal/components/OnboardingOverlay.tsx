@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@clerk/expo';
 import { useSound } from '@/context/SoundContext';
-import { apiFetch, useApp } from '@/context/AppContext';
+import { apiFetch, getAuthToken, useApp } from '@/context/AppContext';
 import type { JournalEntry } from '@/context/AppContext';
 
 // Keys are scoped per userId so different accounts on the same device are isolated.
@@ -259,6 +259,26 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
     const mood = selectedMood ?? 'Dreamy';
     const type = selectedType ?? 'dreamer';
 
+    // ── Wait for a valid Clerk auth token before any API calls ──────────────
+    // Brand-new accounts need a moment after sign-up for the token to propagate.
+    // Poll with exponential back-off (100 → 200 → 400 → 800 → 1000 ms) up to 12 s.
+    {
+      const deadline = Date.now() + 12_000;
+      let delay = 0;
+      let token: string | null = null;
+      while (Date.now() < deadline) {
+        if (delay > 0) await new Promise<void>(r => setTimeout(r, delay));
+        token = await getAuthToken();
+        if (token) break;
+        delay = delay === 0 ? 100 : Math.min(delay * 2 + 100, 1000);
+      }
+      if (!token) {
+        setSaving(false);
+        setSeedError(true);
+        return;
+      }
+    }
+
     // Fetch existing character fields so the PUT doesn't overwrite unrelated data
     // (e.g. username, bio, traits set before this feature).
     type CharMerge = { name?: string | null; bio?: string | null; traits?: string[] | null };
@@ -268,11 +288,10 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       if (existing) mergeBase = existing;
     } catch { /* ok — fall back to schema defaults if fetch fails */ }
 
-    // Character PUT is required — retry up to 4 times with back-off.
-    // On brand-new accounts the auth token may need a moment to propagate.
+    // Character PUT is required — retry up to 3 times with back-off.
     let characterOk = false;
-    const delays = [800, 1500, 2500];
-    for (let attempt = 0; attempt < 4 && !characterOk; attempt++) {
+    const delays = [1000, 2000];
+    for (let attempt = 0; attempt < 3 && !characterOk; attempt++) {
       try {
         await apiFetch('/character', {
           method:  'PUT',
@@ -287,7 +306,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         });
         characterOk = true;
       } catch {
-        if (attempt < 3) await new Promise(r => setTimeout(r, delays[attempt] ?? 2500));
+        if (attempt < 2) await new Promise(r => setTimeout(r, delays[attempt] ?? 2000));
       }
     }
 

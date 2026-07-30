@@ -1,6 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
-import { useSignIn, useSSO } from '@clerk/expo';
+import { useSignIn, useSSO, useClerk } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { type Href, useRouter, Link } from 'expo-router';
@@ -36,6 +36,7 @@ function useWarmUpBrowser() {
 export default function SignInScreen() {
   useWarmUpBrowser();
   const { signIn, errors, fetchStatus } = useSignIn();
+  const { setActive } = useClerk();
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -94,8 +95,10 @@ export default function SignInScreen() {
     try {
       const { error } = await signIn.password({ emailAddress: email.trim(), password });
       if (error) { setCatchError(error.longMessage ?? error.message ?? 'Sign-in failed.'); return; }
-      if (signIn.status === 'complete') {
-        await signIn.finalize({});
+      if (signIn.status === 'complete' && signIn.createdSessionId) {
+        // Use useClerk().setActive — this is the traditional path that updates
+        // useAuth().isSignedIn so the AuthTokenBridge gets a valid token.
+        await setActive({ session: signIn.createdSessionId });
         router.replace('/(tabs)' as Href);
       } else {
         setCatchError('Sign-in failed. Please try again.');
