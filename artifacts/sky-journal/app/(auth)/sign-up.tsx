@@ -2,7 +2,7 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import { useSignUp, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
+import * as Linking from 'expo-linking';
 import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
@@ -71,18 +71,19 @@ export default function SignUpScreen() {
     setGoogleLoading(true);
     setCatchError('');
     try {
+      const redirectUrl = Linking.createURL('oauth-native-callback');
       const { createdSessionId, setActive } = await startSSOFlow({
         strategy: 'oauth_google',
-        redirectUrl: AuthSession.makeRedirectUri(),
+        redirectUrl,
       });
       if (createdSessionId && setActive) {
-        await setActive({
-          session: createdSessionId,
-          navigate: ({ session }) => {
-            if (session?.currentTask) return;
-            router.replace('/(tabs)' as Href);
-          },
-        });
+        // Navigate manually — do not pass a navigate callback to setActive
+        // because Clerk may call it with a session that has currentTask set,
+        // which would prevent navigation from ever firing.
+        await setActive({ session: createdSessionId });
+        router.replace('/(tabs)' as Href);
+      } else if (!createdSessionId) {
+        setCatchError('Google sign-up was cancelled or did not complete. Please try again.');
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
@@ -111,9 +112,8 @@ export default function SignUpScreen() {
     try {
       await signUp.verifications.verifyEmailCode({ code: code.trim() });
       if (signUp.status === 'complete') {
-        await signUp.finalize({
-          navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); },
-        });
+        await signUp.finalize({});
+        router.replace('/(tabs)' as Href);
       } else {
         setCatchError('Verification failed. Please try again.');
       }

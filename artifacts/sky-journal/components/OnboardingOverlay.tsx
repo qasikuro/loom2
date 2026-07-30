@@ -268,9 +268,11 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       if (existing) mergeBase = existing;
     } catch { /* ok — fall back to schema defaults if fetch fails */ }
 
-    // Character PUT is required — retry once on failure
+    // Character PUT is required — retry up to 4 times with back-off.
+    // On brand-new accounts the auth token may need a moment to propagate.
     let characterOk = false;
-    for (let attempt = 0; attempt < 2 && !characterOk; attempt++) {
+    const delays = [800, 1500, 2500];
+    for (let attempt = 0; attempt < 4 && !characterOk; attempt++) {
       try {
         await apiFetch('/character', {
           method:  'PUT',
@@ -285,7 +287,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         });
         characterOk = true;
       } catch {
-        if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+        if (attempt < 3) await new Promise(r => setTimeout(r, delays[attempt] ?? 2500));
       }
     }
 

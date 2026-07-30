@@ -2,8 +2,8 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import { useSignIn, useSSO } from '@clerk/expo';
 import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { type Href, useRouter, Link } from 'expo-router';
-import { Linking } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -65,19 +65,17 @@ export default function SignInScreen() {
     setCatchError('');
     try {
       const redirectUrl = Linking.createURL('oauth-native-callback');
-      const { createdSessionId, setActive, signIn, signUp } = await startSSOFlow({
+      const { createdSessionId, setActive, signIn: ssoSignIn, signUp } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
       });
       if (createdSessionId && setActive) {
-        await setActive({
-          session: createdSessionId,
-          navigate: ({ session }) => {
-            if (session?.currentTask) return;
-            router.replace('/(tabs)' as Href);
-          },
-        });
-      } else if (signIn?.status === 'needs_first_factor' || signUp?.status === 'missing_requirements') {
+        // Navigate manually — do not pass a navigate callback to setActive
+        // because Clerk may call it with a session that has currentTask set,
+        // which would prevent navigation from ever firing.
+        await setActive({ session: createdSessionId });
+        router.replace('/(tabs)' as Href);
+      } else if (ssoSignIn?.status === 'needs_first_factor' || signUp?.status === 'missing_requirements') {
         setCatchError('Additional verification required. Please use email sign-in.');
       } else if (!createdSessionId) {
         setCatchError('Sign-in was cancelled or did not complete. Please try again.');
@@ -97,9 +95,8 @@ export default function SignInScreen() {
       const { error } = await signIn.password({ emailAddress: email.trim(), password });
       if (error) { setCatchError(error.longMessage ?? error.message ?? 'Sign-in failed.'); return; }
       if (signIn.status === 'complete') {
-        await signIn.finalize({
-          navigate: ({ session }) => { if (session?.currentTask) return; router.replace('/(tabs)' as Href); },
-        });
+        await signIn.finalize({});
+        router.replace('/(tabs)' as Href);
       } else {
         setCatchError('Sign-in failed. Please try again.');
       }
