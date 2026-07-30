@@ -26,6 +26,15 @@ const { signUp, errors, fetchStatus } = useSignUp();  // SignUpSignalValue
 - `signUp.reset()` → `{ error }`
 - `signUp.status`, `signUp.unverifiedFields`, `signUp.missingFields` — readable after password()
 
+## CRITICAL: finalize() does NOT update useAuth()
+`signIn.finalize()` and `signUp.finalize()` (Future API) only update signal-based state.
+They do NOT update `useAuth().isSignedIn` or make `getToken()` return a valid JWT.
+Always use `useClerk().setActive({ session: createdSessionId })` after email sign-in/sign-up
+to properly activate the session through the traditional path.
+
+**Why it matters:** The AuthTokenBridge in _layout.tsx checks `isSignedIn` from `useAuth()`.
+If that stays false, every `apiFetch` call returns 401 — including all onboarding PUTs.
+
 ## Google SSO (useSSO)
 ```ts
 const { startSSOFlow } = useSSO();
