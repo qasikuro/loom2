@@ -18,7 +18,7 @@ import { AppSplashScreen } from '@/components/AppSplashScreen';
 import { XPFlash } from '@/components/XPFlash';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
-import { AppProvider, setAuthTokenGetter, useApp, apiFetch } from '@/context/AppContext';
+import { AppProvider, setAuthTokenGetter, useApp, apiFetch, getAuthToken } from '@/context/AppContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
@@ -151,7 +151,24 @@ function AppOverlays() {
       // 2. Server-backed fallback: auto-mark done for users who have already
       //    customised their profile (pre-feature users or other-device completions).
       //    Heuristics: constellationType set OR non-default name/bio/traits.
+      //
+      //    Wait for AuthTokenBridge to register the getter before fetching.
+      //    Both effects fire on the same isLoaded+isSignedIn change; without this
+      //    wait, apiFetch runs before setAuthTokenGetter is called → 401 → wrong.
       try {
+        const deadline = Date.now() + 8_000;
+        let waitDelay = 0;
+        let tok: string | null = null;
+        while (Date.now() < deadline) {
+          if (waitDelay > 0) await new Promise<void>(r => setTimeout(r, waitDelay));
+          tok = await getAuthToken();
+          if (tok) break;
+          waitDelay = waitDelay === 0 ? 100 : Math.min(waitDelay * 2, 800);
+        }
+        // If we still can't get a token the session may be broken.
+        // Skip showing onboarding — an authenticated user shouldn't be locked out.
+        if (!tok) return;
+
         type CharHint = { constellationType?: string | null; name?: string; bio?: string; traits?: unknown[] };
         const char = await apiFetch<CharHint>('/character');
         const isExisting = !!(

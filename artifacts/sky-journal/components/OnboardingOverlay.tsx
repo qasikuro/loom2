@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useClerk } from '@clerk/expo';
 import { useSound } from '@/context/SoundContext';
 import { apiFetch, getAuthToken, useApp } from '@/context/AppContext';
 import type { JournalEntry } from '@/context/AppContext';
@@ -121,6 +121,7 @@ interface OnboardingOverlayProps {
 
 export function OnboardingOverlay({ visible, onComplete, onDismiss }: OnboardingOverlayProps) {
   const { userId }                  = useAuth();
+  const { signOut }                 = useClerk();
   const { playSound }               = useSound();
   const { reloadData, addJournalEntry } = useApp();
 
@@ -484,6 +485,24 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* Escape hatches: shown only on reveal step after a failed attempt.
+              Skip lets users get into the app without completing onboarding.
+              Sign out resets a broken Clerk session (e.g. from an old install). */}
+          {step === STEP_REVEAL && seedError && (
+            <>
+              <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={s.skipEscape}>
+                <Text style={s.skipEscapeText}>Skip for now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => signOut()}
+                activeOpacity={0.7}
+                style={s.signOutEscape}
+              >
+                <Text style={s.signOutEscapeText}>Sign out and try again</Text>
+              </TouchableOpacity>
+            </>
+          )}
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -719,6 +738,32 @@ const s = StyleSheet.create({
     fontSize:    13,
     fontFamily:  'Satoshi-Medium',
     color:       'rgba(200,184,232,0.45)',
+  },
+
+  // Escape hatch on reveal step after a failed attempt
+  skipEscape: {
+    marginTop:  12,
+    alignSelf:  'center',
+    paddingVertical: 6,
+  },
+  skipEscapeText: {
+    fontSize:    13,
+    fontFamily:  'Satoshi-Medium',
+    color:       'rgba(200,184,232,0.40)',
+    textDecorationLine: 'underline',
+  },
+
+  // Sign-out link shown when the session is permanently broken
+  signOutEscape: {
+    marginTop:  4,
+    alignSelf:  'center',
+    paddingVertical: 6,
+  },
+  signOutEscapeText: {
+    fontSize:    12,
+    fontFamily:  'Satoshi-Medium',
+    color:       'rgba(220,100,100,0.55)',
+    textDecorationLine: 'underline',
   },
 
   card: {
