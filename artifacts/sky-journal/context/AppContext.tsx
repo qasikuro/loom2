@@ -137,11 +137,10 @@ export async function apiFetch<T>(
   const token = await _getToken();
   const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-  // Diagnostic: log API base + token presence on every request so mismatches
-  // between Expo Go and EAS production APK builds are visible in Metro / logcat.
-  if (__DEV__) {
-    console.info(`[apiFetch] base=${API_BASE} token=${token ? 'present' : 'NULL'} path=${path}`);
-  }
+  // Diagnostic: always log so mismatches are visible in both Metro (dev) and
+  // adb logcat (production APK). __DEV__ guard was removed intentionally — we
+  // need this in production builds to diagnose the Google SSO data-loading bug.
+  console.info(`[apiFetch] base=${API_BASE} token=${token ? 'present' : 'NULL'} path=${path}`);
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
@@ -678,11 +677,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // auth). Show cached data so the screen isn't blank and schedule ONE
         // automatic retry in 3 s; the second attempt is passed retry=false so it
         // cannot loop further.
+        console.warn(`[AppContext] waitForToken timed out after 6 s (retry=${retry}). No Clerk token available.`);
         if (!dataReadyRef.current) await loadFromCache();
         setApiOnline(false);
         if (retry) setTimeout(() => loadData(false), 3000);
         return;
       }
+      console.info('[AppContext] loadData: token obtained, firing API calls.');
 
       // Fire EVERYTHING in one parallel batch: core + social + notifications.
       // Previously social was a second sequential wave, doubling the wait for Discover.
@@ -809,6 +810,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (e.id && e.config) customMap[e.id] = e.config;
         }
         if (Object.keys(customMap).length > 0) registerCustomEffects(customMap);
+      }
+
+      // Detect systematic auth failure: if ALL core endpoints returned null the
+      // most likely explanation is that every API call got a 401 (token missing
+      // or rejected).  Log it clearly so adb logcat shows the failure in APK
+      // builds (setApiOnline(true) still fires so cached data remains visible).
+      const allCoreFailed = charRaw === null && entriesRaw === null && storiesRaw === null && outfitsRaw === null && discoverRaw === null;
+      if (allCoreFailed) {
+        console.warn('[AppContext] loadData: ALL core API calls returned null. Token was present but server may have rejected it (401) or network failed. Check adb logcat for [apiFetch] token=NULL lines above.');
       }
 
       setApiOnline(true);

@@ -106,7 +106,10 @@ function AuthTokenBridge() {
       try {
         const t = await getToken();
         if (t) return t;
-      } catch { /* fall through to path 2 */ }
+      } catch (e) {
+        // Log in all builds so adb logcat captures this in the production APK.
+        console.warn('[AuthTokenBridge] getToken() (path 1) threw:', e);
+      }
       // Path 2: sessionRef.current.getToken() — direct SessionResource call.
       // Reads sessionRef (not a closure-captured session value) so it always
       // reflects the latest session even if this getter was registered before
@@ -114,7 +117,10 @@ function AuthTokenBridge() {
       try {
         const t = await sessionRef.current?.getToken();
         return t ?? null;
-      } catch { return null; }
+      } catch (e) {
+        console.warn('[AuthTokenBridge] sessionRef.getToken() (path 2) threw:', e);
+        return null;
+      }
     });
     if (isSignedIn && prevSignedIn.current !== true) {
       reloadData();
