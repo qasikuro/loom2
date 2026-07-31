@@ -1,10 +1,27 @@
 ---
-name: Clerk Expo legacy setActive for email auth
-description: useSignIn/useSignUp from @clerk/expo use the Future API (no setActive); must use @clerk/expo/legacy for email auth so setActive saves to the native token cache
+name: Clerk Expo auth token in production APK
+description: getToken() from useAuth() returns null in production APK even when isSignedIn=true; use useSession().session.getToken() as a dual-path fallback in AuthTokenBridge
 ---
 
 ## Rule
+### Email/password auth
 For email/password sign-in and sign-up in `@clerk/expo@3.2.7`, always import from `@clerk/expo/legacy`, NOT from `@clerk/expo` directly.
+
+### getToken() in production APK — dual-path retrieval
+`useAuth().getToken()` returns null in production APK even when `isSignedIn=true`. Root cause: in `@clerk/expo@3.2.7`, `isSignedIn` (via signals) can become `true` before `clerk.session` is populated — so `getToken()` hits a null session and returns null silently.
+
+**Fix in `AuthTokenBridge`**: use BOTH `getToken()` AND `session?.getToken()` from `useSession()`:
+```typescript
+const { session } = useSession(); // from @clerk/expo
+// in getter:
+try { const t = await getToken(); if (t) return t; } catch {}
+try { return await session?.getToken() ?? null; } catch { return null; }
+// deps: [isLoaded, isSignedIn, getToken, session]
+// No isSignedIn gate — just try, return null if both fail
+```
+This covers the window where `isSignedIn=true` but the SessionResource isn't yet available.
+
+### Email/password auth (API methods)
 
 ```typescript
 // CORRECT — same path useSSO uses internally
