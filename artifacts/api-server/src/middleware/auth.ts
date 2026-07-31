@@ -2,15 +2,44 @@ import { clerkMiddleware, getAuth } from "@clerk/express";
 import type { RequestHandler, Request, Response, NextFunction } from "express";
 import { db, characterTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logger } from "../lib/logger";
 
 export const clerkAuth = clerkMiddleware() as RequestHandler;
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const { userId } = getAuth(req);
+  // Step 3 — trace what getAuth() returns after clerkMiddleware() has run.
+  // REMOVE once the token-rejection root cause is confirmed.
+  let userId: string | null = null;
+  let sessionId: string | null = null;
+  let getAuthErr: string | null = null;
+  try {
+    const auth = getAuth(req);
+    userId    = auth.userId    ?? null;
+    sessionId = auth.sessionId ?? null;
+  } catch (e) {
+    getAuthErr = String(e);
+    logger.error({ getAuthErr }, '[CLERK-TRACE-3] getAuth() threw exception in requireAuth');
+  }
+
+  logger.info({
+    userId,
+    sessionId,
+    getAuthErr,
+    hasAuthHeader: !!req.headers.authorization,
+    path: req.path,
+  }, '[CLERK-TRACE-3] requireAuth — getAuth() result');
+
   if (!userId) {
+    // Step 4 — userId is null: log why before returning 401.
+    logger.warn({
+      hasAuthHeader: !!req.headers.authorization,
+      getAuthErr,
+      path: req.path,
+    }, '[CLERK-TRACE-4] userId is null — returning 401');
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+
   try {
     const [row] = await db
       .select({ isBanned: characterTable.isBanned })

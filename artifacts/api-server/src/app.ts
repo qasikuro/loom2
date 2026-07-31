@@ -130,12 +130,59 @@ app.get("/api/images/:filename", async (req: Request, res: Response) => {
 });
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
-// Use clerkMiddleware() with no factory so it reads CLERK_PUBLISHABLE_KEY and
-// CLERK_SECRET_KEY directly from env vars.  The previous dynamic factory called
-// publishableKeyFromHost() per-request; for loom-qasiland.replit.app that
-// function returned an incorrect/empty key, causing every token verification
-// to fail with 401 even when the Bearer token was present and valid.
-app.use(clerkMiddleware());
+// Wrap clerkMiddleware() so we can trace every step of the auth pipeline.
+// This answers the exact question: "where does Clerk lose the token?"
+//
+// Step 1 — log the raw Authorization header before Clerk sees it.
+// Step 2 — run clerkMiddleware(), then log what it placed on req.auth.
+// Step 3 — logged inside requireAuth (auth.ts) after getAuth() is called.
+// Step 4 — logged inside requireAuth when userId is null → 401.
+//
+// Field names deliberately differ from req.headers.authorization so pino's
+// redact list does not strip them.
+//
+// REMOVE these wrappers once the token-rejection root cause is confirmed.
+const clerkMw = clerkMiddleware();
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Step 1 — request received, before Clerk.
+  const authHeader = req.headers.authorization as string | undefined;
+  logger.info({
+    path: req.path,
+    hasAuthHeader: !!authHeader,
+    // First 50 chars — enough to confirm "Bearer eyJ..." JWT format without leaking the full token.
+    authPreview: authHeader?.substring(0, 50) ?? null,
+  }, '[CLERK-TRACE-1] request received — pre-clerkMiddleware');
+
+  clerkMw(req, res, (err?: unknown) => {
+    if (err) {
+      logger.error({ err }, '[CLERK-TRACE-2] clerkMiddleware() called next(err) — middleware threw');
+      return next(err);
+    }
+
+    // Step 2 — read what clerkMiddleware() placed on req.auth.
+    let clerkUserId: string | null = null;
+    let clerkSessionId: string | null = null;
+    let clerkStateErr: string | null = null;
+    try {
+      // In @clerk/express v2, req.auth is a function that returns the auth object.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const authState = (req as any).auth?.();
+      clerkUserId    = authState?.userId    ?? null;
+      clerkSessionId = authState?.sessionId ?? null;
+    } catch (e) {
+      clerkStateErr = String(e);
+    }
+
+    logger.info({
+      clerkUserId,
+      clerkSessionId,
+      clerkStateErr,
+      hasAuthHeader: !!(req.headers.authorization),
+    }, '[CLERK-TRACE-2] clerkMiddleware() completed — post-middleware auth state');
+
+    next();
+  });
+});
 
 // ── API routes ─────────────────────────────────────────────────────────────────
 app.use("/api", router);
