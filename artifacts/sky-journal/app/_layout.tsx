@@ -86,27 +86,33 @@ function IntentionStalenessGuard() {
 
 function AuthTokenBridge() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
-  // useSession gives us the raw SessionResource so we can call session.getToken()
-  // directly — bypassing the useAuth() signal chain that can lag behind setActive
-  // in production APK builds (isSignedIn becomes true before clerk.session is set,
-  // leaving useAuth().getToken() returning null on the first call).
+  // useSession gives us the raw SessionResource. We store it in a ref so the
+  // token getter always reads the LATEST session — even between effect runs.
+  // The ref is updated on every render (the assignment below is outside useEffect),
+  // which means there is never a stale-closure window: if React re-renders this
+  // component because session became available, sessionRef.current is updated
+  // immediately and the next _getToken() poll in waitForToken() will see it.
   const { session } = useSession();
+  const sessionRef = useRef(session);
+  sessionRef.current = session; // always current, updated synchronously on render
+
   const { reloadData, clearUserData } = useApp();
   const prevSignedIn = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (!isLoaded) return;
     setAuthTokenGetter(async () => {
-      // No isSignedIn gate — just try to get a token via both paths.
       // Path 1: useAuth().getToken() — signal-aware, preferred.
-      // Path 2: session.getToken() — direct SessionResource call, covers the
-      //          window where isSignedIn=true but clerk.session isn't yet wired.
       try {
         const t = await getToken();
         if (t) return t;
       } catch { /* fall through to path 2 */ }
+      // Path 2: sessionRef.current.getToken() — direct SessionResource call.
+      // Reads sessionRef (not a closure-captured session value) so it always
+      // reflects the latest session even if this getter was registered before
+      // the session was populated by setActive() in OAuth / Google sign-in flows.
       try {
-        const t = await session?.getToken();
+        const t = await sessionRef.current?.getToken();
         return t ?? null;
       } catch { return null; }
     });
@@ -124,8 +130,8 @@ function AuthTokenBridge() {
             const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
             if (!projectId) return;
             const tokenData = await Notifications!.getExpoPushTokenAsync({ projectId });
-            // Re-try token via both paths for push registration too
-            const authToken = await getToken() ?? await session?.getToken();
+            // Use sessionRef for push registration too — same reason as above.
+            const authToken = await getToken() ?? await sessionRef.current?.getToken();
             if (!authToken) return;
             const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | null;
             if (!apiUrl) return;
@@ -143,10 +149,12 @@ function AuthTokenBridge() {
       clearUserData();
     }
     prevSignedIn.current = isSignedIn ?? false;
-  // session is in deps so the effect re-runs when the SessionResource becomes
-  // available (which can be async after setActive in production APK builds).
+  // `session` is intentionally NOT in deps — the sessionRef handles session
+  // changes reactively without requiring an effect re-run (and without causing
+  // spurious getter re-registrations or double reloadData() calls on session
+  // updates such as token rotation).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, getToken, session]);
+  }, [isLoaded, isSignedIn, getToken]);
 
   return null;
 }

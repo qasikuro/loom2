@@ -660,7 +660,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Called by AuthTokenBridge once a valid Clerk token is available.
   // Uses waitForToken() to avoid the old "fire all → 401 ×6 → wait 1500ms → retry" race.
-  async function loadData() {
+  async function loadData(retry = true) {
     // Prevent two concurrent loads (e.g. rapid sign-out / sign-in)
     if (isLoadingRef.current) return;
     isLoadingRef.current = true;
@@ -673,9 +673,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Block until Clerk has a valid token — avoids all the wasted 401 round trips.
       const token = await waitForToken(6000);
       if (!token) {
-        // Offline or auth failure — show cached data and bail out.
+        // Token not available — could be offline OR the OAuth/Google setActive()
+        // is still writing to the SecureStore token cache (takes longer than email
+        // auth). Show cached data so the screen isn't blank and schedule ONE
+        // automatic retry in 3 s; the second attempt is passed retry=false so it
+        // cannot loop further.
         if (!dataReadyRef.current) await loadFromCache();
         setApiOnline(false);
+        if (retry) setTimeout(() => loadData(false), 3000);
         return;
       }
 
