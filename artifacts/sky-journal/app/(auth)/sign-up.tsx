@@ -77,7 +77,11 @@ export default function SignUpScreen() {
     setCatchError('');
     try {
       const redirectUrl = Linking.createURL('oauth-native-callback');
-      const { createdSessionId, setActive } = await startSSOFlow({
+      // Do NOT destructure setActive from startSSOFlow — that setActive bypasses
+      // the native SecureStore token cache, so getToken() returns null in the APK
+      // on every subsequent API call.  Use the setActive from useSignUp() (legacy)
+      // which correctly saves the session through the cache.
+      const { createdSessionId } = await startSSOFlow({
         strategy: 'oauth_google',
         redirectUrl,
       });
