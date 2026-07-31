@@ -10,7 +10,7 @@ import { access } from "fs/promises";
 import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import { clerkMiddleware, getAuth } from "@clerk/express";
+import { clerkMiddleware } from "@clerk/express";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import {
@@ -136,30 +136,6 @@ app.get("/api/images/:filename", async (req: Request, res: Response) => {
 // function returned an incorrect/empty key, causing every token verification
 // to fail with 401 even when the Bearer token was present and valid.
 app.use(clerkMiddleware());
-
-// ── Public auth diagnostics (no requireAuth — safe for prod debug) ─────────────
-// Hit GET /api/debug-auth with and without a Bearer token to confirm Clerk is
-// accepting the session.  Remove this endpoint once APK auth is confirmed working.
-app.get("/api/debug-auth", (req: Request, res: Response) => {
-  // getAuth returns a union that may include InvalidTokenAuthObject (no userId).
-  // Use `as any` for the debug surface — this endpoint exists only to inspect
-  // what Clerk sees; it is never used as an auth gate.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const auth = getAuth(req) as any;
-  const rawHeader = req.headers.authorization ?? "";
-  const tokenPrefix = rawHeader.startsWith("Bearer ")
-    ? rawHeader.slice(7, 30) + "…"
-    : "(none)";
-  res.json({
-    userId:          auth.userId   ?? null,
-    sessionId:       auth.sessionId ?? null,
-    hasAuth:         !!rawHeader,
-    tokenPrefix,
-    // Clerk populates these headers when it rejects a token
-    clerkAuthStatus: res.getHeader("x-clerk-auth-status") ?? null,
-    clerkAuthReason: res.getHeader("x-clerk-auth-reason") ?? null,
-  });
-});
 
 // ── API routes ─────────────────────────────────────────────────────────────────
 app.use("/api", router);
