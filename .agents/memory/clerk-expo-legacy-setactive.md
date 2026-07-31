@@ -36,7 +36,7 @@ import { useSignIn, useSignUp } from '@clerk/expo';
 
 **Why:** `@clerk/expo` re-exports `useSignIn`/`useSignUp` from `@clerk/react` (Future API). These return `{signIn, errors, fetchStatus}` with no `setActive`. Using `useClerk().setActive` as a workaround bypasses the native SecureStore token cache (`@clerk/expo/token-cache`), so `getToken()` permanently returns null in production APKs → every API call returns 401. The `@clerk/expo/legacy` path re-exports from `@clerk/react/legacy` (traditional API), providing `{signIn, setActive, isLoaded}` where `setActive` correctly saves the session through the token cache.
 
-**How to apply:** Any screen that does email/password auth must use the legacy import. SSO (`useSSO`) already handles this internally. The legacy API methods differ from Future API:
+**How to apply:** Any screen that does email/password auth must use the legacy import. SSO (`useSSO`) does NOT handle this internally — `startSSOFlow` returns its own `setActive` that also bypasses the token cache. Always use the hook-level `setActive` (from `useSignIn()`/`useSignUp()` legacy) and **ignore** the `setActive` returned by `startSSOFlow`. The legacy API methods differ from Future API:
 - `signIn.create({ identifier, password })` instead of `signIn.password({ emailAddress, password })`
 - `signUp.create({ emailAddress, password })` instead of `signUp.password({ emailAddress, password })`
 - `signUp.prepareEmailAddressVerification({ strategy: 'email_code' })` instead of `signUp.verifications.sendEmailCode()`
