@@ -137,11 +137,20 @@ export async function apiFetch<T>(
   const token = await _getToken();
   const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
+  // Diagnostic: log API base + token presence on every request so mismatches
+  // between Expo Go and EAS production APK builds are visible in Metro / logcat.
+  if (__DEV__) {
+    console.info(`[apiFetch] base=${API_BASE} token=${token ? 'present' : 'NULL'} path=${path}`);
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...authHeader,
+      // X-App-Token-Status lets the server log whether the client had a token.
+      // Visible in deployment logs as hasAuth + this header — confirms APK side.
+      'X-App-Token-Status': token ? 'present' : 'missing',
       ...(options?.headers as Record<string, string> ?? {}),
     },
   });

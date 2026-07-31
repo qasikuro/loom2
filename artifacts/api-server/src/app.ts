@@ -39,6 +39,8 @@ app.use(
           id: req.id,
           method: req.method,
           url: req.url?.split("?")[0],
+          // Log auth header presence so we can diagnose token issues in APK builds
+          hasAuth: !!req.headers?.authorization,
         };
       },
       res(res) {

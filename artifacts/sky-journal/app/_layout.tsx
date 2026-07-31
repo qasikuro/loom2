@@ -1,7 +1,7 @@
 import '@/polyfills';
 import '@/i18n';
 
-import { ClerkLoaded, ClerkLoading, ClerkProvider, useAuth } from '@clerk/expo';
+import { ClerkLoaded, ClerkLoading, ClerkProvider, useAuth, useSession } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import Constants from 'expo-constants';
 import * as Font from 'expo-font';
@@ -86,14 +86,29 @@ function IntentionStalenessGuard() {
 
 function AuthTokenBridge() {
   const { getToken, isSignedIn, isLoaded } = useAuth();
+  // useSession gives us the raw SessionResource so we can call session.getToken()
+  // directly — bypassing the useAuth() signal chain that can lag behind setActive
+  // in production APK builds (isSignedIn becomes true before clerk.session is set,
+  // leaving useAuth().getToken() returning null on the first call).
+  const { session } = useSession();
   const { reloadData, clearUserData } = useApp();
   const prevSignedIn = useRef<boolean | null>(null);
 
   useEffect(() => {
     if (!isLoaded) return;
     setAuthTokenGetter(async () => {
-      if (!isSignedIn) return null;
-      try { return await getToken(); } catch { return null; }
+      // No isSignedIn gate — just try to get a token via both paths.
+      // Path 1: useAuth().getToken() — signal-aware, preferred.
+      // Path 2: session.getToken() — direct SessionResource call, covers the
+      //          window where isSignedIn=true but clerk.session isn't yet wired.
+      try {
+        const t = await getToken();
+        if (t) return t;
+      } catch { /* fall through to path 2 */ }
+      try {
+        const t = await session?.getToken();
+        return t ?? null;
+      } catch { return null; }
     });
     if (isSignedIn && prevSignedIn.current !== true) {
       reloadData();
@@ -109,7 +124,8 @@ function AuthTokenBridge() {
             const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
             if (!projectId) return;
             const tokenData = await Notifications!.getExpoPushTokenAsync({ projectId });
-            const authToken = await getToken();
+            // Re-try token via both paths for push registration too
+            const authToken = await getToken() ?? await session?.getToken();
             if (!authToken) return;
             const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | null;
             if (!apiUrl) return;
@@ -127,8 +143,10 @@ function AuthTokenBridge() {
       clearUserData();
     }
     prevSignedIn.current = isSignedIn ?? false;
+  // session is in deps so the effect re-runs when the SessionResource becomes
+  // available (which can be async after setActive in production APK builds).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, getToken]);
+  }, [isLoaded, isSignedIn, getToken, session]);
 
   return null;
 }
