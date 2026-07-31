@@ -1,0 +1,218 @@
+Production APK Root Cause Analysis (No Guessing)
+
+The app works correctly in:
+
+- Replit browser
+- Expo development
+- Expo Go (if applicable)
+
+The problem only exists in the production Android APK build.
+
+Important Observation
+
+The APK launches successfully.
+
+The entire UI loads correctly.
+
+Navigation works correctly.
+
+Screens render normally.
+
+Buttons, menus and routing work.
+
+Google Sign-In with Clerk also succeeds.
+
+This indicates that the application itself is running correctly. The problem is not with the APK build, navigation, routing, or UI rendering.
+
+The failure occurs after authentication, when the application tries to load authenticated user data from the backend.
+
+Current behavior
+
+- User successfully signs in with Google using Clerk.
+- Authentication appears successful.
+- After login, the application does not load:
+  - User profile
+  - Backend API data
+  - Journal entries
+  - Stories
+  - Character data
+  - Other authenticated app content
+- The UI remains functional, but authenticated data never appears.
+
+This strongly suggests the issue is somewhere between successful login and authenticated backend communication.
+
+Your task
+
+Do NOT make one change and assume it fixes the issue.
+
+Do NOT use trial-and-error debugging.
+
+Perform a complete production audit and investigate every possible cause before making code changes.
+
+I want evidence for every conclusion.
+
+Check every possible cause
+
+1. Authentication
+
+- Verify Clerk authentication flow.
+- Verify session creation.
+- Verify JWT/session token.
+- Verify token refresh.
+- Verify Authorization header on every API request.
+- Verify Clerk middleware.
+- Verify Clerk publishable key.
+- Verify Clerk secret key.
+- Verify production domain configuration.
+- Verify audience/issuer.
+- Verify Android authentication flow.
+
+2. API Requests
+
+Inspect every fetch request.
+
+Check:
+
+- Base URL
+- HTTPS
+- Headers
+- Authorization header
+- Cookies
+- Credentials
+- Redirects
+- Timeouts
+- Response codes
+- JSON parsing
+- Error handling
+
+Compare browser requests with APK requests.
+
+3. Environment Variables
+
+Verify every environment variable used by:
+
+- Expo
+- React Native
+- Backend
+- Clerk
+- Production server
+
+Ensure nothing is available in development but missing in production.
+
+4. Expo Production Build
+
+Inspect:
+
+- app.config.ts
+- app.json
+- eas.json
+- Android permissions
+- Network security
+- Build profile
+- SDK compatibility
+- Runtime differences
+
+5. React Native Differences
+
+Look for browser-only APIs that fail inside React Native.
+
+Examples:
+
+- localStorage
+- window
+- document
+- cookies
+- fetch differences
+- URL handling
+- crypto
+- storage APIs
+
+6. Token Storage
+
+Verify:
+
+- SecureStore
+- AsyncStorage
+- Clerk token cache
+- Token persistence
+- Token retrieval after login
+
+7. Backend
+
+Inspect every protected endpoint.
+
+Verify:
+
+- Middleware
+- Authentication
+- Authorization
+- Session verification
+- User lookup
+- Database query
+- Response generation
+
+8. Network
+
+Confirm the APK can reach:
+
+- Backend
+- Database
+- Clerk
+- External services
+
+Check DNS, SSL certificates, redirects and HTTPS requirements.
+
+9. Compare Development vs Production
+
+Create a comparison table showing:
+
+- Replit browser
+- Expo development
+- Production APK
+
+Highlight every difference in:
+
+- Authentication
+- Token handling
+- API requests
+- Environment variables
+- Network behavior
+- Backend responses
+
+10. Logging
+
+Add temporary logging for:
+
+- Login success
+- Session creation
+- Token retrieval
+- Authorization header
+- Every API request
+- Every API response
+- Response status
+- Response body
+- Errors
+- Exceptions
+
+The logs should clearly identify the exact step where the production APK diverges from the browser and Expo.
+
+Required Deliverables
+
+Do not give assumptions.
+
+For every suspected issue provide:
+
+- Evidence
+- File
+- Line number
+- Why it fails only in the production APK
+- How you verified it
+- Proposed fix
+
+If there are multiple issues, identify all of them before implementing fixes.
+
+Rank the root causes by probability.
+
+Only after identifying the verified root cause(s) should you implement fixes.
+
+My objective is to find the actual production-only root cause, not continue making speculative changes.
