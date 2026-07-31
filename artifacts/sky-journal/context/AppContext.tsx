@@ -685,6 +685,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       console.info('[AppContext] loadData: token obtained, firing API calls.');
 
+      // ── DIAGNOSTIC: ask the server what Clerk makes of this token ──────────
+      // This call requires no auth on the server side and returns the raw Clerk
+      // auth state + publishable key prefix. The response tells us whether:
+      //   (a) the token is arriving at the server          → hasAuthHeader
+      //   (b) Clerk accepted it and resolved a userId      → userId / sessionId
+      //   (c) the server is using the correct Clerk key    → publishableKeyPrefix
+      //   (d) why Clerk rejected it if it did              → clerkAuthStatus/Reason
+      // REMOVE once the Google-SSO production data-loading bug is resolved.
+      try {
+        const debugState = await apiFetch<Record<string, unknown>>('/debug/auth-state');
+        console.warn('[AppContext] Clerk server debug state:', JSON.stringify(debugState));
+      } catch (debugErr) {
+        console.warn('[AppContext] /debug/auth-state call failed:', debugErr);
+      }
+      // ── END DIAGNOSTIC ──────────────────────────────────────────────────────
+
       // Fire EVERYTHING in one parallel batch: core + social + notifications.
       // Previously social was a second sequential wave, doubling the wait for Discover.
       const [

@@ -21,6 +21,7 @@ import adminProfileEffectsRouter from "./admin-profile-effects";
 import campfireRouter from "./campfire";
 import streamRouter from "./stream";
 import pushRouter from "./push";
+import debugRouter from "./debug";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(adminProfileEffectsRouter);
 router.use(campfireRouter);
 router.use(streamRouter);
 router.use(pushRouter);
+router.use(debugRouter);
 
 export default router;
