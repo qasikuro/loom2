@@ -1,6 +1,10 @@
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
-import { useSignUp, useSSO, useClerk } from '@clerk/expo';
+import { useSSO } from '@clerk/expo';
+// useSignUp from the legacy (traditional) path — same one useSSO uses internally.
+// Returns { signUp, setActive, isLoaded } with a setActive that properly saves
+// the session through the native token cache so getToken() works in the APK.
+import { useSignUp } from '@clerk/expo/legacy';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { type Href, useRouter, Link } from 'expo-router';
@@ -35,8 +39,7 @@ function useWarmUpBrowser() {
 
 export default function SignUpScreen() {
   useWarmUpBrowser();
-  const { signUp, errors, fetchStatus } = useSignUp();
-  const { setActive } = useClerk();
+  const { signUp, setActive, isLoaded } = useSignUp();
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -49,7 +52,8 @@ export default function SignUpScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const isLoading = fetchStatus === 'fetching';
+  const [submitting, setSubmitting] = useState(false);
+  const isLoading = submitting || !isLoaded;
 
   const needsVerification =
     signUp?.status === 'missing_requirements' &&
@@ -95,27 +99,31 @@ export default function SignUpScreen() {
   }, [startSSOFlow, router]);
 
   async function handleSignUp() {
-    if (!signUp) return;
+    if (!isLoaded || !signUp) return;
     setCatchError('');
+    setSubmitting(true);
     try {
-      const { error } = await signUp.password({ emailAddress: email.trim(), password });
-      if (error) { setCatchError(error.longMessage ?? error.message ?? 'Could not create account.'); return; }
-      await signUp.verifications.sendEmailCode();
+      // Legacy API: signUp.create() then prepareEmailAddressVerification()
+      // Same pattern useSSO uses internally — setActive from the hook saves
+      // the session through the native token cache so getToken() works in the APK.
+      await signUp.create({ emailAddress: email.trim(), password });
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Could not create account.');
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function handleVerify() {
-    if (!signUp) return;
+    if (!isLoaded || !signUp) return;
     setCatchError('');
+    setSubmitting(true);
     try {
-      await signUp.verifications.verifyEmailCode({ code: code.trim() });
-      if (signUp.status === 'complete' && signUp.createdSessionId) {
-        // Use useClerk().setActive — this is the traditional path that updates
-        // useAuth().isSignedIn so the AuthTokenBridge gets a valid token.
-        await setActive({ session: signUp.createdSessionId });
+      const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
+      if (result.status === 'complete' && result.createdSessionId) {
+        await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)' as Href);
       } else {
         setCatchError('Verification failed. Please try again.');
@@ -123,10 +131,12 @@ export default function SignUpScreen() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Verification failed.');
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  const fieldError = catchError || errors?.fields?.emailAddress?.message || errors?.fields?.password?.message || errors?.fields?.code?.message || '';
+  const fieldError = catchError;
 
   // ── Email verification screen ─────────────────────────────────────────────
   if (needsVerification) {
@@ -175,11 +185,11 @@ export default function SignUpScreen() {
             <Text style={styles.verifyNote}>This is a one-time step — you'll stay signed in after this.</Text>
 
             <View style={styles.verifyFooter}>
-              <TouchableOpacity onPress={() => signUp!.verifications.sendEmailCode()}>
+              <TouchableOpacity onPress={() => signUp!.prepareEmailAddressVerification({ strategy: 'email_code' })}>
                 <Text style={styles.footerLink}>Resend code</Text>
               </TouchableOpacity>
               <Text style={styles.footerText}> · </Text>
-              <TouchableOpacity onPress={() => { signUp!.reset(); setCode(''); setCatchError(''); }}>
+              <TouchableOpacity onPress={() => { setCode(''); setCatchError(''); router.replace('/(auth)/sign-up' as Href); }}>
                 <Text style={styles.footerLink}>Start over</Text>
               </TouchableOpacity>
             </View>

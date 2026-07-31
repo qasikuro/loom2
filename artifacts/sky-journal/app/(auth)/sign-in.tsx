@@ -1,6 +1,12 @@
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
-import { useSignIn, useSSO, useClerk } from '@clerk/expo';
+import { useSSO } from '@clerk/expo';
+// useSignIn from the legacy (traditional) path — same one useSSO uses internally.
+// It returns { signIn, setActive, isLoaded } and its setActive properly saves
+// the session through the native token cache, making getToken() work in the APK.
+// The future-API useSignIn from '@clerk/expo' returns { signIn, errors, fetchStatus }
+// with no setActive, and useClerk().setActive bypasses the cache → 401 on every call.
+import { useSignIn } from '@clerk/expo/legacy';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
 import { type Href, useRouter, Link } from 'expo-router';
@@ -35,8 +41,7 @@ function useWarmUpBrowser() {
 
 export default function SignInScreen() {
   useWarmUpBrowser();
-  const { signIn, errors, fetchStatus } = useSignIn();
-  const { setActive } = useClerk();
+  const { signIn, setActive, isLoaded } = useSignIn();
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -48,7 +53,8 @@ export default function SignInScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  const isLoading = fetchStatus === 'fetching';
+  const [submitting, setSubmitting] = useState(false);
+  const isLoading = submitting || !isLoaded;
 
   // entrance animation
   const fadeAnim  = useRef(new Animated.Value(0)).current;
@@ -90,15 +96,16 @@ export default function SignInScreen() {
   }, [startSSOFlow, router]);
 
   async function handleSignIn() {
-    if (!signIn) { setCatchError('Auth not ready. Please try again.'); return; }
+    if (!isLoaded || !signIn) { setCatchError('Auth not ready. Please try again.'); return; }
     setCatchError('');
+    setSubmitting(true);
     try {
-      const { error } = await signIn.password({ emailAddress: email.trim(), password });
-      if (error) { setCatchError(error.longMessage ?? error.message ?? 'Sign-in failed.'); return; }
-      if (signIn.status === 'complete' && signIn.createdSessionId) {
-        // Use useClerk().setActive — this is the traditional path that updates
-        // useAuth().isSignedIn so the AuthTokenBridge gets a valid token.
-        await setActive({ session: signIn.createdSessionId });
+      // Legacy API: signIn.create() — same pattern useSSO uses internally.
+      // setActive comes from useSignIn() and properly saves the session to
+      // the native SecureStore token cache so getToken() works in the APK.
+      const result = await signIn.create({ identifier: email.trim(), password });
+      if (result.status === 'complete' && result.createdSessionId) {
+        await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)' as Href);
       } else {
         setCatchError('Sign-in failed. Please try again.');
@@ -106,10 +113,12 @@ export default function SignInScreen() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Sign-in failed.');
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  const fieldError = catchError || errors?.fields?.identifier?.message || errors?.fields?.password?.message || '';
+  const fieldError = catchError;
 
   return (
     <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
