@@ -1,0 +1,104 @@
+You are acting as CTO for GameJo. A static-analysis production audit 
+(production-failure-audit-2026-08-01.md) identified 6 Critical, 4 High, 
+8 Medium, and 4 Low severity issues. Work through them in BATCHES, ordered 
+by risk (Critical → High → Medium → Low).
+
+BATCH 1 — CRITICAL (before any public launch): C-1, C-2, C-4, C-5, C-6, C-3
+BATCH 2 — HIGH (before first marketing push): H-1, H-2, H-3, H-4
+BATCH 3 — MEDIUM (before scale): M-1 through M-8
+BATCH 4 — LOW: L-1 through L-4
+
+RULES:
+1. Complete all findings in a batch before starting the next batch.
+2. Within a batch, one commit per finding — reference the finding ID in the 
+   commit message (e.g. "Fix C-1: rate limit push notification fan-out"). 
+   Do not squash multiple findings into one commit, and do not leave a 
+   finding partially done across multiple commits.
+3. For each finding: open the referenced file(s) and confirm the issue still 
+   exists at the given line numbers (code may have shifted — search nearby 
+   if lines don't match), then implement the fix described below. Prefer 
+   minimal, surgical changes over refactors unless the fix requires 
+   structural change (e.g. adding a transaction).
+4. If a fix depends on infrastructure that may or may not exist (e.g. Redis), 
+   check the codebase/config first and adapt the approach accordingly — 
+   don't assume.
+5. Run existing tests after each commit. If none exist for the touched code, 
+   write a minimal test covering the failure mode being fixed.
+6. If a finding is blocked (missing dependency, unclear requirement, 
+   conflicting code), stop and report immediately rather than skipping ahead 
+   to the next finding in the batch.
+7. After finishing each batch, stop and report: what changed, any deviations 
+   from spec, and anything that needs my sign-off — before starting the next 
+   batch.
+
+FIX SPECIFICATIONS:
+
+--- BATCH 1: CRITICAL ---
+
+C-1. artifacts/api-server/src/routes/notifications.ts:61-118
+Add a per-user cooldown (30 min) on POST /notify/ping-friends, plus an 
+idempotency key. Use Redis SET NX EX for atomic check-and-set if Redis is 
+available in the stack; otherwise use a DB timestamp column with a 
+conditional UPDATE. Return 429 with retryAfterSeconds when blocked.
+
+C-2. artifacts/api-server/src/app.ts:97-98
+Reduce the Express JSON body parser limit from 50MB to 1MB (10MB max for 
+media-heavy endpoints specifically, scoped per-route not globally). Confirm 
+no legitimate payload currently exceeds the new limit before shipping.
+
+C-4. artifacts/api-server/src/routes/upload.ts:100-134
+Add a per-user rate limit (~10 uploads/minute) scoped specifically to the 
+upload route, separate from the global rate limiter. Same mechanism choice 
+as C-1 (Redis or DB-backed).
+
+C-5. artifacts/api-server/src/routes/upload.ts:131
+Before passing the decoded buffer to Sharp, validate magic bytes: 
+JPEG (FF D8 FF), PNG (89 50 4E 47), WebP (52 49 46 46). Reject non-matching 
+payloads with 400 before any Sharp processing occurs.
+
+C-6. artifacts/sky-journal/app/panel-editor.tsx:367-403, 
+     artifacts/sky-journal/app/create-journal-entry.tsx:237, 
+     artifacts/sky-journal/context/AppContext.tsx:1344,1513
+Reject any imageUri starting with "file://" at the point of persistence in 
+addStory, addJournalEntry, and addOutfit. Additionally, block the Save button 
+in all three editors while any upload is still in flight (uploadingSet.size > 0 
+equivalent) so users can't save a local URI in the first place.
+
+C-3. artifacts/api-server/src/routes/stories.ts:373-431
+Wrap the entire milestone reward sequence (XP grant, story update, character 
+trait update, purchase record insert, notification send) in a single 
+Drizzle db.transaction(). If any step throws, the whole transaction rolls back. 
+Notification send should happen after the transaction commits, not inside it 
+(don't roll back a DB transaction because a push notification failed).
+
+--- BATCH 2: HIGH ---
+
+H-1. artifacts/sky-journal/context/AppContext.tsx:1226,1532,1545,1566,1606,1624
+Replace the "one retry then give up" pattern with a persistent offline mutation 
+queue (e.g. AsyncStorage-backed queue, retried on app foreground/reconnect via 
+NetInfo listener). Local state should reflect "pending sync" not "saved" until 
+server confirms. Surface a sync-status indicator if none exists.
+
+H-2. artifacts/api-server/src/routes/stories.ts:349-360
+Add a uniqueness constraint on (userId, storyId) in a story_witnesses table, 
+and check for an existing record before incrementing witnessedCount. Increment 
+only on first insert.
+
+H-3. artifacts/sky-journal/context/AppContext.tsx:1341,1509
+Add rollback logic to addJournalEntry and addOutfit matching the pattern 
+already correctly implemented in addStory (line 1441). On API failure, revert 
+the local state/AsyncStorage write.
+
+H-4. artifacts/sky-journal/utils/persistImage.ts
+Add a timeout (e.g. 30s) to both uploadNative and uploadWeb. On timeout, clear 
+the uploadingSet entry so the Save button unlocks, and surface a retry/cancel 
+UI to the user rather than leaving them soft-locked.
+
+--- BATCH 3: MEDIUM ---
+M-1 through M-8, in the order listed in the audit's summary table.
+
+--- BATCH 4: LOW ---
+L-1 through L-4, in the order listed in the audit's summary table.
+
+After completing Batch 1, stop and report before proceeding to Batch 2, and 
+likewise between each subsequent batch.
