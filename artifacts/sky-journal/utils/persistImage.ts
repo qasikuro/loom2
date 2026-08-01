@@ -4,7 +4,8 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { getAuthToken } from '@/context/AppContext';
 
-const MAX_DIM = 1200;
+const MAX_DIM          = 1200;
+const UPLOAD_TIMEOUT_MS = 30_000; // H-4: 30-second hard limit on all upload paths
 
 function resolveApiBase(): string {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -29,7 +30,9 @@ export class ImageUploadError extends Error {
 }
 
 /**
- * Returns true for errors that should NOT be retried (auth, quota, format issues).
+ * Returns true for errors that should NOT be retried (auth, quota, format, timeout).
+ * Timeout errors are non-retryable so the user sees the failure immediately and
+ * can tap the panel to retry manually — withRetry(3, 1s) × 30s would be 90s.
  */
 function isNonRetryable(err: unknown): boolean {
   if (!(err instanceof ImageUploadError)) return false;
@@ -39,7 +42,8 @@ function isNonRetryable(err: unknown): boolean {
     msg.includes('Session expired') ||
     msg.includes('too large') ||
     msg.includes('Unsupported image') ||
-    msg.includes('No image')
+    msg.includes('No image') ||
+    msg.includes('timed out')   // H-4: surface timeout immediately; let user tap to retry
   );
 }
 
@@ -91,6 +95,11 @@ async function resizeIfNeeded(uri: string): Promise<string> {
  *   - Uses the native HTTP client (no JS memory pressure from base64)
  *   - 25% smaller payload (binary vs base64)
  *   - Works regardless of JS heap size
+ *
+ * H-4: A 30-second Promise.race timeout is applied because
+ * FileSystem.uploadAsync has no built-in timeout or abort signal.
+ * On timeout the upload is marked as failed so the editor unblocks
+ * and the user can tap the panel to retry.
  */
 async function uploadNative(fileUri: string): Promise<string> {
   const apiBase = resolveApiBase();
@@ -99,16 +108,28 @@ async function uploadNative(fileUri: string): Promise<string> {
     throw new ImageUploadError('You need to be signed in to upload photos.');
   }
 
+  // H-4: Timeout promise — rejects after UPLOAD_TIMEOUT_MS.
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new ImageUploadError('Upload timed out — check your connection and try again.')),
+      UPLOAD_TIMEOUT_MS,
+    ),
+  );
+
   let result: FileSystem.FileSystemUploadResult;
   try {
-    result = await FileSystem.uploadAsync(`${apiBase}/upload`, fileUri, {
-      httpMethod:  'POST',
-      uploadType:  FileSystem.FileSystemUploadType.MULTIPART,
-      fieldName:   'file',
-      mimeType:    'image/jpeg',
-      headers:     { Authorization: `Bearer ${token}` },
-    });
+    result = await Promise.race([
+      FileSystem.uploadAsync(`${apiBase}/upload`, fileUri, {
+        httpMethod:  'POST',
+        uploadType:  FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName:   'file',
+        mimeType:    'image/jpeg',
+        headers:     { Authorization: `Bearer ${token}` },
+      }),
+      timeoutPromise,
+    ]);
   } catch (err) {
+    if (err instanceof ImageUploadError) throw err; // timeout or signed-out
     throw new ImageUploadError(
       'Could not reach the server — check your connection and try again.',
       err,
@@ -144,13 +165,21 @@ async function uploadNative(fileUri: string): Promise<string> {
 
 /**
  * Web upload: blob: / data: URI → JSON body with base64.
+ *
+ * H-4: AbortController with a 30-second timeout is applied to the fetch call.
+ * An AbortError is caught and re-thrown as an ImageUploadError so the editor
+ * unblocks and the user can tap to retry.
  */
 async function uploadWeb(base64Data: string, ext: string): Promise<string> {
-  const apiBase = resolveApiBase();
-  const token   = await getAuthToken();
+  const apiBase  = resolveApiBase();
+  const token    = await getAuthToken();
   if (!token) {
     throw new ImageUploadError('You need to be signed in to upload photos.');
   }
+
+  // H-4: AbortController for web fetch timeout.
+  const controller = new AbortController();
+  const timeoutId  = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
   let res: Response;
   try {
@@ -158,12 +187,18 @@ async function uploadWeb(base64Data: string, ext: string): Promise<string> {
       method:  'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body:    JSON.stringify({ data: base64Data, ext }),
+      signal:  controller.signal,
     });
   } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') {
+      throw new ImageUploadError('Upload timed out — check your connection and try again.');
+    }
     throw new ImageUploadError(
       'Could not reach the server — check your connection and try again.',
       err,
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   if (!res.ok) {
