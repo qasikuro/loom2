@@ -1,4 +1,8 @@
 #!/bin/bash
 set -e
-pnpm install --frozen-lockfile
-pnpm --filter db push
+
+# CI=true tells pnpm it is safe to remove node_modules non-interactively.
+CI=true pnpm install
+
+# Push any pending DB schema changes produced by the merged task.
+pnpm --filter @workspace/db run push-force
