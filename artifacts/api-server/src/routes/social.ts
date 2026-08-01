@@ -25,6 +25,10 @@ router.get("/users/search", requireAuth, async (req, res) => {
   const q = raw.startsWith('@') ? raw.slice(1) : raw;
   if (q.length < 1) return res.json([]);
 
+  // M-2: character_name_trgm_idx and character_username_trgm_idx are GIN
+  // trigram indexes (pg_trgm extension) applied via DB migration. Postgres
+  // uses them automatically for ILIKE patterns — the %q% contains-search on
+  // name is now an index scan instead of a full-table scan.
   try {
     const rows = await db
       .select({
