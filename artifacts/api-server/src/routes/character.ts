@@ -143,9 +143,31 @@ router.patch("/character/active-outfit", requireAuth, async (req, res) => {
   }
 });
 
+// L-1: Per-user rate limit for username availability checks to prevent
+// account enumeration. 30 checks per 60 s — generous for normal use
+// (typing a name character-by-character) but blocks scripted enumeration.
+// Single-process assumption: revisit with DB/Redis if horizontally scaled.
+const UNAME_WINDOW_MS = 60_000;
+const UNAME_LIMIT     = 30;
+const unameTimestamps = new Map<string, number[]>();
+
+function checkUsernameRateLimit(userId: string): boolean {
+  const now    = Date.now();
+  const cutoff = now - UNAME_WINDOW_MS;
+  const times  = (unameTimestamps.get(userId) ?? []).filter(t => t > cutoff);
+  if (times.length >= UNAME_LIMIT) { unameTimestamps.set(userId, times); return false; }
+  times.push(now);
+  unameTimestamps.set(userId, times);
+  return true;
+}
+
 router.get("/users/check-username", requireAuth, async (req, res) => {
   const userId   = getUserId(req);
   const username = String(req.query.username ?? "").trim().toLowerCase();
+
+  if (!checkUsernameRateLimit(userId)) {
+    return res.status(429).json({ available: false, reason: "rate_limited" });
+  }
 
   if (!username || !/^[a-z0-9_]{3,20}$/.test(username)) {
     return res.json({ available: false, reason: "invalid_format" });
