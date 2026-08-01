@@ -228,12 +228,18 @@ router.put("/rewards/active-cosmetics", requireAuth, async (req, res) => {
       }
     }
 
+    // M-3: Use jsonb merge (||) rather than a full replace so concurrent writes
+    // from two devices to different cosmetic categories do not overwrite each
+    // other. The last write per-key wins; unchanged categories are preserved.
     await db
       .insert(userRewardsTable)
       .values({ userId, activeCosmetics: sanitised })
       .onConflictDoUpdate({
         target: userRewardsTable.userId,
-        set: { activeCosmetics: sanitised, updatedAt: sql`now()` },
+        set: {
+          activeCosmetics: sql`user_rewards.active_cosmetics || ${JSON.stringify(sanitised)}::jsonb`,
+          updatedAt:       sql`now()`,
+        },
       });
 
     return res.json({ success: true, activeCosmetics: sanitised });
