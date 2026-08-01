@@ -25,8 +25,9 @@ const SIZE_TARGET   = 200 * 1024;
 const QUALITY_STEPS = [82, 68, 52];
 
 // ── Per-user upload rate limiter (in-memory, 10 uploads / 60 s) ───────────────
-// Single-process server: an in-memory sliding window is sufficient and avoids
-// an extra DB round-trip on every upload.
+// Assumes single-process deployment — in-memory counters will not enforce
+// correctly across multiple processes/instances. Revisit with a Redis or
+// DB-backed approach if the API server is ever horizontally scaled.
 const UPLOAD_WINDOW_MS  = 60_000;
 const UPLOAD_LIMIT      = 10;
 const uploadTimestamps  = new Map<string, number[]>();
