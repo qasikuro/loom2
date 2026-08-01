@@ -38,6 +38,7 @@ export const characterTable = pgTable("character", {
   activeTitle:          text("active_title"),          // user's chosen displayed title
   intention:            text("intention"),             // today's intention (max 80 chars)
   intentionDate:        text("intention_date"),        // ISO date string (YYYY-MM-DD)
+  pingFriendsAt:        timestamp("ping_friends_at", { withTimezone: true }), // last ping-friends call (cooldown)
   updatedAt:            timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
