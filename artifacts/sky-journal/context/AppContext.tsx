@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { enqueueMutation, drainMutationQueue } from '@/utils/mutationQueue';
 import { registerCustomEffects, type EffectDef } from '@/components/ProfileEffect';
 import { showToastGlobal } from '@/components/Toast';
 import {
@@ -1173,6 +1174,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (appStateRef.current !== 'active' && nextState === 'active') {
         softLoadData();
         pollCampfireUnread();
+        // H-1: Drain any mutations that failed their retry while the app was
+        // backgrounded so profile/outfit/cosmetic saves are not silently lost.
+        drainMutationQueue(apiFetch).catch(() => null);
       }
       appStateRef.current = nextState;
     });
@@ -1225,7 +1229,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     apiFetch('/character', { method: 'PUT', body: characterBody }).catch(() => {
       showToastGlobal("Couldn't sync profile — saved locally", 'warning', () => {
-        apiFetch('/character', { method: 'PUT', body: characterBody }).catch(() => null);
+        // H-1: If the retry also fails, queue for next foreground drain so the
+        // change is not permanently lost on other devices / after reinstall.
+        apiFetch('/character', { method: 'PUT', body: characterBody })
+          .catch(() => enqueueMutation('/character', 'PUT', characterBody).catch(() => null));
       });
     });
   }, []);
@@ -1374,6 +1381,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reloadConstellation().catch(() => null);
       import('@/utils/xpFlash').then(m => m.fireXPFlash('Memory grows in the night sky')).catch(() => {});
     } catch {
+      // H-3: Revert the optimistic add — the entry must not persist locally as
+      // "saved" when the server never received it (mirrors addStory's pattern).
+      setJournalEntries(prev => {
+        const reverted = prev.filter(e => e.id !== safeEntry.id);
+        AsyncStorage.setItem('journal_v2', JSON.stringify(reverted)).catch(() => null);
+        return reverted;
+      });
       const retryBody = JSON.stringify({
         id:         safeEntry.id,
         date:       safeEntry.date,
@@ -1383,7 +1397,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         imageUri:   safeImageUri,
         friendName: safeEntry.friendName ?? null,
       });
-      showToastGlobal("Entry saved locally — couldn't sync to server", 'warning', () => {
+      showToastGlobal("Journal entry couldn't sync — tap to retry", 'error', () => {
+        // Re-add optimistically then retry the API call
+        setJournalEntries(prev => {
+          if (prev.some(e => e.id === safeEntry.id)) return prev;
+          const restored = [safeEntry, ...prev];
+          AsyncStorage.setItem('journal_v2', JSON.stringify(restored)).catch(() => null);
+          return restored;
+        });
         apiFetch('/journal-entries', { method: 'POST', body: retryBody }).catch(() => null);
       });
     }
@@ -1555,7 +1576,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       import('@/utils/xpFlash').then(m => m.fireXPFlash('Style memory recorded')).catch(() => {});
     })
     .catch(() => {
-      showToastGlobal("Outfit saved locally — couldn't sync to server", 'warning', () => {
+      // H-3: Revert the optimistic add so the outfit doesn't persist locally as
+      // "saved" when the server never received it (mirrors addStory's pattern).
+      setOutfits(prev => {
+        const reverted = prev.filter(o => o.id !== safeOutfit.id);
+        AsyncStorage.setItem('outfits_v1', JSON.stringify(reverted)).catch(() => null);
+        return reverted;
+      });
+      showToastGlobal("Outfit couldn't be saved — tap to retry", 'error', () => {
+        setOutfits(prev => {
+          if (prev.some(o => o.id === safeOutfit.id)) return prev;
+          const restored = [safeOutfit, ...prev];
+          AsyncStorage.setItem('outfits_v1', JSON.stringify(restored)).catch(() => null);
+          return restored;
+        });
         apiFetch('/outfits', { method: 'POST', body: outfitBody }).catch(() => null);
       });
     });
@@ -1570,7 +1604,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const outfitUpdateBody = JSON.stringify(updates);
     apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody }).catch(() => {
       showToastGlobal("Couldn't save outfit changes", 'error', () => {
-        apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody }).catch(() => null);
+        // H-1: Queue if retry fails — outfit edits must survive backgrounding
+        apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody })
+          .catch(() => enqueueMutation(`/outfits/${id}`, 'PATCH', outfitUpdateBody).catch(() => null));
       });
     });
   }, []);
@@ -1631,7 +1667,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const cosmeticsToggleBody = JSON.stringify({ activeCosmetics: next });
       apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody }).catch(() => {
         showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
-          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody }).catch(() => null);
+          // H-1: Queue if retry fails
+          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody })
+            .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsToggleBody).catch(() => null));
         });
       });
       return next;
@@ -1649,7 +1687,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const outfitSyncBody = JSON.stringify({ activeOutfitId: id });
     apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody }).catch(() => {
       showToastGlobal("Couldn't sync outfit choice", 'warning', () => {
-        apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody }).catch(() => null);
+        // H-1: Queue if retry fails
+        apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody })
+          .catch(() => enqueueMutation('/character/active-outfit', 'PATCH', outfitSyncBody).catch(() => null));
       });
     });
   }, []);
