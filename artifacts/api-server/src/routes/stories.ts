@@ -633,13 +633,17 @@ router.delete("/stories/:id/save", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
   const actorId = getUserId(req);
   try {
-    await Promise.all([
-      db.update(storiesTable)
+    // M-7: Wrap both operations in a transaction so the savedCount decrement
+    // and the save-record deletion are always atomically consistent. Without
+    // this, a concurrent failure left one operation committed and the other
+    // not, causing a permanent count/record desync.
+    await db.transaction(async (tx) => {
+      await tx.update(storiesTable)
         .set({ savedCount: sql`GREATEST(${storiesTable.savedCount} - 1, 0)` })
-        .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true))),
-      db.delete(storySavesTable)
-        .where(and(eq(storySavesTable.userId, actorId), eq(storySavesTable.storyId, storyId))),
-    ]);
+        .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)));
+      await tx.delete(storySavesTable)
+        .where(and(eq(storySavesTable.userId, actorId), eq(storySavesTable.storyId, storyId)));
+    });
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Failed to unsave story");
