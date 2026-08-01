@@ -292,7 +292,9 @@ export default function MessagesScreen() {
   // ── SSE: live push for incoming messages ──────────────────────────────────
   // Subscribe to our own userId channel — the server emits to it when anyone
   // sends us a message, so we can append without polling.
-  useSSE(
+  // M-8: Capture the SSE connection state so the fallback poll can back off
+  // when real-time delivery is active, reducing redundant fetches and flicker.
+  const { connected: sseConnected } = useSSE(
     myUserId ? [`messages:${myUserId}`] : [],
     useCallback((_channel: string, data: unknown) => {
       const ev = data as {
@@ -317,11 +319,14 @@ export default function MessagesScreen() {
     }, [userId, markDmThreadRead, queueSticker]),
   );
 
-  // Slow background poll as a fallback (catches anything SSE misses)
+  // M-8: Background poll as SSE fallback. Backs off to 2 min when SSE is
+  // connected — SSE already handles real-time delivery, so 30 s polling is
+  // redundant and causes UI flicker from simultaneous state updates.
   useFocusEffect(useCallback(() => {
-    const interval = setInterval(() => { load().catch(() => null); }, 30_000);
+    const ms = sseConnected ? 2 * 60_000 : 30_000;
+    const interval = setInterval(() => { load().catch(() => null); }, ms);
     return () => clearInterval(interval);
-  }, [load]));
+  }, [load, sseConnected]));
 
   const scrollToBottom = useCallback(() => {
     flatRef.current?.scrollToEnd({ animated: false });
