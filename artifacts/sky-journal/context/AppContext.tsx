@@ -583,12 +583,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return null;
   }
 
+  // M-5: Backup-key helpers. AsyncStorage processes setItem calls in queue
+  // order, so the _bak write is always committed before the main key write
+  // begins. If the process is killed mid-write on the main key, _bak holds
+  // the complete, valid latest value that readCacheSafe can recover from.
+  async function readCacheSafe(key: string): Promise<string | null> {
+    const value = await AsyncStorage.getItem(key);
+    if (value === null) return null;
+    try { JSON.parse(value); return value; } catch {
+      return AsyncStorage.getItem(`${key}_bak`);
+    }
+  }
+  function writeStoryCache(json: string): void {
+    AsyncStorage.setItem('stories_v1_bak', json).catch(() => null);
+    AsyncStorage.setItem('stories_v1',     json).catch(() => null);
+  }
+  function writeJournalCache(json: string): void {
+    AsyncStorage.setItem('journal_v2_bak', json).catch(() => null);
+    AsyncStorage.setItem('journal_v2',     json).catch(() => null);
+  }
+
   async function loadFromCache() {
     try {
       const [c, j, s, o, d, f, sv, ac, rb, cfSeen, dmSeen] = await Promise.all([
         AsyncStorage.getItem('character_v2'),
-        AsyncStorage.getItem('journal_v2'),
-        AsyncStorage.getItem('stories_v1'),
+        readCacheSafe('journal_v2'),         // M-5: falls back to _bak on corrupt
+        readCacheSafe('stories_v1'),         // M-5: falls back to _bak on corrupt
         AsyncStorage.getItem('outfits_v1'),
         AsyncStorage.getItem('discover_v1'),
         AsyncStorage.getItem('following_v1'),
@@ -598,12 +618,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem('campfire_badge_seen_at'),
         AsyncStorage.getItem('dm_badge_seen_at'),
       ]);
-      if (c)  setCharacterState(JSON.parse(c));
-      if (j)  setJournalEntries(JSON.parse(j));
-      if (s)  setStories(JSON.parse(s));
-      if (o)  setOutfits(JSON.parse(o));
-      if (d)  setDiscoverFeedRaw(JSON.parse(d));
-      if (f)  setFollowingIds(JSON.parse(f));
+      // M-5: Wrap each parse individually — one corrupted key must not
+      // silently prevent all remaining cache entries from being restored.
+      try { if (c) setCharacterState(JSON.parse(c)); } catch { /* use default */ }
+      try { if (j) setJournalEntries(JSON.parse(j)); } catch { /* use default */ }
+      try { if (s) setStories(JSON.parse(s)); } catch { /* use default */ }
+      try { if (o) setOutfits(JSON.parse(o)); } catch { /* use default */ }
+      try { if (d) setDiscoverFeedRaw(JSON.parse(d)); } catch { /* use default */ }
+      try { if (f) setFollowingIds(JSON.parse(f)); } catch { /* use default */ }
       if (sv) { try { setSavedStoryIds(new Set(JSON.parse(sv))); } catch { /* ignore */ } }
       if (ac) { try { setActiveCosmeticsState(JSON.parse(ac)); } catch { /* ignore */ } }
       if (rb) { try { setRewardBalance(JSON.parse(rb)); } catch { /* ignore */ } }
@@ -619,6 +641,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const ALL_CACHE_KEYS = [
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
+    'journal_v2_bak', 'stories_v1_bak',               // M-5: backup keys
     'discover_v1', 'following_v1', 'saved_stories_v1', 'collection_v1',
     'shop_catalog_v1', 'reward_balance_v1',
     FETCH_TIMESTAMPS_KEY,
@@ -850,8 +873,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Persist all fresh data to cache in parallel
       const cacheWrites: Promise<void>[] = [
         AsyncStorage.setItem('character_v2',  JSON.stringify(char)),
-        AsyncStorage.setItem('journal_v2',    JSON.stringify(entries)),
-        AsyncStorage.setItem('stories_v1',    JSON.stringify(stors)),
+        AsyncStorage.setItem('journal_v2_bak', JSON.stringify(entries)),  // M-5
+        AsyncStorage.setItem('journal_v2',     JSON.stringify(entries)),
+        AsyncStorage.setItem('stories_v1_bak', JSON.stringify(stors)),   // M-5
+        AsyncStorage.setItem('stories_v1',     JSON.stringify(stors)),
         AsyncStorage.setItem('outfits_v1',    JSON.stringify(outs)),
         AsyncStorage.setItem('discover_v1',   JSON.stringify(feed)),
         AsyncStorage.setItem('following_v1',  JSON.stringify(follows)),
@@ -1010,6 +1035,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           const entries = validRecs.map(r => toAppJournalEntry(r, API_BASE));
           setJournalEntries(entries);
+          cacheWrites.push(AsyncStorage.setItem('journal_v2_bak', JSON.stringify(entries)));  // M-5
           cacheWrites.push(AsyncStorage.setItem('journal_v2', JSON.stringify(entries)));
           tsUpdates['journal-entries'] = now;
         }
@@ -1025,6 +1051,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           const stors = validRecs.map(r => toAppStory(r, API_BASE));
           setStories(stors);
+          cacheWrites.push(AsyncStorage.setItem('stories_v1_bak', JSON.stringify(stors)));  // M-5
           cacheWrites.push(AsyncStorage.setItem('stories_v1', JSON.stringify(stors)));
           tsUpdates.stories = now;
         }
@@ -1205,6 +1232,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setCharacter = useCallback((c: Character) => {
     setCharacterState(c);
     AsyncStorage.setItem('character_v2', JSON.stringify(c));
+    // M-4: Reset TTL so softLoadData immediately re-fetches the fresh profile
+    // instead of serving the stale cache for up to 5 minutes on other devices.
+    writeFetchTimestamps({ character: 0 }).catch(() => null);
     const characterBody = JSON.stringify({
       name:              c.name,
       bio:               c.bio,
@@ -1354,7 +1384,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setJournalEntries(prev => {
       const updated = [safeEntry, ...prev.filter(e => e.id !== entry.id)];
-      AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
+      writeJournalCache(JSON.stringify(updated));
       return updated;
     });
     writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
@@ -1385,7 +1415,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // "saved" when the server never received it (mirrors addStory's pattern).
       setJournalEntries(prev => {
         const reverted = prev.filter(e => e.id !== safeEntry.id);
-        AsyncStorage.setItem('journal_v2', JSON.stringify(reverted)).catch(() => null);
+        writeJournalCache(JSON.stringify(reverted));
         return reverted;
       });
       const retryBody = JSON.stringify({
@@ -1402,7 +1432,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setJournalEntries(prev => {
           if (prev.some(e => e.id === safeEntry.id)) return prev;
           const restored = [safeEntry, ...prev];
-          AsyncStorage.setItem('journal_v2', JSON.stringify(restored)).catch(() => null);
+          writeJournalCache(JSON.stringify(restored));
           return restored;
         });
         apiFetch('/journal-entries', { method: 'POST', body: retryBody }).catch(() => null);
@@ -1414,7 +1444,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
     setJournalEntries(prev => {
       const updated = prev.filter(e => e.id !== id);
-      AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
+      writeJournalCache(JSON.stringify(updated));
       return updated;
     });
     apiFetch(`/journal-entries/${id}`, { method: 'DELETE' }).catch(() => {
@@ -1464,7 +1494,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         ...s,
         panels: s.panels.map(p => ({ ...p, imageUri: undefined })),
       }));
-      AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
+      writeStoryCache(JSON.stringify(slim));
       return updated;
     });
 
@@ -1489,7 +1519,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...s,
           panels: s.panels.map(p => ({ ...p, imageUri: undefined })),
         }));
-        AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
+        writeStoryCache(JSON.stringify(slim));
         return reverted;
       });
       // Retry: re-add to local state and re-post to API
@@ -1498,7 +1528,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (prev.some(s => s.id === story.id)) return prev;
           const updated = [story, ...prev];
           const slim = updated.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
-          AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
+          writeStoryCache(JSON.stringify(slim));
           return updated;
         });
         apiFetch('/stories', { method: 'POST', body: storyPostBody })
@@ -1510,10 +1540,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [fireToast, reloadRewards, reloadConstellation]);
 
   const updateStory = useCallback((id: string, updates: Partial<Omit<Story, 'id'>>) => {
+    // M-4: Reset TTL so a second device opening within the window sees the edit.
+    writeFetchTimestamps({ stories: 0 }).catch(() => null);
     setStories(prev => {
       const updated = prev.map(s => s.id === id ? { ...s, ...updates } : s);
       const slim = updated.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
-      AsyncStorage.setItem('stories_v1', JSON.stringify(slim)).catch(() => null);
+      writeStoryCache(JSON.stringify(slim));
       return updated;
     });
     const storyPatchBody = JSON.stringify({
@@ -1537,7 +1569,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeFetchTimestamps({ stories: 0 }).catch(() => null);
     setStories(prev => {
       const updated = prev.filter(s => s.id !== id);
-      AsyncStorage.setItem('stories_v1', JSON.stringify(updated));
+      writeStoryCache(JSON.stringify(updated));
       return updated;
     });
     apiFetch(`/stories/${id}`, { method: 'DELETE' }).catch(() => {
@@ -1645,7 +1677,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const cosmeticsBody = JSON.stringify({ activeCosmetics: next });
       apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody }).catch(() => {
         showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
-          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody }).catch(() => null);
+          // H-1: Queue if retry fails (markPurchased gap — mirrors setActiveCosmetic)
+          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody })
+            .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsBody).catch(() => null));
         });
       });
       return next;
