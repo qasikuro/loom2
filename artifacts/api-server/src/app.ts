@@ -94,8 +94,13 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 // ── Body parsers ───────────────────────────────────────────────────────────────
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+// Global limit: 1 MB. The upload route handles its own 10 MB JSON body parser
+// (to accommodate base64 image payloads) via route-level middleware, so we skip
+// the global parsers for that path to avoid a 413 before the route runs.
+const skipForUpload = (fn: express.RequestHandler): express.RequestHandler =>
+  (req, res, next) => (req.path === '/api/upload' ? next() : fn(req, res, next));
+app.use(skipForUpload(express.json({ limit: "1mb" })));
+app.use(skipForUpload(express.urlencoded({ extended: true, limit: "1mb" })));
 
 // ── Image serving: local disk fallback → GCS ──────────────────────────────────
 // New uploads go to GCS. Old local files are served from disk as a fallback
