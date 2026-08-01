@@ -119,6 +119,7 @@ externalPort = 80
 
 [userenv.shared]
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_bmV3LWRyYWdvbi0xNS5jbGVyay5hY2NvdW50cy5kZXYk"
+CLERK_PROXY_URL = "/api/__clerk"
 
 [nix]
 channel = "stable-25_05"
