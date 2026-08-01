@@ -1406,17 +1406,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Stories ────────────────────────────────────────────────────────────────
 
   const addStory = useCallback(async (story: Story): Promise<boolean> => {
+    // C-6: Strip file:// URIs from panel images before the API body is built.
+    // file:// URIs are device-local paths that are never resolvable by the
+    // server or other devices. They appear when a panel upload fails and the
+    // optimistic local preview URI was never replaced with a server URL.
+    const safePanels = story.panels.map(p => ({
+      ...p,
+      imageUri: p.imageUri?.startsWith('file://') ? null : (p.imageUri ?? null),
+    }));
+    const safePages = story.pages?.map(page => ({
+      ...page,
+      panels: page.panels.map(p => ({
+        ...p,
+        imageUri: p.imageUri?.startsWith('file://') ? null : (p.imageUri ?? null),
+      })),
+    })) ?? null;
+
     const storyPostBody = JSON.stringify({
       id:            story.id,
       date:          story.date,
       chapterTitle:  story.chapterTitle,
       description:   story.description ?? '',
-      panels:        story.panels,
+      panels:        safePanels,
       mood:          story.mood,
       location:      story.location,
       isPublic:      story.isPublic,
       pageLayoutKey: story.pageLayoutKey ?? null,
-      pages:         story.pages ?? null,
+      pages:         safePages,
     });
 
     // Optimistic local update

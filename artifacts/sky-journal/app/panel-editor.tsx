@@ -526,7 +526,10 @@ export default function PanelEditorScreen() {
   }
 
   function handleSave() {
-    if (uploadingSet.size > 0) return;
+    // C-6: Also block save when any panel upload has failed — those panels
+    // still hold their local file:// URI and would be sent to the API as-is.
+    // The user must retry the failed panel(s) before saving.
+    if (uploadingSet.size > 0 || failedPanels.size > 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     DraftStore.save(layoutKey);
     router.back();
@@ -602,12 +605,12 @@ export default function PanelEditorScreen() {
         />
         <Text style={styles.headerTitle}>{t('create.editPanel')}</Text>
         <TouchableOpacity
-          style={[styles.saveBtn, uploadingSet.size > 0 && { opacity: 0.4 }]}
+          style={[styles.saveBtn, (uploadingSet.size > 0 || failedPanels.size > 0) && { opacity: 0.4 }]}
           onPress={handleSave}
-          disabled={uploadingSet.size > 0}
+          disabled={uploadingSet.size > 0 || failedPanels.size > 0}
         >
           <Text style={styles.saveBtnText}>
-            {uploadingSet.size > 0 ? t('create.uploading') : t('common.save')}
+            {uploadingSet.size > 0 ? t('common.uploading') : failedPanels.size > 0 ? t('common.uploadFailed') : t('common.save')}
           </Text>
         </TouchableOpacity>
       </View>
