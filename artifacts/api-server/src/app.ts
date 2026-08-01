@@ -157,11 +157,31 @@ const clerkMw = clerkMiddleware((req) => ({
 app.use((req: Request, res: Response, next: NextFunction) => {
   // Step 1 — request received, before Clerk.
   const authHeader = req.headers.authorization as string | undefined;
+  // Extract just the JWT token part (after "Bearer ") and log enough to
+  // decode header + payload in base64 for debugging (first 300 chars of token).
+  const rawToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  // Decode JWT header and payload without verifying signature.
+  let jwtHeader: unknown = null;
+  let jwtPayload: unknown = null;
+  if (rawToken) {
+    try {
+      const parts = rawToken.split('.');
+      if (parts.length >= 2) {
+        const decode = (b64: string) => JSON.parse(
+          Buffer.from(b64, 'base64url').toString('utf8')
+        );
+        jwtHeader  = decode(parts[0]);
+        jwtPayload = decode(parts[1]);
+      }
+    } catch { /* malformed JWT — leave null */ }
+  }
   logger.info({
     path: req.path,
     hasAuthHeader: !!authHeader,
-    // First 50 chars — enough to confirm "Bearer eyJ..." JWT format without leaking the full token.
-    authPreview: authHeader?.substring(0, 50) ?? null,
+    // Full JWT header + payload decoded — reveals alg, kid, iss, aud, azp, exp, sub.
+    // Field names differ from req.headers.authorization so pino redact doesn't strip them.
+    jwtHeader,
+    jwtPayload,
   }, '[CLERK-TRACE-1] request received — pre-clerkMiddleware');
 
   clerkMw(req, res, (err?: unknown) => {
@@ -171,15 +191,32 @@ app.use((req: Request, res: Response, next: NextFunction) => {
     }
 
     // Step 2 — read what clerkMiddleware() placed on req.auth.
+    // Log the FULL auth state including reason/status so we can see exactly
+    // which verification step rejected the token.
     let clerkUserId: string | null = null;
     let clerkSessionId: string | null = null;
     let clerkStateErr: string | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let fullAuthState: Record<string, unknown> = {};
     try {
       // In @clerk/express v2, req.auth is a function that returns the auth object.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const authState = (req as any).auth?.();
+      const authState = (req as any).auth?.() ?? {};
       clerkUserId    = authState?.userId    ?? null;
       clerkSessionId = authState?.sessionId ?? null;
+      // Capture every field — reason/status reveal the exact rejection cause.
+      fullAuthState = {
+        userId:         authState?.userId         ?? null,
+        sessionId:      authState?.sessionId      ?? null,
+        orgId:          authState?.orgId          ?? null,
+        reason:         authState?.reason         ?? null,
+        message:        authState?.message        ?? null,
+        status:         authState?.status         ?? null,
+        tokenType:      authState?.tokenType      ?? null,
+        // x-clerk-auth-reason/status headers set on the response by Clerk
+        xClerkReason:   res.getHeader('x-clerk-auth-reason')  ?? null,
+        xClerkStatus:   res.getHeader('x-clerk-auth-status')  ?? null,
+      };
     } catch (e) {
       clerkStateErr = String(e);
     }
@@ -189,6 +226,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
       clerkSessionId,
       clerkStateErr,
       hasAuthHeader: !!(req.headers.authorization),
+      authState: fullAuthState,
     }, '[CLERK-TRACE-2] clerkMiddleware() completed — post-middleware auth state');
 
     next();
