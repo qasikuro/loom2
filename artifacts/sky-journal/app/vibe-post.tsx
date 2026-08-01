@@ -20,6 +20,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { ResumeDraftBanner } from '@/components/ResumeDraftBanner';
+import { vibePostDraft, type VibePostDraft } from '@/utils/entryDraftStore';
 import {
   FirstPublishOverlay,
   hasCompletedFirstPublish,
@@ -70,6 +72,32 @@ export default function VibePostScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isPublic,      setIsPublic]       = useState(true);
+
+  // ── Draft auto-save ────────────────────────────────────────────────────────
+  const [pendingDraft,   setPendingDraft]   = useState<VibePostDraft | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load any saved draft when the screen opens (only if no event params pre-filled it)
+  useEffect(() => {
+    if (eventPrompt || eventMood) return;
+    vibePostDraft.load().then(d => {
+      if (d && d.text.trim()) {
+        setPendingDraft(d);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced auto-save on content changes
+  useEffect(() => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    if (!text.trim() && !mood) return;
+    draftTimerRef.current = setTimeout(() => {
+      vibePostDraft.save({ text, mood, isPublic, step });
+    }, 800);
+    return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, mood, isPublic, step]);
   const [posting,       setPosting]        = useState(false);
   const [error,         setError]          = useState<string | null>(null);
   const [showFirst,     setShowFirst]      = useState(false);
@@ -78,7 +106,7 @@ export default function VibePostScreen() {
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   const isDirty = text.trim().length > 0 || mood !== null || !isPublic;
-  const markSaved = useNavigationGuard(isDirty);
+  const markSaved = useNavigationGuard(isDirty, () => vibePostDraft.clear());
 
   // Android hardware back: step back to mood picker at STEP_TEXT;
   // at STEP_MOOD return false so navigation proceeds and beforeRemove fires.
@@ -149,6 +177,7 @@ export default function VibePostScreen() {
       return;
     }
     await markFirstPublishDone();
+    await vibePostDraft.clear();
     setShowCompletion(true);
   }
 
@@ -203,6 +232,26 @@ export default function VibePostScreen() {
             contentContainerStyle={[s.stepContainer, { paddingBottom: botPad }]}
             showsVerticalScrollIndicator={false}
           >
+            {pendingDraft && (
+              <ResumeDraftBanner
+                savedAt={pendingDraft.savedAt}
+                accentColor={accentColor}
+                onResume={() => {
+                  setText(pendingDraft.text);
+                  const m = MOODS.find(x => x.id === pendingDraft.mood);
+                  if (m) {
+                    setMood(m.id);
+                    setStep(STEP_TEXT);
+                  }
+                  setIsPublic(pendingDraft.isPublic);
+                  setPendingDraft(null);
+                }}
+                onDiscard={() => {
+                  vibePostDraft.clear();
+                  setPendingDraft(null);
+                }}
+              />
+            )}
             <Text style={s.stepTitle}>What's the vibe?</Text>
             <Text style={s.stepSub}>Choose the feeling that fits this moment.</Text>
 
@@ -254,6 +303,23 @@ export default function VibePostScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
+              {pendingDraft && (
+                <ResumeDraftBanner
+                  savedAt={pendingDraft.savedAt}
+                  accentColor={accentColor}
+                  onResume={() => {
+                    setText(pendingDraft.text);
+                    const m = MOODS.find(x => x.id === pendingDraft.mood);
+                    if (m) setMood(m.id);
+                    setIsPublic(pendingDraft.isPublic);
+                    setPendingDraft(null);
+                  }}
+                  onDiscard={() => {
+                    vibePostDraft.clear();
+                    setPendingDraft(null);
+                  }}
+                />
+              )}
               {/* Mood badge */}
               {selectedMood && (
                 <View style={s.moodBadgeRow}>

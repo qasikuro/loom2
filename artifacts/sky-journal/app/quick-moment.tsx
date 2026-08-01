@@ -23,6 +23,8 @@ import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
 import { persistImageUri } from '@/utils/persistImage';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { ResumeDraftBanner } from '@/components/ResumeDraftBanner';
+import { quickMomentDraft, type QuickMomentDraft } from '@/utils/entryDraftStore';
 import {
   FirstPublishOverlay,
   hasCompletedFirstPublish,
@@ -72,6 +74,32 @@ export default function QuickMomentScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [isPublic,      setIsPublic]      = useState(true);
+
+  // ── Draft auto-save ────────────────────────────────────────────────────────
+  const [pendingDraft,   setPendingDraft]   = useState<QuickMomentDraft | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load any saved draft when the screen opens (only if no event params pre-filled it)
+  useEffect(() => {
+    if (eventPrompt || eventMood) return; // event-prefilled screens don't restore drafts
+    quickMomentDraft.load().then(d => {
+      if (d && (d.caption.trim() || d.imageUri)) {
+        setPendingDraft(d);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced auto-save on content changes
+  useEffect(() => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    if (!caption.trim() && !imageUri) return;
+    draftTimerRef.current = setTimeout(() => {
+      quickMomentDraft.save({ caption, mood, isPublic, imageUri: imageUri ?? undefined, step });
+    }, 800);
+    return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [caption, mood, isPublic, imageUri, step]);
   const [uploading,     setUploading]     = useState(false);
   const [posting,       setPosting]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
@@ -83,7 +111,7 @@ export default function QuickMomentScreen() {
   const pendingLineRef    = useRef<string>('');
 
   const isDirty = !!imageUri || caption.trim().length > 0 || mood !== 'Dreamy' || !isPublic;
-  const markSaved = useNavigationGuard(isDirty);
+  const markSaved = useNavigationGuard(isDirty, () => quickMomentDraft.clear());
 
   // Android hardware back: step back within the flow at step > 0;
   // at step 0 return false so navigation proceeds and beforeRemove fires.
@@ -180,6 +208,7 @@ export default function QuickMomentScreen() {
       return;
     }
     await markFirstPublishDone();
+    await quickMomentDraft.clear();
     setShowCompletion(true);
   }
 
@@ -235,6 +264,26 @@ export default function QuickMomentScreen() {
           {/* ── Step 0: Image ─────────────────────────────────────── */}
           {step === STEP_IMAGE && (
             <View style={[s.stepContainer, { paddingBottom: botPad }]}>
+              {pendingDraft && (
+                <ResumeDraftBanner
+                  savedAt={pendingDraft.savedAt}
+                  accentColor={accentColor}
+                  onResume={() => {
+                    setCaption(pendingDraft.caption);
+                    const m = MOODS.find(x => x.id === pendingDraft.mood);
+                    if (m) setMood(m.id);
+                    setIsPublic(pendingDraft.isPublic);
+                    if (pendingDraft.imageUri) setImageUri(pendingDraft.imageUri);
+                    setPendingDraft(null);
+                    // Jump to caption step since the draft was from there
+                    setStep(STEP_CAPTION);
+                  }}
+                  onDiscard={() => {
+                    quickMomentDraft.clear();
+                    setPendingDraft(null);
+                  }}
+                />
+              )}
               <Text style={s.stepTitle}>Pick your moment</Text>
               <Text style={s.stepSub}>Choose a photo to share — or skip for a text-only post.</Text>
 
@@ -275,6 +324,24 @@ export default function QuickMomentScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
+              {pendingDraft && (
+                <ResumeDraftBanner
+                  savedAt={pendingDraft.savedAt}
+                  accentColor={accentColor}
+                  onResume={() => {
+                    setCaption(pendingDraft.caption);
+                    const m = MOODS.find(x => x.id === pendingDraft.mood);
+                    if (m) setMood(m.id);
+                    setIsPublic(pendingDraft.isPublic);
+                    if (pendingDraft.imageUri) setImageUri(pendingDraft.imageUri);
+                    setPendingDraft(null);
+                  }}
+                  onDiscard={() => {
+                    quickMomentDraft.clear();
+                    setPendingDraft(null);
+                  }}
+                />
+              )}
               <Text style={s.stepTitle}>Add a caption</Text>
               <Text style={s.stepSub}>What's the feeling behind this moment?</Text>
 

@@ -1,10 +1,12 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { ResumeDraftBanner } from '@/components/ResumeDraftBanner';
 import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
+import { journalDraft, type JournalDraft } from '@/utils/entryDraftStore';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
@@ -113,6 +115,37 @@ export default function CreateJournalEntryScreen() {
   const [entryDate,       setEntryDate]       = useState<Date>(today);
   const [showDatePicker,  setShowDatePicker]  = useState(false);
 
+  // ── Draft auto-save ────────────────────────────────────────────────────────
+  const [pendingDraft,   setPendingDraft]    = useState<JournalDraft | null>(null);
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load any saved draft when the screen opens
+  useEffect(() => {
+    journalDraft.load(entryType).then(d => {
+      // Only offer to restore if there's meaningful content to restore
+      if (d && (d.text.trim() || d.friendName.trim())) {
+        setPendingDraft(d);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced auto-save whenever content changes
+  useEffect(() => {
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    // Don't persist an empty draft
+    if (!text.trim() && !friendName.trim()) return;
+    draftTimerRef.current = setTimeout(() => {
+      journalDraft.save(entryType, {
+        text, friendName, mood,
+        entryDate: entryDate.toISOString(),
+        imageUri, fontSize,
+      });
+    }, 800);
+    return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text, friendName, mood, entryDate, imageUri, fontSize]);
+
   // Capture the mood that was in effect when the screen opened so that a
   // pre-filled initialMood param counts as the baseline, not a dirty change.
   const [moodBaseline] = useState(resolvedInitialMood ?? 'Peaceful');
@@ -120,7 +153,7 @@ export default function CreateJournalEntryScreen() {
     !!(text.trim() || imageUri || (entryType === 'friend' && friendName.trim()))
     || mood !== moodBaseline
     || !isSameDay(entryDate, today);
-  const markSaved = useNavigationGuard(isDirty);
+  const markSaved = useNavigationGuard(isDirty, () => journalDraft.clear(entryType));
 
   const MIN_FONT = 12, MAX_FONT = 28;
   const sizeRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -253,6 +286,7 @@ export default function CreateJournalEntryScreen() {
       imageUri,
       friendName: entryType === 'friend' ? friendName.trim() : undefined,
     });
+    journalDraft.clear(entryType);
     setSaving(false);
     setShowCompletion(true);
   }
@@ -311,6 +345,27 @@ export default function CreateJournalEntryScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
       >
+        {/* ── Resume draft banner ─────────────────────────────── */}
+        {pendingDraft && (
+          <ResumeDraftBanner
+            savedAt={pendingDraft.savedAt}
+            accentColor={cfg.accent}
+            onResume={() => {
+              setText(pendingDraft.text);
+              setFriendName(pendingDraft.friendName);
+              setMood(pendingDraft.mood);
+              if (pendingDraft.entryDate) setEntryDate(new Date(pendingDraft.entryDate));
+              if (pendingDraft.imageUri)  setImageUri(pendingDraft.imageUri);
+              if (pendingDraft.fontSize)  setFontSize(pendingDraft.fontSize);
+              setPendingDraft(null);
+            }}
+            onDiscard={() => {
+              journalDraft.clear(entryType);
+              setPendingDraft(null);
+            }}
+          />
+        )}
+
         {/* ── Date picker row ─────────────────────────────────── */}
         <View style={styles.dateRow}>
           {/* Prev day */}
