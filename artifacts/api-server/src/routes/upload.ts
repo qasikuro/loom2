@@ -18,6 +18,7 @@ import sharp from "sharp";
 import multer from "multer";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
+import { registerPendingUpload, startOrphanCleanup } from "../lib/uploadTracking";
 
 const BUCKET_ID     = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
 const MAX_DIM       = 1600;
@@ -83,6 +84,12 @@ const JsonUploadSchema = z.object({
 
 const router: IRouter = Router();
 
+// L-3: Start the hourly orphan-cleanup loop. Passes a delete callback so the
+// tracking module has no direct dependency on the storage client.
+startOrphanCleanup((storagePath) =>
+  objectStorageClient.bucket(BUCKET_ID).file(storagePath).delete().then(() => undefined),
+);
+
 async function processAndSave(
   req: Request,
   res: Response,
@@ -142,6 +149,10 @@ async function processAndSave(
 
     const file = objectStorageClient.bucket(BUCKET_ID).file(`images/${fname}`);
     await file.save(compressed, { metadata: { contentType }, resumable: false });
+
+    // L-3: Register the uploaded file so the orphan-cleanup interval can
+    // delete it after 24 h if no story/outfit create ever claims it.
+    registerPendingUpload(`/api/images/${fname}`, `images/${fname}`);
 
     return res.status(201).json({ path: `/api/images/${fname}` });
   } catch (err) {

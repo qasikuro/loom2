@@ -7,6 +7,7 @@ import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
 import { sendPushNotification, sendPushToTokens } from "../services/pushService";
 import * as cache from "../lib/cache";
+import { claimUpload } from "../lib/uploadTracking";
 
 const router: IRouter = Router();
 
@@ -130,6 +131,10 @@ router.post("/stories", requireAuth, async (req, res) => {
         },
       })
       .returning();
+
+    // L-3: Mark every panel image as claimed so the orphan-cleanup interval
+    // won't delete files that are intentionally referenced by this story.
+    panels.forEach(p => claimUpload(p.imageUri ?? null));
 
     // Fan-out notifications to followers (fire & forget, non-blocking)
     if (rest.isPublic) {
