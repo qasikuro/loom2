@@ -1129,11 +1129,33 @@ export default function HomeScreen() {
     AsyncStorage.getItem('star_intro_v1').then(val => { if (!val) setShowConstellationIntro(true); });
   }, []);
 
-  // Fetch active event (public endpoint, no auth required)
+  // M-6: Fetch active event with a 5-minute AsyncStorage TTL so repeated Home
+  // tab mounts (auth resets, hot-reload) skip redundant network hits.
   useEffect(() => {
-    apiFetch<{ event: ActiveEvent | null }>('/events/active')
-      .then(d => setActiveEvent(d.event ?? null))
-      .catch(() => {});
+    const TTL_MS   = 5 * 60_000;
+    const CACHE_KEY = 'active_event_v1';
+    AsyncStorage.getItem(CACHE_KEY).then(raw => {
+      if (raw) {
+        try {
+          const cached = JSON.parse(raw) as { ts: number; event: ActiveEvent | null };
+          if (Date.now() - cached.ts < TTL_MS) {
+            setActiveEvent(cached.event);
+            return; // still fresh — skip the network hit
+          }
+        } catch { /* fall through to fetch */ }
+      }
+      apiFetch<{ event: ActiveEvent | null }>('/events/active')
+        .then(d => {
+          const ev = d.event ?? null;
+          setActiveEvent(ev);
+          AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), event: ev })).catch(() => null);
+        })
+        .catch(() => {});
+    }).catch(() => {
+      apiFetch<{ event: ActiveEvent | null }>('/events/active')
+        .then(d => setActiveEvent(d.event ?? null))
+        .catch(() => {});
+    });
   }, []);
 
   // Check dismiss flag when activeEvent changes — always reset to false first
