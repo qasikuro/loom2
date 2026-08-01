@@ -179,3 +179,10 @@ id = "gQX0_HLZ7oSmkH08c2uHl"
 uri = "file://gamejo-release.zip"
 type = "unspecified"
 title = "GameJo Release Package"
+
+[[outputs]]
+id = "A_qtiKsXKESDfrQvXvxm9"
+uri = "file://attached_assets/production-failure-audit-2026-08-01.md"
+type = "text"
+title = "GameJo — Production Failure Audit (August 1, 2026)"
+description = "22 verified findings ranked by severity. 6 Critical issues that can crash the server or corrupt data, 4 High issues causing silent data loss, 8 Medium reliability gaps, and 4 Low edge cases — with file references and a recommended fix order."
