@@ -388,9 +388,12 @@ export default function CampfireRoom() {
   const [sending, setSending] = useState(false);
   const [showInput, setShowInput] = useState(false);
 
-  const scrollRef  = useRef<ScrollView>(null);
-  const pollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastIdRef  = useRef<string>('');
+  const scrollRef      = useRef<ScrollView>(null);
+  const pollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastIdRef      = useRef<string>('');
+  // L-4: Collect pending scrollToEnd timer handles so they can all be
+  // cancelled if the component unmounts before the 80 ms fires.
+  const scrollTimerRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   const palette = data ? (MOOD_PALETTE[data.room.mood] ?? MOOD_PALETTE.default) : MOOD_PALETTE.default;
 
@@ -406,7 +409,8 @@ export default function CampfireRoom() {
         lastIdRef.current = newestId;
         setData(res);
         if (hasNew) {
-          setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+          const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+          scrollTimerRef.current.add(t);
         }
       }
     } finally {
@@ -419,7 +423,13 @@ export default function CampfireRoom() {
     if (roomId) markCampfireRoomRead(roomId);
     // Slow fallback poll — SSE handles the live updates
     pollRef.current = setInterval(() => fetchData(true), POLL_MS);
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      // L-4: Cancel any pending scroll timers so we never call scrollToEnd
+      // on an unmounted ref (no-op warning on Android, crash on old Hermes).
+      scrollTimerRef.current.forEach(clearTimeout);
+      scrollTimerRef.current.clear();
+    };
   }, [fetchData, roomId, markCampfireRoomRead]);
 
   // ── SSE: live push for campfire messages and presence ────────────────────
@@ -444,7 +454,11 @@ export default function CampfireRoom() {
           return { ...prev, messages: [...prev.messages, newMsg] };
         });
         lastIdRef.current = m.id;
-        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+        // L-4: Store the timeout handle so it can be cancelled if the component
+        // unmounts in the 80 ms window (prevents no-op on unmounted ref +
+        // potential crash on older Hermes versions).
+        const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+        scrollTimerRef.current.add(t);
         return;
       }
 
@@ -464,7 +478,8 @@ export default function CampfireRoom() {
       return { ...prev, messages: [...prev.messages, msg] };
     });
     lastIdRef.current = msg.id;
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    scrollTimerRef.current.add(t);
   }
 
   async function sendText() {
