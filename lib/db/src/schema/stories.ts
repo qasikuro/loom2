@@ -42,3 +42,17 @@ export const storySavesTable = pgTable("story_saves", {
   primaryKey({ columns: [table.userId, table.storyId] }),
   index("story_saves_user_id_idx").on(table.userId),
 ]);
+
+// H-2: Per-user witness deduplication table.
+// The composite primary key (user_id, story_id) guarantees at most one row
+// per (user, story) pair. The witness route inserts here ON CONFLICT DO NOTHING
+// before incrementing witnessed_count, so rapid double-taps, network retries,
+// and re-entries to the story reader cannot inflate the count.
+export const storyWitnessesTable = pgTable("story_witnesses", {
+  userId:      text("user_id").notNull(),
+  storyId:     uuid("story_id").notNull(),
+  witnessedAt: timestamp("witnessed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.storyId] }),
+  index("story_witnesses_story_id_idx").on(table.storyId),
+]);

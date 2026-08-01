@@ -1,4 +1,4 @@
-import { db, storiesTable, storySavesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable, userPurchasesTable, type StoryPageDB } from "@workspace/db";
+import { db, storiesTable, storySavesTable, storyWitnessesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable, userPurchasesTable, type StoryPageDB } from "@workspace/db";
 import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
@@ -350,6 +350,23 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
   const actorId = getUserId(req);
   try {
+    // H-2: Per-user witness deduplication.
+    // INSERT … ON CONFLICT DO NOTHING returns [] when this user has already
+    // witnessed this story, so we short-circuit before touching the count.
+    // This prevents double-increments from rapid taps, network retries, and
+    // re-entries to the story reader.
+    const [witnessRecord] = await db
+      .insert(storyWitnessesTable)
+      .values({ userId: actorId, storyId })
+      .onConflictDoNothing()
+      .returning({ userId: storyWitnessesTable.userId });
+
+    if (!witnessRecord) {
+      // Already witnessed — tell the client so it can skip the reward animation
+      // without showing an error.
+      return res.json({ alreadyWitnessed: true, witnessedCount: null, milestone: null });
+    }
+
     const [updated] = await db
       .update(storiesTable)
       .set({ witnessedCount: sql`${storiesTable.witnessedCount} + 1` })

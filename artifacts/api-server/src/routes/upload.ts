@@ -164,7 +164,7 @@ router.post(
         retryAfterSeconds,
       });
     }
-    next();
+    return next();
   },
   // ── C-2: 10 MB JSON body parser scoped to this route only ─────────────────
   (req, res, next) => {
