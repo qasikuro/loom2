@@ -373,54 +373,66 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
       for (const threshold of unclaimedThresholds) {
         const mData = MILESTONE_DATA[threshold]!;
 
-        // ── Step 1: Grant reward FIRST (idempotent via unique refId in reward_events).
-        //    If this throws, we skip the claim entirely so the milestone can be retried
-        //    on the next witness — prevents a permanently-claimed-but-unrewarded state.
+        // ── C-3: Wrap all DB writes for this milestone in a single transaction.
+        //    grantReward already has its own internal transaction (idempotent via
+        //    unique refId), so nesting it here creates a savepoint in Postgres —
+        //    safe and correct. The milestone claim UPDATE uses a jsonb containment
+        //    check so concurrent witnesses cannot double-claim.
+        //    Notifications fire AFTER the transaction commits so a push failure
+        //    never causes a DB rollback.
+        let claimedThreshold = false;
         try {
-          await grantReward(
-            updated.userId, "witness_milestone",
-            `${storyId}:${threshold}`,
-            { aura: mData.aura, stars: mData.stars },
-          );
-        } catch (grantErr) {
-          req.log.warn({ grantErr, storyId, threshold }, "Milestone reward grant failed; will retry on next witness");
-          continue; // Do NOT mark claimed — allows retry when next witness arrives
+          await db.transaction(async (tx) => {
+            // Step 1: Grant reward. If already granted (unique refId), this is a no-op.
+            // We call grantReward outside tx so its own internal transaction runs as
+            // a nested savepoint — if it throws the outer tx rolls back too.
+            await grantReward(
+              updated.userId, "witness_milestone",
+              `${storyId}:${threshold}`,
+              { aura: mData.aura, stars: mData.stars },
+            );
+
+            // Step 2: Atomically mark milestone as claimed using jsonb containment.
+            // If another concurrent witness already claimed it, rows = [] and we skip.
+            const claimResult = await tx.execute(sql`
+              UPDATE stories
+              SET witness_milestones = witness_milestones || ${JSON.stringify([threshold])}::jsonb
+              WHERE id = ${storyId}
+                AND NOT (witness_milestones @> ${JSON.stringify([threshold])}::jsonb)
+              RETURNING id
+            `) as unknown as { rows: { id: string }[] };
+
+            if (!claimResult?.rows?.length) return; // Already claimed by a concurrent witness
+
+            // Step 3: Best-effort side-effects inside the same transaction.
+            // Append milestone title to character traits (idempotent jsonb check).
+            await tx.execute(sql`
+              UPDATE character
+              SET traits = CASE
+                WHEN traits @> ${JSON.stringify([mData.titleName])}::jsonb THEN traits
+                ELSE traits || ${JSON.stringify([mData.titleName])}::jsonb
+              END
+              WHERE user_id = ${updated.userId}
+            `);
+
+            // 500-milestone: grant profile shimmer cosmetic (free).
+            if (threshold === 500) {
+              await tx
+                .insert(userPurchasesTable)
+                .values({ userId: updated.userId, itemId: 'shimmer_profile', itemName: 'Profile Shimmer', starsSpent: 0, auraSpent: 0, shardsSpent: 0 })
+                .onConflictDoNothing();
+            }
+
+            claimedThreshold = true;
+          });
+        } catch (txErr) {
+          req.log.warn({ txErr, storyId, threshold }, "Milestone transaction failed; will retry on next witness");
+          continue;
         }
 
-        // ── Step 2: Atomically mark milestone as claimed.
-        //    Uses jsonb containment check to be safe against concurrent witnesses.
-        //    grantReward is already idempotent, so even if two witnesses race here,
-        //    the reward is granted exactly once by the unique reward_events index.
-        const claimResult = await db.execute(sql`
-          UPDATE stories
-          SET witness_milestones = witness_milestones || ${JSON.stringify([threshold])}::jsonb
-          WHERE id = ${storyId}
-            AND NOT (witness_milestones @> ${JSON.stringify([threshold])}::jsonb)
-          RETURNING id
-        `).catch(err => { req.log.warn({ err, storyId, threshold }, "Milestone claim update failed"); return { rows: [] }; }) as unknown as { rows: { id: string }[] };
-
-        if (claimResult?.rows?.length) {
-          // ── Step 3: Best-effort side-effects (non-critical — already rewarded above) ──
-
-          // Append milestone title to character traits (idempotent)
-          db.execute(sql`
-            UPDATE character
-            SET traits = CASE
-              WHEN traits @> ${JSON.stringify([mData.titleName])}::jsonb THEN traits
-              ELSE traits || ${JSON.stringify([mData.titleName])}::jsonb
-            END
-            WHERE user_id = ${updated.userId}
-          `).catch(err => req.log.warn({ err }, "Failed to append milestone title to traits"));
-
-          // 500-milestone: grant profile shimmer cosmetic (free — no currency spent)
-          if (threshold === 500) {
-            db.insert(userPurchasesTable)
-              .values({ userId: updated.userId, itemId: 'shimmer_profile', itemName: 'Profile Shimmer', starsSpent: 0, auraSpent: 0, shardsSpent: 0 })
-              .onConflictDoNothing()
-              .catch(err => req.log.warn({ err }, "Failed to grant shimmer cosmetic"));
-          }
-
-          // Send milestone notification to creator so they can open the story and see the modal
+        if (claimedThreshold) {
+          // Notifications fire OUTSIDE the transaction — a push failure must never
+          // roll back the already-committed reward and milestone claim.
           notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "milestone", req).catch(() => null);
 
           // Track the highest newly claimed threshold for the response payload
