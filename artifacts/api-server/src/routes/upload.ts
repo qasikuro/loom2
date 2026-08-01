@@ -12,10 +12,11 @@
  *   4. PNG with true alpha: palette-quantise instead of JPEG.
  */
 import { Router, type IRouter, type Request, type Response } from "express";
+import express from "express";
 import { z } from "zod";
 import sharp from "sharp";
 import multer from "multer";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
 
 const BUCKET_ID     = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
@@ -23,9 +24,55 @@ const MAX_DIM       = 1600;
 const SIZE_TARGET   = 200 * 1024;
 const QUALITY_STEPS = [82, 68, 52];
 
+// ── Per-user upload rate limiter (in-memory, 10 uploads / 60 s) ───────────────
+// Single-process server: an in-memory sliding window is sufficient and avoids
+// an extra DB round-trip on every upload.
+const UPLOAD_WINDOW_MS  = 60_000;
+const UPLOAD_LIMIT      = 10;
+const uploadTimestamps  = new Map<string, number[]>();
+
+function checkUploadRateLimit(userId: string): { allowed: boolean; retryAfterSeconds: number } {
+  const now   = Date.now();
+  const cutoff = now - UPLOAD_WINDOW_MS;
+  const times  = (uploadTimestamps.get(userId) ?? []).filter(t => t > cutoff);
+  if (times.length >= UPLOAD_LIMIT) {
+    const oldest = times[0];
+    const retryAfterSeconds = Math.ceil((oldest + UPLOAD_WINDOW_MS - now) / 1000);
+    uploadTimestamps.set(userId, times);
+    return { allowed: false, retryAfterSeconds };
+  }
+  times.push(now);
+  uploadTimestamps.set(userId, times);
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
+// ── Image magic-byte validation ───────────────────────────────────────────────
+// Checked before any Sharp processing to avoid feeding arbitrary data to libvips.
+const MAGIC_SIGNATURES: Array<{ bytes: number[]; mask?: number[]; label: string }> = [
+  { bytes: [0xFF, 0xD8, 0xFF],             label: "JPEG" },
+  { bytes: [0x89, 0x50, 0x4E, 0x47],      label: "PNG"  },
+  { bytes: [0x52, 0x49, 0x46, 0x46],      label: "WebP" }, // followed by WEBP at offset 8
+  { bytes: [0x47, 0x49, 0x46],            label: "GIF"  },
+];
+
+function isValidImageBuffer(buf: Buffer): boolean {
+  for (const sig of MAGIC_SIGNATURES) {
+    if (sig.bytes.every((b, i) => buf[i] === b)) {
+      // Extra check for WebP: bytes 8-11 must be "WEBP"
+      if (sig.label === "WebP") {
+        const webpMark = buf.slice(8, 12).toString("ascii");
+        return webpMark === "WEBP";
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+// ── Multer: 10 MB cap on multipart uploads (down from 50 MB) ─────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits:  { fileSize: 50 * 1024 * 1024 },
+  limits:  { fileSize: 10 * 1024 * 1024 },
 });
 
 const JsonUploadSchema = z.object({
@@ -43,6 +90,11 @@ async function processAndSave(
   if (!BUCKET_ID) {
     req.log.error("DEFAULT_OBJECT_STORAGE_BUCKET_ID is not set");
     return res.status(503).json({ error: "Storage not configured" });
+  }
+
+  // ── C-5: Validate magic bytes before touching Sharp ───────────────────────
+  if (!isValidImageBuffer(incoming)) {
+    return res.status(400).json({ error: "Unsupported file type. Please upload a JPEG, PNG, WebP, or GIF." });
   }
 
   try {
@@ -100,13 +152,27 @@ async function processAndSave(
 router.post(
   "/upload",
   requireAuth,
+  // ── C-4: Per-user rate limit (10 uploads / 60 s) ──────────────────────────
+  (req, res, next) => {
+    const userId = getUserId(req);
+    const { allowed, retryAfterSeconds } = checkUploadRateLimit(userId);
+    if (!allowed) {
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      return res.status(429).json({
+        error: "Too many uploads. Please wait before uploading again.",
+        retryAfterSeconds,
+      });
+    }
+    next();
+  },
+  // ── C-2: 10 MB JSON body parser scoped to this route only ─────────────────
   (req, res, next) => {
     const ct = req.headers["content-type"] ?? "";
     if (ct.startsWith("multipart/")) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       upload.single("file")(req as any, res as any, next);
     } else {
-      next();
+      express.json({ limit: "10mb" })(req, res, next);
     }
   },
   async (req: Request, res: Response) => {
