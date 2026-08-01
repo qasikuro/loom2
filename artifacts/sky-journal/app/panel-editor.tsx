@@ -411,7 +411,9 @@ export default function PanelEditorScreen() {
       setUploadError(msg);
       setFailedPanels(prev => { const m = new Map(prev); m.set(idx, croppedUri); return m; });
     } finally {
-      setUploadingSet(new Set());
+      // C-6: Remove only this panel's index from the uploading set so concurrent
+      // uploads from pickPanelImage are not accidentally cleared.
+      setUploadingSet(prev => { const s = new Set(prev); s.delete(idx); return s; });
     }
   }
 

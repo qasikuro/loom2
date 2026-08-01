@@ -1339,8 +1339,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Journal entries ────────────────────────────────────────────────────────
 
   const addJournalEntry = useCallback(async (entry: JournalEntry): Promise<void> => {
+    // C-6: Reject local file:// URIs — they are never valid server URLs and
+    // would cause broken images for every device that loads this entry.
+    const safeImageUri = entry.imageUri?.startsWith('file://') ? null : (entry.imageUri ?? null);
+
+    const safeEntry = { ...entry, imageUri: safeImageUri ?? undefined };
+
     setJournalEntries(prev => {
-      const updated = [entry, ...prev.filter(e => e.id !== entry.id)];
+      const updated = [safeEntry, ...prev.filter(e => e.id !== entry.id)];
       AsyncStorage.setItem('journal_v2', JSON.stringify(updated));
       return updated;
     });
@@ -1350,13 +1356,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         '/journal-entries', {
           method: 'POST',
           body:   JSON.stringify({
-            id:         entry.id,
-            date:       entry.date,
-            type:       entry.type,
-            text:       entry.text,
-            mood:       entry.mood,
-            imageUri:   entry.imageUri   ?? null,
-            friendName: entry.friendName ?? null,
+            id:         safeEntry.id,
+            date:       safeEntry.date,
+            type:       safeEntry.type,
+            text:       safeEntry.text,
+            mood:       safeEntry.mood,
+            imageUri:   safeImageUri,
+            friendName: safeEntry.friendName ?? null,
           }),
         },
       );
@@ -1369,13 +1375,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       import('@/utils/xpFlash').then(m => m.fireXPFlash('Memory grows in the night sky')).catch(() => {});
     } catch {
       const retryBody = JSON.stringify({
-        id:         entry.id,
-        date:       entry.date,
-        type:       entry.type,
-        text:       entry.text,
-        mood:       entry.mood,
-        imageUri:   entry.imageUri   ?? null,
-        friendName: entry.friendName ?? null,
+        id:         safeEntry.id,
+        date:       safeEntry.date,
+        type:       safeEntry.type,
+        text:       safeEntry.text,
+        mood:       safeEntry.mood,
+        imageUri:   safeImageUri,
+        friendName: safeEntry.friendName ?? null,
       });
       showToastGlobal("Entry saved locally — couldn't sync to server", 'warning', () => {
         apiFetch('/journal-entries', { method: 'POST', body: retryBody }).catch(() => null);
@@ -1507,21 +1513,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Outfits ────────────────────────────────────────────────────────────────
 
   const addOutfit = useCallback((outfit: Outfit) => {
+    // C-6: Strip local file:// URIs — they cannot be resolved by other devices.
+    const safeImageUri = outfit.imageUri?.startsWith('file://') ? null : (outfit.imageUri ?? null);
+    const safeOutfit   = { ...outfit, imageUri: safeImageUri ?? undefined };
+
     writeFetchTimestamps({ outfits: 0 }).catch(() => null);
     setOutfits(prev => {
-      const updated = [outfit, ...prev.filter(o => o.id !== outfit.id)];
+      const updated = [safeOutfit, ...prev.filter(o => o.id !== outfit.id)];
       AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));
       return updated;
     });
     const outfitBody = JSON.stringify({
-      id:          outfit.id,
-      date:        outfit.date,
-      name:        outfit.name,
-      description: outfit.description,
-      story:       outfit.story ?? '',
-      imageUri:    outfit.imageUri ?? null,
-      tags:        outfit.tags,
-      isPublic:    outfit.isPublic,
+      id:          safeOutfit.id,
+      date:        safeOutfit.date,
+      name:        safeOutfit.name,
+      description: safeOutfit.description,
+      story:       safeOutfit.story ?? '',
+      imageUri:    safeImageUri,
+      tags:        safeOutfit.tags,
+      isPublic:    safeOutfit.isPublic,
     });
     apiFetch('/outfits', { method: 'POST', body: outfitBody })
     .then(() => {
