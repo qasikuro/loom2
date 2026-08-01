@@ -22,11 +22,18 @@ import {
 } from "./generated/api";
 
 // Passthrough schemas for fetch boundaries.
-// ApiCharacterSchema uses .passthrough() to preserve server-side extras not yet
-// described in the OpenAPI spec (username, avatarUri, isGuide, etc.).
+// ApiCharacterSchema uses .partial().passthrough():
+//   - .partial() — makes all generated fields optional so the schema does not
+//     fail when the server omits fields the OpenAPI spec invented (e.g. `id`).
+//     The character table has no numeric `id` — its primary key is `userId`
+//     (text). Without .partial() every character fetch fails Zod validation and
+//     parseOrDefault silently falls back to DEFAULT_CHARACTER, wiping the user's
+//     saved name, avatar, username, etc. on every fresh API load.
+//   - .passthrough() — preserves server-side extras not yet in the spec
+//     (username, avatarUri, isGuide, constellationType, …).
 // Array schemas use the base schemas — strip mode is fine at item level; extras
 // logged as mismatch and never reach mapper functions.
-export const ApiCharacterSchema = GetCharacterResponse.passthrough();
+export const ApiCharacterSchema = GetCharacterResponse.partial().passthrough();
 export const ApiJournalEntriesSchema = ListJournalEntriesResponse;
 export const ApiStoriesSchema = ListStoriesResponse;
 export const ApiOutfitsSchema = ListOutfitsResponse;
