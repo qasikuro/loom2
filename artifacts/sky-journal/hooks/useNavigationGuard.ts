@@ -58,7 +58,7 @@ export function useNavigationGuard(
   // inside the callback to handle the markSaved() → router.back() fast-path:
   // if markSaved() was called between the last render and this callback, the
   // ref is already true even though the rendered boolean was still true.
-  usePreventRemove(!confirmingRef.current && isDirty, ({ data }) => {
+  usePreventRemove(!confirmingRef.current && isDirty, ({ data }: { data: { action: Parameters<typeof navigation.dispatch>[0] } }) => {
     if (confirmingRef.current) {
       // markSaved() was called just before the navigation; let it through.
       // We do NOT reset the flag here: React Navigation may re-invoke this

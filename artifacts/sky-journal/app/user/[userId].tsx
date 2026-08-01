@@ -378,7 +378,10 @@ interface PublicProfile {
   activeTitle:    string | null;
   intention:      string | null;
   intentionDate:  string | null;
+  stars:          number; // lifetimeStars — never decreases
 }
+
+const XP_PER_LEVEL = 300;
 
 interface PublicStory {
   id:             string;
@@ -409,11 +412,13 @@ export default function UserProfileScreen() {
   const { userId: meId }    = useAuth();
   const { followingIds, followUser, unfollowUser } = useApp();
 
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
-  const [stories, setStories] = useState<PublicStory[]>([]);
-  const [outfits, setOutfits] = useState<PublicOutfit[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [profile,      setProfile]      = useState<PublicProfile | null>(null);
+  const [stories,      setStories]      = useState<PublicStory[]>([]);
+  const [outfits,      setOutfits]      = useState<PublicOutfit[]>([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState<string | null>(null);
+  const [storiesError, setStoriesError] = useState(false);
+  const [outfitsError, setOutfitsError] = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
@@ -427,35 +432,63 @@ export default function UserProfileScreen() {
   const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 40;
   const bannerH   = topPad + 230;
 
+  function runEnterAnimation() {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1, duration: 450,
+        useNativeDriver: true, easing: Easing.out(Easing.quad),
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0, tension: 50, friction: 9, useNativeDriver: true,
+      }),
+      Animated.spring(scaleAnim, {
+        toValue: 1, tension: 55, friction: 9, useNativeDriver: true,
+      }),
+    ]).start();
+  }
+
+  async function loadStories() {
+    setStoriesError(false);
+    try {
+      const stors = await apiFetch<PublicStory[]>(`/users/${userId}/stories`);
+      setStories(stors);
+    } catch {
+      setStoriesError(true);
+    }
+  }
+
+  async function loadOutfits() {
+    setOutfitsError(false);
+    try {
+      const outs = await apiFetch<PublicOutfit[]>(`/users/${userId}/outfits`);
+      setOutfits(outs);
+    } catch {
+      setOutfitsError(true);
+    }
+  }
+
   useEffect(() => {
     if (!userId) return;
     (async () => {
-      try {
-        const [prof, stors, outs] = await Promise.all([
-          apiFetch<PublicProfile>(`/users/${userId}`),
-          apiFetch<PublicStory[]>(`/users/${userId}/stories`),
-          apiFetch<PublicOutfit[]>(`/users/${userId}/outfits`),
-        ]);
-        setProfile(prof);
-        setStories(stors);
-        setOutfits(outs);
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1, duration: 450,
-            useNativeDriver: true, easing: Easing.out(Easing.quad),
-          }),
-          Animated.spring(slideAnim, {
-            toValue: 0, tension: 50, friction: 9, useNativeDriver: true,
-          }),
-          Animated.spring(scaleAnim, {
-            toValue: 1, tension: 55, friction: 9, useNativeDriver: true,
-          }),
-        ]).start();
-      } catch {
+      const [profResult, storsResult, outsResult] = await Promise.allSettled([
+        apiFetch<PublicProfile>(`/users/${userId}`),
+        apiFetch<PublicStory[]>(`/users/${userId}/stories`),
+        apiFetch<PublicOutfit[]>(`/users/${userId}/outfits`),
+      ]);
+
+      if (profResult.status === 'rejected') {
         setError('Could not load this profile.');
-      } finally {
         setLoading(false);
+        return;
       }
+
+      setProfile(profResult.value);
+      setStories(storsResult.status === 'fulfilled' ? storsResult.value : []);
+      setStoriesError(storsResult.status === 'rejected');
+      setOutfits(outsResult.status === 'fulfilled' ? outsResult.value : []);
+      setOutfitsError(outsResult.status === 'rejected');
+      setLoading(false);
+      runEnterAnimation();
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -590,6 +623,28 @@ export default function UserProfileScreen() {
               ✦ {profile.activeTitle}
             </Text>
           ) : null}
+
+          {/* Level + XP progress */}
+          {(() => {
+            const xp        = profile.stars ?? 0;
+            const level     = Math.max(1, Math.floor(xp / XP_PER_LEVEL) + 1);
+            const xpPct     = (xp % XP_PER_LEVEL) / XP_PER_LEVEL;
+            return (
+              <View style={{ marginTop: 6, gap: 4 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: aura.accent + '22', borderWidth: 1, borderColor: aura.accent + '44' }}>
+                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: aura.accent, letterSpacing: 0.4 }}>Lv {level}</Text>
+                  </View>
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)' }}>
+                    {xp % XP_PER_LEVEL} / {XP_PER_LEVEL} XP
+                  </Text>
+                </View>
+                <View style={{ height: 3, borderRadius: 2, backgroundColor: aura.accent + '22', overflow: 'hidden' }}>
+                  <View style={{ height: '100%', width: `${Math.round(xpPct * 100)}%` as `${number}%`, borderRadius: 2, backgroundColor: aura.accent + 'AA' }} />
+                </View>
+              </View>
+            );
+          })()}
 
           {/* Today's intention (only shown if set today) */}
           {profile.intention && profile.intentionDate && (() => {
@@ -822,7 +877,23 @@ export default function UserProfileScreen() {
           )}
 
           {/* ── OTHER OUTFITS horizontal row ──────────────────────── */}
-          {outfits.length > 0 && (
+          {outfitsError && (
+            <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>Outfits unavailable</Text>
+                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>Couldn't load outfits right now</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.inlineRetryBtn, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}
+                onPress={loadOutfits}
+                activeOpacity={0.75}
+              >
+                <Icon name="refresh-cw" size={12} color={aura.accent} />
+                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!outfitsError && outfits.length > 0 && (
             <View style={styles.hSection}>
               <View style={styles.hSectionHeader}>
                 <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Other Outfits</Text>
@@ -897,7 +968,23 @@ export default function UserProfileScreen() {
           )}
 
           {/* ── STORIES horizontal row ─────────────────────────────── */}
-          {stories.length > 0 && (
+          {storiesError && (
+            <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>Stories unavailable</Text>
+                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>Couldn't load stories right now</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.inlineRetryBtn, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}
+                onPress={loadStories}
+                activeOpacity={0.75}
+              >
+                <Icon name="refresh-cw" size={12} color={aura.accent} />
+                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!storiesError && stories.length > 0 && (
             <View style={styles.hSection}>
               <View style={styles.hSectionHeader}>
                 <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Stories</Text>
@@ -954,8 +1041,8 @@ export default function UserProfileScreen() {
             </View>
           )}
 
-          {/* Empty state when both are empty */}
-          {stories.length === 0 && outfits.length === 0 && !profile.activeOutfit && (
+          {/* Empty state when both are empty (and no errors showing) */}
+          {stories.length === 0 && outfits.length === 0 && !profile.activeOutfit && !storiesError && !outfitsError && (
             <View style={[styles.emptyState, { borderColor: aura.accent + '18' }]}>
               <Text style={{ fontSize: 24 }}>{aura.particle}</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
@@ -1240,6 +1327,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderStyle: 'dashed',
   },
   emptyText: { fontSize: 13, fontFamily: 'Satoshi-Regular', textAlign: 'center' },
+
+  // Inline section error
+  inlineError: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 14, borderRadius: 16, borderWidth: 1,
+  },
+  inlineErrorTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  inlineErrorSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  inlineRetryBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 12, borderWidth: 1,
+  },
+  inlineRetryText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   reportLink: {
     flexDirection: 'row', alignItems: 'center', gap: 5,

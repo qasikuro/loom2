@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable } from "@workspace/db";
 import { and, count, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -156,9 +156,11 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         intention:      characterTable.intention,
         intentionDate:  characterTable.intentionDate,
         activeTitle:    constellationProgressTable.activeTitle,
+        lifetimeStars:  userRewardsTable.lifetimeStars,
       })
         .from(characterTable)
         .leftJoin(constellationProgressTable, eq(constellationProgressTable.userId, characterTable.userId))
+        .leftJoin(userRewardsTable, eq(userRewardsTable.userId, characterTable.userId))
         .where(eq(characterTable.userId, targetId))
         .limit(1),
 
@@ -232,6 +234,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       activeTitle:   char.activeTitle   ?? null,
       intention:     char.intention     ?? null,
       intentionDate: char.intentionDate ?? null,
+      stars:         char.lifetimeStars  ?? 0,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get user profile");
