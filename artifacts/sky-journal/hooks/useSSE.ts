@@ -122,10 +122,20 @@ export function useSSE(
       const decoder = new TextDecoder();
       let buf = '';
 
+      // L-2: Cap the accumulated buffer to 1 MB. If the server sends a burst
+      // of malformed (non-JSON) data the buffer grows until this limit and
+      // the connection is reset, preventing unbounded memory use on Hermes.
+      const SSE_BUF_MAX = 1_024 * 1_024;
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buf += decoder.decode(value, { stream: true });
+        if (buf.length > SSE_BUF_MAX) {
+          console.warn('[useSSE] buffer overrun — resetting and reconnecting');
+          buf = '';
+          break; // triggers the reconnect backoff below
+        }
         const [events, leftover] = parseSSEChunk(buf);
         buf = leftover;
         for (const ev of events) {
