@@ -3,7 +3,7 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -25,6 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/hooks/useColors';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { DraftStore } from '@/utils/draftStore';
 import type { BubbleStyle, PanelOverlay, StoryPanel } from '@/context/AppContext';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
@@ -264,6 +265,33 @@ export default function PanelEditorScreen() {
 
   const [panels,      setPanels]      = useState<StoryPanel[]>(initPanels);
   const [layoutKey,   setLayoutKey]   = useState<string>(() => defaultLayoutKey(initPanels.length));
+
+  // Snapshot the initial draft state once at mount so we can compare current
+  // edits against it.  useState initializer runs only on the first render,
+  // which is exactly when DraftStore.get() reflects the draft as it was set
+  // by chapter-editor before pushing to panel-editor.
+  const [initSnapshot] = useState(() => ({
+    panelsJson: JSON.stringify(draft?.panels ?? []),
+    layoutKey:  defaultLayoutKey((draft?.panels ?? []).length),
+  }));
+
+  // Dirty when the current layout or panel content differs from what was in
+  // the draft when the editor opened.  Covers: imageUri, text, bubble text,
+  // background preset, sticker overlays, and layout/panel-count changes.
+  const isDirty =
+    layoutKey !== initSnapshot.layoutKey ||
+    JSON.stringify(panels) !== initSnapshot.panelsJson;
+
+  // Use the local navigation object so the BackButton's onPress routes back
+  // through the same navigator that usePreventRemove (inside useNavigationGuard)
+  // is registered on.  Using the global router.back() can target a parent
+  // navigator in nested stacks, bypassing the removal interception.
+  const navigation = useNavigation();
+
+  // onConfirmedDiscard runs only when the user explicitly taps "Discard".
+  const markSaved = useNavigationGuard(isDirty, () => DraftStore.discard());
+
+
   const [activeIdx,   setActiveIdx]   = useState(draft?.activePanelIndex ?? 0);
   const [selId,       setSelId]       = useState<string | null>(null);
   const [toolMode,    setToolMode]    = useState<'bubble' | 'text' | 'sticker' | null>(null);
@@ -532,6 +560,7 @@ export default function PanelEditorScreen() {
     if (uploadingSet.size > 0 || failedPanels.size > 0) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     DraftStore.save(layoutKey);
+    markSaved(); // allow the back-navigation without prompting
     router.back();
   }
 
@@ -601,7 +630,7 @@ export default function PanelEditorScreen() {
           style={styles.headerBtn}
           color="rgba(235,228,255,0.9)"
           size={20}
-          onPress={() => { DraftStore.discard(); router.back(); }}
+          onPress={() => navigation.goBack()}
         />
         <Text style={styles.headerTitle}>{t('create.editPanel')}</Text>
         <TouchableOpacity

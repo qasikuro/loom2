@@ -25,6 +25,7 @@ import { CompletionMoment } from '@/components/CompletionMoment';
 import { useApp, type JournalEntryType } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useSound } from '@/context/SoundContext';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 
 const MOODS = [
   { label: 'Hopeful',  icon: 'sun'     as const, color: '#C8A84B' },
@@ -111,6 +112,15 @@ export default function CreateJournalEntryScreen() {
   const [fontSize,        setFontSize]        = useState(16);
   const [entryDate,       setEntryDate]       = useState<Date>(today);
   const [showDatePicker,  setShowDatePicker]  = useState(false);
+
+  // Capture the mood that was in effect when the screen opened so that a
+  // pre-filled initialMood param counts as the baseline, not a dirty change.
+  const [moodBaseline] = useState(resolvedInitialMood ?? 'Peaceful');
+  const isDirty =
+    !!(text.trim() || imageUri || (entryType === 'friend' && friendName.trim()))
+    || mood !== moodBaseline
+    || !isSameDay(entryDate, today);
+  const markSaved = useNavigationGuard(isDirty);
 
   const MIN_FONT = 12, MAX_FONT = 28;
   const sizeRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -515,7 +525,7 @@ export default function CreateJournalEntryScreen() {
           </Text>
         </View>
       </KeyboardAwareScrollView>
-      <CompletionMoment visible={showCompletion} variant="journal" onFinish={() => router.back()} />
+      <CompletionMoment visible={showCompletion} variant="journal" onFinish={() => { markSaved(); router.back(); }} />
     </View>
   );
 }

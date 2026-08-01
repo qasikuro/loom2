@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 
 const MOODS = [
   { label: 'Warm',      icon: 'sun'     as const, color: '#C8A84B' },
@@ -47,6 +48,9 @@ export default function CreateFriendLogScreen() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDirty = friendName.trim().length > 0 || note.trim().length > 0 || mood !== 'Warm';
+  const markSaved = useNavigationGuard(isDirty);
+
   // Build suggestion list from past friend entries + static suggestions
   const pastFriends = Array.from(
     new Set(journalEntries.filter(e => e.type === 'friend' && e.friendName).map(e => e.friendName!))
@@ -70,6 +74,7 @@ export default function CreateFriendLogScreen() {
       friendName: friendName.trim(),
     });
     setSaving(false);
+    markSaved();
     router.back();
   }
 

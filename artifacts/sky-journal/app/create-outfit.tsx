@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 
 const VIBE_TAGS = [
   { label: 'Casual',    color: '#78A8C8' },
@@ -97,6 +98,45 @@ export default function CreateOutfitScreen() {
   const [showSheet, setShowSheet]     = useState(false);
   const uploadProgress                = useRef(new Animated.Value(0)).current;
   const [cameraPermission, requestCameraPermission] = ImagePicker.useCameraPermissions();
+
+  // Use the local navigator so BackButton routes through the same navigator
+  // that usePreventRemove is registered on.
+  const navigation = useNavigation();
+
+  // Capture initial field values at mount so we can detect unsaved edits.
+  // For new outfits every field starts blank/default.  For edits we use the
+  // params that were passed in — changes from those values are "dirty".
+  const [initBaseline] = useState(() => ({
+    name:         params.editName        ?? '',
+    description:  params.editDescription ?? '',
+    story:        params.editStory       ?? '',
+    imageUri:     params.editImageUri    || undefined as string | undefined,
+    tags:         (() => {
+      try {
+        const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+        return all.filter((t: string) => !t.startsWith('vibe:')).sort().join(',');
+      } catch { return ''; }
+    })(),
+    vibe: (() => {
+      try {
+        const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
+        const vt = all.find((t: string) => t.startsWith('vibe:'));
+        return vt ? vt.slice(5) : null as string | null;
+      } catch { return null; }
+    })(),
+    isPublic:     params.editIsPublic !== 'false',
+  }));
+
+  const isDirty =
+    name        !== initBaseline.name         ||
+    description !== initBaseline.description  ||
+    story       !== initBaseline.story        ||
+    imageUri    !== initBaseline.imageUri     ||
+    selectedTags.slice().sort().join(',') !== initBaseline.tags ||
+    selectedVibe !== initBaseline.vibe        ||
+    isPublic    !== initBaseline.isPublic;
+
+  const markSaved = useNavigationGuard(isDirty);
 
   useEffect(() => {
     if (isEditing) {
@@ -179,6 +219,7 @@ export default function CreateOutfitScreen() {
   }
 
   function handleSave() {
+    if (uploading) return; // guard against the save button tap racing the upload
     if (!name.trim()) { setError(tr('outfit.needName')); return; }
     if (!imageUri)    { setError('Add a photo — every outfit deserves to be seen ✦'); return; }
     setError(null);
@@ -210,6 +251,7 @@ export default function CreateOutfitScreen() {
       });
     }
     setSaving(false);
+    markSaved();
     router.back();
   }
 
@@ -219,11 +261,11 @@ export default function CreateOutfitScreen() {
         <LinearGradient colors={['#E8E0F4', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
 
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-          <BackButton style={[styles.iconBtn, { backgroundColor: colors.muted }]} iconName="x" size={18} color={colors.foreground} />
+          <BackButton style={[styles.iconBtn, { backgroundColor: colors.muted }]} iconName="x" size={18} color={colors.foreground} onPress={() => navigation.goBack()} />
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')}</Text>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
-            onPress={handleSave} disabled={saving}
+            onPress={handleSave} disabled={saving || uploading}
           >
             <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
               {saving ? '...' : tr('outfit.saveOutfit')}

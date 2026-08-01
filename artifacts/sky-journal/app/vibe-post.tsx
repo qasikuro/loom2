@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  BackHandler,
   Dimensions,
   Easing,
   KeyboardAvoidingView,
@@ -18,6 +19,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import {
   FirstPublishOverlay,
   hasCompletedFirstPublish,
@@ -74,6 +76,23 @@ export default function VibePostScreen() {
   const [showCompletion,setShowCompletion] = useState(false);
 
   const slideAnim = useRef(new Animated.Value(0)).current;
+
+  const isDirty = text.trim().length > 0 || mood !== null || !isPublic;
+  const markSaved = useNavigationGuard(isDirty);
+
+  // Android hardware back: step back to mood picker at STEP_TEXT;
+  // at STEP_MOOD return false so navigation proceeds and beforeRemove fires.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (step === STEP_TEXT) {
+        setStep(STEP_MOOD);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [step]);
 
   const selectedMood = MOODS.find(m => m.id === mood);
   const accentColor  = selectedMood?.color ?? '#9B7FE8';
@@ -146,7 +165,7 @@ export default function VibePostScreen() {
 
       {/* Header */}
       <View style={[s.header, { paddingTop: topPad + 8 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity style={s.backBtn} onPress={step === STEP_TEXT ? () => setStep(STEP_MOOD) : () => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.76)" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
@@ -300,7 +319,8 @@ export default function VibePostScreen() {
         visible={showCompletion}
         variant="story"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onFinish={() => router.push('/(tabs)' as any)}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        onFinish={() => { markSaved(); router.push('/(tabs)' as any); }}
       />
     </View>
   );

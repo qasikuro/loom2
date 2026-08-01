@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  BackHandler,
   Dimensions,
   Easing,
   KeyboardAvoidingView,
@@ -21,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
 import { persistImageUri } from '@/utils/persistImage';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import {
   FirstPublishOverlay,
   hasCompletedFirstPublish,
@@ -80,6 +82,23 @@ export default function QuickMomentScreen() {
   const pendingMoodRef    = useRef<string | null>(null);
   const pendingLineRef    = useRef<string>('');
 
+  const isDirty = !!imageUri || caption.trim().length > 0 || mood !== 'Dreamy' || !isPublic;
+  const markSaved = useNavigationGuard(isDirty);
+
+  // Android hardware back: step back within the flow at step > 0;
+  // at step 0 return false so navigation proceeds and beforeRemove fires.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (step > STEP_IMAGE) {
+        setStep(s => s - 1);
+        return true;
+      }
+      return false;
+    });
+    return () => sub.remove();
+  }, [step]);
+
   const currentMood = MOODS.find(m => m.id === mood)!;
   const accentColor = currentMood.color;
 
@@ -103,10 +122,16 @@ export default function QuickMomentScreen() {
     const localUri = res.assets[0].uri;
     setImageUri(localUri);
     setUploading(true);
+    setError(null);
     try {
       const serverUri = await persistImageUri(localUri);
       setImageUri(serverUri);
-    } catch { /* keep local uri */ }
+    } catch {
+      // Upload failed — clear the image so the user must pick again; a
+      // local file:// URI is never valid for other devices.
+      setImageUri(null);
+      setError('Image upload failed — please choose the photo again');
+    }
     finally { setUploading(false); }
     goToStep(STEP_CAPTION);
   }
@@ -171,7 +196,7 @@ export default function QuickMomentScreen() {
 
       {/* Header */}
       <View style={[s.header, { paddingTop: topPad + 8 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity style={s.backBtn} onPress={step > STEP_IMAGE ? () => setStep(s => s - 1) : () => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.76)" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
@@ -339,9 +364,9 @@ export default function QuickMomentScreen() {
               )}
 
               <TouchableOpacity
-                style={[s.publishBtn, { backgroundColor: accentColor, opacity: posting ? 0.65 : 1 }]}
+                style={[s.publishBtn, { backgroundColor: accentColor, opacity: (posting || uploading) ? 0.65 : 1 }]}
                 onPress={handlePublish}
-                disabled={posting}
+                disabled={posting || uploading}
                 activeOpacity={0.88}
               >
                 <Icon name="send" size={17} color="#fff" />
@@ -367,7 +392,7 @@ export default function QuickMomentScreen() {
         visible={showCompletion}
         variant="story"
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        onFinish={() => router.push('/(tabs)' as any)}
+        onFinish={() => { markSaved(); router.push('/(tabs)' as any); }}
       />
     </View>
   );

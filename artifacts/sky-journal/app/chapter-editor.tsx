@@ -2,7 +2,7 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CompletionMoment } from '@/components/CompletionMoment';
 import { useApp, type StoryPanel, type StoryPage } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { DraftStore } from '@/utils/draftStore';
 import { useTranslation } from 'react-i18next';
 import {
@@ -150,16 +151,39 @@ export default function ChapterEditorScreen() {
   const { editId, eventPrompt, eventMood } = useLocalSearchParams<{ editId?: string; eventPrompt?: string; eventMood?: string }>();
   const prevEditIdRef = useRef<string | null>(null);
 
+  // Snapshot of field values captured when an existing story loads.
+  // Stored in state (not a ref) so that setting it triggers a re-render and
+  // isDirty is re-evaluated immediately after the load effect runs.
+  // Null means new-story mode — use content-presence for dirty check instead.
+  type EditSnapshot = {
+    title: string; desc: string; mood: string; location: string; isPublic: boolean;
+    pagesJson: string;
+  };
+  const [editSnapshot, setEditSnapshot] = useState<EditSnapshot | null>(null);
+
   useEffect(() => {
     if (editId && editId !== prevEditIdRef.current) {
       const s = stories.find(st => st.id === editId);
       if (s) {
+        const loadedPages = s.pages?.length
+          ? s.pages
+          : [{ id: crypto.randomUUID(), layoutKey: s.pageLayoutKey ?? '1', panels: s.panels }];
         setTitle(s.chapterTitle);
         setDesc(s.description ?? '');
         setMood(s.mood);
         setLocation(s.location);
         setIsPublic(s.isPublic);
-        setPages(s.pages?.length ? s.pages : [{ id: crypto.randomUUID(), layoutKey: s.pageLayoutKey ?? '1', panels: s.panels }]);
+        setPages(loadedPages);
+        // Capture snapshot so isDirty compares against loaded values,
+        // not content presence (which would always be true for an existing story).
+        setEditSnapshot({
+          title:     s.chapterTitle,
+          desc:      s.description ?? '',
+          mood:      s.mood,
+          location:  s.location,
+          isPublic:  s.isPublic,
+          pagesJson: JSON.stringify(loadedPages),
+        });
       }
       prevEditIdRef.current = editId;
     } else if (!editId && prevEditIdRef.current) {
@@ -169,9 +193,38 @@ export default function ChapterEditorScreen() {
       setLocation('Daylight Prairie');
       setIsPublic(true);
       setPages([makePage()]);
+      setEditSnapshot(null);
       prevEditIdRef.current = null;
     }
   }, [editId, stories]);
+
+  // isDirty:
+  // • Edit mode  — compare each field against the snapshot captured at load.
+  // • New-story  — check content presence; empty fields are never dirty.
+  const isDirty = editSnapshot
+    ? (
+        title    !== editSnapshot.title    ||
+        desc     !== editSnapshot.desc     ||
+        mood     !== editSnapshot.mood     ||
+        location !== editSnapshot.location ||
+        isPublic !== editSnapshot.isPublic ||
+        JSON.stringify(pages) !== editSnapshot.pagesJson
+      )
+    : (
+        title.trim().length > 0 ||
+        desc.trim().length > 0 ||
+        mood !== 'Hopeful' ||
+        location !== 'Daylight Prairie' ||
+        !isPublic ||
+        pages.some(pg => pg.panels.some(
+          panel => panel.text.trim() || panel.bubbleText?.trim() || panel.imageUri || panel.bgPreset || (panel.overlays?.length ?? 0) > 0,
+        ))
+      );
+  // Use the local navigation object so the header back button routes through
+  // the same navigator that usePreventRemove is registered on, preventing a
+  // global router.back() from bypassing the guard in nested stacks.
+  const navigation = useNavigation();
+  const markSaved = useNavigationGuard(isDirty);
 
   // Pre-fill from event params (only for new stories, not edits)
   useEffect(() => {
@@ -314,6 +367,7 @@ export default function ChapterEditorScreen() {
         pages:          filledPages,
       });
       setPosting(false);
+      markSaved(); // allow navigation without prompting after a successful update
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace('/(tabs)/create' as any);
       return;
@@ -421,7 +475,7 @@ export default function ChapterEditorScreen() {
       {/* ── Header ─────────────────────────────────────────────── */}
       <View style={[c.header, { paddingTop: topPad + 10 }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => navigation.goBack()}
           style={c.navBtn}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
@@ -732,7 +786,7 @@ export default function ChapterEditorScreen() {
       />
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-      <CompletionMoment visible={showCompletion} variant="story" onFinish={() => router.push('/(tabs)' as any)} />
+      <CompletionMoment visible={showCompletion} variant="story" onFinish={() => { markSaved(); router.push('/(tabs)' as any); }} />
     </View>
   );
 }

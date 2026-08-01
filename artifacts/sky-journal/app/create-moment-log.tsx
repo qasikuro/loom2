@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 
 const MOODS = [
   { label: 'Hopeful',  icon: 'sun'     as const, color: '#C8A84B' },
@@ -53,6 +54,9 @@ export default function CreateMomentLogScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const isDirty = text.trim().length > 0 || mood !== 'Peaceful';
+  const markSaved = useNavigationGuard(isDirty);
+
   const prompt = PROMPTS[new Date().getDate() % PROMPTS.length];
 
   function handleSave() {
@@ -68,6 +72,7 @@ export default function CreateMomentLogScreen() {
       mood,
     });
     setSaving(false);
+    markSaved();
     router.back();
   }
 

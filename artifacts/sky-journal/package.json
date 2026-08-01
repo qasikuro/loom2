@@ -63,6 +63,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@react-navigation/native": "7.2.2",
     "@workspace/api-zod": "workspace:*",
     "expo-av": "^16.0.8",
     "expo-build-properties": "^57.0.6",

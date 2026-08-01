@@ -400,13 +400,15 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
         let claimedThreshold = false;
         try {
           await db.transaction(async (tx) => {
-            // Step 1: Grant reward. If already granted (unique refId), this is a no-op.
-            // We call grantReward outside tx so its own internal transaction runs as
-            // a nested savepoint — if it throws the outer tx rolls back too.
+            // Step 1: Grant reward inside the outer transaction so the reward
+            // write and the milestone claim are atomic.  If already granted
+            // (unique refId), this is a no-op.  Errors propagate and roll back
+            // the whole transaction.
             await grantReward(
               updated.userId, "witness_milestone",
               `${storyId}:${threshold}`,
               { aura: mData.aura, stars: mData.stars },
+              tx, // ← participate in the outer transaction
             );
 
             // Step 2: Atomically mark milestone as claimed using jsonb containment.

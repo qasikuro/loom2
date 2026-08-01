@@ -1427,33 +1427,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // ── Stories ────────────────────────────────────────────────────────────────
 
   const addStory = useCallback(async (story: Story): Promise<boolean> => {
-    // C-6: Strip file:// URIs from panel images before the API body is built.
-    // file:// URIs are device-local paths that are never resolvable by the
-    // server or other devices. They appear when a panel upload fails and the
-    // optimistic local preview URI was never replaced with a server URL.
-    const safePanels = story.panels.map(p => ({
-      ...p,
-      imageUri: p.imageUri?.startsWith('file://') ? null : (p.imageUri ?? null),
-    }));
-    const safePages = story.pages?.map(page => ({
-      ...page,
-      panels: page.panels.map(p => ({
+    // C-6: Strip local file:// URIs from panels and pages before any network or
+    // persistence call.  Local URIs are device-specific and cannot be resolved
+    // by the server or other clients, so publishing them produces permanently
+    // broken images.
+    function sanitizePanels(panels: Story['panels']) {
+      return panels.map(p => ({
         ...p,
-        imageUri: p.imageUri?.startsWith('file://') ? null : (p.imageUri ?? null),
-      })),
-    })) ?? null;
+        imageUri: p.imageUri?.startsWith('file://') ? undefined : p.imageUri,
+      }));
+    }
+    const sanitizedPanels = sanitizePanels(story.panels);
+    const sanitizedPages  = story.pages?.map(page => ({
+      ...page,
+      panels: sanitizePanels(page.panels),
+    }));
 
     const storyPostBody = JSON.stringify({
       id:            story.id,
       date:          story.date,
       chapterTitle:  story.chapterTitle,
       description:   story.description ?? '',
-      panels:        safePanels,
+      panels:        sanitizedPanels,
       mood:          story.mood,
       location:      story.location,
       isPublic:      story.isPublic,
       pageLayoutKey: story.pageLayoutKey ?? null,
-      pages:         safePages,
+      pages:         sanitizedPages ?? null,
     });
 
     // Optimistic local update
