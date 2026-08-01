@@ -11,11 +11,13 @@ import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
+import { publishableKeyFromHost } from "@clerk/shared/keys";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import {
   CLERK_PROXY_PATH,
   clerkProxyMiddleware,
+  getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import { objectStorageClient } from "./lib/objectStorage";
 
@@ -142,7 +144,16 @@ app.get("/api/images/:filename", async (req: Request, res: Response) => {
 // redact list does not strip them.
 //
 // REMOVE these wrappers once the token-rejection root cause is confirmed.
-const clerkMw = clerkMiddleware();
+// Resolve the publishable key from the incoming request host so the same
+// server binary can serve both dev (pk_test) and prod (pk_live) — Replit
+// automatically swaps the key at publish time, and publishableKeyFromHost
+// maps the incoming Host header to the correct Clerk instance.
+const clerkMw = clerkMiddleware((req) => ({
+  publishableKey: publishableKeyFromHost(
+    getClerkProxyHost(req) ?? "",
+    process.env.CLERK_PUBLISHABLE_KEY,
+  ),
+}));
 app.use((req: Request, res: Response, next: NextFunction) => {
   // Step 1 — request received, before Clerk.
   const authHeader = req.headers.authorization as string | undefined;
