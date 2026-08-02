@@ -186,3 +186,17 @@ uri = "file://attached_assets/production-failure-audit-2026-08-01.md"
 type = "text"
 title = "GameJo — Production Failure Audit (August 1, 2026)"
 description = "22 verified findings ranked by severity. 6 Critical issues that can crash the server or corrupt data, 4 High issues causing silent data loss, 8 Medium reliability gaps, and 4 Low edge cases — with file references and a recommended fix order."
+
+[[outputs]]
+id = "s30XxaLKbdlNxK0ukVrtB"
+uri = "file://admin-panel-gap-analysis.md"
+type = "text"
+title = "GameJo Admin Panel — Gap Analysis"
+description = "Full breakdown of what's built, what's missing, estimated hours, cost per section, and 3-phase build order."
+
+[[outputs]]
+id = "7xMpCxkpZc2M6759tgePN"
+uri = "file://gamejo-admin-gap-analysis.html"
+type = "unspecified"
+title = "GameJo Admin Panel — Gap Analysis"
+description = "What's built, what's missing, hours, cost per section, and 3-phase build plan."
