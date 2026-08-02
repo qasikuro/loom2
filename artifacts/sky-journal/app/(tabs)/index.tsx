@@ -1520,16 +1520,6 @@ export default function HomeScreen() {
                   <Text style={s.heroPillTxt}>{constellation.quietStreak} day streak</Text>
                 </TouchableOpacity>
               )}
-              {rewardBalance && (
-                <TouchableOpacity
-                  style={s.heroPillStar}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/shop'); }}
-                  activeOpacity={0.78}
-                >
-                  <Text style={{ fontSize: 12, lineHeight: 15 }}>⭐</Text>
-                  <Text style={s.heroPillTxt}>{rewardBalance.stars}/6 stars</Text>
-                </TouchableOpacity>
-              )}
             </View>
           </View>
 
@@ -1729,71 +1719,6 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
-        {/* ══════════════════════════════════════════════════
-            STATS GRID — constellation + season side by side
-        ══════════════════════════════════════════════════ */}
-        <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
-          <View style={s.statsGrid}>
-            {constellation && (
-              <TouchableOpacity style={s.statsGridCard} onPress={() => router.push('/constellation')} activeOpacity={0.85}>
-                <LinearGradient colors={['rgba(168,136,248,0.14)', 'rgba(96,168,248,0.06)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-                <Text style={s.statsGridLabel}>Your Constellation</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginVertical: 8 }}>
-                  {MINI_STARS.map(star => (
-                    <View key={star.key} style={[s.statsGridStar, { backgroundColor: constellation.unlockedStars.includes(star.key) ? star.color : 'rgba(255,255,255,0.09)' }]} />
-                  ))}
-                </View>
-                {nextStar && (
-                  <>
-                    <Text style={[s.statsGridSub, { color: nextStar.color }]}>{nextStar.label} Star</Text>
-                    <View style={s.statsGridTrack}>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      <View style={[s.statsGridFill, { width: `${Math.round(nextStarPct * 100)}%` as any, backgroundColor: nextStar.color }]} />
-                    </View>
-                    <Text style={s.statsGridHint}>{nextStarCount < nextStar.threshold ? `${nextStar.threshold - nextStarCount} more ${nextStar.unit}` : 'Ready!'}</Text>
-                  </>
-                )}
-                <Text style={s.statsGridCTA}>Continue Journey →</Text>
-              </TouchableOpacity>
-            )}
-            {(() => {
-              const month = new Date().getMonth();
-              const sd    = SEASON_BY_MONTH[month]!;
-              const th    = activeEvent ? (EVENT_THEME[activeEvent.theme] ?? null) : null;
-              const color = th?.color ?? sd.color;
-              const icon  = th?.icon  ?? sd.icon;
-              const name  = activeEvent?.title ?? sd.name;
-              const bgA   = th ? th.bgStart : sd.bgA;
-              const bgB   = th ? th.bgEnd   : sd.bgB;
-              const end   = new Date(); end.setMonth(sd.endMonth, 1); end.setHours(0,0,0,0);
-              if (end <= new Date()) end.setFullYear(end.getFullYear() + 1);
-              const daysLeft = Math.max(1, Math.ceil((end.getTime() - Date.now()) / 86400000));
-              const stars = constellation?.unlockedStars.length ?? 0;
-              const pct   = stars / 6;
-              return (
-                <TouchableOpacity style={s.statsGridCard} onPress={() => activeEvent ? setShowEventSheet(true) : router.push('/season')} activeOpacity={0.84}>
-                  <LinearGradient colors={[bgA, bgB, 'transparent'] as unknown as [string, string, ...string[]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                    <Text style={{ fontSize: 13 }}>{icon}</Text>
-                    <Text style={{ fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.1, color, textTransform: 'uppercase' as const }}>Current Season</Text>
-                  </View>
-                  <View style={[s.statsGridPill, { backgroundColor: `${color}1E` }]}>
-                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color }}>{daysLeft}d left</Text>
-                  </View>
-                  <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EEE8FF', letterSpacing: 0.1, marginVertical: 8, lineHeight: 20 }} numberOfLines={2}>{name}</Text>
-                  <View style={{ height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden', marginBottom: 5 }}>
-                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <View style={{ height: 4, borderRadius: 2, width: `${Math.round(pct * 100)}%` as any, backgroundColor: color }} />
-                  </View>
-                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: `${color}AA`, marginBottom: 8 }}>{stars}/6 stars collected</Text>
-                  <View style={[s.statsGridCTAPill, { borderColor: `${color}45` }]}>
-                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color, letterSpacing: 0.3 }}>Continue Journey →</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })()}
-          </View>
-        </Animated.View>
 
         {/* ══════════════════════════════════════════════════
             CONSTELLATION INTRO — one-time, first-run hint
