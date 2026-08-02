@@ -238,6 +238,129 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   });
 });
 
+// ── Landing page ───────────────────────────────────────────────────────────────
+const LANDING_HTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GameJo — The friendships were real.</title>
+<meta name="description" content="GameJo is the social home for people who found their people inside a game. Keep what mattered. Tell it well."/>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#0b0d1a;
+    color:#e8e0d5;
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    position:relative;
+  }
+  canvas#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+  nav{
+    position:fixed;top:0;left:0;right:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:24px 40px;z-index:10;
+  }
+  .logo{font-family:'Playfair Display',serif;font-size:1.4rem;font-weight:700;color:#e8e0d5;letter-spacing:-0.5px}
+  .logo span{color:#c87941}
+  .badge{
+    font-size:0.7rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;
+    color:#c87941;display:flex;align-items:center;gap:6px;
+  }
+  .badge::before{content:'✦';font-size:0.6rem}
+  main{
+    position:relative;z-index:5;
+    display:flex;flex-direction:column;align-items:center;
+    text-align:center;padding:0 24px;max-width:680px;
+  }
+  h1{
+    font-family:'Playfair Display',serif;
+    font-size:clamp(2.4rem,7vw,4.2rem);
+    font-weight:400;line-height:1.12;
+    color:#e8e0d5;margin-bottom:0.1em;
+  }
+  h1 em{
+    display:block;font-style:italic;color:#c87941;
+    font-size:clamp(2.6rem,7.5vw,4.4rem);
+  }
+  p.sub{
+    margin-top:28px;
+    font-size:1rem;font-weight:300;line-height:1.7;
+    color:#b0a898;max-width:480px;
+  }
+  .cta-area{margin-top:44px;display:flex;flex-direction:column;align-items:center;gap:12px}
+  a.download-btn{
+    display:inline-flex;align-items:center;gap:10px;
+    background:#c87941;color:#fff;
+    font-family:'Inter',sans-serif;font-size:1rem;font-weight:500;
+    padding:16px 36px;border-radius:50px;
+    text-decoration:none;letter-spacing:0.01em;
+    box-shadow:0 4px 32px rgba(200,121,65,0.35);
+    transition:transform 0.18s ease,box-shadow 0.18s ease;
+  }
+  a.download-btn:hover{transform:translateY(-2px);box-shadow:0 8px 40px rgba(200,121,65,0.5)}
+  a.download-btn svg{width:18px;height:18px;fill:currentColor}
+  .platform-note{font-size:0.78rem;color:#6b6358;letter-spacing:0.04em;text-transform:uppercase}
+  .orb{
+    position:fixed;width:320px;height:320px;border-radius:50%;
+    background:radial-gradient(circle,rgba(200,121,65,0.18) 0%,transparent 70%);
+    left:-80px;bottom:-80px;z-index:0;pointer-events:none;
+    animation:pulse 6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{transform:scale(1);opacity:0.7}50%{transform:scale(1.15);opacity:1}}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+<div class="orb"></div>
+<nav>
+  <div class="logo">game<span>jo</span></div>
+  <div class="badge">Now Available</div>
+</nav>
+<main>
+  <h1>The friendships were real.<em>So are the memories.</em></h1>
+  <p class="sub">GameJo is the social home for people who found their people inside a game. Keep what mattered. Tell it well. Read the stories of everyone still out there flying.</p>
+  <div class="cta-area">
+    <a class="download-btn" href="https://drive.google.com/file/d/1SfVduWZ-0PtBksrkYe-R2WQ4Y-Z6lS44/view?usp=drivesdk" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm-1 14.17l-3.59-3.58 1.42-1.42L11 13.34V7h2v6.34l2.17-2.17 1.42 1.42L13 16.17l-1 1z"/></svg>
+      Download Now
+    </a>
+    <span class="platform-note">Android only</span>
+  </div>
+</main>
+<script>
+  const c=document.getElementById('stars'),ctx=c.getContext('2d');
+  let W,H,stars=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;init()}
+  function init(){stars=[];for(let i=0;i<180;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+0.2,o:Math.random(),s:Math.random()*0.005+0.001,d:Math.random()>0.5?1:-1})}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    for(const s of stars){
+      s.o+=s.s*s.d;
+      if(s.o>1||s.o<0)s.d*=-1;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=\`rgba(232,224,213,\${s.o})\`;ctx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);resize();draw();
+</script>
+</body>
+</html>`;
+
+app.get("/", (_req: Request, res: Response) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.send(LANDING_HTML);
+});
+
 // ── API routes ─────────────────────────────────────────────────────────────────
 app.use("/api", router);
 
