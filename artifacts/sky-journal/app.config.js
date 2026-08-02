@@ -1,6 +1,5 @@
-import type { ConfigContext, ExpoConfig } from "expo/config";
-
-export default ({ config }: ConfigContext): ExpoConfig => ({
+/** @type {import('expo/config').ConfigContext} */
+module.exports = ({ config }) => ({
   ...config,
   name:    config.name    ?? "GameJo",
   slug:    config.slug    ?? "sky-journal",
