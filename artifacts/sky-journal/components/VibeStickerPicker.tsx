@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useSound } from '@/context/SoundContext';
+import { registerNativeSound } from '@/utils/soundRegistry';
 
 // ── Sticker catalogue ──────────────────────────────────────────────────────────
 
@@ -101,8 +102,6 @@ const STICKER_ASSETS: Record<StickerType, any> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import { registerNativeSound } from '@/utils/soundRegistry';
-
 const loadedSounds: Partial<Record<StickerType, any>> = {};
 
 async function ensureLoaded(type: StickerType) {
