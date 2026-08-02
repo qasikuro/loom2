@@ -21,7 +21,7 @@ import {
 } from '@/context/AppContext';
 // import { RewardBalance } from '@/components/RewardBalance'; // kept for future use
 import { RewardBanner } from '@/components/RewardBanner';
-import { ShopModal } from '@/components/ShopModal';
+import { FloatingMenu } from '@/components/FloatingMenu';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -1089,7 +1089,6 @@ export default function HomeScreen() {
   const [activeEvent,    setActiveEvent]    = useState<ActiveEvent | null>(null);
   const [eventDismissed, setEventDismissed] = useState(false);
   const [showEventSheet, setShowEventSheet] = useState(false);
-  const [showShop,       setShowShop]       = useState(false);
 
   // ── Witness delta card: only shown when witness counts increased since last open ──
   const [newWitnessData, setNewWitnessData] = useState<{ count: number; title: string } | null>(null);
@@ -1524,7 +1523,7 @@ export default function HomeScreen() {
               {rewardBalance && (
                 <TouchableOpacity
                   style={s.heroPillStar}
-                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
+                  onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/shop'); }}
                   activeOpacity={0.78}
                 >
                   <Text style={{ fontSize: 12, lineHeight: 15 }}>⭐</Text>
@@ -1736,7 +1735,7 @@ export default function HomeScreen() {
         <Animated.View style={{ opacity: s0, transform: [{ translateY: s0.interpolate({ inputRange: [0,1], outputRange: [12,0] }) }] }}>
           <View style={s.statsGrid}>
             {constellation && (
-              <TouchableOpacity style={s.statsGridCard} onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.85}>
+              <TouchableOpacity style={s.statsGridCard} onPress={() => router.push('/constellation')} activeOpacity={0.85}>
                 <LinearGradient colors={['rgba(168,136,248,0.14)', 'rgba(96,168,248,0.06)', 'transparent']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
                 <Text style={s.statsGridLabel}>Your Constellation</Text>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginVertical: 8 }}>
@@ -1772,7 +1771,7 @@ export default function HomeScreen() {
               const stars = constellation?.unlockedStars.length ?? 0;
               const pct   = stars / 6;
               return (
-                <TouchableOpacity style={s.statsGridCard} onPress={() => activeEvent ? setShowEventSheet(true) : router.push('/(tabs)/profile')} activeOpacity={0.84}>
+                <TouchableOpacity style={s.statsGridCard} onPress={() => activeEvent ? setShowEventSheet(true) : router.push('/season')} activeOpacity={0.84}>
                   <LinearGradient colors={[bgA, bgB, 'transparent'] as unknown as [string, string, ...string[]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 }}>
                     <Text style={{ fontSize: 13 }}>{icon}</Text>
@@ -2189,7 +2188,19 @@ export default function HomeScreen() {
         />
       )}
 
-      <ShopModal visible={showShop} onClose={() => setShowShop(false)} />
+      {/* ── Floating action menu — Shop · Season · Constellation ── */}
+      <View
+        style={{ position: 'absolute', right: 0, bottom: 220, zIndex: 100 }}
+        pointerEvents="box-none"
+      >
+        <FloatingMenu
+          items={[
+            { label: 'Shop',          icon: '🛍',  onPress: () => router.push('/shop') },
+            { label: 'Season',        icon: '✨',  onPress: () => router.push('/season') },
+            { label: 'Constellation', icon: '🔮', onPress: () => router.push('/constellation') },
+          ]}
+        />
+      </View>
 
     </Animated.View>
   );
