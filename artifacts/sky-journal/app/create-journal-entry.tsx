@@ -6,7 +6,8 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
-import { journalDraft, type JournalDraft } from '@/utils/entryDraftStore';
+import { journalDraft } from '@/utils/entryDraftStore';
+import { useJournalDraftLoader } from '@/hooks/useJournalDraftLoader';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
@@ -116,24 +117,14 @@ export default function CreateJournalEntryScreen() {
   const [showDatePicker,  setShowDatePicker]  = useState(false);
 
   // ── Draft auto-save ────────────────────────────────────────────────────────
-  const [pendingDraft,   setPendingDraft]    = useState<JournalDraft | null>(null);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load any saved draft when the screen opens.
   // When the screen was launched with pre-filled content (initialPrompt),
   // suppress the restore banner — restoring would silently overwrite the prompt.
   const hasPrefilledContent = typeof initialPrompt === 'string' && initialPrompt.trim().length > 0;
 
-  useEffect(() => {
-    if (hasPrefilledContent) return; // prompt takes priority; skip draft banner
-    journalDraft.load(entryType).then(d => {
-      // Only offer to restore if there's meaningful content to restore
-      if (d && (d.text.trim() || d.friendName.trim())) {
-        setPendingDraft(d);
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Load any saved draft when the screen opens (skipped when hasPrefilledContent).
+  const [pendingDraft, setPendingDraft] = useJournalDraftLoader(entryType, hasPrefilledContent);
 
   // Debounced auto-save whenever content changes
   useEffect(() => {
