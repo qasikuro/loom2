@@ -101,6 +101,8 @@ const STICKER_ASSETS: Record<StickerType, any> = {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+import { registerNativeSound } from '@/utils/soundRegistry';
+
 const loadedSounds: Partial<Record<StickerType, any>> = {};
 
 async function ensureLoaded(type: StickerType) {
@@ -109,6 +111,7 @@ async function ensureLoaded(type: StickerType) {
     const { Audio } = await import('expo-av');
     const { sound } = await Audio.Sound.createAsync(STICKER_ASSETS[type], { volume: 0.55 });
     loadedSounds[type] = sound;
+    registerNativeSound(sound); // coordinated teardown via soundRegistry
     return sound;
   } catch { return null; }
 }

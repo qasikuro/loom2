@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { registerNativeSound, unloadAllNativeSounds } from '@/utils/soundRegistry';
 
 export type SoundName = 'tap' | 'chime' | 'save' | 'star' | 'navigate' | 'whoosh';
 
@@ -275,6 +276,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
           try {
             const { sound } = await Audio.Sound.createAsync(asset, { volume: 0.45 });
             soundsRef.current[name] = sound;
+            registerNativeSound(sound); // coordinated teardown via soundRegistry
           } catch { /* skip silently */ }
         }
 
@@ -283,6 +285,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
           try {
             const { sound } = await Audio.Sound.createAsync(asset, { volume: 0.50 });
             stickerSoundsRef.current[id] = sound;
+            registerNativeSound(sound); // coordinated teardown via soundRegistry
           } catch { /* skip silently */ }
         }
 
@@ -294,15 +297,26 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
-      // eslint-disable-next-line react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any
-      Object.values(soundsRef.current).forEach((s: any) =>
-        s?.unloadAsync?.().catch(() => null)
-      );
-      // eslint-disable-next-line react-hooks/exhaustive-deps, @typescript-eslint/no-explicit-any
-      Object.values(stickerSoundsRef.current).forEach((s: any) =>
-        s?.unloadAsync?.().catch(() => null)
-      );
+      // Unload every registered sound (covers SoundContext + VibeStickerPicker
+      // module-level cache) so AVManager.onHostDestroy finds nothing to release
+      // on the ThreadPoolExecutor thread — preventing the ExoPlayer wrong-thread crash.
+      unloadAllNativeSounds();
     };
+  }, []);
+
+  // Proactive cleanup: unload all sounds when the app goes inactive or
+  // backgrounds.  On Android, Metro fast-refresh and manual shake-menu reloads
+  // often cause the app to briefly go inactive before bridge teardown begins.
+  // Unloading here means AVManager.onHostDestroy finds nothing to release,
+  // preventing the "Player is accessed on the wrong thread" ExoPlayer crash.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', nextState => {
+      if (nextState === 'inactive' || nextState === 'background') {
+        unloadAllNativeSounds();
+      }
+    });
+    return () => sub.remove();
   }, []);
 
   const setSoundEnabled = useCallback((v: boolean) => {
