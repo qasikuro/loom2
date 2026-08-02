@@ -602,6 +602,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.setItem('journal_v2_bak', json).catch(() => null);
     AsyncStorage.setItem('journal_v2',     json).catch(() => null);
   }
+  function writeOutfitCache(json: string): void {
+    AsyncStorage.setItem('outfits_v1_bak', json).catch(() => null);
+    AsyncStorage.setItem('outfits_v1',     json).catch(() => null);
+  }
 
   async function loadFromCache() {
     try {
@@ -609,7 +613,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem('character_v2'),
         readCacheSafe('journal_v2'),         // M-5: falls back to _bak on corrupt
         readCacheSafe('stories_v1'),         // M-5: falls back to _bak on corrupt
-        AsyncStorage.getItem('outfits_v1'),
+        readCacheSafe('outfits_v1'),         // M-5: falls back to _bak on corrupt
         AsyncStorage.getItem('discover_v1'),
         AsyncStorage.getItem('following_v1'),
         AsyncStorage.getItem('saved_stories_v1'),
@@ -641,7 +645,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const ALL_CACHE_KEYS = [
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
-    'journal_v2_bak', 'stories_v1_bak',               // M-5: backup keys
+    'journal_v2_bak', 'stories_v1_bak', 'outfits_v1_bak', // M-5: backup keys
     'discover_v1', 'following_v1', 'saved_stories_v1', 'collection_v1',
     'shop_catalog_v1', 'reward_balance_v1',
     FETCH_TIMESTAMPS_KEY,
@@ -877,7 +881,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.setItem('journal_v2',     JSON.stringify(entries)),
         AsyncStorage.setItem('stories_v1_bak', JSON.stringify(stors)),   // M-5
         AsyncStorage.setItem('stories_v1',     JSON.stringify(stors)),
-        AsyncStorage.setItem('outfits_v1',    JSON.stringify(outs)),
+        AsyncStorage.setItem('outfits_v1_bak', JSON.stringify(outs)),   // M-5
+        AsyncStorage.setItem('outfits_v1',     JSON.stringify(outs)),
         AsyncStorage.setItem('discover_v1',   JSON.stringify(feed)),
         AsyncStorage.setItem('following_v1',  JSON.stringify(follows)),
       ];
@@ -1062,6 +1067,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (outfitsRaw !== null) {
           const outs = outfitsRaw.map(r => toAppOutfit(r, API_BASE));
           setOutfits(outs);
+          cacheWrites.push(AsyncStorage.setItem('outfits_v1_bak', JSON.stringify(outs)));  // M-5
           cacheWrites.push(AsyncStorage.setItem('outfits_v1', JSON.stringify(outs)));
           tsUpdates.outfits = now;
         }
@@ -1657,7 +1663,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeFetchTimestamps({ outfits: 0 }).catch(() => null);
     setOutfits(prev => {
       const updated = [safeOutfit, ...prev.filter(o => o.id !== outfit.id)];
-      AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));
+      writeOutfitCache(JSON.stringify(updated));
       return updated;
     });
     const outfitBody = JSON.stringify({
@@ -1680,14 +1686,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // "saved" when the server never received it (mirrors addStory's pattern).
       setOutfits(prev => {
         const reverted = prev.filter(o => o.id !== safeOutfit.id);
-        AsyncStorage.setItem('outfits_v1', JSON.stringify(reverted)).catch(() => null);
+        writeOutfitCache(JSON.stringify(reverted));
         return reverted;
       });
       showToastGlobal("Outfit couldn't be saved — tap to retry", 'error', () => {
         setOutfits(prev => {
           if (prev.some(o => o.id === safeOutfit.id)) return prev;
           const restored = [safeOutfit, ...prev];
-          AsyncStorage.setItem('outfits_v1', JSON.stringify(restored)).catch(() => null);
+          writeOutfitCache(JSON.stringify(restored));
           return restored;
         });
         apiFetch('/outfits', { method: 'POST', body: outfitBody }).catch(() => null);
@@ -1700,7 +1706,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const originalOutfit = stateRef.current.outfits.find(o => o.id === id);
     setOutfits(prev => {
       const updated = prev.map(o => o.id === id ? { ...o, ...updates } : o);
-      AsyncStorage.setItem('outfits_v1', JSON.stringify(updated)).catch(() => null);
+      writeOutfitCache(JSON.stringify(updated));
       return updated;
     });
     const outfitUpdateBody = JSON.stringify(updates);
@@ -1709,14 +1715,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Revert only the edited outfit — don't clobber concurrent changes to others.
       setOutfits(prev => {
         const reverted = prev.map(o => o.id === id ? originalOutfit : o);
-        AsyncStorage.setItem('outfits_v1', JSON.stringify(reverted)).catch(() => null);
+        writeOutfitCache(JSON.stringify(reverted));
         return reverted;
       });
       showToastGlobal("Couldn't save outfit changes — tap to retry", 'error', () => {
         // Re-apply only this outfit's edit and retry the PATCH.
         setOutfits(prev => {
           const reapplied = prev.map(o => o.id === id ? { ...o, ...updates } : o);
-          AsyncStorage.setItem('outfits_v1', JSON.stringify(reapplied)).catch(() => null);
+          writeOutfitCache(JSON.stringify(reapplied));
           return reapplied;
         });
         apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody })
@@ -1724,7 +1730,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             // Retry also failed — revert the single outfit again and queue.
             setOutfits(prev => {
               const rereverted = prev.map(o => o.id === id ? originalOutfit : o);
-              AsyncStorage.setItem('outfits_v1', JSON.stringify(rereverted)).catch(() => null);
+              writeOutfitCache(JSON.stringify(rereverted));
               return rereverted;
             });
             enqueueMutation(`/outfits/${id}`, 'PATCH', outfitUpdateBody).catch(() => null);
@@ -1742,7 +1748,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeFetchTimestamps({ outfits: 0 }).catch(() => null);
     setOutfits(prev => {
       const updated = prev.filter(o => o.id !== id);
-      AsyncStorage.setItem('outfits_v1', JSON.stringify(updated));
+      writeOutfitCache(JSON.stringify(updated));
       return updated;
     });
     setActiveOutfitIdState(prev => {
@@ -1759,7 +1765,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (prev.some(o => o.id === id)) return prev; // already restored
         const insertAt = Math.min(originalIndex, prev.length);
         const restored = [...prev.slice(0, insertAt), originalOutfit, ...prev.slice(insertAt)];
-        AsyncStorage.setItem('outfits_v1', JSON.stringify(restored)).catch(() => null);
+        writeOutfitCache(JSON.stringify(restored));
         return restored;
       });
       // Restore active selection only if it was this outfit.
@@ -1772,7 +1778,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           .then(() => {
             setOutfits(prev => {
               const updated = prev.filter(o => o.id !== id);
-              AsyncStorage.setItem('outfits_v1', JSON.stringify(updated)).catch(() => null);
+              writeOutfitCache(JSON.stringify(updated));
               return updated;
             });
             setActiveOutfitIdState(prev => {
