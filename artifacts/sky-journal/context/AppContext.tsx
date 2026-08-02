@@ -798,18 +798,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         createdAt: r.createdAt,
       }));
 
-      // Commit all state at once — single React render pass
-      setCharacterState(char);
-      setJournalEntries(entries);
-      setStories(stors);
-      setOutfits(outs);
-      setGallery(gal);
-      setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
-      setDiscoverFeedRaw(feed);
-      setFollowingIds(follows);
-      setFriends(friendsRaw ?? []);
-      setServerNotifications(notifs);
-      setMyGuides(guides);
+      // Commit state — only for endpoints whose fetch succeeded.
+      // If an endpoint returned null (API down, 401, network error) we skip its
+      // setter so existing cached state (loaded earlier by loadFromCache) remains
+      // visible.  A transient server restart must never blank the user's screen.
+      if (charRaw    !== null) setCharacterState(char);
+      if (entriesRaw !== null) setJournalEntries(entries);
+      if (storiesRaw !== null) setStories(stors);
+      if (outfitsRaw !== null) setOutfits(outs);
+      if (galleryRaw !== null) {
+        setGallery(gal);
+        setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
+      } else if (usageRaw !== null) {
+        setGalleryUsage({ count: usageRaw.count, limit: usageRaw.limit });
+      }
+      if (discoverRaw  !== null) setDiscoverFeedRaw(feed);
+      if (followingRaw !== null) setFollowingIds(follows);
+      if (friendsRaw   !== null) setFriends(friendsRaw);
+      if (notifRaw     !== null) setServerNotifications(notifs);
+      setMyGuides(guides); // guidesRaw falls back to [] so always safe
       if (rewardBalanceRaw) setRewardBalance(rewardBalanceRaw);
       if (constellationRaw) {
         setConstellation(constellationRaw);
@@ -850,6 +857,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const allCoreFailed = charRaw === null && entriesRaw === null && storiesRaw === null && outfitsRaw === null && discoverRaw === null;
       if (allCoreFailed) {
         console.warn('[AppContext] loadData: ALL core API calls returned null. Token was present but server may have rejected it (401) or network failed. Check adb logcat for [apiFetch] token=NULL lines above.');
+        // Schedule ONE automatic retry — the server may have been briefly down
+        // during a post-merge restart.  retry=false prevents further loops.
+        if (retry) setTimeout(() => loadData(false), 3000);
       }
 
       setApiOnline(true);
@@ -880,18 +890,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }).catch(() => null);
       }
 
-      // Persist all fresh data to cache in parallel
-      const cacheWrites: Promise<void>[] = [
-        AsyncStorage.setItem('character_v2',  JSON.stringify(char)),
-        AsyncStorage.setItem('journal_v2_bak', JSON.stringify(entries)),  // M-5
-        AsyncStorage.setItem('journal_v2',     JSON.stringify(entries)),
-        AsyncStorage.setItem('stories_v1_bak', JSON.stringify(stors)),   // M-5
-        AsyncStorage.setItem('stories_v1',     JSON.stringify(stors)),
-        AsyncStorage.setItem('outfits_v1_bak', JSON.stringify(outs)),   // M-5
-        AsyncStorage.setItem('outfits_v1',     JSON.stringify(outs)),
-        AsyncStorage.setItem('discover_v1',   JSON.stringify(feed)),
-        AsyncStorage.setItem('following_v1',  JSON.stringify(follows)),
-      ];
+      // Persist fresh data to cache — only when the fetch succeeded.
+      // Unconditional writes were the root cause of the "data not showing" bug:
+      // a transient 401 / server restart caused loadData to overwrite good cached
+      // data with DEFAULT_CHARACTER + empty arrays, permanently blanking the screen
+      // until the user force-killed and reopened the app.
+      const cacheWrites: Promise<void>[] = [];
+      if (charRaw    !== null) cacheWrites.push(AsyncStorage.setItem('character_v2',   JSON.stringify(char)));
+      if (entriesRaw !== null) {
+        cacheWrites.push(AsyncStorage.setItem('journal_v2_bak', JSON.stringify(entries)));  // M-5
+        cacheWrites.push(AsyncStorage.setItem('journal_v2',     JSON.stringify(entries)));
+      }
+      if (storiesRaw !== null) {
+        cacheWrites.push(AsyncStorage.setItem('stories_v1_bak', JSON.stringify(stors)));   // M-5
+        cacheWrites.push(AsyncStorage.setItem('stories_v1',     JSON.stringify(stors)));
+      }
+      if (outfitsRaw !== null) {
+        cacheWrites.push(AsyncStorage.setItem('outfits_v1_bak', JSON.stringify(outs)));   // M-5
+        cacheWrites.push(AsyncStorage.setItem('outfits_v1',     JSON.stringify(outs)));
+      }
+      if (discoverRaw  !== null) cacheWrites.push(AsyncStorage.setItem('discover_v1',   JSON.stringify(feed)));
+      if (followingRaw !== null) cacheWrites.push(AsyncStorage.setItem('following_v1',  JSON.stringify(follows)));
       if (rewardBalanceRaw) {
         cacheWrites.push(AsyncStorage.setItem('reward_balance_v1', JSON.stringify(rewardBalanceRaw)));
       }
