@@ -1794,13 +1794,46 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteGalleryPhoto = useCallback((id: string) => {
-    setGallery(prev => prev.filter(p => p.id !== id));
-    setGalleryUsage(prev => ({ ...prev, count: Math.max(0, prev.count - 1) }));
-    apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => {
-      showToastGlobal("Couldn't remove photo", 'error', () => {
-        apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => null);
-      });
+    let originalPhoto: GalleryPhoto | undefined;
+    let originalIndex = -1;
+
+    // Optimistic remove — capture snapshot for rollback
+    setGallery(prev => {
+      originalIndex = prev.findIndex(p => p.id === id);
+      originalPhoto = prev.find(p => p.id === id);
+      return prev.filter(p => p.id !== id);
     });
+    setGalleryUsage(prev => ({ ...prev, count: Math.max(0, prev.count - 1) }));
+
+    const doDelete = () =>
+      apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => {
+        if (!originalPhoto) return;
+
+        // Rollback: re-insert at original position and restore usage count
+        setGallery(prev => {
+          if (prev.some(p => p.id === id)) return prev;
+          const insertAt = Math.min(Math.max(originalIndex, 0), prev.length);
+          return [...prev.slice(0, insertAt), originalPhoto!, ...prev.slice(insertAt)];
+        });
+        setGalleryUsage(prev => ({ ...prev, count: prev.count + 1 }));
+
+        showToastGlobal('Delete failed — tap to retry', 'error', () => {
+          // Retry: optimistically remove again, then re-attempt the DELETE
+          setGallery(prev => prev.filter(p => p.id !== id));
+          setGalleryUsage(prev => ({ ...prev, count: Math.max(0, prev.count - 1) }));
+          apiFetch(`/gallery/${id}`, { method: 'DELETE' }).catch(() => {
+            if (!originalPhoto) return;
+            setGallery(prev => {
+              if (prev.some(p => p.id === id)) return prev;
+              const insertAt = Math.min(Math.max(originalIndex, 0), prev.length);
+              return [...prev.slice(0, insertAt), originalPhoto!, ...prev.slice(insertAt)];
+            });
+            setGalleryUsage(prev => ({ ...prev, count: prev.count + 1 }));
+          });
+        });
+      });
+
+    doDelete();
   }, []);
 
   // ── Discover / Save ────────────────────────────────────────────────────────
