@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { AppState, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { registerNativeSound, unloadAllNativeSounds } from '@/utils/soundRegistry';
 
@@ -302,21 +302,6 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       // on the ThreadPoolExecutor thread — preventing the ExoPlayer wrong-thread crash.
       unloadAllNativeSounds();
     };
-  }, []);
-
-  // Proactive cleanup: unload all sounds when the app goes inactive or
-  // backgrounds.  On Android, Metro fast-refresh and manual shake-menu reloads
-  // often cause the app to briefly go inactive before bridge teardown begins.
-  // Unloading here means AVManager.onHostDestroy finds nothing to release,
-  // preventing the "Player is accessed on the wrong thread" ExoPlayer crash.
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    const sub = AppState.addEventListener('change', nextState => {
-      if (nextState === 'inactive' || nextState === 'background') {
-        unloadAllNativeSounds();
-      }
-    });
-    return () => sub.remove();
   }, []);
 
   const setSoundEnabled = useCallback((v: boolean) => {
