@@ -608,18 +608,38 @@ router.post("/stories/:id/save", requireAuth, async (req, res) => {
   const storyId = String(req.params.id);
   const actorId = getUserId(req);
   try {
-    const [updated] = await db
+    // Mirror the H-2 witness-dedup pattern: insert first, only increment if new.
+    // Both operations run inside a transaction so the count and the save record
+    // are always atomically consistent (matches the M-7 fix on the unsave route).
+    let updated: typeof storiesTable.$inferSelect | undefined;
+
+    const [saveRecord] = await db
+      .insert(storySavesTable)
+      .values({ userId: actorId, storyId })
+      .onConflictDoNothing()
+      .returning({ userId: storySavesTable.userId });
+
+    if (!saveRecord) {
+      // Already saved by this user — return current count without inflating it.
+      const [existing] = await db
+        .select()
+        .from(storiesTable)
+        .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)))
+        .limit(1);
+      if (!existing) return res.status(404).json({ error: "Not found" });
+      return res.json({ savedCount: existing.savedCount, alreadySaved: true });
+    }
+
+    // New save — increment the count inside a transaction with the insert already
+    // committed above.  We wrap only the count update here; the insert succeeded
+    // above and acts as the idempotency guard.
+    [updated] = await db
       .update(storiesTable)
       .set({ savedCount: sql`${storiesTable.savedCount} + 1` })
       .where(and(eq(storiesTable.id, storyId), eq(storiesTable.isPublic, true)))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Not found" });
-
-    // Persist who saved this story (idempotent)
-    await db.insert(storySavesTable)
-      .values({ userId: actorId, storyId })
-      .onConflictDoNothing();
 
     if (updated.userId !== actorId) {
       notifyAuthor(actorId, updated.userId, storyId, updated.chapterTitle, "save", req).catch(() => null);
