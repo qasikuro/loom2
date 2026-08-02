@@ -52,6 +52,7 @@ const en = {
     emptyText: 'Write your first entry to start your journal.',
     startWriting: 'Write something', composeMoment: 'Moment',
     composeFriend: 'Friend', composeDiary: 'Diary',
+    resumeDraft: 'Resume draft',
   },
   create: {
     title: 'Create Story', pages: '{{n}} page', pagesPlural: '{{n}} pages',
@@ -219,6 +220,7 @@ const ja = {
     withFriend: '{{name}}と', moment: 'モーメント',
     emptyTitle: '日記が空です', emptyText: '最初のエントリーを書いて日記を始めよう。',
     startWriting: '書いてみる', composeMoment: 'モーメント', composeFriend: '友達', composeDiary: '日記',
+    resumeDraft: '下書きを再開',
   },
   create: {
     title: 'ストーリーを作成', pages: '{{n}}ページ', pagesPlural: '{{n}}ページ',
@@ -339,6 +341,7 @@ const es = {
     emptyTitle: 'Tu diario está vacío',
     emptyText: 'Escribe tu primera entrada para comenzar tu historia.',
     startWriting: 'Escribe algo', composeMoment: 'Momento', composeFriend: 'Amigo', composeDiary: 'Diario',
+    resumeDraft: 'Retomar borrador',
   },
   create: {
     title: 'Crear Historia', pages: '{{n}} página', pagesPlural: '{{n}} páginas',
@@ -454,6 +457,7 @@ const tr = {
     withFriend: '{{name}} ile', moment: 'An',
     emptyTitle: 'Günlüğün boş', emptyText: 'Sky hikayeni başlatmak için ilk girişini yaz.',
     startWriting: 'Bir şeyler yaz', composeMoment: 'An', composeFriend: 'Arkadaş', composeDiary: 'Günlük',
+    resumeDraft: 'Taslağa devam et',
   },
   create: {
     title: 'Hikaye Oluştur', pages: '{{n}} sayfa', pagesPlural: '{{n}} sayfa',
@@ -594,6 +598,7 @@ const fr = {
     withFriend: 'Avec {{name}}', moment: 'Moment', emptyTitle: 'Ton journal est vide',
     emptyText: 'Écris ta première entrée pour commencer ton histoire céleste.',
     startWriting: 'Écris quelque chose', composeMoment: 'Moment', composeFriend: 'Ami', composeDiary: 'Journal',
+    resumeDraft: 'Reprendre le brouillon',
   },
   home: {
     subtitle: 'Ton voyage, tes souvenirs.', featuresBeingAdded: 'Fonctionnalités en cours',
@@ -703,6 +708,7 @@ const de = {
     withFriend: 'Mit {{name}}', moment: 'Moment', emptyTitle: 'Dein Tagebuch ist leer',
     emptyText: 'Schreibe deinen ersten Eintrag, um deine Geschichte zu beginnen.',
     startWriting: 'Schreib etwas', composeMoment: 'Moment', composeFriend: 'Freund', composeDiary: 'Tagebuch',
+    resumeDraft: 'Entwurf fortsetzen',
   },
   home: {
     subtitle: 'Deine Reise, deine Erinnerungen.', featuresBeingAdded: 'Funktionen werden hinzugefügt',
@@ -809,6 +815,7 @@ const pt = {
     withFriend: 'Com {{name}}', moment: 'Momento', emptyTitle: 'Seu diário está vazio',
     emptyText: 'Escreva sua primeira entrada para começar sua história.',
     startWriting: 'Escreva algo', composeMoment: 'Momento', composeFriend: 'Amigo', composeDiary: 'Diário',
+    resumeDraft: 'Retomar rascunho',
   },
   home: {
     subtitle: 'Sua jornada, suas memórias.', featuresBeingAdded: 'Funcionalidades em desenvolvimento',
@@ -919,6 +926,7 @@ const ko = {
     withFriend: '{{name}} 와(과)', moment: '순간', emptyTitle: '일기가 비어있어요',
     emptyText: '첫 번째 항목을 작성해 하늘 이야기를 시작하세요.',
     startWriting: '뭔가 써보기', composeMoment: '순간', composeFriend: '친구', composeDiary: '일기',
+    resumeDraft: '초안 이어 쓰기',
   },
   home: {
     subtitle: '나의 여정, 나의 기억.', featuresBeingAdded: '기능 추가 중', comingSoon: '곧 출시',
@@ -1022,6 +1030,7 @@ const zh = {
     withFriend: '与 {{name}} 一起', moment: '瞬间', emptyTitle: '你的日记是空的',
     emptyText: '写下你的第一条记录，开始你的日记。',
     startWriting: '写点什么', composeMoment: '瞬间', composeFriend: '朋友', composeDiary: '日记',
+    resumeDraft: '继续草稿',
   },
   home: {
     subtitle: '你的旅程，你的记忆。', featuresBeingAdded: '功能添加中', comingSoon: '即将推出',
@@ -1120,6 +1129,7 @@ const ru = {
     withFriend: 'С {{name}}', moment: 'Момент', emptyTitle: 'Ваш дневник пуст',
     emptyText: 'Напишите первую запись, чтобы начать свою историю.',
     startWriting: 'Написать что-нибудь', composeMoment: 'Момент', composeFriend: 'Друг', composeDiary: 'Дневник',
+    resumeDraft: 'Продолжить черновик',
   },
   home: {
     subtitle: 'Ваше путешествие, ваши воспоминания.', featuresBeingAdded: 'Добавляются функции',
@@ -1222,6 +1232,7 @@ const ar = {
     withFriend: 'مع {{name}}', moment: 'لحظة', emptyTitle: 'مذكراتك فارغة',
     emptyText: 'اكتب أول مدخل لبدء قصتك.',
     startWriting: 'اكتب شيئاً', composeMoment: 'لحظة', composeFriend: 'صديق', composeDiary: 'يوميات',
+    resumeDraft: 'استئناف المسودة',
   },
   home: {
     subtitle: 'رحلتك، ذكرياتك.', featuresBeingAdded: 'تُضاف ميزات', comingSoon: 'قريباً',
@@ -1321,6 +1332,7 @@ const it = {
     withFriend: 'Con {{name}}', moment: 'Momento', emptyTitle: 'Il tuo diario è vuoto',
     emptyText: 'Scrivi la prima voce per iniziare la tua storia.',
     startWriting: 'Scrivi qualcosa', composeMoment: 'Momento', composeFriend: 'Amico', composeDiary: 'Diario',
+    resumeDraft: 'Riprendi bozza',
   },
   home: {
     subtitle: 'Il tuo viaggio, i tuoi ricordi.', featuresBeingAdded: 'Funzioni in arrivo',

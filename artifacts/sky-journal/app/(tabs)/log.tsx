@@ -409,18 +409,18 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
   const anim       = useRef(new Animated.Value(0)).current;
   const floatAnim  = useRef(new Animated.Value(0)).current;
 
-  // Track which entry types have a saved draft so we can show a dot indicator
-  const [draftTypes, setDraftTypes] = useState<Set<string>>(new Set());
+  // Track which entry types have a saved draft (and when) so we can show a dot + "Resume draft" label
+  const [draftMeta, setDraftMeta] = useState<Map<string, number>>(new Map());
 
   useFocusEffect(useCallback(() => {
     let cancelled = false;
     Promise.all(
-      COMPOSE_TYPES.map(item => journalDraft.exists(item.type).then(has => ({ type: item.type, has })))
+      COMPOSE_TYPES.map(item => journalDraft.load(item.type).then(d => ({ type: item.type, savedAt: d?.savedAt ?? null, hasContent: !!(d?.text?.trim() || d?.friendName?.trim()) })))
     ).then(results => {
       if (cancelled) return;
-      const set = new Set<string>();
-      results.forEach(r => { if (r.has) set.add(r.type); });
-      setDraftTypes(set);
+      const map = new Map<string, number>();
+      results.forEach(r => { if (r.hasContent && r.savedAt != null) map.set(r.type, r.savedAt); });
+      setDraftMeta(map);
     });
     return () => { cancelled = true; };
   }, []));
@@ -475,7 +475,10 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
         return (
           <Animated.View key={item.type} style={[fab.actionRow, { opacity, transform: [{ translateY }] }]}>
             <View style={[fab.actionLabel, { backgroundColor: 'rgba(26,22,48,0.88)', borderWidth:1, borderColor:'rgba(200,184,232,0.12)' }]}>
-              <Text style={fab.actionLabelText}>{t(item.labelKey)}</Text>
+              {draftMeta.has(item.type)
+                ? <Text style={fab.actionLabelText}>{t('log.resumeDraft')} · {relativeTime(new Date(draftMeta.get(item.type)!).toISOString(), t)}</Text>
+                : <Text style={fab.actionLabelText}>{t(item.labelKey)}</Text>
+              }
             </View>
             <TouchableOpacity
               style={[fab.actionBtn, { backgroundColor: item.bg, borderColor: `${item.color}40` }]}
@@ -483,7 +486,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
               activeOpacity={0.82}
             >
               <Icon name={item.icon} size={19} color={item.color} />
-              {draftTypes.has(item.type) && <View style={fab.draftDot} />}
+              {draftMeta.has(item.type) && <View style={fab.draftDot} />}
             </TouchableOpacity>
           </Animated.View>
         );
