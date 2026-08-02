@@ -10,4 +10,5 @@
 - [Campfire route params type](campfire-params.md) — cast req.params.roomId as string for Drizzle uuid columns; destructuring alone leaves string|string[] which fails insert/eq overloads
 - [ClerkProvider must be unconditional in Expo](clerk-provider-unconditional.md) — @clerk/expo v3 uses useClerkSignal internally; gating ClerkProvider behind any condition causes "not within ClerkProvider" crash when Expo Router renders routes early
 - [expo-notifications PermissionResponse type gap](expo-notifications-permission-type.md) — .granted/.status don't resolve via TS; cast with `as unknown as { granted?: boolean }` + ios.status fallback
+- [loadData cache/state overwrite on API failure](loaddata-cache-overwrite.md) — all state+cache writes must be guarded by raw !== null; unconditional writes caused "data not showing" after any transient 401/server restart
 - [ExoPlayer wrong-thread crash on Metro reload](exoplayer-wrong-thread-crash.md) — RN 0.81 new-arch teardown calls ExoPlayer.release() on wrong thread; fix via soundRegistry coordinated cleanup; never use AppState listener for this
