@@ -105,7 +105,7 @@ export default function CharacterScreen() {
   } = useGalleryState({ galleryUsage, addGalleryPhoto, deleteGalleryPhoto });
 
   // ── UI state ───────────────────────────────────────────────────────────────
-  const [profileTab,      setProfileTab]      = useState<'journey' | 'style' | 'about'>('journey');
+  const [profileTab,      setProfileTab]      = useState<'style' | 'about'>('style');
   const [showShop,        setShowShop]        = useState(false);
   const [showMoodPicker,  setShowMoodPicker]  = useState(false);
   const [showTitlePicker, setShowTitlePicker] = useState(false);
@@ -237,10 +237,10 @@ export default function CharacterScreen() {
 
         {/* Tab bar */}
         <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 14, marginBottom: 2, backgroundColor: 'rgba(200,184,232,0.05)', borderRadius: 14, padding: 3, gap: 2, borderWidth: 1, borderColor: 'rgba(200,184,232,0.10)' }}>
-          {(['journey', 'style', 'about'] as const).map(tab => (
+          {(['style', 'about'] as const).map(tab => (
             <TouchableOpacity key={tab} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab(tab); }} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', backgroundColor: profileTab === tab ? 'rgba(107,91,149,0.60)' : 'transparent' }} activeOpacity={0.75}>
               <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: profileTab === tab ? '#fff' : 'rgba(200,184,232,0.50)' }}>
-                {tab === 'journey' ? '✦ Progress' : tab === 'style' ? '✨ Style' : '◌ About'}
+                {tab === 'style' ? '✨ Style' : '◌ About'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -286,22 +286,11 @@ export default function CharacterScreen() {
           {profileTab === 'about' && (!isLoading || character.name !== 'Player') && (
             <ProfileAboutSection character={character} setCharacter={setCharacter} />
           )}
-          {profileTab === 'journey' && (!isLoading || character.name !== 'Player') && (
-            <ProfileJourneySection
-              constellation={constellation} stories={stories} journalEntries={journalEntries}
-              character={character} animTrigger={animTrigger}
-              setSelectedStarKey={setSelectedStarKey} setShowTitlePicker={setShowTitlePicker}
-              availableTitles={availableTitles} onSetActiveTitle={handleSetActiveTitle}
-            />
-          )}
           {profileTab === 'style' && (!isLoading || character.name !== 'Player') && (
             <ProfileStyleSection
               outfits={outfits} openOutfit={openOutfit} gallery={gallery}
               openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
               galleryUploading={galleryUploading} galleryError={galleryError}
-              setShowShop={setShowShop} rewardBalance={rewardBalance}
-              purchasedIds={purchasedIds} shopCatalog={shopCatalog}
-              activeCosmetics={activeCosmetics} setActiveCosmetic={setActiveCosmetic}
               activeOutfitId={activeOutfitId} moodAccent={moodAccent}
             />
           )}

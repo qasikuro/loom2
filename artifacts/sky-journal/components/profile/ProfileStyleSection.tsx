@@ -18,12 +18,6 @@ interface Props {
   handleAddGalleryPhoto: () => Promise<void>;
   galleryUploading: boolean;
   galleryError: string | null;
-  setShowShop: (v: boolean) => void;
-  rewardBalance: { stars: number; auraEnergy: number; memoryShards: number } | null;
-  purchasedIds: string[];
-  shopCatalog: Array<{ id: string; name: string; category: string; icon: string }>;
-  activeCosmetics: Record<string, string>;
-  setActiveCosmetic: (id: string) => void;
   activeOutfitId: string | null;
   moodAccent: string;
 }
@@ -31,90 +25,13 @@ interface Props {
 export function ProfileStyleSection({
   outfits, openOutfit, gallery, openPhoto,
   handleAddGalleryPhoto, galleryUploading, galleryError,
-  setShowShop, rewardBalance, purchasedIds, shopCatalog,
-  activeCosmetics, setActiveCosmetic, activeOutfitId, moodAccent: _moodAccent,
+  activeOutfitId, moodAccent: _moodAccent,
 }: Props) {
   const colors = useColors();
   const { t }  = useTranslation();
 
-  const CATEGORY_ICON:  Record<string, string> = { frame: '⬡', accent: '◈', theme: '◇', effect: '✦' };
-  const CATEGORY_COLOR: Record<string, string> = { frame: '#C8A84B', accent: '#9878C8', theme: '#78B8E8', effect: '#70C8A0' };
-
   return (
     <>
-      {/* ── Shop entry ─── */}
-      <View style={s.section}>
-        <TouchableOpacity
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowShop(true); }}
-          activeOpacity={0.82}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(107,91,149,0.08)', borderColor: 'rgba(107,91,149,0.22)', borderWidth: 1, borderRadius: 16, paddingVertical: 13, paddingHorizontal: 16 }}
-        >
-          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(107,91,149,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 18 }}>🛍</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: colors.foreground, letterSpacing: -0.2 }}>Shop</Text>
-            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>Browse frames, accents & themes</Text>
-          </View>
-          {rewardBalance && (
-            <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center', flexShrink: 1 }}>
-              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B' }} numberOfLines={1}>✦ {fmtBal(rewardBalance.stars)}</Text>
-              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9878D8' }} numberOfLines={1}>◈ {fmtBal(rewardBalance.auraEnergy)}</Text>
-              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#78B4DC' }} numberOfLines={1}>◇ {fmtBal(rewardBalance.memoryShards)}</Text>
-            </View>
-          )}
-          <Icon name="chevron-right" size={16} color="rgba(107,91,149,0.55)" />
-        </TouchableOpacity>
-      </View>
-
-      {/* ── Owned Cosmetics ─── */}
-      {(() => {
-        const owned = shopCatalog.filter(item => purchasedIds.includes(item.id));
-        if (owned.length === 0) return null;
-        return (
-          <View style={s.section}>
-            <View style={s.sectionHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[s.sectionTitle, { color: colors.foreground }]}>Owned Cosmetics</Text>
-                <View style={[s.countPill, { backgroundColor: 'rgba(200,168,75,0.12)', borderColor: 'rgba(200,168,75,0.25)' }]}>
-                  <Text style={[s.countPillText, { color: '#C8A84B' }]}>{owned.length}</Text>
-                </View>
-              </View>
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <TouchableOpacity onPress={() => router.push('/purchase-history' as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.75}>
-                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Medium', color: colors.mutedForeground }}>History</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
-              {owned.map(item => {
-                const cat     = item.category;
-                const isActive = activeCosmetics[cat] === item.id;
-                const iconChar = CATEGORY_ICON[cat] ?? '✦';
-                const catColor = CATEGORY_COLOR[cat] ?? '#C8B8E8';
-                return (
-                  <TouchableOpacity
-                    key={item.id}
-                    onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setActiveCosmetic(item.id); }}
-                    activeOpacity={0.8}
-                    style={{ width: 90, marginRight: 8, borderRadius: 14, borderWidth: 1.5, borderColor: isActive ? catColor : 'rgba(255,255,255,0.08)', backgroundColor: isActive ? `${catColor}12` : 'rgba(255,255,255,0.04)', padding: 10, alignItems: 'center', gap: 6 }}
-                  >
-                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: `${catColor}18`, alignItems: 'center', justifyContent: 'center' }}>
-                      <Text style={{ fontSize: 20 }}>{item.icon}</Text>
-                    </View>
-                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: isActive ? catColor : 'rgba(200,184,232,0.70)', textAlign: 'center' }} numberOfLines={2}>{item.name}</Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: `${catColor}18` }}>
-                      <Text style={{ fontSize: 9, color: catColor }}>{iconChar}</Text>
-                      <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: catColor, textTransform: 'capitalize' }}>{cat}</Text>
-                    </View>
-                    {isActive && <View style={{ position: 'absolute', top: 6, right: 6, width: 8, height: 8, borderRadius: 4, backgroundColor: catColor }} />}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        );
-      })()}
-
       {/* ── Wardrobe ─── */}
       <View style={s.section}>
         <View style={s.sectionHeader}>
