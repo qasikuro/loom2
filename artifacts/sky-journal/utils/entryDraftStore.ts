@@ -72,6 +72,11 @@ export const journalDraft = {
     save<JournalDraft>(KEYS.journal(type), { ...d, savedAt: Date.now() }),
   load:  (type: string) => load<JournalDraft>(KEYS.journal(type)),
   clear: (type: string) => clear(KEYS.journal(type)),
+  /** Returns true only when a draft with meaningful content exists for the given type. */
+  exists: async (type: string): Promise<boolean> => {
+    const d = await load<JournalDraft>(KEYS.journal(type));
+    return !!d && !!(d.text?.trim() || d.friendName?.trim());
+  },
 };
 
 // ── Quick moment ──────────────────────────────────────────────────────────────

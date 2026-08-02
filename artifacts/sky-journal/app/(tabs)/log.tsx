@@ -2,10 +2,10 @@ import { Icon } from '@/components/Icon';
 import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Animated,
@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MoodBadge } from '@/components/MoodBadge';
 import { useApp, type JournalEntry, type JournalEntryType } from '@/context/AppContext';
+import { journalDraft } from '@/utils/entryDraftStore';
 import { SHADOW } from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
@@ -408,6 +409,22 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
   const anim       = useRef(new Animated.Value(0)).current;
   const floatAnim  = useRef(new Animated.Value(0)).current;
 
+  // Track which entry types have a saved draft so we can show a dot indicator
+  const [draftTypes, setDraftTypes] = useState<Set<string>>(new Set());
+
+  useFocusEffect(useCallback(() => {
+    let cancelled = false;
+    Promise.all(
+      COMPOSE_TYPES.map(item => journalDraft.exists(item.type).then(has => ({ type: item.type, has })))
+    ).then(results => {
+      if (cancelled) return;
+      const set = new Set<string>();
+      results.forEach(r => { if (r.has) set.add(r.type); });
+      setDraftTypes(set);
+    });
+    return () => { cancelled = true; };
+  }, []));
+
   // Gentle float — FAB hovers up and down like a sky lantern
   useEffect(() => {
     const loop = Animated.loop(
@@ -466,6 +483,7 @@ function ComposeFAB({ bottomPad }: { bottomPad: number }) {
               activeOpacity={0.82}
             >
               <Icon name={item.icon} size={19} color={item.color} />
+              {draftTypes.has(item.type) && <View style={fab.draftDot} />}
             </TouchableOpacity>
           </Animated.View>
         );
@@ -490,6 +508,13 @@ const fab = StyleSheet.create({
   actionBtn:  { width:48, height:48, borderRadius:24, borderWidth:1, alignItems:'center', justifyContent:'center' },
   actionLabel:{ paddingHorizontal:10, paddingVertical:5, borderRadius:12 },
   actionLabelText: { color:'#fff', fontSize:12, fontFamily:'Satoshi-Medium' },
+  /** Subtle dot shown on a type button when that type has a saved draft. */
+  draftDot: {
+    position:'absolute', top:5, right:5,
+    width:8, height:8, borderRadius:4,
+    backgroundColor:'#C8A84B',
+    borderWidth:1.5, borderColor:'#0B0820',
+  },
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
