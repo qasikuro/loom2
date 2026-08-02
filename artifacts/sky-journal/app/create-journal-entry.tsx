@@ -119,8 +119,13 @@ export default function CreateJournalEntryScreen() {
   const [pendingDraft,   setPendingDraft]    = useState<JournalDraft | null>(null);
   const draftTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load any saved draft when the screen opens
+  // Load any saved draft when the screen opens.
+  // When the screen was launched with pre-filled content (initialPrompt),
+  // suppress the restore banner — restoring would silently overwrite the prompt.
+  const hasPrefilledContent = typeof initialPrompt === 'string' && initialPrompt.trim().length > 0;
+
   useEffect(() => {
+    if (hasPrefilledContent) return; // prompt takes priority; skip draft banner
     journalDraft.load(entryType).then(d => {
       // Only offer to restore if there's meaningful content to restore
       if (d && (d.text.trim() || d.friendName.trim())) {
