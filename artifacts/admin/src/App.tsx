@@ -7,14 +7,18 @@ import ContentPage from "./pages/ContentPage";
 import ReportsPage from "./pages/ReportsPage";
 import EventsPage from "./pages/EventsPage";
 import EffectsPage from "./pages/EffectsPage";
+import SettingsPage from "./pages/SettingsPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "⬡" },
   { id: "users",     label: "Users",     icon: "⊹" },
   { id: "content",   label: "Content",   icon: "▦" },
   { id: "events",    label: "Events",    icon: "✦" },
-  { id: "effects",   label: "Effects",   icon: "✧" },
-  { id: "reports",   label: "Reports",   icon: "⚑" },
+  { id: "effects",       label: "Effects",       icon: "✧" },
+  { id: "reports",       label: "Reports",       icon: "⚑" },
+  { id: "notifications", label: "Notifications", icon: "◎" },
+  { id: "settings",      label: "Settings",      icon: "⚙" },
 ] as const;
 type Page = (typeof NAV)[number]["id"];
 
@@ -178,8 +182,10 @@ function AdminApp() {
       {page === "users"     && <UsersPage />}
       {page === "content"   && <ContentPage />}
       {page === "events"    && <EventsPage />}
-      {page === "effects"   && <EffectsPage />}
-      {page === "reports"   && <ReportsPage />}
+      {page === "effects"       && <EffectsPage />}
+      {page === "reports"       && <ReportsPage />}
+      {page === "notifications" && <NotificationsPage />}
+      {page === "settings"      && <SettingsPage />}
     </Layout>
   );
 }
