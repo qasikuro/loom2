@@ -31,6 +31,12 @@ import {
   toRawDiscoverPost,
   DEFAULT_CHARACTER,
 } from './mappers';
+import {
+  handleDeleteJournalEntry,
+  handleDeleteStory,
+  handleDeleteOutfit,
+  handleUpdateStory,
+} from './mutations';
 import type {
   GuideAvailability,
   Character,
@@ -1447,38 +1453,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [fireToast, reloadRewards, reloadConstellation]);
 
   const deleteJournalEntry = useCallback((id: string) => {
-    // Capture only the item being deleted and its position for targeted restore.
-    const currentEntries = stateRef.current.journalEntries;
-    const originalEntry  = currentEntries.find(e => e.id === id);
-    const originalIndex  = currentEntries.findIndex(e => e.id === id);
     writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
-    setJournalEntries(prev => {
-      const updated = prev.filter(e => e.id !== id);
-      writeJournalCache(JSON.stringify(updated));
-      return updated;
-    });
-    apiFetch(`/journal-entries/${id}`, { method: 'DELETE' }).catch(() => {
-      if (!originalEntry) return;
-      // Reinsert only the deleted item — don't clobber concurrent changes to other entries.
-      setJournalEntries(prev => {
-        if (prev.some(e => e.id === id)) return prev; // already restored
-        const insertAt = Math.min(originalIndex, prev.length);
-        const restored = [...prev.slice(0, insertAt), originalEntry, ...prev.slice(insertAt)];
-        writeJournalCache(JSON.stringify(restored));
-        return restored;
-      });
-      showToastGlobal('Delete failed — tap to retry', 'error', () => {
-        apiFetch(`/journal-entries/${id}`, { method: 'DELETE' })
-          .then(() => {
-            setJournalEntries(prev => {
-              const updated = prev.filter(e => e.id !== id);
-              writeJournalCache(JSON.stringify(updated));
-              return updated;
-            });
-          })
-          .catch(() => null);
-      });
-    });
+    handleDeleteJournalEntry(
+      id,
+      stateRef.current.journalEntries,
+      setJournalEntries,
+      (json) => writeJournalCache(json),
+      (path, opts) => apiFetch(path, opts),
+      showToastGlobal,
+    );
   }, []);
 
   // ── Stories ────────────────────────────────────────────────────────────────
@@ -1567,16 +1550,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [fireToast, reloadRewards, reloadConstellation]);
 
   const updateStory = useCallback((id: string, updates: Partial<Omit<Story, 'id'>>) => {
-    // Capture only the story being edited for targeted restore.
-    const originalStory = stateRef.current.stories.find(s => s.id === id);
     // M-4: Reset TTL so a second device opening within the window sees the edit.
     writeFetchTimestamps({ stories: 0 }).catch(() => null);
-    setStories(prev => {
-      const updated = prev.map(s => s.id === id ? { ...s, ...updates } : s);
-      const slim = updated.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
-      writeStoryCache(JSON.stringify(slim));
-      return updated;
-    });
     const storyPatchBody = JSON.stringify({
       chapterTitle:  updates.chapterTitle,
       description:   updates.description ?? '',
@@ -1587,70 +1562,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       pageLayoutKey: updates.pageLayoutKey ?? null,
       pages:         updates.pages ?? null,
     });
-    apiFetch(`/stories/${id}`, { method: 'PATCH', body: storyPatchBody }).catch(() => {
-      if (!originalStory) return;
-      // Revert only the edited story — don't clobber concurrent changes to other stories.
-      setStories(prev => {
-        const reverted = prev.map(s => s.id === id ? originalStory : s);
-        const slim = reverted.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
-        writeStoryCache(JSON.stringify(slim));
-        return reverted;
-      });
-      showToastGlobal("Couldn't save story changes — tap to retry", 'error', () => {
-        setStories(prev => {
-          const reapplied = prev.map(s => s.id === id ? { ...s, ...updates } : s);
-          const slim = reapplied.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
-          writeStoryCache(JSON.stringify(slim));
-          return reapplied;
-        });
-        apiFetch(`/stories/${id}`, { method: 'PATCH', body: storyPatchBody })
-          .catch(() => {
-            // Retry also failed — revert the single story again.
-            setStories(prev => {
-              const rereverted = prev.map(s => s.id === id ? originalStory : s);
-              const slim = rereverted.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
-              writeStoryCache(JSON.stringify(slim));
-              return rereverted;
-            });
-          });
-      });
-    });
+    handleUpdateStory(
+      id,
+      updates,
+      stateRef.current.stories,
+      setStories,
+      (json) => writeStoryCache(json),
+      (path, opts) => apiFetch(path, opts),
+      showToastGlobal,
+      storyPatchBody,
+    );
   }, []);
 
   const deleteStory = useCallback((id: string) => {
-    // Capture only the story being deleted and its position for targeted restore.
-    const currentStories = stateRef.current.stories;
-    const originalStory  = currentStories.find(s => s.id === id);
-    const originalIndex  = currentStories.findIndex(s => s.id === id);
     writeFetchTimestamps({ stories: 0 }).catch(() => null);
-    setStories(prev => {
-      const updated = prev.filter(s => s.id !== id);
-      writeStoryCache(JSON.stringify(updated));
-      return updated;
-    });
-    apiFetch(`/stories/${id}`, { method: 'DELETE' }).catch(() => {
-      if (!originalStory) return;
-      // Reinsert only the deleted story — don't clobber concurrent changes to others.
-      setStories(prev => {
-        if (prev.some(s => s.id === id)) return prev; // already restored
-        const insertAt = Math.min(originalIndex, prev.length);
-        const restored = [...prev.slice(0, insertAt), originalStory, ...prev.slice(insertAt)];
-        const slim = restored.map(s => ({ ...s, panels: s.panels.map(p => ({ ...p, imageUri: undefined })) }));
-        writeStoryCache(JSON.stringify(slim));
-        return restored;
-      });
-      showToastGlobal('Delete failed — tap to retry', 'error', () => {
-        apiFetch(`/stories/${id}`, { method: 'DELETE' })
-          .then(() => {
-            setStories(prev => {
-              const updated = prev.filter(s => s.id !== id);
-              writeStoryCache(JSON.stringify(updated));
-              return updated;
-            });
-          })
-          .catch(() => null);
-      });
-    });
+    handleDeleteStory(
+      id,
+      stateRef.current.stories,
+      setStories,
+      (json) => writeStoryCache(json),
+      (path, opts) => apiFetch(path, opts),
+      showToastGlobal,
+    );
   }, []);
 
   // ── Outfits ────────────────────────────────────────────────────────────────
@@ -1740,58 +1673,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteOutfit = useCallback((id: string) => {
-    // Capture only the outfit being deleted and its position for targeted restore.
-    const currentOutfits = stateRef.current.outfits;
-    const originalOutfit = currentOutfits.find(o => o.id === id);
-    const originalIndex  = currentOutfits.findIndex(o => o.id === id);
-    const wasActive      = activeOutfitId === id;
     writeFetchTimestamps({ outfits: 0 }).catch(() => null);
-    setOutfits(prev => {
-      const updated = prev.filter(o => o.id !== id);
-      writeOutfitCache(JSON.stringify(updated));
-      return updated;
-    });
-    setActiveOutfitIdState(prev => {
-      if (prev === id) {
-        AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
-        return null;
-      }
-      return prev;
-    });
-    apiFetch(`/outfits/${id}`, { method: 'DELETE' }).catch(() => {
-      if (!originalOutfit) return;
-      // Reinsert only the deleted outfit at its original position — don't clobber others.
-      setOutfits(prev => {
-        if (prev.some(o => o.id === id)) return prev; // already restored
-        const insertAt = Math.min(originalIndex, prev.length);
-        const restored = [...prev.slice(0, insertAt), originalOutfit, ...prev.slice(insertAt)];
-        writeOutfitCache(JSON.stringify(restored));
-        return restored;
-      });
-      // Restore active selection only if it was this outfit.
-      if (wasActive) {
-        setActiveOutfitIdState(id);
-        AsyncStorage.setItem('active_outfit_v1', id).catch(() => null);
-      }
-      showToastGlobal('Delete failed — tap to retry', 'error', () => {
-        apiFetch(`/outfits/${id}`, { method: 'DELETE' })
-          .then(() => {
-            setOutfits(prev => {
-              const updated = prev.filter(o => o.id !== id);
-              writeOutfitCache(JSON.stringify(updated));
-              return updated;
-            });
-            setActiveOutfitIdState(prev => {
-              if (prev === id) {
-                AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
-                return null;
-              }
-              return prev;
-            });
-          })
-          .catch(() => null);
-      });
-    });
+    handleDeleteOutfit(
+      id,
+      stateRef.current.outfits,
+      activeOutfitId,
+      setOutfits,
+      (fn) => setActiveOutfitIdState(prev => {
+        const next = fn(prev);
+        if (next === null && prev !== null) AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
+        if (next !== null && next !== prev)  AsyncStorage.setItem('active_outfit_v1', next).catch(() => null);
+        return next;
+      }),
+      (json) => writeOutfitCache(json),
+      (path, opts) => apiFetch(path, opts),
+      showToastGlobal,
+    );
   }, [activeOutfitId]);
 
   const markPurchased = useCallback((itemId: string) => {
