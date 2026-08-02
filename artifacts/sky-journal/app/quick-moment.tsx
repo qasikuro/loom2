@@ -23,6 +23,7 @@ import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
 import { persistImageUri } from '@/utils/persistImage';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { makeStepBackHandler } from '@/hooks/stepBackHandler';
 import { ResumeDraftBanner } from '@/components/ResumeDraftBanner';
 import { quickMomentDraft, type QuickMomentDraft } from '@/utils/entryDraftStore';
 import {
@@ -117,13 +118,8 @@ export default function QuickMomentScreen() {
   // at step 0 return false so navigation proceeds and beforeRemove fires.
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (step > STEP_IMAGE) {
-        setStep(s => s - 1);
-        return true;
-      }
-      return false;
-    });
+    const handler = makeStepBackHandler(step, STEP_IMAGE, setStep);
+    const sub = BackHandler.addEventListener('hardwareBackPress', handler);
     return () => sub.remove();
   }, [step]);
 

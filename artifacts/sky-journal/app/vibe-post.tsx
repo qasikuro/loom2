@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { makeStepBackHandler } from '@/hooks/stepBackHandler';
 import { ResumeDraftBanner } from '@/components/ResumeDraftBanner';
 import { vibePostDraft, type VibePostDraft } from '@/utils/entryDraftStore';
 import {
@@ -112,13 +113,8 @@ export default function VibePostScreen() {
   // at STEP_MOOD return false so navigation proceeds and beforeRemove fires.
   useEffect(() => {
     if (Platform.OS !== 'android') return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (step === STEP_TEXT) {
-        setStep(STEP_MOOD);
-        return true;
-      }
-      return false;
-    });
+    const handler = makeStepBackHandler(step, STEP_MOOD, setStep);
+    const sub = BackHandler.addEventListener('hardwareBackPress', handler);
     return () => sub.remove();
   }, [step]);
 
