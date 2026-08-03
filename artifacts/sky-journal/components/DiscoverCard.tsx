@@ -11,6 +11,7 @@ const BETA_IMG    = require('@/assets/images/badge_beta.png');
 
 import { MoodBadge } from '@/components/MoodBadge';
 import { ResonateButton } from '@/components/ResonateButton';
+import { BadgeTray } from '@/components/profile/BadgeTray';
 import { useColors } from '@/hooks/useColors';
 import type { DiscoverPost } from '@/context/AppContext';
 import { extractPullQuote } from '@/utils/storyUtils';
@@ -177,6 +178,11 @@ export function DiscoverCard({
             {post.authorHandle || post.authorName}
             {!!post.authorTitle && <Text style={styles.titleBadge}> · {post.authorTitle}</Text>}
           </Text>
+
+          {/* Author badges */}
+          {!!post.authorBadges?.length && (
+            <BadgeTray badges={post.authorBadges} />
+          )}
 
           {/* Mood badge */}
           <View style={styles.moodRow}>
