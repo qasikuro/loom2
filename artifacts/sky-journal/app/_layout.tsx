@@ -11,7 +11,15 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { KeyboardProvider } from 'react-native-keyboard-controller';
+// react-native-keyboard-controller is a custom native module — not bundled in Expo Go.
+// Lazy-require it so a missing native module can't crash _layout.tsx on startup.
+let KeyboardProvider: React.ComponentType<{ children: React.ReactNode }> | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  KeyboardProvider = require('react-native-keyboard-controller').KeyboardProvider;
+} catch { /* not available in Expo Go — fall back to a plain wrapper below */ }
+const KeyboardProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
+  KeyboardProvider ? <KeyboardProvider>{children}</KeyboardProvider> : <>{children}</>;
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppSplashScreen } from '@/components/AppSplashScreen';
@@ -357,7 +365,7 @@ export default function RootLayout() {
                         <AppOverlays />
                         <ToastProvider>
                         <GestureHandlerRootView style={{ flex: 1 }}>
-                        <KeyboardProvider>
+                        <KeyboardProviderWrapper>
                           <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="(auth)" />
                             <Stack.Screen name="(tabs)" />
@@ -427,7 +435,7 @@ export default function RootLayout() {
                             />
                           </Stack>
                           <XPFlash />
-                        </KeyboardProvider>
+                        </KeyboardProviderWrapper>
                       </GestureHandlerRootView>
                       </ToastProvider>
                       </AppProvider>
