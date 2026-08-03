@@ -51,6 +51,10 @@ export default function NotificationsPage() {
   const [audience, setAudience] = useState<Audience>("all");
   const [deepLink, setDeepLink] = useState("");
 
+  // Audience count preview
+  const [audienceCount,        setAudienceCount]        = useState<number | null>(null);
+  const [audienceCountLoading, setAudienceCountLoading] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -64,6 +68,18 @@ export default function NotificationsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Fetch audience count whenever the audience selection changes
+  useEffect(() => {
+    let cancelled = false;
+    setAudienceCount(null);
+    setAudienceCountLoading(true);
+    apiFetch<{ count: number }>(`/admin/notifications/audience-count?audience=${audience}`)
+      .then(res => { if (!cancelled) setAudienceCount(res.count); })
+      .catch(() => { if (!cancelled) setAudienceCount(null); })
+      .finally(() => { if (!cancelled) setAudienceCountLoading(false); });
+    return () => { cancelled = true; };
+  }, [audience]);
 
   const send = async () => {
     if (!title.trim() || !body.trim()) {
@@ -184,6 +200,16 @@ export default function NotificationsPage() {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">{meta.description}</p>
+            <p className="text-xs text-muted-foreground">
+              {audienceCountLoading ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 border border-muted-foreground border-t-transparent rounded-full animate-spin" />
+                  Counting devices…
+                </span>
+              ) : audienceCount !== null ? (
+                <span>→ <strong className="text-foreground">{audienceCount.toLocaleString()}</strong> device{audienceCount !== 1 ? "s" : ""}</span>
+              ) : null}
+            </p>
           </div>
 
           <div className="pt-1">
@@ -197,6 +223,8 @@ export default function NotificationsPage() {
                   <span className="w-3.5 h-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
                   Sending…
                 </span>
+              ) : audienceCount !== null ? (
+                `Send to ${meta.label} (${audienceCount.toLocaleString()} device${audienceCount !== 1 ? "s" : ""})`
               ) : (
                 `Send to ${meta.label}`
               )}

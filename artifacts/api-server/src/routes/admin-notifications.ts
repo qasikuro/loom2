@@ -75,6 +75,23 @@ async function getTokensForAudience(audience: Audience): Promise<string[]> {
     .filter(t => t.startsWith("ExponentPushToken["));
 }
 
+// ── GET /admin/notifications/audience-count ───────────────────────────────────
+
+router.get("/admin/notifications/audience-count", requireAdmin, async (req: Request, res: Response) => {
+  const audienceParam = req.query.audience as string | undefined;
+  const parsed = z.enum(AUDIENCE_VALUES).safeParse(audienceParam ?? "all");
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid audience value" });
+  }
+  try {
+    const tokens = await getTokensForAudience(parsed.data);
+    return res.json({ audience: parsed.data, count: tokens.length });
+  } catch (err) {
+    req.log.error({ err }, "admin/notifications audience-count failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── GET /admin/notifications ──────────────────────────────────────────────────
 
 router.get("/admin/notifications", requireAdmin, async (req: Request, res: Response) => {
