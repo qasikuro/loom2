@@ -5,6 +5,7 @@ export default defineConfig({
     globals:     true,
     environment: 'node',
     include:     [
+      'app/__tests__/**/*.test.ts',
       'context/__tests__/**/*.test.ts',
       'hooks/__tests__/**/*.test.ts',
     ],

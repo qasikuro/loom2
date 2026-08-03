@@ -240,35 +240,43 @@ function AppOverlays() {
   return <OnboardingOverlay visible={showOnboarding} onComplete={handleComplete} onDismiss={handleDismiss} />;
 }
 
+/**
+ * Pure routing helper extracted from NotificationDeepLinkHandler so it can be
+ * unit-tested without a React or native runtime.
+ *
+ * @param push  - the `router.push` function (or any compatible sink in tests)
+ * @param data  - the notification payload's `data` field
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function resolveNotificationRoute(push: (href: any) => void, data: Record<string, unknown>): void {
+  // Admin broadcast deep link — takes priority over type-based routing
+  if (typeof data?.url === 'string' && data.url) {
+    push(data.url);
+    return;
+  }
+  if (!data?.type) return;
+  switch (data.type) {
+    case 'follow':
+      if (data.refId) push(`/user/${data.refId}`);
+      break;
+    case 'witness':
+    case 'save':
+    case 'new_story':
+      if (data.refId) push(`/story/${data.refId}`);
+      break;
+    case 'message':
+      if (data.refId) push(`/messages/${data.refId}`);
+      break;
+    default:
+      break;
+  }
+}
+
 function NotificationDeepLinkHandler() {
   const router = useRouter();
 
   const navigate = useCallback((data: Record<string, unknown>) => {
-    // Admin broadcast deep link — takes priority over type-based routing
-    if (typeof data?.url === 'string' && data.url) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      router.push(data.url as any);
-      return;
-    }
-    if (!data?.type) return;
-    switch (data.type) {
-      case 'follow':
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (data.refId) router.push(`/user/${data.refId}` as any);
-        break;
-      case 'witness':
-      case 'save':
-      case 'new_story':
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (data.refId) router.push(`/story/${data.refId}` as any);
-        break;
-      case 'message':
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (data.refId) router.push(`/messages/${data.refId}` as any);
-        break;
-      default:
-        break;
-    }
+    resolveNotificationRoute(router.push, data);
   }, [router]);
 
   useEffect(() => {
