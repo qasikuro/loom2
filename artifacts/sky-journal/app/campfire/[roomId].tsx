@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -25,13 +26,15 @@ import { useSSE } from '@/hooks/useSSE';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface CampfireMsg {
-  id:         string;
-  userId:     string;
-  authorName: string;
-  content:    string | null;
-  expression: string | null;
-  createdAt:  string;
-  isMine:     boolean;
+  id:           string;
+  userId:       string;
+  authorName:   string;
+  content:      string | null;
+  expression:   string | null;
+  createdAt:    string;
+  isMine:       boolean;
+  isFounder?:    boolean;
+  isBetaTester?: boolean;
 }
 
 interface RoomData {
@@ -287,12 +290,28 @@ function MessageRow({ msg, palette, opacity }: {
     return (
       <Animated.View style={[mb.exprWrap, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
         <Text style={mb.exprSymbol}>{expr.symbol}</Text>
-        <Text style={[mb.exprAuthor, { color: `${palette.ember}88` }]}>
-          <Text style={{ color: msg.isMine ? palette.ember : `${palette.ember}80` }}>
-            {msg.isMine ? 'You' : msg.authorName}
+        <View style={mb.exprAuthorRow}>
+          <Text style={[mb.exprAuthor, { color: `${palette.ember}88` }]}>
+            <Text style={{ color: msg.isMine ? palette.ember : `${palette.ember}80` }}>
+              {msg.isMine ? 'You' : msg.authorName}
+            </Text>
+            {' '}{expr.verb}
           </Text>
-          {' '}{expr.verb}
-        </Text>
+          {!msg.isMine && msg.isFounder && (
+            <Image
+              source={require('@/assets/images/badge_founder.png')}
+              style={mb.badge}
+              accessibilityLabel="Founder"
+            />
+          )}
+          {!msg.isMine && msg.isBetaTester && (
+            <Image
+              source={require('@/assets/images/badge_beta.png')}
+              style={mb.badge}
+              accessibilityLabel="Beta Tester"
+            />
+          )}
+        </View>
       </Animated.View>
     );
   }
@@ -305,7 +324,23 @@ function MessageRow({ msg, palette, opacity }: {
       { opacity: fadeIn, transform: [{ translateY: slideUp }] },
     ]}>
       {!msg.isMine && (
-        <Text style={[mb.author, { color: `${palette.ember}88` }]}>{msg.authorName}</Text>
+        <View style={mb.authorRow}>
+          <Text style={[mb.author, { color: `${palette.ember}88` }]}>{msg.authorName}</Text>
+          {msg.isFounder && (
+            <Image
+              source={require('@/assets/images/badge_founder.png')}
+              style={mb.badge}
+              accessibilityLabel="Founder"
+            />
+          )}
+          {msg.isBetaTester && (
+            <Image
+              source={require('@/assets/images/badge_beta.png')}
+              style={mb.badge}
+              accessibilityLabel="Beta Tester"
+            />
+          )}
+        </View>
       )}
       <View style={[
         mb.bubble,
@@ -325,15 +360,18 @@ function MessageRow({ msg, palette, opacity }: {
 const mb = StyleSheet.create({
   row:         { marginBottom: 10, maxWidth: '78%' },
   rowMine:     { alignSelf: 'flex-end' },
-  author:      { fontSize: 9.5, fontFamily: 'Satoshi-Bold', marginBottom: 3, marginLeft: 12, letterSpacing: 0.2 },
+  authorRow:   { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3, marginLeft: 12 },
+  author:      { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
+  badge:       { width: 16, height: 16, borderRadius: 3 },
   bubble:      { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18, borderWidth: 1 },
   bubbleMine:  { borderBottomRightRadius: 6 },
   bubbleOther: { borderBottomLeftRadius: 6 },
   text:        { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 20 },
   // Expression
-  exprWrap:    { alignItems: 'center', marginVertical: 10, gap: 2 },
-  exprSymbol:  { fontSize: 22 },
-  exprAuthor:  { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
+  exprWrap:       { alignItems: 'center', marginVertical: 10, gap: 2 },
+  exprSymbol:     { fontSize: 22 },
+  exprAuthorRow:  { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  exprAuthor:     { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 });
 
 // ── Expression bar ────────────────────────────────────────────────────────────
@@ -441,6 +479,7 @@ export default function CampfireRoom() {
         message?: {
           id: string; userId: string; authorName: string;
           content: string | null; expression: string | null; createdAt: string;
+          isFounder?: boolean; isBetaTester?: boolean;
         };
         soulCount?: number;
       };
@@ -450,7 +489,12 @@ export default function CampfireRoom() {
         setData(prev => {
           if (!prev) return prev;
           if (prev.messages.find(x => x.id === m.id)) return prev;
-          const newMsg: CampfireMsg = { ...m, isMine: m.userId === myUserId };
+          const newMsg: CampfireMsg = {
+            ...m,
+            isMine:       m.userId === myUserId,
+            isFounder:    m.isFounder    ?? false,
+            isBetaTester: m.isBetaTester ?? false,
+          };
           return { ...prev, messages: [...prev.messages, newMsg] };
         });
         lastIdRef.current = m.id;

@@ -141,8 +141,18 @@ router.get("/campfire/:roomId", requireAuth, async (req, res) => {
   if (!room) return res.status(404).json({ error: "Campfire not found" });
 
   const messages = await db
-    .select()
+    .select({
+      id:           campfireMessagesTable.id,
+      userId:       campfireMessagesTable.userId,
+      authorName:   campfireMessagesTable.authorName,
+      content:      campfireMessagesTable.content,
+      expression:   campfireMessagesTable.expression,
+      createdAt:    campfireMessagesTable.createdAt,
+      isFounder:    characterTable.isFounder,
+      isBetaTester: characterTable.isBetaTester,
+    })
     .from(campfireMessagesTable)
+    .leftJoin(characterTable, eq(campfireMessagesTable.userId, characterTable.userId))
     .where(and(
       eq(campfireMessagesTable.roomId, roomId),
       gt(campfireMessagesTable.expiresAt, now),
@@ -163,13 +173,15 @@ router.get("/campfire/:roomId", requireAuth, async (req, res) => {
   return res.json({
     room: { id: room.id, name: room.name, mood: room.mood, isPreset: room.isPreset },
     messages: messages.reverse().map(m => ({
-      id:         m.id,
-      userId:     m.userId,
-      authorName: m.authorName,
-      content:    m.content,
-      expression: m.expression,
-      createdAt:  m.createdAt,
-      isMine:     m.userId === userId,
+      id:           m.id,
+      userId:       m.userId,
+      authorName:   m.authorName,
+      content:      m.content,
+      expression:   m.expression,
+      createdAt:    m.createdAt,
+      isMine:       m.userId === userId,
+      isFounder:    m.isFounder ?? false,
+      isBetaTester: m.isBetaTester ?? false,
     })),
     soulCount: Number(presenceRow?.souls ?? 0),
   });
@@ -202,14 +214,25 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
 
   if (!room) return res.status(404).json({ error: "Campfire not found" });
 
-  // Resolve author name from character table if not provided
-  let resolvedName = authorName?.trim() || "Wanderer";
-  if (!authorName) {
+  // Resolve author name + badge flags from character table
+  let resolvedName  = authorName?.trim() || "Wanderer";
+  let isFounder     = false;
+  let isBetaTester  = false;
+  {
     const [char] = await db
-      .select({ name: characterTable.name, username: characterTable.username })
+      .select({
+        name:         characterTable.name,
+        username:     characterTable.username,
+        isFounder:    characterTable.isFounder,
+        isBetaTester: characterTable.isBetaTester,
+      })
       .from(characterTable)
       .where(eq(characterTable.userId, userId));
-    if (char?.name) resolvedName = char.name;
+    if (char) {
+      if (!authorName && char.name) resolvedName = char.name;
+      isFounder    = char.isFounder    ?? false;
+      isBetaTester = char.isBetaTester ?? false;
+    }
   }
 
   const now       = new Date();
@@ -228,12 +251,14 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
     .returning();
 
   const payload = {
-    id:         msg.id,
-    userId:     msg.userId,
-    authorName: msg.authorName,
-    content:    msg.content,
-    expression: msg.expression,
-    createdAt:  msg.createdAt,
+    id:           msg.id,
+    userId:       msg.userId,
+    authorName:   msg.authorName,
+    content:      msg.content,
+    expression:   msg.expression,
+    createdAt:    msg.createdAt,
+    isFounder,
+    isBetaTester,
   };
 
   // Notify all SSE clients watching this campfire room
