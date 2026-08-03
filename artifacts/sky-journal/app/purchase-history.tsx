@@ -1,7 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { apiFetch } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useState } from 'react';
 import {

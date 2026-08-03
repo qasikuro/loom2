@@ -3,7 +3,7 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useNavigation } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';

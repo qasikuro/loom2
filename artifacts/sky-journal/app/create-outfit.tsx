@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';

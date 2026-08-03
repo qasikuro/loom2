@@ -48,7 +48,10 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
+    },
+    "updates": {
+      "enabled": false
     },
     "extra": {
       "eas": {

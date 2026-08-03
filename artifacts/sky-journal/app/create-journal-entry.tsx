@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { journalDraft } from '@/utils/entryDraftStore';
 import { useJournalDraftLoader } from '@/hooks/useJournalDraftLoader';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';

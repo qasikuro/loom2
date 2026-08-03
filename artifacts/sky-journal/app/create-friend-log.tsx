@@ -2,7 +2,6 @@ import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
