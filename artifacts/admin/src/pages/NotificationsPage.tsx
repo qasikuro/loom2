@@ -15,12 +15,25 @@ interface Broadcast {
   createdAt: string;
 }
 
-type Audience = "all" | "beta";
+type Audience = "all" | "beta" | "founders" | "banned" | "admins" | "guides" | "recent";
 
-const AUDIENCE_LABELS: Record<Audience, string> = {
-  all:  "Everyone",
-  beta: "Beta testers only",
+interface AudienceMeta {
+  label:       string;
+  description: string;
+  badge:       string; // Tailwind classes for the history badge
+}
+
+const AUDIENCES: Record<Audience, AudienceMeta> = {
+  all:      { label: "Everyone",         description: "All users with push notifications enabled",           badge: "bg-secondary text-secondary-foreground" },
+  recent:   { label: "Recently Active",  description: "Users active in the last 7 days",                    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  beta:     { label: "Beta Testers",     description: "Users with the beta tester flag",                    badge: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  founders: { label: "Founders",         description: "Users with the founder status",                      badge: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  guides:   { label: "Guides",           description: "Constellation Guides",                               badge: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  admins:   { label: "Admins",           description: "Admin users only",                                   badge: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
+  banned:   { label: "Banned Users",     description: "Users currently banned — e.g. policy reminders",    badge: "bg-zinc-200 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400" },
 };
+
+const AUDIENCE_ORDER: Audience[] = ["all", "recent", "beta", "founders", "guides", "admins", "banned"];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -84,6 +97,8 @@ export default function NotificationsPage() {
     }
   };
 
+  const meta = AUDIENCES[audience] ?? AUDIENCES.all;
+
   return (
     <div className="p-8 max-w-2xl space-y-8">
       <div>
@@ -130,25 +145,27 @@ export default function NotificationsPage() {
             <p className="text-xs text-muted-foreground text-right">{body.length}/500</p>
           </div>
 
-          <div className="space-y-1.5">
+          {/* ── Audience picker ── */}
+          <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Send To
             </label>
-            <div className="flex gap-2">
-              {(["all", "beta"] as Audience[]).map(a => (
+            <div className="flex flex-wrap gap-2">
+              {AUDIENCE_ORDER.map(a => (
                 <button
                   key={a}
                   onClick={() => setAudience(a)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  className={`px-3.5 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
                     audience === a
                       ? "bg-primary text-primary-foreground border-primary"
                       : "border-border text-muted-foreground hover:bg-accent"
                   }`}
                 >
-                  {AUDIENCE_LABELS[a]}
+                  {AUDIENCES[a].label}
                 </button>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">{meta.description}</p>
           </div>
 
           <div className="pt-1">
@@ -163,7 +180,7 @@ export default function NotificationsPage() {
                   Sending…
                 </span>
               ) : (
-                `Send to ${AUDIENCE_LABELS[audience]}`
+                `Send to ${meta.label}`
               )}
             </Button>
           </div>
@@ -189,34 +206,35 @@ export default function NotificationsPage() {
             No notifications sent yet.
           </div>
         ) : (
-          broadcasts.map(b => (
-            <div key={b.id} className="px-5 py-4 flex gap-4 items-start">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-sm font-medium truncate">{b.title}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                    b.audience === "beta"
-                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                      : "bg-secondary text-secondary-foreground"
-                  }`}>
-                    {AUDIENCE_LABELS[b.audience as Audience] ?? b.audience}
-                  </span>
+          broadcasts.map(b => {
+            const bMeta = AUDIENCES[b.audience as Audience];
+            return (
+              <div key={b.id} className="px-5 py-4 flex gap-4 items-start">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-medium truncate">{b.title}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
+                      bMeta?.badge ?? "bg-secondary text-secondary-foreground"
+                    }`}>
+                      {bMeta?.label ?? b.audience}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{b.body}</p>
+                  <p className="text-xs text-muted-foreground mt-1.5">
+                    {b.sentCount.toLocaleString()} device{b.sentCount !== 1 ? "s" : ""} ·{" "}
+                    {b.sentAt ? new Date(b.sentAt).toLocaleString() : "—"}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{b.body}</p>
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  {b.sentCount.toLocaleString()} device{b.sentCount !== 1 ? "s" : ""} ·{" "}
-                  {b.sentAt ? new Date(b.sentAt).toLocaleString() : "—"}
-                </p>
+                <button
+                  onClick={() => deleteRecord(b.id)}
+                  className="text-muted-foreground hover:text-destructive transition-colors text-xs shrink-0 mt-0.5"
+                  title="Remove from history"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                onClick={() => deleteRecord(b.id)}
-                className="text-muted-foreground hover:text-destructive transition-colors text-xs shrink-0 mt-0.5"
-                title="Remove from history"
-              >
-                ✕
-              </button>
-            </div>
-          ))
+            );
+          })
         )}
       </section>
     </div>

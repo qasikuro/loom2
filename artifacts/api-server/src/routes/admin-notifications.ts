@@ -1,11 +1,79 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, characterTable, notificationBroadcastsTable } from "@workspace/db";
-import { eq, desc, isNotNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
 import { requireAdmin, getUserId } from "../middleware/auth";
 import { sendPushToTokens } from "../services/pushService";
 import { z } from "zod";
 
 const router: IRouter = Router();
+
+// ── Audience → DB query ───────────────────────────────────────────────────────
+
+const AUDIENCE_VALUES = ["all", "beta", "founders", "banned", "admins", "guides", "recent"] as const;
+type Audience = typeof AUDIENCE_VALUES[number];
+
+async function getTokensForAudience(audience: Audience): Promise<string[]> {
+  let rows: { pushToken: string | null }[];
+
+  switch (audience) {
+    case "beta":
+      rows = await db
+        .select({ pushToken: characterTable.pushToken })
+        .from(characterTable)
+        .where(and(isNotNull(characterTable.pushToken), eq(characterTable.isBetaTester, true)));
+      break;
+
+    case "founders":
+      rows = await db
+        .select({ pushToken: characterTable.pushToken })
+        .from(characterTable)
+        .where(and(isNotNull(characterTable.pushToken), eq(characterTable.isFounder, true)));
+      break;
+
+    case "banned":
+      rows = await db
+        .select({ pushToken: characterTable.pushToken })
+        .from(characterTable)
+        .where(and(isNotNull(characterTable.pushToken), eq(characterTable.isBanned, true)));
+      break;
+
+    case "admins":
+      rows = await db
+        .select({ pushToken: characterTable.pushToken })
+        .from(characterTable)
+        .where(and(isNotNull(characterTable.pushToken), eq(characterTable.isAdmin, true)));
+      break;
+
+    case "guides":
+      rows = await db
+        .select({ pushToken: characterTable.pushToken })
+        .from(characterTable)
+        .where(and(isNotNull(characterTable.pushToken), eq(characterTable.isGuide, true)));
+      break;
+
+    case "recent": {
+      // "Recently active" = updatedAt within the last 7 days
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      rows = await db
+        .select({ pushToken: characterTable.pushToken })
+        .from(characterTable)
+        .where(and(isNotNull(characterTable.pushToken), gt(characterTable.updatedAt, sevenDaysAgo)));
+      break;
+    }
+
+    case "all":
+    default:
+      rows = await db
+        .select({ pushToken: characterTable.pushToken })
+        .from(characterTable)
+        .where(isNotNull(characterTable.pushToken));
+      break;
+  }
+
+  return rows
+    .map(r => r.pushToken!)
+    .filter(t => t.startsWith("ExponentPushToken["));
+}
 
 // ── GET /admin/notifications ──────────────────────────────────────────────────
 
@@ -28,8 +96,7 @@ router.get("/admin/notifications", requireAdmin, async (req: Request, res: Respo
 const BroadcastSchema = z.object({
   title:    z.string().min(1).max(100),
   body:     z.string().min(1).max(500),
-  /** "all" | "beta" */
-  audience: z.enum(["all", "beta"]).default("all"),
+  audience: z.enum(AUDIENCE_VALUES).default("all"),
 });
 
 router.post("/admin/notifications/broadcast", requireAdmin, async (req: Request, res: Response) => {
@@ -42,29 +109,11 @@ router.post("/admin/notifications/broadcast", requireAdmin, async (req: Request,
   const adminId = getUserId(req);
 
   try {
-    // Fetch tokens based on audience
-    let rows: { pushToken: string | null }[];
-
-    if (audience === "beta") {
-      // Use raw SQL since isBetaTester may not be in the TS schema yet
-      const result = await db.execute(
-        sql`SELECT push_token FROM character WHERE push_token IS NOT NULL AND is_beta_tester = TRUE`
-      );
-      rows = (result.rows as { push_token: string | null }[]).map(r => ({ pushToken: r.push_token }));
-    } else {
-      rows = await db
-        .select({ pushToken: characterTable.pushToken })
-        .from(characterTable)
-        .where(isNotNull(characterTable.pushToken));
-    }
-
-    const messages = rows
-      .filter(r => r.pushToken?.startsWith("ExponentPushToken["))
-      .map(r => ({ token: r.pushToken!, title, body }));
+    const tokens  = await getTokensForAudience(audience);
+    const messages = tokens.map(token => ({ token, title, body }));
 
     await sendPushToTokens(messages);
 
-    // Log the broadcast
     const [record] = await db
       .insert(notificationBroadcastsTable)
       .values({
