@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Image, Text, StyleSheet } from 'react-native';
 
 export interface BadgeItem {
   id:        string;
@@ -11,60 +11,63 @@ export interface BadgeItem {
 }
 
 interface Props {
-  badges:  BadgeItem[];
-  size?:   'sm' | 'md';
+  badges: BadgeItem[];
 }
 
 /**
- * Fully data-driven badge tray.
- * Renders whatever badges the API returns — no hardcoded knowledge of specific
- * badge slugs or images.  If a badge has an imageUrl, renders it; otherwise
- * falls back to an emoji + name pill.
+ * Compact badge tray — image-only circles in a horizontal row.
+ * Shows the badge image when available, otherwise a single emoji.
+ * No name labels — keeps the tray dense so multiple badges fit easily.
  */
-export function BadgeTray({ badges, size = 'md' }: Props) {
+export function BadgeTray({ badges }: Props) {
   if (!badges || badges.length === 0) return null;
-
-  const imgSize  = size === 'sm' ? 28 : 38;
-  const fontSize = size === 'sm' ? 10 : 11;
 
   return (
     <View style={s.row}>
       {badges.map((badge) => (
-        <View key={badge.id} style={[s.pill, { backgroundColor: badge.color + '22', borderColor: badge.color + '55' }]}>
+        <View
+          key={badge.id}
+          style={[s.chip, { backgroundColor: badge.color + '22', borderColor: badge.color + '55' }]}
+        >
           {badge.imageUrl ? (
             <Image
               source={{ uri: badge.imageUrl }}
-              style={{ width: imgSize, height: imgSize, borderRadius: 4 }}
+              style={s.img}
               resizeMode="contain"
             />
           ) : (
-            <Text style={{ fontSize: imgSize * 0.6 }}>{badge.emoji}</Text>
+            <Text style={s.emoji}>{badge.emoji}</Text>
           )}
-          <Text style={[s.label, { color: badge.color, fontSize }]}>{badge.name}</Text>
         </View>
       ))}
     </View>
   );
 }
 
+const CHIP = 32;
+
 const s = StyleSheet.create({
   row: {
-    flexDirection:  'row',
-    flexWrap:       'wrap',
-    gap:            6,
-    marginTop:      4,
+    flexDirection: 'row',
+    flexWrap:      'wrap',
+    gap:           6,
+    marginTop:     4,
   },
-  pill: {
-    flexDirection:  'row',
-    alignItems:     'center',
-    gap:            5,
-    paddingVertical:  4,
-    paddingHorizontal: 8,
-    borderRadius:   10,
+  chip: {
+    width:          CHIP,
+    height:         CHIP,
+    borderRadius:   CHIP / 2,
     borderWidth:    1,
+    alignItems:     'center',
+    justifyContent: 'center',
+    overflow:       'hidden',
   },
-  label: {
-    fontFamily: 'Satoshi-Bold',
-    letterSpacing: 0.2,
+  img: {
+    width:  CHIP,
+    height: CHIP,
+  },
+  emoji: {
+    fontSize: 16,
+    lineHeight: 20,
   },
 });

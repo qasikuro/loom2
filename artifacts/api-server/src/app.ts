@@ -19,7 +19,7 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
-import { objectStorageClient } from "./lib/objectStorage";
+import { objectStorageClient, ObjectStorageService, ObjectNotFoundError } from "./lib/objectStorage";
 
 const app: Express = express();
 
@@ -133,6 +133,30 @@ app.get("/api/images/:filename", async (req: Request, res: Response) => {
     // GCS returns 404 when the object doesn't exist
     if (err?.code === 404 || err?.code === "404") return res.status(404).end();
     return res.status(404).end();
+  }
+});
+
+// ── Object storage serving: /api/storage/objects/uploads/:uuid ────────────────
+// Publicly accessible — no auth required. Used by badge images and any other
+// admin-uploaded objects stored via ObjectStorageService presigned-URL flow.
+// The objectPath passed to getObjectEntityFile must start with "/objects/".
+app.get("/api/storage/objects/uploads/:uuid", async (req: Request, res: Response) => {
+  const entityPath = `/objects/uploads/${req.params.uuid}`;
+  try {
+    const svc  = new ObjectStorageService();
+    const file = await svc.getObjectEntityFile(entityPath);
+    const [meta] = await file.getMetadata();
+    res.setHeader("Content-Type", (meta.contentType as string) || "application/octet-stream");
+    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+    file.createReadStream().pipe(res);
+    return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
+    if (err instanceof ObjectNotFoundError || err?.code === 404 || err?.code === "404") {
+      return void res.status(404).end();
+    }
+    logger.error({ err }, "GET /api/storage/objects/uploads/:uuid failed");
+    return void res.status(500).end();
   }
 });
 
