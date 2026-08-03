@@ -75,6 +75,27 @@ async function getTokensForAudience(audience: Audience): Promise<string[]> {
     .filter(t => t.startsWith("ExponentPushToken["));
 }
 
+// ── Audience count cache (30-second TTL) ─────────────────────────────────────
+
+const AUDIENCE_COUNT_TTL_MS = 30_000;
+
+interface AudienceCountEntry {
+  count: number;
+  ts: number;
+}
+
+const audienceCountCache = new Map<Audience, AudienceCountEntry>();
+
+async function getCachedAudienceCount(audience: Audience): Promise<number> {
+  const cached = audienceCountCache.get(audience);
+  if (cached && Date.now() - cached.ts < AUDIENCE_COUNT_TTL_MS) {
+    return cached.count;
+  }
+  const tokens = await getTokensForAudience(audience);
+  audienceCountCache.set(audience, { count: tokens.length, ts: Date.now() });
+  return tokens.length;
+}
+
 // ── GET /admin/notifications/audience-count ───────────────────────────────────
 
 router.get("/admin/notifications/audience-count", requireAdmin, async (req: Request, res: Response) => {
@@ -84,8 +105,8 @@ router.get("/admin/notifications/audience-count", requireAdmin, async (req: Requ
     return res.status(400).json({ error: "Invalid audience value" });
   }
   try {
-    const tokens = await getTokensForAudience(parsed.data);
-    return res.json({ audience: parsed.data, count: tokens.length });
+    const count = await getCachedAudienceCount(parsed.data);
+    return res.json({ audience: parsed.data, count });
   } catch (err) {
     req.log.error({ err }, "admin/notifications audience-count failed");
     return res.status(500).json({ error: "Internal server error" });
