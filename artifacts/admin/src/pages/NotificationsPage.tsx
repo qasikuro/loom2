@@ -2,6 +2,16 @@ import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "../api";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +46,52 @@ const AUDIENCES: Record<Audience, AudienceMeta> = {
 
 const AUDIENCE_ORDER: Audience[] = ["all", "recent", "beta", "founders", "guides", "admins", "banned"];
 
+// ── Deep Link Destinations ────────────────────────────────────────────────────
+
+const CUSTOM_DEEP_LINK = "__custom__";
+const NONE_DEEP_LINK   = "__none__";
+
+interface DeepLinkOption {
+  value: string; // Expo Router path, or CUSTOM_DEEP_LINK sentinel
+  label: string;
+}
+
+interface DeepLinkGroup {
+  label: string;
+  options: DeepLinkOption[];
+}
+
+const DEEP_LINK_GROUPS: DeepLinkGroup[] = [
+  {
+    label: "Main Tabs",
+    options: [
+      { value: "/(tabs)/index",    label: "Home (Journal)" },
+      { value: "/(tabs)/discover", label: "Discover" },
+      { value: "/(tabs)/create",   label: "Create" },
+      { value: "/(tabs)/log",      label: "Log" },
+      { value: "/(tabs)/drift",    label: "Drift" },
+      { value: "/(tabs)/profile",  label: "Profile" },
+    ],
+  },
+  {
+    label: "Features",
+    options: [
+      { value: "/season",       label: "Season" },
+      { value: "/shop",         label: "Shop" },
+      { value: "/campfire",     label: "Campfire" },
+      { value: "/messages",     label: "Messages" },
+      { value: "/constellation", label: "Constellation" },
+      { value: "/my-stories",   label: "My Stories" },
+      { value: "/saved-stories", label: "Saved Stories" },
+    ],
+  },
+];
+
+/** Returns true if s looks like a valid Expo Router path */
+function isValidDeepLinkPath(s: string): boolean {
+  return /^\/[^\s]*$/.test(s.trim());
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function NotificationsPage() {
@@ -46,10 +102,20 @@ export default function NotificationsPage() {
   const [success, setSuccess]       = useState<string | null>(null);
 
   // Form state
-  const [title,    setTitle]    = useState("");
-  const [body,     setBody]     = useState("");
-  const [audience, setAudience] = useState<Audience>("all");
-  const [deepLink, setDeepLink] = useState("");
+  const [title,           setTitle]           = useState("");
+  const [body,            setBody]            = useState("");
+  const [audience,        setAudience]        = useState<Audience>("all");
+  const [deepLinkChoice,  setDeepLinkChoice]  = useState<string>(NONE_DEEP_LINK); // preset path, CUSTOM_DEEP_LINK, NONE_DEEP_LINK
+  const [customDeepLink,  setCustomDeepLink]  = useState("");              // used when choice === CUSTOM_DEEP_LINK
+  const [deepLinkError,   setDeepLinkError]   = useState<string | null>(null);
+
+  /** The resolved path sent to the API (empty string = no deep link) */
+  const resolvedDeepLink =
+    deepLinkChoice === NONE_DEEP_LINK   ? ""
+    : deepLinkChoice === CUSTOM_DEEP_LINK ? customDeepLink.trim()
+    : deepLinkChoice;
+
+  const isCustomMode = deepLinkChoice === CUSTOM_DEEP_LINK;
 
   // Audience count preview
   const [audienceCount,        setAudienceCount]        = useState<number | null>(null);
@@ -86,18 +152,26 @@ export default function NotificationsPage() {
       setError("Title and message are required");
       return;
     }
+    // Validate custom path before sending
+    if (isCustomMode && customDeepLink.trim() && !isValidDeepLinkPath(customDeepLink)) {
+      setDeepLinkError("Path must start with / and contain no spaces (e.g. /season or /(tabs)/discover)");
+      return;
+    }
+    setDeepLinkError(null);
     setSending(true);
     setError(null);
     try {
       const res = await apiFetch<{ ok: boolean; sentCount: number }>("/admin/notifications/broadcast", {
         method: "POST",
-        body:   JSON.stringify({ title: title.trim(), body: body.trim(), audience, ...(deepLink.trim() ? { deepLink: deepLink.trim() } : {}) }),
+        body:   JSON.stringify({ title: title.trim(), body: body.trim(), audience, ...(resolvedDeepLink ? { deepLink: resolvedDeepLink } : {}) }),
       });
       setSuccess(`Sent to ${res.sentCount} device${res.sentCount !== 1 ? "s" : ""}`);
       setTitle("");
       setBody("");
       setAudience("all");
-      setDeepLink("");
+      setDeepLinkChoice(NONE_DEEP_LINK);
+      setCustomDeepLink("");
+      setDeepLinkError(null);
       setTimeout(() => setSuccess(null), 4000);
       await load();
     } catch (e: unknown) {
@@ -168,14 +242,51 @@ export default function NotificationsPage() {
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Deep Link <span className="normal-case font-normal">(optional)</span>
             </label>
-            <Input
-              placeholder="e.g. /(tabs)/season or /story/[id]"
-              value={deepLink}
-              onChange={e => setDeepLink(e.target.value)}
-              maxLength={500}
-            />
+            <Select
+              value={deepLinkChoice}
+              onValueChange={v => { setDeepLinkChoice(v); setDeepLinkError(null); }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="None — open the app home screen" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_DEEP_LINK}>None — open app home</SelectItem>
+                <SelectSeparator />
+                {DEEP_LINK_GROUPS.map(group => (
+                  <SelectGroup key={group.label}>
+                    <SelectLabel>{group.label}</SelectLabel>
+                    {group.options.map(opt => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                        <span className="ml-2 text-xs text-muted-foreground font-mono">{opt.value}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                ))}
+                <SelectSeparator />
+                <SelectItem value={CUSTOM_DEEP_LINK}>Custom path…</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {isCustomMode && (
+              <div className="space-y-1">
+                <Input
+                  placeholder="e.g. /story/abc123 or /(tabs)/profile"
+                  value={customDeepLink}
+                  onChange={e => { setCustomDeepLink(e.target.value); setDeepLinkError(null); }}
+                  maxLength={500}
+                  className={deepLinkError ? "border-destructive focus-visible:ring-destructive" : ""}
+                />
+                {deepLinkError && (
+                  <p className="text-xs text-destructive">{deepLinkError}</p>
+                )}
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground">
-              When set, tapping the notification opens this screen directly.
+              {resolvedDeepLink
+                ? <>Tapping the notification will open <code className="font-mono text-foreground">{resolvedDeepLink}</code>.</>
+                : "When set, tapping the notification opens that screen directly."}
             </p>
           </div>
 
