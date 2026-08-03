@@ -75,12 +75,13 @@ router.get("/character", requireAuth, async (req, res) => {
     // Fetch dynamic badges for this user
     const badges = await db
       .select({
-        id:       badgesTable.id,
-        slug:     badgesTable.slug,
-        name:     badgesTable.name,
-        emoji:    badgesTable.emoji,
-        color:    badgesTable.color,
-        imageUrl: badgesTable.imageUrl,
+        id:          badgesTable.id,
+        slug:        badgesTable.slug,
+        name:        badgesTable.name,
+        emoji:       badgesTable.emoji,
+        color:       badgesTable.color,
+        imageUrl:    badgesTable.imageUrl,
+        description: badgesTable.description,
       })
       .from(characterBadgesTable)
       .innerJoin(badgesTable, eq(badgesTable.id, characterBadgesTable.badgeId))

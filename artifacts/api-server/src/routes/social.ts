@@ -220,12 +220,13 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
     // Fetch dynamic badges for this user
     const userBadgeRows = await db
       .select({
-        id:       badgesTable.id,
-        slug:     badgesTable.slug,
-        name:     badgesTable.name,
-        emoji:    badgesTable.emoji,
-        color:    badgesTable.color,
-        imageUrl: badgesTable.imageUrl,
+        id:          badgesTable.id,
+        slug:        badgesTable.slug,
+        name:        badgesTable.name,
+        emoji:       badgesTable.emoji,
+        color:       badgesTable.color,
+        imageUrl:    badgesTable.imageUrl,
+        description: badgesTable.description,
       })
       .from(characterBadgesTable)
       .innerJoin(badgesTable, eq(badgesTable.id, characterBadgesTable.badgeId))
@@ -566,7 +567,7 @@ router.get("/discover", requireAuth, async (req, res) => {
     const top50Authors = [...new Set(top50.map(({ row }) => row.userId))];
 
     const stickerCountMap: Record<string, number> = {};
-    const authorBadgesMap: Record<string, { id: string; slug: string; name: string; emoji: string; color: string; imageUrl: string | null }[]> = {};
+    const authorBadgesMap: Record<string, { id: string; slug: string; name: string; emoji: string; color: string; imageUrl: string | null; description: string | null }[]> = {};
 
     await Promise.all([
       top50Ids.length > 0
@@ -579,13 +580,14 @@ router.get("/discover", requireAuth, async (req, res) => {
 
       top50Authors.length > 0
         ? db.select({
-              userId:   characterBadgesTable.userId,
-              id:       badgesTable.id,
-              slug:     badgesTable.slug,
-              name:     badgesTable.name,
-              emoji:    badgesTable.emoji,
-              color:    badgesTable.color,
-              imageUrl: badgesTable.imageUrl,
+              userId:      characterBadgesTable.userId,
+              id:          badgesTable.id,
+              slug:        badgesTable.slug,
+              name:        badgesTable.name,
+              emoji:       badgesTable.emoji,
+              color:       badgesTable.color,
+              imageUrl:    badgesTable.imageUrl,
+              description: badgesTable.description,
             })
             .from(characterBadgesTable)
             .innerJoin(badgesTable, eq(badgesTable.id, characterBadgesTable.badgeId))
@@ -594,7 +596,7 @@ router.get("/discover", requireAuth, async (req, res) => {
             .then(rows => {
               rows.forEach(r => {
                 if (!authorBadgesMap[r.userId]) authorBadgesMap[r.userId] = [];
-                authorBadgesMap[r.userId].push({ id: r.id, slug: r.slug, name: r.name, emoji: r.emoji, color: r.color, imageUrl: r.imageUrl });
+                authorBadgesMap[r.userId].push({ id: r.id, slug: r.slug, name: r.name, emoji: r.emoji, color: r.color, imageUrl: r.imageUrl, description: r.description ?? null });
               });
             })
         : Promise.resolve(),
