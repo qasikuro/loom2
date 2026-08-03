@@ -75,10 +75,14 @@ const PARTICLE_SIZES = [14,   10,   18,   12,   16,   9,    20,   11,   13,   15
 function AuraBanner({
   mood,
   bannerH,
+  isFounder,
+  isBeta,
   children,
 }: {
   mood: string;
   bannerH: number;
+  isFounder?: boolean;
+  isBeta?: boolean;
   children: React.ReactNode;
 }) {
   const aura = MOOD_AURA[mood] ?? DEFAULT_AURA;
@@ -155,6 +159,26 @@ function AuraBanner({
         start={{ x: 0.1, y: 0 }}
         end={{ x: 0.9, y: 1 }}
       />
+      {/* Founder golden tint overlay */}
+      {isFounder && (
+        <LinearGradient
+          colors={['#C8A84B33', '#8A682018', 'transparent']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          pointerEvents="none"
+        />
+      )}
+      {/* Beta purple tint overlay */}
+      {isBeta && !isFounder && (
+        <LinearGradient
+          colors={['#9B78E833', '#3A187820', 'transparent']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          pointerEvents="none"
+        />
+      )}
 
       {/* Animated orb A — large, left, breathes */}
       <Animated.View
@@ -720,7 +744,7 @@ export default function UserProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
 
         {/* ── ANIMATED AURA BANNER ────────────────────────────────── */}
-        <AuraBanner mood={mood} bannerH={bannerH}>
+        <AuraBanner mood={mood} bannerH={bannerH} isFounder={isFounder} isBeta={isBeta}>
           {/* Back button */}
           <TouchableOpacity
             style={[styles.topBtn, { top: topPad + 10, left: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}
@@ -773,6 +797,16 @@ export default function UserProfileScreen() {
           {/* Name + badge */}
           <View style={styles.nameRow}>
             <Text style={[styles.name, { color: colors.foreground }]}>{profile.name}</Text>
+            {isFounder && (
+              <View style={[styles.verifiedBadge, { backgroundColor: '#C8A84B22', borderColor: '#C8A84B55' }]}>
+                <Text style={{ fontSize: 11, color: '#C8A84B' }}>✦</Text>
+              </View>
+            )}
+            {isBeta && !isFounder && (
+              <View style={[styles.verifiedBadge, { backgroundColor: '#9B78E822', borderColor: '#9B78E855' }]}>
+                <Text style={{ fontSize: 11 }}>⚗️</Text>
+              </View>
+            )}
             <View style={[styles.nameBadge, { backgroundColor: aura.accent + '20', borderColor: aura.accent + '40' }]}>
               <Text style={{ fontSize: 12 }}>{aura.particle}</Text>
             </View>
@@ -953,6 +987,14 @@ export default function UserProfileScreen() {
               <Text style={styles.statIcon}>💗</Text>
               <Text style={[styles.statNum, { color: '#D878B0' }]}>{totalWitnessed}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Likes</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={styles.statIcon}>{isFounder ? '👑' : isBeta ? '⚗️' : '✦'}</Text>
+              <Text style={[styles.statNum, { color: isFounder ? '#C8A84B' : isBeta ? '#9B78E8' : colors.foreground }]}>
+                {Math.floor((profile.stars ?? 0) / XP_PER_LEVEL) + 1}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Level</Text>
             </View>
           </View>
 
@@ -1390,6 +1432,12 @@ const styles = StyleSheet.create({
   nameBadge: {
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: 8, borderWidth: 1,
+  },
+  verifiedBadge: {
+    width: 22, height: 22, borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center',
+    marginLeft: 5,
   },
   followPill: {
     marginLeft: 'auto',
