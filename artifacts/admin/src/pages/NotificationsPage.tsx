@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "../api";
+import { DEEP_LINK_GROUPS } from "../lib/deepLinks";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import {
@@ -47,45 +48,10 @@ const AUDIENCES: Record<Audience, AudienceMeta> = {
 const AUDIENCE_ORDER: Audience[] = ["all", "recent", "beta", "founders", "guides", "admins", "banned"];
 
 // ── Deep Link Destinations ────────────────────────────────────────────────────
+// Route list lives in src/lib/deepLinks.ts — edit there to add new destinations.
 
 const CUSTOM_DEEP_LINK = "__custom__";
 const NONE_DEEP_LINK   = "__none__";
-
-interface DeepLinkOption {
-  value: string; // Expo Router path, or CUSTOM_DEEP_LINK sentinel
-  label: string;
-}
-
-interface DeepLinkGroup {
-  label: string;
-  options: DeepLinkOption[];
-}
-
-const DEEP_LINK_GROUPS: DeepLinkGroup[] = [
-  {
-    label: "Main Tabs",
-    options: [
-      { value: "/(tabs)/index",    label: "Home (Journal)" },
-      { value: "/(tabs)/discover", label: "Discover" },
-      { value: "/(tabs)/create",   label: "Create" },
-      { value: "/(tabs)/log",      label: "Log" },
-      { value: "/(tabs)/drift",    label: "Drift" },
-      { value: "/(tabs)/profile",  label: "Profile" },
-    ],
-  },
-  {
-    label: "Features",
-    options: [
-      { value: "/season",       label: "Season" },
-      { value: "/shop",         label: "Shop" },
-      { value: "/campfire",     label: "Campfire" },
-      { value: "/messages",     label: "Messages" },
-      { value: "/constellation", label: "Constellation" },
-      { value: "/my-stories",   label: "My Stories" },
-      { value: "/saved-stories", label: "Saved Stories" },
-    ],
-  },
-];
 
 /** Returns true if s looks like a valid Expo Router path */
 function isValidDeepLinkPath(s: string): boolean {
