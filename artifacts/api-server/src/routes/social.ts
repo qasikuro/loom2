@@ -508,6 +508,8 @@ router.get("/discover", requireAuth, async (req, res) => {
         authorUsername:  characterTable.username,
         authorAvatarUri: characterTable.avatarUri,
         authorTitle:     constellationProgressTable.activeTitle,
+        authorIsFounder:    characterTable.isFounder,
+        authorIsBetaTester: characterTable.isBetaTester,
       })
         .from(storiesTable)
         .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
@@ -568,6 +570,8 @@ router.get("/discover", requireAuth, async (req, res) => {
         authorUsername:  row.authorUsername ?? null,
         authorTitle:     row.authorTitle ?? null,
         authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
+        authorIsFounder:    row.authorIsFounder    ?? false,
+        authorIsBetaTester: row.authorIsBetaTester ?? false,
         chapterTitle:    row.chapterTitle,
         description:     row.description ?? '',
         storySnippet:    panels[0]?.text ?? "",

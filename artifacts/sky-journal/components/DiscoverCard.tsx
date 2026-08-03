@@ -4,6 +4,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import { Animated, Easing, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const FOUNDER_IMG = require('@/assets/images/badge_founder.png');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const BETA_IMG    = require('@/assets/images/badge_beta.png');
+
 import { MoodBadge } from '@/components/MoodBadge';
 import { ResonateButton } from '@/components/ResonateButton';
 import { useColors } from '@/hooks/useColors';
@@ -148,6 +153,12 @@ export function DiscoverCard({
               )}
             </View>
             <Text style={styles.imageAuthorName} numberOfLines={1}>{post.authorName}</Text>
+            {!!post.authorIsFounder && (
+              <Image source={FOUNDER_IMG} style={styles.authorBadge} contentFit="contain" />
+            )}
+            {!!post.authorIsBetaTester && (
+              <Image source={BETA_IMG} style={styles.authorBadge} contentFit="contain" />
+            )}
           </TouchableOpacity>
 
           {/* Chapter badge at top-right */}
@@ -285,6 +296,7 @@ const styles = StyleSheet.create({
     fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#F0ECFF',
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
   },
+  authorBadge: { width: 18, height: 18 },
 
   chapterBadge: {
     position: 'absolute',

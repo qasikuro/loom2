@@ -121,6 +121,8 @@ export interface DiscoverPost {
   authorHandle:     string;
   authorTitle?:     string | null;
   authorAvatarUri?: string | null;
+  authorIsFounder?:    boolean;
+  authorIsBetaTester?: boolean;
   chapterTitle:     string;
   description?:     string;
   storySnippet:     string;
@@ -234,9 +236,11 @@ export interface RawDiscoverApiItem {
   id:               string;
   authorUserId?:    string;
   authorName?:      string;
-  authorUsername?:  string;
-  authorTitle?:     string | null;
-  authorAvatarUri?: string | null;
+  authorUsername?:      string;
+  authorTitle?:         string | null;
+  authorAvatarUri?:     string | null;
+  authorIsFounder?:     boolean;
+  authorIsBetaTester?:  boolean;
   chapterTitle?:    string;
   description?:     string;
   storySnippet?:    string;
@@ -387,8 +391,10 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     authorHandle:     raw.authorUsername
       ? `@${raw.authorUsername}`
       : `@${(raw.authorName ?? 'sky').toLowerCase().replace(/\s+/g, '')}`,
-    authorTitle:      raw.authorTitle ?? null,
-    authorAvatarUri:  resolveUri(raw.authorAvatarUri ?? undefined, apiBase) ?? null,
+    authorTitle:         raw.authorTitle ?? null,
+    authorAvatarUri:     resolveUri(raw.authorAvatarUri ?? undefined, apiBase) ?? null,
+    authorIsFounder:     raw.authorIsFounder     ?? false,
+    authorIsBetaTester:  raw.authorIsBetaTester  ?? false,
     chapterTitle:     raw.chapterTitle ?? '',
     storySnippet:     raw.storySnippet ?? '',
     imageUri:         resolveUri(raw.imageUri ?? undefined, apiBase),
