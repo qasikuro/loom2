@@ -3,7 +3,9 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { and, asc, count, eq } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth";
 import { sendPushNotification } from "../services/pushService";
-import { objectStorageClient } from "../lib/objectStorage";
+import { ObjectStorageService } from "../lib/objectStorage";
+
+const objectStorage = new ObjectStorageService();
 import { z } from "zod";
 
 const router: IRouter = Router();
@@ -129,8 +131,8 @@ router.delete("/admin/badges/:id", requireAdmin, async (req: Request, res: Respo
 
 router.post("/admin/badges/upload-url", requireAdmin, async (req: Request, res: Response) => {
   try {
-    const uploadUrl  = await objectStorageClient.getObjectEntityUploadURL();
-    const objectPath = objectStorageClient.normalizeObjectEntityPath(uploadUrl);
+    const uploadUrl  = await objectStorage.getObjectEntityUploadURL();
+    const objectPath = objectStorage.normalizeObjectEntityPath(uploadUrl);
     const servingUrl = resolveImageUrl(req, objectPath);
     return res.json({ uploadUrl, objectPath, servingUrl });
   } catch (err) {

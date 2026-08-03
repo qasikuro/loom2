@@ -1,36 +1,54 @@
 import { useEffect, useState } from "react";
-import { api, type AdminUserDetail } from "../api";
+import { api, type AdminBadge, type AdminUserDetail } from "../api";
 
 interface Props {
-  userId: string | null;
-  onClose: () => void;
+  userId:        string | null;
+  onClose:       () => void;
   onActionDone?: () => void;
 }
 
-type ConfirmKind = "ban" | "unban" | "delete" | "admin" | "founder" | "beta";
+type ConfirmKind = "ban" | "unban" | "delete" | "admin";
 
 export default function UserDetailDrawer({ userId, onClose, onActionDone }: Props) {
-  const [user, setUser]       = useState<AdminUserDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
-  const [toast, setToast]     = useState("");
-  const [confirm, setConfirm] = useState<ConfirmKind | null>(null);
-  const [copied, setCopied]   = useState(false);
+  const [user, setUser]         = useState<AdminUserDetail | null>(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
+  const [toast, setToast]       = useState("");
+  const [confirm, setConfirm]   = useState<ConfirmKind | null>(null);
+  const [copied, setCopied]     = useState(false);
 
-  const [limitMode, setLimitMode]   = useState(false);
-  const [limitVal, setLimitVal]     = useState("");
+  const [limitMode, setLimitMode]     = useState(false);
+  const [limitVal, setLimitVal]       = useState("");
   const [limitSaving, setLimitSaving] = useState(false);
+
+  // Dynamic badge state
+  const [allBadges, setAllBadges]           = useState<AdminBadge[]>([]);
+  const [userBadgeIds, setUserBadgeIds]     = useState<Set<string>>(new Set());
+  const [badgesLoading, setBadgesLoading]   = useState(false);
+  const [badgeConfirm, setBadgeConfirm]     = useState<{ badge: AdminBadge; action: "grant" | "revoke" } | null>(null);
+  const [badgeSaving, setBadgeSaving]       = useState(false);
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
   useEffect(() => {
-    if (!userId) { setUser(null); return; }
+    if (!userId) { setUser(null); setAllBadges([]); setUserBadgeIds(new Set()); return; }
     setLoading(true);
     setError("");
     setConfirm(null);
+    setBadgeConfirm(null);
     setLimitMode(false);
-    api.getUserDetail(userId)
-      .then(d => { setUser(d); setLimitVal(String(d.galleryLimit ?? 200)); })
+
+    Promise.all([
+      api.getUserDetail(userId),
+      api.getBadges(),
+      api.getUserBadges(userId),
+    ])
+      .then(([detail, allB, userB]) => {
+        setUser(detail);
+        setLimitVal(String(detail.galleryLimit ?? 200));
+        setAllBadges(allB.badges);
+        setUserBadgeIds(new Set(userB.badges.map(b => b.id)));
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [userId]);
@@ -38,12 +56,10 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
   const handleAction = async (kind: ConfirmKind) => {
     if (!user) return;
     try {
-      if (kind === "ban")     await api.banUser(user.userId);
-      if (kind === "unban")   await api.unbanUser(user.userId);
-      if (kind === "delete")  { await api.deleteUser(user.userId); onClose(); onActionDone?.(); return; }
-      if (kind === "admin")   await api.toggleAdmin(user.userId);
-      if (kind === "founder") await api.toggleFounder(user.userId);
-      if (kind === "beta")    await api.toggleBeta(user.userId);
+      if (kind === "ban")    await api.banUser(user.userId);
+      if (kind === "unban")  await api.unbanUser(user.userId);
+      if (kind === "delete") { await api.deleteUser(user.userId); onClose(); onActionDone?.(); return; }
+      if (kind === "admin")  await api.toggleAdmin(user.userId);
       const fresh = await api.getUserDetail(user.userId);
       setUser(fresh);
       showToast("Done!");
@@ -53,6 +69,32 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
     } catch (e: any) {
       showToast("Error: " + e.message);
       setConfirm(null);
+    }
+  };
+
+  const handleBadgeAction = async () => {
+    if (!user || !badgeConfirm) return;
+    setBadgeSaving(true);
+    try {
+      if (badgeConfirm.action === "grant") {
+        await api.grantBadge(user.userId, badgeConfirm.badge.id);
+        setUserBadgeIds(prev => new Set([...prev, badgeConfirm.badge.id]));
+        showToast(`${badgeConfirm.badge.name} badge granted!`);
+      } else {
+        await api.revokeBadge(user.userId, badgeConfirm.badge.id);
+        setUserBadgeIds(prev => { const s = new Set(prev); s.delete(badgeConfirm.badge.id); return s; });
+        showToast(`${badgeConfirm.badge.name} badge removed.`);
+      }
+      // Refresh detail to keep boolean fields in sync
+      const fresh = await api.getUserDetail(user.userId);
+      setUser(fresh);
+      onActionDone?.();
+      setBadgeConfirm(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      showToast("Error: " + e.message);
+    } finally {
+      setBadgeSaving(false);
     }
   };
 
@@ -85,17 +127,17 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
 
   if (!userId) return null;
 
-  const initials = user?.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() ?? "?";
-  const joinDate  = user?.clerkCreatedAt ? new Date(user.clerkCreatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
-  const lastActive = user?.updatedAt ? new Date(user.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+  const initials  = user?.name?.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() ?? "?";
+  const joinDate   = user?.clerkCreatedAt ? new Date(user.clerkCreatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+  const lastActive = user?.updatedAt       ? new Date(user.updatedAt).toLocaleDateString("en-US",       { month: "short", day: "numeric", year: "numeric" }) : null;
+
+  const heldBadges   = allBadges.filter(b =>  userBadgeIds.has(b.id));
+  const unHeldBadges = allBadges.filter(b => !userBadgeIds.has(b.id));
 
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/30 z-40 transition-opacity"
-        onClick={onClose}
-      />
+      <div className="fixed inset-0 bg-black/30 z-40 transition-opacity" onClick={onClose} />
 
       {/* Drawer */}
       <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-background border-l shadow-2xl z-50 flex flex-col overflow-hidden">
@@ -137,17 +179,29 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                   <div className="font-semibold text-base leading-tight">{user.name || <span className="text-muted-foreground italic">No name</span>}</div>
                   {user.username && <div className="text-sm text-muted-foreground mt-0.5">@{user.username}</div>}
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {user.isAdmin      && <Badge color="purple">Admin</Badge>}
-                    {user.isBanned     && <Badge color="red">Banned</Badge>}
+                    {user.isAdmin  && <Badge color="purple">Admin</Badge>}
+                    {user.isBanned && <Badge color="red">Banned</Badge>}
                     {!user.isAdmin && !user.isBanned && <Badge color="green">Active</Badge>}
-                    {!user.isPublic    && <Badge color="gray">Private</Badge>}
-                    {user.isFounder    && <Badge color="gold">👑 Founder</Badge>}
-                    {user.isBetaTester && <Badge color="violet">🧪 Beta Tester</Badge>}
+                    {!user.isPublic && <Badge color="gray">Private</Badge>}
+                    {/* Dynamic earned badges */}
+                    {heldBadges.map(b => (
+                      <span
+                        key={b.id}
+                        className="px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1"
+                        style={{ backgroundColor: b.color + "22", color: b.color }}
+                      >
+                        {b.imageUrl
+                          ? <img src={b.imageUrl} alt="" className="w-3.5 h-3.5 rounded object-contain" />
+                          : <span>{b.emoji}</span>
+                        }
+                        {b.name}
+                      </span>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              {/* Email — the CRM hook */}
+              {/* Email */}
               <div className="px-5 py-4">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Email / Contact</div>
                 {user.email ? (
@@ -156,14 +210,13 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
                     </svg>
                     <span className="text-sm flex-1 truncate font-mono">{user.email}</span>
-                    <button
-                      onClick={copyEmail}
-                      className="px-2 py-1 text-xs rounded-md border bg-background hover:bg-muted transition-colors flex-shrink-0"
-                    >{copied ? "✓ Copied" : "Copy"}</button>
+                    <button onClick={copyEmail} className="px-2 py-1 text-xs rounded-md border bg-background hover:bg-muted transition-colors flex-shrink-0">
+                      {copied ? "✓ Copied" : "Copy"}
+                    </button>
                     <a
                       href={`mailto:${user.email}?subject=Sky Journal Support`}
                       className="px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0 font-medium"
-                    >Send Email ↗</a>
+                    >Send ↗</a>
                   </div>
                 ) : (
                   <div className="text-sm text-muted-foreground italic">No email on file</div>
@@ -222,10 +275,10 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
               {/* Account info */}
               <div className="px-5 py-4 space-y-2">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Account</div>
-                <Row label="User ID"      value={<span className="font-mono text-[11px] break-all">{user.userId}</span>} />
-                {joinDate   && <Row label="Joined"       value={joinDate} />}
-                {lastActive && <Row label="Last active"  value={lastActive} />}
-                <Row label="Profile"      value={user.isPublic ? "Public" : "Private"} />
+                <Row label="User ID"     value={<span className="font-mono text-[11px] break-all">{user.userId}</span>} />
+                {joinDate   && <Row label="Joined"      value={joinDate} />}
+                {lastActive && <Row label="Last active" value={lastActive} />}
+                <Row label="Profile"     value={user.isPublic ? "Public" : "Private"} />
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-sm text-muted-foreground">Gallery limit</span>
                   {limitMode ? (
@@ -252,6 +305,51 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                 </div>
               </div>
 
+              {/* Badges */}
+              <div className="px-5 py-5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Badges</div>
+                  {badgesLoading && <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />}
+                </div>
+
+                {allBadges.length === 0 ? (
+                  <p className="text-sm text-muted-foreground italic">No badges configured. Create badges on the Badges page.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {allBadges.map(badge => {
+                      const held = userBadgeIds.has(badge.id);
+                      return (
+                        <div key={badge.id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border bg-muted/20">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {badge.imageUrl
+                              ? <img src={badge.imageUrl} alt="" className="w-8 h-8 rounded-lg object-contain border bg-muted/30 flex-shrink-0" />
+                              : <div
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 border"
+                                  style={{ backgroundColor: badge.color + "22", borderColor: badge.color + "44" }}
+                                >{badge.emoji}</div>
+                            }
+                            <div className="min-w-0">
+                              <div className="text-sm font-semibold truncate">{badge.name}</div>
+                              {badge.description && <div className="text-xs text-muted-foreground truncate">{badge.description}</div>}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setBadgeConfirm({ badge, action: held ? "revoke" : "grant" })}
+                            className={`flex-shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium border transition-colors ${
+                              held
+                                ? "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                                : "bg-green-50 text-green-700 border-green-200 hover:bg-green-100"
+                            }`}
+                          >
+                            {held ? "Remove" : "Grant"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* Actions */}
               <div className="px-5 py-5">
                 <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Actions</div>
@@ -259,12 +357,10 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                 {confirm ? (
                   <div className="bg-muted/40 border rounded-xl p-4 space-y-3">
                     <p className="text-sm font-medium">
-                      {confirm === "delete"  ? `Permanently delete ${user.name}? This cannot be undone.`
-                       : confirm === "ban"    ? `Ban ${user.name}? They'll be hidden from the discover feed.`
-                       : confirm === "unban"  ? `Unban ${user.name}? They'll regain full access.`
-                       : confirm === "founder"? (user.isFounder ? `Remove 👑 Founder badge from ${user.name}?` : `Grant 👑 Founder badge to ${user.name}? They'll be notified.`)
-                       : confirm === "beta"   ? (user.isBetaTester ? `Remove 🧪 Beta Tester badge from ${user.name}?` : `Grant 🧪 Beta Tester badge to ${user.name}? They'll be notified.`)
-                       : user.isAdmin         ? `Remove admin access from ${user.name}?`
+                      {confirm === "delete" ? `Permanently delete ${user.name}? This cannot be undone.`
+                       : confirm === "ban"   ? `Ban ${user.name}? They'll be hidden from the discover feed.`
+                       : confirm === "unban" ? `Unban ${user.name}? They'll regain full access.`
+                       : user.isAdmin        ? `Remove admin access from ${user.name}?`
                                              : `Grant admin access to ${user.name}?`}
                     </p>
                     <div className="flex gap-2">
@@ -287,16 +383,6 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                       color="purple"
                       onClick={() => setConfirm("admin")}
                     />
-                    <ActionBtn
-                      label={user.isFounder ? "👑 Remove Founder" : "👑 Grant Founder"}
-                      color={user.isFounder ? "gold" : "gray"}
-                      onClick={() => setConfirm("founder")}
-                    />
-                    <ActionBtn
-                      label={user.isBetaTester ? "🧪 Remove Beta" : "🧪 Grant Beta"}
-                      color={user.isBetaTester ? "violet" : "gray"}
-                      onClick={() => setConfirm("beta")}
-                    />
                     <a
                       href={user.email ? `mailto:${user.email}?subject=Sky Journal Support` : undefined}
                       className={`flex items-center justify-center gap-2 px-3 py-2.5 text-sm rounded-xl font-medium transition-colors border ${user.email ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" : "opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border"}`}
@@ -306,11 +392,7 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                       </svg>
                       Send email
                     </a>
-                    <ActionBtn
-                      label="Delete account"
-                      color="red"
-                      onClick={() => setConfirm("delete")}
-                    />
+                    <ActionBtn label="Delete account" color="red" onClick={() => setConfirm("delete")} />
                   </div>
                 )}
               </div>
@@ -319,6 +401,32 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
           ) : null}
         </div>
       </div>
+
+      {/* Badge confirm overlay */}
+      {badgeConfirm && (
+        <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center p-4">
+          <div className="bg-background rounded-2xl shadow-xl p-6 max-w-sm w-full border">
+            <h3 className="font-bold text-base mb-2">
+              {badgeConfirm.action === "grant" ? `Grant ${badgeConfirm.badge.name}?` : `Remove ${badgeConfirm.badge.name}?`}
+            </h3>
+            <p className="text-sm text-muted-foreground mb-5">
+              {badgeConfirm.action === "grant"
+                ? `${user?.name} will receive the ${badgeConfirm.badge.name} badge and a notification.`
+                : `The ${badgeConfirm.badge.name} badge will be removed from ${user?.name}.`}
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setBadgeConfirm(null)} className="flex-1 px-4 py-2 text-sm border rounded-xl hover:bg-muted transition-colors">Cancel</button>
+              <button
+                onClick={handleBadgeAction}
+                disabled={badgeSaving}
+                className={`flex-1 px-4 py-2 text-sm rounded-xl font-semibold text-white disabled:opacity-50 ${badgeConfirm.action === "grant" ? "bg-primary hover:bg-primary/90" : "bg-red-600 hover:bg-red-700"}`}
+              >
+                {badgeSaving ? "…" : badgeConfirm.action === "grant" ? "Grant" : "Remove"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-4 right-4 bg-foreground text-background px-4 py-2.5 rounded-xl text-sm font-medium shadow-lg z-[60]">
@@ -329,14 +437,12 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
   );
 }
 
-function Badge({ color, children }: { color: "purple" | "red" | "green" | "gray" | "gold" | "violet"; children: React.ReactNode }) {
+function Badge({ color, children }: { color: "purple" | "red" | "green" | "gray"; children: React.ReactNode }) {
   const cls = {
     purple: "bg-purple-100 text-purple-700",
     red:    "bg-red-100 text-red-700",
     green:  "bg-green-100 text-green-700",
     gray:   "bg-gray-100 text-gray-600",
-    gold:   "bg-yellow-100 text-yellow-700",
-    violet: "bg-violet-100 text-violet-700",
   }[color];
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{children}</span>;
 }
@@ -350,15 +456,12 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function ActionBtn({ label, color, onClick }: { label: string; color: "orange" | "green" | "purple" | "red" | "gold" | "violet" | "gray"; onClick: () => void }) {
+function ActionBtn({ label, color, onClick }: { label: string; color: "orange" | "green" | "purple" | "red"; onClick: () => void }) {
   const cls = {
     orange: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100",
     green:  "bg-green-50 text-green-700 border-green-200 hover:bg-green-100",
     purple: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100",
     red:    "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
-    gold:   "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100",
-    violet: "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100",
-    gray:   "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100",
   }[color];
   return (
     <button onClick={onClick} className={`px-3 py-2.5 text-sm rounded-xl font-medium transition-colors border ${cls}`}>

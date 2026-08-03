@@ -1,5 +1,5 @@
 import { Icon } from '@/components/Icon';
-import { ProfileBadges } from '@/components/profile/ProfileBadges';
+import { BadgeTray, type BadgeItem } from '@/components/profile/BadgeTray';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -382,6 +382,7 @@ interface PublicProfile {
   stars:          number; // lifetimeStars — never decreases
   isFounder?:     boolean;
   isBetaTester?:  boolean;
+  badges?:        BadgeItem[];
 }
 
 const XP_PER_LEVEL = 300;
@@ -627,10 +628,10 @@ export default function UserProfileScreen() {
             </Text>
           ) : null}
 
-          {/* Founder / Beta Tester badges */}
-          {(profile.isFounder || profile.isBetaTester) && (
+          {/* Dynamic badges */}
+          {(profile.badges ?? []).length > 0 && (
             <View style={{ marginTop: 6 }}>
-              <ProfileBadges isFounder={profile.isFounder} isBetaTester={profile.isBetaTester} size={40} showLabel />
+              <BadgeTray badges={profile.badges ?? []} />
             </View>
           )}
 

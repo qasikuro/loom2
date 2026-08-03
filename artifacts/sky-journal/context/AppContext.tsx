@@ -51,6 +51,7 @@ import type {
   RawDiscoverApiItem,
 } from './mappers';
 export type {
+  BadgeItem,
   ProfileLink,
   GuideAvailability,
   BubbleStyle,

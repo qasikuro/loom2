@@ -1,5 +1,5 @@
 import { Icon } from '@/components/Icon';
-import { ProfileBadges } from '@/components/profile/ProfileBadges';
+import { BadgeTray } from '@/components/profile/BadgeTray';
 import { Images } from '@/assets/images';
 import type { ConstellationState } from '@/components/ConstellationMap';
 import { apiFetch, type Character, type Outfit } from '@/context/AppContext';
@@ -230,10 +230,10 @@ export function ProfileHeaderSection({
             </View>
           )}
 
-          {/* Founder / Beta Tester badges */}
-          {(character.isFounder || character.isBetaTester) && (
+          {/* Dynamic badges */}
+          {(character.badges ?? []).length > 0 && (
             <View style={{ marginTop: 6 }}>
-              <ProfileBadges isFounder={character.isFounder} isBetaTester={character.isBetaTester} size={40} showLabel />
+              <BadgeTray badges={character.badges ?? []} />
             </View>
           )}
 

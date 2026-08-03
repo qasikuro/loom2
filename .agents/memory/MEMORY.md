@@ -1,3 +1,4 @@
+- [ObjectStorageService vs objectStorageClient](object-storage-service.md) — app helpers (upload URL, normalize path) are on the service class, not the raw GCS Storage instance
 - [ApiCharacterSchema partial fix](api-zod-character-schema.md) — generated schema had id:number but DB uses userId:text; without .partial() every char fetch silently fell back to DEFAULT_CHARACTER
 - [Clerk Expo Future API](clerk-expo-future-api.md) — useSignIn/useSignUp return {signIn,errors,fetchStatus}; use expo-linking not react-native Linking; no navigate in setActive
 - [Clerk Expo legacy setActive for email auth](clerk-expo-legacy-setactive.md) — use @clerk/expo/legacy for email sign-in/up; Future API setActive bypasses token cache → getToken()=null → 401 in APK

@@ -133,6 +133,7 @@ export interface DiscoverPost {
   authorAvatarUri?: string | null;
   authorIsFounder?:    boolean;
   authorIsBetaTester?: boolean;
+  authorBadges?:       BadgeItem[];
   chapterTitle:     string;
   description?:     string;
   storySnippet:     string;
@@ -182,6 +183,7 @@ export interface RawCharacterResponse {
   intentionDate?:        string | null;
   isFounder?:            boolean;
   isBetaTester?:         boolean;
+  badges?:               unknown;
 }
 
 export interface RawJournalEntryResponse {
