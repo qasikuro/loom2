@@ -14,6 +14,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -789,7 +790,10 @@ export default function UserProfileScreen() {
         <Animated.View
           style={[
             styles.profileCard,
-            { backgroundColor: colors.card, borderColor: colors.border },
+            {
+              backgroundColor: colors.card,
+              borderColor: isFounder ? '#C8A84B55' : isBeta ? '#9B78E855' : colors.border,
+            },
             SHADOW.md,
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
           ]}
@@ -880,6 +884,11 @@ export default function UserProfileScreen() {
             </Text>
           ) : null}
 
+          {/* Vibe chip — mood shown in the card */}
+          <View style={{ marginTop: 2 }}>
+            <MoodChip mood={mood} />
+          </View>
+
           {/* ── Meta row: role + weather/time ─────────────────── */}
           {(userRole || profile.timezone || weatherQuery) ? (
             <View style={styles.metaRow}>
@@ -896,13 +905,6 @@ export default function UserProfileScreen() {
                 compact
               />
             </View>
-          ) : null}
-
-          {/* Bio */}
-          {profile.bio ? (
-            <Text style={[styles.bio, { color: colors.mutedForeground }]} numberOfLines={5}>
-              {profile.bio}
-            </Text>
           ) : null}
 
           {/* Trait chips horizontal scroll */}
@@ -924,22 +926,25 @@ export default function UserProfileScreen() {
             </ScrollView>
           )}
 
-          {/* ── Details row: country + birthday ───────────────── */}
-          {(profile.country || profile.birthday) ? (
-            <View style={styles.detailsRow}>
-              {profile.country ? (
-                <View style={[styles.detailPill, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <Text style={styles.detailPillEmoji}>📍</Text>
-                  <Text style={[styles.detailPillText, { color: colors.mutedForeground }]}>{profile.country}</Text>
-                </View>
-              ) : null}
-              {profile.birthday ? (
-                <View style={[styles.detailPill, { backgroundColor: aura.accent + '12', borderColor: aura.accent + '32' }]}>
-                  <Text style={styles.detailPillEmoji}>🎂</Text>
-                  <Text style={[styles.detailPillText, { color: aura.accent }]}>{fmtBirthday(profile.birthday)}</Text>
-                </View>
-              ) : null}
-            </View>
+          {/* Birthday inline */}
+          {profile.birthday ? (
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.60)', marginTop: 1 }}>
+              🎂 {fmtBirthday(profile.birthday)}
+            </Text>
+          ) : null}
+
+          {/* Country */}
+          {profile.country ? (
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', marginTop: 1 }}>
+              📍 {profile.country}
+            </Text>
+          ) : null}
+
+          {/* Bio */}
+          {profile.bio ? (
+            <Text style={[styles.bio, { color: colors.mutedForeground }]} numberOfLines={5}>
+              {profile.bio}
+            </Text>
           ) : null}
 
           {/* ── Social links ───────────────────────────────────── */}
@@ -974,19 +979,19 @@ export default function UserProfileScreen() {
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>📖</Text>
               <Text style={[styles.statNum, { color: '#78A8D4' }]}>{stories.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>STORIES</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>🧥</Text>
               <Text style={[styles.statNum, { color: '#C8A84B' }]}>{outfits.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Outfits</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>OUTFITS</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>💗</Text>
               <Text style={[styles.statNum, { color: '#D878B0' }]}>{totalWitnessed}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Likes</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>LIKES</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
@@ -994,7 +999,7 @@ export default function UserProfileScreen() {
               <Text style={[styles.statNum, { color: isFounder ? '#C8A84B' : isBeta ? '#9B78E8' : colors.foreground }]}>
                 {Math.floor((profile.stars ?? 0) / XP_PER_LEVEL) + 1}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Level</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>LEVEL</Text>
             </View>
           </View>
 
@@ -1050,6 +1055,23 @@ export default function UserProfileScreen() {
               <Text style={[styles.messageBtnText, { color: aura.accent }]}>Send Message</Text>
             </TouchableOpacity>
           )}
+
+          {/* Notification toggle — shown when following someone else */}
+          {!isSelf && isFollowing && (
+            <View style={[styles.notifyRow, { borderTopColor: colors.border }]}>
+              <Icon name="bell" size={14} color={aura.accent} />
+              <Text style={[styles.notifyRowText, { color: colors.mutedForeground }]} numberOfLines={2}>
+                You'll see new posts from {profile.name} in your Discover feed
+              </Text>
+              <Switch
+                value
+                onValueChange={() => {}}
+                trackColor={{ false: colors.border, true: aura.accent + '90' }}
+                thumbColor={aura.accent}
+                style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
+              />
+            </View>
+          )}
         </Animated.View>
 
         {/* ── BODY ─────────────────────────────────────────────────── */}
@@ -1059,15 +1081,7 @@ export default function UserProfileScreen() {
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          {/* Following notification banner */}
-          {!isSelf && isFollowing && (
-            <View style={[styles.notifyBanner, { backgroundColor: aura.accent + '10', borderColor: aura.accent + '28' }]}>
-              <Icon name="bell" size={13} color={aura.accent} />
-              <Text style={[styles.notifyText, { color: aura.accent }]}>
-                You'll see new posts from {profile.name} in your Discover feed
-              </Text>
-            </View>
-          )}
+          {/* (notification toggle moved into profile card) */}
 
           {/* ── CURRENT OUTFIT spotlight ─────────────────────────── */}
           {profile.activeOutfit && (
@@ -1533,6 +1547,22 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   messageBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+
+  notifyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  notifyRowText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: 'Satoshi-Regular',
+    lineHeight: 17,
+  },
 
   // ── Body
   body: { paddingHorizontal: 16, paddingTop: 14, gap: 14 },
