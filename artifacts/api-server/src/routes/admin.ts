@@ -8,6 +8,8 @@ import {
   followsTable,
   stickerReactionsTable,
   notificationsTable,
+  badgesTable,
+  characterBadgesTable,
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
@@ -569,6 +571,16 @@ router.put("/admin/users/:id/toggle-founder", requireAdmin, async (req: Request,
     const newValue = !row.isFounder;
     await db.update(characterTable).set({ isFounder: newValue }).where(eq(characterTable.userId, targetId));
 
+    // Sync to dynamic badge system
+    const [founderBadge] = await db.select({ id: badgesTable.id }).from(badgesTable).where(eq(badgesTable.slug, "founder")).limit(1);
+    if (founderBadge) {
+      if (newValue) {
+        await db.insert(characterBadgesTable).values({ userId: targetId, badgeId: founderBadge.id }).onConflictDoNothing();
+      } else {
+        await db.delete(characterBadgesTable).where(and(eq(characterBadgesTable.userId, targetId), eq(characterBadgesTable.badgeId, founderBadge.id)));
+      }
+    }
+
     // In-app notification
     await db.insert(notificationsTable).values({
       userId:    targetId,
@@ -612,6 +624,16 @@ router.put("/admin/users/:id/toggle-beta", requireAdmin, async (req: Request, re
 
     const newValue = !row.isBetaTester;
     await db.update(characterTable).set({ isBetaTester: newValue }).where(eq(characterTable.userId, targetId));
+
+    // Sync to dynamic badge system
+    const [betaBadge] = await db.select({ id: badgesTable.id }).from(badgesTable).where(eq(badgesTable.slug, "beta_tester")).limit(1);
+    if (betaBadge) {
+      if (newValue) {
+        await db.insert(characterBadgesTable).values({ userId: targetId, badgeId: betaBadge.id }).onConflictDoNothing();
+      } else {
+        await db.delete(characterBadgesTable).where(and(eq(characterBadgesTable.userId, targetId), eq(characterBadgesTable.badgeId, betaBadge.id)));
+      }
+    }
 
     // In-app notification
     await db.insert(notificationsTable).values({

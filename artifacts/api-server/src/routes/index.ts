@@ -23,6 +23,7 @@ import adminNotificationsRouter from "./admin-notifications";
 import campfireRouter from "./campfire";
 import streamRouter from "./stream";
 import pushRouter from "./push";
+import adminBadgesRouter from "./admin-badges";
 
 const router: IRouter = Router();
 
@@ -50,5 +51,6 @@ router.use(adminNotificationsRouter);
 router.use(campfireRouter);
 router.use(streamRouter);
 router.use(pushRouter);
+router.use(adminBadgesRouter);
 
 export default router;

@@ -14,3 +14,4 @@ export * from "./campfire";
 export * from "./profileEffects";
 export * from "./appSettings";
 export * from "./notificationBroadcasts";
+export * from "./badges";

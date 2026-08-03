@@ -38,6 +38,15 @@ export const api = {
   toggleAdmin:     (id: string) => apiFetch<{ isAdmin: boolean }>(`/admin/users/${id}/toggle-admin`, { method: "PUT" }),
   toggleFounder:   (id: string) => apiFetch<{ ok: boolean; isFounder: boolean }>(`/admin/users/${id}/toggle-founder`, { method: "PUT" }),
   toggleBeta:      (id: string) => apiFetch<{ ok: boolean; isBetaTester: boolean }>(`/admin/users/${id}/toggle-beta`, { method: "PUT" }),
+  // Dynamic badge system
+  getBadges:        () => apiFetch<{ badges: AdminBadge[] }>("/admin/badges"),
+  createBadge:      (body: BadgeBody) => apiFetch<{ badge: AdminBadge }>("/admin/badges", { method: "POST", body: JSON.stringify(body) }),
+  updateBadge:      (id: string, body: Partial<BadgeBody>) => apiFetch<{ badge: AdminBadge }>(`/admin/badges/${id}`, { method: "PUT", body: JSON.stringify(body) }),
+  deleteBadge:      (id: string) => apiFetch(`/admin/badges/${id}`, { method: "DELETE" }),
+  getBadgeUploadUrl: () => apiFetch<{ uploadUrl: string; objectPath: string; servingUrl: string }>("/admin/badges/upload-url", { method: "POST" }),
+  getUserBadges:    (userId: string) => apiFetch<{ badges: AdminBadge[] }>(`/admin/users/${userId}/badges`),
+  grantBadge:       (userId: string, badgeId: string) => apiFetch(`/admin/users/${userId}/badges/${badgeId}`, { method: "POST" }),
+  revokeBadge:      (userId: string, badgeId: string) => apiFetch(`/admin/users/${userId}/badges/${badgeId}`, { method: "DELETE" }),
   setGalleryLimit: (id: string, limit: number) => apiFetch<{ ok: boolean; limit: number }>(`/admin/users/${id}/gallery-limit`, { method: "PUT", body: JSON.stringify({ limit }) }),
   getContent:    (type: "stories" | "outfits", offset = 0, q = "", dateFrom = "", dateTo = "") => apiFetch<{ items: ContentItem[]; total: number }>(`/admin/content?type=${type}&offset=${offset}&limit=50&q=${encodeURIComponent(q)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}`),
   hideContent:   (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/hide`, { method: "PUT" }),
@@ -63,6 +72,30 @@ export const api = {
   generateInventory: (body: GenerateInventoryBody) => apiFetch<{ inventory: EventInventoryItem[]; prompt: string }>("/admin/events/generate-inventory", { method: "POST", body: JSON.stringify(body) }),
   grantEvent:        (id: string) => apiFetch<{ granted: number; stars: number; aura: number; shards: number; itemsGranted: number; message: string }>(`/admin/events/${id}/grant`, { method: "POST" }),
 };
+
+export interface AdminBadge {
+  id:          string;
+  slug:        string;
+  name:        string;
+  emoji:       string;
+  color:       string;
+  imageUrl:    string | null;
+  description: string;
+  sortOrder:   number;
+  createdAt:   string;
+  holderCount?: number;
+  grantedAt?:  string;
+}
+
+export interface BadgeBody {
+  slug:        string;
+  name:        string;
+  emoji:       string;
+  color:       string;
+  description: string;
+  imageUrl?:   string | null;
+  sortOrder?:  number;
+}
 
 export interface Stats {
   totalUsers: number;

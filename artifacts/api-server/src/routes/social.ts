@@ -1,5 +1,5 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable } from "@workspace/db";
-import { and, count, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable } from "@workspace/db";
+import { and, asc, count, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
@@ -217,6 +217,21 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       }
     }
 
+    // Fetch dynamic badges for this user
+    const userBadgeRows = await db
+      .select({
+        id:       badgesTable.id,
+        slug:     badgesTable.slug,
+        name:     badgesTable.name,
+        emoji:    badgesTable.emoji,
+        color:    badgesTable.color,
+        imageUrl: badgesTable.imageUrl,
+      })
+      .from(characterBadgesTable)
+      .innerJoin(badgesTable, eq(badgesTable.id, characterBadgesTable.badgeId))
+      .where(eq(characterBadgesTable.userId, targetId))
+      .orderBy(asc(badgesTable.sortOrder));
+
     return res.json({
       userId:        char.userId,
       name:          char.name,
@@ -239,6 +254,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       stars:         char.lifetimeStars  ?? 0,
       isFounder:     char.isFounder     ?? false,
       isBetaTester:  char.isBetaTester  ?? false,
+      badges:        userBadgeRows,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get user profile");
@@ -545,17 +561,44 @@ router.get("/discover", requireAuth, async (req, res) => {
     scored.sort((a, b) => b.score - a.score);
     const top50 = scored.slice(0, 50);
 
-    // Fetch sticker counts in bulk for the top 50 stories
-    const top50Ids = top50.map(({ row }) => row.id);
+    // Fetch sticker counts + author badges in bulk for the top 50
+    const top50Ids     = top50.map(({ row }) => row.id);
+    const top50Authors = [...new Set(top50.map(({ row }) => row.userId))];
+
     const stickerCountMap: Record<string, number> = {};
-    if (top50Ids.length > 0) {
-      const stickerRows = await db
-        .select({ storyId: stickerReactionsTable.storyId, cnt: count() })
-        .from(stickerReactionsTable)
-        .where(inArray(stickerReactionsTable.storyId, top50Ids))
-        .groupBy(stickerReactionsTable.storyId);
-      stickerRows.forEach(r => { stickerCountMap[r.storyId] = Number(r.cnt); });
-    }
+    const authorBadgesMap: Record<string, { id: string; slug: string; name: string; emoji: string; color: string; imageUrl: string | null }[]> = {};
+
+    await Promise.all([
+      top50Ids.length > 0
+        ? db.select({ storyId: stickerReactionsTable.storyId, cnt: count() })
+            .from(stickerReactionsTable)
+            .where(inArray(stickerReactionsTable.storyId, top50Ids))
+            .groupBy(stickerReactionsTable.storyId)
+            .then(rows => rows.forEach(r => { stickerCountMap[r.storyId] = Number(r.cnt); }))
+        : Promise.resolve(),
+
+      top50Authors.length > 0
+        ? db.select({
+              userId:   characterBadgesTable.userId,
+              id:       badgesTable.id,
+              slug:     badgesTable.slug,
+              name:     badgesTable.name,
+              emoji:    badgesTable.emoji,
+              color:    badgesTable.color,
+              imageUrl: badgesTable.imageUrl,
+            })
+            .from(characterBadgesTable)
+            .innerJoin(badgesTable, eq(badgesTable.id, characterBadgesTable.badgeId))
+            .where(inArray(characterBadgesTable.userId, top50Authors))
+            .orderBy(asc(badgesTable.sortOrder))
+            .then(rows => {
+              rows.forEach(r => {
+                if (!authorBadgesMap[r.userId]) authorBadgesMap[r.userId] = [];
+                authorBadgesMap[r.userId].push({ id: r.id, slug: r.slug, name: r.name, emoji: r.emoji, color: r.color, imageUrl: r.imageUrl });
+              });
+            })
+        : Promise.resolve(),
+    ]);
 
     const result = top50.map(({ row, isFollowing }) => {
       const rawPanels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
@@ -572,6 +615,7 @@ router.get("/discover", requireAuth, async (req, res) => {
         authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
         authorIsFounder:    row.authorIsFounder    ?? false,
         authorIsBetaTester: row.authorIsBetaTester ?? false,
+        authorBadges:       authorBadgesMap[row.userId] ?? [],
         chapterTitle:    row.chapterTitle,
         description:     row.description ?? '',
         storySnippet:    panels[0]?.text ?? "",

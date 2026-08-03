@@ -3,6 +3,15 @@
 
 // ── Shared app-level types ─────────────────────────────────────────────────────
 
+export interface BadgeItem {
+  id:        string;
+  slug:      string;
+  name:      string;
+  emoji:     string;
+  color:     string;
+  imageUrl?: string | null;
+}
+
 export interface ProfileLink {
   label:     string;
   url:       string;

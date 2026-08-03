@@ -9,12 +9,14 @@ import EventsPage from "./pages/EventsPage";
 import EffectsPage from "./pages/EffectsPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import BadgesPage from "./pages/BadgesPage";
 
 const NAV = [
   { id: "dashboard", label: "Dashboard", icon: "⬡" },
   { id: "users",     label: "Users",     icon: "⊹" },
   { id: "content",   label: "Content",   icon: "▦" },
   { id: "events",    label: "Events",    icon: "✦" },
+  { id: "badges",        label: "Badges",        icon: "🏅" },
   { id: "effects",       label: "Effects",       icon: "✧" },
   { id: "reports",       label: "Reports",       icon: "⚑" },
   { id: "notifications", label: "Notifications", icon: "◎" },
@@ -182,6 +184,7 @@ function AdminApp() {
       {page === "users"     && <UsersPage />}
       {page === "content"   && <ContentPage />}
       {page === "events"    && <EventsPage />}
+      {page === "badges"        && <BadgesPage />}
       {page === "effects"       && <EffectsPage />}
       {page === "reports"       && <ReportsPage />}
       {page === "notifications" && <NotificationsPage />}

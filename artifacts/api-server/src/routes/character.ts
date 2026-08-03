@@ -1,5 +1,5 @@
-import { db, characterTable } from "@workspace/db";
-import { and, eq, ne } from "drizzle-orm";
+import { db, characterTable, badgesTable, characterBadgesTable } from "@workspace/db";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -63,14 +63,31 @@ router.get("/character", requireAuth, async (req, res) => {
       .where(eq(characterTable.userId, userId))
       .limit(1);
 
-    if (rows.length === 0) {
+    let char = rows[0];
+    if (!char) {
       const [created] = await db
         .insert(characterTable)
         .values({ userId, name: "Sky Child", bio: "", mood: "Hopeful", traits: [], isPublic: true })
         .returning();
-      return res.json(created);
+      char = created;
     }
-    return res.json(rows[0]);
+
+    // Fetch dynamic badges for this user
+    const badges = await db
+      .select({
+        id:       badgesTable.id,
+        slug:     badgesTable.slug,
+        name:     badgesTable.name,
+        emoji:    badgesTable.emoji,
+        color:    badgesTable.color,
+        imageUrl: badgesTable.imageUrl,
+      })
+      .from(characterBadgesTable)
+      .innerJoin(badgesTable, eq(badgesTable.id, characterBadgesTable.badgeId))
+      .where(eq(characterBadgesTable.userId, userId))
+      .orderBy(asc(badgesTable.sortOrder));
+
+    return res.json({ ...char, badges });
   } catch (err) {
     req.log.error({ err }, "Failed to get character");
     return res.status(500).json({ error: "Internal server error" });
