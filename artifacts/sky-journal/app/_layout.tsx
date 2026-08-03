@@ -244,6 +244,12 @@ function NotificationDeepLinkHandler() {
   const router = useRouter();
 
   const navigate = useCallback((data: Record<string, unknown>) => {
+    // Admin broadcast deep link — takes priority over type-based routing
+    if (typeof data?.url === 'string' && data.url) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push(data.url as any);
+      return;
+    }
     if (!data?.type) return;
     switch (data.type) {
       case 'follow':

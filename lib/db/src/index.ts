@@ -62,6 +62,12 @@ export async function runStartupMigrations(): Promise<void> {
       )
     `);
 
+    // Deep link support for admin push notifications.
+    await client.query(`
+      ALTER TABLE notification_broadcasts
+        ADD COLUMN IF NOT EXISTS deep_link TEXT
+    `);
+
     // Beta tester flag on character table (keep for backward compat).
     await client.query(`
       ALTER TABLE character

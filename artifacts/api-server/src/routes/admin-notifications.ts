@@ -97,6 +97,7 @@ const BroadcastSchema = z.object({
   title:    z.string().min(1).max(100),
   body:     z.string().min(1).max(500),
   audience: z.enum(AUDIENCE_VALUES).default("all"),
+  deepLink: z.string().max(500).optional(),
 });
 
 router.post("/admin/notifications/broadcast", requireAdmin, async (req: Request, res: Response) => {
@@ -105,12 +106,14 @@ router.post("/admin/notifications/broadcast", requireAdmin, async (req: Request,
     return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
   }
 
-  const { title, body, audience } = parsed.data;
+  const { title, body, audience, deepLink } = parsed.data;
   const adminId = getUserId(req);
 
   try {
     const tokens  = await getTokensForAudience(audience);
-    const messages = tokens.map(token => ({ token, title, body }));
+    const data: Record<string, unknown> = {};
+    if (deepLink) data.url = deepLink;
+    const messages = tokens.map(token => ({ token, title, body, data }));
 
     await sendPushToTokens(messages);
 
@@ -123,6 +126,7 @@ router.post("/admin/notifications/broadcast", requireAdmin, async (req: Request,
         sentAt:    new Date(),
         sentCount: messages.length,
         createdBy: adminId,
+        ...(deepLink ? { deepLink } : {}),
       })
       .returning();
 

@@ -11,6 +11,8 @@ export const notificationBroadcastsTable = pgTable("notification_broadcasts", {
   sentCount:   integer("sent_count").notNull().default(0),
   createdBy:   text("created_by").notNull(),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /** Optional Expo Router path to navigate to when the user taps the notification */
+  deepLink:    text("deep_link"),
 });
 
 export type NotificationBroadcast      = typeof notificationBroadcastsTable.$inferSelect;

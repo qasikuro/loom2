@@ -13,6 +13,7 @@ interface Broadcast {
   sentAt:    string | null;
   sentCount: number;
   createdAt: string;
+  deepLink:  string | null;
 }
 
 type Audience = "all" | "beta" | "founders" | "banned" | "admins" | "guides" | "recent";
@@ -48,6 +49,7 @@ export default function NotificationsPage() {
   const [title,    setTitle]    = useState("");
   const [body,     setBody]     = useState("");
   const [audience, setAudience] = useState<Audience>("all");
+  const [deepLink, setDeepLink] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,12 +75,13 @@ export default function NotificationsPage() {
     try {
       const res = await apiFetch<{ ok: boolean; sentCount: number }>("/admin/notifications/broadcast", {
         method: "POST",
-        body:   JSON.stringify({ title: title.trim(), body: body.trim(), audience }),
+        body:   JSON.stringify({ title: title.trim(), body: body.trim(), audience, ...(deepLink.trim() ? { deepLink: deepLink.trim() } : {}) }),
       });
       setSuccess(`Sent to ${res.sentCount} device${res.sentCount !== 1 ? "s" : ""}`);
       setTitle("");
       setBody("");
       setAudience("all");
+      setDeepLink("");
       setTimeout(() => setSuccess(null), 4000);
       await load();
     } catch (e: unknown) {
@@ -143,6 +146,21 @@ export default function NotificationsPage() {
               maxLength={500}
             />
             <p className="text-xs text-muted-foreground text-right">{body.length}/500</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              Deep Link <span className="normal-case font-normal">(optional)</span>
+            </label>
+            <Input
+              placeholder="e.g. /(tabs)/season or /story/[id]"
+              value={deepLink}
+              onChange={e => setDeepLink(e.target.value)}
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground">
+              When set, tapping the notification opens this screen directly.
+            </p>
           </div>
 
           {/* ── Audience picker ── */}
@@ -220,6 +238,11 @@ export default function NotificationsPage() {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{b.body}</p>
+                  {b.deepLink && (
+                    <p className="text-xs text-muted-foreground mt-0.5 font-mono truncate">
+                      → {b.deepLink}
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-1.5">
                     {b.sentCount.toLocaleString()} device{b.sentCount !== 1 ? "s" : ""} ·{" "}
                     {b.sentAt ? new Date(b.sentAt).toLocaleString() : "—"}
