@@ -80,6 +80,7 @@ export interface Character {
   intentionDate?:        string | null;
   isFounder?:            boolean;
   isBetaTester?:         boolean;
+  badges?:               BadgeItem[];
 }
 
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
@@ -250,6 +251,7 @@ export interface RawDiscoverApiItem {
   authorAvatarUri?:     string | null;
   authorIsFounder?:     boolean;
   authorIsBetaTester?:  boolean;
+  authorBadges?:        BadgeItem[];
   chapterTitle?:    string;
   description?:     string;
   storySnippet?:    string;
@@ -332,6 +334,7 @@ export function toAppCharacter(raw: RawCharacterResponse, _apiBase?: string): Ch
     intentionDate:        raw.intentionDate    ?? null,
     isFounder:            raw.isFounder        ?? false,
     isBetaTester:         raw.isBetaTester     ?? false,
+    badges:               Array.isArray(raw.badges) ? (raw.badges as BadgeItem[]) : [],
   };
 }
 
@@ -404,6 +407,7 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     authorAvatarUri:     resolveUri(raw.authorAvatarUri ?? undefined, apiBase) ?? null,
     authorIsFounder:     raw.authorIsFounder     ?? false,
     authorIsBetaTester:  raw.authorIsBetaTester  ?? false,
+    authorBadges:        Array.isArray(raw.authorBadges) ? (raw.authorBadges as BadgeItem[]) : [],
     chapterTitle:     raw.chapterTitle ?? '',
     storySnippet:     raw.storySnippet ?? '',
     imageUri:         resolveUri(raw.imageUri ?? undefined, apiBase),
