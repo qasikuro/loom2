@@ -216,38 +216,212 @@ function AuraBanner({
   );
 }
 
+// ── Crown spark dots for founder ring ────────────────────────────────────────
+const SPARK_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
+function FounderSparks({ radius, color }: { radius: number; color: string }) {
+  return (
+    <>
+      {SPARK_ANGLES.map((angle, i) => {
+        const rad = (angle * Math.PI) / 180;
+        const x   = radius * Math.cos(rad);
+        const y   = radius * Math.sin(rad);
+        const size = i % 2 === 0 ? 7 : 4.5;
+        return (
+          <View
+            key={angle}
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              width: size, height: size, borderRadius: size / 2,
+              backgroundColor: color,
+              left: radius + x - size / 2,
+              top:  radius + y - size / 2,
+              shadowColor: color,
+              shadowOpacity: 0.9,
+              shadowRadius: 4,
+              elevation: 4,
+            }}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 // ── Animated avatar ring ──────────────────────────────────────────────────────
-function AnimatedAvatarRing({ mood, profile }: { mood: string; profile: PublicProfile }) {
+function AnimatedAvatarRing({
+  mood,
+  profile,
+  isFounder,
+  isBeta,
+}: {
+  mood: string;
+  profile: PublicProfile;
+  isFounder: boolean;
+  isBeta:    boolean;
+}) {
   const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const breathe = useRef(new Animated.Value(0)).current;
   const rotate  = useRef(new Animated.Value(0)).current;
+  const pulse   = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const breatheLoop = Animated.loop(Animated.sequence([
-      Animated.timing(breathe, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(breathe, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 1, duration: isFounder ? 2000 : isBeta ? 1600 : 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(breathe, { toValue: 0, duration: isFounder ? 2000 : isBeta ? 1600 : 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
     breatheLoop.start();
     return () => breatheLoop.stop();
-  }, [breathe]);
+  }, [breathe, isFounder, isBeta]);
 
   useEffect(() => {
     const rotateLoop = Animated.loop(
-      Animated.timing(rotate, { toValue: 1, duration: 12000, easing: Easing.linear, useNativeDriver: true })
+      Animated.timing(rotate, { toValue: 1, duration: isFounder ? 18000 : isBeta ? 5000 : 12000, easing: Easing.linear, useNativeDriver: true })
     );
     rotateLoop.start();
     return () => rotateLoop.stop();
-  }, [rotate]);
+  }, [rotate, isFounder, isBeta]);
 
-  const ringScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.10] });
-  const ringOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.30, 0.85, 0.30] });
-  const haloOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.38, 0.12] });
-  const haloScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.20] });
+  useEffect(() => {
+    if (!isFounder && !isBeta) return;
+    const pulseLoop = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 1200, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0, duration: 1200, easing: Easing.in(Easing.quad),  useNativeDriver: true }),
+    ]));
+    pulseLoop.start();
+    return () => pulseLoop.stop();
+  }, [pulse, isFounder, isBeta]);
+
+  const ringScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.06 : 1.10] });
+  const ringOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [isFounder ? 0.55 : 0.30, 1, isFounder ? 0.55 : 0.30] });
+  const haloOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, isFounder ? 0.55 : isBeta ? 0.50 : 0.38, 0.12] });
+  const haloScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.28 : 1.20] });
   const spin        = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const pulseScale  = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  const pulseOp     = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.55, 0] });
 
   const avatarSource = profile.avatarUri ? { uri: profile.avatarUri } : null;
   const initial = (profile.name ?? '?').charAt(0).toUpperCase();
 
+  // ── Founder color palette
+  const founderGold   = '#C8A84B';
+  const founderDeep   = '#8A6820';
+  // ── Beta color palette
+  const betaPurple    = '#9B78E8';
+  const betaDark      = '#5A3AB0';
+
+  if (isFounder) {
+    return (
+      <View style={styles.avatarInBanner}>
+        {/* Outer shimmer halo */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 172, height: 172, borderRadius: 86,
+          backgroundColor: founderGold + '14',
+          transform: [{ scale: haloScale }],
+          opacity: haloOpacity,
+        }} />
+        {/* Spark dots container (sized to match outer ring) */}
+        <View pointerEvents="none" style={{ position: 'absolute', width: 152, height: 152, left: -10, top: -10 }}>
+          <FounderSparks radius={76} color={founderGold} />
+        </View>
+        {/* Slow-spinning outer ring — thick gold */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 148, height: 148, borderRadius: 74,
+          borderWidth: 2.5,
+          borderColor: founderGold,
+          transform: [{ rotate: spin }],
+          opacity: 0.75,
+        }} />
+        {/* Breathing solid ring — inner */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 118, height: 118, borderRadius: 59,
+          borderWidth: 3,
+          borderColor: founderDeep,
+          transform: [{ scale: ringScale }],
+          opacity: ringOpacity,
+        }} />
+        {/* Pulse ring — energy burst */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 118, height: 118, borderRadius: 59,
+          borderWidth: 1.5,
+          borderColor: founderGold,
+          transform: [{ scale: pulseScale }],
+          opacity: pulseOp,
+        }} />
+        {/* Avatar circle */}
+        <View style={[styles.avatarCircle, { borderColor: founderGold, borderWidth: 3, backgroundColor: '#1A1408' }]}>
+          {avatarSource ? (
+            <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+          ) : (
+            <Text style={[styles.avatarInitial, { color: founderGold }]}>{initial}</Text>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  if (isBeta) {
+    return (
+      <View style={styles.avatarInBanner}>
+        {/* Outer halo */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 165, height: 165, borderRadius: 82.5,
+          backgroundColor: betaPurple + '18',
+          transform: [{ scale: haloScale }],
+          opacity: haloOpacity,
+        }} />
+        {/* Fast-spinning outer ring — purple dashed */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 148, height: 148, borderRadius: 74,
+          borderWidth: 2,
+          borderColor: betaPurple + 'CC',
+          borderStyle: 'dashed',
+          transform: [{ rotate: spin }],
+        }} />
+        {/* Steady solid middle ring */}
+        <View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 130, height: 130, borderRadius: 65,
+          borderWidth: 1.5,
+          borderColor: betaDark + '99',
+        }} />
+        {/* Breathing solid inner ring */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 118, height: 118, borderRadius: 59,
+          borderWidth: 2.5,
+          borderColor: betaPurple,
+          transform: [{ scale: ringScale }],
+          opacity: ringOpacity,
+        }} />
+        {/* Pulse ring */}
+        <Animated.View pointerEvents="none" style={{
+          position: 'absolute',
+          width: 118, height: 118, borderRadius: 59,
+          borderWidth: 1.5,
+          borderColor: betaPurple,
+          transform: [{ scale: pulseScale }],
+          opacity: pulseOp,
+        }} />
+        {/* Avatar circle */}
+        <View style={[styles.avatarCircle, { borderColor: betaPurple, borderWidth: 3, backgroundColor: '#120A20' }]}>
+          {avatarSource ? (
+            <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+          ) : (
+            <Text style={[styles.avatarInitial, { color: betaPurple }]}>{initial}</Text>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  // ── Normal user ring
   return (
     <View style={styles.avatarInBanner}>
       {/* Outer halo pulse */}
@@ -511,6 +685,10 @@ export default function UserProfileScreen() {
   const weatherQuery   = profile?.country ?? null;
   const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
   const isTopExplorer  = totalWitnessed >= 10 || stories.length >= 3;
+  const isFounder      = (profile?.badges ?? []).some(b => b.slug === 'founder');
+  const isBeta         = (profile?.badges ?? []).some(b => b.slug === 'beta_tester');
+  const founderBadge   = isFounder ? (profile?.badges ?? []).find(b => b.slug === 'founder') : null;
+  const betaBadge      = isBeta    ? (profile?.badges ?? []).find(b => b.slug === 'beta_tester') : null;
 
   if (loading) {
     return (
@@ -580,7 +758,7 @@ export default function UserProfileScreen() {
           </View>
 
           {/* Avatar with animated aura rings */}
-          <AnimatedAvatarRing mood={mood} profile={profile} />
+          <AnimatedAvatarRing mood={mood} profile={profile} isFounder={isFounder} isBeta={isBeta} />
         </AuraBanner>
 
         {/* ── FLOATING PROFILE CARD ───────────────────────────────── */}
@@ -757,23 +935,63 @@ export default function UserProfileScreen() {
             </ScrollView>
           ) : null}
 
-          {/* Stats row */}
+          {/* Stats row — icon + colored number + label */}
           <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: aura.accent }]}>{stories.length}</Text>
+              <Text style={styles.statIcon}>📖</Text>
+              <Text style={[styles.statNum, { color: '#78A8D4' }]}>{stories.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: colors.gold }]}>{outfits.length}</Text>
+              <Text style={styles.statIcon}>🧥</Text>
+              <Text style={[styles.statNum, { color: '#C8A84B' }]}>{outfits.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Outfits</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={[styles.statNum, { color: '#6BA57A' }]}>{totalWitnessed}</Text>
+              <Text style={styles.statIcon}>💗</Text>
+              <Text style={[styles.statNum, { color: '#D878B0' }]}>{totalWitnessed}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Likes</Text>
             </View>
           </View>
+
+          {/* ── Founder / Beta spotlight card ──────────────────── */}
+          {(isFounder || isBeta) && (() => {
+            const badge       = isFounder ? founderBadge : betaBadge;
+            const cardColor   = isFounder ? '#C8A84B' : '#9B78E8';
+            const cardDark    = isFounder ? '#6B4A14' : '#3A1878';
+            const icon        = isFounder ? '👑'       : '⚗️';
+            const title       = isFounder ? 'Founder'  : 'Beta Pioneer';
+            const description = isFounder
+              ? 'Joined before launch. Thank you for believing in GameJo. ✨'
+              : 'Helped shape GameJo during its early days. Thank you! 💜';
+            return (
+              <View style={[styles.spotlightBadgeCard, {
+                backgroundColor: cardDark + '33',
+                borderColor:     cardColor + '55',
+              }]}>
+                <LinearGradient
+                  colors={[cardColor + '22', 'transparent']}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                />
+                {/* Icon or badge image */}
+                <View style={[styles.spotlightBadgeIcon, { backgroundColor: cardColor + '22', borderColor: cardColor + '55' }]}>
+                  {badge?.imageUrl ? (
+                    <Image source={{ uri: badge.imageUrl }} style={{ width: 44, height: 44 }} contentFit="contain" />
+                  ) : (
+                    <Text style={{ fontSize: 26 }}>{icon}</Text>
+                  )}
+                </View>
+                {/* Text */}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.spotlightBadgeTitle, { color: cardColor }]}>{title}</Text>
+                  <Text style={[styles.spotlightBadgeDesc, { color: cardColor + 'BB' }]}>{description}</Text>
+                </View>
+              </View>
+            );
+          })()}
 
           {/* Message button — only visible when viewing someone else's profile */}
           {!isSelf && (
@@ -1223,12 +1441,38 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     marginHorizontal: -16,
     marginTop: 10,
-    paddingVertical: 11,
+    paddingVertical: 12,
   },
-  statItem: { flex: 1, alignItems: 'center', gap: 1 },
-  statNum:  { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-  statLabel: { fontSize: 10, fontFamily: 'Satoshi-Regular' },
+  statItem:    { flex: 1, alignItems: 'center', gap: 2 },
+  statIcon:    { fontSize: 22, lineHeight: 26 },
+  statNum:     { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  statLabel:   { fontSize: 10, fontFamily: 'Satoshi-Regular' },
   statDivider: { width: 1, marginVertical: 4 },
+
+  // ── Founder / Beta badge spotlight card
+  spotlightBadgeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    overflow: 'hidden',
+  },
+  spotlightBadgeIcon: {
+    width: 58, height: 58, borderRadius: 29,
+    borderWidth: 1.5,
+    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  spotlightBadgeTitle: {
+    fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2,
+  },
+  spotlightBadgeDesc: {
+    fontSize: 11, fontFamily: 'Satoshi-Regular',
+    lineHeight: 16, marginTop: 2,
+  },
 
   messageBtn: {
     flexDirection: 'row',
