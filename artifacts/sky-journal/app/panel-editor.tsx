@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useNavigation } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -330,7 +331,7 @@ export default function PanelEditorScreen() {
     return (
       <View style={[styles.root, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' }]}>
         <Text style={{ color: colors.mutedForeground }}>{t('create.noPanelToEdit')}</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+        <TouchableOpacity onPress={() => safeBack()} style={{ marginTop: 16 }}>
           <Text style={{ color: colors.primary }}>{t('common.goBack')}</Text>
         </TouchableOpacity>
       </View>
@@ -561,7 +562,7 @@ export default function PanelEditorScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     DraftStore.save(layoutKey);
     markSaved(); // allow the back-navigation without prompting
-    router.back();
+    safeBack();
   }
 
   // ── Image source sheet helpers ─────────────────────────────────────────────

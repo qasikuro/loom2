@@ -3,6 +3,7 @@ import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import { useTranslation } from 'react-i18next';
 import React, { useState } from 'react';
 import {
@@ -75,7 +76,7 @@ export default function CreateFriendLogScreen() {
     });
     setSaving(false);
     markSaved();
-    router.back();
+    safeBack();
   }
 
   const timesMet = journalEntries.filter(e => e.type === 'friend' && e.friendName === friendName.trim()).length;

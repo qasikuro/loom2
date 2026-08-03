@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useRef } from 'react';
 import {
@@ -109,7 +110,7 @@ export default function SeasonScreen() {
       <View style={[s.header, { paddingTop: topPad + 8 }]}>
         <TouchableOpacity
           style={s.backBtn}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); safeBack(); }}
           activeOpacity={0.75}
         >
           <Icon name="chevron-left" size={18} color="rgba(242,232,255,0.80)" />

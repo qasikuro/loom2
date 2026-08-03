@@ -16,6 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
@@ -190,7 +191,7 @@ export default function VibePostScreen() {
 
       {/* Header */}
       <View style={[s.header, { paddingTop: topPad + 8 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={step === STEP_TEXT ? () => setStep(STEP_MOOD) : () => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity style={s.backBtn} onPress={step === STEP_TEXT ? () => setStep(STEP_MOOD) : () => safeBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.76)" />
         </TouchableOpacity>
         <View style={s.headerCenter}>

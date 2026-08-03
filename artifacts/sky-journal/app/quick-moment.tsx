@@ -18,6 +18,7 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
@@ -221,7 +222,7 @@ export default function QuickMomentScreen() {
 
       {/* Header */}
       <View style={[s.header, { paddingTop: topPad + 8 }]}>
-        <TouchableOpacity style={s.backBtn} onPress={step > STEP_IMAGE ? () => setStep(s => s - 1) : () => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+        <TouchableOpacity style={s.backBtn} onPress={step > STEP_IMAGE ? () => setStep(s => s - 1) : () => safeBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.76)" />
         </TouchableOpacity>
         <View style={s.headerCenter}>

@@ -7,6 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
@@ -98,7 +99,7 @@ export default function SavedStoriesScreen() {
           </Text>
           <TouchableOpacity
             style={styles.emptyBtn}
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             activeOpacity={0.8}
           >
             <Text style={styles.emptyBtnText}>Explore stories</Text>

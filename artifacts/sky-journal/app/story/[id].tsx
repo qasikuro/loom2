@@ -4,6 +4,7 @@ import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Image } from 'expo-image';
@@ -506,7 +507,7 @@ export default function StoryScreen() {
       <View style={[errState.container, { backgroundColor: '#0D0B1A' }]}>
         <TouchableOpacity
           style={[errState.backBtn, { top: topPad + 12 }]}
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
           activeOpacity={0.78}
         >
           <Icon name="chevron-left" size={20} color="rgba(200,184,232,0.9)" />
@@ -519,7 +520,7 @@ export default function StoryScreen() {
               ? 'The story data appears to be incomplete.'
               : 'This story may have been removed or is no longer available.'}
           </Text>
-          <TouchableOpacity style={errState.btn} onPress={() => router.back()} activeOpacity={0.82}>
+          <TouchableOpacity style={errState.btn} onPress={() => safeBack()} activeOpacity={0.82}>
             <Icon name="chevron-left" size={15} color="rgba(200,184,232,0.9)" />
             <Text style={errState.btnText}>Go Back</Text>
           </TouchableOpacity>
@@ -625,7 +626,7 @@ export default function StoryScreen() {
     if (confirmingDelete) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       deleteStory(id!);
-      router.back();
+      safeBack();
     } else {
       setConfirmingDelete(true);
       setTimeout(() => setConfirmingDelete(false), 3000);

@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import { apiFetch } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -90,7 +91,7 @@ export default function PurchaseHistoryScreen() {
       {/* ── Header ── */}
       <View style={[s.header, { paddingTop: topPad + 10 }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
           style={s.backBtn}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}

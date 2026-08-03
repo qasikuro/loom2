@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -252,7 +253,7 @@ export default function CreateOutfitScreen() {
     }
     setSaving(false);
     markSaved();
-    router.back();
+    safeBack();
   }
 
   return (

@@ -3,6 +3,7 @@ import { BadgeTray, type BadgeItem } from '@/components/profile/BadgeTray';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
@@ -732,7 +733,7 @@ export default function UserProfileScreen() {
         </Text>
         <TouchableOpacity
           style={[styles.backBtnErr, { backgroundColor: colors.card, borderColor: colors.border }]}
-          onPress={() => router.back()}
+          onPress={() => safeBack()}
         >
           <Text style={[styles.backBtnErrText, { color: colors.primary }]}>{t('common.goBack')}</Text>
         </TouchableOpacity>
@@ -749,7 +750,7 @@ export default function UserProfileScreen() {
           {/* Back button */}
           <TouchableOpacity
             style={[styles.topBtn, { top: topPad + 10, left: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}
-            onPress={() => router.back()}
+            onPress={() => safeBack()}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
             <Icon name="arrow-left" size={17} color="rgba(220,210,255,0.92)" />

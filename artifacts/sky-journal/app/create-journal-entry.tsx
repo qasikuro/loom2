@@ -9,6 +9,7 @@ import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { journalDraft } from '@/utils/entryDraftStore';
 import { useJournalDraftLoader } from '@/hooks/useJournalDraftLoader';
 import { router, useLocalSearchParams } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
@@ -576,7 +577,7 @@ export default function CreateJournalEntryScreen() {
           </Text>
         </View>
       </KeyboardAwareScrollView>
-      <CompletionMoment visible={showCompletion} variant="journal" onFinish={() => { markSaved(); router.back(); }} />
+      <CompletionMoment visible={showCompletion} variant="journal" onFinish={() => { markSaved(); safeBack(); }} />
     </View>
   );
 }

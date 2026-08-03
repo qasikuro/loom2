@@ -6,7 +6,7 @@
  * can push here instead of toggling local modal state.
  */
 import { ShopModal } from '@/components/ShopModal';
-import { router } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 
@@ -15,7 +15,7 @@ export default function ShopScreen() {
 
   function handleClose() {
     setVisible(false);
-    router.back();
+    safeBack();
   }
 
   return (

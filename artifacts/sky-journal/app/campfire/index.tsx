@@ -16,6 +16,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
+import { safeBack } from '@/utils/navigation';
 import * as Haptics from 'expo-haptics';
 
 import { Icon } from '@/components/Icon';
@@ -361,7 +362,7 @@ export default function CampfireLobby() {
 
       {/* Header */}
       <View style={[L.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity onPress={() => router.back()} style={L.backBtn} activeOpacity={0.7} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+        <TouchableOpacity onPress={() => safeBack()} style={L.backBtn} activeOpacity={0.7} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
           <Icon name="arrow-left" size={16} color="rgba(200,184,232,0.75)" />
         </TouchableOpacity>
         <View style={L.headerCenter}>
