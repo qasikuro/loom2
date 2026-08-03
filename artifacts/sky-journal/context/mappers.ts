@@ -69,6 +69,8 @@ export interface Character {
   activeTitle?:          string | null;
   intention?:            string | null;
   intentionDate?:        string | null;
+  isFounder?:            boolean;
+  isBetaTester?:         boolean;
 }
 
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
@@ -166,6 +168,8 @@ export interface RawCharacterResponse {
   activeTitle?:          string | null;
   intention?:            string | null;
   intentionDate?:        string | null;
+  isFounder?:            boolean;
+  isBetaTester?:         boolean;
 }
 
 export interface RawJournalEntryResponse {
@@ -313,6 +317,8 @@ export function toAppCharacter(raw: RawCharacterResponse, _apiBase?: string): Ch
     activeTitle:          raw.activeTitle      ?? null,
     intention:            raw.intention        ?? null,
     intentionDate:        raw.intentionDate    ?? null,
+    isFounder:            raw.isFounder        ?? false,
+    isBetaTester:         raw.isBetaTester     ?? false,
   };
 }
 

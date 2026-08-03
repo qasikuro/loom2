@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { ProfileBadges } from '@/components/profile/ProfileBadges';
 import { Images } from '@/assets/images';
 import type { ConstellationState } from '@/components/ConstellationMap';
 import { apiFetch, type Character, type Outfit } from '@/context/AppContext';
@@ -226,6 +227,13 @@ export function ProfileHeaderSection({
               <Text style={{ fontSize: 11, color: '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 }}>
                 ✦ {character.activeTitle ?? constellation!.activeTitle}
               </Text>
+            </View>
+          )}
+
+          {/* Founder / Beta Tester badges */}
+          {(character.isFounder || character.isBetaTester) && (
+            <View style={{ marginTop: 6 }}>
+              <ProfileBadges isFounder={character.isFounder} isBetaTester={character.isBetaTester} size={40} showLabel />
             </View>
           )}
 

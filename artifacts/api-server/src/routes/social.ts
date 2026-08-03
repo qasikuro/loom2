@@ -157,6 +157,8 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         intentionDate:  characterTable.intentionDate,
         activeTitle:    constellationProgressTable.activeTitle,
         lifetimeStars:  userRewardsTable.lifetimeStars,
+        isFounder:      characterTable.isFounder,
+        isBetaTester:   characterTable.isBetaTester,
       })
         .from(characterTable)
         .leftJoin(constellationProgressTable, eq(constellationProgressTable.userId, characterTable.userId))
@@ -235,6 +237,8 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       intention:     char.intention     ?? null,
       intentionDate: char.intentionDate ?? null,
       stars:         char.lifetimeStars  ?? 0,
+      isFounder:     char.isFounder     ?? false,
+      isBetaTester:  char.isBetaTester  ?? false,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to get user profile");

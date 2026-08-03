@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { api, type Stats } from "../api";
 
 const cards = (s: Stats) => [
-  { label: "Total Users",      value: s.totalUsers,      color: "text-blue-600",  bg: "bg-blue-50" },
-  { label: "New (30 days)",    value: s.recentSignups,   color: "text-green-600", bg: "bg-green-50" },
-  { label: "Banned Users",     value: s.bannedUsers,     color: "text-red-600",   bg: "bg-red-50" },
-  { label: "Admin Accounts",   value: s.adminUsers,      color: "text-purple-600",bg: "bg-purple-50" },
-  { label: "Total Stories",    value: s.totalStories,    color: "text-indigo-600",bg: "bg-indigo-50" },
-  { label: "Total Outfits",    value: s.totalOutfits,    color: "text-pink-600",  bg: "bg-pink-50" },
-  { label: "Journal Entries",  value: s.totalJournals,   color: "text-teal-600",  bg: "bg-teal-50" },
-  { label: "Vibe Stickers",    value: s.totalStickers,   color: "text-violet-600",bg: "bg-violet-50" },
+  { label: "Online Now",       value: s.onlineUsers,     color: "text-emerald-600", bg: "bg-emerald-50", pulse: s.onlineUsers > 0 },
+  { label: "Total Users",      value: s.totalUsers,      color: "text-blue-600",    bg: "bg-blue-50" },
+  { label: "New (30 days)",    value: s.recentSignups,   color: "text-green-600",   bg: "bg-green-50" },
+  { label: "Banned Users",     value: s.bannedUsers,     color: "text-red-600",     bg: "bg-red-50" },
+  { label: "Admin Accounts",   value: s.adminUsers,      color: "text-purple-600",  bg: "bg-purple-50" },
+  { label: "Total Stories",    value: s.totalStories,    color: "text-indigo-600",  bg: "bg-indigo-50" },
+  { label: "Total Outfits",    value: s.totalOutfits,    color: "text-pink-600",    bg: "bg-pink-50" },
+  { label: "Journal Entries",  value: s.totalJournals,   color: "text-teal-600",    bg: "bg-teal-50" },
+  { label: "Vibe Stickers",    value: s.totalStickers,   color: "text-violet-600",  bg: "bg-violet-50" },
   { label: "Pending Reports",  value: s.pendingReports,  color: s.pendingReports > 0 ? "text-orange-600" : "text-gray-600", bg: s.pendingReports > 0 ? "bg-orange-50" : "bg-gray-50" },
 ];
 
@@ -43,7 +44,15 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {cards(stats).map((c) => (
             <div key={c.label} className="bg-card rounded-xl border p-5 hover:shadow-sm transition-shadow">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{c.label}</p>
+              <div className="flex items-center gap-1.5">
+                {"pulse" in c && c.pulse && (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                  </span>
+                )}
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{c.label}</p>
+              </div>
               <p className={`text-3xl font-bold mt-2 ${c.color}`}>{c.value.toLocaleString()}</p>
             </div>
           ))}

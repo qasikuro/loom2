@@ -36,6 +36,8 @@ export const api = {
   unbanUser:     (id: string) => apiFetch(`/admin/users/${id}/unban`, { method: "PUT" }),
   deleteUser:    (id: string) => apiFetch(`/admin/users/${id}`, { method: "DELETE" }),
   toggleAdmin:     (id: string) => apiFetch<{ isAdmin: boolean }>(`/admin/users/${id}/toggle-admin`, { method: "PUT" }),
+  toggleFounder:   (id: string) => apiFetch<{ ok: boolean; isFounder: boolean }>(`/admin/users/${id}/toggle-founder`, { method: "PUT" }),
+  toggleBeta:      (id: string) => apiFetch<{ ok: boolean; isBetaTester: boolean }>(`/admin/users/${id}/toggle-beta`, { method: "PUT" }),
   setGalleryLimit: (id: string, limit: number) => apiFetch<{ ok: boolean; limit: number }>(`/admin/users/${id}/gallery-limit`, { method: "PUT", body: JSON.stringify({ limit }) }),
   getContent:    (type: "stories" | "outfits", offset = 0, q = "", dateFrom = "", dateTo = "") => apiFetch<{ items: ContentItem[]; total: number }>(`/admin/content?type=${type}&offset=${offset}&limit=50&q=${encodeURIComponent(q)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}`),
   hideContent:   (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/hide`, { method: "PUT" }),
@@ -72,6 +74,7 @@ export interface Stats {
   recentSignups: number;
   totalJournals: number;
   totalStickers: number;
+  onlineUsers: number;
 }
 
 export interface AdminSticker {
@@ -88,17 +91,19 @@ export interface AdminSticker {
 }
 
 export interface AdminUser {
-  userId:       string;
-  username:     string | null;
-  name:         string;
-  bio:          string;
-  mood:         string;
-  isPublic:     boolean;
-  isAdmin:      boolean;
-  isBanned:     boolean;
-  galleryLimit: number;
-  updatedAt:    string;
-  email?:       string | null;
+  userId:        string;
+  username:      string | null;
+  name:          string;
+  bio:           string;
+  mood:          string;
+  isPublic:      boolean;
+  isAdmin:       boolean;
+  isBanned:      boolean;
+  isFounder:     boolean;
+  isBetaTester:  boolean;
+  galleryLimit:  number;
+  updatedAt:     string;
+  email?:        string | null;
   lastSignInAt?: number | null;
 }
 

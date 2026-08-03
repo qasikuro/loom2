@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { ProfileBadges } from '@/components/profile/ProfileBadges';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -379,6 +380,8 @@ interface PublicProfile {
   intention:      string | null;
   intentionDate:  string | null;
   stars:          number; // lifetimeStars — never decreases
+  isFounder?:     boolean;
+  isBetaTester?:  boolean;
 }
 
 const XP_PER_LEVEL = 300;
@@ -623,6 +626,13 @@ export default function UserProfileScreen() {
               ✦ {profile.activeTitle}
             </Text>
           ) : null}
+
+          {/* Founder / Beta Tester badges */}
+          {(profile.isFounder || profile.isBetaTester) && (
+            <View style={{ marginTop: 6 }}>
+              <ProfileBadges isFounder={profile.isFounder} isBetaTester={profile.isBetaTester} size={40} showLabel />
+            </View>
+          )}
 
           {/* Level + XP progress */}
           {(() => {

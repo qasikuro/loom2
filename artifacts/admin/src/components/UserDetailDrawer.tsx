@@ -7,7 +7,7 @@ interface Props {
   onActionDone?: () => void;
 }
 
-type ConfirmKind = "ban" | "unban" | "delete" | "admin";
+type ConfirmKind = "ban" | "unban" | "delete" | "admin" | "founder" | "beta";
 
 export default function UserDetailDrawer({ userId, onClose, onActionDone }: Props) {
   const [user, setUser]       = useState<AdminUserDetail | null>(null);
@@ -38,10 +38,12 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
   const handleAction = async (kind: ConfirmKind) => {
     if (!user) return;
     try {
-      if (kind === "ban")    await api.banUser(user.userId);
-      if (kind === "unban")  await api.unbanUser(user.userId);
-      if (kind === "delete") { await api.deleteUser(user.userId); onClose(); onActionDone?.(); return; }
-      if (kind === "admin")  await api.toggleAdmin(user.userId);
+      if (kind === "ban")     await api.banUser(user.userId);
+      if (kind === "unban")   await api.unbanUser(user.userId);
+      if (kind === "delete")  { await api.deleteUser(user.userId); onClose(); onActionDone?.(); return; }
+      if (kind === "admin")   await api.toggleAdmin(user.userId);
+      if (kind === "founder") await api.toggleFounder(user.userId);
+      if (kind === "beta")    await api.toggleBeta(user.userId);
       const fresh = await api.getUserDetail(user.userId);
       setUser(fresh);
       showToast("Done!");
@@ -135,10 +137,12 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                   <div className="font-semibold text-base leading-tight">{user.name || <span className="text-muted-foreground italic">No name</span>}</div>
                   {user.username && <div className="text-sm text-muted-foreground mt-0.5">@{user.username}</div>}
                   <div className="flex flex-wrap gap-1.5 mt-2">
-                    {user.isAdmin  && <Badge color="purple">Admin</Badge>}
-                    {user.isBanned && <Badge color="red">Banned</Badge>}
+                    {user.isAdmin      && <Badge color="purple">Admin</Badge>}
+                    {user.isBanned     && <Badge color="red">Banned</Badge>}
                     {!user.isAdmin && !user.isBanned && <Badge color="green">Active</Badge>}
-                    {!user.isPublic && <Badge color="gray">Private</Badge>}
+                    {!user.isPublic    && <Badge color="gray">Private</Badge>}
+                    {user.isFounder    && <Badge color="gold">👑 Founder</Badge>}
+                    {user.isBetaTester && <Badge color="violet">🧪 Beta Tester</Badge>}
                   </div>
                 </div>
               </div>
@@ -255,10 +259,12 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                 {confirm ? (
                   <div className="bg-muted/40 border rounded-xl p-4 space-y-3">
                     <p className="text-sm font-medium">
-                      {confirm === "delete" ? `Permanently delete ${user.name}? This cannot be undone.`
-                       : confirm === "ban"   ? `Ban ${user.name}? They'll be hidden from the discover feed.`
-                       : confirm === "unban" ? `Unban ${user.name}? They'll regain full access.`
-                       : user.isAdmin        ? `Remove admin access from ${user.name}?`
+                      {confirm === "delete"  ? `Permanently delete ${user.name}? This cannot be undone.`
+                       : confirm === "ban"    ? `Ban ${user.name}? They'll be hidden from the discover feed.`
+                       : confirm === "unban"  ? `Unban ${user.name}? They'll regain full access.`
+                       : confirm === "founder"? (user.isFounder ? `Remove 👑 Founder badge from ${user.name}?` : `Grant 👑 Founder badge to ${user.name}? They'll be notified.`)
+                       : confirm === "beta"   ? (user.isBetaTester ? `Remove 🧪 Beta Tester badge from ${user.name}?` : `Grant 🧪 Beta Tester badge to ${user.name}? They'll be notified.`)
+                       : user.isAdmin         ? `Remove admin access from ${user.name}?`
                                              : `Grant admin access to ${user.name}?`}
                     </p>
                     <div className="flex gap-2">
@@ -280,6 +286,16 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                       label={user.isAdmin ? "Demote admin" : "Promote to admin"}
                       color="purple"
                       onClick={() => setConfirm("admin")}
+                    />
+                    <ActionBtn
+                      label={user.isFounder ? "👑 Remove Founder" : "👑 Grant Founder"}
+                      color={user.isFounder ? "gold" : "gray"}
+                      onClick={() => setConfirm("founder")}
+                    />
+                    <ActionBtn
+                      label={user.isBetaTester ? "🧪 Remove Beta" : "🧪 Grant Beta"}
+                      color={user.isBetaTester ? "violet" : "gray"}
+                      onClick={() => setConfirm("beta")}
                     />
                     <a
                       href={user.email ? `mailto:${user.email}?subject=Sky Journal Support` : undefined}
@@ -313,12 +329,14 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
   );
 }
 
-function Badge({ color, children }: { color: "purple" | "red" | "green" | "gray"; children: React.ReactNode }) {
+function Badge({ color, children }: { color: "purple" | "red" | "green" | "gray" | "gold" | "violet"; children: React.ReactNode }) {
   const cls = {
     purple: "bg-purple-100 text-purple-700",
     red:    "bg-red-100 text-red-700",
     green:  "bg-green-100 text-green-700",
     gray:   "bg-gray-100 text-gray-600",
+    gold:   "bg-yellow-100 text-yellow-700",
+    violet: "bg-violet-100 text-violet-700",
   }[color];
   return <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{children}</span>;
 }
@@ -332,12 +350,15 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function ActionBtn({ label, color, onClick }: { label: string; color: "orange" | "green" | "purple" | "red"; onClick: () => void }) {
+function ActionBtn({ label, color, onClick }: { label: string; color: "orange" | "green" | "purple" | "red" | "gold" | "violet" | "gray"; onClick: () => void }) {
   const cls = {
     orange: "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100",
     green:  "bg-green-50 text-green-700 border-green-200 hover:bg-green-100",
     purple: "bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100",
     red:    "bg-red-50 text-red-700 border-red-200 hover:bg-red-100",
+    gold:   "bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100",
+    violet: "bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100",
+    gray:   "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100",
   }[color];
   return (
     <button onClick={onClick} className={`px-3 py-2.5 text-sm rounded-xl font-medium transition-colors border ${cls}`}>

@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { api, type AdminUser } from "../api";
 import UserDetailDrawer from "../components/UserDetailDrawer";
 
-type ConfirmAction = { type: "ban" | "unban" | "delete" | "admin"; user: AdminUser };
+type ConfirmAction = { type: "ban" | "unban" | "delete" | "admin" | "founder" | "beta"; user: AdminUser };
 type LimitEdit     = { userId: string; value: string };
 
 function fmtDate(ts: number | string | null | undefined, fallback = "—") {
@@ -57,10 +57,12 @@ export default function UsersPage() {
   const handleConfirm = async () => {
     if (!confirm) return;
     try {
-      if (confirm.type === "ban")    await api.banUser(confirm.user.userId);
-      if (confirm.type === "unban")  await api.unbanUser(confirm.user.userId);
-      if (confirm.type === "delete") await api.deleteUser(confirm.user.userId);
-      if (confirm.type === "admin")  await api.toggleAdmin(confirm.user.userId);
+      if (confirm.type === "ban")     await api.banUser(confirm.user.userId);
+      if (confirm.type === "unban")   await api.unbanUser(confirm.user.userId);
+      if (confirm.type === "delete")  await api.deleteUser(confirm.user.userId);
+      if (confirm.type === "admin")   await api.toggleAdmin(confirm.user.userId);
+      if (confirm.type === "founder") await api.toggleFounder(confirm.user.userId);
+      if (confirm.type === "beta")    await api.toggleBeta(confirm.user.userId);
       showToast("Done!");
       setConfirm(null);
       load(query, offset);
@@ -164,10 +166,12 @@ export default function UsersPage() {
                     {/* Status */}
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
-                        {u.isAdmin  && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">Admin</span>}
-                        {u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Banned</span>}
+                        {u.isAdmin      && <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 text-purple-700 font-medium">Admin</span>}
+                        {u.isBanned     && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Banned</span>}
                         {!u.isAdmin && !u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Active</span>}
-                        {!u.isPublic && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
+                        {!u.isPublic    && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
+                        {u.isFounder    && <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700 font-medium">👑 Founder</span>}
+                        {u.isBetaTester && <span className="px-2 py-0.5 rounded-full text-xs bg-violet-100 text-violet-700 font-medium">🧪 Beta</span>}
                       </div>
                     </td>
 
@@ -234,6 +238,14 @@ export default function UsersPage() {
                           className="px-2 py-1 text-xs rounded-md font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors"
                         >{u.isAdmin ? "Demote" : "Promote"}</button>
                         <button
+                          onClick={() => setConfirm({ type: "founder", user: u })}
+                          className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isFounder ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                        >{u.isFounder ? "👑 Unfounder" : "👑 Founder"}</button>
+                        <button
+                          onClick={() => setConfirm({ type: "beta", user: u })}
+                          className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isBetaTester ? "bg-violet-100 text-violet-700 hover:bg-violet-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
+                        >{u.isBetaTester ? "🧪 Un-Beta" : "🧪 Beta"}</button>
+                        <button
                           onClick={() => setConfirm({ type: "delete", user: u })}
                           className="px-2 py-1 text-xs rounded-md font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
                         >Delete</button>
@@ -270,8 +282,13 @@ export default function UsersPage() {
       {confirm && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-card rounded-xl border shadow-xl p-6 max-w-sm w-full space-y-4">
-            <h3 className="font-semibold text-lg capitalize">
-              {confirm.type === "admin" ? (confirm.user.isAdmin ? "Demote from Admin" : "Promote to Admin") : `${confirm.type} User`}
+            <h3 className="font-semibold text-lg">
+              {confirm.type === "admin"   ? (confirm.user.isAdmin ? "Demote from Admin" : "Promote to Admin")
+               : confirm.type === "founder" ? (confirm.user.isFounder ? "Remove Founder Badge" : "Grant Founder Badge")
+               : confirm.type === "beta"    ? (confirm.user.isBetaTester ? "Remove Beta Tester Badge" : "Grant Beta Tester Badge")
+               : confirm.type === "delete"  ? "Delete User"
+               : confirm.type === "ban"     ? "Ban User"
+               : "Unban User"}
             </h3>
             <p className="text-sm text-muted-foreground">
               {confirm.type === "delete"
@@ -280,6 +297,14 @@ export default function UsersPage() {
                 ? `Ban ${confirm.user.name}? Their content will be hidden from the discover feed.`
                 : confirm.type === "unban"
                 ? `Unban ${confirm.user.name}? They will regain full access.`
+                : confirm.type === "founder"
+                ? confirm.user.isFounder
+                  ? `Remove the 👑 Founder badge from ${confirm.user.name}? They'll receive a notification.`
+                  : `Grant the 👑 Founder badge to ${confirm.user.name}? They'll be notified immediately.`
+                : confirm.type === "beta"
+                ? confirm.user.isBetaTester
+                  ? `Remove the 🧪 Beta Tester badge from ${confirm.user.name}?`
+                  : `Grant the 🧪 Beta Tester badge to ${confirm.user.name}?`
                 : confirm.user.isAdmin
                 ? `Remove admin access from ${confirm.user.name}?`
                 : `Grant admin access to ${confirm.user.name}?`}

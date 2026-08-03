@@ -24,6 +24,8 @@ export const characterTable = pgTable("character", {
   links:          jsonb("links").$type<ProfileLink[]>().default([]),
   isAdmin:           boolean("is_admin").notNull().default(false),
   isBanned:          boolean("is_banned").notNull().default(false),
+  isFounder:         boolean("is_founder").notNull().default(false),
+  isBetaTester:      boolean("is_beta_tester").notNull().default(false),
   galleryLimit:      integer("gallery_limit").notNull().default(200),
   // ── Constellation Guides ─────────────────────────────────────────────────
   isGuide:           boolean("is_guide").notNull().default(false),

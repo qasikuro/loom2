@@ -7,11 +7,14 @@ import {
   journalEntriesTable,
   followsTable,
   stickerReactionsTable,
+  notificationsTable,
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 import { clerkClient } from "@clerk/express";
+import { connectedClientCount } from "../lib/sseEmitter";
+import { sendPushNotification } from "../services/pushService";
 
 const router: IRouter = Router();
 
@@ -104,6 +107,7 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
       recentSignups,
       totalJournals,
       totalStickers,
+      onlineUsers: connectedClientCount(),
     });
   } catch (err) {
     req.log.error({ err }, "Admin stats failed");
@@ -127,8 +131,10 @@ router.get("/admin/users/:id", requireAdmin, async (req: Request, res: Response)
         isPublic:     characterTable.isPublic,
         isAdmin:      characterTable.isAdmin,
         isBanned:     characterTable.isBanned,
-        galleryLimit: characterTable.galleryLimit,
-        updatedAt:    characterTable.updatedAt,
+        galleryLimit:  characterTable.galleryLimit,
+        updatedAt:     characterTable.updatedAt,
+        isFounder:     characterTable.isFounder,
+        isBetaTester:  characterTable.isBetaTester,
       })
       .from(characterTable)
       .where(eq(characterTable.userId, targetId))
@@ -198,11 +204,13 @@ router.get("/admin/users", requireAdmin, async (req: Request, res: Response) => 
         name:         characterTable.name,
         bio:          characterTable.bio,
         mood:         characterTable.mood,
-        isPublic:     characterTable.isPublic,
-        isAdmin:      characterTable.isAdmin,
-        isBanned:     characterTable.isBanned,
-        galleryLimit: characterTable.galleryLimit,
-        updatedAt:    characterTable.updatedAt,
+        isPublic:      characterTable.isPublic,
+        isAdmin:       characterTable.isAdmin,
+        isBanned:      characterTable.isBanned,
+        galleryLimit:  characterTable.galleryLimit,
+        updatedAt:     characterTable.updatedAt,
+        isFounder:     characterTable.isFounder,
+        isBetaTester:  characterTable.isBetaTester,
       })
       .from(characterTable)
       .where(where)
@@ -545,6 +553,94 @@ router.delete("/admin/reports/:id", requireAdmin, async (req: Request, res: Resp
 });
 
 // ── Gallery limit ─────────────────────────────────────────────────────────────
+
+// ── Toggle Founder badge ──────────────────────────────────────────────────────
+router.put("/admin/users/:id/toggle-founder", requireAdmin, async (req: Request, res: Response) => {
+  const targetId = String(req.params.id);
+  try {
+    const [row] = await db
+      .select({ isFounder: characterTable.isFounder, name: characterTable.name, pushToken: characterTable.pushToken })
+      .from(characterTable)
+      .where(eq(characterTable.userId, targetId))
+      .limit(1);
+
+    if (!row) return res.status(404).json({ error: "User not found" });
+
+    const newValue = !row.isFounder;
+    await db.update(characterTable).set({ isFounder: newValue }).where(eq(characterTable.userId, targetId));
+
+    // In-app notification
+    await db.insert(notificationsTable).values({
+      userId:    targetId,
+      actorId:   "system",
+      actorName: "Sky Journal",
+      type:      newValue ? "badge_granted" : "badge_removed",
+      refId:     "founder",
+      title:     newValue
+        ? "🏆 You've been granted the Founder badge!"
+        : "Your Founder badge has been removed.",
+      isRead:    false,
+    });
+
+    // Push notification (fire-and-forget)
+    sendPushNotification(targetId, {
+      title: newValue ? "🏆 Founder Badge Granted!" : "Founder Badge Removed",
+      body:  newValue
+        ? "You've been recognized as a Founder of Sky Journal!"
+        : "Your Founder badge has been removed by an admin.",
+    }).catch(() => {});
+
+    req.log.info({ targetId, isFounder: newValue }, "Admin toggled founder badge");
+    return res.json({ ok: true, isFounder: newValue });
+  } catch (err) {
+    req.log.error({ err }, "Admin toggle-founder failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Toggle Beta Tester badge ──────────────────────────────────────────────────
+router.put("/admin/users/:id/toggle-beta", requireAdmin, async (req: Request, res: Response) => {
+  const targetId = String(req.params.id);
+  try {
+    const [row] = await db
+      .select({ isBetaTester: characterTable.isBetaTester, name: characterTable.name, pushToken: characterTable.pushToken })
+      .from(characterTable)
+      .where(eq(characterTable.userId, targetId))
+      .limit(1);
+
+    if (!row) return res.status(404).json({ error: "User not found" });
+
+    const newValue = !row.isBetaTester;
+    await db.update(characterTable).set({ isBetaTester: newValue }).where(eq(characterTable.userId, targetId));
+
+    // In-app notification
+    await db.insert(notificationsTable).values({
+      userId:    targetId,
+      actorId:   "system",
+      actorName: "Sky Journal",
+      type:      newValue ? "badge_granted" : "badge_removed",
+      refId:     "beta_tester",
+      title:     newValue
+        ? "🧪 You've been granted the Beta Tester badge!"
+        : "Your Beta Tester badge has been removed.",
+      isRead:    false,
+    });
+
+    // Push notification (fire-and-forget)
+    sendPushNotification(targetId, {
+      title: newValue ? "🧪 Beta Tester Badge!" : "Beta Tester Badge Removed",
+      body:  newValue
+        ? "Welcome to the inner circle — you're now a Sky Journal Beta Tester!"
+        : "Your Beta Tester badge has been removed by an admin.",
+    }).catch(() => {});
+
+    req.log.info({ targetId, isBetaTester: newValue }, "Admin toggled beta tester badge");
+    return res.json({ ok: true, isBetaTester: newValue });
+  } catch (err) {
+    req.log.error({ err }, "Admin toggle-beta failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.put("/admin/users/:id/gallery-limit", requireAdmin, async (req: Request, res: Response) => {
   const userId = String(req.params.id);

@@ -67,6 +67,12 @@ export async function runStartupMigrations(): Promise<void> {
       ALTER TABLE character
         ADD COLUMN IF NOT EXISTS is_beta_tester BOOLEAN NOT NULL DEFAULT FALSE
     `);
+
+    // Founder flag on character table.
+    await client.query(`
+      ALTER TABLE character
+        ADD COLUMN IF NOT EXISTS is_founder BOOLEAN NOT NULL DEFAULT FALSE
+    `);
   } finally {
     client.release();
   }
