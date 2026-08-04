@@ -138,6 +138,19 @@ export async function getAuthToken(): Promise<string | null> {
   return _getToken();
 }
 
+// ── Typed API error — carries HTTP status + optional Retry-After seconds ──────
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    /** Parsed value of the Retry-After response header (seconds), if present. */
+    public readonly retryAfter: number | null = null,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export async function apiFetch<T>(
   path: string,
   options?: RequestInit,
@@ -162,7 +175,13 @@ export async function apiFetch<T>(
   });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(`API ${options?.method ?? 'GET'} ${path} → ${res.status}: ${text}`);
+    const retryAfterRaw = res.headers.get('Retry-After');
+    const retryAfter = retryAfterRaw ? parseInt(retryAfterRaw, 10) : null;
+    throw new ApiError(
+      `API ${options?.method ?? 'GET'} ${path} → ${res.status}: ${text}`,
+      res.status,
+      Number.isFinite(retryAfter) ? retryAfter : null,
+    );
   }
   if (res.status === 204) return undefined as unknown as T;
   return res.json() as Promise<T>;

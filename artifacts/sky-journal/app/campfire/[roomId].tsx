@@ -26,7 +26,8 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '@clerk/expo';
 
 import { Icon } from '@/components/Icon';
-import { apiFetch, useApp } from '@/context/AppContext';
+import { ApiError, apiFetch, useApp } from '@/context/AppContext';
+import { showToastGlobal } from '@/components/Toast';
 import { useSSE } from '@/hooks/useSSE';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -604,6 +605,17 @@ export default function CampfireRoom() {
         body: JSON.stringify({ content: trimmed, authorName: character.name || 'Wanderer' }),
       });
       if (sent) appendOwnMessage(sent);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 429) {
+        // Restore the typed text so the user can try again
+        setText(trimmed);
+        setShowInput(true);
+        const suffix = (err.retryAfter != null && err.retryAfter >= 5)
+          ? ` Try again in ${err.retryAfter}s.`
+          : '';
+        showToastGlobal(`Slow down a little ✦${suffix}`, 'warning');
+      }
+      // Other errors: swallow silently (existing behaviour)
     } finally {
       setSending(false);
     }
