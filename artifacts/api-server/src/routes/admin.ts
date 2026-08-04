@@ -456,7 +456,33 @@ router.put("/admin/content/stories/:id/unhide", requireAdmin, async (req: Reques
 router.delete("/admin/content/stories/:id", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
+    // Fetch author before deleting so we can notify them
+    const [story] = await db
+      .select({ userId: storiesTable.userId })
+      .from(storiesTable)
+      .where(eq(storiesTable.id, id))
+      .limit(1);
+
+    if (!story) return res.status(404).json({ error: "Story not found" });
+
     await db.delete(storiesTable).where(eq(storiesTable.id, id));
+
+    // Notify the author
+    await db.insert(notificationsTable).values({
+      userId:    story.userId,
+      actorId:   "system",
+      actorName: "Sky Journal",
+      type:      "content_removed",
+      refId:     id,
+      title:     "Your story was removed by a moderator",
+      isRead:    false,
+    });
+
+    sendPushNotification(story.userId, {
+      title: "Story Removed",
+      body:  "Your story was removed by a moderator.",
+    }).catch(() => {});
+
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin delete story failed");
@@ -489,7 +515,33 @@ router.put("/admin/content/outfits/:id/unhide", requireAdmin, async (req: Reques
 router.delete("/admin/content/outfits/:id", requireAdmin, async (req: Request, res: Response) => {
   const id = String(req.params.id);
   try {
+    // Fetch author before deleting so we can notify them
+    const [outfit] = await db
+      .select({ userId: outfitsTable.userId })
+      .from(outfitsTable)
+      .where(eq(outfitsTable.id, id))
+      .limit(1);
+
+    if (!outfit) return res.status(404).json({ error: "Outfit not found" });
+
     await db.delete(outfitsTable).where(eq(outfitsTable.id, id));
+
+    // Notify the author
+    await db.insert(notificationsTable).values({
+      userId:    outfit.userId,
+      actorId:   "system",
+      actorName: "Sky Journal",
+      type:      "content_removed",
+      refId:     id,
+      title:     "Your outfit was removed by a moderator",
+      isRead:    false,
+    });
+
+    sendPushNotification(outfit.userId, {
+      title: "Outfit Removed",
+      body:  "Your outfit was removed by a moderator.",
+    }).catch(() => {});
+
     return res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "Admin delete outfit failed");
