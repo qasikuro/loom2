@@ -48,6 +48,8 @@ export interface StoryPanel {
   bubbleText?:       string;
   overlays?:         PanelOverlay[];
   imageAspectRatio?: number;
+  /** How the image fills the panel cell. 'contain' = full image visible (letterbox); 'cover' = fill & crop. */
+  contentFit?:       'cover' | 'contain';
 }
 
 export interface StoryPage {
@@ -208,6 +210,7 @@ export interface RawStoryPanel {
   overlays?:         unknown[];
   imageAspectRatio?: number;
   bubbleText?:       string;
+  contentFit?:       'cover' | 'contain';
 }
 
 export interface RawStoryResponse {
@@ -369,6 +372,7 @@ export function toAppStory(raw: RawStoryResponse, apiBase?: string): Story {
           overlays:         p.overlays as PanelOverlay[] | undefined,
           imageAspectRatio: p.imageAspectRatio,
           bubbleText:       p.bubbleText,
+          contentFit:       p.contentFit,
         }))
       : [],
     mood:           raw.mood,

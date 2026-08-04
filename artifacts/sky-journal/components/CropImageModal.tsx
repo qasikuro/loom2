@@ -31,7 +31,7 @@ export interface CropImageModalProps {
   visible:      boolean;
   uri:          string;
   aspectRatio?: number;
-  onDone:       (croppedUri: string, aspectRatio: number) => void;
+  onDone:       (croppedUri: string, aspectRatio: number, fit: 'cover' | 'contain') => void;
   onCancel:     () => void;
 }
 
@@ -191,7 +191,7 @@ export default function CropImageModal({
   // ── Apply crop ────────────────────────────────────────────────────────────
 
   async function applyCrop() {
-    if (!naturalSize) { onDone(uri, ratio); return; }
+    if (!naturalSize) { onDone(uri, ratio, 'cover'); return; }
     setApplying(true);
     try {
       const totalScale = baseScale * scaleRef.current;
@@ -218,9 +218,9 @@ export default function CropImageModal({
         actions,
         { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
       );
-      onDone(result.uri, ratio);
+      onDone(result.uri, ratio, 'cover');
     } catch {
-      onDone(uri, ratio);
+      onDone(uri, ratio, 'cover');
     } finally {
       setApplying(false);
     }
@@ -354,7 +354,8 @@ export default function CropImageModal({
               const naturalRatio = naturalSize
                 ? naturalSize.w / naturalSize.h
                 : ratio;
-              onDone(uri, naturalRatio);
+              // 'contain' so the panel shows the full image without cropping.
+              onDone(uri, naturalRatio, 'contain');
             }}
             disabled={applying}
           >

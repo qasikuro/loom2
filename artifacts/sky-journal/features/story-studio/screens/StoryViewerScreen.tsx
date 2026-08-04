@@ -105,6 +105,7 @@ interface CellPanel {
   bubbleText?:      string;
   overlays?:        PanelOverlay[];
   imageAspectRatio?: number;   // width/height — stored at crop time
+  contentFit?:       'cover' | 'contain';
 }
 
 function PanelCell({
@@ -130,9 +131,9 @@ function PanelCell({
 
   const imgSrc    = getPanelImageSource(panel.imageUri, panel.bgPreset);
   const hasBubble = panel.bubbleText?.trim();
-  // "cover" only when we know the exact ratio (cell is pre-sized to match).
-  // "contain" shows the full image without cropping for old panels that lack a stored ratio.
-  const fit       = panel.imageAspectRatio ? 'cover' : 'contain';
+  // Use the stored contentFit preference when available (set at crop time).
+  // Fall back: 'cover' when we have an exact ratio (cell sized to match), 'contain' otherwise.
+  const fit = panel.contentFit ?? (panel.imageAspectRatio ? 'cover' : 'contain');
 
   return (
     <TouchableWithoutFeedback onPress={onPress}>

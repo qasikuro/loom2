@@ -40,6 +40,7 @@ interface ChapterPanel {
   bgPreset?: string;
   bubbleText?: string;
   overlays?: PanelOverlay[];
+  contentFit?: 'cover' | 'contain';
 }
 
 interface ChapterPage {
@@ -101,7 +102,7 @@ function PanelCell({ panel, cellW, cellH }: { panel: ChapterPanel; cellW: number
   return (
     <View style={[{ width: cellW, height: cellH }, styles.cell]}>
       {imgSrc ? (
-        <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+        <Image source={imgSrc} style={StyleSheet.absoluteFill} contentFit={panel.contentFit ?? 'cover'} cachePolicy="memory-disk" />
       ) : (
         <LinearGradient colors={GRADIENT} style={StyleSheet.absoluteFill} />
       )}

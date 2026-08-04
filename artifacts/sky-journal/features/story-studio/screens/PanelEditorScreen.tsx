@@ -425,15 +425,15 @@ export default function PanelEditorScreen() {
     });
   }
 
-  async function handleCropDone(croppedUri: string, aspectRatio: number) {
+  async function handleCropDone(croppedUri: string, aspectRatio: number, fit: 'cover' | 'contain' = 'cover') {
     const idx = pendingIdx;
     setPendingUri(null);
     // Show cropped local image immediately (optimistic preview)
-    updatePanel(idx, { imageUri: croppedUri, bgPreset: undefined, imageAspectRatio: aspectRatio });
+    updatePanel(idx, { imageUri: croppedUri, bgPreset: undefined, imageAspectRatio: aspectRatio, contentFit: fit });
     setUploadingSet(new Set([idx]));
     try {
       const uri = await persistImageUri(croppedUri);
-      updatePanel(idx, { imageUri: uri, bgPreset: undefined, imageAspectRatio: aspectRatio });
+      updatePanel(idx, { imageUri: uri, bgPreset: undefined, imageAspectRatio: aspectRatio, contentFit: fit });
       setFailedPanels(prev => { const m = new Map(prev); m.delete(idx); return m; });
     } catch (err: unknown) {
       const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — tap the panel to retry.';
@@ -687,7 +687,7 @@ export default function PanelEditorScreen() {
                         ]}>
                           {/* Background image */}
                           {bg
-                            ? <Image source={bg} style={StyleSheet.absoluteFill} contentFit="cover" />
+                            ? <Image source={bg} style={StyleSheet.absoluteFill} contentFit={panel?.contentFit ?? 'cover'} />
                             : (
                               <View style={styles.emptyHint}>
                                 <Icon name="image" size={isActive ? 26 : 16} color="rgba(180,165,220,0.25)" />
