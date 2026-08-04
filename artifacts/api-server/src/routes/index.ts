@@ -25,6 +25,7 @@ import streamRouter from "./stream";
 import pushRouter from "./push";
 import adminBadgesRouter from "./admin-badges";
 import blocksRouter from "./blocks";
+import booksRouter from "./books";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(streamRouter);
 router.use(pushRouter);
 router.use(adminBadgesRouter);
 router.use(blocksRouter);
+router.use(booksRouter);
 
 export default router;

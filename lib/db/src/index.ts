@@ -151,6 +151,43 @@ export async function runStartupMigrations(): Promise<void> {
       )
     `);
 
+    // ── Story Studio: Books ───────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS books (
+        id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id         TEXT        NOT NULL,
+        title           TEXT        NOT NULL,
+        subtitle        TEXT        NOT NULL DEFAULT '',
+        series_type     TEXT        NOT NULL DEFAULT 'standalone',
+        genre           JSONB       NOT NULL DEFAULT '[]',
+        language        TEXT        NOT NULL DEFAULT 'English',
+        age_rating      TEXT        NOT NULL DEFAULT 'All Ages',
+        visibility      TEXT        NOT NULL DEFAULT 'public',
+        cover_image_uri TEXT,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS books_user_id_idx ON books(user_id)`);
+
+    // ── Story Studio: Chapters ────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chapters (
+        id            UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+        book_id       UUID        NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+        title         TEXT        NOT NULL,
+        order_index   INTEGER     NOT NULL DEFAULT 0,
+        status        TEXT        NOT NULL DEFAULT 'draft',
+        published_at  TIMESTAMPTZ,
+        page_count    INTEGER     NOT NULL DEFAULT 0,
+        pages         JSONB       NOT NULL DEFAULT '[]',
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS chapters_book_id_idx ON chapters(book_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS chapters_book_id_order_idx ON chapters(book_id, order_index)`);
+
   } finally {
     client.release();
   }
