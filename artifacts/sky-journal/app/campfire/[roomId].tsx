@@ -570,6 +570,7 @@ export default function CampfireRoom() {
 
       if (payload?.type === 'new_message' && payload.message) {
         const m = payload.message;
+        if (blockedIds.includes(m.userId)) return;
         setData(prev => {
           if (!prev) return prev;
           if (prev.messages.find(x => x.id === m.id)) return prev;
@@ -594,7 +595,7 @@ export default function CampfireRoom() {
         setData(prev => prev ? { ...prev, soulCount: payload.soulCount! } : prev);
         return;
       }
-    }, [myUserId]),
+    }, [myUserId, blockedIds]),
   );
 
   // Gap-fill: refetch when SSE reconnects
