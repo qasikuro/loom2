@@ -6,6 +6,7 @@ import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
 import { sendPushNotification } from "../services/pushService";
 import * as cache from "../lib/cache";
+import { isBlocked } from "./blocks";
 
 const router: IRouter = Router();
 
@@ -137,6 +138,11 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
   const targetId = String(req.params.userId);
 
   try {
+    // Deny access when a block exists in either direction
+    if (viewerId !== targetId && await isBlocked(viewerId, targetId)) {
+      return res.status(403).json({ error: "This profile is unavailable." });
+    }
+
     const [charRows, followingRows] = await Promise.all([
       db.select({
         userId:         characterTable.userId,
@@ -266,9 +272,15 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
 // ── Public user stories (public only) ────────────────────────────────────────
 
 router.get("/users/:userId/stories", requireAuth, async (req, res) => {
+  const viewerId = getUserId(req);
   const targetId = String(req.params.userId);
 
   try {
+    // Deny access when a block exists in either direction
+    if (viewerId !== targetId && await isBlocked(viewerId, targetId)) {
+      return res.status(403).json({ error: "This profile is unavailable." });
+    }
+
     // Verify the target profile is public
     const [charRow] = await db
       .select({ isPublic: characterTable.isPublic })
@@ -332,9 +344,15 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
 // ── Public user outfits (public only) ────────────────────────────────────────
 
 router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
+  const viewerId = getUserId(req);
   const targetId = String(req.params.userId);
 
   try {
+    // Deny access when a block exists in either direction
+    if (viewerId !== targetId && await isBlocked(viewerId, targetId)) {
+      return res.status(403).json({ error: "This profile is unavailable." });
+    }
+
     // Verify the target profile is public
     const [charRow] = await db
       .select({ isPublic: characterTable.isPublic })

@@ -25,7 +25,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuth } from '@clerk/expo';
-import { apiFetch, useApp } from '@/context/AppContext';
+import { apiFetch, ApiError, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import { ReportSheet } from '@/components/ReportSheet';
@@ -683,7 +683,9 @@ export default function UserProfileScreen() {
       ]);
 
       if (profResult.status === 'rejected') {
-        setError('Could not load this profile.');
+        const err = profResult.reason;
+        const isBlocked = err instanceof ApiError && err.status === 403;
+        setError(isBlocked ? 'This profile is unavailable.' : 'Could not load this profile.');
         setLoading(false);
         return;
       }
