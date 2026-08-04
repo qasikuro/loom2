@@ -182,24 +182,42 @@ describe('executeSendText — 429 rate-limit path', () => {
 });
 
 describe('executeSendText — non-429 error path', () => {
-  it('swallows non-429 errors silently: does NOT call showToast', async () => {
+  it('shows a toast for a 500 error', async () => {
     const deps = makeDeps({ apiFetch: vi.fn().mockRejectedValue(makeErr(500)) });
     await executeSendText(asSendTextDeps(deps));
-    expect(deps.showToast).not.toHaveBeenCalled();
+    expect(deps.showToast).toHaveBeenCalledOnce();
+    expect(deps.showToast).toHaveBeenCalledWith("Message couldn't be sent", 'error');
   });
 
-  it('does NOT restore text for a 500 error', async () => {
+  it('restores the original text after a 500 error', async () => {
     const deps = makeDeps({ apiFetch: vi.fn().mockRejectedValue(makeErr(500)) });
     await executeSendText(asSendTextDeps(deps));
-    // setText was called once (cleared before the request), not twice
-    expect(deps.setText).toHaveBeenCalledTimes(1);
-    expect(deps.setText).toHaveBeenCalledWith('');
+    expect(deps.setText).toHaveBeenLastCalledWith('Hello campfire');
+  });
+
+  it('sets showInput to true after a 500 error so the input bar reappears', async () => {
+    const deps = makeDeps({ apiFetch: vi.fn().mockRejectedValue(makeErr(500)) });
+    await executeSendText(asSendTextDeps(deps));
+    expect(deps.setShowInput).toHaveBeenLastCalledWith(true);
   });
 
   it('still calls setSending(false) in finally for a 500', async () => {
     const deps = makeDeps({ apiFetch: vi.fn().mockRejectedValue(makeErr(500)) });
     await executeSendText(asSendTextDeps(deps));
     expect(deps.setSending).toHaveBeenLastCalledWith(false);
+  });
+
+  it('shows a toast for a network-level error (no status property)', async () => {
+    const deps = makeDeps({ apiFetch: vi.fn().mockRejectedValue(new Error('Network request failed')) });
+    await executeSendText(asSendTextDeps(deps));
+    expect(deps.showToast).toHaveBeenCalledOnce();
+    expect(deps.showToast).toHaveBeenCalledWith("Message couldn't be sent", 'error');
+  });
+
+  it('restores text after a network-level error', async () => {
+    const deps = makeDeps({ apiFetch: vi.fn().mockRejectedValue(new Error('Network request failed')) });
+    await executeSendText(asSendTextDeps(deps));
+    expect(deps.setText).toHaveBeenLastCalledWith('Hello campfire');
   });
 });
 

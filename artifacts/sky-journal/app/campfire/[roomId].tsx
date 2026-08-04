@@ -481,8 +481,12 @@ export async function executeSendText(deps: SendTextDeps): Promise<void> {
         ? ` Try again in ${retryAfter}s.`
         : '';
       showToast(`Slow down a little ✦${suffix}`, 'warning');
+    } else {
+      // Network failure, 500, or any other error — restore text and notify the user
+      setText(trimmed);
+      setShowInput(true);
+      showToast("Message couldn't be sent", 'error');
     }
-    // Other errors: swallow silently (existing behaviour)
   } finally {
     setSending(false);
   }
