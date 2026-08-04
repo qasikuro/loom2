@@ -10,6 +10,7 @@ const ME       = "test-disc-me";
 const FRIEND   = "test-disc-friend";     // ME follows FRIEND
 const STRANGER = "test-disc-stranger";
 const PRIVATE  = "test-disc-private";    // private profile
+const BANNED   = "test-disc-banned";     // banned user — stories must not appear
 
 const SHARED_MOOD = "Dreamy";
 
@@ -24,6 +25,7 @@ let storyPrivateId:    string;
 let storyOwnId:        string;
 let storyOldId:        string;
 let storyMoodMatchId:  string;
+let storyBannedId:     string;
 
 beforeAll(async () => {
   // Characters
@@ -32,6 +34,7 @@ beforeAll(async () => {
     { userId: FRIEND,   name: "Friend",   mood: "Hopeful",   isPublic: true,  isBanned: false },
     { userId: STRANGER, name: "Stranger", mood: "Hopeful",   isPublic: true,  isBanned: false },
     { userId: PRIVATE,  name: "Private",  mood: "Hopeful",   isPublic: false, isBanned: false },
+    { userId: BANNED,   name: "Banned",   mood: "Hopeful",   isPublic: true,  isBanned: true  },
   ]).onConflictDoNothing();
 
   // ME follows FRIEND
@@ -77,10 +80,17 @@ beforeAll(async () => {
     isPublic: true, isHidden: false, date: makeDate(3), panels: [],
   }).returning({ id: storiesTable.id });
   storyMoodMatchId = s6.id;
+
+  // Story by a banned user → must NOT appear in the discover feed
+  const [s7] = await db.insert(storiesTable).values({
+    userId: BANNED, chapterTitle: "Banned user story", mood: "Hopeful",
+    isPublic: true, isHidden: false, date: makeDate(1), panels: [],
+  }).returning({ id: storiesTable.id });
+  storyBannedId = s7.id;
 });
 
 afterAll(async () => {
-  const storyIds = [storyFriendId, storyStrangerId, storyPrivateId, storyOwnId, storyOldId, storyMoodMatchId]
+  const storyIds = [storyFriendId, storyStrangerId, storyPrivateId, storyOwnId, storyOldId, storyMoodMatchId, storyBannedId]
     .filter(Boolean);
 
   if (storyIds.length > 0) {
@@ -95,7 +105,7 @@ afterAll(async () => {
 
   const { inArray: inArr2 } = await import("drizzle-orm");
   await db.delete(characterTable).where(
-    inArr2(characterTable.userId, [ME, FRIEND, STRANGER, PRIVATE]),
+    inArr2(characterTable.userId, [ME, FRIEND, STRANGER, PRIVATE, BANNED]),
   );
 });
 
@@ -200,6 +210,18 @@ describe("GET /api/discover", () => {
       expect(Array.isArray(post.panels)).toBe(true);
       expect(typeof post.isFollowing).toBe("boolean");
     }
+  });
+
+  it("excludes stories from banned users", async () => {
+    setTestUserId(ME);
+    const res = await request(app).get("/api/discover");
+    expect(res.status).toBe(200);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ids = res.body.map((p: any) => p.id);
+    expect(ids).not.toContain(storyBannedId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const authorIds = res.body.map((p: any) => p.authorUserId);
+    expect(authorIds).not.toContain(BANNED);
   });
 
   it("correctly marks followed authors with isFollowing: true", async () => {
