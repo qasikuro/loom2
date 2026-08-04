@@ -207,3 +207,10 @@ uri = "file://attached_assets/sky-journal-icons.html"
 type = "unspecified"
 title = "Sky Journal — Icon Reference"
 description = "All 44 registered icons (lucide-react-native) + 15 icon names found in source but not registered in Icon.tsx. Open in any browser."
+
+[[outputs]]
+id = "eNPZwZyaUlCwTe0nXnnjv"
+uri = "file://attached_assets/chat-campfire-roadmap.docx"
+type = "word_document"
+title = "Chat & Campfire Roadmap"
+description = "28-task roadmap for DM chat and Campfire features — priorities, scope, and sprint order."
