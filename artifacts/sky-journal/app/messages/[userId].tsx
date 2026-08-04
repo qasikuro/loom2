@@ -130,8 +130,9 @@ const STARS = Array.from({ length: 28 }, (_, i) => ({
 }));
 
 // ── Sticker bubble (in chat history) ─────────────────────────────────────────
-function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
+function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPress }: {
   msg: Message; partnerInitial: string; avatarUri?: string; primaryColor: string;
+  onLongPress?: () => void;
 }) {
   const def    = getSticker(msg.expression!);
   const scaleA = useRef(new Animated.Value(0.3)).current;
@@ -147,18 +148,28 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
 
   const label = msg.isOwn ? def.ownLabel : def.otherLabel;
 
+  const cardInner = (
+    <View style={[styles.stickerCard, { borderColor: `${def.color}40`, backgroundColor: `${def.color}18` }]}>
+      <Text style={styles.stickerCardEmoji}>{def.emoji}</Text>
+      <View style={styles.stickerCardBody}>
+        <Text style={[styles.stickerCardLabel, { color: `${def.color}E0` }]}>{def.label}</Text>
+        <Text style={styles.stickerCardSubtitle}>{label}</Text>
+        <Text style={styles.stickerCardTime}>{fmtTime(msg.createdAt)}</Text>
+      </View>
+    </View>
+  );
+
   if (msg.isOwn) {
     return (
       <View style={styles.exprRowOwn}>
         <Animated.View style={{ opacity: opA, transform: [{ scale: scaleA }] }}>
-          <View style={[styles.stickerCard, { borderColor: `${def.color}40`, backgroundColor: `${def.color}18` }]}>
-            <Text style={styles.stickerCardEmoji}>{def.emoji}</Text>
-            <View style={styles.stickerCardBody}>
-              <Text style={[styles.stickerCardLabel, { color: `${def.color}E0` }]}>{def.label}</Text>
-              <Text style={styles.stickerCardSubtitle}>{label}</Text>
-              <Text style={styles.stickerCardTime}>{fmtTime(msg.createdAt)}</Text>
-            </View>
-          </View>
+          <TouchableOpacity
+            onLongPress={onLongPress}
+            delayLongPress={350}
+            activeOpacity={0.85}
+          >
+            {cardInner}
+          </TouchableOpacity>
         </Animated.View>
       </View>
     );
@@ -173,14 +184,7 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor }: {
         }
       </View>
       <Animated.View style={{ opacity: opA, transform: [{ scale: scaleA }] }}>
-        <View style={[styles.stickerCard, { borderColor: `${def.color}40`, backgroundColor: `${def.color}18` }]}>
-          <Text style={styles.stickerCardEmoji}>{def.emoji}</Text>
-          <View style={styles.stickerCardBody}>
-            <Text style={[styles.stickerCardLabel, { color: `${def.color}E0` }]}>{def.label}</Text>
-            <Text style={styles.stickerCardSubtitle}>{label}</Text>
-            <Text style={styles.stickerCardTime}>{fmtTime(msg.createdAt)}</Text>
-          </View>
-        </View>
+        {cardInner}
       </Animated.View>
     </View>
   );
@@ -644,6 +648,7 @@ export default function MessagesScreen() {
                     partnerInitial={partnerInitial}
                     avatarUri={avatarUri}
                     primaryColor={PURPLE}
+                    onLongPress={() => handleDeleteMsg(msg)}
                   />
                 );
               }
