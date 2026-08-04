@@ -20,8 +20,18 @@ config.resolver.unstable_enableSymlinks = true;
 
 // Block volatile agent/skills temp directories — Metro crashes when they
 // disappear while being watched (ENOENT on deleted .tmp-* dirs).
+// Also block test files and vitest config: they import vitest/vite which
+// Metro/Hermes cannot transform (dynamic import() call in vite's module-runner).
+const escRe = (p) => p.replace(/[/\\]/g, "[\\\\/\\\\\\\\]").replace(/\./g, "\\.");
 config.resolver.blockList = new RegExp(
-  path.resolve(workspaceRoot, ".local").replace(/\\/g, "\\\\") + "[\\/\\\\].*"
+  [
+    escRe(path.resolve(workspaceRoot, ".local")) + "[\\/\\\\].*",
+    escRe(path.resolve(projectRoot))             + "[\\/\\\\].*__tests__[\\/\\\\].*",
+    escRe(path.resolve(projectRoot))             + "[\\/\\\\].*\\.test\\.[jt]sx?$",
+    escRe(path.resolve(projectRoot))             + "[\\/\\\\].*\\.spec\\.[jt]sx?$",
+    escRe(path.resolve(projectRoot, "vitest.config.ts")),
+    escRe(path.resolve(projectRoot, "vitest.config.js")),
+  ].map((r) => `(${r})`).join("|")
 );
 
 module.exports = config;
