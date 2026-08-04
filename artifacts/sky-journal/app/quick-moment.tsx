@@ -58,7 +58,7 @@ export default function QuickMomentScreen() {
   const topPad  = Platform.OS === 'web' ? 48 : insets.top;
   const botPad  = Platform.OS === 'web' ? 24 : insets.bottom + 16;
 
-  const { addStory } = useApp();
+  const { addStory, stories } = useApp();
   const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
 
   const [step,          setStep]          = useState(STEP_IMAGE);
@@ -162,7 +162,9 @@ export default function QuickMomentScreen() {
   }
 
   async function handlePublish() {
-    const isFirstPublish = !(await hasCompletedFirstPublish());
+    const alreadyHasStories = stories.length > 0;
+    if (alreadyHasStories) void markFirstPublishDone();
+    const isFirstPublish = !alreadyHasStories && !(await hasCompletedFirstPublish());
     if (isFirstPublish) {
       pendingMoodRef.current = null;
       pendingLineRef.current = '';

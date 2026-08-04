@@ -269,6 +269,8 @@ export default function ChapterEditorScreen() {
       const hasContent = title.trim() ||
         pages.some(p => p.panels.some(panel => panel.text?.trim() || panel.bubbleText?.trim()));
       if (hasContent) {
+        // User has started editing — dismiss any stale draft banner from a previous session
+        setHasDraft(false);
         AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({
           title, desc, mood, location, isPublic,
           pages: stripPageImages(pages),
@@ -373,8 +375,16 @@ export default function ChapterEditorScreen() {
       return;
     }
 
-    // New story — check first-publish gate
-    const isFirstPublish = !(await hasCompletedFirstPublish());
+    // New story — check first-publish gate.
+    // Guard: skip the overlay if the user already has stories on their account
+    // (covers reinstalls, new devices, and cleared app storage where the
+    // AsyncStorage flag was lost but published stories still exist on the server).
+    const alreadyHasStories = stories.length > 0;
+    if (alreadyHasStories) {
+      // Silently mark done so we never ask again on this device
+      void markFirstPublishDone();
+    }
+    const isFirstPublish = !alreadyHasStories && !(await hasCompletedFirstPublish());
     if (isFirstPublish) {
       pendingFilledPagesRef.current = filledPages;
       setShowFirstPublish(true);

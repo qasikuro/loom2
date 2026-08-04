@@ -348,7 +348,14 @@ export default function CropImageModal({
         <View style={[styles.bottomBar, { paddingBottom: bottomInset + 12 }]}>
           <TouchableOpacity
             style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.10)' }]}
-            onPress={() => onDone(uri, ratio)}
+            onPress={() => {
+              // Pass the image's true aspect ratio so the panel isn't forced
+              // into the currently-selected crop box dimensions.
+              const naturalRatio = naturalSize
+                ? naturalSize.w / naturalSize.h
+                : ratio;
+              onDone(uri, naturalRatio);
+            }}
             disabled={applying}
           >
             <Icon name="image" size={14} color="rgba(255,255,255,0.7)" />
