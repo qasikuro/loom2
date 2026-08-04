@@ -429,7 +429,7 @@ const POLL_MS = 30_000;
 
 export default function CampfireRoom() {
   const insets        = useSafeAreaInsets();
-  const { character, markCampfireRoomRead } = useApp();
+  const { character, markCampfireRoomRead, blockedIds } = useApp();
   const { roomId }    = useLocalSearchParams<{ roomId: string }>();
   const { userId: myUserId } = useAuth();
 
@@ -634,7 +634,7 @@ export default function CampfireRoom() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const messages = data?.messages ?? [];
+  const messages = (data?.messages ?? []).filter(m => !blockedIds.includes(m.userId));
   const totalMsg = messages.length;
 
   return (
