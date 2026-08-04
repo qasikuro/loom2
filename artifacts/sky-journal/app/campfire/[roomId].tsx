@@ -521,6 +521,49 @@ export function applyPollResult(
   return fetched;
 }
 
+/** The raw message shape carried by a `new_message` SSE event. */
+export interface SseNewMessage {
+  id:           string;
+  userId:       string;
+  authorName:   string;
+  content:      string | null;
+  expression:   string | null;
+  createdAt:    string;
+  isFounder?:   boolean;
+  isBetaTester?: boolean;
+}
+
+/**
+ * Build the state-updater for a `new_message` SSE event.
+ *
+ * Returns `null` when the message should be silently ignored — caller must
+ * NOT invoke `setData` in that case.  Currently ignores messages from any
+ * userId that appears in `blockedIds`.
+ *
+ * Returns a `(prev) => next` updater when the message should be appended.
+ * The updater is a no-op when `prev` is null (room not yet loaded) or when
+ * the message id is already present (dedup guard).
+ */
+export function buildNewMessageUpdater(
+  m:          SseNewMessage,
+  blockedIds: string[],
+  myUserId:   string | null | undefined,
+): null | ((prev: RoomData | null) => RoomData | null) {
+  if (blockedIds.includes(m.userId)) return null;
+
+  return (prev: RoomData | null): RoomData | null => {
+    if (!prev) return prev;
+    if (prev.messages.find(x => x.id === m.id)) return prev; // dedup
+    const newMsg: CampfireMsg = {
+      ...m,
+      isMine:       m.userId === myUserId,
+      isFounder:    m.isFounder    ?? false,
+      isBetaTester: m.isBetaTester ?? false,
+    };
+    return { ...prev, messages: [...prev.messages, newMsg] };
+  };
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 const POLL_MS = 30_000;
@@ -604,18 +647,9 @@ export default function CampfireRoom() {
 
       if (payload?.type === 'new_message' && payload.message) {
         const m = payload.message;
-        if (blockedIds.includes(m.userId)) return;
-        setData(prev => {
-          if (!prev) return prev;
-          if (prev.messages.find(x => x.id === m.id)) return prev;
-          const newMsg: CampfireMsg = {
-            ...m,
-            isMine:       m.userId === myUserId,
-            isFounder:    m.isFounder    ?? false,
-            isBetaTester: m.isBetaTester ?? false,
-          };
-          return { ...prev, messages: [...prev.messages, newMsg] };
-        });
+        const updater = buildNewMessageUpdater(m, blockedIds, myUserId);
+        if (!updater) return;
+        setData(updater);
         lastIdRef.current = m.id;
         // L-4: Store the timeout handle so it can be cancelled if the component
         // unmounts in the 80 ms window (prevents no-op on unmounted ref +
