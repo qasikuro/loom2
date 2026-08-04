@@ -8,6 +8,7 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Platform,
   StyleSheet,
@@ -88,12 +89,54 @@ export default function MessagesInboxScreen() {
     } as any);
   }
 
+  function handleLongPressThread(thread: Thread) {
+    Alert.alert(
+      thread.partnerName,
+      undefined,
+      [
+        {
+          text: 'Clear conversation',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Clear conversation',
+              'This will remove all messages from your view. The other person will still see them.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Clear',
+                  style: 'destructive',
+                  onPress: async () => {
+                    // Remove from list immediately for instant feedback
+                    setThreads(prev => prev.filter(t => t.partnerId !== thread.partnerId));
+                    try {
+                      await apiFetch(`/messages/conversation/${thread.partnerId}`, { method: 'DELETE' });
+                    } catch {
+                      // Restore the thread if the API call failed
+                      setThreads(prev => [...prev, thread].sort(
+                        (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
+                      ));
+                      Alert.alert('Error', 'Could not clear the conversation. Try again.');
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }
+
   const renderThread = ({ item }: { item: Thread }) => {
     const initial = item.partnerName.charAt(0).toUpperCase();
     return (
       <TouchableOpacity
         style={[styles.threadRow, { borderBottomColor: `${colors.border}50` }]}
         onPress={() => openThread(item)}
+        onLongPress={() => handleLongPressThread(item)}
+        delayLongPress={400}
         activeOpacity={0.75}
       >
         {/* Avatar */}
