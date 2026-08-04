@@ -15,3 +15,4 @@
 - [loadData cache/state overwrite on API failure](loaddata-cache-overwrite.md) — all state+cache writes must be guarded by raw !== null; unconditional writes caused "data not showing" after any transient 401/server restart
 - [ExoPlayer wrong-thread crash on Metro reload](exoplayer-wrong-thread-crash.md) — RN 0.81 new-arch teardown calls ExoPlayer.release() on wrong thread; fix via soundRegistry coordinated cleanup; never use AppState listener for this
 - [Chat & Campfire architecture](chat-campfire-arch.md) — schema additions (deleted_at/for on messages, blocks table), shared rate limiter, isBlocked helper, presence via recent senders dedup
+- [Messages table UUID id](messages-uuid-id.md) — deployed messages.id is UUID (not serial); Drizzle schema must use uuid(), route keeps messageId as String not parseInt
