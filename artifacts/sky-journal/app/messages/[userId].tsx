@@ -225,35 +225,48 @@ export default function MessagesScreen() {
 
   const isBlocked = blockedIds.includes(userId ?? '');
 
+  const handleClearConversation = useCallback(() => {
+    if (!userId) return;
+    Alert.alert(
+      'Clear conversation',
+      'This will remove all messages from your view. The other person will still see them.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiFetch(`/messages/conversation/${userId}`, { method: 'DELETE' });
+              setMessages([]);
+            } catch {
+              Alert.alert('Error', 'Could not clear the conversation. Try again.');
+            }
+          },
+        },
+      ],
+    );
+  }, [userId]);
+
   function handleMoreMenu() {
     if (!userId) return;
     const partnerName = name ?? 'this user';
-    if (isBlocked) {
-      Alert.alert(
-        'Unblock user',
-        `${partnerName} will be able to send you messages again.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Unblock', onPress: () => unblockUser(userId) },
-        ],
-      );
-    } else {
-      Alert.alert(
-        'Block user',
-        `${partnerName} will no longer be able to message you, and their posts will be hidden from your feed. Any existing follows will be removed.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Block',
-            style: 'destructive',
-            onPress: () => {
-              blockUser(userId).catch(() => null);
-              safeBack();
-            },
-          },
-        ],
-      );
-    }
+    const blockOption = isBlocked
+      ? { text: 'Unblock user', onPress: () => unblockUser(userId) }
+      : {
+          text: 'Block user',
+          style: 'destructive' as const,
+          onPress: () => { blockUser(userId).catch(() => null); safeBack(); },
+        };
+    Alert.alert(
+      partnerName,
+      undefined,
+      [
+        { text: 'Clear conversation', onPress: handleClearConversation },
+        blockOption,
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
   }
 
   const playSticker = useCallback((def: StickerDef) => {
@@ -340,7 +353,7 @@ export default function MessagesScreen() {
         type: string; id?: string; fromUserId?: string; toUserId?: string;
         content?: string | null; expression?: string | null;
         isRead?: boolean; createdAt?: string; isOwn?: boolean;
-        messageId?: string; forEveryone?: boolean;
+        messageId?: string; forEveryone?: boolean; partnerId?: string;
       };
 
       if (ev?.type === 'new_message' && ev.fromUserId === userId && ev.id) {
@@ -361,6 +374,11 @@ export default function MessagesScreen() {
 
       if (ev?.type === 'message_deleted' && ev.messageId) {
         setMessages(prev => prev.filter(m => m.id !== ev.messageId));
+        return;
+      }
+
+      if (ev?.type === 'conversation_cleared' && ev.partnerId === userId) {
+        setMessages([]);
         return;
       }
 

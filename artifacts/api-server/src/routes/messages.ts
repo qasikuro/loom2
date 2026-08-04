@@ -34,13 +34,12 @@ router.get("/messages", requireAuth, async (req, res) => {
             eq(messagesTable.fromUserId, userId),
             eq(messagesTable.toUserId,   userId),
           ),
-          // Exclude messages deleted for everyone, or deleted-for-sender when viewing as sender
+          // Show if: not deleted, OR sender-only delete (recipient still sees it),
+          // OR recipient-only clear (sender still sees it)
           or(
             isNull(messagesTable.deletedAt),
-            and(
-              eq(messagesTable.deletedFor, "sender"),
-              eq(messagesTable.toUserId, userId), // recipient still sees it
-            ),
+            and(eq(messagesTable.deletedFor, "sender"),    eq(messagesTable.toUserId,   userId)),
+            and(eq(messagesTable.deletedFor, "recipient"), eq(messagesTable.fromUserId, userId)),
           ),
         ),
       )
@@ -124,13 +123,12 @@ router.get("/messages/:userId", requireAuth, async (req, res) => {
             and(eq(messagesTable.fromUserId, myId),   eq(messagesTable.toUserId, otherId)),
             and(eq(messagesTable.fromUserId, otherId), eq(messagesTable.toUserId, myId)),
           ),
-          // Exclude hard-deleted (for everyone) and sender-only deletes when I'm sender
+          // Show if: not deleted, OR sender-only delete (recipient still sees it),
+          // OR recipient-only clear (sender still sees it)
           or(
             isNull(messagesTable.deletedAt),
-            and(
-              eq(messagesTable.deletedFor, "sender"),
-              eq(messagesTable.toUserId, myId), // recipient still sees it
-            ),
+            and(eq(messagesTable.deletedFor, "sender"),    eq(messagesTable.toUserId,   myId)),
+            and(eq(messagesTable.deletedFor, "recipient"), eq(messagesTable.fromUserId, myId)),
           ),
         ),
       )
@@ -281,6 +279,45 @@ router.delete("/messages/:messageId", requireAuth, async (req, res) => {
     return res.json({ deleted: true });
   } catch (err) {
     req.log.error({ err }, "Failed to delete message");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DELETE /api/messages/conversation/:partnerId — clear thread for caller ────
+// Soft-deletes all messages in this thread from the caller's side only.
+// Partner continues to see the messages; the caller's view is wiped.
+router.delete("/messages/conversation/:partnerId", requireAuth, async (req, res) => {
+  const userId    = getUserId(req);
+  const partnerId = String(req.params.partnerId);
+  if (userId === partnerId) return res.status(400).json({ error: "Cannot clear conversation with yourself" });
+  try {
+    // Messages where I am the SENDER → mark deleted_for = 'sender'
+    await db
+      .update(messagesTable)
+      .set({ deletedAt: new Date(), deletedFor: "sender" })
+      .where(
+        and(
+          eq(messagesTable.fromUserId, userId),
+          eq(messagesTable.toUserId,   partnerId),
+          isNull(messagesTable.deletedAt),
+        ),
+      );
+    // Messages where I am the RECIPIENT → mark deleted_for = 'recipient'
+    await db
+      .update(messagesTable)
+      .set({ deletedAt: new Date(), deletedFor: "recipient" })
+      .where(
+        and(
+          eq(messagesTable.fromUserId, partnerId),
+          eq(messagesTable.toUserId,   userId),
+          isNull(messagesTable.deletedAt),
+        ),
+      );
+    // Notify caller's other devices via SSE
+    emitSSEEvent(`messages:${userId}`, { type: "conversation_cleared", partnerId });
+    return res.json({ cleared: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to clear conversation");
     return res.status(500).json({ error: "Internal server error" });
   }
 });
