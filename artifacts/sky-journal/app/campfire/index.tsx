@@ -302,15 +302,21 @@ export default function CampfireLobby() {
   useWindowDimensions();
   useApp();
 
-  const [rooms,   setRooms]   = useState<CampfireRoom[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [kindle,  setKindle]  = useState(false);
+  const [rooms,       setRooms]       = useState<CampfireRoom[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [kindle,      setKindle]      = useState(false);
+  const [search,      setSearch]      = useState('');
+  const [moodFilter,  setMoodFilter]  = useState('');
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const loadRooms = useCallback(async () => {
+  const loadRooms = useCallback(async (q = '', mood = '') => {
     try {
-      const data = await apiFetch<CampfireRoom[]>('/campfire');
+      const params = new URLSearchParams();
+      if (q)    params.set('q',    q);
+      if (mood) params.set('mood', mood);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const data = await apiFetch<CampfireRoom[]>(`/campfire${qs}`);
       setRooms(data ?? []);
     } catch {
       // keep previous state
@@ -321,7 +327,7 @@ export default function CampfireLobby() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useFocusEffect(useCallback(() => { loadRooms(); }, [loadRooms]));
+  useFocusEffect(useCallback(() => { loadRooms(search, moodFilter); }, [loadRooms, search, moodFilter]));
 
   function handleRoomPress(roomId: string) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -374,6 +380,35 @@ export default function CampfireLobby() {
         </TouchableOpacity>
       </View>
 
+      {/* Search + mood filter bar */}
+      <View style={L.filterBar}>
+        <TextInput
+          style={L.searchInput}
+          placeholder="Search rooms…"
+          placeholderTextColor="rgba(200,184,232,0.28)"
+          value={search}
+          onChangeText={v => { setSearch(v); loadRooms(v, moodFilter); }}
+          returnKeyType="search"
+          clearButtonMode="while-editing"
+        />
+      </View>
+      <View style={L.moodRow}>
+        {['', 'Dreamy', 'Peaceful', 'Lonely', 'Soft', 'Romantic', 'Adventurous', 'Chaotic'].map(m => {
+          const cfg = m ? (MOOD_FIRE[m] ?? MOOD_FIRE.default) : MOOD_FIRE.default;
+          const active = moodFilter === m;
+          return (
+            <TouchableOpacity
+              key={m || 'all'}
+              style={[L.moodChip, active && { backgroundColor: `${cfg.ember}22`, borderColor: `${cfg.ember}55` }]}
+              onPress={() => { Haptics.selectionAsync(); const next = m; setMoodFilter(next); loadRooms(search, next); }}
+              activeOpacity={0.75}
+            >
+              <Text style={[L.moodChipText, active && { color: cfg.ember }]}>{m || 'All'}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {/* Room grid */}
       {loading ? (
         <View style={L.centre}>
@@ -416,6 +451,25 @@ const L = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: 'rgba(107,91,149,0.14)',
     gap: 10,
   },
+  filterBar: {
+    paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4,
+  },
+  searchInput: {
+    backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12,
+    borderWidth: 1, borderColor: 'rgba(107,91,149,0.18)',
+    paddingHorizontal: 14, paddingVertical: 9,
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(230,220,255,0.85)',
+  },
+  moodRow: {
+    flexDirection: 'row', flexWrap: 'nowrap',
+    paddingHorizontal: 14, paddingVertical: 6, gap: 6,
+  },
+  moodChip: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(107,91,149,0.18)',
+  },
+  moodChipText: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.50)' },
   backBtn: {
     width: 36, height: 36, borderRadius: 11,
     alignItems: 'center', justifyContent: 'center',

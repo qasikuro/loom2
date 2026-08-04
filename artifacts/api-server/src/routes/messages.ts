@@ -1,10 +1,12 @@
 import { db, messagesTable, characterTable } from "@workspace/db";
-import { and, eq, or, desc, asc, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { z } from "zod";
 import { sendPushNotification } from "../services/pushService";
 import { emitSSEEvent } from "../lib/sseEmitter";
+import { checkMsgRateLimit } from "../middleware/messageLimiter";
+import { isBlocked } from "./blocks";
 
 const router: IRouter = Router();
 
@@ -27,9 +29,19 @@ router.get("/messages", requireAuth, async (req, res) => {
       .select()
       .from(messagesTable)
       .where(
-        or(
-          eq(messagesTable.fromUserId, userId),
-          eq(messagesTable.toUserId,   userId),
+        and(
+          or(
+            eq(messagesTable.fromUserId, userId),
+            eq(messagesTable.toUserId,   userId),
+          ),
+          // Exclude messages deleted for everyone, or deleted-for-sender when viewing as sender
+          or(
+            isNull(messagesTable.deletedAt),
+            and(
+              eq(messagesTable.deletedFor, "sender"),
+              eq(messagesTable.toUserId, userId), // recipient still sees it
+            ),
+          ),
         ),
       )
       .orderBy(desc(messagesTable.createdAt))
@@ -40,6 +52,8 @@ router.get("/messages", requireAuth, async (req, res) => {
     const partnerIds = new Set<string>();
     for (const row of rows) {
       const partner = row.fromUserId === userId ? row.toUserId : row.fromUserId;
+      // Skip if message was deleted by this user (deleted_for === 'sender' and I'm sender)
+      if (row.deletedAt && row.deletedFor === "sender" && row.fromUserId === userId) continue;
       if (!seen.has(partner)) {
         seen.set(partner, row);
         partnerIds.add(partner);
@@ -105,9 +119,19 @@ router.get("/messages/:userId", requireAuth, async (req, res) => {
       .select()
       .from(messagesTable)
       .where(
-        or(
-          and(eq(messagesTable.fromUserId, myId),   eq(messagesTable.toUserId, otherId)),
-          and(eq(messagesTable.fromUserId, otherId), eq(messagesTable.toUserId, myId)),
+        and(
+          or(
+            and(eq(messagesTable.fromUserId, myId),   eq(messagesTable.toUserId, otherId)),
+            and(eq(messagesTable.fromUserId, otherId), eq(messagesTable.toUserId, myId)),
+          ),
+          // Exclude hard-deleted (for everyone) and sender-only deletes when I'm sender
+          or(
+            isNull(messagesTable.deletedAt),
+            and(
+              eq(messagesTable.deletedFor, "sender"),
+              eq(messagesTable.toUserId, myId), // recipient still sees it
+            ),
+          ),
         ),
       )
       .orderBy(asc(messagesTable.createdAt))
@@ -145,6 +169,18 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
 
   if (fromId === toId) {
     return res.status(400).json({ error: "Cannot message yourself" });
+  }
+
+  // Block check
+  if (await isBlocked(fromId, toId)) {
+    return res.status(403).json({ error: "Cannot send message to this user" });
+  }
+
+  // Rate limiting: 20 messages per minute per DM thread
+  const rl = checkMsgRateLimit(fromId, toId);
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfter));
+    return res.status(429).json({ error: "Sending too fast — slow down a little" });
   }
 
   const parsed = SendMessageSchema.safeParse(req.body);
@@ -211,6 +247,57 @@ router.post("/messages/:userId", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ── DELETE /api/messages/:messageId — soft-delete a message ──────────────────
+router.delete("/messages/:messageId", requireAuth, async (req, res) => {
+  const userId    = getUserId(req);
+  const messageId = String(req.params.messageId);
+  const forEveryone = req.query.forEveryone === "true";
+
+  try {
+    const [msg] = await db
+      .select()
+      .from(messagesTable)
+      .where(eq(messagesTable.id, messageId))
+      .limit(1);
+
+    if (!msg) return res.status(404).json({ error: "Message not found" });
+    if (msg.fromUserId !== userId)
+      return res.status(403).json({ error: "You can only delete your own messages" });
+
+    await db
+      .update(messagesTable)
+      .set({
+        deletedAt:  new Date(),
+        deletedFor: forEveryone ? "both" : "sender",
+      })
+      .where(eq(messagesTable.id, messageId));
+
+    // Notify both sides via SSE so UI updates immediately
+    const payload = { type: "message_deleted", messageId, forEveryone };
+    emitSSEEvent(`messages:${msg.fromUserId}`, payload);
+    emitSSEEvent(`messages:${msg.toUserId}`,   payload);
+
+    return res.json({ deleted: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to delete message");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/messages/:userId/typing — broadcast typing indicator ────────────
+// No DB write — just fan-out SSE to the recipient
+router.post("/messages/:userId/typing", requireAuth, async (req, res) => {
+  const fromId = getUserId(req);
+  const toId   = String(req.params.userId);
+
+  if (fromId !== toId) {
+    emitSSEEvent(`messages:${toId}`, { type: "typing", fromUserId: fromId });
+  }
+  return res.status(204).end();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const EXPR_PUSH_LABELS: Record<string, string> = {
   bomb:     "threw a bomb 💥",

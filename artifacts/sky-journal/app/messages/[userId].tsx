@@ -12,6 +12,7 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Easing,
   FlatList,
@@ -197,18 +198,22 @@ export default function MessagesScreen() {
   const { playStickerSound } = useSound();
   const { userId: myUserId } = useAuth();
 
-  const [messages,   setMessages]   = useState<Message[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [sending,    setSending]    = useState(false);
-  const [input,      setInput]      = useState('');
-  const [error,      setError]      = useState<string | null>(null);
-  const [headerH,    setHeaderH]    = useState(0);
-  const [showPicker, setShowPicker] = useState(false);
+  const [messages,      setMessages]      = useState<Message[]>([]);
+  const [loading,       setLoading]       = useState(true);
+  const [sending,       setSending]       = useState(false);
+  const [input,         setInput]         = useState('');
+  const [error,         setError]         = useState<string | null>(null);
+  const [headerH,       setHeaderH]       = useState(0);
+  const [showPicker,    setShowPicker]    = useState(false);
+  const [partnerTyping, setPartnerTyping] = useState(false);
 
   const [playingAnim, setPlayingAnim] = useState<{ type: StickerAnimType; emoji: string } | null>(null);
 
-  const lastMsgIdRef = useRef<string | null>(null);
-  const flatRef      = useRef<FlatList<ListItem>>(null);
+  const lastMsgIdRef    = useRef<string | null>(null);
+  const flatRef         = useRef<FlatList<ListItem>>(null);
+  const prevSseRef      = useRef(false);
+  const typingTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingClearRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'ios'  ? insets.bottom : 8;
@@ -298,26 +303,48 @@ export default function MessagesScreen() {
     myUserId ? [`messages:${myUserId}`] : [],
     useCallback((_channel: string, data: unknown) => {
       const ev = data as {
-        type: string; id: string; fromUserId: string; toUserId: string;
-        content: string | null; expression: string | null;
-        isRead: boolean; createdAt: string; isOwn: boolean;
+        type: string; id?: string; fromUserId?: string; toUserId?: string;
+        content?: string | null; expression?: string | null;
+        isRead?: boolean; createdAt?: string; isOwn?: boolean;
+        messageId?: string; forEveryone?: boolean;
       };
-      // Only append if it's from the person we're currently chatting with
-      if (ev?.type !== 'new_message' || ev.fromUserId !== userId) return;
-      setMessages(prev => {
-        if (prev.find(m => m.id === ev.id)) return prev; // deduplicate
-        const newMsg: Message = { ...ev, isOwn: false };
-        lastMsgIdRef.current = ev.id;
-        // Animate incoming sticker
-        if (ev.expression) {
-          const def = getSticker(ev.expression);
-          queueSticker(def);
-        }
-        markDmThreadRead(userId ?? '');
-        return [...prev, newMsg];
-      });
+
+      if (ev?.type === 'new_message' && ev.fromUserId === userId && ev.id) {
+        setMessages(prev => {
+          if (prev.find(m => m.id === ev.id)) return prev;
+          const newMsg: Message = {
+            id: ev.id!, fromUserId: ev.fromUserId!, toUserId: ev.toUserId ?? '',
+            content: ev.content ?? null, expression: ev.expression ?? null,
+            isRead: ev.isRead ?? false, createdAt: ev.createdAt!, isOwn: false,
+          };
+          lastMsgIdRef.current = ev.id!;
+          if (ev.expression) queueSticker(getSticker(ev.expression));
+          markDmThreadRead(userId ?? '');
+          return [...prev, newMsg];
+        });
+        return;
+      }
+
+      if (ev?.type === 'message_deleted' && ev.messageId) {
+        setMessages(prev => prev.filter(m => m.id !== ev.messageId));
+        return;
+      }
+
+      if (ev?.type === 'typing' && ev.fromUserId === userId) {
+        setPartnerTyping(true);
+        if (typingClearRef.current) clearTimeout(typingClearRef.current);
+        typingClearRef.current = setTimeout(() => setPartnerTyping(false), 4000);
+      }
     }, [userId, markDmThreadRead, queueSticker]),
   );
+
+  // Gap-fill: when SSE reconnects, fetch to fill the gap
+  useEffect(() => {
+    if (sseConnected && !prevSseRef.current) {
+      load().catch(() => null);
+    }
+    prevSseRef.current = sseConnected;
+  }, [sseConnected, load]);
 
   // M-8: Background poll as SSE fallback. Backs off to 2 min when SSE is
   // connected — SSE already handles real-time delivery, so 30 s polling is
@@ -356,6 +383,32 @@ export default function MessagesScreen() {
       setSending(false);
     }
   }, [input, sending, userId]);
+
+  const handleDeleteMsg = useCallback(async (msg: Message) => {
+    if (!msg.isOwn) return;
+    Alert.alert(
+      'Delete message',
+      'Choose how to delete this message',
+      [
+        {
+          text: 'Delete for me',
+          onPress: async () => {
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+            apiFetch(`/messages/${msg.id}?forEveryone=false`, { method: 'DELETE' }).catch(() => null);
+          },
+        },
+        {
+          text: 'Delete for everyone',
+          style: 'destructive',
+          onPress: async () => {
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+            apiFetch(`/messages/${msg.id}?forEveryone=true`, { method: 'DELETE' }).catch(() => null);
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }, []);
 
   const handleSticker = useCallback(async (def: StickerDef) => {
     if (sending || !userId) return;
@@ -466,6 +519,19 @@ export default function MessagesScreen() {
             showsVerticalScrollIndicator={false}
             onContentSizeChange={scrollToBottom}
             onLayout={scrollToBottom}
+            ListFooterComponent={partnerTyping ? (
+              <View style={[styles.msgRow, styles.msgRowOther]}>
+                <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
+                  {avatarUri
+                    ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>
+                  }
+                </View>
+                <View style={[styles.bubble, styles.bubbleOther, { paddingVertical: 10, paddingHorizontal: 16 }]}>
+                  <Text style={{ color: MUTED, fontSize: 18, letterSpacing: 4 }}>•••</Text>
+                </View>
+              </View>
+            ) : null}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <LinearGradient
@@ -515,10 +581,15 @@ export default function MessagesScreen() {
                       }
                     </View>
                   )}
-                  <View style={[
-                    styles.bubble,
-                    msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
-                  ]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.bubble,
+                      msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
+                    ]}
+                    onLongPress={() => handleDeleteMsg(msg)}
+                    activeOpacity={0.85}
+                    delayLongPress={350}
+                  >
                     {msg.isOwn && (
                       <LinearGradient
                         colors={[PURPLE, PURPLE2]}
@@ -532,7 +603,7 @@ export default function MessagesScreen() {
                     <Text style={[styles.bubbleTime, { color: msg.isOwn ? 'rgba(255,255,255,0.40)' : 'rgba(200,184,232,0.40)' }]}>
                       {fmtTime(msg.createdAt)}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               );
             }}
@@ -580,7 +651,16 @@ export default function MessagesScreen() {
               <TextInput
                 style={styles.input}
                 value={input}
-                onChangeText={t => { setInput(t); if (showPicker) setShowPicker(false); }}
+                onChangeText={t => {
+                  setInput(t);
+                  if (showPicker) setShowPicker(false);
+                  if (t && userId) {
+                    if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+                    typingTimerRef.current = setTimeout(() => {
+                      apiFetch(`/messages/${userId}/typing`, { method: 'POST' }).catch(() => null);
+                    }, 600);
+                  }
+                }}
                 placeholder="Send a whisper…"
                 placeholderTextColor="rgba(200,184,232,0.30)"
                 multiline

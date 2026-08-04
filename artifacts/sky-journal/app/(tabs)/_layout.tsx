@@ -169,6 +169,7 @@ function ClassicTabLayout() {
   const isWeb  = Platform.OS === 'web';
   const { t }  = useTranslation();
   const { playSound } = useSound();
+  const { dmUnread } = useApp();
 
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 10);
 
@@ -248,6 +249,8 @@ function ClassicTabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="sky-lantern" color={color} focused={focused} primaryColor={colors.primary} />
           ),
+          tabBarBadge:      dmUnread > 0 ? dmUnread : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.primary, fontSize: 9, minWidth: 16, height: 16, lineHeight: 16 },
         }}
       />
       <Tabs.Screen

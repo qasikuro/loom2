@@ -24,6 +24,7 @@ import campfireRouter from "./campfire";
 import streamRouter from "./stream";
 import pushRouter from "./push";
 import adminBadgesRouter from "./admin-badges";
+import blocksRouter from "./blocks";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(campfireRouter);
 router.use(streamRouter);
 router.use(pushRouter);
 router.use(adminBadgesRouter);
+router.use(blocksRouter);
 
 export default router;

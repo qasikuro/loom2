@@ -133,6 +133,24 @@ export async function runStartupMigrations(): Promise<void> {
       ON CONFLICT DO NOTHING
     `);
 
+    // ── Messages: soft-delete support ───────────────────────────────────────
+    await client.query(`
+      ALTER TABLE messages
+        ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS deleted_for TEXT
+    `);
+
+    // ── Blocks table ─────────────────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS blocks (
+        id          UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
+        blocker_id  TEXT    NOT NULL,
+        blocked_id  TEXT    NOT NULL,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (blocker_id, blocked_id)
+      )
+    `);
+
   } finally {
     client.release();
   }

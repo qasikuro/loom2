@@ -8,6 +8,8 @@ export const messagesTable = pgTable("messages", {
   expression: text("expression"),
   isRead:     boolean("is_read").notNull().default(false),
   createdAt:  timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt:  timestamp("deleted_at", { withTimezone: true }),
+  deletedFor: text("deleted_for"), // 'sender' | 'both'
 });
 
 export interface GuideAvailability {

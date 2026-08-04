@@ -1,14 +1,17 @@
 import { Router } from "express";
-import { and, desc, eq, gt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, isNull, sql } from "drizzle-orm";
 
 import {
   db,
   campfireRoomsTable,
   campfireMessagesTable,
   characterTable,
+  reportsTable,
 } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { emitSSEEvent } from "../lib/sseEmitter";
+import { checkMsgRateLimit } from "../middleware/messageLimiter";
+import { sendPushNotification } from "../services/pushService";
 
 const router = Router();
 
@@ -50,17 +53,21 @@ async function ensurePresets() {
 }
 
 // ── GET /api/campfire — list rooms with presence + last message ───────────────
+// Supports optional ?q=<search> and ?mood=<mood> filters
 
 router.get("/campfire", requireAuth, async (req, res) => {
   await ensurePresets();
 
-  const now          = new Date();
+  const now            = new Date();
   const presenceCutoff = new Date(now.getTime() - PRESENCE_MS);
+  const q              = typeof req.query.q    === "string" ? req.query.q.trim()    : "";
+  const moodFilter     = typeof req.query.mood === "string" ? req.query.mood.trim() : "";
 
-  const rooms = await db
-    .select()
-    .from(campfireRoomsTable)
-    .orderBy(desc(campfireRoomsTable.createdAt));
+  let roomQuery = db.select().from(campfireRoomsTable).$dynamic();
+  if (q)          roomQuery = roomQuery.where(ilike(campfireRoomsTable.name, `%${q}%`));
+  if (moodFilter) roomQuery = roomQuery.where(eq(campfireRoomsTable.mood, moodFilter));
+
+  const rooms = await roomQuery.orderBy(desc(campfireRoomsTable.createdAt));
 
   const roomsWithMeta = await Promise.all(
     rooms.map(async (room) => {
@@ -187,9 +194,75 @@ router.get("/campfire/:roomId", requireAuth, async (req, res) => {
   });
 });
 
+// ── GET /api/campfire/:roomId/presence — who's here (active ≤ 5 min) ─────────
+
+router.get("/campfire/:roomId/presence", requireAuth, async (req, res) => {
+  const roomId = req.params.roomId as string;
+  const now    = new Date();
+  const cutoff = new Date(now.getTime() - PRESENCE_MS);
+
+  try {
+    // Get distinct users who sent a message in the last 5 minutes
+    const recentRows = await db
+      .select({ userId: campfireMessagesTable.userId })
+      .from(campfireMessagesTable)
+      .where(and(
+        eq(campfireMessagesTable.roomId, roomId),
+        gt(campfireMessagesTable.createdAt, cutoff),
+        gt(campfireMessagesTable.expiresAt, now),
+      ))
+      .orderBy(asc(campfireMessagesTable.createdAt));
+
+    // De-duplicate (Drizzle doesn't have DISTINCT SELECT shorthand easily across all adapters)
+    const seenIds   = new Set<string>();
+    const userIds: string[] = [];
+    for (const r of recentRows) {
+      if (!seenIds.has(r.userId)) { seenIds.add(r.userId); userIds.push(r.userId); }
+    }
+
+    if (userIds.length === 0) return res.json([]);
+
+    const chars = await db
+      .select({
+        userId:    characterTable.userId,
+        name:      characterTable.name,
+        username:  characterTable.username,
+        avatarUri: characterTable.avatarUri,
+        mood:      characterTable.mood,
+      })
+      .from(characterTable)
+      .where(sql`${characterTable.userId} = ANY(${userIds})`);
+
+    const charMap = new Map(chars.map(c => [c.userId, c]));
+
+    const participants = userIds.map(uid => {
+      const c = charMap.get(uid);
+      return {
+        userId:    uid,
+        name:      c?.name      ?? "Wanderer",
+        username:  c?.username  ?? null,
+        avatarUri: c?.avatarUri ?? null,
+        mood:      c?.mood      ?? null,
+      };
+    });
+
+    return res.json(participants);
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch campfire presence");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── POST /api/campfire/:roomId/messages — send message or expression ──────────
 
 const VALID_EXPRESSIONS = ["candle", "spark", "lantern", "hush"] as const;
+
+// Parse @username mentions from text content, return array of mentions
+function parseMentions(content: string): string[] {
+  const matches = content.match(/@(\w+)/g);
+  if (!matches) return [];
+  return [...new Set(matches.map(m => m.slice(1).toLowerCase()))];
+}
 
 router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
   const roomId = req.params.roomId as string;
@@ -206,6 +279,13 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Message too long (max 500 chars)" });
   if (expression && !(VALID_EXPRESSIONS as readonly string[]).includes(expression))
     return res.status(400).json({ error: "Invalid expression" });
+
+  // Rate limiting: 20 campfire messages per minute per room
+  const rl = checkMsgRateLimit(userId, roomId);
+  if (!rl.ok) {
+    res.setHeader("Retry-After", String(rl.retryAfter));
+    return res.status(429).json({ error: "Sending too fast — slow down a little" });
+  }
 
   const [room] = await db
     .select({ id: campfireRoomsTable.id })
@@ -264,7 +344,69 @@ router.post("/campfire/:roomId/messages", requireAuth, async (req, res) => {
   // Notify all SSE clients watching this campfire room
   emitSSEEvent(`campfire:${roomId}`, { type: "new_message", message: payload });
 
+  // ── @mention push notifications (fire-and-forget) ──────────────────────────
+  if (content?.trim()) {
+    const handles = parseMentions(content);
+    if (handles.length > 0) {
+      sendMentionNotifications(handles, userId, resolvedName, content, roomId).catch(() => null);
+    }
+  }
+
   return res.status(201).json({ ...payload, isMine: true });
 });
+
+// ── POST /api/campfire/:roomId/messages/:messageId/report ─────────────────────
+
+router.post("/campfire/:roomId/messages/:messageId/report", requireAuth, async (req, res) => {
+  const reporterId = getUserId(req);
+  const messageId  = String(req.params.messageId);
+  const reason     = String(req.body?.reason ?? "").slice(0, 500);
+
+  if (!reason) return res.status(400).json({ error: "reason is required" });
+
+  try {
+    await db.insert(reportsTable).values({
+      reporterId,
+      targetType: "campfire_message",
+      targetId:   messageId,
+      reason,
+      details:    "",
+      status:     "pending",
+    });
+    return res.json({ reported: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to submit campfire report");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function sendMentionNotifications(
+  handles:      string[],
+  fromUserId:   string,
+  fromName:     string,
+  content:      string,
+  roomId:       string,
+): Promise<void> {
+  for (const handle of handles.slice(0, 5)) { // cap at 5 mentions per message
+    const [user] = await db
+      .select({ userId: characterTable.userId })
+      .from(characterTable)
+      .where(sql`LOWER(${characterTable.username}) = ${handle}`)
+      .limit(1);
+
+    if (!user || user.userId === fromUserId) continue;
+
+    const body = content.length > 80 ? content.slice(0, 77) + "…" : content;
+    await sendPushNotification(user.userId, {
+      title: `${fromName} mentioned you 🔥`,
+      body,
+      data: { type: "campfire_mention", refId: roomId },
+    }).catch(() => null);
+  }
+}
 
 export default router;

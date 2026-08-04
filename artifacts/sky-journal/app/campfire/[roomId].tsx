@@ -1,10 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Animated,
   Easing,
+  FlatList,
   Image,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -270,10 +275,11 @@ function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
 
 // ── Message bubble ────────────────────────────────────────────────────────────
 
-function MessageRow({ msg, palette, opacity }: {
-  msg:     CampfireMsg;
-  palette: typeof MOOD_PALETTE.default;
-  opacity: number;
+function MessageRow({ msg, palette, opacity, onReport }: {
+  msg:      CampfireMsg;
+  palette:  typeof MOOD_PALETTE.default;
+  opacity:  number;
+  onReport: (msg: CampfireMsg) => void;
 }) {
   const fadeIn  = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(12)).current;
@@ -343,16 +349,21 @@ function MessageRow({ msg, palette, opacity }: {
           )}
         </View>
       )}
-      <View style={[
-        mb.bubble,
-        msg.isMine
-          ? [mb.bubbleMine, { backgroundColor: `${palette.ember}18`, borderColor: `${palette.ember}35` }]
-          : [mb.bubbleOther, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.09)' }],
-      ]}>
+      <TouchableOpacity
+        style={[
+          mb.bubble,
+          msg.isMine
+            ? [mb.bubbleMine, { backgroundColor: `${palette.ember}18`, borderColor: `${palette.ember}35` }]
+            : [mb.bubbleOther, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.09)' }],
+        ]}
+        onLongPress={() => onReport(msg)}
+        delayLongPress={400}
+        activeOpacity={0.85}
+      >
         <Text style={[mb.text, { color: msg.isMine ? palette.text : 'rgba(230,220,255,0.85)' }]}>
           {msg.content}
         </Text>
-      </View>
+      </TouchableOpacity>
     </Animated.View>
     </View>
   );
@@ -421,15 +432,21 @@ export default function CampfireRoom() {
   const { roomId }    = useLocalSearchParams<{ roomId: string }>();
   const { userId: myUserId } = useAuth();
 
-  const [data,    setData]    = useState<RoomData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [text,    setText]    = useState('');
-  const [sending, setSending] = useState(false);
-  const [showInput, setShowInput] = useState(false);
+  const [data,            setData]            = useState<RoomData | null>(null);
+  const [loading,         setLoading]         = useState(true);
+  const [text,            setText]            = useState('');
+  const [sending,         setSending]         = useState(false);
+  const [showInput,       setShowInput]       = useState(false);
+  const [presenceVisible, setPresenceVisible] = useState(false);
+  const [presenceData,    setPresenceData]    = useState<{
+    userId: string; name: string; username: string | null; avatarUri: string | null; mood: string | null;
+  }[]>([]);
+  const [presenceLoading, setPresenceLoading] = useState(false);
 
   const scrollRef      = useRef<ScrollView>(null);
   const pollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastIdRef      = useRef<string>('');
+  const prevSseRef     = useRef(false);
   // L-4: Collect pending scrollToEnd timer handles so they can all be
   // cancelled if the component unmounts before the 80 ms fires.
   const scrollTimerRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
@@ -513,6 +530,53 @@ export default function CampfireRoom() {
       }
     }, [myUserId]),
   );
+
+  // Gap-fill: refetch when SSE reconnects
+  useEffect(() => {
+    if (sseConnected && !prevSseRef.current) {
+      fetchData(true).catch(() => null);
+    }
+    prevSseRef.current = sseConnected;
+  }, [sseConnected, fetchData]);
+
+  // ── Presence ───────────────────────────────────────────────────────────────
+  const openPresence = useCallback(async () => {
+    if (!roomId) return;
+    setPresenceVisible(true);
+    setPresenceLoading(true);
+    try {
+      const rows = await apiFetch<typeof presenceData>(`/campfire/${roomId}/presence`);
+      setPresenceData(rows ?? []);
+    } catch { /* silent */ } finally {
+      setPresenceLoading(false);
+    }
+  }, [roomId]);
+
+  // ── Report ─────────────────────────────────────────────────────────────────
+  const handleReport = useCallback((msg: CampfireMsg) => {
+    if (msg.isMine) return;
+    Alert.alert(
+      'Report message',
+      'Why are you reporting this message?',
+      [
+        { text: 'Inappropriate content', onPress: () => submitReport(msg.id, 'inappropriate') },
+        { text: 'Harassment',            onPress: () => submitReport(msg.id, 'harassment')    },
+        { text: 'Spam',                  onPress: () => submitReport(msg.id, 'spam')          },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }, [roomId]);
+
+  async function submitReport(messageId: string, reason: string) {
+    if (!roomId) return;
+    try {
+      await apiFetch(`/campfire/${roomId}/messages/${messageId}/report`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+      Alert.alert('Reported', 'Thank you — our team will review this message.');
+    } catch { /* silent */ }
+  }
 
   // ── Send message ───────────────────────────────────────────────────────────
 
@@ -600,6 +664,7 @@ export default function CampfireRoom() {
                     </Text>
                   </View>
                 )}
+                <TouchableOpacity onPress={openPresence} activeOpacity={0.75}>
                 {data.soulCount > 0 && (
                   <View style={R.soulOrbs}>
                     {Array.from({ length: Math.min(data.soulCount, 8) }).map((_, i) => (
@@ -624,6 +689,7 @@ export default function CampfireRoom() {
                     ? `${data.soulCount} soul${data.soulCount !== 1 ? 's' : ''} gathered`
                     : 'You are the first soul tonight'}
                 </Text>
+                </TouchableOpacity>
               </>
             ) : (
               <Text style={R.roomName}>Campfire</Text>
@@ -661,7 +727,7 @@ export default function CampfireRoom() {
                 const fromBottom = totalMsg - 1 - idx;
                 const opacity = Math.max(0.22, 1 - (fromBottom * 0.085));
                 return (
-                  <MessageRow key={msg.id} msg={msg} palette={palette} opacity={opacity} />
+                  <MessageRow key={msg.id} msg={msg} palette={palette} opacity={opacity} onReport={handleReport} />
                 );
               })
             )}
@@ -718,9 +784,71 @@ export default function CampfireRoom() {
           )}
         </View>
       </View>
+
+      {/* ── Presence modal ────────────────────────────────────────────────── */}
+      <Modal
+        visible={presenceVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPresenceVisible(false)}
+      >
+        <Pressable style={PR.overlay} onPress={() => setPresenceVisible(false)} />
+        <View style={PR.sheet}>
+          <View style={PR.handle} />
+          <Text style={PR.title}>Souls around the fire</Text>
+          {presenceLoading ? (
+            <ActivityIndicator color={palette.ember} style={{ marginVertical: 20 }} />
+          ) : presenceData.length === 0 ? (
+            <Text style={PR.empty}>No one active in the last 5 minutes</Text>
+          ) : (
+            <FlatList
+              data={presenceData}
+              keyExtractor={u => u.userId}
+              contentContainerStyle={{ gap: 10 }}
+              renderItem={({ item }) => (
+                <View style={PR.row}>
+                  <View style={[PR.avatar, { backgroundColor: `${palette.ember}22`, borderColor: `${palette.ember}35` }]}>
+                    <Text style={[PR.avatarTxt, { color: palette.ember }]}>
+                      {(item.name ?? '?').charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                  <View style={PR.info}>
+                    <Text style={PR.name}>{item.name}</Text>
+                    {item.username && <Text style={PR.handle2}>@{item.username}</Text>}
+                  </View>
+                  {item.mood ? <Text style={[PR.mood, { color: `${palette.ember}80` }]}>{item.mood}</Text> : null}
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
+
+const PR = StyleSheet.create({
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4,2,14,0.65)' },
+  sheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#0E0B24',
+    borderTopLeftRadius: 26, borderTopRightRadius: 26,
+    borderTopWidth: 1, borderColor: 'rgba(107,91,149,0.28)',
+    paddingHorizontal: 22, paddingTop: 12, paddingBottom: 40,
+    maxHeight: '65%', gap: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 20,
+  },
+  handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.20)', alignSelf: 'center', marginBottom: 4 },
+  title:  { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#F0EAF8', letterSpacing: -0.2 },
+  empty:  { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', textAlign: 'center', paddingVertical: 20, fontStyle: 'italic' },
+  row:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  avatar: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  avatarTxt: { fontSize: 16, fontFamily: 'Satoshi-Bold' },
+  info:   { flex: 1 },
+  name:   { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.92)' },
+  handle2: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', marginTop: 1 },
+  mood:   { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
+});
 
 const R = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#040210' },
