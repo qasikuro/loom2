@@ -57,3 +57,42 @@ export const chaptersTable = pgTable("chapters", {
 
 export type Chapter      = typeof chaptersTable.$inferSelect;
 export type ChapterInput = typeof chaptersTable.$inferInsert;
+
+// ── Book follows ──────────────────────────────────────────────────────────────
+
+export const bookFollowsTable = pgTable("book_follows", {
+  id:        uuid("id").primaryKey().defaultRandom(),
+  bookId:    uuid("book_id").notNull(),
+  userId:    text("user_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("book_follows_book_id_idx").on(table.bookId),
+  index("book_follows_user_id_idx").on(table.userId),
+]);
+
+// ── Chapter comments ──────────────────────────────────────────────────────────
+
+export const bookCommentsTable = pgTable("book_comments", {
+  id:        uuid("id").primaryKey().defaultRandom(),
+  chapterId: uuid("chapter_id").notNull(),
+  userId:    text("user_id").notNull(),
+  parentId:  uuid("parent_id"),                        // null = top-level
+  content:   text("content").notNull(),
+  likeCount: integer("like_count").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("book_comments_chapter_id_idx").on(table.chapterId),
+  index("book_comments_parent_id_idx").on(table.parentId),
+]);
+
+export type BookComment      = typeof bookCommentsTable.$inferSelect;
+export type BookCommentInput = typeof bookCommentsTable.$inferInsert;
+
+// ── Comment likes ─────────────────────────────────────────────────────────────
+
+export const commentLikesTable = pgTable("comment_likes", {
+  commentId: uuid("comment_id").notNull(),
+  userId:    text("user_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

@@ -29,6 +29,11 @@ export { default as ChaptersListScreen } from './screens/ChaptersListScreen';
 export { default as PageManagerScreen }  from './screens/PageManagerScreen';
 export { default as PublishChapterScreen } from './screens/PublishChapterScreen';
 
+// ── Screens — Reader experience ───────────────────────────────────────────────
+export { default as BookPublicScreen }    from './screens/BookPublicScreen';
+export { default as ChapterReaderScreen } from './screens/ChapterReaderScreen';
+export { default as EngagementScreen }    from './screens/EngagementScreen';
+
 // ── Components ────────────────────────────────────────────────────────────────
 export {
   FirstPublishOverlay,

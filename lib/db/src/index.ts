@@ -188,6 +188,51 @@ export async function runStartupMigrations(): Promise<void> {
     await client.query(`CREATE INDEX IF NOT EXISTS chapters_book_id_idx ON chapters(book_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS chapters_book_id_order_idx ON chapters(book_id, order_index)`);
 
+    // Add read_count to existing chapters table (idempotent)
+    await client.query(`
+      ALTER TABLE chapters
+        ADD COLUMN IF NOT EXISTS read_count INTEGER NOT NULL DEFAULT 0
+    `);
+
+    // ── Story Studio: Book follows ────────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS book_follows (
+        id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+        book_id    UUID        NOT NULL,
+        user_id    TEXT        NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (book_id, user_id)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS book_follows_book_id_idx ON book_follows(book_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS book_follows_user_id_idx ON book_follows(user_id)`);
+
+    // ── Story Studio: Chapter comments ────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS book_comments (
+        id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+        chapter_id  UUID        NOT NULL,
+        user_id     TEXT        NOT NULL,
+        parent_id   UUID,
+        content     TEXT        NOT NULL,
+        like_count  INTEGER     NOT NULL DEFAULT 0,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS book_comments_chapter_id_idx ON book_comments(chapter_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS book_comments_parent_id_idx ON book_comments(parent_id)`);
+
+    // ── Story Studio: Comment likes ───────────────────────────────────────────
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS comment_likes (
+        comment_id UUID        NOT NULL,
+        user_id    TEXT        NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (comment_id, user_id)
+      )
+    `);
+
   } finally {
     client.release();
   }

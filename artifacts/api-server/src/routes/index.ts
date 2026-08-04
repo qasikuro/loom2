@@ -26,6 +26,7 @@ import pushRouter from "./push";
 import adminBadgesRouter from "./admin-badges";
 import blocksRouter from "./blocks";
 import booksRouter from "./books";
+import bookReaderRouter from "./book-reader";
 
 const router: IRouter = Router();
 
@@ -56,5 +57,6 @@ router.use(pushRouter);
 router.use(adminBadgesRouter);
 router.use(blocksRouter);
 router.use(booksRouter);
+router.use(bookReaderRouter);
 
 export default router;
