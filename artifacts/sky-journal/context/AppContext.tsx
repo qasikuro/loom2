@@ -387,8 +387,11 @@ interface AppContextValue {
 
   friends:       FriendSummary[];
   followingIds:  string[];
+  blockedIds:    string[];
   followUser:    (targetUserId: string) => void;
   unfollowUser:  (targetUserId: string) => void;
+  blockUser:     (targetUserId: string) => Promise<void>;
+  unblockUser:   (targetUserId: string) => Promise<void>;
   myGuides:      GuideProfile[];
 
   rewards:       Reward[];
@@ -530,6 +533,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
+  const [blockedIds, setBlockedIds]                   = useState<string[]>([]);
   const [friends, setFriends]                         = useState<FriendSummary[]>([]);
   const [serverNotifications, setServerNotifications] = useState<ServerNotification[]>([]);
   const [myGuides, setMyGuides]                       = useState<GuideProfile[]>([]);
@@ -543,12 +547,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const campfireToastShownRef = useRef<Set<string>>(new Set());
 
   const discoverPosts = useMemo((): DiscoverPost[] =>
-    discoverFeedRaw.map(p => ({
-      ...p,
-      saved:       savedStoryIds.has(p.id),
-      isFollowing: followingIds.includes(p.authorUserId),
-    })),
-  [discoverFeedRaw, savedStoryIds, followingIds]);
+    discoverFeedRaw
+      .filter(p => !blockedIds.includes(p.authorUserId))
+      .map(p => ({
+        ...p,
+        saved:       savedStoryIds.has(p.id),
+        isFollowing: followingIds.includes(p.authorUserId),
+      })),
+  [discoverFeedRaw, savedStoryIds, followingIds, blockedIds]);
 
   const stateRef     = useRef({ journalEntries, stories, outfits, character });
   useEffect(() => { stateRef.current = { journalEntries, stories, outfits, character }; });
@@ -722,7 +728,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const [
         _charFetch, _entriesFetch, _storiesFetch, _outfitsFetch,
         _galleryFetch, _usageFetch, _discoverFetch, _followingFetch, _notifFetch, _friendsFetch, guidesRaw,
-        _rewardsFetch, _constellationFetch, _shopFetch, savedIdsRaw, effectsCatalogRaw,
+        _rewardsFetch, _constellationFetch, _shopFetch, savedIdsRaw, effectsCatalogRaw, _blockedFetch,
       ] = await Promise.all([
         apiFetch<unknown>('/character').catch(() => null),
         apiFetch<unknown>('/journal-entries').catch(() => null),
@@ -740,6 +746,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         apiFetch<unknown>('/rewards/shop').catch(() => null),
         apiFetch<string[]>('/stories/saved/ids').catch(() => null),
         apiFetch<{ effects: Array<{ id: string; config: EffectDef }> }>('/effects/catalog').catch(() => null),
+        apiFetch<{ blockedId: string }[]>('/users/blocked').catch(() => null),
       ]);
 
       // Validate all endpoints against generated Zod schemas.
@@ -816,6 +823,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (discoverRaw  !== null) setDiscoverFeedRaw(feed);
       if (followingRaw !== null) setFollowingIds(follows);
       if (friendsRaw   !== null) setFriends(friendsRaw);
+      // Load blocked user IDs so the discover feed can filter them out
+      if (Array.isArray(_blockedFetch)) {
+        setBlockedIds((_blockedFetch as { blockedId: string }[]).map(r => r.blockedId));
+      }
       if (notifRaw     !== null) setServerNotifications(notifs);
       setMyGuides(guides); // guidesRaw falls back to [] so always safe
       if (rewardBalanceRaw) setRewardBalance(rewardBalanceRaw);
@@ -1900,6 +1911,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // ── Block / Unblock ────────────────────────────────────────────────────────
+
+  const blockUser = useCallback(async (targetUserId: string) => {
+    // Optimistic: add to blocked list and remove from following/friends immediately
+    setBlockedIds(prev => prev.includes(targetUserId) ? prev : [...prev, targetUserId]);
+    setFollowingIds(prev => prev.filter(id => id !== targetUserId));
+    setFriends(prev => prev.filter(f => f.userId !== targetUserId));
+    try {
+      await apiFetch(`/users/${targetUserId}/block`, { method: 'POST' });
+    } catch {
+      // Rollback optimistic update on failure
+      setBlockedIds(prev => prev.filter(id => id !== targetUserId));
+      showToastGlobal("Couldn't block user", 'warning', () => {
+        blockUser(targetUserId).catch(() => null);
+      });
+    }
+  }, []);
+
+  const unblockUser = useCallback(async (targetUserId: string) => {
+    // Optimistic: remove from blocked list immediately
+    setBlockedIds(prev => prev.filter(id => id !== targetUserId));
+    try {
+      await apiFetch(`/users/${targetUserId}/block`, { method: 'DELETE' });
+    } catch {
+      // Rollback optimistic update on failure
+      setBlockedIds(prev => prev.includes(targetUserId) ? prev : [...prev, targetUserId]);
+      showToastGlobal("Couldn't unblock user", 'warning', () => {
+        unblockUser(targetUserId).catch(() => null);
+      });
+    }
+  }, []);
+
   // ── Rewards ────────────────────────────────────────────────────────────────
 
   const dismissReward = useCallback((id: string) => {
@@ -1951,7 +1994,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
       gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
       discoverPosts, savedStoryIds, toggleSavePost,
-      friends, followingIds, followUser, unfollowUser, myGuides,
+      friends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
       rewards, dismissReward, showRewardToast,
       rewardBalance, constellation, reloadRewards, reloadConstellation,
       shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,

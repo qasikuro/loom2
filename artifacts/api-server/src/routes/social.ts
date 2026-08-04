@@ -1,5 +1,5 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable } from "@workspace/db";
-import { and, asc, count, desc, eq, ilike, inArray, ne, or } from "drizzle-orm";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, blocksTable } from "@workspace/db";
+import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
@@ -498,7 +498,8 @@ router.get("/discover", requireAuth, async (req, res) => {
   }
 
   try {
-    const [myCharRows, followingRows, stories] = await Promise.all([
+    // Fetch blocked user IDs in both directions concurrently with other queries
+    const [myCharRows, followingRows, blockedRows, stories] = await Promise.all([
       db.select({ mood: characterTable.mood })
         .from(characterTable)
         .where(eq(characterTable.userId, userId))
@@ -507,6 +508,17 @@ router.get("/discover", requireAuth, async (req, res) => {
       db.select({ followingId: followsTable.followingId })
         .from(followsTable)
         .where(eq(followsTable.followerId, userId)),
+
+      // Collect all user IDs in a block relationship with the caller (either direction)
+      db.select({ otherId: blocksTable.blockedId })
+        .from(blocksTable)
+        .where(eq(blocksTable.blockerId, userId))
+        .then(async rows => {
+          const reverseRows = await db.select({ otherId: blocksTable.blockerId })
+            .from(blocksTable)
+            .where(eq(blocksTable.blockedId, userId));
+          return [...rows, ...reverseRows];
+        }),
 
       db.select({
         id:              storiesTable.id,
@@ -544,11 +556,19 @@ router.get("/discover", requireAuth, async (req, res) => {
         .limit(200),
     ]);
 
+    // Build set of all blocked user IDs (bidirectional) for fast lookup
+    const blockedUserIds = [...new Set(blockedRows.map(r => r.otherId))];
+
+    // Filter out stories from users in any blocking relationship with the caller
+    const visibleStories = blockedUserIds.length > 0
+      ? stories.filter(s => !blockedUserIds.includes(s.userId))
+      : stories;
+
     const myMood       = myCharRows[0]?.mood ?? "Hopeful";
     const followingSet = new Set(followingRows.map(r => r.followingId));
     const now          = Date.now();
 
-    const scored = stories.map(row => {
+    const scored = visibleStories.map(row => {
       const isFollowing = followingSet.has(row.userId);
       const moodMatch   = row.mood === myMood;
       const engagement  = Math.min(2, (row.witnessedCount + row.savedCount) / 25);

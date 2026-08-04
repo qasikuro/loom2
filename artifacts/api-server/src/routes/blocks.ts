@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import * as cache from "../lib/cache";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,10 @@ router.post("/users/:userId/block", requireAuth, async (req, res) => {
           OR (follower_id = ${blockedId} AND following_id = ${blockerId})
     `);
 
+    // Invalidate discover cache for both parties — block changes feed visibility
+    cache.invalidate(`discover:${blockerId}`);
+    cache.invalidate(`discover:${blockedId}`);
+
     return res.json({ blocked: true });
   } catch (err) {
     req.log.error({ err }, "Failed to block user");
@@ -44,6 +49,11 @@ router.delete("/users/:userId/block", requireAuth, async (req, res) => {
       DELETE FROM blocks
        WHERE blocker_id = ${blockerId} AND blocked_id = ${blockedId}
     `);
+
+    // Invalidate discover cache for both parties — unblocking changes feed visibility
+    cache.invalidate(`discover:${blockerId}`);
+    cache.invalidate(`discover:${blockedId}`);
+
     return res.json({ blocked: false });
   } catch (err) {
     req.log.error({ err }, "Failed to unblock user");

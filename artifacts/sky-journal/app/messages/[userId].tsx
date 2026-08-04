@@ -2,6 +2,7 @@ import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { apiFetch, useApp } from '@/context/AppContext';
+import { safeBack } from '@/utils/navigation';
 import { useSound } from '@/context/SoundContext';
 import { useSSE } from '@/hooks/useSSE';
 import { useAuth } from '@clerk/expo';
@@ -194,7 +195,7 @@ export default function MessagesScreen() {
     isGuide?:   string;
   }>();
   const insets = useSafeAreaInsets();
-  const { markDmThreadRead } = useApp();
+  const { markDmThreadRead, blockedIds, blockUser, unblockUser } = useApp();
   const { playStickerSound } = useSound();
   const { userId: myUserId } = useAuth();
 
@@ -221,6 +222,39 @@ export default function MessagesScreen() {
   const partnerSubtitle = isGuide === 'true'
     ? 'Constellation Guide'
     : handle ? `@${handle}` : null;
+
+  const isBlocked = blockedIds.includes(userId ?? '');
+
+  function handleMoreMenu() {
+    if (!userId) return;
+    const partnerName = name ?? 'this user';
+    if (isBlocked) {
+      Alert.alert(
+        'Unblock user',
+        `${partnerName} will be able to send you messages again.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Unblock', onPress: () => unblockUser(userId) },
+        ],
+      );
+    } else {
+      Alert.alert(
+        'Block user',
+        `${partnerName} will no longer be able to message you, and their posts will be hidden from your feed. Any existing follows will be removed.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Block',
+            style: 'destructive',
+            onPress: () => {
+              blockUser(userId).catch(() => null);
+              safeBack();
+            },
+          },
+        ],
+      );
+    }
+  }
 
   const playSticker = useCallback((def: StickerDef) => {
     setPlayingAnim({ type: def.anim, emoji: def.emoji });
@@ -495,6 +529,17 @@ export default function MessagesScreen() {
               )}
             </View>
           </View>
+
+          {/* Kebab / more menu — only for non-guides */}
+          {isGuide !== 'true' && (
+            <TouchableOpacity
+              onPress={handleMoreMenu}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{ padding: 4 }}
+            >
+              <Icon name="more-vertical" size={18} color="rgba(200,184,232,0.70)" />
+            </TouchableOpacity>
+          )}
         </View>
       </LinearGradient>
 

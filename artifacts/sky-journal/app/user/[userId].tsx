@@ -9,6 +9,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Easing,
   Linking,
@@ -614,7 +615,7 @@ export default function UserProfileScreen() {
   const { t }               = useTranslation();
   const insets              = useSafeAreaInsets();
   const { userId: meId }    = useAuth();
-  const { followingIds, followUser, unfollowUser } = useApp();
+  const { followingIds, followUser, unfollowUser, blockedIds, blockUser, unblockUser } = useApp();
 
   const [profile,      setProfile]      = useState<PublicProfile | null>(null);
   const [stories,      setStories]      = useState<PublicStory[]>([]);
@@ -631,6 +632,7 @@ export default function UserProfileScreen() {
 
   const isFollowing = followingIds.includes(userId ?? '');
   const isSelf      = meId === userId;
+  const isBlocked   = blockedIds.includes(userId ?? '');
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 40;
@@ -704,6 +706,57 @@ export default function UserProfileScreen() {
     else             followUser(profile.userId);
   }
 
+  function handleMore() {
+    if (!profile || !userId) return;
+    const blockOption = isBlocked
+      ? {
+          text: 'Unblock user',
+          onPress: () => {
+            Alert.alert(
+              'Unblock user',
+              `${profile.name} will be able to send you messages again.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Unblock',
+                  onPress: () => unblockUser(userId),
+                },
+              ],
+            );
+          },
+        }
+      : {
+          text: 'Block user',
+          style: 'destructive' as const,
+          onPress: () => {
+            Alert.alert(
+              'Block user',
+              `${profile.name} will no longer be able to message you, and their posts will be hidden from your feed. Any existing follows will be removed.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Block',
+                  style: 'destructive',
+                  onPress: () => {
+                    blockUser(userId).catch(() => null);
+                    safeBack();
+                  },
+                },
+              ],
+            );
+          },
+        };
+    Alert.alert(
+      profile.name,
+      undefined,
+      [
+        { text: 'Report', onPress: () => setReportVisible(true) },
+        blockOption,
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }
+
   const mood           = profile?.mood ?? 'Dreamy';
   const aura           = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const _moodColor     = MOOD_COLORS[mood] ?? aura.accent;
@@ -756,10 +809,10 @@ export default function UserProfileScreen() {
             <Icon name="arrow-left" size={17} color="rgba(220,210,255,0.92)" />
           </TouchableOpacity>
 
-          {/* More / report button */}
+          {/* More / report / block button */}
           <TouchableOpacity
             style={[styles.topBtn, { top: topPad + 10, right: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}
-            onPress={() => setReportVisible(true)}
+            onPress={handleMore}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
           >
             <Icon name="more-horizontal" size={17} color="rgba(220,210,255,0.92)" />
