@@ -215,21 +215,23 @@ export default function CharacterScreen() {
           />
         </CharacterAuraHeader>
 
-        {/* Stats row */}
-        <View style={s.statsRow}>
-          {[
-            { icon: 'book-open', count: stories.length,   label: 'Stories',   tab: 'journey' },
-            { icon: 'star',      count: outfits.length,   label: 'Outfits',   tab: 'style'   },
-            { icon: 'eye',       count: totalWitnessed,   label: 'Likes',     tab: null       },
-          ].map((item, i) => (
+        {/* Stats card */}
+        <View style={s.statsCard}>
+          {([
+            { icon: 'book-open', count: stories.length,  label: 'STORIES', tab: 'style' },
+            { icon: 'user',      count: outfits.length,  label: 'OUTFITS', tab: 'style' },
+            { icon: 'heart',     count: totalWitnessed,  label: 'LIKES',   tab: null    },
+          ] as const).map((item, i) => (
             <React.Fragment key={item.label}>
-              {i > 0 && <View style={s.statDot} />}
+              {i > 0 && <View style={s.statDivider} />}
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <TouchableOpacity style={s.statPill} onPress={() => item.tab && (Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), setProfileTab(item.tab as any))} activeOpacity={item.tab ? 0.75 : 1} disabled={!item.tab}>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Icon name={item.icon as any} size={13} color={moodAccent} style={{ marginBottom: 2 }} />
+              <TouchableOpacity style={s.statCol} onPress={() => item.tab && (Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), setProfileTab(item.tab as any))} activeOpacity={item.tab ? 0.75 : 1} disabled={!item.tab}>
                 <Text style={s.statNum}>{item.count}</Text>
-                <Text style={s.statLabel}>{item.label}</Text>
+                <View style={s.statMeta}>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <Icon name={item.icon as any} size={11} color={moodAccent} />
+                  <Text style={s.statLabel}>{item.label}</Text>
+                </View>
               </TouchableOpacity>
             </React.Fragment>
           ))}
@@ -237,13 +239,21 @@ export default function CharacterScreen() {
 
         {/* Tab bar */}
         <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 14, marginBottom: 2, backgroundColor: 'rgba(200,184,232,0.05)', borderRadius: 14, padding: 3, gap: 2, borderWidth: 1, borderColor: 'rgba(200,184,232,0.10)' }}>
-          {(['style', 'about'] as const).map(tab => (
-            <TouchableOpacity key={tab} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab(tab); }} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', backgroundColor: profileTab === tab ? 'rgba(107,91,149,0.60)' : 'transparent' }} activeOpacity={0.75}>
-              <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: profileTab === tab ? '#fff' : 'rgba(200,184,232,0.50)' }}>
-                {tab === 'style' ? '🌌 My Space' : '◌ About'}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {(['style', 'about'] as const).map(tab => {
+            const active = profileTab === tab;
+            return (
+              <TouchableOpacity key={tab} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab(tab); }} style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5, backgroundColor: active ? 'rgba(107,91,149,0.60)' : 'transparent' }} activeOpacity={0.75}>
+                {tab === 'style' ? (
+                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: active ? '#fff' : 'rgba(200,184,232,0.50)' }}>🪐 My Space</Text>
+                ) : (
+                  <>
+                    <Icon name="user" size={12} color={active ? '#fff' : 'rgba(200,184,232,0.50)'} />
+                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: active ? '#fff' : 'rgba(200,184,232,0.50)' }}>About</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Currently worn outfit hero (Style tab) */}
@@ -320,12 +330,13 @@ export default function CharacterScreen() {
 }
 
 const s = StyleSheet.create({
-  container:      { flex: 1 },
-  statsRow:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, paddingHorizontal: 24 },
-  statPill:       { flex: 1, alignItems: 'center', gap: 3 },
-  statNum:        { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.5 },
-  statLabel:      { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,180,255,0.50)', letterSpacing: 0.4, textTransform: 'uppercase' },
-  statDot:        { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(155,120,255,0.30)', marginHorizontal: 4 },
+  container:    { flex: 1 },
+  statsCard:    { flexDirection: 'row', marginHorizontal: 16, marginTop: 14, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)', overflow: 'hidden' },
+  statCol:      { flex: 1, alignItems: 'center', paddingVertical: 18, gap: 6 },
+  statNum:      { fontSize: 28, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.8 },
+  statMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.45)', letterSpacing: 1.0 },
+  statDivider:  { width: 1, backgroundColor: 'rgba(200,184,232,0.10)', marginVertical: 14 },
   outfitHero:     { borderRadius: 20, overflow: 'hidden', borderWidth: 1, backgroundColor: 'rgba(107,91,149,0.10)' },
   outfitHeroImg:  { width: '100%', height: 216 },
   outfitHeroBadge:  { position: 'absolute', top: 12, left: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },

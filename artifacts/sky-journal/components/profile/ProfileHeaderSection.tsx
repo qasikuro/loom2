@@ -44,7 +44,7 @@ interface Props {
 export function ProfileHeaderSection({
   character, setCharacter,
   constellation, availableTitles: _availableTitles, setShowTitlePicker: _setShowTitlePicker,
-  rewardBalance: _rewardBalance,
+  rewardBalance,
   activeFrame, activeAccent,
   activeOutfit,
   openDrawer, toggleVisibility,
@@ -146,7 +146,10 @@ export function ProfileHeaderSection({
           </Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
-        <TouchableOpacity style={s.headerIconBtn} onPress={openDrawer}>
+        <TouchableOpacity style={[s.headerIconBtn, { marginRight: 8 }]} onPress={() => {/* share — future */}} activeOpacity={0.75}>
+          <Icon name="share-2" size={14} color="rgba(200,184,232,0.7)" />
+        </TouchableOpacity>
+        <TouchableOpacity style={s.headerIconBtn} onPress={openDrawer} activeOpacity={0.75}>
           <Icon name="settings" size={14} color="rgba(200,184,232,0.7)" />
         </TouchableOpacity>
       </View>
@@ -283,28 +286,36 @@ export function ProfileHeaderSection({
               multiline autoFocus returnKeyType="done" onBlur={saveBio}
             />
           ) : (
-            <TouchableOpacity onPress={() => setEditingBio(true)} activeOpacity={0.75}>
-              <View style={activeAccent && ACCENT_CONFIGS[activeAccent] ? {
-                borderRadius: 10, backgroundColor: `${ACCENT_CONFIGS[activeAccent].color}14`,
-                borderWidth: 1, borderColor: `${ACCENT_CONFIGS[activeAccent].color}45`,
-                paddingHorizontal: 10, paddingVertical: 6,
-                shadowColor: ACCENT_CONFIGS[activeAccent].shadow, shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.35, shadowRadius: 8, elevation: 4,
-              } : undefined}>
-                <Text style={[s.profileBio, { color: character.bio ? 'rgba(200,184,232,0.78)' : 'rgba(200,184,232,0.32)' }]}>
-                  {character.bio || t('profile.tapBio')}
-                </Text>
-              </View>
+            <TouchableOpacity
+              onPress={() => setEditingBio(true)}
+              activeOpacity={0.75}
+              style={[
+                s.bioRow,
+                activeAccent && ACCENT_CONFIGS[activeAccent]
+                  ? { borderColor: `${ACCENT_CONFIGS[activeAccent].color}45`, backgroundColor: `${ACCENT_CONFIGS[activeAccent].color}14`, shadowColor: ACCENT_CONFIGS[activeAccent].shadow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }
+                  : { borderColor: 'rgba(200,184,232,0.13)', backgroundColor: 'rgba(255,255,255,0.04)' },
+              ]}
+            >
+              <Text style={[s.profileBio, { flex: 1, color: character.bio ? 'rgba(200,184,232,0.78)' : 'rgba(200,184,232,0.30)' }]}>
+                {character.bio || t('profile.tapBio')}
+              </Text>
+              <Icon name="edit-2" size={13} color="rgba(200,184,232,0.28)" />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Mood orb picker */}
-      <MoodOrbPicker
-        currentMood={character.mood || 'Dreamy'}
-        onSelect={m => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCharacter({ ...character, mood: m }); }}
-      />
+      {/* VIBE row: label + orbs + current mood name */}
+      <View style={s.vibeCard}>
+        <Text style={s.vibeLbl}>VIBE</Text>
+        <View style={{ flex: 1 }}>
+          <MoodOrbPicker
+            currentMood={character.mood || 'Dreamy'}
+            onSelect={m => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCharacter({ ...character, mood: m }); }}
+          />
+        </View>
+        <Text style={s.vibeMood}>{character.mood || 'Dreamy'}</Text>
+      </View>
 
       {/* Trait chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.traitScroll} contentContainerStyle={s.traitRow}>
@@ -374,8 +385,12 @@ export function ProfileHeaderSection({
             🌙 {profileTitle}
           </Text>
           <View style={{ backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 }}>
-            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.5 }}>Lv.{profileLevel}</Text>
+            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.5 }}>Lv. {profileLevel}</Text>
           </View>
+          <View style={{ flex: 1 }} />
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,75,0.55)', letterSpacing: 0.2 }}>
+            {((rewardBalance?.stars ?? 0) % 300).toLocaleString()} / 300 XP
+          </Text>
         </View>
         <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -392,9 +407,9 @@ const s = StyleSheet.create({
   visPill:          { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   visPillText:      { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
   profileRow:       { flexDirection: 'row', gap: 16, alignItems: 'flex-start', marginBottom: 4 },
-  avatarWrap:       { width: 82, height: 82, position: 'relative', flexShrink: 0 },
-  avatarCircle:     { width: 82, height: 82, borderRadius: 41, borderWidth: 2.5, overflow: 'hidden' },
-  avatarEditBtn:    { position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: 12, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  avatarWrap:       { width: 90, height: 90, position: 'relative', flexShrink: 0 },
+  avatarCircle:     { width: 90, height: 90, borderRadius: 45, borderWidth: 2.5, overflow: 'hidden' },
+  avatarEditBtn:    { position: 'absolute', bottom: 1, right: 1, width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   profileInfo:      { flex: 1, gap: 3, paddingTop: 2 },
   nameRow:          { flexDirection: 'row', alignItems: 'center' },
   profileName:      { fontSize: 22, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.4 },
@@ -407,7 +422,11 @@ const s = StyleSheet.create({
   usernameEditInput:{ flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular' },
   usernameError:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
   profileBio:       { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 17 },
-  bioInput:         { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18, borderWidth: 1, borderRadius: 10, padding: 10 },
+  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, marginTop: 5 },
+  bioInput:         { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18, borderWidth: 1, borderRadius: 10, padding: 10, marginTop: 5 },
+  vibeCard:         { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 14, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)' },
+  vibeLbl:          { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(200,184,232,0.45)', marginRight: 8 },
+  vibeMood:         { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#9B78FF', marginLeft: 8 },
   traitScroll:      { marginTop: 12 },
   traitRow:         { flexDirection: 'row', gap: 6, paddingHorizontal: 2 },
   traitChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 3, paddingVertical: 4, borderRadius: 20, borderWidth: 1, backgroundColor: 'rgba(120,86,255,0.18)', borderColor: 'rgba(120,86,255,0.38)' },
