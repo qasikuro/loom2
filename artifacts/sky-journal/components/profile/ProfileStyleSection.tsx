@@ -1,5 +1,6 @@
 import { Icon } from '@/components/Icon';
 import type { GalleryPhoto, Outfit, Story } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
@@ -49,9 +50,10 @@ interface StoryActionSheetProps {
   story: Story | null;
   onClose: () => void;
   onDelete: (id: string) => void;
+  onTogglePublic: (id: string, isPublic: boolean) => void;
 }
 
-function StoryActionSheet({ story, onClose, onDelete }: StoryActionSheetProps) {
+function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryActionSheetProps) {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -160,6 +162,23 @@ function StoryActionSheet({ story, onClose, onDelete }: StoryActionSheetProps) {
           <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.35)" />
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={ss.action}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            onTogglePublic(story.id, !story.isPublic);
+            dismiss();
+          }}
+          activeOpacity={0.75}
+        >
+          <View style={[ss.actionIcon, { backgroundColor: story.isPublic ? 'rgba(180,140,60,0.12)' : 'rgba(100,160,220,0.12)' }]}>
+            <Icon name={story.isPublic ? 'lock' : 'globe'} size={16} color={story.isPublic ? '#C8A840' : '#64A0DC'} />
+          </View>
+          <Text style={[ss.actionText, { color: colors.foreground }]}>
+            {story.isPublic ? 'Make private' : 'Make public'}
+          </Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={ss.action} onPress={handleDelete} activeOpacity={0.75}>
           <View style={[ss.actionIcon, { backgroundColor: confirmDelete ? 'rgba(180,60,60,0.18)' : 'rgba(180,60,60,0.10)' }]}>
             <Icon name="trash-2" size={16} color={confirmDelete ? '#E05555' : '#C06060'} />
@@ -258,6 +277,7 @@ export function ProfileStyleSection({
   activeOutfitId, moodAccent,
 }: Props) {
   const colors = useColors();
+  const { updateStory } = useApp();
   const [activeStory, setActiveStory] = useState<Story | null>(null);
 
   const sorted = [...stories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -437,6 +457,7 @@ export function ProfileStyleSection({
         story={activeStory}
         onClose={() => setActiveStory(null)}
         onDelete={deleteStory}
+        onTogglePublic={(id, isPublic) => updateStory(id, { isPublic })}
       />
     </>
   );
