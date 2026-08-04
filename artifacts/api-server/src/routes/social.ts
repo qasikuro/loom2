@@ -1,5 +1,5 @@
 import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, blocksTable } from "@workspace/db";
-import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
@@ -31,6 +31,14 @@ router.get("/users/search", requireAuth, async (req, res) => {
   // uses them automatically for ILIKE patterns — the %q% contains-search on
   // name is now an index scan instead of a full-table scan.
   try {
+    // Collect all user IDs involved in a block with the current user (either direction)
+    const blockRows = await db.execute(sql`
+      SELECT blocker_id AS id FROM blocks WHERE blocked_id = ${userId}
+      UNION
+      SELECT blocked_id AS id FROM blocks WHERE blocker_id = ${userId}
+    `);
+    const blockedIds = blockRows.rows.map((r) => (r as { id: string }).id);
+
     const rows = await db
       .select({
         userId:    characterTable.userId,
@@ -48,6 +56,7 @@ router.get("/users/search", requireAuth, async (req, res) => {
             ilike(characterTable.username, `${q}%`),
             ilike(characterTable.name, `%${q}%`),
           ),
+          blockedIds.length > 0 ? notInArray(characterTable.userId, blockedIds) : undefined,
         ),
       )
       .limit(20);
