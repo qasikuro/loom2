@@ -16,20 +16,18 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-// Apply any additive schema changes (e.g. new nullable columns) that Drizzle
-// push may not have applied to the deployed database yet.  Each statement is
-// idempotent — safe to run on every server start.
-runStartupMigrations()
-  .then(() => {
-    app.listen(port, (err) => {
-      if (err) {
-        logger.error({ err }, "Error listening on port");
-        process.exit(1);
-      }
-      logger.info({ port }, "Server listening");
-    });
-  })
-  .catch((err) => {
-    logger.error({ err }, "Startup migrations failed — aborting");
+// Start listening immediately so the port is open (workflow health-check passes)
+// then run additive migrations in the background.  All migrations are
+// idempotent ADD COLUMN / CREATE TABLE IF NOT EXISTS — safe to run while the
+// server is already serving requests.
+app.listen(port, (err) => {
+  if (err) {
+    logger.error({ err }, "Error listening on port");
     process.exit(1);
-  });
+  }
+  logger.info({ port }, "Server listening");
+
+  runStartupMigrations()
+    .then(() => logger.info("Startup migrations completed"))
+    .catch((err) => logger.error({ err }, "Startup migrations failed (non-fatal)"));
+});
