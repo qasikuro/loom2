@@ -47,6 +47,7 @@ export const chaptersTable = pgTable("chapters", {
   status:      text("status").notNull().default("draft"),   // 'draft' | 'published'
   publishedAt: timestamp("published_at", { withTimezone: true }),
   pageCount:   integer("page_count").notNull().default(0),
+  readCount:   integer("read_count").notNull().default(0),
   pages:       jsonb("pages").$type<BookChapterPage[]>().notNull().default([]),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:   timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

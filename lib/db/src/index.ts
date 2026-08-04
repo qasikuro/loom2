@@ -133,11 +133,15 @@ export async function runStartupMigrations(): Promise<void> {
       ON CONFLICT DO NOTHING
     `);
 
-    // ── Messages: soft-delete support ───────────────────────────────────────
+    // ── Messages: DM columns (idempotent — add if missing) ──────────────────
     await client.query(`
       ALTER TABLE messages
-        ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ,
-        ADD COLUMN IF NOT EXISTS deleted_for TEXT
+        ADD COLUMN IF NOT EXISTS from_user_id TEXT,
+        ADD COLUMN IF NOT EXISTS to_user_id   TEXT,
+        ADD COLUMN IF NOT EXISTS expression   TEXT,
+        ADD COLUMN IF NOT EXISTS is_read      BOOLEAN NOT NULL DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS deleted_at   TIMESTAMPTZ,
+        ADD COLUMN IF NOT EXISTS deleted_for  TEXT
     `);
 
     // ── Blocks table ─────────────────────────────────────────────────────────
@@ -180,6 +184,7 @@ export async function runStartupMigrations(): Promise<void> {
         status        TEXT        NOT NULL DEFAULT 'draft',
         published_at  TIMESTAMPTZ,
         page_count    INTEGER     NOT NULL DEFAULT 0,
+        read_count    INTEGER     NOT NULL DEFAULT 0,
         pages         JSONB       NOT NULL DEFAULT '[]',
         created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()

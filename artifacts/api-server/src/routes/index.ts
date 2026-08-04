@@ -27,6 +27,8 @@ import adminBadgesRouter from "./admin-badges";
 import blocksRouter from "./blocks";
 import booksRouter from "./books";
 import bookReaderRouter from "./book-reader";
+import creatorDashboardRouter from "./creator-dashboard";
+import aiAssistRouter from "./ai-assist";
 
 const router: IRouter = Router();
 
@@ -58,5 +60,7 @@ router.use(adminBadgesRouter);
 router.use(blocksRouter);
 router.use(booksRouter);
 router.use(bookReaderRouter);
+router.use(creatorDashboardRouter);
+router.use(aiAssistRouter);
 
 export default router;

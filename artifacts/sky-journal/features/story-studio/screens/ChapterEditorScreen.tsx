@@ -29,6 +29,7 @@ import {
   hasCompletedFirstPublish,
   markFirstPublishDone,
 } from '../components/FirstPublishOverlay';
+import { AiAssistantPanel } from '../components/AiAssistantPanel';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -140,9 +141,10 @@ export default function ChapterEditorScreen() {
   const [posting,  setPosting]  = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [error,    setError]    = useState<string | null>(null);
-  const [showMeta, setShowMeta] = useState(false);
-  const [hasDraft, setHasDraft] = useState(false);
+  const [showMeta,     setShowMeta]     = useState(false);
+  const [hasDraft,     setHasDraft]     = useState(false);
   const [showFirstPublish, setShowFirstPublish] = useState(false);
+  const [showAiPanel,  setShowAiPanel]  = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingFilledPagesRef = useRef<StoryPage[] | null>(null);
 
@@ -498,13 +500,22 @@ export default function ChapterEditorScreen() {
           <Text style={c.headerPageCount}>{pages.length}/{MAX_PAGES}</Text>
         </View>
 
-        <TouchableOpacity
-          style={[c.navBtn, showMeta && { backgroundColor: `${moodColor}22`, borderColor: `${moodColor}38` }]}
-          onPress={() => setShowMeta(v => !v)}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Icon name="map-pin" size={16} color={showMeta ? moodColor : 'rgba(255,255,255,0.78)'} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <TouchableOpacity
+            style={[c.navBtn, showAiPanel && { backgroundColor: 'rgba(155,127,232,0.20)', borderColor: 'rgba(155,127,232,0.38)' }]}
+            onPress={() => setShowAiPanel(v => !v)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="zap" size={15} color={showAiPanel ? '#9B7FE8' : 'rgba(255,255,255,0.78)'} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[c.navBtn, showMeta && { backgroundColor: `${moodColor}22`, borderColor: `${moodColor}38` }]}
+            onPress={() => setShowMeta(v => !v)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Icon name="map-pin" size={16} color={showMeta ? moodColor : 'rgba(255,255,255,0.78)'} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <KeyboardAwareScrollView
@@ -793,6 +804,27 @@ export default function ChapterEditorScreen() {
           const pages = pendingFilledPagesRef.current ?? [];
           doPublish(pages, overlayMood, openingLine);
         }}
+      />
+
+      <AiAssistantPanel
+        visible={showAiPanel}
+        context={pages
+          .flatMap(p => p.panels)
+          .map(p => [p.text?.trim(), p.bubbleText?.trim()].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .join('\n')
+        }
+        onInsert={(text) => {
+          setPages(prev => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            const panel = last.panels[0] ?? { id: crypto.randomUUID(), text: '', bubbleText: '' };
+            const updatedPanel = { ...panel, text: panel.text ? `${panel.text} ${text}` : text };
+            const updatedPanels = [updatedPanel, ...last.panels.slice(1)];
+            return [...prev.slice(0, -1), { ...last, panels: updatedPanels }];
+          });
+        }}
+        onClose={() => setShowAiPanel(false)}
       />
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}

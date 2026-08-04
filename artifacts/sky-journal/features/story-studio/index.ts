@@ -34,9 +34,15 @@ export { default as BookPublicScreen }    from './screens/BookPublicScreen';
 export { default as ChapterReaderScreen } from './screens/ChapterReaderScreen';
 export { default as EngagementScreen }    from './screens/EngagementScreen';
 
+// ── Screens — Creator Dashboard & Books management ───────────────────────────
+export { default as CreatorDashboardScreen } from './screens/CreatorDashboardScreen';
+export { default as MyBooksScreen }          from './screens/MyBooksScreen';
+
 // ── Components ────────────────────────────────────────────────────────────────
 export {
   FirstPublishOverlay,
   hasCompletedFirstPublish,
   markFirstPublishDone,
 } from './components/FirstPublishOverlay';
+export { AiAssistantPanel }  from './components/AiAssistantPanel';
+export type { AiTool }       from './components/AiAssistantPanel';

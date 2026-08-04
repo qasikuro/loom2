@@ -1,4 +1,4 @@
-import { db, messagesTable, characterTable } from "@workspace/db";
+import { db, messages as messagesTable, characterTable } from "@workspace/db";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";

@@ -163,6 +163,28 @@ export default function CreateScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* ── Creator dashboard shortcut ───────────────────────────────────── */}
+        <View style={s.divider} />
+        <TouchableOpacity
+          style={s.dashLink}
+          activeOpacity={0.78}
+          onPress={() => {
+            Animated.parallel([
+              Animated.timing(sheetY,    { toValue: SHEET_H, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+              Animated.timing(bgOpacity, { toValue: 0,       duration: 160,                                  useNativeDriver: true }),
+            ]).start(() => router.push('/creator-dashboard' as never));
+          }}
+        >
+          <View style={s.dashIconWrap}>
+            <Icon name="bar-chart-2" size={15} color="#9B7FE8" />
+          </View>
+          <View style={s.dashText}>
+            <Text style={s.dashTitle}>Creator Dashboard</Text>
+            <Text style={s.dashSub}>Track reads, followers & manage your books</Text>
+          </View>
+          <Icon name="chevron-right" size={14} color="rgba(155,127,232,0.35)" />
+        </TouchableOpacity>
       </Animated.View>
     </View>
   );
@@ -281,4 +303,23 @@ const s = StyleSheet.create({
     fontSize: 12, fontFamily: 'Satoshi-Regular',
     color: 'rgba(200,185,255,0.42)', lineHeight: 17,
   },
+
+  divider: {
+    height: 1, backgroundColor: 'rgba(200,185,255,0.07)',
+    marginTop: 12, marginBottom: 10,
+  },
+  dashLink: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 4, paddingVertical: 6,
+  },
+  dashIconWrap: {
+    width: 36, height: 36, borderRadius: 11,
+    backgroundColor: 'rgba(155,127,232,0.12)',
+    borderWidth: 1, borderColor: 'rgba(155,127,232,0.22)',
+    alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  },
+  dashText:  { flex: 1 },
+  dashTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.85)' },
+  dashSub:   { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.38)', marginTop: 1 },
 });
