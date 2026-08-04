@@ -305,17 +305,11 @@ export function ProfileHeaderSection({
         </View>
       </View>
 
-      {/* VIBE row: label + orbs + current mood name */}
-      <View style={s.vibeCard}>
-        <Text style={s.vibeLbl}>VIBE</Text>
-        <View style={{ flex: 1 }}>
-          <MoodOrbPicker
-            currentMood={character.mood || 'Dreamy'}
-            onSelect={m => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCharacter({ ...character, mood: m }); }}
-          />
-        </View>
-        <Text style={s.vibeMood}>{character.mood || 'Dreamy'}</Text>
-      </View>
+      {/* Mood orb picker */}
+      <MoodOrbPicker
+        currentMood={character.mood || 'Dreamy'}
+        onSelect={m => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCharacter({ ...character, mood: m }); }}
+      />
 
       {/* Trait chips */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.traitScroll} contentContainerStyle={s.traitRow}>
@@ -424,9 +418,6 @@ const s = StyleSheet.create({
   profileBio:       { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 17 },
   bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, marginTop: 5 },
   bioInput:         { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18, borderWidth: 1, borderRadius: 10, padding: 10, marginTop: 5 },
-  vibeCard:         { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginTop: 14, paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)' },
-  vibeLbl:          { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.5, textTransform: 'uppercase', color: 'rgba(200,184,232,0.45)', marginRight: 8 },
-  vibeMood:         { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#9B78FF', marginLeft: 8 },
   traitScroll:      { marginTop: 12 },
   traitRow:         { flexDirection: 'row', gap: 6, paddingHorizontal: 2 },
   traitChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 3, paddingVertical: 4, borderRadius: 20, borderWidth: 1, backgroundColor: 'rgba(120,86,255,0.18)', borderColor: 'rgba(120,86,255,0.38)' },

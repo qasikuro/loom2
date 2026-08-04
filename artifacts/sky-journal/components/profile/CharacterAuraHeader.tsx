@@ -93,21 +93,22 @@ export function MoodOrbPicker({ currentMood, onSelect }: {
     onSelect(key);
   }
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, marginBottom: 2, flexWrap: 'wrap' }}>
-      <Text style={{ fontSize: 9, color: 'rgba(200,184,232,0.40)', fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, marginRight: 1 }}>VIBE</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12, marginBottom: 2, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)' }}>
+      <Text style={{ fontSize: 9, color: 'rgba(200,184,232,0.40)', fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, marginRight: 3 }}>VIBE</Text>
       {MOOD_ORBS.map(({ key, accent }, idx) => {
         const sel = currentMood === key;
         return (
           <Animated.View key={key} style={{ transform: [{ scale: scales[idx] }] }}>
             <TouchableOpacity
-              style={{ width: sel ? 26 : 20, height: sel ? 26 : 20, borderRadius: 13, backgroundColor: accent, opacity: sel ? 1 : 0.30, borderWidth: sel ? 2 : 0, borderColor: 'rgba(255,255,255,0.80)' }}
+              style={{ width: sel ? 22 : 17, height: sel ? 22 : 17, borderRadius: 11, backgroundColor: accent, opacity: sel ? 1 : 0.32, borderWidth: sel ? 2 : 0, borderColor: 'rgba(255,255,255,0.80)' }}
               onPress={() => select(key, idx)}
               activeOpacity={0.75}
             />
           </Animated.View>
         );
       })}
-      <Text style={{ fontSize: 11, color: 'rgba(200,184,232,0.65)', fontFamily: 'Satoshi-Medium', marginLeft: 2, fontStyle: 'italic' }}>
+      <View style={{ flex: 1 }} />
+      <Text style={{ fontSize: 12, color: '#9B78FF', fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 }}>
         {currentMood}
       </Text>
     </View>
