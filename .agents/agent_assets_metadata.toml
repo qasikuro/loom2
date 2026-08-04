@@ -214,3 +214,10 @@ uri = "file://attached_assets/chat-campfire-roadmap.docx"
 type = "word_document"
 title = "Chat & Campfire Roadmap"
 description = "28-task roadmap for DM chat and Campfire features — priorities, scope, and sprint order."
+
+[[outputs]]
+id = "GQ2MURusV3EY2paWa6fOG"
+uri = "file://attached_assets/friends-social-roadmap.docx"
+type = "word_document"
+title = "Friends & Social Graph Roadmap"
+description = "22-task roadmap for follow system, discovery, social profile features, and notifications."
