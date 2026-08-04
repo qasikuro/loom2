@@ -619,10 +619,36 @@ router.put("/admin/reports/:id/resolve", requireAdmin, async (req: Request, res:
   }
 
   try {
+    // Fetch the report to get the reporter's userId
+    const [report] = await db
+      .select({ reporterId: reportsTable.reporterId })
+      .from(reportsTable)
+      .where(eq(reportsTable.id, reportId))
+      .limit(1);
+
+    if (!report) {
+      return res.status(404).json({ error: "Report not found" });
+    }
+
     await db
       .update(reportsTable)
       .set({ status, resolvedById: adminId, resolvedAt: new Date() })
       .where(eq(reportsTable.id, reportId));
+
+    // Notify the reporter of the outcome
+    const notificationTitle = status === "resolved"
+      ? "Your report has been reviewed and action was taken"
+      : "Your report was reviewed and dismissed";
+
+    await db.insert(notificationsTable).values({
+      userId:    report.reporterId,
+      actorId:   "system",
+      actorName: "Sky Journal",
+      type:      status === "resolved" ? "report_resolved" : "report_dismissed",
+      refId:     reportId,
+      title:     notificationTitle,
+      isRead:    false,
+    });
 
     return res.json({ ok: true });
   } catch (err) {
