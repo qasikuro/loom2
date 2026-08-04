@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, blocksTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable } from "@workspace/db";
 import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -525,8 +525,7 @@ router.get("/discover", requireAuth, async (req, res) => {
   }
 
   try {
-    // Fetch blocked user IDs in both directions concurrently with other queries
-    const [myCharRows, followingRows, blockedRows, stories] = await Promise.all([
+    const [myCharRows, followingRows, stories] = await Promise.all([
       db.select({ mood: characterTable.mood })
         .from(characterTable)
         .where(eq(characterTable.userId, userId))
@@ -535,17 +534,6 @@ router.get("/discover", requireAuth, async (req, res) => {
       db.select({ followingId: followsTable.followingId })
         .from(followsTable)
         .where(eq(followsTable.followerId, userId)),
-
-      // Collect all user IDs in a block relationship with the caller (either direction)
-      db.select({ otherId: blocksTable.blockedId })
-        .from(blocksTable)
-        .where(eq(blocksTable.blockerId, userId))
-        .then(async rows => {
-          const reverseRows = await db.select({ otherId: blocksTable.blockerId })
-            .from(blocksTable)
-            .where(eq(blocksTable.blockedId, userId));
-          return [...rows, ...reverseRows];
-        }),
 
       db.select({
         id:              storiesTable.id,
@@ -577,19 +565,19 @@ router.get("/discover", requireAuth, async (req, res) => {
             eq(characterTable.isPublic, true),
             eq(characterTable.isBanned, false),   // exclude banned users
             ne(storiesTable.userId, userId),       // never show own stories
+            // Exclude stories from users who have blocked the viewer OR been blocked by the viewer
+            sql`${storiesTable.userId} NOT IN (
+              SELECT blocked_id FROM blocks WHERE blocker_id = ${userId}
+              UNION
+              SELECT blocker_id FROM blocks WHERE blocked_id = ${userId}
+            )`,
           ),
         )
         .orderBy(desc(storiesTable.date))
         .limit(200),
     ]);
 
-    // Build set of all blocked user IDs (bidirectional) for fast lookup
-    const blockedUserIds = [...new Set(blockedRows.map(r => r.otherId))];
-
-    // Filter out stories from users in any blocking relationship with the caller
-    const visibleStories = blockedUserIds.length > 0
-      ? stories.filter(s => !blockedUserIds.includes(s.userId))
-      : stories;
+    const visibleStories = stories;
 
     const myMood       = myCharRows[0]?.mood ?? "Hopeful";
     const followingSet = new Set(followingRows.map(r => r.followingId));
