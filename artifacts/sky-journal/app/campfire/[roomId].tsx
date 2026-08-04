@@ -27,7 +27,7 @@ import { useAuth } from '@clerk/expo';
 
 import { Icon } from '@/components/Icon';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
-import { showToastGlobal } from '@/components/Toast';
+import { showToastGlobal, type ToastLevel } from '@/components/Toast';
 import { useSSE } from '@/hooks/useSSE';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -423,6 +423,71 @@ const eb = StyleSheet.create({
   label:  { fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
 });
 
+// ── sendText — extracted for testability ──────────────────────────────────────
+
+export interface SendTextDeps {
+  text:            string;
+  sending:         boolean;
+  roomId:          string | undefined;
+  characterName:   string;
+  // Injected so tests can stub without needing the full AppContext module tree.
+  // Typed as Promise<unknown> (not generic) so vi.fn() mocks are assignable.
+  apiFetch:        (path: string, opts?: RequestInit) => Promise<unknown>;
+  appendOwnMessage:(msg: CampfireMsg) => void;
+  setSending:      (v: boolean) => void;
+  setText:         (v: string)  => void;
+  setShowInput:    (v: boolean) => void;
+  showToast:       (msg: string, level: ToastLevel) => void;
+}
+
+/**
+ * Core send-text logic, separated from the component so it can be unit-tested
+ * without a React render.  Duck-types the 429 check so tests can throw a plain
+ * object instead of a real ApiError instance.
+ */
+export async function executeSendText(deps: SendTextDeps): Promise<void> {
+  const {
+    text, sending, roomId, characterName,
+    apiFetch: fetch, appendOwnMessage,
+    setSending, setText, setShowInput, showToast,
+  } = deps;
+
+  const trimmed = text.trim();
+  if (!trimmed || sending || !roomId) return;
+
+  setSending(true);
+  setText('');
+  setShowInput(false);
+  try {
+    const sent = await fetch(`/campfire/${roomId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content: trimmed, authorName: characterName }),
+    }) as CampfireMsg | undefined;
+    if (sent) appendOwnMessage(sent);
+  } catch (err) {
+    // Duck-type the 429 check — works with ApiError instances and plain stubs.
+    const is429 =
+      err != null &&
+      typeof err === 'object' &&
+      'status' in err &&
+      (err as { status: number }).status === 429;
+
+    if (is429) {
+      // Restore the typed text so the user can try again
+      setText(trimmed);
+      setShowInput(true);
+      const retryAfter = (err as { retryAfter?: number | null }).retryAfter ?? null;
+      const suffix = retryAfter != null && retryAfter >= 5
+        ? ` Try again in ${retryAfter}s.`
+        : '';
+      showToast(`Slow down a little ✦${suffix}`, 'warning');
+    }
+    // Other errors: swallow silently (existing behaviour)
+  } finally {
+    setSending(false);
+  }
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 const POLL_MS = 30_000;
@@ -593,32 +658,21 @@ export default function CampfireRoom() {
   }
 
   async function sendText() {
-    const trimmed = text.trim();
-    if (!trimmed || sending || !roomId) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setSending(true);
-    setText('');
-    setShowInput(false);
-    try {
-      const sent = await apiFetch<CampfireMsg>(`/campfire/${roomId}/messages`, {
-        method: 'POST',
-        body: JSON.stringify({ content: trimmed, authorName: character.name || 'Wanderer' }),
-      });
-      if (sent) appendOwnMessage(sent);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 429) {
-        // Restore the typed text so the user can try again
-        setText(trimmed);
-        setShowInput(true);
-        const suffix = (err.retryAfter != null && err.retryAfter >= 5)
-          ? ` Try again in ${err.retryAfter}s.`
-          : '';
-        showToastGlobal(`Slow down a little ✦${suffix}`, 'warning');
-      }
-      // Other errors: swallow silently (existing behaviour)
-    } finally {
-      setSending(false);
+    if (text.trim() && !sending && roomId) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+    await executeSendText({
+      text,
+      sending,
+      roomId,
+      characterName: character.name || 'Wanderer',
+      apiFetch,
+      appendOwnMessage,
+      setSending,
+      setText,
+      setShowInput,
+      showToast: showToastGlobal,
+    });
   }
 
   async function sendExpression(id: string) {
