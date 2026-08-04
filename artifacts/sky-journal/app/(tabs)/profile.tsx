@@ -240,7 +240,7 @@ export default function CharacterScreen() {
           {(['style', 'about'] as const).map(tab => (
             <TouchableOpacity key={tab} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab(tab); }} style={{ flex: 1, paddingVertical: 8, borderRadius: 11, alignItems: 'center', backgroundColor: profileTab === tab ? 'rgba(107,91,149,0.60)' : 'transparent' }} activeOpacity={0.75}>
               <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: profileTab === tab ? '#fff' : 'rgba(200,184,232,0.50)' }}>
-                {tab === 'style' ? '✨ Style' : '◌ About'}
+                {tab === 'style' ? '🌌 My Space' : '◌ About'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -288,8 +288,8 @@ export default function CharacterScreen() {
           )}
           {profileTab === 'style' && (!isLoading || character.name !== 'Player') && (
             <ProfileStyleSection
-              outfits={outfits} openOutfit={openOutfit} gallery={gallery}
-              openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
+              outfits={outfits} stories={stories} openOutfit={openOutfit} deleteStory={deleteStory}
+              gallery={gallery} openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
               galleryUploading={galleryUploading} galleryError={galleryError}
               activeOutfitId={activeOutfitId} moodAccent={moodAccent}
             />
