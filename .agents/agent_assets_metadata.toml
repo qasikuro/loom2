@@ -200,3 +200,10 @@ uri = "file://gamejo-admin-gap-analysis.html"
 type = "unspecified"
 title = "GameJo Admin Panel — Gap Analysis"
 description = "What's built, what's missing, hours, cost per section, and 3-phase build plan."
+
+[[outputs]]
+id = "aqy3GbAmQiphAhg2RKsb-"
+uri = "file://attached_assets/sky-journal-icons.html"
+type = "unspecified"
+title = "Sky Journal — Icon Reference"
+description = "All 44 registered icons (lucide-react-native) + 15 icon names found in source but not registered in Icon.tsx. Open in any browser."

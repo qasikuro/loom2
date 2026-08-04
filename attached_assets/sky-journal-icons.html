@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sky Journal — Icon Reference</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0C0A1E;
+    color: #EDE8FF;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    padding: 40px 32px 60px;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 36px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(200,184,232,0.12);
+  }
+
+  header h1 {
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    background: linear-gradient(135deg, #C8B8FF 0%, #9B7AE8 60%, #7C5FCC 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  header p {
+    font-size: 13px;
+    color: rgba(200,184,232,0.50);
+    letter-spacing: 0.2px;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: rgba(200,184,232,0.40);
+    margin-bottom: 16px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    margin-bottom: 40px;
+  }
+
+  .tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px 10px 14px;
+    border-radius: 16px;
+    background: rgba(200,184,232,0.05);
+    border: 1px solid rgba(200,184,232,0.09);
+    cursor: default;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .tile:hover {
+    background: rgba(155,122,232,0.14);
+    border-color: rgba(155,122,232,0.35);
+  }
+
+  .tile svg {
+    flex-shrink: 0;
+  }
+
+  .tile .name {
+    font-size: 10px;
+    font-weight: 500;
+    color: rgba(200,184,232,0.65);
+    text-align: center;
+    letter-spacing: 0.2px;
+    line-height: 1.4;
+    word-break: break-all;
+  }
+
+  .tile.missing {
+    background: rgba(200,60,60,0.05);
+    border-color: rgba(200,60,60,0.12);
+    opacity: 0.6;
+  }
+
+  .tile.missing .name {
+    color: rgba(220,120,120,0.70);
+  }
+
+  .note {
+    font-size: 12px;
+    color: rgba(200,184,232,0.40);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .note span {
+    color: rgba(220,120,120,0.70);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌌 Sky Journal Icons</h1>
+  <p>lucide-react-native • all registered icons</p>
+</header>
+
+<div class="section-label">Registered in Icon.tsx (44 icons)</div>
+
+<div class="grid" id="registered"></div>
+
+<div class="section-label">Used in app code — not in Icon.tsx map (render as null)</div>
+<p class="note">These icon names appear in component source but are <span>not registered</span> in the ICON_MAP, so they silently render nothing at runtime.</p>
+
+<div class="grid" id="missing"></div>
+
+<script>
+// ── Icons registered in artifacts/sky-journal/components/Icon.tsx ────────────
+// app name  →  actual lucide icon name (kebab-case)
+const REGISTERED = [
+  ['alert-circle',   'alert-circle'],
+  ['arrow-down',     'arrow-down'],
+  ['arrow-left',     'arrow-left'],
+  ['arrow-right',    'arrow-right'],
+  ['bell',           'bell'],
+  ['bell-off',       'bell-off'],
+  ['book',           'book'],
+  ['book-open',      'book-open'],
+  ['bookmark',       'bookmark'],
+  ['calendar',       'calendar'],
+  ['camera',         'camera'],
+  ['check',          'check'],
+  ['check-circle',   'check-circle'],
+  ['chevron-down',   'chevron-down'],
+  ['chevron-left',   'chevron-left'],
+  ['chevron-right',  'chevron-right'],
+  ['circle',         'circle'],
+  ['clock',          'clock'],
+  ['cloud',          'cloud'],
+  ['compass',        'compass'],
+  ['crop',           'crop'],
+  ['droplet',        'droplet'],
+  ['edit-2',         'pencil'],
+  ['eye',            'eye'],
+  ['eye-off',        'eye-off'],
+  ['feather',        'feather'],
+  ['file-text',      'file-text'],
+  ['flag',           'flag'],
+  ['globe',          'globe'],
+  ['grid',           'grid-3x3'],
+  ['heart',          'heart'],
+  ['home',           'home'],
+  ['image',          'image'],
+  ['key',            'key'],
+  ['layers',         'layers'],
+  ['layout',         'layout-grid'],
+  ['lock',           'lock'],
+  ['log-out',        'log-out'],
+  ['mail',           'mail'],
+  ['map-pin',        'map-pin'],
+  ['maximize-2',     'maximize-2'],
+  ['message-circle', 'message-circle'],
+  ['minus',          'minus'],
+  ['monitor',        'monitor'],
+  ['moon',           'moon'],
+  ['more-vertical',  'more-vertical'],
+  ['plus',           'plus'],
+  ['plus-circle',    'circle-plus'],
+  ['refresh-cw',     'refresh-cw'],
+  ['search',         'search'],
+  ['send',           'send'],
+  ['settings',       'settings'],
+  ['shield',         'shield'],
+  ['slash',          'slash'],
+  ['sliders',        'sliders-horizontal'],
+  ['smile',          'smile'],
+  ['star',           'star'],
+  ['sun',            'sun'],
+  ['sunrise',        'sunrise'],
+  ['trash-2',        'trash-2'],
+  ['trending-up',    'trending-up'],
+  ['user',           'user'],
+  ['users',          'users'],
+  ['wind',           'wind'],
+  ['x',              'x'],
+  ['zap',            'zap'],
+];
+
+// ── Icon names found in app/component source but NOT in ICON_MAP ─────────────
+const MISSING = [
+  'alert-triangle',
+  'chevron-up',
+  'edit-3',
+  'external-link',
+  'gift',
+  'help-circle',
+  'info',
+  'message-square',
+  'minimize-2',
+  'more-horizontal',
+  'share-2',
+  'shopping-bag',
+  'tag',
+  'user-plus',
+  'wifi-off',
+];
+
+function makeTile(appName, lucideName, isMissing) {
+  const tile = document.createElement('div');
+  tile.className = 'tile' + (isMissing ? ' missing' : '');
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '28');
+  svg.setAttribute('height', '28');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', isMissing ? 'rgba(220,120,120,0.50)' : 'rgba(200,184,232,0.85)');
+  svg.setAttribute('stroke-width', '1.75');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.dataset.lucide = lucideName;
+  tile.appendChild(svg);
+
+  const label = document.createElement('div');
+  label.className = 'name';
+  label.textContent = appName;
+  tile.appendChild(label);
+
+  return tile;
+}
+
+// Render registered
+const regGrid = document.getElementById('registered');
+REGISTERED.forEach(([appName, lucideName]) => {
+  regGrid.appendChild(makeTile(appName, lucideName, false));
+});
+
+// Render missing
+const misGrid = document.getElementById('missing');
+MISSING.forEach(name => {
+  misGrid.appendChild(makeTile(name, name, true));
+});
+
+// Initialise all lucide icons on the page
+lucide.createIcons();
+</script>
+
+</body>
+</html>
