@@ -485,8 +485,14 @@ export default function MessagesScreen() {
       });
       setMessages(prev => prev.map(m => m.id === optimistic.id ? (sent ?? optimistic) : m));
       if (sent?.id) lastMsgIdRef.current = sent.id;
-    } catch {
+    } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      if (err instanceof ApiError && err.status === 429) {
+        const suffix = (err.retryAfter != null && err.retryAfter >= 5)
+          ? ` Try again in ${err.retryAfter}s.`
+          : '';
+        showToastGlobal(`Slow down a little ✦${suffix}`, 'warning');
+      }
     } finally {
       setSending(false);
     }
