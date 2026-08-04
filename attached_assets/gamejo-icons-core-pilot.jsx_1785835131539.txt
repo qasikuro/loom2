@@ -1,0 +1,198 @@
+import React from "react";
+
+/* ─────────────────────────────────────────────────────────
+   GAMEJO ICON SYSTEM — PILOT BATCH (01. CORE)
+   ─────────────────────────────────────────────────────────
+   Construction rules (apply to every icon in the library):
+   - 24x24 viewBox, 1.75px stroke, round caps/joins, no fill
+     except the signature mark.
+   - Every icon carries a small solid 4-point "hallmark" sparkle
+     fixed at the same relative position (top-right, ~18,5).
+     This is GameJo's maker's mark — it's what makes the set
+     recognizably GameJo's own rather than a generic icon pack,
+     and it extends the ✦ sparkle already used as your bullet
+     glyph throughout the brand deck.
+   - Shapes are drawn from GameJo/Sky's own vocabulary where it
+     makes sense (lantern, not bell; cloaked figure, not a
+     generic person; cloud-speech, not a rounded rectangle)
+     rather than reused stock-icon silhouettes.
+   ───────────────────────────────────────────────────────── */
+
+const Hallmark = () => (
+  <path
+    d="M18 3.2 L18.7 4.7 L20.2 5.4 L18.7 6.1 L18 7.6 L17.3 6.1 L15.8 5.4 L17.3 4.7 Z"
+    fill="currentColor"
+    stroke="none"
+  />
+);
+
+const Base = ({ children, label, hallmark = true }) => (
+  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {children}
+      {hallmark && <Hallmark />}
+    </svg>
+    <span style={{ fontSize: 12, color: "#9c9ab8", fontFamily: "system-ui" }}>{label}</span>
+  </div>
+);
+
+/* Home — a cozy peaked cottage, not a generic pentagon-roof house */
+export const IconHome = () => (
+  <Base label="Home">
+    <path d="M4 12 L12 5 L20 12" />
+    <path d="M6.5 11 V19.5 H17.5 V11" />
+    <path d="M10 19.5 V15 Q10 13.7 12 13.7 Q14 13.7 14 15 V19.5" />
+  </Base>
+);
+
+/* Discover — a compass whose needle is a falling star, not a plain arrow.
+   No hallmark here: the needle already IS the sparkle idea, so stacking
+   the corner mark on top would just be two stars arguing with each other. */
+export const IconDiscover = () => (
+  <Base label="Discover" hallmark={false}>
+    <circle cx="12" cy="12" r="8" />
+    <path d="M14.6 8.6 L11.4 13 L9.4 15.4 L12.6 11 Z" fill="currentColor" stroke="none" />
+  </Base>
+);
+
+/* Search — magnifier with the handle finished as a spark tail */
+export const IconSearch = () => (
+  <Base label="Search">
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="M15.8 15.8 L20.5 20.5" />
+  </Base>
+);
+
+/* Notifications — a hanging lantern (GameJo's campfire/lantern motif), not a bell */
+export const IconNotifications = () => (
+  <Base label="Notifications">
+    <path d="M12 3 V5" />
+    <path d="M8.5 5 H15.5 L16.5 9 V15 Q16.5 17.5 12 17.5 Q7.5 17.5 7.5 15 V9 Z" />
+    <path d="M9.5 20 H14.5" />
+    <circle cx="12" cy="11" r="1.1" fill="currentColor" stroke="none" />
+  </Base>
+);
+
+/* Messages — a soft scalloped cloud-speech shape, GameJo's cloud vocabulary */
+export const IconMessages = () => (
+  <Base label="Messages">
+    <path d="M5 12 Q4 8 8 7.3 Q8.6 5 11.5 5.3 Q14 5.5 14.5 8 Q18 7.7 18 11.3 Q18 15 14 15 H10 L6.5 17.5 L7.2 14.6 Q5 14 5 12 Z" />
+  </Base>
+);
+
+/* Profile — a small cloaked/hooded figure, not a generic head-and-shoulders */
+export const IconProfile = () => (
+  <Base label="Profile">
+    <path d="M12 4.5 C9.5 4.5 8 6.3 8 8.5 C8 10.2 9 11.4 9 11.4 C6.5 12.4 5.5 15 5.5 18.5 H18.5 C18.5 15 17.5 12.4 15 11.4 C15 11.4 16 10.2 16 8.5 C16 6.3 14.5 4.5 12 4.5 Z" />
+  </Base>
+);
+
+/* Settings — closer to the familiar 8-tooth gear so it stays instantly
+   recognizable at a glance, rather than a custom shape users have to
+   decode. Still hand-built for GameJo's stroke weight and corner
+   radius, just not reinvented past the point of usability. No hallmark
+   — the teeth already fill the space around the icon. */
+export const IconSettings = () => (
+  <Base label="Settings" hallmark={false}>
+    <circle cx="12" cy="12" r="2.4" />
+    <circle cx="12" cy="12" r="6.4" />
+    {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+      <rect
+        key={deg}
+        x="10.6"
+        y="2.8"
+        width="2.8"
+        height="3"
+        rx="1"
+        transform={`rotate(${deg} 12 12)`}
+      />
+    ))}
+  </Base>
+);
+
+/* Back — comet-trail arrow. No hallmark: the arrowhead sits right where
+   the mark would go, so it stays clean and directional. */
+export const IconBack = () => (
+  <Base label="Back" hallmark={false}>
+    <path d="M19 12 H6" />
+    <path d="M10.5 7 L5.5 12 L10.5 17" />
+  </Base>
+);
+
+/* Close — an X drawn as two crossed spark strokes tapering at center.
+   No hallmark: the X already reaches close to that corner, so it stays
+   simple and unambiguous rather than decorated. */
+export const IconClose = () => (
+  <Base label="Close" hallmark={false}>
+    <path d="M6.5 6.5 L17.5 17.5" />
+    <path d="M17.5 6.5 L6.5 17.5" />
+  </Base>
+);
+
+/* More — three dots joined faintly like a tiny constellation */
+export const IconMore = () => (
+  <Base label="More">
+    <path d="M5.5 12 H8.2 M15.8 12 H18.5" strokeOpacity="0.35" />
+    <circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="12" r="1.3" fill="currentColor" stroke="none" />
+  </Base>
+);
+
+export default function GameJoCorePilot() {
+  const icons = [
+    IconHome,
+    IconDiscover,
+    IconSearch,
+    IconNotifications,
+    IconMessages,
+    IconProfile,
+    IconSettings,
+    IconBack,
+    IconClose,
+    IconMore,
+  ];
+
+  return (
+    <div
+      style={{
+        background: "#0b0b18",
+        minHeight: "100vh",
+        padding: "48px 32px",
+        color: "#f4f3fb",
+        fontFamily: "system-ui",
+      }}
+    >
+      <div style={{ marginBottom: 32 }}>
+        <h1 style={{ fontSize: 22, margin: 0, letterSpacing: 0.5 }}>GAMEJO — Core Icon Pilot</h1>
+        <p style={{ fontSize: 13, color: "#9c9ab8", marginTop: 6 }}>
+          10 of 160 · hand-drawn, custom paths · hallmark sparkle used selectively, not stamped on every icon
+        </p>
+      </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(90px, 1fr))",
+          gap: 28,
+          background: "#12122a",
+          border: "1px solid #23233f",
+          borderRadius: 16,
+          padding: 32,
+        }}
+      >
+        {icons.map((Icon, i) => (
+          <Icon key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
