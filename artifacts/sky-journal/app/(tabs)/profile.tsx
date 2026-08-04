@@ -63,7 +63,7 @@ export default function CharacterScreen() {
 
   const {
     character, setCharacter, outfits, stories, journalEntries,
-    activeOutfitId, setActiveOutfitId, deleteOutfit,
+    activeOutfitId, setActiveOutfitId, deleteOutfit, deleteStory,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
     isLoading, apiOnline, storiesLoadError, outfitsLoadError, hasCorruptedStories, reloadData,
     constellation, rewardBalance, reloadConstellation,
