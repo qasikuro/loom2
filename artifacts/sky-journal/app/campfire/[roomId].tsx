@@ -492,6 +492,35 @@ export async function executeSendText(deps: SendTextDeps): Promise<void> {
   }
 }
 
+// ── Pure state helpers (exported for unit tests) ──────────────────────────────
+
+/**
+ * Apply a `deleted_message` SSE event: filter the matching message out of state.
+ * Returns `prev` unchanged (same reference) when the id is not found, so React
+ * skips a re-render in that case.
+ */
+export function applyDeletedMessage(
+  prev: RoomData | null,
+  messageId: string,
+): RoomData | null {
+  if (!prev) return prev;
+  const idx = prev.messages.findIndex(m => m.id === messageId);
+  if (idx === -1) return prev; // not found — no change
+  return { ...prev, messages: prev.messages.filter(m => m.id !== messageId) };
+}
+
+/**
+ * Apply a full-room poll result: the server response is the source of truth, so
+ * the entire message list is replaced.  Messages absent from the response
+ * (e.g. deleted server-side) are automatically removed.
+ */
+export function applyPollResult(
+  _prev: RoomData | null,
+  fetched: RoomData,
+): RoomData {
+  return fetched;
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 const POLL_MS = 30_000;
@@ -533,7 +562,7 @@ export default function CampfireRoom() {
         const newestId = res.messages[res.messages.length - 1]?.id ?? '';
         const hasNew   = newestId !== lastIdRef.current;
         lastIdRef.current = newestId;
-        setData(res);
+        setData(prev => applyPollResult(prev, res));
         if (hasNew) {
           const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
           scrollTimerRef.current.add(t);
@@ -569,6 +598,7 @@ export default function CampfireRoom() {
           content: string | null; expression: string | null; createdAt: string;
           isFounder?: boolean; isBetaTester?: boolean;
         };
+        messageId?: string;
         soulCount?: number;
       };
 
@@ -592,6 +622,11 @@ export default function CampfireRoom() {
         // potential crash on older Hermes versions).
         const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
         scrollTimerRef.current.add(t);
+        return;
+      }
+
+      if (payload?.type === 'deleted_message' && typeof payload.messageId === 'string') {
+        setData(prev => applyDeletedMessage(prev, payload.messageId!));
         return;
       }
 

@@ -36,6 +36,13 @@ vi.mock("../services/pushService", () => ({
   sendPushToTokens:     vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../lib/sseEmitter", () => ({
+  emitSSEEvent:          vi.fn(),
+  connectedClientCount:  vi.fn().mockReturnValue(0),
+  addSSEClient:          vi.fn().mockReturnValue("1"),
+  removeSSEClient:       vi.fn(),
+}));
+
 // ── Imports ────────────────────────────────────────────────────────────────────
 
 import supertest from "supertest";
@@ -50,6 +57,7 @@ import {
   reportsTable,
   notificationsTable,
 } from "@workspace/db";
+import { emitSSEEvent } from "../lib/sseEmitter";
 
 // ── Test identities ────────────────────────────────────────────────────────────
 
@@ -129,6 +137,40 @@ describe("DELETE /admin/campfire-messages/:id", () => {
     expect(remaining).toHaveLength(0);
 
     // Cleanup the room (message is already deleted).
+    await db.delete(campfireRoomsTable).where(eq(campfireRoomsTable.id, room.id));
+  });
+
+  it("emits a deleted_message SSE event to the room channel after deletion", async () => {
+    const mockEmit = vi.mocked(emitSSEEvent);
+    mockEmit.mockClear();
+
+    const [room] = await db
+      .insert(campfireRoomsTable)
+      .values({ name: "SSE Test Room", mood: "Dreamy", createdBy: ADMIN_ID })
+      .returning({ id: campfireRoomsTable.id });
+
+    const expiresAt = new Date(Date.now() + 60_000);
+    const [msg] = await db
+      .insert(campfireMessagesTable)
+      .values({
+        roomId:     room.id,
+        userId:     AUTHOR_ID,
+        authorName: "CfDelAuthor",
+        content:    "SSE test message",
+        expiresAt,
+      })
+      .returning({ id: campfireMessagesTable.id });
+
+    const res = await adminDelete(`/admin/campfire-messages/${msg.id}`);
+    expect(res.status).toBe(200);
+
+    // SSE event must target the correct campfire channel with the deleted messageId
+    expect(mockEmit).toHaveBeenCalledWith(
+      `campfire:${room.id}`,
+      { type: "deleted_message", messageId: msg.id },
+    );
+
+    // Cleanup
     await db.delete(campfireRoomsTable).where(eq(campfireRoomsTable.id, room.id));
   });
 

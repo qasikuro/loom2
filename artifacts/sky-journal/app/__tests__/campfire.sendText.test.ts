@@ -83,7 +83,7 @@ vi.mock('react', async (importOriginal) => {
 
 // ── Import after mocks ─────────────────────────────────────────────────────
 
-import { executeSendText, type SendTextDeps } from '../campfire/[roomId]';
+import { executeSendText, applyDeletedMessage, applyPollResult, type SendTextDeps } from '../campfire/[roomId]';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -260,5 +260,105 @@ describe('executeSendText — early-exit guards', () => {
     const deps = makeDeps({ roomId: undefined });
     await executeSendText(asSendTextDeps(deps));
     expect(deps.apiFetch).not.toHaveBeenCalled();
+  });
+});
+
+// ── Helpers for room-data tests ────────────────────────────────────────────
+
+type RoomData = Parameters<typeof applyDeletedMessage>[0] & object;
+
+function makeRoom(messageIds: string[]): NonNullable<RoomData> {
+  return {
+    room:      { id: 'room-1', name: 'Test Room', mood: 'Peaceful', isPreset: true },
+    soulCount: 3,
+    messages:  messageIds.map(id => ({
+      id,
+      userId:       `user-${id}`,
+      authorName:   `Author ${id}`,
+      content:      `Message ${id}`,
+      expression:   null,
+      createdAt:    '2026-08-04T00:00:00Z',
+      isMine:       false,
+      isFounder:    false,
+      isBetaTester: false,
+    })),
+  };
+}
+
+// ── applyDeletedMessage — SSE deleted_message event ────────────────────────
+
+describe('applyDeletedMessage — SSE deleted_message event', () => {
+  it('removes the matching message from the list', () => {
+    const prev = makeRoom(['msg-1', 'msg-2', 'msg-3']);
+    const next = applyDeletedMessage(prev, 'msg-2');
+    expect(next?.messages.map(m => m.id)).toEqual(['msg-1', 'msg-3']);
+  });
+
+  it('removes a message that is the only one in the list', () => {
+    const prev = makeRoom(['msg-1']);
+    const next = applyDeletedMessage(prev, 'msg-1');
+    expect(next?.messages).toHaveLength(0);
+  });
+
+  it('removes the first message correctly', () => {
+    const prev = makeRoom(['msg-1', 'msg-2', 'msg-3']);
+    const next = applyDeletedMessage(prev, 'msg-1');
+    expect(next?.messages.map(m => m.id)).toEqual(['msg-2', 'msg-3']);
+  });
+
+  it('removes the last message correctly', () => {
+    const prev = makeRoom(['msg-1', 'msg-2', 'msg-3']);
+    const next = applyDeletedMessage(prev, 'msg-3');
+    expect(next?.messages.map(m => m.id)).toEqual(['msg-1', 'msg-2']);
+  });
+
+  it('returns the same reference when the id is not found (no re-render)', () => {
+    const prev = makeRoom(['msg-1', 'msg-2']);
+    const next = applyDeletedMessage(prev, 'msg-unknown');
+    expect(next).toBe(prev); // reference equality — React skips re-render
+  });
+
+  it('returns null unchanged when prev is null', () => {
+    expect(applyDeletedMessage(null, 'msg-1')).toBeNull();
+  });
+
+  it('preserves room metadata (name, mood, soulCount) after deletion', () => {
+    const prev = makeRoom(['msg-1', 'msg-2']);
+    const next = applyDeletedMessage(prev, 'msg-1');
+    expect(next?.room).toEqual(prev.room);
+    expect(next?.soulCount).toBe(prev.soulCount);
+  });
+});
+
+// ── applyPollResult — poll re-fetch replaces entire message list ───────────
+
+describe('applyPollResult — poll re-fetch removes deleted messages', () => {
+  it('replaces messages with the server response, dropping the deleted one', () => {
+    const prev    = makeRoom(['msg-1', 'msg-2', 'msg-3']);
+    // Server no longer returns msg-2 (deleted)
+    const fetched = makeRoom(['msg-1', 'msg-3']);
+    const next = applyPollResult(prev, fetched);
+    expect(next.messages.map(m => m.id)).toEqual(['msg-1', 'msg-3']);
+  });
+
+  it('results in an empty message list when the server returns no messages', () => {
+    const prev    = makeRoom(['msg-1', 'msg-2']);
+    const fetched = makeRoom([]);
+    const next = applyPollResult(prev, fetched);
+    expect(next.messages).toHaveLength(0);
+  });
+
+  it('returns the fetched object directly (full replacement, not a merge)', () => {
+    const prev    = makeRoom(['msg-1']);
+    const fetched = makeRoom(['msg-2', 'msg-3']);
+    const next = applyPollResult(prev, fetched);
+    // The returned value IS the fetched object — no old messages survive
+    expect(next).toBe(fetched);
+  });
+
+  it('works correctly when prev is null (initial load)', () => {
+    const fetched = makeRoom(['msg-1', 'msg-2']);
+    const next = applyPollResult(null, fetched);
+    expect(next.messages.map(m => m.id)).toEqual(['msg-1', 'msg-2']);
   });
 });

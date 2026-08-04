@@ -17,7 +17,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 import { clerkClient } from "@clerk/express";
-import { connectedClientCount } from "../lib/sseEmitter";
+import { connectedClientCount, emitSSEEvent } from "../lib/sseEmitter";
 import { sendPushNotification } from "../services/pushService";
 
 const router: IRouter = Router();
@@ -505,11 +505,12 @@ router.delete("/admin/campfire-messages/:id", requireAdmin, async (req: Request,
 
   try {
     let authorId: string | null = null;
+    let roomId:   string | null = null;
 
     await db.transaction(async (tx) => {
       // Verify the message exists before deleting
       const [msg] = await tx
-        .select({ id: campfireMessagesTable.id, userId: campfireMessagesTable.userId })
+        .select({ id: campfireMessagesTable.id, userId: campfireMessagesTable.userId, roomId: campfireMessagesTable.roomId })
         .from(campfireMessagesTable)
         .where(eq(campfireMessagesTable.id, messageId))
         .limit(1);
@@ -517,6 +518,7 @@ router.delete("/admin/campfire-messages/:id", requireAdmin, async (req: Request,
       if (!msg) throw Object.assign(new Error("Message not found"), { status: 404 });
 
       authorId = msg.userId;
+      roomId   = msg.roomId;
 
       // Delete the message
       await tx.delete(campfireMessagesTable).where(eq(campfireMessagesTable.id, messageId));
@@ -553,7 +555,13 @@ router.delete("/admin/campfire-messages/:id", requireAdmin, async (req: Request,
       }).catch(() => {});
     }
 
-    req.log.info({ messageId, authorId }, "Admin deleted campfire message");
+    // Broadcast deletion to all clients watching this room so they remove
+    // the message immediately without waiting for the 30-second poll cycle.
+    if (roomId) {
+      emitSSEEvent(`campfire:${roomId}`, { type: "deleted_message", messageId });
+    }
+
+    req.log.info({ messageId, authorId, roomId }, "Admin deleted campfire message");
     return res.json({ ok: true });
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string };
