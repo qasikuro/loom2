@@ -23,6 +23,7 @@ import {
   bookFollowsTable,
   bookCommentsTable,
   commentLikesTable,
+  characterTable,
 } from "@workspace/db";
 import { clerkAuth, requireAuth, getUserId } from "../middleware/auth";
 import { getAuth } from "@clerk/express";
@@ -86,16 +87,27 @@ router.get("/books/:id/public", clerkAuth, async (req, res) => {
       isFollowing = rows.length > 0;
     }
 
+    // Author profile (best-effort — may not exist for all users)
+    const [authorRow] = await db
+      .select({ name: characterTable.name, username: characterTable.username, avatarUri: characterTable.avatarUri })
+      .from(characterTable)
+      .where(eq(characterTable.userId, book.userId))
+      .limit(1);
+
     return res.json({
-      id:            book.id,
-      title:         book.title,
-      subtitle:      book.subtitle,
-      seriesType:    book.seriesType,
-      genre:         book.genre,
-      language:      book.language,
-      ageRating:     book.ageRating,
-      coverImageUri: book.coverImageUri ?? null,
-      authorUserId:  book.userId,
+      id:             book.id,
+      title:          book.title,
+      subtitle:       book.subtitle,
+      description:    book.subtitle,   // subtitle doubles as description until a dedicated field is added
+      seriesType:     book.seriesType,
+      genre:          book.genre,
+      language:       book.language,
+      ageRating:      book.ageRating,
+      coverImageUri:  book.coverImageUri ?? null,
+      authorUserId:   book.userId,
+      authorName:     authorRow?.name     ?? 'Unknown Author',
+      authorUsername: authorRow?.username ?? null,
+      authorAvatarUri:authorRow?.avatarUri ?? null,
       followCount,
       isFollowing,
       chapters: chapters.map(c => ({

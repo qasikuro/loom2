@@ -13,6 +13,7 @@ import {
   Animated,
   FlatList,
   Platform,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -242,6 +243,16 @@ export default function ChapterReaderScreen() {
     setShowFontMenu(false);
   }
 
+  async function handleShare() {
+    if (!chapter) return;
+    try {
+      await Share.share({
+        message: `Reading "${chapter.title}" — a chapter from Sky Journal ✦`,
+        title: chapter.title,
+      });
+    } catch { /* user dismissed */ }
+  }
+
   async function toggleBookmark() {
     if (!chapterId) return;
     const next = !bookmarked;
@@ -356,9 +367,13 @@ export default function ChapterReaderScreen() {
           >
             <Text style={styles.aaBtn}>Aa</Text>
           </TouchableOpacity>
+          {/* Share */}
+          <TouchableOpacity onPress={handleShare} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <Icon name="share-2" size={17} color="rgba(255,255,255,0.65)" />
+          </TouchableOpacity>
           {/* Bookmark */}
           <TouchableOpacity onPress={toggleBookmark} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Icon name={bookmarked ? 'bookmark' : 'bookmark'} size={18} color={bookmarked ? '#FFCC44' : 'rgba(255,255,255,0.65)'} />
+            <Icon name="bookmark" size={18} color={bookmarked ? '#FFCC44' : 'rgba(255,255,255,0.65)'} />
           </TouchableOpacity>
         </View>
       </Animated.View>

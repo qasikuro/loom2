@@ -41,12 +41,16 @@ interface PublicBook {
   id: string;
   title: string;
   subtitle: string;
+  description: string;
   seriesType: string;
   genre: string[];
   language: string;
   ageRating: string;
   coverImageUri: string | null;
   authorUserId: string;
+  authorName: string;
+  authorUsername: string | null;
+  authorAvatarUri: string | null;
   followCount: number;
   isFollowing: boolean;
   chapters: PublicChapter[];
@@ -54,8 +58,9 @@ interface PublicBook {
 
 // ── Tab IDs ───────────────────────────────────────────────────────────────────
 
-type TabId = 'info' | 'world' | 'characters' | 'gallery';
+type TabId = 'chapters' | 'info' | 'world' | 'characters' | 'gallery';
 const TABS: { id: TabId; label: string }[] = [
+  { id: 'chapters',   label: 'Chapters'   },
   { id: 'info',       label: 'Info'       },
   { id: 'world',      label: 'World'      },
   { id: 'characters', label: 'Characters' },
@@ -88,7 +93,7 @@ export default function BookPublicScreen() {
 
   const [book,    setBook]    = useState<PublicBook | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab,     setTab]     = useState<TabId>('info');
+  const [tab,     setTab]     = useState<TabId>('chapters');
   const [following, setFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
 
@@ -165,7 +170,7 @@ export default function BookPublicScreen() {
   function renderTabContent() {
     if (!book) return null;
     switch (tab) {
-      case 'info':
+      case 'chapters':
         return (
           <View>
             {book.chapters.length === 0 ? (
@@ -183,6 +188,60 @@ export default function BookPublicScreen() {
                 ))}
               </>
             )}
+          </View>
+        );
+      case 'info':
+        return (
+          <View style={s.infoTab}>
+            {/* Author row */}
+            <View style={s.authorRow}>
+              {book.authorAvatarUri ? (
+                <Image source={{ uri: book.authorAvatarUri }} style={s.authorAvatar} contentFit="cover" />
+              ) : (
+                <View style={[s.authorAvatar, s.authorAvatarFallback]}>
+                  <Text style={s.authorAvatarInitial}>
+                    {(book.authorName ?? 'A').charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={s.authorName}>{book.authorName}</Text>
+                {!!book.authorUsername && (
+                  <Text style={s.authorHandle}>@{book.authorUsername}</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Description */}
+            {!!book.description && (
+              <>
+                <Text style={s.infoLabel}>ABOUT</Text>
+                <Text style={s.descriptionTxt}>{book.description}</Text>
+              </>
+            )}
+
+            {/* Details */}
+            <Text style={s.infoLabel}>DETAILS</Text>
+            <View style={s.detailGrid}>
+              <View style={s.detailItem}>
+                <Text style={s.detailLbl}>Genre</Text>
+                <Text style={s.detailVal}>{book.genre.join(', ') || '—'}</Text>
+              </View>
+              <View style={s.detailItem}>
+                <Text style={s.detailLbl}>Language</Text>
+                <Text style={s.detailVal}>{book.language}</Text>
+              </View>
+              <View style={s.detailItem}>
+                <Text style={s.detailLbl}>Age Rating</Text>
+                <Text style={s.detailVal}>{book.ageRating}</Text>
+              </View>
+              <View style={s.detailItem}>
+                <Text style={s.detailLbl}>Format</Text>
+                <Text style={s.detailVal}>
+                  {book.seriesType === 'oneshot' ? 'One-shot' : book.seriesType === 'series' ? 'Series' : 'Standalone'}
+                </Text>
+              </View>
+            </View>
           </View>
         );
       case 'world':
@@ -421,4 +480,18 @@ const s = StyleSheet.create({
   readCta:         { position: 'absolute', alignSelf: 'center' },
   readCtaBtn:      { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 30, backgroundColor: ACCENT, shadowColor: ACCENT, shadowOpacity: 0.45, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 8 },
   readCtaTxt:      { color: '#fff', fontSize: 15, fontWeight: '700' },
+  // Info tab
+  infoTab:         { paddingHorizontal: 20, paddingTop: 16, gap: 16 },
+  authorRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },
+  authorAvatar:    { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(139,112,200,0.18)' },
+  authorAvatarFallback: { alignItems: 'center', justifyContent: 'center' },
+  authorAvatarInitial: { color: ACCENT, fontSize: 18, fontWeight: '700' },
+  authorName:      { color: 'rgba(255,255,255,0.88)', fontSize: 14, fontWeight: '600' },
+  authorHandle:    { color: 'rgba(200,185,255,0.40)', fontSize: 12, marginTop: 1 },
+  infoLabel:       { color: 'rgba(200,185,255,0.30)', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginTop: 4 },
+  descriptionTxt:  { color: 'rgba(255,255,255,0.65)', fontSize: 14, lineHeight: 21 },
+  detailGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  detailItem:      { minWidth: '44%', gap: 2 },
+  detailLbl:       { color: 'rgba(200,185,255,0.35)', fontSize: 10 },
+  detailVal:       { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '500' },
 });

@@ -154,6 +154,8 @@ export interface DiscoverPost {
   panels?:          { text: string; imageUri?: string; overlays?: PanelOverlay[] }[];
   pages?:           StoryPage[];
   pageLayoutKey?:   string;
+  /** Set when this post is a chapter from a book — routes to the book page instead of the standalone story viewer. */
+  bookId?:          string;
 }
 
 // ── Raw server response shapes ─────────────────────────────────────────────────
@@ -272,6 +274,7 @@ export interface RawDiscoverApiItem {
   panels?:          Array<{ text?: string; imageUri?: string | null; overlays?: unknown[] }>;
   pages?:           unknown[];
   pageLayoutKey?:   string;
+  bookId?:          string;
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────────────
@@ -433,5 +436,6 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     })) : [],
     pages:            Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
     pageLayoutKey:    raw.pageLayoutKey ?? undefined,
+    bookId:           raw.bookId,
   };
 }
