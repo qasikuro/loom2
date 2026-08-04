@@ -497,6 +497,49 @@ router.delete("/admin/content/outfits/:id", requireAdmin, async (req: Request, r
   }
 });
 
+// ── Campfire message moderation ───────────────────────────────────────────────
+
+router.delete("/admin/campfire-messages/:id", requireAdmin, async (req: Request, res: Response) => {
+  const adminId   = getUserId(req);
+  const messageId = String(req.params.id);
+
+  try {
+    await db.transaction(async (tx) => {
+      // Verify the message exists before deleting
+      const [msg] = await tx
+        .select({ id: campfireMessagesTable.id })
+        .from(campfireMessagesTable)
+        .where(eq(campfireMessagesTable.id, messageId))
+        .limit(1);
+
+      if (!msg) throw Object.assign(new Error("Message not found"), { status: 404 });
+
+      // Delete the message
+      await tx.delete(campfireMessagesTable).where(eq(campfireMessagesTable.id, messageId));
+
+      // Auto-resolve any pending reports that targeted this message
+      await tx
+        .update(reportsTable)
+        .set({ status: "resolved", resolvedById: adminId, resolvedAt: new Date() })
+        .where(
+          and(
+            eq(reportsTable.targetType, "campfire_message"),
+            eq(reportsTable.targetId, messageId),
+            eq(reportsTable.status, "pending"),
+          ),
+        );
+    });
+
+    req.log.info({ messageId }, "Admin deleted campfire message");
+    return res.json({ ok: true });
+  } catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
+    if (e?.status === 404) return res.status(404).json({ error: e.message ?? "Message not found" });
+    req.log.error({ err }, "Admin delete campfire message failed");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Reports ───────────────────────────────────────────────────────────────────
 
 router.get("/admin/reports", requireAdmin, async (req: Request, res: Response) => {
@@ -511,55 +554,55 @@ router.get("/admin/reports", requireAdmin, async (req: Request, res: Response) =
     if (targetType)       conditions.push(eq(reportsTable.targetType, targetType));
     const where = conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
 
-    // For campfire_message reports: join to fetch message content + room name
-    if (targetType === "campfire_message") {
-      const rows = await db
-        .select({
-          id:           reportsTable.id,
-          reporterId:   reportsTable.reporterId,
-          targetType:   reportsTable.targetType,
-          targetId:     reportsTable.targetId,
-          reason:       reportsTable.reason,
-          details:      reportsTable.details,
-          status:       reportsTable.status,
-          resolvedById: reportsTable.resolvedById,
-          resolvedAt:   reportsTable.resolvedAt,
-          createdAt:    reportsTable.createdAt,
-          // campfire enrichment
-          messageContent: campfireMessagesTable.content,
-          authorName:     campfireMessagesTable.authorName,
-          roomName:       campfireRoomsTable.name,
-          reporterName:   sql<string | null>`reporter_char.name`,
-        })
-        .from(reportsTable)
-        .leftJoin(
-          campfireMessagesTable,
-          sql`${campfireMessagesTable.id}::text = ${reportsTable.targetId}`,
-        )
-        .leftJoin(campfireRoomsTable, eq(campfireRoomsTable.id, campfireMessagesTable.roomId))
-        .leftJoin(
-          sql`${characterTable} AS reporter_char`,
-          sql`reporter_char.user_id = ${reportsTable.reporterId}`,
-        )
-        .where(where)
-        .orderBy(desc(reportsTable.createdAt))
-        .limit(limit)
-        .offset(offset);
-
-      const [{ total }] = await db.select({ total: count() }).from(reportsTable).where(where);
-      return res.json({ reports: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString(), resolvedAt: r.resolvedAt?.toISOString() ?? null })), total });
-    }
-
+    // Always join campfire tables so enrichment is available regardless of type filter.
+    // The conditional join clause ensures non-campfire rows get null for all campfire fields.
     const rows = await db
-      .select()
+      .select({
+        id:           reportsTable.id,
+        reporterId:   reportsTable.reporterId,
+        targetType:   reportsTable.targetType,
+        targetId:     reportsTable.targetId,
+        reason:       reportsTable.reason,
+        details:      reportsTable.details,
+        status:       reportsTable.status,
+        resolvedById: reportsTable.resolvedById,
+        resolvedAt:   reportsTable.resolvedAt,
+        createdAt:    reportsTable.createdAt,
+        // campfire enrichment (null for non-campfire rows)
+        messageContent:   campfireMessagesTable.content,
+        messageExpiresAt: campfireMessagesTable.expiresAt,
+        authorName:       campfireMessagesTable.authorName,
+        roomName:         campfireRoomsTable.name,
+        reporterName:     sql<string | null>`reporter_char.name`,
+      })
       .from(reportsTable)
+      .leftJoin(
+        campfireMessagesTable,
+        and(
+          sql`${campfireMessagesTable.id}::text = ${reportsTable.targetId}`,
+          eq(reportsTable.targetType, "campfire_message"),
+        ),
+      )
+      .leftJoin(campfireRoomsTable, eq(campfireRoomsTable.id, campfireMessagesTable.roomId))
+      .leftJoin(
+        sql`${characterTable} AS reporter_char`,
+        sql`reporter_char.user_id = ${reportsTable.reporterId}`,
+      )
       .where(where)
       .orderBy(desc(reportsTable.createdAt))
       .limit(limit)
       .offset(offset);
 
     const [{ total }] = await db.select({ total: count() }).from(reportsTable).where(where);
-    return res.json({ reports: rows, total });
+    return res.json({
+      reports: rows.map(r => ({
+        ...r,
+        createdAt:        r.createdAt.toISOString(),
+        resolvedAt:       r.resolvedAt?.toISOString() ?? null,
+        messageExpiresAt: r.messageExpiresAt?.toISOString() ?? null,
+      })),
+      total,
+    });
   } catch (err) {
     req.log.error({ err }, "Admin list reports failed");
     return res.status(500).json({ error: "Internal server error" });

@@ -53,6 +53,17 @@ export default function ReportsPage() {
     }
   };
 
+  const handleDeleteMessage = async (messageId: string) => {
+    try {
+      await api.deleteCampfireMessage(messageId);
+      showToast("Message deleted and report resolved.");
+      load(status, typeFilter, offset);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (e: any) {
+      showToast("Error: " + e.message);
+    }
+  };
+
   const statusColor = (s: string) =>
     s === "pending"   ? "bg-orange-100 text-orange-700" :
     s === "resolved"  ? "bg-green-100 text-green-700" :
@@ -166,6 +177,12 @@ export default function ReportsPage() {
                             className="px-2 py-1 text-xs rounded-md font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
                             Dismiss
                           </button>
+                          {r.targetType === "campfire_message" && r.messageExpiresAt && new Date(r.messageExpiresAt) > new Date() && (
+                            <button onClick={() => handleDeleteMessage(r.targetId)}
+                              className="px-2 py-1 text-xs rounded-md font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors">
+                              Delete Message
+                            </button>
+                          )}
                         </>
                       )}
                       <button onClick={() => handle(r.id, "delete")}
