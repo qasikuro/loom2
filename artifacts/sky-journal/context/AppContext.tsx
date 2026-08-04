@@ -84,7 +84,7 @@ function resolveApiBase(): string {
 const API_BASE = resolveApiBase();
 
 // Bind resolveUri to the runtime API_BASE so call-sites stay zero-arg.
-function resolveUri(uri: string | null | undefined): string | undefined {
+export function resolveUri(uri: string | null | undefined): string | undefined {
   return _resolveUri(uri, API_BASE);
 }
 

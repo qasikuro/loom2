@@ -132,6 +132,13 @@ export function ProfileSettingsDrawer({
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+            <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/blocked-users' as any), 260); }} activeOpacity={0.7}>
+              <View style={s.drawerItemIcon}><Icon name="slash" size={15} color="rgba(200,184,232,0.75)" /></View>
+              <Text style={[s.drawerItemLabel, { flex: 1 }]}>Blocked Users</Text>
+              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+            </TouchableOpacity>
+            <View style={s.drawerDivider} />
+            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/purchase-history' as any), 260); }} activeOpacity={0.7}>
               <View style={s.drawerItemIcon}><Icon name="shopping-bag" size={15} color="rgba(200,184,232,0.75)" /></View>
               <Text style={[s.drawerItemLabel, { flex: 1 }]}>Purchase History</Text>
