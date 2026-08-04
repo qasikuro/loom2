@@ -10,9 +10,11 @@ import {
   notificationsTable,
   badgesTable,
   characterBadgesTable,
+  campfireMessagesTable,
+  campfireRoomsTable,
 } from "@workspace/db";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 import { clerkClient } from "@clerk/express";
 import { connectedClientCount } from "../lib/sseEmitter";
@@ -498,12 +500,55 @@ router.delete("/admin/content/outfits/:id", requireAdmin, async (req: Request, r
 // ── Reports ───────────────────────────────────────────────────────────────────
 
 router.get("/admin/reports", requireAdmin, async (req: Request, res: Response) => {
-  const status = String(req.query.status ?? "pending");
-  const limit  = Math.min(100, Math.max(1, Number(req.query.limit ?? 50)));
-  const offset = Math.max(0, Number(req.query.offset ?? 0));
+  const status     = String(req.query.status ?? "pending");
+  const targetType = req.query.targetType ? String(req.query.targetType) : null;
+  const limit      = Math.min(100, Math.max(1, Number(req.query.limit ?? 50)));
+  const offset     = Math.max(0, Number(req.query.offset ?? 0));
 
   try {
-    const where = status === "all" ? undefined : eq(reportsTable.status, status);
+    const conditions = [];
+    if (status !== "all") conditions.push(eq(reportsTable.status, status));
+    if (targetType)       conditions.push(eq(reportsTable.targetType, targetType));
+    const where = conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
+
+    // For campfire_message reports: join to fetch message content + room name
+    if (targetType === "campfire_message") {
+      const rows = await db
+        .select({
+          id:           reportsTable.id,
+          reporterId:   reportsTable.reporterId,
+          targetType:   reportsTable.targetType,
+          targetId:     reportsTable.targetId,
+          reason:       reportsTable.reason,
+          details:      reportsTable.details,
+          status:       reportsTable.status,
+          resolvedById: reportsTable.resolvedById,
+          resolvedAt:   reportsTable.resolvedAt,
+          createdAt:    reportsTable.createdAt,
+          // campfire enrichment
+          messageContent: campfireMessagesTable.content,
+          authorName:     campfireMessagesTable.authorName,
+          roomName:       campfireRoomsTable.name,
+          reporterName:   sql<string | null>`reporter_char.name`,
+        })
+        .from(reportsTable)
+        .leftJoin(
+          campfireMessagesTable,
+          sql`${campfireMessagesTable.id}::text = ${reportsTable.targetId}`,
+        )
+        .leftJoin(campfireRoomsTable, eq(campfireRoomsTable.id, campfireMessagesTable.roomId))
+        .leftJoin(
+          sql`${characterTable} AS reporter_char`,
+          sql`reporter_char.user_id = ${reportsTable.reporterId}`,
+        )
+        .where(where)
+        .orderBy(desc(reportsTable.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const [{ total }] = await db.select({ total: count() }).from(reportsTable).where(where);
+      return res.json({ reports: rows.map(r => ({ ...r, createdAt: r.createdAt.toISOString(), resolvedAt: r.resolvedAt?.toISOString() ?? null })), total });
+    }
 
     const rows = await db
       .select()

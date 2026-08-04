@@ -52,7 +52,7 @@ export const api = {
   hideContent:   (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/hide`, { method: "PUT" }),
   unhideContent: (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}/unhide`, { method: "PUT" }),
   deleteContent: (type: "stories" | "outfits", id: string) => apiFetch(`/admin/content/${type}/${id}`, { method: "DELETE" }),
-  getReports:    (status: string, offset = 0) => apiFetch<{ reports: Report[]; total: number }>(`/admin/reports?status=${status}&offset=${offset}&limit=50`),
+  getReports:    (status: string, offset = 0, targetType = "") => apiFetch<{ reports: Report[]; total: number }>(`/admin/reports?status=${status}&offset=${offset}&limit=50${targetType ? `&targetType=${encodeURIComponent(targetType)}` : ""}`),
   resolveReport: (id: string, status: "resolved" | "dismissed") => apiFetch(`/admin/reports/${id}/resolve`, { method: "PUT", body: JSON.stringify({ status }) }),
   deleteReport:  (id: string) => apiFetch(`/admin/reports/${id}`, { method: "DELETE" }),
   getStickers:   (offset = 0) => apiFetch<{ stickers: AdminSticker[]; total: number }>(`/admin/stickers?offset=${offset}`),
@@ -228,6 +228,11 @@ export interface Report {
   resolvedById: string | null;
   resolvedAt: string | null;
   createdAt: string;
+  // campfire_message enrichment (only present when targetType === 'campfire_message')
+  messageContent?: string | null;
+  authorName?: string | null;
+  roomName?: string | null;
+  reporterName?: string | null;
 }
 
 // ── Profile Effects ───────────────────────────────────────────────────────────

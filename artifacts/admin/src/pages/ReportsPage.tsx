@@ -3,22 +3,31 @@ import { api, type Report } from "../api";
 
 const STATUS_TABS = ["pending", "resolved", "dismissed", "all"] as const;
 
+const TYPE_TABS = [
+  { value: "",                  label: "All Types"  },
+  { value: "campfire_message",  label: "Campfire"   },
+  { value: "story",             label: "Story"      },
+  { value: "outfit",            label: "Outfit"     },
+  { value: "user",              label: "User"       },
+] as const;
+
 export default function ReportsPage() {
-  const [status, setStatus]   = useState<string>("pending");
-  const [reports, setReports] = useState<Report[]>([]);
-  const [total, setTotal]     = useState(0);
-  const [offset, setOffset]   = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState("");
-  const [toast, setToast]     = useState("");
+  const [status,     setStatus]     = useState<string>("pending");
+  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [reports,    setReports]    = useState<Report[]>([]);
+  const [total,      setTotal]      = useState(0);
+  const [offset,     setOffset]     = useState(0);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState("");
+  const [toast,      setToast]      = useState("");
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(""), 3000); };
 
-  const load = useCallback(async (s: string, off: number) => {
+  const load = useCallback(async (s: string, type: string, off: number) => {
     setLoading(true);
     setError("");
     try {
-      const data = await api.getReports(s, off);
+      const data = await api.getReports(s, off, type);
       setReports(data.reports);
       setTotal(data.total);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -30,14 +39,14 @@ export default function ReportsPage() {
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(status, offset); }, [status, offset]);
+  useEffect(() => { load(status, typeFilter, offset); }, [status, typeFilter, offset]);
 
   const handle = async (id: string, action: "resolved" | "dismissed" | "delete") => {
     try {
       if (action === "delete") await api.deleteReport(id);
       else await api.resolveReport(id, action);
       showToast("Done!");
-      load(status, offset);
+      load(status, typeFilter, offset);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
       showToast("Error: " + e.message);
@@ -49,13 +58,20 @@ export default function ReportsPage() {
     s === "resolved"  ? "bg-green-100 text-green-700" :
     s === "dismissed" ? "bg-gray-100 text-gray-600" : "bg-blue-100 text-blue-700";
 
+  const typeLabel = (t: string) =>
+    t === "campfire_message" ? "Campfire" :
+    t === "story"   ? "Story" :
+    t === "outfit"  ? "Outfit" :
+    t === "user"    ? "User" : t;
+
   return (
     <div className="p-6 space-y-5">
       <div>
-        <h1 className="text-2xl font-semibold">Reports & Complaints</h1>
+        <h1 className="text-2xl font-semibold">Reports &amp; Complaints</h1>
         <p className="text-sm text-muted-foreground mt-1">Review and action user-submitted reports</p>
       </div>
 
+      {/* Status filter */}
       <div className="flex gap-2 flex-wrap">
         {STATUS_TABS.map((t) => (
           <button
@@ -66,11 +82,22 @@ export default function ReportsPage() {
         ))}
       </div>
 
+      {/* Type filter */}
+      <div className="flex gap-2 flex-wrap">
+        {TYPE_TABS.map((t) => (
+          <button
+            key={t.value}
+            onClick={() => { setTypeFilter(t.value); setOffset(0); }}
+            className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${typeFilter === t.value ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+          >{t.label}</button>
+        ))}
+      </div>
+
       {error && <div className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</div>}
 
       <div className="bg-card rounded-xl border overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted/20">
-          <span className="text-sm font-medium">{total} {status === "all" ? "total" : status} reports</span>
+          <span className="text-sm font-medium">{total} {status === "all" ? "total" : status} reports{typeFilter ? ` · ${typeLabel(typeFilter)}` : ""}</span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -93,17 +120,35 @@ export default function ReportsPage() {
                   </tr>
                 ))
               ) : reports.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No {status} reports</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No {status} reports{typeFilter ? ` for ${typeLabel(typeFilter)}` : ""}</td></tr>
               ) : reports.map((r) => (
                 <tr key={r.id} className="border-b hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
                     <div className="font-medium">{r.reason}</div>
                     {r.details && <div className="text-xs text-muted-foreground mt-0.5 max-w-xs truncate">{r.details}</div>}
-                    <div className="text-xs text-muted-foreground/60 font-mono mt-0.5">by {r.reporterId.slice(0, 16)}…</div>
+                    <div className="text-xs text-muted-foreground/60 font-mono mt-0.5">
+                      by {r.reporterName ?? r.reporterId.slice(0, 16) + "…"}
+                    </div>
                   </td>
-                  <td className="px-4 py-3">
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-muted font-medium capitalize">{r.targetType}</span>
-                    <div className="text-xs text-muted-foreground font-mono mt-1">{r.targetId.slice(0, 16)}…</div>
+                  <td className="px-4 py-3 max-w-xs">
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-muted font-medium">{typeLabel(r.targetType)}</span>
+                    {r.targetType === "campfire_message" ? (
+                      <div className="mt-1 space-y-0.5">
+                        {r.roomName && (
+                          <div className="text-xs font-medium text-foreground">🔥 {r.roomName}</div>
+                        )}
+                        {r.authorName && (
+                          <div className="text-xs text-muted-foreground">by {r.authorName}</div>
+                        )}
+                        {r.messageContent ? (
+                          <div className="text-xs text-muted-foreground italic truncate max-w-[220px]">"{r.messageContent}"</div>
+                        ) : (
+                          <div className="text-xs text-muted-foreground/50 italic">(message expired)</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground font-mono mt-1">{r.targetId.slice(0, 16)}…</div>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColor(r.status)}`}>{r.status}</span>
