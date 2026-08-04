@@ -504,15 +504,19 @@ router.delete("/admin/campfire-messages/:id", requireAdmin, async (req: Request,
   const messageId = String(req.params.id);
 
   try {
+    let authorId: string | null = null;
+
     await db.transaction(async (tx) => {
       // Verify the message exists before deleting
       const [msg] = await tx
-        .select({ id: campfireMessagesTable.id })
+        .select({ id: campfireMessagesTable.id, userId: campfireMessagesTable.userId })
         .from(campfireMessagesTable)
         .where(eq(campfireMessagesTable.id, messageId))
         .limit(1);
 
       if (!msg) throw Object.assign(new Error("Message not found"), { status: 404 });
+
+      authorId = msg.userId;
 
       // Delete the message
       await tx.delete(campfireMessagesTable).where(eq(campfireMessagesTable.id, messageId));
@@ -530,7 +534,26 @@ router.delete("/admin/campfire-messages/:id", requireAdmin, async (req: Request,
         );
     });
 
-    req.log.info({ messageId }, "Admin deleted campfire message");
+    // Notify the message author
+    if (authorId) {
+      await db.insert(notificationsTable).values({
+        userId:    authorId,
+        actorId:   "system",
+        actorName: "Sky Journal",
+        type:      "content_removed",
+        refId:     messageId,
+        title:     "Your campfire message was removed by a moderator",
+        isRead:    false,
+      });
+
+      // Push notification (fire-and-forget)
+      sendPushNotification(authorId, {
+        title: "Message Removed",
+        body:  "Your campfire message was removed by a moderator.",
+      }).catch(() => {});
+    }
+
+    req.log.info({ messageId, authorId }, "Admin deleted campfire message");
     return res.json({ ok: true });
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string };
