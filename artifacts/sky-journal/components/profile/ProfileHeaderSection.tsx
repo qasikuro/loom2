@@ -43,7 +43,7 @@ interface Props {
 
 export function ProfileHeaderSection({
   character, setCharacter,
-  constellation, availableTitles: _availableTitles, setShowTitlePicker: _setShowTitlePicker,
+  constellation, availableTitles: _availableTitles, setShowTitlePicker,
   rewardBalance,
   activeFrame, activeAccent,
   activeOutfit,
@@ -129,6 +129,9 @@ export function ProfileHeaderSection({
     } finally { setAvatarUploading(false); }
   }
 
+  const hasTitle = !!(character.activeTitle || constellation?.activeTitle);
+  const currentTitle = character.activeTitle ?? constellation?.activeTitle ?? null;
+
   return (
     <>
       {/* Top controls */}
@@ -156,6 +159,7 @@ export function ProfileHeaderSection({
 
       {/* Profile row: avatar left + info right */}
       <View style={s.profileRow}>
+        {/* Avatar */}
         <View style={s.avatarWrap}>
           <View style={[s.avatarCircle, {
             borderColor: (activeFrame && FRAME_CONFIGS[activeFrame])
@@ -178,7 +182,9 @@ export function ProfileHeaderSection({
           </TouchableOpacity>
         </View>
 
+        {/* Name / username / title / badges */}
         <View style={s.profileInfo}>
+          {/* Display name */}
           {editingName ? (
             <View style={[s.nameEditWrap, { borderBottomColor: colors.primary }]}>
               <TextInput
@@ -191,10 +197,11 @@ export function ProfileHeaderSection({
           ) : (
             <TouchableOpacity style={s.nameRow} onPress={() => setEditingName(true)}>
               <Text style={s.profileName}>{character.name}</Text>
-              <Icon name="edit-2" size={10} color="rgba(200,184,232,0.4)" style={{ marginLeft: 4 }} />
+              <Icon name="edit-2" size={11} color="rgba(200,184,232,0.35)" style={{ marginLeft: 5 }} />
             </TouchableOpacity>
           )}
 
+          {/* Username */}
           {character.username ? (
             <View style={s.usernameRow}>
               <Text style={s.profileHandle}>@{character.username}</Text>
@@ -225,84 +232,107 @@ export function ProfileHeaderSection({
           )}
           {usernameError && <Text style={[s.usernameError, { color: colors.destructive }]}>{usernameError}</Text>}
 
-          {(character.activeTitle || constellation?.activeTitle) && (
-            <View style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ fontSize: 11, color: '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 }}>
-                ✦ {character.activeTitle ?? constellation!.activeTitle}
-              </Text>
-            </View>
-          )}
+          {/* Role / Title row with + add button */}
+          <View style={s.titleRow}>
+            {hasTitle ? (
+              <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={s.titleStar}>✦</Text>
+                <Text style={s.titleText}>{currentTitle}</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titleAddBtn}>
+                <Icon name="plus" size={10} color="rgba(200,184,232,0.50)" />
+                <Text style={s.titleAddText}>Add title</Text>
+              </TouchableOpacity>
+            )}
+            {hasTitle && (
+              <TouchableOpacity
+                onPress={() => setShowTitlePicker(true)}
+                activeOpacity={0.75}
+                style={s.titlePlusBtn}
+              >
+                <Icon name="plus" size={10} color="rgba(200,184,232,0.50)" />
+              </TouchableOpacity>
+            )}
+          </View>
 
-          {/* Dynamic badges */}
+          {/* Achievement badges */}
           {(character.badges ?? []).length > 0 && (
-            <View style={{ marginTop: 6 }}>
+            <View style={{ marginTop: 5 }}>
               <BadgeTray badges={character.badges ?? []} />
             </View>
           )}
-
-          {/* Today's Intention */}
-          {editingIntention ? (
-            <View style={[s.intentionEditWrap, { borderColor: colors.primary, backgroundColor: 'rgba(255,255,255,0.07)' }]}>
-              <TextInput
-                style={[s.intentionInput, { color: '#FFFFFF' }]}
-                value={intentionVal}
-                onChangeText={v => setIntentionVal(v.slice(0, 80))}
-                placeholder="Set an intention for today…"
-                placeholderTextColor="rgba(200,184,232,0.38)"
-                autoFocus
-                returnKeyType="done"
-                maxLength={80}
-                onSubmitEditing={() => {
-                  setCharacter({ ...character, intention: intentionVal.trim() || null, intentionDate: intentionVal.trim() ? todayISO() : null });
-                  setEditingIntention(false);
-                }}
-                onBlur={() => {
-                  setCharacter({ ...character, intention: intentionVal.trim() || null, intentionDate: intentionVal.trim() ? todayISO() : null });
-                  setEditingIntention(false);
-                }}
-              />
-              <Text style={s.intentionCharCount}>{80 - intentionVal.length}</Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={{ marginTop: 5, flexDirection: 'row', alignItems: 'center', gap: 4 }}
-              onPress={() => { setIntentionVal(character.intentionDate === todayISO() ? (character.intention ?? '') : ''); setEditingIntention(true); }}
-              activeOpacity={0.75}
-            >
-              {character.intentionDate === todayISO() && character.intention ? (
-                <Text style={s.intentionText} numberOfLines={1}>
-                  ◌ {character.intention}
-                </Text>
-              ) : (
-                <Text style={s.intentionPlaceholder}>◌ Set an intention for today…</Text>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {editingBio ? (
-            <TextInput
-              style={[s.bioInput, { color: '#FFFFFF', borderColor: colors.primary, backgroundColor: 'rgba(255,255,255,0.08)' }]}
-              value={bioVal} onChangeText={setBioVal}
-              multiline autoFocus returnKeyType="done" onBlur={saveBio}
-            />
-          ) : (
-            <TouchableOpacity
-              onPress={() => setEditingBio(true)}
-              activeOpacity={0.75}
-              style={[
-                s.bioRow,
-                activeAccent && ACCENT_CONFIGS[activeAccent]
-                  ? { borderColor: `${ACCENT_CONFIGS[activeAccent].color}45`, backgroundColor: `${ACCENT_CONFIGS[activeAccent].color}14`, shadowColor: ACCENT_CONFIGS[activeAccent].shadow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.35, shadowRadius: 8, elevation: 4 }
-                  : { borderColor: 'rgba(200,184,232,0.13)', backgroundColor: 'rgba(255,255,255,0.04)' },
-              ]}
-            >
-              <Text style={[s.profileBio, { flex: 1, color: character.bio ? 'rgba(200,184,232,0.78)' : 'rgba(200,184,232,0.30)' }]}>
-                {character.bio || t('profile.tapBio')}
-              </Text>
-              <Icon name="edit-2" size={13} color="rgba(200,184,232,0.28)" />
-            </TouchableOpacity>
-          )}
         </View>
+      </View>
+
+      {/* Intention + Bio — shared full-width card */}
+      <View style={[
+        s.intentionBioCard,
+        activeAccent && ACCENT_CONFIGS[activeAccent]
+          ? { borderColor: `${ACCENT_CONFIGS[activeAccent].color}38`, backgroundColor: `${ACCENT_CONFIGS[activeAccent].color}0E` }
+          : { borderColor: 'rgba(200,184,232,0.12)', backgroundColor: 'rgba(255,255,255,0.04)' },
+      ]}>
+        {/* Intention row */}
+        {editingIntention ? (
+          <View style={s.intentionEditRow}>
+            <Text style={s.intentionIcon}>✦</Text>
+            <TextInput
+              style={[s.intentionInput, { color: '#FFFFFF', flex: 1 }]}
+              value={intentionVal}
+              onChangeText={v => setIntentionVal(v.slice(0, 80))}
+              placeholder="Set an intention for today…"
+              placeholderTextColor="rgba(200,184,232,0.35)"
+              autoFocus returnKeyType="done" maxLength={80}
+              onSubmitEditing={() => {
+                setCharacter({ ...character, intention: intentionVal.trim() || null, intentionDate: intentionVal.trim() ? todayISO() : null });
+                setEditingIntention(false);
+              }}
+              onBlur={() => {
+                setCharacter({ ...character, intention: intentionVal.trim() || null, intentionDate: intentionVal.trim() ? todayISO() : null });
+                setEditingIntention(false);
+              }}
+            />
+            <Text style={s.intentionCharCount}>{80 - intentionVal.length}</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={s.intentionRow}
+            onPress={() => { setIntentionVal(character.intentionDate === todayISO() ? (character.intention ?? '') : ''); setEditingIntention(true); }}
+            activeOpacity={0.75}
+          >
+            <Text style={s.intentionIcon}>✦</Text>
+            {character.intentionDate === todayISO() && character.intention ? (
+              <Text style={s.intentionText} numberOfLines={2}>{character.intention}</Text>
+            ) : (
+              <Text style={s.intentionPlaceholder}>Set an intention for today…</Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* Divider */}
+        <View style={s.cardDivider} />
+
+        {/* Bio row */}
+        {editingBio ? (
+          <TextInput
+            style={[s.bioInput, { color: '#FFFFFF', borderColor: colors.primary }]}
+            value={bioVal} onChangeText={setBioVal}
+            multiline autoFocus returnKeyType="done" onBlur={saveBio}
+            placeholder="Write something about yourself…"
+            placeholderTextColor="rgba(200,184,232,0.35)"
+          />
+        ) : (
+          <TouchableOpacity
+            onPress={() => setEditingBio(true)}
+            activeOpacity={0.75}
+            style={s.bioRow}
+          >
+            <Text style={[s.profileBio, { flex: 1, color: character.bio ? 'rgba(200,184,232,0.78)' : 'rgba(200,184,232,0.30)' }]}>
+              {character.bio || t('profile.tapBio')}
+            </Text>
+            <Icon name="edit-2" size={13} color="rgba(200,184,232,0.28)" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Mood orb picker */}
@@ -311,29 +341,36 @@ export function ProfileHeaderSection({
         onSelect={m => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCharacter({ ...character, mood: m }); }}
       />
 
-      {/* Trait chips */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.traitScroll} contentContainerStyle={s.traitRow}>
-        {character.traits.map(tr => (
-          <View key={tr} style={s.traitChip}>
-            <Text style={s.traitText}>{tr}</Text>
-            <Text style={{ fontSize: 8, color: 'rgba(200,184,232,0.45)', marginLeft: 1 }}>✦</Text>
-            <TouchableOpacity
-              onPress={() => removeTrait(tr)}
-              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-              style={s.traitRemove}
-            >
-              <Icon name="x" size={9} color="rgba(200,184,232,0.7)" />
-            </TouchableOpacity>
-          </View>
-        ))}
+      {/* Existing trait chips (only if user has traits) */}
+      {character.traits.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.traitScroll} contentContainerStyle={s.traitRow}>
+          {character.traits.map(tr => (
+            <View key={tr} style={s.traitChip}>
+              <Text style={s.traitText}>{tr}</Text>
+              <Text style={{ fontSize: 8, color: 'rgba(200,184,232,0.45)', marginLeft: 1 }}>✦</Text>
+              <TouchableOpacity
+                onPress={() => removeTrait(tr)}
+                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+                style={s.traitRemove}
+              >
+                <Icon name="x" size={9} color="rgba(200,184,232,0.7)" />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+
+      {/* + Add trait pill — standalone below VIBE / traits */}
+      <View style={s.addTraitWrap}>
         <TouchableOpacity
-          style={s.traitAddBtn}
+          style={s.addTraitPill}
           onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}
+          activeOpacity={0.75}
         >
-          <Icon name="plus" size={12} color="rgba(200,184,232,0.7)" />
-          <Text style={s.traitAddText}>{t('profile.addTrait')}</Text>
+          <Icon name="plus" size={13} color="rgba(200,184,232,0.65)" />
+          <Text style={s.addTraitText}>{t('profile.addTrait')}</Text>
         </TouchableOpacity>
-      </ScrollView>
+      </View>
 
       {addingTrait && (
         <View style={[s.traitAddWrap, { borderColor: colors.primary, backgroundColor: 'rgba(120,86,255,0.1)', marginTop: 8 }]}>
@@ -373,22 +410,20 @@ export function ProfileHeaderSection({
       )}
 
       {/* Level / XP bar */}
-      <View style={{ marginHorizontal: 16, marginTop: 14, marginBottom: 2 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 }}>
-          <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.3 }}>
-            🌙 {profileTitle}
-          </Text>
-          <View style={{ backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 }}>
-            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.5 }}>Lv. {profileLevel}</Text>
+      <View style={s.xpSection}>
+        <View style={s.xpTopRow}>
+          <Text style={s.xpTitle}>🌙 {profileTitle}</Text>
+          <View style={s.xpLevelBadge}>
+            <Text style={s.xpLevelText}>Lv. {profileLevel}</Text>
           </View>
           <View style={{ flex: 1 }} />
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,75,0.55)', letterSpacing: 0.2 }}>
+          <Text style={s.xpNumbers}>
             {((rewardBalance?.stars ?? 0) % 300).toLocaleString()} / 300 XP
           </Text>
         </View>
-        <View style={{ height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+        <View style={s.xpBarTrack}>
           {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <View style={{ height: 5, borderRadius: 3, backgroundColor: '#C8A84B', width: `${Math.round(profileXpPct * 100)}%` as any }} />
+          <View style={[s.xpBarFill, { width: `${Math.round(profileXpPct * 100)}%` as any }]} />
         </View>
       </View>
     </>
@@ -400,41 +435,68 @@ const s = StyleSheet.create({
   headerIconBtn:    { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   visPill:          { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   visPillText:      { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
-  profileRow:       { flexDirection: 'row', gap: 16, alignItems: 'flex-start', marginBottom: 4 },
+
+  profileRow:       { flexDirection: 'row', gap: 16, alignItems: 'flex-start', marginBottom: 14 },
   avatarWrap:       { width: 90, height: 90, position: 'relative', flexShrink: 0 },
   avatarCircle:     { width: 90, height: 90, borderRadius: 45, borderWidth: 2.5, overflow: 'hidden' },
   avatarEditBtn:    { position: 'absolute', bottom: 1, right: 1, width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  profileInfo:      { flex: 1, gap: 3, paddingTop: 2 },
+
+  profileInfo:      { flex: 1, gap: 2, paddingTop: 2 },
   nameRow:          { flexDirection: 'row', alignItems: 'center' },
-  profileName:      { fontSize: 22, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.4 },
+  profileName:      { fontSize: 26, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.5 },
   nameEditWrap:     { borderBottomWidth: 2, paddingBottom: 3 },
-  nameEditInput:    { fontSize: 22, fontFamily: 'Satoshi-Bold', letterSpacing: -0.4 },
+  nameEditInput:    { fontSize: 26, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
   usernameRow:      { flexDirection: 'row', alignItems: 'center' },
   profileHandle:    { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.65)' },
   usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
   usernameAt:       { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   usernameEditInput:{ flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular' },
   usernameError:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
-  profileBio:       { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 17 },
-  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, marginTop: 5 },
-  bioInput:         { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18, borderWidth: 1, borderRadius: 10, padding: 10, marginTop: 5 },
-  traitScroll:      { marginTop: 12 },
+
+  titleRow:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  titleStar:        { fontSize: 11, color: '#C8A84B' },
+  titleText:        { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.2 },
+  titlePlusBtn:     { width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(200,184,232,0.30)', backgroundColor: 'rgba(200,184,232,0.06)' },
+  titleAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(200,184,232,0.25)', backgroundColor: 'rgba(200,184,232,0.05)' },
+  titleAddText:     { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.50)', letterSpacing: 0.1 },
+
+  // Shared intention + bio card
+  intentionBioCard: { marginHorizontal: 16, borderRadius: 16, borderWidth: 1, overflow: 'hidden', marginBottom: 2 },
+  intentionRow:     { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12 },
+  intentionEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10 },
+  intentionIcon:    { fontSize: 12, color: 'rgba(200,184,232,0.38)' },
+  intentionText:    { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.78)' },
+  intentionPlaceholder:{ flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.30)' },
+  intentionInput:   { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
+  intentionCharCount:{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.35)' },
+  cardDivider:      { height: 1, backgroundColor: 'rgba(200,184,232,0.08)', marginHorizontal: 14 },
+  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 12 },
+  profileBio:       { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18 },
+  bioInput:         { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 18, borderWidth: 1, borderRadius: 0, padding: 14 },
+
+  traitScroll:      { marginTop: 10 },
   traitRow:         { flexDirection: 'row', gap: 6, paddingHorizontal: 2 },
   traitChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 3, paddingVertical: 4, borderRadius: 20, borderWidth: 1, backgroundColor: 'rgba(120,86,255,0.18)', borderColor: 'rgba(120,86,255,0.38)' },
   traitText:        { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.92)' },
   traitRemove:      { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(120,86,255,0.22)' },
-  traitAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(120,86,255,0.32)', backgroundColor: 'rgba(120,86,255,0.1)' },
-  traitAddText:     { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.7)' },
-  traitAddWrap:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
+
+  addTraitWrap:     { marginHorizontal: 16, marginTop: 10, alignItems: 'flex-start' },
+  addTraitPill:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(120,86,255,0.40)', backgroundColor: 'rgba(120,86,255,0.08)' },
+  addTraitText:     { fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.70)' },
+  traitAddWrap:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, marginHorizontal: 16 },
   traitInput:       { fontSize: 12, fontFamily: 'Satoshi-Regular', minWidth: 80, maxWidth: 120 },
   suggRow:          { marginTop: 14, gap: 8 },
   suggLabel:        { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(200,184,232,0.55)' },
   suggChips:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   suggChip:         { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.18)' },
   suggText:         { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.5)' },
-  intentionEditWrap:{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, marginTop: 5 },
-  intentionInput:   { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
-  intentionCharCount:{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.35)', marginLeft: 2 },
-  intentionText:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.65)', flex: 1 },
-  intentionPlaceholder:{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.28)' },
+
+  xpSection:        { marginHorizontal: 16, marginTop: 14, marginBottom: 2 },
+  xpTopRow:         { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 7 },
+  xpTitle:          { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.2 },
+  xpLevelBadge:     { backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  xpLevelText:      { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.5 },
+  xpNumbers:        { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,168,75,0.55)', letterSpacing: 0.2 },
+  xpBarTrack:       { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' },
+  xpBarFill:        { height: 5, borderRadius: 3, backgroundColor: '#C8A84B' },
 });
