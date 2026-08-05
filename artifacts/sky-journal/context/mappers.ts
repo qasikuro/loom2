@@ -114,6 +114,10 @@ export interface Story {
   witnessMilestones?: number[];
   pageLayoutKey?:     string;
   pages?:             StoryPage[];
+  /** 'story' (default) or 'video' */
+  contentType?:       'story' | 'video';
+  videoUri?:          string | null;
+  thumbnailUri?:      string | null;
 }
 
 export interface Outfit {
@@ -243,6 +247,9 @@ export interface RawStoryResponse {
   pageLayoutKey?:     string;
   page_layout_key?:   string;
   pages?:             unknown[];
+  contentType?:       'story' | 'video';
+  videoUri?:          string | null;
+  thumbnailUri?:      string | null;
 }
 
 export interface RawOutfitResponse {
@@ -400,6 +407,9 @@ export function toAppStory(raw: RawStoryResponse, apiBase?: string): Story {
     witnessMilestones: Array.isArray(raw.witnessMilestones) ? raw.witnessMilestones : [],
     pageLayoutKey:     raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
     pages:             Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
+    contentType:       raw.contentType === 'video' ? 'video' : 'story',
+    videoUri:          resolveUri(raw.videoUri ?? undefined, apiBase) ?? null,
+    thumbnailUri:      resolveUri(raw.thumbnailUri ?? undefined, apiBase) ?? null,
   };
 }
 

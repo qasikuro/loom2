@@ -472,12 +472,13 @@ type RawDiscoverItem = Omit<DiscoverPost, 'saved' | 'isFollowing'>;
 // Any item missing required fields is dropped and the corruption flag is set.
 
 function isValidStoryRecord(r: RawStoryResponse): boolean {
-  return (
-    typeof r.id === 'string' && r.id.length > 0 &&
-    typeof r.chapterTitle === 'string' && r.chapterTitle.trim().length > 0 &&
-    Array.isArray(r.panels) && r.panels.length > 0 &&
-    typeof r.date === 'string'
-  );
+  if (typeof r.id !== 'string' || r.id.length === 0) return false;
+  if (typeof r.date !== 'string') return false;
+  const title = r.chapterTitle ?? r.chapter_title ?? '';
+  if (typeof title !== 'string' || title.trim().length === 0) return false;
+  // Video posts have no panels — allow them through
+  if (r.contentType === 'video') return true;
+  return Array.isArray(r.panels) && r.panels.length > 0;
 }
 
 function isValidJournalRecord(r: RawJournalEntryResponse): boolean {

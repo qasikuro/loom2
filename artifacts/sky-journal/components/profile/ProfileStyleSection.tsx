@@ -31,6 +31,10 @@ const BG_MAP: Record<string, any> = {
 };
 
 function getStoryCover(story: Story) {
+  // Video posts use their extracted thumbnail
+  if (story.contentType === 'video' && story.thumbnailUri) {
+    return { uri: story.thumbnailUri };
+  }
   const p = story.panels[0];
   if (!p) return null;
   if (p.imageUri) return { uri: p.imageUri };
@@ -145,22 +149,26 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
         <View style={[ss.divider, { backgroundColor: 'rgba(200,184,232,0.08)' }]} />
 
-        {/* Actions */}
-        <TouchableOpacity style={ss.action} onPress={() => { dismiss(); setTimeout(() => router.push(`/story/${story.id}` as never), 280); }} activeOpacity={0.75}>
-          <View style={[ss.actionIcon, { backgroundColor: 'rgba(155,122,232,0.12)' }]}>
-            <Icon name="eye" size={16} color="#9B7AB5" />
-          </View>
-          <Text style={[ss.actionText, { color: colors.foreground }]}>View story</Text>
-          <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.35)" />
-        </TouchableOpacity>
+        {/* Actions — story-only (hidden for video posts) */}
+        {story.contentType !== 'video' && (
+          <TouchableOpacity style={ss.action} onPress={() => { dismiss(); setTimeout(() => router.push(`/story/${story.id}` as never), 280); }} activeOpacity={0.75}>
+            <View style={[ss.actionIcon, { backgroundColor: 'rgba(155,122,232,0.12)' }]}>
+              <Icon name="eye" size={16} color="#9B7AB5" />
+            </View>
+            <Text style={[ss.actionText, { color: colors.foreground }]}>View story</Text>
+            <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.35)" />
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity style={ss.action} onPress={() => { dismiss(); setTimeout(() => router.push((`/chapter-editor?editId=${story.id}`) as never), 280); }} activeOpacity={0.75}>
-          <View style={[ss.actionIcon, { backgroundColor: 'rgba(100,180,120,0.12)' }]}>
-            <Icon name="edit-2" size={16} color="#64B478" />
-          </View>
-          <Text style={[ss.actionText, { color: colors.foreground }]}>Edit story</Text>
-          <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.35)" />
-        </TouchableOpacity>
+        {story.contentType !== 'video' && (
+          <TouchableOpacity style={ss.action} onPress={() => { dismiss(); setTimeout(() => router.push((`/chapter-editor?editId=${story.id}`) as never), 280); }} activeOpacity={0.75}>
+            <View style={[ss.actionIcon, { backgroundColor: 'rgba(100,180,120,0.12)' }]}>
+              <Icon name="edit-2" size={16} color="#64B478" />
+            </View>
+            <Text style={[ss.actionText, { color: colors.foreground }]}>Edit story</Text>
+            <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.35)" />
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={ss.action}
@@ -202,13 +210,14 @@ const CARD_W = 118;
 const CARD_H = 152;
 
 function StoryCard({ story, onMenu }: { story: Story; onMenu: (s: Story) => void }) {
-  const cover     = getStoryCover(story);
-  const moodColor = MOOD_COLORS[story.mood] ?? '#9B7AB5';
+  const cover      = getStoryCover(story);
+  const moodColor  = MOOD_COLORS[story.mood] ?? '#9B7AB5';
+  const isVideo    = story.contentType === 'video';
 
   return (
     <TouchableOpacity
       style={sc.card}
-      onPress={() => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as never); }}
+      onPress={isVideo ? undefined : () => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as never); }}
       activeOpacity={0.88}
     >
       {cover ? (
@@ -223,8 +232,12 @@ function StoryCard({ story, onMenu }: { story: Story; onMenu: (s: Story) => void
       {/* Mood dot */}
       <View style={[sc.moodDot, { backgroundColor: moodColor }]} />
 
-      {/* Public / private badge */}
-      {story.isPublic ? (
+      {/* Video badge — shown in place of globe icon for video posts */}
+      {isVideo ? (
+        <View style={sc.videoBadge}>
+          <Icon name="video" size={8} color="rgba(240,200,255,0.95)" />
+        </View>
+      ) : story.isPublic ? (
         <View style={sc.globeBadge}>
           <Icon name="globe" size={8} color="rgba(200,232,200,0.9)" />
         </View>
@@ -495,6 +508,7 @@ const sc = StyleSheet.create({
   grad:      { position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%' },
   moodDot:   { position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: 3.5 },
   globeBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.10)', alignItems: 'center', justifyContent: 'center' },
+  videoBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center' },
   menuBtn:   { position: 'absolute', top: 5, right: 3, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   bottom:    { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10, gap: 5 },
   title:     { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 14 },
