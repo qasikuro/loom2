@@ -7,7 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'expo-image';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
@@ -63,6 +63,13 @@ export function ProfileHeaderSection({
   const [usernameChecking,  setUsernameChecking]  = useState(false);
   const [editingBio,        setEditingBio]        = useState(false);
   const [bioVal,            setBioVal]            = useState(character.bio ?? '');
+
+  // Keep input values in sync with the character prop so that when loadData
+  // refreshes the character from the DB (e.g. after sign-in or a background
+  // refresh), the displayed name/bio always reflects what was actually saved.
+  // Guards prevent stomping on a value the user is actively typing.
+  useEffect(() => { if (!editingName) setNameVal(character.name); },      [character.name, editingName]);
+  useEffect(() => { if (!editingBio)  setBioVal(character.bio ?? ''); },  [character.bio,  editingBio]);
   const [avatarUploading,   setAvatarUploading]   = useState(false);
   const [avatarError,       setAvatarError]       = useState<string | null>(null);
   const [newTrait,          setNewTrait]          = useState('');
