@@ -280,3 +280,64 @@ export async function persistImageUriSafe(uri: string): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Uploads a local video URI to the server and returns the permanent https URL.
+ * Like persistImageUri but skips image resize and sends video/mp4 mime type.
+ * Only supported on native (Android/iOS) — not web.
+ * Throws `ImageUploadError` on failure.
+ */
+export async function persistVideoUri(uri: string): Promise<string> {
+  if (!uri) throw new ImageUploadError('No video was selected.');
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
+  if (Platform.OS === 'web') {
+    throw new ImageUploadError('Video upload is not supported on web.');
+  }
+
+  const apiBase = resolveApiBase();
+  const token   = await getAuthToken();
+  if (!token) throw new ImageUploadError('You need to be signed in to upload videos.');
+
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new ImageUploadError('Upload timed out — check your connection and try again.')),
+      60_000, // videos may be larger; give 60 s
+    ),
+  );
+
+  let result: FileSystem.FileSystemUploadResult;
+  try {
+    result = await Promise.race([
+      FileSystem.uploadAsync(`${apiBase}/upload`, uri, {
+        httpMethod:  'POST',
+        uploadType:  FileSystem.FileSystemUploadType.MULTIPART,
+        fieldName:   'file',
+        mimeType:    'video/mp4',
+        headers:     { Authorization: `Bearer ${token}` },
+      }),
+      timeoutPromise,
+    ]);
+  } catch (err) {
+    if (err instanceof ImageUploadError) throw err;
+    throw new ImageUploadError('Could not reach the server — check your connection and try again.', err);
+  }
+
+  if (result.status >= 200 && result.status < 300) {
+    try {
+      const json   = JSON.parse(result.body) as { path: string };
+      const domain = apiBase.replace(/\/api$/, '');
+      return `${domain}${json.path}`;
+    } catch {
+      throw new ImageUploadError('The server returned an unexpected response. Please try again.');
+    }
+  }
+  if (result.status === 401 || result.status === 403) {
+    throw new ImageUploadError('Session expired — please sign out and back in, then try again.');
+  }
+  if (result.status === 413) {
+    throw new ImageUploadError('That video is too large. Try a shorter clip.');
+  }
+  let errMsg = '';
+  try { errMsg = (JSON.parse(result.body) as { error?: string }).error ?? ''; } catch { /* ignore */ }
+  throw new ImageUploadError(errMsg || `Upload failed (${result.status}) — please try again.`);
+}

@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
+import { Video, ResizeMode } from 'expo-av';
 import { Animated, Easing, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -39,10 +40,17 @@ interface DiscoverCardProps {
   onReport?:         () => void;
   onAuthorPress?:    () => void;
   delay?:            number;
+  /** True when this video card should be playing (Stories FlatList tracks visibility). */
+  isVideoPlaying?:   boolean;
+  /** Whether the video is muted; caller controls the toggle so all cards share mute state. */
+  videoMuted?:       boolean;
+  /** Called when the user taps the video area to toggle mute. */
+  onMuteToggle?:     () => void;
 }
 
 export function DiscoverCard({
   post, onPress, onSave, onDelete, onReport, onAuthorPress, delay = 0,
+  isVideoPlaying = false, videoMuted = true, onMuteToggle,
 }: DiscoverCardProps) {
   useColors();
   const initial  = post.authorName.charAt(0).toUpperCase();
@@ -98,7 +106,46 @@ export function DiscoverCard({
       >
         {/* ── Full-bleed hero image (16:9) ── */}
         <View style={styles.imageWrap}>
-          {heroPanelImage ? (
+          {post.contentType === 'video' && post.videoUri ? (
+            /* ── Video hero ── */
+            <>
+              {/* Thumbnail shown while paused so the card doesn't flash black */}
+              {post.thumbnailUri ? (
+                <Image
+                  source={{ uri: post.thumbnailUri }}
+                  style={styles.image}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              ) : (
+                <LinearGradient colors={gradient} style={styles.image} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+              )}
+              {/* Video overlaid; opacity 0 when paused so thumbnail shows through */}
+              <Video
+                source={{ uri: post.videoUri }}
+                shouldPlay={isVideoPlaying}
+                isLooping
+                isMuted={videoMuted}
+                resizeMode={ResizeMode.COVER}
+                style={[StyleSheet.absoluteFill, { opacity: isVideoPlaying ? 1 : 0 }]}
+                useNativeControls={false}
+              />
+              {/* Tap overlay to toggle mute — catches tap before outer Pressable */}
+              <TouchableOpacity
+                style={StyleSheet.absoluteFill}
+                onPress={onMuteToggle}
+                activeOpacity={1}
+              />
+              {/* Mute indicator */}
+              <View style={styles.muteIndicator} pointerEvents="none">
+                <Icon name={videoMuted ? 'volume-x' : 'volume-2'} size={11} color="rgba(240,236,255,0.90)" />
+              </View>
+              {/* Video badge */}
+              <View style={styles.videoBadge} pointerEvents="none">
+                <Icon name="video" size={10} color="rgba(240,236,255,0.80)" />
+              </View>
+            </>
+          ) : heroPanelImage ? (
             <Image
               source={{ uri: heroPanelImage }}
               style={styles.image}
@@ -290,6 +337,24 @@ const styles = StyleSheet.create({
   // ── Hero image ──
   imageWrap: { position: 'relative' },
   image:     { width: '100%', aspectRatio: 16 / 9 },
+
+  // ── Video hero extras ──
+  muteIndicator: {
+    position: 'absolute',
+    bottom: 10, right: 10,
+    backgroundColor: 'rgba(0,0,0,0.50)',
+    borderRadius: 8,
+    paddingHorizontal: 7, paddingVertical: 4,
+    borderWidth: 0.75, borderColor: 'rgba(255,255,255,0.18)',
+  },
+  videoBadge: {
+    position: 'absolute',
+    bottom: 10, left: 10,
+    backgroundColor: 'rgba(0,0,0,0.50)',
+    borderRadius: 8,
+    paddingHorizontal: 7, paddingVertical: 4,
+    borderWidth: 0.75, borderColor: 'rgba(200,100,100,0.40)',
+  },
 
   imageAuthorRow: {
     position: 'absolute',

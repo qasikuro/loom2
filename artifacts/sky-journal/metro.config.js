@@ -22,6 +22,8 @@ config.resolver.unstable_enableSymlinks = true;
 // disappear while being watched (ENOENT on deleted .tmp-* dirs).
 // Also block test files and vitest config: they import vitest/vite which
 // Metro/Hermes cannot transform (dynamic import() call in vite's module-runner).
+// Also block expo-video-thumbnails_tmp_* directories created and deleted by
+// that package's postinstall script — Metro watches them, they vanish, ENOENT.
 const escRe = (p) => p.replace(/[/\\]/g, "[\\\\/\\\\\\\\]").replace(/\./g, "\\.");
 config.resolver.blockList = new RegExp(
   [
@@ -31,6 +33,8 @@ config.resolver.blockList = new RegExp(
     escRe(path.resolve(projectRoot))             + "[\\/\\\\].*\\.spec\\.[jt]sx?$",
     escRe(path.resolve(projectRoot, "vitest.config.ts")),
     escRe(path.resolve(projectRoot, "vitest.config.js")),
+    // expo-video-thumbnails postinstall creates then deletes _tmp_NNNN dirs
+    ".*expo-video-thumbnails_tmp_[0-9]+[\\/\\\\].*",
   ].map((r) => `(${r})`).join("|")
 );
 

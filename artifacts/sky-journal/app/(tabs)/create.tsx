@@ -18,7 +18,7 @@ import { Icon } from '@/components/Icon';
 
 const { height: H } = Dimensions.get('window');
 
-const SHEET_H = Math.min(H * 0.60, 440);
+const SHEET_H = Math.min(H * 0.78, 540);
 
 const MODES = [
   {
@@ -38,6 +38,15 @@ const MODES = [
     tag:         'Full editor',
     color:       '#9B7FE8',
     route:       '/chapter-editor',
+  },
+  {
+    id:          'video',
+    icon:        'video'       as const,
+    name:        'Post Video',
+    description: 'Share a 10-second moment directly to Discover.',
+    tag:         'Short clip',
+    color:       '#E8787A',
+    route:       '/post-video',
   },
   {
     id:          'dashboard',

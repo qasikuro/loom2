@@ -75,6 +75,7 @@
     "expo-localization": "^17.0.9",
     "expo-notifications": "^0.32.17",
     "expo-sharing": "^14.0.8",
+    "expo-video-thumbnails": "^57.0.1",
     "i18next": "^26.2.0",
     "lucide-react-native": "^1.14.0",
     "react-i18next": "^17.0.8"

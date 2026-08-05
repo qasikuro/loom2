@@ -118,6 +118,9 @@ export default function DiscoverScreen() {
   const [refreshing,    setRefreshing]    = useState(false);
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
+  // Video auto-play / mute state
+  const [visiblePostId, setVisiblePostId] = useState<string | null>(null);
+  const [videosMuted,   setVideosMuted]   = useState(true);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
   const [guideTopicFilter, setGuideTopicFilter] = useState<string | null>(null);
   const [guideAvailNow,    setGuideAvailNow]    = useState(false);
@@ -130,6 +133,12 @@ export default function DiscoverScreen() {
   const guidesLoaded     = useRef(false);
   const booksLoaded      = useRef(false);
   const moodDoorShown    = useRef(false);
+  // Track which story-card is ≥60 % visible for video autoplay
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60, minimumViewTime: 300 });
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: { item: { id: string; contentType?: string } }[] }) => {
+    const videoItem = viewableItems.find(v => v.item.contentType === 'video');
+    setVisiblePostId(videoItem ? videoItem.item.id : null);
+  });
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
@@ -420,15 +429,20 @@ export default function DiscoverScreen() {
               post={item}
               delay={Math.min(index * 75, 400)}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={() => item.bookId
+              onPress={item.contentType === 'video' ? undefined : () => item.bookId
                 ? router.push({ pathname: '/book-public', params: { bookId: item.bookId } } as any)
                 : router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
+              isVideoPlaying={item.id === visiblePostId && item.contentType === 'video'}
+              videoMuted={videosMuted}
+              onMuteToggle={() => setVideosMuted(m => !m)}
             />
           )}
+          viewabilityConfig={viewabilityConfig.current}
+          onViewableItemsChanged={onViewableItemsChanged.current}
           contentContainerStyle={[styles.listPad, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
