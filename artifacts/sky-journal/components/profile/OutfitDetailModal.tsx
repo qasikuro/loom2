@@ -4,8 +4,9 @@ import { MoodBadge } from '@/components/MoodBadge';
 import type { Character, Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
@@ -31,6 +32,7 @@ export function OutfitDetailModal({
 }: Props) {
   const colors = useColors();
   const { t }  = useTranslation();
+  const [imageFit, setImageFit] = useState<'contain' | 'cover'>('contain');
 
   return (
     <Modal
@@ -46,9 +48,14 @@ export function OutfitDetailModal({
           <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
             {outfit && (
               <>
+                {/* ── Image with fit toggle ─── */}
                 <View style={[s.imageWrap, { backgroundColor: `${colors.primary}14` }]}>
                   {outfit.imageUri ? (
-                    <Image source={{ uri: outfit.imageUri }} style={s.image} contentFit="contain" />
+                    <Image
+                      source={{ uri: outfit.imageUri }}
+                      style={s.image}
+                      contentFit={imageFit}
+                    />
                   ) : (
                     <View style={[s.image, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 10 }]}>
                       <Icon name="camera" size={36} color={`${colors.primary}50`} />
@@ -58,6 +65,25 @@ export function OutfitDetailModal({
                       </Text>
                     </View>
                   )}
+
+                  {/* Fit toggle button */}
+                  {outfit.imageUri ? (
+                    <TouchableOpacity
+                      style={[s.fitToggle, { backgroundColor: 'rgba(14,10,32,0.72)', borderColor: `${colors.primary}40` }]}
+                      onPress={() => setImageFit(f => f === 'contain' ? 'cover' : 'contain')}
+                      activeOpacity={0.8}
+                    >
+                      <Icon
+                        name={imageFit === 'contain' ? 'maximize-2' : 'minimize-2'}
+                        size={13}
+                        color="rgba(240,234,255,0.90)"
+                      />
+                      <Text style={s.fitToggleText}>
+                        {imageFit === 'contain' ? 'Full pic' : 'Card view'}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+
                   {isActiveOutfit && (
                     <View style={[s.activePill, { backgroundColor: colors.primary }]}>
                       <Text style={s.activePillText}>{t('profile.displayOutfit')}</Text>
@@ -118,6 +144,67 @@ export function OutfitDetailModal({
                     </Text>
                   </TouchableOpacity>
 
+                  {/* ── Public preview ── */}
+                  <View style={s.divider}>
+                    <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
+                    <Text style={[s.dividerLabel, { color: colors.mutedForeground }]}>HOW OTHERS SEE IT</Text>
+                    <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
+                  </View>
+
+                  <View style={s.publicPreviewRow}>
+                    {/* Profile grid card preview */}
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <Text style={[s.previewLabel, { color: colors.mutedForeground }]}>Profile card</Text>
+                      <View style={[s.previewCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                        {outfit.imageUri ? (
+                          <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                        ) : (
+                          <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center' }]}>
+                            <Icon name="camera" size={16} color={`${colors.primary}50`} />
+                          </View>
+                        )}
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={StyleSheet.absoluteFill} />
+                        {isActiveOutfit && (
+                          <View style={[s.previewActiveDot, { backgroundColor: colors.primary }]}>
+                            <Text style={{ fontSize: 8, color: '#fff' }}>✦</Text>
+                          </View>
+                        )}
+                        <Text style={s.previewCardName} numberOfLines={1}>{outfit.name}</Text>
+                      </View>
+                    </View>
+
+                    {/* Discover card preview */}
+                    <View style={{ flex: 1.4, gap: 6 }}>
+                      <Text style={[s.previewLabel, { color: colors.mutedForeground }]}>Discover feed</Text>
+                      <View style={[s.previewDiscover, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                        {outfit.imageUri ? (
+                          <Image source={{ uri: outfit.imageUri }} style={[StyleSheet.absoluteFill, { borderRadius: 14 }]} contentFit="cover" />
+                        ) : (
+                          <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', borderRadius: 14 }]}>
+                            <Icon name="camera" size={16} color={`${colors.primary}50`} />
+                          </View>
+                        )}
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.80)']} style={[StyleSheet.absoluteFill, { borderRadius: 14 }]} />
+                        {/* Author strip */}
+                        <View style={s.previewAuthorStrip}>
+                          <View style={[s.previewAvatar, { borderColor: colors.primary }]}>
+                            {avatarSource
+                              ? <Image source={avatarSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+                              : <Text style={{ fontSize: 8, color: '#fff', fontFamily: 'Satoshi-Bold' }}>
+                                  {(character.name ?? '?').charAt(0).toUpperCase()}
+                                </Text>
+                            }
+                          </View>
+                          <View style={{ flex: 1, gap: 1 }}>
+                            <Text style={s.previewAuthorName} numberOfLines={1}>{character.name}</Text>
+                            <Text style={s.previewOutfitName} numberOfLines={1}>{outfit.name}</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* ── Your character ── */}
                   <View style={s.divider}>
                     <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
                     <Text style={[s.dividerLabel, { color: colors.mutedForeground }]}>
@@ -232,10 +319,17 @@ export function OutfitDetailModal({
 
 const s = StyleSheet.create({
   overlay:       { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.55)' },
-  sheet:         { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '88%', overflow: 'hidden' },
+  sheet:         { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', overflow: 'hidden' },
   handle:        { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(120,86,255,0.25)', alignSelf: 'center', marginTop: 10, marginBottom: 6 },
   imageWrap:     { position: 'relative', alignItems: 'center', justifyContent: 'center' },
-  image:         { width: '100%', height: 220, alignItems: 'center', justifyContent: 'center' },
+  image:         { width: '100%', height: 260, alignItems: 'center', justifyContent: 'center' },
+  fitToggle:     {
+    position: 'absolute', top: 10, right: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1,
+  },
+  fitToggleText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.90)' },
   activePill:    { position: 'absolute', bottom: 12, left: 16, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
   activePillText:{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: 0.2 },
   body:          { paddingVertical: 16, gap: 12 },
@@ -255,6 +349,18 @@ const s = StyleSheet.create({
   divider:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
   dividerLine:   { flex: 1, height: 1 },
   dividerLabel:  { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.5 },
+  // Public preview
+  publicPreviewRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  previewLabel:     { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center' },
+  previewCard:      { height: 130, borderRadius: 12, overflow: 'hidden', borderWidth: 1, position: 'relative', justifyContent: 'flex-end' },
+  previewCardName:  { position: 'absolute', bottom: 7, left: 8, right: 8, fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)' },
+  previewActiveDot: { position: 'absolute', top: 7, right: 7, width: 18, height: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  previewDiscover:  { height: 130, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative' },
+  previewAuthorStrip: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 7, padding: 9 },
+  previewAvatar:    { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, overflow: 'hidden', backgroundColor: 'rgba(107,91,149,0.4)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  previewAuthorName:{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)' },
+  previewOutfitName:{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.75)' },
+  // Character section
   charRow:       { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   charAvatar:    { width: 52, height: 52, borderRadius: 26, borderWidth: 2, overflow: 'hidden', flexShrink: 0 },
   charAvatarImg: { width: '100%', height: '100%' },
