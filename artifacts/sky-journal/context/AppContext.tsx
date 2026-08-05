@@ -128,10 +128,24 @@ function isFetchStale(timestamps: Record<string, number>, key: string): boolean 
 
 type TokenGetter = () => Promise<string | null>;
 
-let _getToken: TokenGetter = async () => null;
+// Survive Expo Go HMR: every hot-reload re-evaluates this module and would
+// reset a plain `let _getToken = ...` back to the no-op.  The useEffect in
+// _layout.tsx only re-fires when isLoaded/isSignedIn/getToken change, so the
+// getter stays null after an HMR that doesn't touch those deps — causing all
+// PUT/POST requests to be sent without auth → 401 → silent data loss.
+// globalThis persists across module re-evaluations, so we use it as a stable
+// registry that survives HMR without needing a full component remount.
+const _TOKEN_GETTER_KEY = '__skyJournalTokenGetter';
+if (!(globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY]) {
+  (globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY] = async () => null;
+}
 
 export function setAuthTokenGetter(fn: TokenGetter) {
-  _getToken = fn;
+  (globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY] = fn;
+}
+
+function _getToken(): Promise<string | null> {
+  return ((globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY] as TokenGetter)();
 }
 
 export async function getAuthToken(): Promise<string | null> {
@@ -1322,13 +1336,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       intentionDate:     c.intentionDate     ?? null,
       showOnlineStatus:  c.showOnlineStatus  ?? true,
     });
-    apiFetch('/character', { method: 'PUT', body: characterBody }).catch(() => {
-      showToastGlobal("Couldn't sync profile — saved locally", 'warning', () => {
-        // H-1: If the retry also fails, queue for next foreground drain so the
-        // change is not permanently lost on other devices / after reinstall.
-        apiFetch('/character', { method: 'PUT', body: characterBody })
-          .catch(() => enqueueMutation('/character', 'PUT', characterBody).catch(() => null));
-      });
+    apiFetch('/character', { method: 'PUT', body: characterBody }).catch((err) => {
+      console.warn('[setCharacter] PUT /character failed (will auto-retry):', err);
+      // H-1: Auto-retry once immediately, then queue for next foreground drain.
+      // Do NOT require a toast tap — profile edits must persist automatically.
+      apiFetch('/character', { method: 'PUT', body: characterBody })
+        .catch((err2) => {
+          console.warn('[setCharacter] PUT /character retry failed — queuing mutation:', err2);
+          enqueueMutation('/character', 'PUT', characterBody).catch(() => null);
+          showToastGlobal("Couldn't sync profile — will retry when online", 'warning');
+        });
     });
   }, []);
 
