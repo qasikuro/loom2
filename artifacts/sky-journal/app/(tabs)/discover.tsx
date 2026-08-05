@@ -222,7 +222,7 @@ export default function DiscoverScreen() {
     setBooksLoading(true);
     setBooksError(null);
     try {
-      const data = await apiFetch<DiscoverBook[]>('/books/discover');
+      const data = await apiFetch<DiscoverBook[]>('/public-books');
       setBooksData(data ?? []);
     } catch {
       setBooksError('Could not load books. Pull to refresh.');
@@ -991,21 +991,22 @@ const styles = StyleSheet.create({
   // Tabs
   tabsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 14,
-    paddingRight: 24,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    paddingRight: 12,
+    gap: 6,
     alignItems: 'center',
   },
   tabPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 15, paddingVertical: 8,
-    borderRadius: 22, borderWidth: 1,
+    gap: 4,
+    paddingHorizontal: 11, paddingVertical: 6,
+    borderRadius: 18, borderWidth: 1,
+    flexShrink: 1,
   },
-  tabIcon: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  tabText: { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  tabIcon: { fontSize: 9, fontFamily: 'Satoshi-Bold' },
+  tabText: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
   // Stories sort toggle
   storiesSortRow: {

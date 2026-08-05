@@ -44,11 +44,11 @@ function tryGetUserId(req: Request): string | null {
 // ── Discover books (all public) ───────────────────────────────────────────────
 
 /**
- * GET /books/discover
+ * GET /public-books
  * Returns all public books ordered by most recently updated, with author stub.
- * No auth required.
+ * No auth required. (Named /public-books to avoid conflict with /books/:id)
  */
-router.get("/books/discover", async (req, res) => {
+router.get("/public-books", async (req, res) => {
   try {
     const rows = await db
       .select({
