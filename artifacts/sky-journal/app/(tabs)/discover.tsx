@@ -399,7 +399,10 @@ export default function DiscoverScreen() {
             <DiscoverCard
               post={item}
               delay={Math.min(index * 75, 400)}
-              onPress={() => router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onPress={() => item.bookId
+                ? router.push({ pathname: '/book-public', params: { bookId: item.bookId } } as any)
+                : router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -469,7 +472,10 @@ export default function DiscoverScreen() {
                 <DiscoverCard
                   key={post.id}
                   post={post}
-                  onPress={() => router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'discover' } })}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onPress={() => post.bookId
+                    ? router.push({ pathname: '/book-public', params: { bookId: post.bookId } } as any)
+                    : router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'discover' } })}
                   onSave={() => toggleSavePost(post.id)}
                 />
               ))}

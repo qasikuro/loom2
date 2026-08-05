@@ -1,4 +1,5 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, booksTable, chaptersTable } from "@workspace/db";
+import type { BookChapterPage } from "@workspace/db";
 import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -525,7 +526,7 @@ router.get("/discover", requireAuth, async (req, res) => {
   }
 
   try {
-    const [myCharRows, followingRows, stories] = await Promise.all([
+    const [myCharRows, followingRows, stories, chapters] = await Promise.all([
       db.select({ mood: characterTable.mood })
         .from(characterTable)
         .where(eq(characterTable.userId, userId))
@@ -575,40 +576,93 @@ router.get("/discover", requireAuth, async (req, res) => {
         )
         .orderBy(desc(storiesTable.date))
         .limit(200),
-    ]);
 
-    const visibleStories = stories;
+      // Published book chapters from public books — surfaces new books to readers
+      db.select({
+        id:              chaptersTable.id,
+        bookId:          chaptersTable.bookId,
+        bookTitle:       booksTable.title,
+        userId:          booksTable.userId,
+        chapterTitle:    chaptersTable.title,
+        orderIndex:      chaptersTable.orderIndex,
+        publishedAt:     chaptersTable.publishedAt,
+        readCount:       chaptersTable.readCount,
+        pages:           chaptersTable.pages,
+        authorName:      characterTable.name,
+        authorUsername:  characterTable.username,
+        authorAvatarUri: characterTable.avatarUri,
+        authorTitle:     constellationProgressTable.activeTitle,
+        authorIsFounder:    characterTable.isFounder,
+        authorIsBetaTester: characterTable.isBetaTester,
+        authorMood:         characterTable.mood,
+      })
+        .from(chaptersTable)
+        .innerJoin(booksTable, eq(booksTable.id, chaptersTable.bookId))
+        .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
+        .leftJoin(constellationProgressTable, eq(constellationProgressTable.userId, booksTable.userId))
+        .where(
+          and(
+            eq(chaptersTable.status, "published"),
+            eq(booksTable.visibility, "public"),
+            eq(characterTable.isPublic, true),
+            eq(characterTable.isBanned, false),
+            ne(booksTable.userId, userId),
+            sql`${booksTable.userId} NOT IN (
+              SELECT blocked_id FROM blocks WHERE blocker_id = ${userId}
+              UNION
+              SELECT blocker_id FROM blocks WHERE blocked_id = ${userId}
+            )`,
+          ),
+        )
+        .orderBy(desc(chaptersTable.publishedAt))
+        .limit(100),
+    ]);
 
     const myMood       = myCharRows[0]?.mood ?? "Hopeful";
     const followingSet = new Set(followingRows.map(r => r.followingId));
     const now          = Date.now();
 
-    const scored = visibleStories.map(row => {
+    // Score stories
+    type ScoredEntry = { kind: 'story' | 'chapter'; id: string; userId: string; score: number; isFollowing: boolean; data: typeof stories[0] | typeof chapters[0] };
+
+    const scoredStories: ScoredEntry[] = stories.map(row => {
       const isFollowing = followingSet.has(row.userId);
       const moodMatch   = row.mood === myMood;
       const engagement  = Math.min(2, (row.witnessedCount + row.savedCount) / 25);
       const daysOld     = (now - row.date.getTime()) / 86_400_000;
       const recency     = Math.max(0, 1 - daysOld / 30);
-      // Followed users get highest priority
       const score = (isFollowing ? 6 : 0) + (moodMatch ? 2 : 0) + engagement + recency;
-      return { row, score, isFollowing };
+      return { kind: 'story', id: row.id, userId: row.userId, score, isFollowing, data: row };
     });
 
-    scored.sort((a, b) => b.score - a.score);
-    const top50 = scored.slice(0, 50);
+    // Score chapters — use readCount as engagement proxy
+    const scoredChapters: ScoredEntry[] = chapters.map(row => {
+      const isFollowing  = followingSet.has(row.userId);
+      const moodMatch    = row.authorMood === myMood;
+      const engagement   = Math.min(2, (row.readCount ?? 0) / 25);
+      const publishedMs  = row.publishedAt ? row.publishedAt.getTime() : now;
+      const daysOld      = (now - publishedMs) / 86_400_000;
+      const recency      = Math.max(0, 1 - daysOld / 30);
+      const score = (isFollowing ? 6 : 0) + (moodMatch ? 2 : 0) + engagement + recency;
+      return { kind: 'chapter', id: row.id, userId: row.userId, score, isFollowing, data: row };
+    });
 
-    // Fetch sticker counts + author badges in bulk for the top 50
-    const top50Ids     = top50.map(({ row }) => row.id);
-    const top50Authors = [...new Set(top50.map(({ row }) => row.userId))];
+    const allScored = [...scoredStories, ...scoredChapters];
+    allScored.sort((a, b) => b.score - a.score);
+    const top50 = allScored.slice(0, 50);
+
+    // Fetch sticker counts (stories only) + author badges in bulk for the top 50
+    const top50StoryIds = top50.filter(e => e.kind === 'story').map(e => e.id);
+    const top50Authors  = [...new Set(top50.map(e => e.userId))];
 
     const stickerCountMap: Record<string, number> = {};
     const authorBadgesMap: Record<string, { id: string; slug: string; name: string; emoji: string; color: string; imageUrl: string | null; description: string | null }[]> = {};
 
     await Promise.all([
-      top50Ids.length > 0
+      top50StoryIds.length > 0
         ? db.select({ storyId: stickerReactionsTable.storyId, cnt: count() })
             .from(stickerReactionsTable)
-            .where(inArray(stickerReactionsTable.storyId, top50Ids))
+            .where(inArray(stickerReactionsTable.storyId, top50StoryIds))
             .groupBy(stickerReactionsTable.storyId)
             .then(rows => rows.forEach(r => { stickerCountMap[r.storyId] = Number(r.cnt); }))
         : Promise.resolve(),
@@ -637,37 +691,78 @@ router.get("/discover", requireAuth, async (req, res) => {
         : Promise.resolve(),
     ]);
 
-    const result = top50.map(({ row, isFollowing }) => {
-      const rawPanels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
-      const panels = rawPanels.map(p => ({
-        ...p,
-        imageUri: safeDiscoverUri(p.imageUri),
-      }));
-      return {
-        id:              row.id,
-        authorUserId:    row.userId,
-        authorName:      row.authorName,
-        authorUsername:  row.authorUsername ?? null,
-        authorTitle:     row.authorTitle ?? null,
-        authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
-        authorIsFounder:    row.authorIsFounder    ?? false,
-        authorIsBetaTester: row.authorIsBetaTester ?? false,
-        authorBadges:       authorBadgesMap[row.userId] ?? [],
-        chapterTitle:    row.chapterTitle,
-        description:     row.description ?? '',
-        storySnippet:    panels[0]?.text ?? "",
-        imageUri:        panels[0]?.imageUri ?? null,
-        mood:            row.mood,
-        location:        row.location,
-        witnessedCount:  row.witnessedCount,
-        savedCount:      row.savedCount,
-        stickerCount:    stickerCountMap[row.id] ?? 0,
-        date:            row.date.toISOString(),
-        panels,
-        pageLayoutKey:   row.pageLayoutKey ?? undefined,
-        pages:           row.pages ?? undefined,
-        isFollowing,
-      };
+    const result = top50.map(({ kind, isFollowing, data }) => {
+      if (kind === 'story') {
+        const row = data as typeof stories[0];
+        const rawPanels = row.panels as Array<{ text?: string; imageUri?: string; overlays?: unknown[] }>;
+        const panels = rawPanels.map(p => ({
+          ...p,
+          imageUri: safeDiscoverUri(p.imageUri),
+        }));
+        return {
+          id:              row.id,
+          authorUserId:    row.userId,
+          authorName:      row.authorName,
+          authorUsername:  row.authorUsername ?? null,
+          authorTitle:     row.authorTitle ?? null,
+          authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
+          authorIsFounder:    row.authorIsFounder    ?? false,
+          authorIsBetaTester: row.authorIsBetaTester ?? false,
+          authorBadges:       authorBadgesMap[row.userId] ?? [],
+          chapterTitle:    row.chapterTitle,
+          description:     row.description ?? '',
+          storySnippet:    panels[0]?.text ?? "",
+          imageUri:        panels[0]?.imageUri ?? null,
+          mood:            row.mood,
+          location:        row.location,
+          witnessedCount:  row.witnessedCount,
+          savedCount:      row.savedCount,
+          stickerCount:    stickerCountMap[row.id] ?? 0,
+          date:            row.date.toISOString(),
+          panels,
+          pageLayoutKey:   row.pageLayoutKey ?? undefined,
+          pages:           row.pages ?? undefined,
+          isFollowing,
+        };
+      } else {
+        // Book chapter
+        const row = data as typeof chapters[0];
+        const chapterPages = (row.pages ?? []) as BookChapterPage[];
+        const firstPanel   = chapterPages[0]?.panels[0];
+        const snippet      = firstPanel?.text ?? '';
+        const imageUri     = safeDiscoverUri(firstPanel?.imageUri ?? null);
+        // Flatten the first page's panels for card rendering
+        const cardPanels = (chapterPages[0]?.panels ?? []).map(p => ({
+          text:     p.text     ?? '',
+          imageUri: safeDiscoverUri(p.imageUri ?? null),
+        }));
+        return {
+          id:              row.id,
+          authorUserId:    row.userId,
+          authorName:      row.authorName,
+          authorUsername:  row.authorUsername ?? null,
+          authorTitle:     row.authorTitle ?? null,
+          authorAvatarUri: safeDiscoverUri(row.authorAvatarUri),
+          authorIsFounder:    row.authorIsFounder    ?? false,
+          authorIsBetaTester: row.authorIsBetaTester ?? false,
+          authorBadges:       authorBadgesMap[row.userId] ?? [],
+          chapterTitle:    row.chapterTitle,
+          chapterNumber:   row.orderIndex + 1,
+          description:     '',
+          storySnippet:    snippet,
+          imageUri,
+          mood:            row.authorMood ?? 'Hopeful',
+          location:        '',
+          witnessedCount:  0,
+          savedCount:      0,
+          stickerCount:    0,
+          date:            row.publishedAt?.toISOString() ?? new Date().toISOString(),
+          panels:          cardPanels,
+          bookId:          row.bookId,
+          bookTitle:       row.bookTitle,
+          isFollowing,
+        };
+      }
     });
 
     cache.set(cacheKey, result, 2 * 60 * 1000);

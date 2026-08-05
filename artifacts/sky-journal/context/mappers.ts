@@ -156,6 +156,8 @@ export interface DiscoverPost {
   pageLayoutKey?:   string;
   /** Set when this post is a chapter from a book — routes to the book page instead of the standalone story viewer. */
   bookId?:          string;
+  /** Title of the parent book (only present when bookId is set). */
+  bookTitle?:       string;
 }
 
 // ── Raw server response shapes ─────────────────────────────────────────────────
@@ -275,6 +277,8 @@ export interface RawDiscoverApiItem {
   pages?:           unknown[];
   pageLayoutKey?:   string;
   bookId?:          string;
+  /** Title of the parent book (only present when bookId is set). */
+  bookTitle?:       string;
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────────────
@@ -437,5 +441,6 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     pages:            Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
     pageLayoutKey:    raw.pageLayoutKey ?? undefined,
     bookId:           raw.bookId,
+    bookTitle:        raw.bookTitle,
   };
 }

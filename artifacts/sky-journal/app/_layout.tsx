@@ -264,6 +264,10 @@ export function resolveNotificationRoute(push: (href: any) => void, data: Record
     case 'new_story':
       if (data.refId) push(`/story/${data.refId}`);
       break;
+    case 'new_chapter':
+      // refId is the bookId — route to the public book page
+      if (data.refId) push({ pathname: '/book-public', params: { bookId: data.refId } });
+      break;
     case 'message':
       if (data.refId) push(`/messages/${data.refId}`);
       break;

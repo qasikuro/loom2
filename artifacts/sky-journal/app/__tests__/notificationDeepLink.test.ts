@@ -157,6 +157,17 @@ describe('resolveNotificationRoute — type-based routing (no data.url)', () => 
     expect(push).toHaveBeenCalledWith('/story/story-z');
   });
 
+  it('routes "new_chapter" notification to /book-public with bookId param', () => {
+    resolveNotificationRoute(push, { type: 'new_chapter', refId: 'book-uuid-1' });
+    expect(push).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledWith({ pathname: '/book-public', params: { bookId: 'book-uuid-1' } });
+  });
+
+  it('does NOT push for "new_chapter" when refId is absent', () => {
+    resolveNotificationRoute(push, { type: 'new_chapter' });
+    expect(push).not.toHaveBeenCalled();
+  });
+
   it('routes "message" notification to /messages/<refId>', () => {
     resolveNotificationRoute(push, { type: 'message', refId: 'thread-5' });
     expect(push).toHaveBeenCalledWith('/messages/thread-5');

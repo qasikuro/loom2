@@ -314,7 +314,7 @@ export interface ServerNotification {
   id:        string;
   actorId:   string;
   actorName: string;
-  type:      'new_story' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'message' | 'resonate' | 'badge_granted' | 'badge_removed';
+  type:      'new_story' | 'new_chapter' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'message' | 'resonate' | 'badge_granted' | 'badge_removed';
   refId:     string;
   title:     string;
   isRead:    boolean;

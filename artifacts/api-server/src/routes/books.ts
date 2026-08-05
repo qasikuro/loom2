@@ -16,11 +16,13 @@
  *   PATCH  /chapters/:id             — update chapter (title, status, pages, orderIndex, …)
  *   DELETE /chapters/:id             — delete a chapter
  */
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
-import { and, asc, count, desc, eq } from "drizzle-orm";
-import { db, booksTable, chaptersTable } from "@workspace/db";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { db, booksTable, chaptersTable, followsTable, notificationsTable, characterTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { sendPushToTokens } from "../services/pushService";
+import * as cache from "../lib/cache";
 
 const router: IRouter = Router();
 
@@ -240,14 +242,17 @@ router.patch("/chapters/:id", requireAuth, async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
 
   try {
-    // Verify ownership via book join
+    // Verify ownership via book join — also grab current chapter status and book title for fan-out
     const rows = await db
-      .select({ chapter: chaptersTable })
+      .select({ chapter: chaptersTable, bookTitle: booksTable.title })
       .from(chaptersTable)
       .innerJoin(booksTable, eq(booksTable.id, chaptersTable.bookId))
       .where(and(eq(chaptersTable.id, chapterId), eq(booksTable.userId, userId)))
       .limit(1);
     if (!rows.length) return res.status(404).json({ error: "Not found" });
+
+    const prevStatus        = rows[0].chapter.status;
+    const isBecomingPublished = prevStatus !== 'published' && parsed.data.status === 'published';
 
     const { pages, publishedAt, ...rest } = parsed.data;
     const updateSet: Record<string, unknown> = { ...rest, updatedAt: new Date() };
@@ -264,6 +269,12 @@ router.patch("/chapters/:id", requireAuth, async (req, res) => {
 
     // Bump book updatedAt
     await db.update(booksTable).set({ updatedAt: new Date() }).where(eq(booksTable.id, updated.bookId));
+
+    // Fan-out to followers when a chapter is first published
+    if (isBecomingPublished) {
+      fanOutChapterNotification(userId, updated.bookId, rows[0].bookTitle, updated.id, updated.title, req).catch(() => null);
+      invalidateFollowerDiscoverCaches(userId).catch(() => null);
+    }
 
     return res.json(serializeChapter(updated));
   } catch (err) {
@@ -293,6 +304,74 @@ router.delete("/chapters/:id", requireAuth, async (req, res) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
+// ── Fan-out helpers ───────────────────────────────────────────────────────────
+
+async function invalidateFollowerDiscoverCaches(authorId: string): Promise<void> {
+  const followers = await db
+    .select({ followerId: followsTable.followerId })
+    .from(followsTable)
+    .where(eq(followsTable.followingId, authorId));
+  for (const { followerId } of followers) {
+    cache.invalidate(`discover:${followerId}`);
+  }
+}
+
+async function fanOutChapterNotification(
+  userId:       string,
+  bookId:       string,
+  bookTitle:    string,
+  chapterId:    string,
+  chapterTitle: string,
+  req:          Request,
+): Promise<void> {
+  try {
+    const [followers, actorRows] = await Promise.all([
+      db.select({ followerId: followsTable.followerId })
+        .from(followsTable)
+        .where(eq(followsTable.followingId, userId)),
+      db.select({ name: characterTable.name })
+        .from(characterTable)
+        .where(eq(characterTable.userId, userId))
+        .limit(1),
+    ]);
+
+    if (followers.length === 0) return;
+
+    const actorName = actorRows[0]?.name ?? "A sky child";
+
+    await db.insert(notificationsTable).values(
+      followers.map(f => ({
+        userId:    f.followerId,
+        actorId:   userId,
+        actorName,
+        type:      "new_chapter",        // distinct type so client routes to the book page
+        refId:     bookId,               // refId = bookId so client can navigate to /book-public?bookId=...
+        title:     `${bookTitle} · ${chapterTitle}`,
+      })),
+    );
+
+    // Push notifications — batch-fetch tokens in one query
+    const followerIds = followers.map(f => f.followerId);
+    const tokenRows   = await db
+      .select({ pushToken: characterTable.pushToken })
+      .from(characterTable)
+      .where(inArray(characterTable.userId, followerIds));
+
+    await sendPushToTokens(
+      tokenRows
+        .filter((r): r is { pushToken: string } => !!r.pushToken)
+        .map(r => ({
+          token: r.pushToken,
+          title: actorName,
+          body:  `published a new chapter in "${bookTitle}" ✦`,
+          data:  { type: "new_chapter", refId: bookId, bookId },
+        })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "Failed to fan-out chapter notification");
+  }
+}
 
 // ── Serializers ───────────────────────────────────────────────────────────────
 

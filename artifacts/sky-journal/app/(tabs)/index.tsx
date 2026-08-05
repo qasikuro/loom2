@@ -1264,7 +1264,7 @@ export default function HomeScreen() {
   // ── Activity digest — what changed in the world while you were away ──────────
   const witnessedNotifs   = serverNotifications.filter(n => n.type === 'witness').length;
   const savedNotifs       = serverNotifications.filter(n => n.type === 'save').length;
-  const newStoryNotifs    = serverNotifications.filter(n => n.type === 'new_story').length;
+  const newStoryNotifs    = serverNotifications.filter(n => n.type === 'new_story' || n.type === 'new_chapter').length;
   const hasDigest = witnessedNotifs > 0 || savedNotifs > 0 || circleStories.length > 0 || newStoryNotifs > 0;
 
   const myCampfire: GuideProfile | null = (character.isGuide && clerkUserId) ? {
@@ -1975,7 +1975,7 @@ export default function HomeScreen() {
                 {serverNotifications.map(n => (
                   <View key={n.id} style={[m.notif, { backgroundColor: n.isRead ? colors.muted : `${accent}14`, borderColor: n.isRead ? 'transparent' : `${accent}28` }]}>
                     <View style={[m.notifIcon, { backgroundColor: `${accent}18` }]}>
-                      <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : n.type === 'new_story' ? 'book-open' : n.type === 'resonate' ? 'activity' : 'star'} size={13} color={accent} />
+                      <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : (n.type === 'new_story' || n.type === 'new_chapter') ? 'book-open' : n.type === 'resonate' ? 'activity' : 'star'} size={13} color={accent} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={2}>{n.title}</Text>

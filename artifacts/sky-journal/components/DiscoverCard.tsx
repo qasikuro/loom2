@@ -170,6 +170,14 @@ export function DiscoverCard({
 
         {/* ── Below-image content block ── */}
         <View style={styles.contentBlock}>
+          {/* Book series label (only for book chapters) */}
+          {!!post.bookId && !!post.bookTitle && (
+            <View style={styles.bookLabelRow}>
+              <Text style={styles.bookLabelIcon}>📖</Text>
+              <Text style={styles.bookLabelText} numberOfLines={1}>{post.bookTitle}</Text>
+            </View>
+          )}
+
           {/* Title */}
           <Text style={styles.chapterTitle} numberOfLines={2}>{post.chapterTitle}</Text>
 
@@ -323,6 +331,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(107,91,149,0.18)',
   },
+
+  bookLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  bookLabelIcon: {
+    fontSize: 10,
+  },
+  bookLabelText: {
+    fontSize: 10,
+    fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.55)',
+    letterSpacing: 0.2,
+    flexShrink: 1,
+  },
+
   chapterTitle: {
     fontSize: 17,
     fontFamily: 'Satoshi-Bold',
