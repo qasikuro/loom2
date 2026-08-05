@@ -52,10 +52,40 @@ const MOOD_COLORS: Record<string, string> = {
 
 // ── Fullscreen video player modal ─────────────────────────────────────────────
 
-function VideoPlayerModal({ story, onClose }: { story: Story | null; onClose: () => void }) {
+function VideoPlayerModal({
+  story,
+  onClose,
+  onDelete,
+}: {
+  story: Story | null;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+}) {
   const insets = useSafeAreaInsets();
   const { width: W, height: H } = useWindowDimensions();
   const [muted, setMuted] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Reset confirm state whenever the modal opens a new story
+  React.useEffect(() => {
+    setConfirmDelete(false);
+    if (deleteTimer.current) clearTimeout(deleteTimer.current);
+  }, [story?.id]);
+
+  function handleDelete() {
+    if (!story) return;
+    if (confirmDelete) {
+      if (deleteTimer.current) clearTimeout(deleteTimer.current);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      onClose();
+      onDelete(story.id);
+    } else {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      setConfirmDelete(true);
+      deleteTimer.current = setTimeout(() => setConfirmDelete(false), 3000);
+    }
+  }
 
   if (!story || story.contentType !== 'video' || !story.videoUri) return null;
 
@@ -75,13 +105,35 @@ function VideoPlayerModal({ story, onClose }: { story: Story | null; onClose: ()
 
         {/* Top bar */}
         <View style={[vp.topBar, { paddingTop: insets.top + 8 }]}>
-          <TouchableOpacity style={vp.closeBtn} onPress={onClose} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity style={vp.iconBtn} onPress={onClose} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Icon name="x" size={18} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity style={vp.muteBtn} onPress={() => setMuted(m => !m)} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Icon name={muted ? 'volume-x' : 'volume-2'} size={18} color="#fff" />
-          </TouchableOpacity>
+
+          {/* Right-side controls */}
+          <View style={vp.rightControls}>
+            {/* Delete with confirm */}
+            <TouchableOpacity
+              style={[vp.iconBtn, confirmDelete && vp.iconBtnDanger]}
+              onPress={handleDelete}
+              activeOpacity={0.8}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Icon name="trash-2" size={18} color={confirmDelete ? '#FF6B6B' : '#fff'} />
+            </TouchableOpacity>
+            {/* Mute */}
+            <TouchableOpacity style={vp.iconBtn} onPress={() => setMuted(m => !m)} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <Icon name={muted ? 'volume-x' : 'volume-2'} size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
+
+        {/* Confirm-delete hint */}
+        {confirmDelete && (
+          <View style={vp.confirmBanner} pointerEvents="none">
+            <Icon name="alert-triangle" size={13} color="#FF6B6B" />
+            <Text style={vp.confirmText}>Tap again to delete</Text>
+          </View>
+        )}
 
         {/* Bottom info */}
         <View style={[vp.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
@@ -528,7 +580,7 @@ export function ProfileStyleSection({
       />
 
       {/* ── Video player modal ─── */}
-      <VideoPlayerModal story={playingVideo} onClose={() => setPlayingVideo(null)} />
+      <VideoPlayerModal story={playingVideo} onClose={() => setPlayingVideo(null)} onDelete={deleteStory} />
     </>
   );
 }
@@ -576,15 +628,18 @@ const sc = StyleSheet.create({
 // ── Video player modal styles ─────────────────────────────────────────────────
 
 const vp = StyleSheet.create({
-  backdrop:  { flex: 1, backgroundColor: '#000' },
-  topBar:    { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, zIndex: 10 },
-  closeBtn:  { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  muteBtn:   { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, gap: 6, backgroundColor: 'rgba(0,0,0,0.45)' },
-  title:     { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#fff', lineHeight: 24 },
-  desc:      { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(240,234,255,0.75)', lineHeight: 18 },
-  moodPill:  { alignSelf: 'flex-start', backgroundColor: 'rgba(107,91,149,0.55)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
-  moodText:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
+  backdrop:       { flex: 1, backgroundColor: '#000' },
+  topBar:         { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, zIndex: 10 },
+  rightControls:  { flexDirection: 'row', gap: 8 },
+  iconBtn:        { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  iconBtnDanger:  { backgroundColor: 'rgba(180,40,40,0.55)' },
+  confirmBanner:  { position: 'absolute', top: 90, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 5 },
+  confirmText:    { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#FF6B6B' },
+  bottomBar:      { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, gap: 6, backgroundColor: 'rgba(0,0,0,0.45)' },
+  title:          { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#fff', lineHeight: 24 },
+  desc:           { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(240,234,255,0.75)', lineHeight: 18 },
+  moodPill:       { alignSelf: 'flex-start', backgroundColor: 'rgba(107,91,149,0.55)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  moodText:       { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
 });
 
 // ── Action sheet styles ───────────────────────────────────────────────────────

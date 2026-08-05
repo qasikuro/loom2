@@ -252,6 +252,13 @@ export async function runStartupMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS thumbnail_uri TEXT
     `);
 
+    // ── Online presence ────────────────────────────────────────────────────────
+    await client.query(`
+      ALTER TABLE character
+        ADD COLUMN IF NOT EXISTS show_online_status BOOLEAN NOT NULL DEFAULT TRUE,
+        ADD COLUMN IF NOT EXISTS last_seen_at       TIMESTAMPTZ
+    `);
+
   } finally {
     client.release();
   }

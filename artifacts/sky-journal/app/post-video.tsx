@@ -108,7 +108,6 @@ export default function PostVideoScreen() {
       thumb = tn.uri;
     } catch {
       // Expo Go doesn't support video thumbnails — fall back to null (no preview)
-      thumb = null;
     }
 
     setVideoUri(asset.uri);
