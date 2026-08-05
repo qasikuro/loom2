@@ -158,6 +158,10 @@ export default function CharacterScreen() {
     Haptics.selectionAsync();
     setCharacter({ ...character, isPublic: !character.isPublic });
   }
+  function toggleOnlineStatus() {
+    Haptics.selectionAsync();
+    setCharacter({ ...character, showOnlineStatus: !(character.showOnlineStatus ?? true) });
+  }
 
   // ── Outfit modal ───────────────────────────────────────────────────────────
   const [selectedOutfitId,      setSelectedOutfitId]      = useState<string | null>(null);
@@ -322,6 +326,7 @@ export default function CharacterScreen() {
         drawerOpen={drawerOpen}
         drawerX={drawerX.interpolate({ inputRange: [0, drawerWidth], outputRange: [0, drawerWidth] })}
         drawerWidth={drawerWidth} character={character} toggleVisibility={toggleVisibility}
+        toggleOnlineStatus={toggleOnlineStatus}
         handleSignOut={handleSignOut} confirmingSignOut={confirmingSignOut}
         closeDrawer={closeDrawer} user={user} avatarSource={avatarSource} topPad={topPad} colors={colors}
       />

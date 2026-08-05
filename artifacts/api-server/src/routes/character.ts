@@ -50,8 +50,10 @@ const CharacterInputSchema = z.object({
   // Onboarding
   constellationType: z.enum(['wanderer', 'keeper', 'dreamer']).nullable().optional(),
   // Intention (title is server-controlled via /constellation/title)
-  intention:     z.string().max(80).nullable().optional(),
-  intentionDate: z.string().max(20).nullable().optional(),
+  intention:        z.string().max(80).nullable().optional(),
+  intentionDate:    z.string().max(20).nullable().optional(),
+  // Online presence
+  showOnlineStatus: z.boolean().optional(),
 });
 
 router.get("/character", requireAuth, async (req, res) => {

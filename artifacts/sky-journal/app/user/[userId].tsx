@@ -562,28 +562,30 @@ interface ActiveOutfit {
 }
 
 interface PublicProfile {
-  userId:         string;
-  name:           string;
-  username:       string | null;
-  bio:            string;
-  traits:         string[];
-  mood:           string;
-  role:           string | null;
-  timezone:       string | null;
-  country:        string | null;
-  birthday:       string | null;
-  links:          ProfileLink[];
-  avatarUri:      string | null;
-  activeOutfitId: string | null;
-  activeOutfit:   ActiveOutfit | null;
-  isFollowing:    boolean;
-  activeTitle:    string | null;
-  intention:      string | null;
-  intentionDate:  string | null;
-  stars:          number; // lifetimeStars — never decreases
-  isFounder?:     boolean;
-  isBetaTester?:  boolean;
-  badges?:        BadgeItem[];
+  userId:           string;
+  name:             string;
+  username:         string | null;
+  bio:              string;
+  traits:           string[];
+  mood:             string;
+  role:             string | null;
+  timezone:         string | null;
+  country:          string | null;
+  birthday:         string | null;
+  links:            ProfileLink[];
+  avatarUri:        string | null;
+  activeOutfitId:   string | null;
+  activeOutfit:     ActiveOutfit | null;
+  isFollowing:      boolean;
+  activeTitle:      string | null;
+  intention:        string | null;
+  intentionDate:    string | null;
+  stars:            number; // lifetimeStars — never decreases
+  isFounder?:       boolean;
+  isBetaTester?:    boolean;
+  badges?:          BadgeItem[];
+  isOnline?:        boolean;
+  showOnlineStatus?: boolean;
 }
 
 const XP_PER_LEVEL = 300;
@@ -912,10 +914,20 @@ export default function UserProfileScreen() {
             )}
           </View>
 
-          {/* @handle */}
-          {profile.username ? (
-            <Text style={[styles.handle, { color: aura.accent }]}>@{profile.username}</Text>
-          ) : null}
+          {/* @handle + online status */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {profile.username ? (
+              <Text style={[styles.handle, { color: aura.accent }]}>@{profile.username}</Text>
+            ) : null}
+            {profile.showOnlineStatus && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: profile.isOnline ? 'rgba(80,200,120,0.12)' : 'rgba(200,184,232,0.08)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: profile.isOnline ? 'rgba(80,200,120,0.30)' : 'rgba(200,184,232,0.15)' }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: profile.isOnline ? '#4EC87A' : 'rgba(200,184,232,0.40)' }} />
+                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: profile.isOnline ? '#4EC87A' : 'rgba(200,184,232,0.50)' }}>
+                  {profile.isOnline ? 'Online' : 'Offline'}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Active title */}
           {profile.activeTitle ? (

@@ -74,6 +74,7 @@ interface Props {
   drawerWidth: number;
   character: Character;
   toggleVisibility: () => void;
+  toggleOnlineStatus: () => void;
   handleSignOut: () => void;
   confirmingSignOut: boolean;
   closeDrawer: () => void;
@@ -86,7 +87,7 @@ interface Props {
 }
 
 export function ProfileSettingsDrawer({
-  drawerOpen, drawerX, drawerWidth, character, toggleVisibility,
+  drawerOpen, drawerX, drawerWidth, character, toggleVisibility, toggleOnlineStatus,
   handleSignOut, confirmingSignOut, closeDrawer, user, avatarSource, topPad, colors,
 }: Props) {
   return (
@@ -128,6 +129,22 @@ export function ProfileSettingsDrawer({
                 <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.55)' }}>
                   {character.isPublic ? 'Public' : 'Private'}
                 </Text>
+              </View>
+            </TouchableOpacity>
+            <View style={s.drawerDivider} />
+            <TouchableOpacity style={s.drawerItem} onPress={toggleOnlineStatus} activeOpacity={0.7}>
+              <View style={s.drawerItemIcon}><Icon name="radio" size={15} color="rgba(200,184,232,0.75)" /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.drawerItemLabel}>Online Status</Text>
+                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', marginTop: 1 }}>
+                  {(character.showOnlineStatus ?? true) ? 'Others can see when you\'re online' : 'Your status is hidden'}
+                </Text>
+              </View>
+              <View style={[s.soundPill, (character.showOnlineStatus ?? true) ? s.soundPillOn : s.soundPillOff]}>
+                <View style={[s.soundKnob, {
+                  backgroundColor: (character.showOnlineStatus ?? true) ? '#4EC87A' : 'rgba(200,184,232,0.35)',
+                  transform: [{ translateX: (character.showOnlineStatus ?? true) ? 16 : 0 }],
+                }]} />
               </View>
             </TouchableOpacity>
             <View style={s.drawerDivider} />

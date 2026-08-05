@@ -1,8 +1,23 @@
 import { clerkMiddleware, getAuth } from "@clerk/express";
 import type { RequestHandler, Request, Response, NextFunction } from "express";
 import { db, characterTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { logger } from "../lib/logger";
+
+// ── Presence heartbeat ────────────────────────────────────────────────────────
+// Update last_seen_at at most once per 2 minutes per user (in-process throttle).
+const _lastSeenFlush = new Map<string, number>();
+
+function touchLastSeen(userId: string) {
+  const now = Date.now();
+  const prev = _lastSeenFlush.get(userId) ?? 0;
+  if (now - prev < 2 * 60 * 1000) return; // throttle: 2-min window
+  _lastSeenFlush.set(userId, now);
+  // Fire-and-forget — never block the request
+  db.execute(
+    sql`UPDATE character SET last_seen_at = NOW() WHERE user_id = ${userId} AND show_online_status = true`
+  ).catch(() => { /* silent — presence is best-effort */ });
+}
 
 export const clerkAuth = clerkMiddleware() as RequestHandler;
 
@@ -55,6 +70,8 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
     res.status(500).json({ error: "Internal server error" });
     return;
   }
+  // Best-effort presence heartbeat — does not block the request
+  touchLastSeen(userId);
   next();
 }
 

@@ -42,6 +42,9 @@ export const characterTable = pgTable("character", {
   intentionDate:        text("intention_date"),        // ISO date string (YYYY-MM-DD)
   pingFriendsAt:        timestamp("ping_friends_at", { withTimezone: true }), // last ping-friends call (cooldown)
   updatedAt:            timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  // ── Online presence ────────────────────────────────────────────────────────
+  showOnlineStatus:     boolean("show_online_status").notNull().default(true),
+  lastSeenAt:           timestamp("last_seen_at", { withTimezone: true }),
 });
 
 export type Character      = typeof characterTable.$inferSelect;

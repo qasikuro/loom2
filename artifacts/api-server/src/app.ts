@@ -151,7 +151,7 @@ app.get("/api/videos/:filename", async (req: Request, res: Response) => {
     const [meta] = await file.getMetadata();
     res.setHeader("Content-Type", (meta.contentType as string) || "video/mp4");
     res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-    file.createReadStream().pipe(res);
+    return void file.createReadStream().pipe(res);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     if (err?.code === 404 || err?.code === "404") return res.status(404).end();

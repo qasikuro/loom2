@@ -84,6 +84,7 @@ export interface Character {
   isFounder?:            boolean;
   isBetaTester?:         boolean;
   badges?:               BadgeItem[];
+  showOnlineStatus?:     boolean;
 }
 
 export type JournalEntryType = 'diary' | 'friend' | 'moment';
@@ -201,6 +202,7 @@ export interface RawCharacterResponse {
   isFounder?:            boolean;
   isBetaTester?:         boolean;
   badges?:               unknown;
+  showOnlineStatus?:     boolean;
 }
 
 export interface RawJournalEntryResponse {
@@ -364,6 +366,7 @@ export function toAppCharacter(raw: RawCharacterResponse, _apiBase?: string): Ch
     isFounder:            raw.isFounder        ?? false,
     isBetaTester:         raw.isBetaTester     ?? false,
     badges:               Array.isArray(raw.badges) ? (raw.badges as BadgeItem[]) : [],
+    showOnlineStatus:     raw.showOnlineStatus ?? true,
   };
 }
 
