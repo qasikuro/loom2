@@ -1295,9 +1295,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setCharacter = useCallback((c: Character) => {
     setCharacterState(c);
     AsyncStorage.setItem('character_v2', JSON.stringify(c));
-    // M-4: Reset TTL so softLoadData immediately re-fetches the fresh profile
-    // instead of serving the stale cache for up to 5 minutes on other devices.
-    writeFetchTimestamps({ character: 0 }).catch(() => null);
+    // Stamp TTL as now so softLoadData treats local state as fresh and does NOT
+    // immediately re-fetch — which would race the in-flight PUT and overwrite the
+    // edit with stale DB data. Other devices will naturally re-fetch after 5 min.
+    writeFetchTimestamps({ character: Date.now() }).catch(() => null);
     const characterBody = JSON.stringify({
       name:              c.name,
       bio:               c.bio,
