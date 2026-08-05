@@ -609,6 +609,15 @@ interface PublicOutfit {
   date:        string;
 }
 
+interface PublicBook {
+  id:            string;
+  title:         string;
+  subtitle:      string | null;
+  genre:         string | null;
+  coverImageUri: string | null;
+  chapterCount:  number;
+}
+
 export default function UserProfileScreen() {
   const { userId }          = useLocalSearchParams<{ userId: string }>();
   const colors              = useColors();
@@ -620,10 +629,12 @@ export default function UserProfileScreen() {
   const [profile,      setProfile]      = useState<PublicProfile | null>(null);
   const [stories,      setStories]      = useState<PublicStory[]>([]);
   const [outfits,      setOutfits]      = useState<PublicOutfit[]>([]);
+  const [books,        setBooks]        = useState<PublicBook[]>([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState<string | null>(null);
   const [storiesError, setStoriesError] = useState(false);
   const [outfitsError, setOutfitsError] = useState(false);
+  const [booksError,   setBooksError]   = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
@@ -673,13 +684,24 @@ export default function UserProfileScreen() {
     }
   }
 
+  async function loadBooks() {
+    setBooksError(false);
+    try {
+      const bks = await apiFetch<PublicBook[]>(`/users/${userId}/books`);
+      setBooks(bks);
+    } catch {
+      setBooksError(true);
+    }
+  }
+
   useEffect(() => {
     if (!userId) return;
     (async () => {
-      const [profResult, storsResult, outsResult] = await Promise.allSettled([
+      const [profResult, storsResult, outsResult, booksResult] = await Promise.allSettled([
         apiFetch<PublicProfile>(`/users/${userId}`),
         apiFetch<PublicStory[]>(`/users/${userId}/stories`),
         apiFetch<PublicOutfit[]>(`/users/${userId}/outfits`),
+        apiFetch<PublicBook[]>(`/users/${userId}/books`),
       ]);
 
       if (profResult.status === 'rejected') {
@@ -695,6 +717,8 @@ export default function UserProfileScreen() {
       setStoriesError(storsResult.status === 'rejected');
       setOutfits(outsResult.status === 'fulfilled' ? outsResult.value : []);
       setOutfitsError(outsResult.status === 'rejected');
+      setBooks(booksResult.status === 'fulfilled' ? booksResult.value : []);
+      setBooksError(booksResult.status === 'rejected');
       setLoading(false);
       runEnterAnimation();
     })();
@@ -1308,6 +1332,78 @@ export default function UserProfileScreen() {
             </View>
           )}
 
+          {/* ── BOOKS horizontal row ──────────────────────────────── */}
+          {booksError && (
+            <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>Books unavailable</Text>
+                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>Couldn't load books right now</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.inlineRetryBtn, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}
+                onPress={loadBooks}
+                activeOpacity={0.75}
+              >
+                <Icon name="refresh-cw" size={12} color={aura.accent} />
+                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!booksError && books.length > 0 && (
+            <View style={styles.hSection}>
+              <View style={styles.hSectionHeader}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Books</Text>
+                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{books.length}</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.hScrollContent}
+              >
+                {books.map(book => (
+                  <TouchableOpacity
+                    key={book.id}
+                    style={[styles.hBookCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    onPress={() => router.push({ pathname: '/book-public', params: { bookId: book.id } } as any)}
+                    activeOpacity={0.86}
+                  >
+                    {book.coverImageUri ? (
+                      <Image
+                        source={{ uri: book.coverImageUri }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={[aura.accent + '60', aura.accent + '20']}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    )}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(8,6,22,0.92)']}
+                      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}
+                    >
+                      <Text style={styles.hBookTitle} numberOfLines={2}>{book.title}</Text>
+                      <View style={styles.hBookMeta}>
+                        <Icon name="book-open" size={9} color="rgba(200,184,232,0.75)" />
+                        <Text style={styles.hBookChapters}>
+                          {book.chapterCount} {book.chapterCount === 1 ? 'ch' : 'chs'}
+                        </Text>
+                      </View>
+                    </LinearGradient>
+                    {book.genre ? (
+                      <View style={[styles.hTagPill, { backgroundColor: 'rgba(8,6,22,0.72)' }]}>
+                        <Text style={styles.hTagPillText}>{book.genre}</Text>
+                      </View>
+                    ) : null}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* ── STORIES horizontal row ─────────────────────────────── */}
           {storiesError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -1382,8 +1478,8 @@ export default function UserProfileScreen() {
             </View>
           )}
 
-          {/* Empty state when both are empty (and no errors showing) */}
-          {stories.length === 0 && outfits.length === 0 && !profile.activeOutfit && !storiesError && !outfitsError && (
+          {/* Empty state when everything is empty (and no errors showing) */}
+          {stories.length === 0 && outfits.length === 0 && books.length === 0 && !profile.activeOutfit && !storiesError && !outfitsError && !booksError && (
             <View style={[styles.emptyState, { borderColor: aura.accent + '18' }]}>
               <Text style={{ fontSize: 24 }}>{aura.particle}</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
@@ -1687,6 +1783,22 @@ const styles = StyleSheet.create({
   hTagPillText: {
     fontSize: 9, fontFamily: 'Satoshi-Bold',
     color: 'rgba(220,200,255,0.9)',
+  },
+
+  hBookCard: {
+    width: 110, height: 155,
+    borderRadius: 14, overflow: 'hidden', borderWidth: 1,
+    position: 'relative',
+  },
+  hBookTitle: {
+    fontSize: 11, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(240,234,255,0.95)', lineHeight: 14,
+    marginBottom: 3,
+  },
+  hBookMeta: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  hBookChapters: {
+    fontSize: 10, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(200,184,232,0.8)',
   },
 
   hStoryCard: {

@@ -41,6 +41,46 @@ function tryGetUserId(req: Request): string | null {
   }
 }
 
+// ── Public books by user ──────────────────────────────────────────────────────
+
+/**
+ * GET /users/:userId/books
+ * Returns all public books for a given user (no auth required).
+ */
+router.get("/users/:userId/books", async (req, res) => {
+  const authorId = String(req.params.userId);
+  try {
+    const rows = await db
+      .select({
+        book:         booksTable,
+        chapterCount: count(chaptersTable.id),
+      })
+      .from(booksTable)
+      .leftJoin(chaptersTable, and(
+        eq(chaptersTable.bookId, booksTable.id),
+        eq(chaptersTable.status, "published"),
+      ))
+      .where(and(
+        eq(booksTable.userId, authorId),
+        eq(booksTable.visibility, "public"),
+      ))
+      .groupBy(booksTable.id)
+      .orderBy(desc(booksTable.updatedAt));
+
+    return res.json(rows.map(r => ({
+      id:             r.book.id,
+      title:          r.book.title,
+      subtitle:       r.book.subtitle,
+      genre:          r.book.genre,
+      coverImageUri:  r.book.coverImageUri ?? null,
+      chapterCount:   Number(r.chapterCount),
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to list user books");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Public book page ──────────────────────────────────────────────────────────
 
 /**
