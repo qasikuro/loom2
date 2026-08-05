@@ -41,6 +41,54 @@ function tryGetUserId(req: Request): string | null {
   }
 }
 
+// ── Discover books (all public) ───────────────────────────────────────────────
+
+/**
+ * GET /books/discover
+ * Returns all public books ordered by most recently updated, with author stub.
+ * No auth required.
+ */
+router.get("/books/discover", async (req, res) => {
+  try {
+    const rows = await db
+      .select({
+        book:         booksTable,
+        chapterCount: count(chaptersTable.id),
+        authorName:   characterTable.name,
+        authorUsername: characterTable.username,
+        authorAvatarUri: characterTable.avatarUri,
+      })
+      .from(booksTable)
+      .leftJoin(chaptersTable, and(
+        eq(chaptersTable.bookId, booksTable.id),
+        eq(chaptersTable.status, "published"),
+      ))
+      .leftJoin(characterTable, eq(characterTable.userId, booksTable.userId))
+      .where(eq(booksTable.visibility, "public"))
+      .groupBy(booksTable.id, characterTable.name, characterTable.username, characterTable.avatarUri)
+      .orderBy(desc(booksTable.updatedAt))
+      .limit(60);
+
+    return res.json(rows.map(r => ({
+      id:              r.book.id,
+      title:           r.book.title,
+      subtitle:        r.book.subtitle,
+      description:     (r.book as Record<string, unknown>).description as string | null ?? r.book.subtitle,
+      genre:           r.book.genre,
+      ageRating:       r.book.ageRating,
+      coverImageUri:   r.book.coverImageUri ?? null,
+      chapterCount:    Number(r.chapterCount),
+      authorUserId:    r.book.userId,
+      authorName:      r.authorName ?? null,
+      authorUsername:  r.authorUsername ?? null,
+      authorAvatarUri: r.authorAvatarUri ?? null,
+    })));
+  } catch (err) {
+    req.log.error({ err }, "Failed to list discover books");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Public books by user ──────────────────────────────────────────────────────
 
 /**

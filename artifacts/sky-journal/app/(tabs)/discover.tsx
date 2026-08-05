@@ -14,7 +14,6 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Platform,
   RefreshControl,
@@ -27,15 +26,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const SCREEN_W = Dimensions.get('window').width;
-
-const TABS = ['Stories', 'Guides', 'Vibes', 'People'] as const;
+const TABS = ['Stories', 'Guides', 'Books', 'People'] as const;
 type TabType = (typeof TABS)[number];
 
 const TAB_ICONS: Record<TabType, string> = {
   Stories: '✦',
   Guides:  '★',
-  Vibes:   '◈',
+  Books:   '◎',
   People:  '◉',
 };
 
@@ -60,16 +57,20 @@ const TOPIC_COLORS: Record<string, string> = {
   'Mindfulness':      '#68B8B0',
 };
 
-const VIBES = [
-  { label: 'Soft',        icon: 'feather'  as const, color: '#9B87C8', dark: '#2D1E4A' },
-  { label: 'Lonely',      icon: 'moon'     as const, color: '#6B8EC8', dark: '#1A2A4A' },
-  { label: 'Romantic',    icon: 'heart'    as const, color: '#C87AA8', dark: '#3A1830' },
-  { label: 'Chaotic',     icon: 'zap'      as const, color: '#C87850', dark: '#3A1A0A' },
-  { label: 'Peaceful',    icon: 'cloud'    as const, color: '#58A0B8', dark: '#0A2A38' },
-  { label: 'Adventurous', icon: 'wind'     as const, color: '#58A878', dark: '#0A2A1A' },
-  { label: 'Dreamy',      icon: 'star'     as const, color: '#9878C8', dark: '#2A1848' },
-  { label: 'Hopeful',     icon: 'sunrise'  as const, color: '#C8A050', dark: '#3A2800' },
-];
+interface DiscoverBook {
+  id:              string;
+  title:           string;
+  subtitle:        string | null;
+  description:     string | null;
+  genre:           string | null;
+  ageRating:       string | null;
+  coverImageUri:   string | null;
+  chapterCount:    number;
+  authorUserId:    string;
+  authorName:      string | null;
+  authorUsername:  string | null;
+  authorAvatarUri: string | null;
+}
 
 interface UserSearchResult {
   userId:      string;
@@ -109,7 +110,6 @@ export default function DiscoverScreen() {
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
   const [storiesSort,   setStoriesSort]   = useState<'for-you' | 'new'>('for-you');
-  const [selectedVibe,  setSelectedVibe]  = useState<string | null>(null);
   const [peopleQuery,   setPeopleQuery]   = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(false);
@@ -121,10 +121,14 @@ export default function DiscoverScreen() {
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
   const [guideTopicFilter, setGuideTopicFilter] = useState<string | null>(null);
   const [guideAvailNow,    setGuideAvailNow]    = useState(false);
+  const [booksData,    setBooksData]    = useState<DiscoverBook[]>([]);
+  const [booksLoading, setBooksLoading] = useState(false);
+  const [booksError,   setBooksError]   = useState<string | null>(null);
   const [moodDoorVisible, setMoodDoorVisible] = useState(false);
   const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchRef     = useRef<number>(0);
   const guidesLoaded     = useRef(false);
+  const booksLoaded      = useRef(false);
   const moodDoorShown    = useRef(false);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
@@ -156,7 +160,6 @@ export default function DiscoverScreen() {
 
   function selectTab(tab: TabType) {
     setActiveTab(tab);
-    setSelectedVibe(null);
     Haptics.selectionAsync();
   }
 
@@ -212,7 +215,29 @@ export default function DiscoverScreen() {
       guidesLoaded.current = true;
       loadGuides();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: loadGuides is a stable function ref; only activeTab should trigger this check
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only activeTab should trigger this check
+  }, [activeTab]);
+
+  async function loadBooks() {
+    setBooksLoading(true);
+    setBooksError(null);
+    try {
+      const data = await apiFetch<DiscoverBook[]>('/books/discover');
+      setBooksData(data ?? []);
+    } catch {
+      setBooksError('Could not load books. Pull to refresh.');
+    } finally {
+      setBooksLoading(false);
+    }
+  }
+
+  // Load books the first time the Books tab is opened
+  useEffect(() => {
+    if (activeTab === 'Books' && !booksLoaded.current) {
+      booksLoaded.current = true;
+      loadBooks();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only activeTab should trigger this check
   }, [activeTab]);
 
   function handleGuideFollow(g: GuideResult) {
@@ -232,12 +257,7 @@ export default function DiscoverScreen() {
   const sortedByNew = [...filteredByMoodDoor].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
   );
-  const vibePosts = selectedVibe
-    ? filteredByMoodDoor.filter(p => p.vibe === selectedVibe || p.mood === selectedVibe)
-    : filteredByMoodDoor;
   const activePosts = storiesSort === 'new' ? sortedByNew : filteredByMoodDoor;
-
-  const CARD_W = (SCREEN_W - 48) / 2;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
@@ -437,83 +457,128 @@ export default function DiscoverScreen() {
         />
       )}
 
-      {/* ── Vibes ─────────────────────────────────────────── */}
-      {activeTab === 'Vibes' && (
+      {/* ── Books ─────────────────────────────────────────── */}
+      {activeTab === 'Books' && (
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.vibesScroll, { paddingBottom: bottomPad }]}
+          contentContainerStyle={[{ paddingBottom: bottomPad, paddingTop: 12 }]}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
+              refreshing={booksLoading && booksData.length > 0}
+              onRefresh={() => { booksLoaded.current = false; loadBooks(); }}
               tintColor={colors.primary}
               colors={[colors.primary]}
             />
           }
         >
-          {selectedVibe ? (
-            <>
-              <TouchableOpacity
-                style={[styles.backRow, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                onPress={() => setSelectedVibe(null)}
-              >
-                <Icon name="arrow-left" size={14} color={colors.foreground} />
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Text style={[styles.backText, { color: colors.foreground }]}>{t(`moods.${selectedVibe}` as any)}</Text>
-              </TouchableOpacity>
+          {/* Banner */}
+          <LinearGradient
+            colors={['rgba(80,40,180,0.22)', 'rgba(40,80,220,0.10)', 'transparent']}
+            style={styles.booksBanner}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+              <Icon name="book-open" size={15} color="#C8A84B" />
+              <Text style={styles.booksBannerTitle}>Sky Journal Library</Text>
+            </View>
+            <Text style={styles.booksBannerSub}>
+              Explore serialised stories from writers in the community
+            </Text>
+          </LinearGradient>
 
-              {vibePosts.length === 0 ? (
-                <EmptyVibes
-                  vibe={selectedVibe}
-                  colors={colors}
-                  onCreatePress={() => router.push('/(tabs)/create')}
-                />
-              ) : vibePosts.map(post => (
-                <DiscoverCard
-                  key={post.id}
-                  post={post}
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  onPress={() => post.bookId
-                    ? router.push({ pathname: '/book-public', params: { bookId: post.bookId } } as any)
-                    : router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'discover' } })}
-                  onSave={() => toggleSavePost(post.id)}
-                />
-              ))}
-            </>
-          ) : (
-            <>
-              <Text style={[styles.vibeHint, { color: colors.mutedForeground }]}>
-                {t('discover.findMood')}
-              </Text>
-              <View style={styles.vibeGrid}>
-                {VIBES.map(vibe => {
-                  const count = discoverPosts.filter(p => p.mood === vibe.label || p.vibe === vibe.label).length;
-                  return (
-                    <TouchableOpacity
-                      key={vibe.label}
-                      style={[styles.vibeCard, { width: CARD_W, borderColor: `${vibe.color}35` }]}
-                      onPress={() => { setSelectedVibe(vibe.label); Haptics.selectionAsync(); }}
-                      activeOpacity={0.85}
-                    >
-                      <LinearGradient
-                        colors={[`${vibe.color}22`, `${vibe.color}08`]}
-                        style={StyleSheet.absoluteFill}
-                        start={{ x: 0.1, y: 0 }}
-                        end={{ x: 0.9, y: 1 }}
-                      />
-                      <View style={[styles.vibeIconWrap, { backgroundColor: `${vibe.color}28` }]}>
-                        <Icon name={vibe.icon} size={22} color={vibe.color} />
-                      </View>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      <Text style={[styles.vibeLabel, { color: vibe.color }]}>{t(`moods.${vibe.label}` as any)}</Text>
-                      <Text style={[styles.vibeCount, { color: `${vibe.color}70` }]}>
-                        {count} {count === 1 ? t('discover.story') : t('discover.stories')}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+          {/* Error */}
+          {!!booksError && (
+            <View style={{ marginHorizontal: 16, marginBottom: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(180,60,60,0.12)', borderWidth: 1, borderColor: 'rgba(180,60,60,0.25)' }}>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#E06C75', textAlign: 'center' }}>{booksError}</Text>
+            </View>
+          )}
+
+          {/* Loading */}
+          {booksLoading && booksData.length === 0 ? (
+            <ActivityIndicator color="rgba(155,120,232,0.7)" style={{ marginTop: 40 }} />
+          ) : booksData.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <View style={[styles.emptyIconBox, { backgroundColor: 'rgba(155,120,232,0.12)' }]}>
+                <Icon name="book-open" size={30} color="rgba(155,120,232,0.6)" />
               </View>
-            </>
+              <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>No books yet</Text>
+              <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
+                Be the first to publish a book series in Sky Journal
+              </Text>
+            </View>
+          ) : (
+            <View style={{ paddingHorizontal: 16, gap: 12 }}>
+              {booksData.map(book => (
+                <TouchableOpacity
+                  key={book.id}
+                  style={styles.bookCard}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  onPress={() => router.push({ pathname: '/book-public', params: { bookId: book.id } } as any)}
+                  activeOpacity={0.88}
+                >
+                  {/* Cover */}
+                  <View style={styles.bookCardCover}>
+                    {book.coverImageUri ? (
+                      <Image
+                        source={{ uri: book.coverImageUri }}
+                        style={StyleSheet.absoluteFill}
+                        contentFit="cover"
+                        cachePolicy="memory-disk"
+                      />
+                    ) : (
+                      <LinearGradient
+                        colors={['rgba(120,70,255,0.55)', 'rgba(60,140,240,0.35)']}
+                        style={StyleSheet.absoluteFill}
+                      />
+                    )}
+                    {!book.coverImageUri && (
+                      <Icon name="book-open" size={28} color="rgba(220,210,255,0.55)" />
+                    )}
+                    {/* Chapter badge */}
+                    <View style={styles.bookChapterBadge}>
+                      <Text style={styles.bookChapterBadgeText}>
+                        {book.chapterCount} {book.chapterCount === 1 ? 'ch' : 'chs'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Info */}
+                  <View style={{ flex: 1, gap: 5 }}>
+                    <Text style={styles.bookCardTitle} numberOfLines={2}>{book.title}</Text>
+                    {book.authorName ? (
+                      <TouchableOpacity
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: book.authorUserId } } as any)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.bookCardAuthor}>By {book.authorName}</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    {/* Genre + age rating tags */}
+                    {(book.genre || book.ageRating) ? (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
+                        {book.genre ? (
+                          <View style={styles.bookTag}>
+                            <Text style={styles.bookTagText}>{book.genre}</Text>
+                          </View>
+                        ) : null}
+                        {book.ageRating ? (
+                          <View style={[styles.bookTag, { backgroundColor: 'rgba(200,168,75,0.12)', borderColor: 'rgba(200,168,75,0.28)' }]}>
+                            <Text style={[styles.bookTagText, { color: '#C8A84B' }]}>{book.ageRating}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                    {/* Description */}
+                    {book.description ? (
+                      <Text style={styles.bookCardDesc} numberOfLines={3}>{book.description}</Text>
+                    ) : null}
+                  </View>
+
+                  {/* Chevron */}
+                  <Icon name="chevron-right" size={16} color="rgba(200,184,232,0.30)" style={{ alignSelf: 'center' }} />
+                </TouchableOpacity>
+              ))}
+            </View>
           )}
         </ScrollView>
       )}
@@ -854,31 +919,6 @@ function EmptyFeed({ tab: _tab, colors, onCreatePress }: { tab: string; colors: 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function EmptyVibes({ vibe, colors, onCreatePress }: { vibe: string; colors: any; onCreatePress: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.emptyWrap}>
-      <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
-        <Icon name="compass" size={30} color={`${colors.primary}70`} />
-      </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discover.emptyFeed')}</Text>
-      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {t('discover.emptyVibes', { vibe: t(`moods.${vibe}` as any) })}
-      </Text>
-      <TouchableOpacity
-        style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
-        onPress={onCreatePress}
-        activeOpacity={0.85}
-      >
-        <Icon name="plus" size={14} color="#fff" />
-        <Text style={styles.ctaBtnText}>{t('discover.beFirst')}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function PeopleEmptyStart({ colors }: { colors: any }) {
   return (
     <View style={styles.emptyWrap}>
@@ -990,46 +1030,66 @@ const styles = StyleSheet.create({
   // Feed list
   listPad: { paddingHorizontal: 16, paddingTop: 18 },
 
-  // Vibes
-  vibesScroll: { paddingHorizontal: 16, paddingTop: 20, gap: 16 },
-  vibeHint: {
-    fontSize: 13, fontFamily: 'Satoshi-Regular',
-    fontStyle: 'italic', textAlign: 'center',
-    color: 'rgba(210,196,240,0.55)',
-    paddingBottom: 4,
-  },
-  vibeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 14,
-  },
-  vibeCard: {
-    borderRadius: 20, borderWidth: 1,
-    padding: 16, gap: 6,
-    minHeight: 122,
-    justifyContent: 'flex-end',
+  // Books
+  booksBanner: {
+    paddingHorizontal: 20, paddingTop: 8,
+    paddingBottom: 16, marginBottom: 4,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 4,
   },
-  vibeIconWrap: {
-    width: 44, height: 44, borderRadius: 14,
+  booksBannerTitle: {
+    fontSize: 17, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,210,255,0.95)', letterSpacing: -0.3,
+  },
+  booksBannerSub: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.55)', marginTop: 4,
+    fontStyle: 'italic', lineHeight: 18,
+  },
+  bookCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    backgroundColor: 'rgba(30,20,60,0.65)',
+    borderRadius: 18, borderWidth: 1,
+    borderColor: 'rgba(155,120,232,0.18)', padding: 14,
+  },
+  bookCardCover: {
+    width: 80, height: 112,
+    borderRadius: 10, overflow: 'hidden',
+    backgroundColor: 'rgba(120,70,255,0.25)',
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 4,
+    flexShrink: 0, position: 'relative',
   },
-  vibeLabel: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-  vibeCount: { fontSize: 11, fontFamily: 'Satoshi-Medium', opacity: 0.72 },
-
-  backRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 24, borderWidth: 1, marginBottom: 8,
+  bookChapterBadge: {
+    position: 'absolute', bottom: 5, right: 5,
+    backgroundColor: 'rgba(8,6,22,0.82)',
+    borderRadius: 7, paddingHorizontal: 6, paddingVertical: 2,
+    borderWidth: 1, borderColor: 'rgba(155,120,232,0.30)',
   },
-  backText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  bookChapterBadgeText: {
+    fontSize: 9, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(200,184,232,0.85)',
+  },
+  bookCardTitle: {
+    fontSize: 15, fontFamily: 'Satoshi-Bold',
+    color: 'rgba(220,210,255,0.96)', letterSpacing: -0.3, lineHeight: 20,
+  },
+  bookCardAuthor: {
+    fontSize: 12, fontFamily: 'Satoshi-Medium',
+    color: 'rgba(155,120,232,0.80)',
+  },
+  bookTag: {
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 10, borderWidth: 1,
+    backgroundColor: 'rgba(155,120,232,0.12)',
+    borderColor: 'rgba(155,120,232,0.28)',
+  },
+  bookTagText: {
+    fontSize: 10, fontFamily: 'Satoshi-Medium',
+    color: 'rgba(200,184,232,0.75)',
+  },
+  bookCardDesc: {
+    fontSize: 12, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(200,184,232,0.50)', lineHeight: 17, fontStyle: 'italic',
+  },
 
   // Guides
   guideBanner: {
