@@ -27,6 +27,7 @@ export const booksTable = pgTable("books", {
   language:      text("language").notNull().default("English"),
   ageRating:     text("age_rating").notNull().default("All Ages"),
   visibility:    text("visibility").notNull().default("public"),
+  description:   text("description").notNull().default(""),
   coverImageUri: text("cover_image_uri"),
   createdAt:     timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:     timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

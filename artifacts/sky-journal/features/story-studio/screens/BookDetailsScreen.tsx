@@ -2,13 +2,14 @@
  * BookDetailsScreen — overview of a book, its chapters and their status.
  * "+ New Chapter" creates a blank draft chapter and navigates to PageManagerScreen.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -25,6 +26,7 @@ interface Book {
   id: string;
   title: string;
   subtitle: string;
+  description: string;
   seriesType: string;
   genre: string[];
   language: string;
@@ -58,6 +60,9 @@ export default function BookDetailsScreen() {
   const [chapters,   setChapters]   = useState<Chapter[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [adding,     setAdding]     = useState(false);
+  const [descDraft,  setDescDraft]  = useState('');
+  const [descFocused, setDescFocused] = useState(false);
+  const [descSaving, setDescSaving] = useState(false);
 
   async function loadData() {
     if (!bookId) return;
@@ -67,11 +72,30 @@ export default function BookDetailsScreen() {
         fetch<Chapter[]>(`/books/${bookId}/chapters`),
       ]);
       setBook(bookData);
+      setDescDraft(bookData.description ?? '');
       setChapters(chapData);
     } catch (err) {
       Alert.alert('Error', 'Could not load book details');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function saveDescription() {
+    if (!bookId || descSaving) return;
+    setDescSaving(true);
+    try {
+      const updated = await fetch<Book>(`/books/${bookId}`, {
+        method: 'PATCH',
+        json: { description: descDraft.trim() },
+      });
+      setBook(updated);
+      setDescDraft(updated.description ?? '');
+    } catch {
+      Alert.alert('Error', 'Could not save synopsis');
+    } finally {
+      setDescSaving(false);
+      setDescFocused(false);
     }
   }
 
@@ -214,6 +238,34 @@ export default function BookDetailsScreen() {
             </View>
           </View>
           {book.subtitle ? <Text style={s.bookSubtitle}>{book.subtitle}</Text> : null}
+
+          {/* Synopsis / description — inline editable */}
+          <Text style={s.descLabel}>SYNOPSIS</Text>
+          <TextInput
+            style={[s.descInput, descFocused && s.descInputFocused]}
+            value={descDraft}
+            onChangeText={setDescDraft}
+            onFocus={() => setDescFocused(true)}
+            onBlur={saveDescription}
+            multiline
+            numberOfLines={4}
+            placeholder="Write a synopsis for your book…"
+            placeholderTextColor="rgba(200,185,255,0.22)"
+            returnKeyType="default"
+            blurOnSubmit={false}
+          />
+          {descFocused && (
+            <TouchableOpacity
+              style={[s.descSaveBtn, descSaving && { opacity: 0.6 }]}
+              onPress={saveDescription}
+              disabled={descSaving}
+            >
+              {descSaving
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={s.descSaveTxt}>Save</Text>}
+            </TouchableOpacity>
+          )}
+
           <Text style={s.bookStat}>{chapters.length} chapter{chapters.length !== 1 ? 's' : ''}</Text>
         </View>
       )}
@@ -265,7 +317,12 @@ const s = StyleSheet.create({
   metaChip:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   metaChipTxt:   { color: 'rgba(200,185,255,0.50)', fontSize: 11 },
   bookSubtitle:  { color: 'rgba(255,255,255,0.45)', fontSize: 13, marginBottom: 4, fontStyle: 'italic' },
-  bookStat:      { color: 'rgba(200,185,255,0.38)', fontSize: 12 },
+  descLabel:     { color: 'rgba(200,185,255,0.38)', fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginTop: 10, marginBottom: 6 },
+  descInput:     { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: 'rgba(255,255,255,0.82)', fontSize: 13, minHeight: 80, textAlignVertical: 'top', marginBottom: 4 },
+  descInputFocused: { borderColor: 'rgba(139,112,200,0.45)', backgroundColor: 'rgba(139,112,200,0.06)' },
+  descSaveBtn:   { alignSelf: 'flex-end', backgroundColor: '#8B70C8', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, marginBottom: 6 },
+  descSaveTxt:   { color: '#fff', fontSize: 13, fontWeight: '600' },
+  bookStat:      { color: 'rgba(200,185,255,0.38)', fontSize: 12, marginTop: 4 },
   list:          { padding: 16, gap: 10 },
   chapterCard:   { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 12, gap: 12 },
   chapterIndex:  { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' },

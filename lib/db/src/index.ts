@@ -174,6 +174,12 @@ export async function runStartupMigrations(): Promise<void> {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS books_user_id_idx ON books(user_id)`);
 
+    // Add description field to books (idempotent)
+    await client.query(`
+      ALTER TABLE books
+        ADD COLUMN IF NOT EXISTS description TEXT NOT NULL DEFAULT ''
+    `);
+
     // ── Story Studio: Chapters ────────────────────────────────────────────────
     await client.query(`
       CREATE TABLE IF NOT EXISTS chapters (

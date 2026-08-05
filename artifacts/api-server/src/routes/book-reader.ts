@@ -138,7 +138,7 @@ router.get("/books/:id/public", clerkAuth, async (req, res) => {
       id:             book.id,
       title:          book.title,
       subtitle:       book.subtitle,
-      description:    book.subtitle,   // subtitle doubles as description until a dedicated field is added
+      description:    book.description,
       seriesType:     book.seriesType,
       genre:          book.genre,
       language:       book.language,

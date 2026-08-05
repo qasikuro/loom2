@@ -31,6 +31,7 @@ const router: IRouter = Router();
 const BookInputSchema = z.object({
   title:         z.string().min(1).max(200),
   subtitle:      z.string().max(300).default(""),
+  description:   z.string().max(5000).default(""),
   seriesType:    z.enum(["standalone", "series", "oneshot"]).default("standalone"),
   genre:         z.array(z.string()).default([]),
   language:      z.string().default("English"),
@@ -380,6 +381,7 @@ function serializeBook(b: typeof booksTable.$inferSelect) {
     id:            b.id,
     title:         b.title,
     subtitle:      b.subtitle,
+    description:   b.description,
     seriesType:    b.seriesType,
     genre:         b.genre,
     language:      b.language,
