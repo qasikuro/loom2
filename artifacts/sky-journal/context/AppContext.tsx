@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { enqueueMutation, drainMutationQueue } from '@/utils/mutationQueue';
+import { enqueueMutation, drainMutationQueue, clearMutation } from '@/utils/mutationQueue';
 import { registerCustomEffects, type EffectDef } from '@/components/ProfileEffect';
 import { showToastGlobal } from '@/components/Toast';
 import {
@@ -1336,17 +1336,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       intentionDate:     c.intentionDate     ?? null,
       showOnlineStatus:  c.showOnlineStatus  ?? true,
     });
-    apiFetch('/character', { method: 'PUT', body: characterBody }).catch((err) => {
-      console.warn('[setCharacter] PUT /character failed (will auto-retry):', err);
-      // H-1: Auto-retry once immediately, then queue for next foreground drain.
-      // Do NOT require a toast tap — profile edits must persist automatically.
-      apiFetch('/character', { method: 'PUT', body: characterBody })
-        .catch((err2) => {
-          console.warn('[setCharacter] PUT /character retry failed — queuing mutation:', err2);
-          enqueueMutation('/character', 'PUT', characterBody).catch(() => null);
-          showToastGlobal("Couldn't sync profile — will retry when online", 'warning');
-        });
-    });
+    apiFetch('/character', { method: 'PUT', body: characterBody })
+      .then(() => {
+        // PUT succeeded — remove any older queued snapshot so the drain can't
+        // replay a stale full-character body from a previous session and
+        // silently overwrite this fresh DB value with e.g. name: "Sky Child".
+        clearMutation('/character', 'PUT').catch(() => null);
+      })
+      .catch((err) => {
+        console.warn('[setCharacter] PUT /character failed (will auto-retry):', err);
+        // H-1: Auto-retry once immediately, then queue for next foreground drain.
+        // Do NOT require a toast tap — profile edits must persist automatically.
+        apiFetch('/character', { method: 'PUT', body: characterBody })
+          .then(() => { clearMutation('/character', 'PUT').catch(() => null); })
+          .catch((err2) => {
+            console.warn('[setCharacter] PUT /character retry failed — queuing mutation:', err2);
+            enqueueMutation('/character', 'PUT', characterBody).catch(() => null);
+            showToastGlobal("Couldn't sync profile — will retry when online", 'warning');
+          });
+      });
   }, []);
 
   // ── Inline reward toast helper (defined early so mutations can use it) ──────

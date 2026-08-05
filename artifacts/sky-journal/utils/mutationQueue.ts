@@ -11,7 +11,10 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const QUEUE_KEY  = 'pending_mutations_v1';
+// v2: bumped to evict any queued mutations written under v1 that contained
+// stale full-character snapshots (e.g. name: "Sky Child") and were replaying
+// on every foreground event, silently overwriting newer DB values.
+const QUEUE_KEY  = 'pending_mutations_v2';
 const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface PendingMutation {
@@ -43,6 +46,23 @@ export async function enqueueMutation(
     );
     fresh.push({ id: crypto.randomUUID(), url, method, body, queuedAt: now });
     await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(fresh));
+  } catch { /* never block the caller */ }
+}
+
+/**
+ * Remove all queued entries for a specific URL + method.
+ * Call this after a direct PUT/PATCH succeeds so the queue can never replay a
+ * stale snapshot from a previous session and silently overwrite the fresh value.
+ */
+export async function clearMutation(url: string, method: string): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(QUEUE_KEY);
+    if (!raw) return;
+    const queue: PendingMutation[] = JSON.parse(raw);
+    const filtered = queue.filter(m => !(m.url === url && m.method === method));
+    if (filtered.length !== queue.length) {
+      await AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(filtered));
+    }
   } catch { /* never block the caller */ }
 }
 

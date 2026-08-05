@@ -18,3 +18,4 @@
 - [Messages table UUID id](messages-uuid-id.md) — deployed messages.id is UUID (not serial); Drizzle schema must use uuid(), route keeps messageId as String not parseInt
 - [API server startup order](api-server-startup-order.md) — app.listen() must fire BEFORE runStartupMigrations(); reverse order causes silent hang (no log output) if any ALTER TABLE blocks on a DB lock
 - [HMR resets _getToken → 401 on writes](hmr-token-getter-reset.md) — Expo Go HMR re-evaluates AppContext.tsx resetting _getToken to null; fix: store in globalThis, not a plain let; auto-queue mutations, never require toast tap
+- [Mutation queue stale full-character snapshots](mutation-queue-stale-snapshots.md) — drain replays old full-body snapshots and can overwrite newer DB values; call clearMutation() after every successful PUT
