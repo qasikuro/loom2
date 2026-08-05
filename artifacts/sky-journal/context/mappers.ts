@@ -158,6 +158,12 @@ export interface DiscoverPost {
   bookId?:          string;
   /** Title of the parent book (only present when bookId is set). */
   bookTitle?:       string;
+  /** Distinguishes post kinds — 'story' (panels/pages) or 'video'. Defaults to 'story'. */
+  contentType?:     'story' | 'video';
+  /** URI of the uploaded video file (video posts only). */
+  videoUri?:        string | null;
+  /** URI of the video thumbnail image (video posts only). */
+  thumbnailUri?:    string | null;
 }
 
 // ── Raw server response shapes ─────────────────────────────────────────────────
@@ -279,6 +285,9 @@ export interface RawDiscoverApiItem {
   bookId?:          string;
   /** Title of the parent book (only present when bookId is set). */
   bookTitle?:       string;
+  contentType?:     'story' | 'video';
+  videoUri?:        string | null;
+  thumbnailUri?:    string | null;
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────────────
@@ -442,5 +451,8 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     pageLayoutKey:    raw.pageLayoutKey ?? undefined,
     bookId:           raw.bookId,
     bookTitle:        raw.bookTitle,
+    contentType:      (raw.contentType === 'video' ? 'video' : 'story') as 'story' | 'video',
+    videoUri:         raw.videoUri ?? null,
+    thumbnailUri:     raw.thumbnailUri ?? null,
   };
 }

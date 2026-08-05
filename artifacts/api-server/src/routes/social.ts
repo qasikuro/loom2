@@ -549,6 +549,9 @@ router.get("/discover", requireAuth, async (req, res) => {
         pageLayoutKey:   storiesTable.pageLayoutKey,
         pages:           storiesTable.pages,
         date:            storiesTable.date,
+        contentType:     storiesTable.contentType,
+        videoUri:        storiesTable.videoUri,
+        thumbnailUri:    storiesTable.thumbnailUri,
         authorName:      characterTable.name,
         authorUsername:  characterTable.username,
         authorAvatarUri: characterTable.avatarUri,
@@ -722,6 +725,9 @@ router.get("/discover", requireAuth, async (req, res) => {
           panels,
           pageLayoutKey:   row.pageLayoutKey ?? undefined,
           pages:           row.pages ?? undefined,
+          contentType:     (row.contentType ?? 'story') as 'story' | 'video',
+          videoUri:        row.videoUri ?? null,
+          thumbnailUri:    row.thumbnailUri ?? null,
           isFollowing,
         };
       } else {

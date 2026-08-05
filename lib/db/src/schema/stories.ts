@@ -26,6 +26,10 @@ export const storiesTable = pgTable("stories", {
   resonatedCount:  integer("resonated_count").notNull().default(0),
   date:            timestamp("date", { withTimezone: true }).notNull(),
   createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  // Video post support — contentType distinguishes post kinds cleanly
+  contentType:  text("content_type").notNull().default("story"),
+  videoUri:     text("video_uri"),
+  thumbnailUri: text("thumbnail_uri"),
 }, (table) => [
   index("stories_user_id_idx").on(table.userId),
   index("stories_is_public_is_hidden_idx").on(table.isPublic, table.isHidden),

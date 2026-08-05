@@ -244,6 +244,14 @@ export async function runStartupMigrations(): Promise<void> {
       )
     `);
 
+    // ── Video posts: contentType + video/thumbnail URIs ───────────────────────
+    await client.query(`
+      ALTER TABLE stories
+        ADD COLUMN IF NOT EXISTS content_type  TEXT NOT NULL DEFAULT 'story',
+        ADD COLUMN IF NOT EXISTS video_uri     TEXT,
+        ADD COLUMN IF NOT EXISTS thumbnail_uri TEXT
+    `);
+
   } finally {
     client.release();
   }

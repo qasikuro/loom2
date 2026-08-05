@@ -32,12 +32,13 @@ const PanelSchema = z.object({
   overlays:   z.array(OverlaySchema).optional().nullable(),
 });
 
-const StoryInputSchema = z.object({
+// Base object — used by PATCH (which calls .partial()) so it must stay a ZodObject, not ZodEffects.
+const StoryBaseSchema = z.object({
   id:             z.string().uuid().optional().nullable(),
   date:           z.string(),
   chapterTitle:   z.string().min(1).max(200),
   description:    z.string().max(1000).default(""),
-  panels:         z.array(PanelSchema).min(1),
+  panels:         z.array(PanelSchema).default([]),
   mood:           z.string().default("Peaceful"),
   location:       z.string().default(""),
   isPublic:       z.boolean().default(false),
@@ -47,15 +48,41 @@ const StoryInputSchema = z.object({
     layoutKey: z.string(),
     panels:    z.array(PanelSchema),
   })).optional().nullable(),
+  contentType:  z.enum(['story', 'video']).default('story'),
+  videoUri:     z.string().optional().nullable(),
+  thumbnailUri: z.string().optional().nullable(),
+});
+
+// Full POST schema — adds cross-field validation on top of the base.
+const StoryInputSchema = StoryBaseSchema.superRefine((data, ctx) => {
+  if (data.contentType === 'video') {
+    if (!data.videoUri) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['videoUri'], message: 'videoUri is required for video posts' });
+    }
+    if (!data.thumbnailUri) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['thumbnailUri'], message: 'thumbnailUri is required for video posts' });
+    }
+  } else {
+    if (data.panels.length === 0) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['panels'], message: 'panels must not be empty for story posts' });
+    }
+  }
 });
 
 const StoryOutputSchema = z.object({
   id:           z.string().uuid(),
   date:         z.string(),
   chapterTitle: z.string().min(1),
-  panels:       z.array(z.unknown()).min(1),
+  // Video posts have no panels — only require panels for story contentType
+  panels:       z.array(z.unknown()),
   mood:         z.string().min(1),
   createdAt:    z.string(),
+  contentType:  z.enum(['story', 'video']).optional(),
+}).superRefine((data, ctx) => {
+  const ct = data.contentType ?? 'story';
+  if (ct === 'story' && data.panels.length === 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['panels'], message: 'story posts must have at least one panel' });
+  }
 });
 
 router.get("/stories", requireAuth, async (req, res) => {
@@ -115,6 +142,9 @@ router.post("/stories", requireAuth, async (req, res) => {
       mood:          rest.mood,
       location:      rest.location,
       isPublic:      rest.isPublic,
+      contentType:   rest.contentType ?? 'story',
+      videoUri:      rest.videoUri ?? null,
+      thumbnailUri:  rest.thumbnailUri ?? null,
     };
 
     const [created] = await db
@@ -128,6 +158,9 @@ router.post("/stories", requireAuth, async (req, res) => {
           pages: (rest.pages ?? null) as StoryPageDB[] | null,
           chapterTitle: rest.chapterTitle, description: rest.description ?? '',
           mood: rest.mood, location: rest.location, isPublic: rest.isPublic,
+          contentType: rest.contentType ?? 'story',
+          videoUri:    rest.videoUri ?? null,
+          thumbnailUri: rest.thumbnailUri ?? null,
         },
       })
       .returning();
@@ -289,7 +322,7 @@ router.get("/stories/:id", requireAuth, async (req, res) => {
 router.patch("/stories/:id", requireAuth, async (req, res) => {
   const userId  = getUserId(req);
   const storyId = String(req.params.id);
-  const parsed  = StoryInputSchema.partial().safeParse(req.body);
+  const parsed  = StoryBaseSchema.partial().safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
   }
@@ -303,7 +336,7 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
     if ('pageLayoutKey' in parsed.data)          updateSet.pageLayoutKey = parsed.data.pageLayoutKey ?? null;
     if ('pages' in parsed.data)                  updateSet.pages         = (parsed.data.pages ?? null) as unknown;
     if (parsed.data.panels        !== undefined) {
-      updateSet.panels = parsed.data.panels.map(p => ({
+      updateSet.panels = parsed.data.panels.map((p: z.infer<typeof PanelSchema>) => ({
         id:         p.id,
         text:       p.text,
         imageUri:   safeImageUri(p.imageUri ?? null) ?? undefined,
@@ -311,6 +344,21 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
         bubbleText: p.bubbleText ?? undefined,
         overlays:   p.overlays   ?? undefined,
       }));
+    }
+    if (parsed.data.contentType  !== undefined) updateSet.contentType  = parsed.data.contentType;
+    if ('videoUri'    in parsed.data)            updateSet.videoUri     = parsed.data.videoUri    ?? null;
+    if ('thumbnailUri' in parsed.data)           updateSet.thumbnailUri = parsed.data.thumbnailUri ?? null;
+
+    // Cross-field validation: preserve valid story/video invariant after patch
+    const currentContentType = parsed.data.contentType ?? 'story';
+    if (currentContentType === 'video') {
+      // If switching to video, both URIs must be present in the patch or already set
+      if ('videoUri' in parsed.data && !parsed.data.videoUri) {
+        return res.status(400).json({ error: "videoUri is required for video posts" });
+      }
+      if ('thumbnailUri' in parsed.data && !parsed.data.thumbnailUri) {
+        return res.status(400).json({ error: "thumbnailUri is required for video posts" });
+      }
     }
 
     const [updated] = await db
@@ -738,6 +786,9 @@ function serializeStory(row: typeof storiesTable.$inferSelect, stickerCount = 0)
     pageLayoutKey:     row.pageLayoutKey ?? undefined,
     pages:             row.pages ?? undefined,
     createdAt:         row.createdAt.toISOString(),
+    contentType:       (row.contentType ?? 'story') as 'story' | 'video',
+    videoUri:          row.videoUri ?? null,
+    thumbnailUri:      row.thumbnailUri ?? null,
   };
 }
 
