@@ -194,7 +194,11 @@ export default function BookPublicScreen() {
         return (
           <View style={s.infoTab}>
             {/* Author row */}
-            <View style={s.authorRow}>
+            <TouchableOpacity
+              style={s.authorRow}
+              activeOpacity={0.7}
+              onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: book.authorUserId } } as never)}
+            >
               {book.authorAvatarUri ? (
                 <Image source={{ uri: book.authorAvatarUri }} style={s.authorAvatar} contentFit="cover" />
               ) : (
@@ -210,7 +214,8 @@ export default function BookPublicScreen() {
                   <Text style={s.authorHandle}>@{book.authorUsername}</Text>
                 )}
               </View>
-            </View>
+              <Icon name="chevron-right" size={14} color="rgba(200,185,255,0.28)" />
+            </TouchableOpacity>
 
             {/* Description */}
             {!!book.description && (
