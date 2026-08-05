@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Images } from '@/assets/images/index';
+import { Video, ResizeMode } from 'expo-av';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,6 +20,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -47,6 +49,54 @@ const MOOD_COLORS: Record<string, string> = {
   Nostalgic: '#A5785D', Hopeful: '#6BA57A', Anxious: '#A56B6B',
   Dreamy: '#9B7AB5', Mysterious: '#6B6BA5',
 };
+
+// ── Fullscreen video player modal ─────────────────────────────────────────────
+
+function VideoPlayerModal({ story, onClose }: { story: Story | null; onClose: () => void }) {
+  const insets = useSafeAreaInsets();
+  const { width: W, height: H } = useWindowDimensions();
+  const [muted, setMuted] = useState(false);
+
+  if (!story || story.contentType !== 'video' || !story.videoUri) return null;
+
+  return (
+    <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <View style={[vp.backdrop, { width: W, height: H }]}>
+        {/* Video */}
+        <Video
+          source={{ uri: story.videoUri }}
+          shouldPlay
+          isLooping
+          isMuted={muted}
+          resizeMode={ResizeMode.CONTAIN}
+          style={StyleSheet.absoluteFill}
+          useNativeControls={false}
+        />
+
+        {/* Top bar */}
+        <View style={[vp.topBar, { paddingTop: insets.top + 8 }]}>
+          <TouchableOpacity style={vp.closeBtn} onPress={onClose} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Icon name="x" size={18} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity style={vp.muteBtn} onPress={() => setMuted(m => !m)} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Icon name={muted ? 'volume-x' : 'volume-2'} size={18} color="#fff" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom info */}
+        <View style={[vp.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+          <Text style={vp.title} numberOfLines={2}>{story.chapterTitle}</Text>
+          {!!story.description && (
+            <Text style={vp.desc} numberOfLines={3}>{story.description}</Text>
+          )}
+          <View style={vp.moodPill}>
+            <Text style={vp.moodText}>{story.mood}</Text>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 // ── Story action sheet ────────────────────────────────────────────────────────
 
@@ -209,7 +259,7 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 const CARD_W = 118;
 const CARD_H = 152;
 
-function StoryCard({ story, onMenu }: { story: Story; onMenu: (s: Story) => void }) {
+function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story) => void; onPlay: (s: Story) => void }) {
   const cover      = getStoryCover(story);
   const moodColor  = MOOD_COLORS[story.mood] ?? '#9B7AB5';
   const isVideo    = story.contentType === 'video';
@@ -217,7 +267,10 @@ function StoryCard({ story, onMenu }: { story: Story; onMenu: (s: Story) => void
   return (
     <TouchableOpacity
       style={sc.card}
-      onPress={isVideo ? undefined : () => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as never); }}
+      onPress={isVideo
+        ? () => { Haptics.selectionAsync(); onPlay(story); }
+        : () => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as never); }
+      }
       activeOpacity={0.88}
     >
       {cover ? (
@@ -291,7 +344,8 @@ export function ProfileStyleSection({
 }: Props) {
   const colors = useColors();
   const { updateStory } = useApp();
-  const [activeStory, setActiveStory] = useState<Story | null>(null);
+  const [activeStory,  setActiveStory]  = useState<Story | null>(null);
+  const [playingVideo, setPlayingVideo] = useState<Story | null>(null);
 
   const sorted = [...stories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
@@ -334,7 +388,7 @@ export function ProfileStyleSection({
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
             {sorted.slice(0, 10).map(story => (
-              <StoryCard key={story.id} story={story} onMenu={setActiveStory} />
+              <StoryCard key={story.id} story={story} onMenu={setActiveStory} onPlay={setPlayingVideo} />
             ))}
           </ScrollView>
         )}
@@ -472,6 +526,9 @@ export function ProfileStyleSection({
         onDelete={deleteStory}
         onTogglePublic={(id, isPublic) => updateStory(id, { isPublic })}
       />
+
+      {/* ── Video player modal ─── */}
+      <VideoPlayerModal story={playingVideo} onClose={() => setPlayingVideo(null)} />
     </>
   );
 }
@@ -514,6 +571,20 @@ const sc = StyleSheet.create({
   title:     { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 14 },
   metaRow:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.75)', marginRight: 3 },
+});
+
+// ── Video player modal styles ─────────────────────────────────────────────────
+
+const vp = StyleSheet.create({
+  backdrop:  { flex: 1, backgroundColor: '#000' },
+  topBar:    { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, zIndex: 10 },
+  closeBtn:  { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  muteBtn:   { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, gap: 6, backgroundColor: 'rgba(0,0,0,0.45)' },
+  title:     { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#fff', lineHeight: 24 },
+  desc:      { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(240,234,255,0.75)', lineHeight: 18 },
+  moodPill:  { alignSelf: 'flex-start', backgroundColor: 'rgba(107,91,149,0.55)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
+  moodText:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
 });
 
 // ── Action sheet styles ───────────────────────────────────────────────────────
