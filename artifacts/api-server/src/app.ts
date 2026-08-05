@@ -98,7 +98,11 @@ app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 // (to accommodate base64 image payloads) via route-level middleware, so we skip
 // the global parsers for that path to avoid a 413 before the route runs.
 const skipForUpload = (fn: express.RequestHandler): express.RequestHandler =>
-  (req, res, next) => (req.path === '/api/upload' ? next() : fn(req, res, next));
+  (req, res, next) => (
+    req.path === '/api/upload' || req.path === '/api/upload-video'
+      ? next()
+      : fn(req, res, next)
+  );
 app.use(skipForUpload(express.json({ limit: "1mb" })));
 app.use(skipForUpload(express.urlencoded({ extended: true, limit: "1mb" })));
 
@@ -131,6 +135,25 @@ app.get("/api/images/:filename", async (req: Request, res: Response) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     // GCS returns 404 when the object doesn't exist
+    if (err?.code === 404 || err?.code === "404") return res.status(404).end();
+    return res.status(404).end();
+  }
+});
+
+// ── Video serving: /api/videos/:filename ──────────────────────────────────────
+app.get("/api/videos/:filename", async (req: Request, res: Response) => {
+  const fname = String(req.params.filename ?? "");
+  if (!/^[\w.-]+$/.test(fname)) return res.status(400).end();
+
+  if (!GCS_BUCKET_ID) return res.status(404).end();
+  try {
+    const file   = objectStorageClient.bucket(GCS_BUCKET_ID).file(`videos/${fname}`);
+    const [meta] = await file.getMetadata();
+    res.setHeader("Content-Type", (meta.contentType as string) || "video/mp4");
+    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
+    file.createReadStream().pipe(res);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (err: any) {
     if (err?.code === 404 || err?.code === "404") return res.status(404).end();
     return res.status(404).end();
   }

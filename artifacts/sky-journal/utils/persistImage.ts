@@ -308,7 +308,7 @@ export async function persistVideoUri(uri: string): Promise<string> {
   let result: FileSystem.FileSystemUploadResult;
   try {
     result = await Promise.race([
-      FileSystem.uploadAsync(`${apiBase}/upload`, uri, {
+      FileSystem.uploadAsync(`${apiBase}/upload-video`, uri, {
         httpMethod:  'POST',
         uploadType:  FileSystem.FileSystemUploadType.MULTIPART,
         fieldName:   'file',

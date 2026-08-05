@@ -71,11 +71,29 @@ function isValidImageBuffer(buf: Buffer): boolean {
   return false;
 }
 
-// ── Multer: 10 MB cap on multipart uploads (down from 50 MB) ─────────────────
+// ── Multer: 10 MB cap on image uploads ────────────────────────────────────────
 const upload = multer({
   storage: multer.memoryStorage(),
   limits:  { fileSize: 10 * 1024 * 1024 },
 });
+
+// ── Multer: 100 MB cap for video uploads ──────────────────────────────────────
+const uploadVideo = multer({
+  storage: multer.memoryStorage(),
+  limits:  { fileSize: 100 * 1024 * 1024 },
+});
+
+// ── Video magic-byte validation ───────────────────────────────────────────────
+// Accepts MP4/MOV/M4V (ISO Base Media File Format): the "ftyp" box lives at
+// byte offset 4 in every conformant file regardless of the size field at 0–3.
+function isValidVideoBuffer(buf: Buffer): boolean {
+  if (buf.length < 12) return false;
+  // ftyp box marker at offset 4
+  return (
+    buf[4] === 0x66 && buf[5] === 0x74 &&
+    buf[6] === 0x79 && buf[7] === 0x70
+  );
+}
 
 const JsonUploadSchema = z.object({
   data: z.string().min(1),
@@ -208,6 +226,69 @@ router.post(
     const raw      = parsed.data.data.replace(/^data:[^;]+;base64,/, "");
     const incoming = Buffer.from(raw, "base64");
     return processAndSave(req, res, incoming);
+  },
+);
+
+// ── POST /upload-video ────────────────────────────────────────────────────────
+// Accepts a video file (MP4/MOV) via multipart/form-data, field name "file".
+// Stores it directly in object storage (no transcoding) and returns the path.
+router.post(
+  "/upload-video",
+  requireAuth,
+  // ── Per-user rate limit (shared 10 uploads / 60 s window) ─────────────────
+  (req, res, next) => {
+    const userId = getUserId(req);
+    const { allowed, retryAfterSeconds } = checkUploadRateLimit(userId);
+    if (!allowed) {
+      res.setHeader("Retry-After", String(retryAfterSeconds));
+      return res.status(429).json({
+        error: "Too many uploads. Please wait before uploading again.",
+        retryAfterSeconds,
+      });
+    }
+    return next();
+  },
+  // ── 100 MB multipart parser ────────────────────────────────────────────────
+  (req, res, next) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    uploadVideo.single("file")(req as any, res as any, next);
+  },
+  async (req: Request, res: Response) => {
+    if (!BUCKET_ID) {
+      req.log.error("DEFAULT_OBJECT_STORAGE_BUCKET_ID is not set");
+      return res.status(503).json({ error: "Storage not configured" });
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const multipartFile = (req as any).file as { buffer: Buffer } | undefined;
+    if (!multipartFile) {
+      return res.status(400).json({ error: "No file was uploaded." });
+    }
+
+    // ── Validate magic bytes ─────────────────────────────────────────────────
+    if (!isValidVideoBuffer(multipartFile.buffer)) {
+      return res.status(400).json({ error: "Unsupported file type. Please upload an MP4 or MOV video." });
+    }
+
+    try {
+      const fname = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`;
+      const file  = objectStorageClient.bucket(BUCKET_ID).file(`videos/${fname}`);
+      await file.save(multipartFile.buffer, {
+        metadata:  { contentType: "video/mp4" },
+        resumable: false,
+      });
+
+      req.log.info(
+        { fname, sizeKb: Math.round(multipartFile.buffer.byteLength / 1024) },
+        "Video saved",
+      );
+
+      registerPendingUpload(`/api/videos/${fname}`, `videos/${fname}`);
+      return res.status(201).json({ path: `/api/videos/${fname}` });
+    } catch (err) {
+      req.log.error({ err }, "Failed to save uploaded video");
+      return res.status(500).json({ error: "Internal server error" });
+    }
   },
 );
 
