@@ -3,8 +3,8 @@ import { MoodBadge } from '@/components/MoodBadge';
 
 import type { Character, Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useUser } from '@clerk/expo';
 import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -30,8 +30,9 @@ export function OutfitDetailModal({
   outfit, isActiveOutfit, character, deletingConfirm, avatarSource,
   onClose, onSetDisplay, onDelete,
 }: Props) {
-  const colors = useColors();
-  const { t }  = useTranslation();
+  const colors          = useColors();
+  const { t }           = useTranslation();
+  const { user }        = useUser();
   const [imageFit, setImageFit] = useState<'contain' | 'cover'>('contain');
 
   return (
@@ -144,65 +145,39 @@ export function OutfitDetailModal({
                     </Text>
                   </TouchableOpacity>
 
-                  {/* ── Public preview ── */}
-                  <View style={s.divider}>
-                    <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
-                    <Text style={[s.dividerLabel, { color: colors.mutedForeground }]}>HOW OTHERS SEE IT</Text>
-                    <View style={[s.dividerLine, { backgroundColor: colors.border }]} />
-                  </View>
-
-                  <View style={s.publicPreviewRow}>
-                    {/* Profile grid card preview */}
-                    <View style={{ flex: 1, gap: 6 }}>
-                      <Text style={[s.previewLabel, { color: colors.mutedForeground }]}>Profile card</Text>
-                      <View style={[s.previewCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                        {outfit.imageUri ? (
-                          <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                        ) : (
-                          <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center' }]}>
-                            <Icon name="camera" size={16} color={`${colors.primary}50`} />
-                          </View>
-                        )}
-                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={StyleSheet.absoluteFill} />
-                        {isActiveOutfit && (
-                          <View style={[s.previewActiveDot, { backgroundColor: colors.primary }]}>
-                            <Text style={{ fontSize: 8, color: '#fff' }}>✦</Text>
-                          </View>
-                        )}
-                        <Text style={s.previewCardName} numberOfLines={1}>{outfit.name}</Text>
-                      </View>
-                    </View>
-
-                    {/* Discover card preview */}
-                    <View style={{ flex: 1.4, gap: 6 }}>
-                      <Text style={[s.previewLabel, { color: colors.mutedForeground }]}>Discover feed</Text>
-                      <View style={[s.previewDiscover, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                        {outfit.imageUri ? (
-                          <Image source={{ uri: outfit.imageUri }} style={[StyleSheet.absoluteFill, { borderRadius: 14 }]} contentFit="cover" />
-                        ) : (
-                          <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', borderRadius: 14 }]}>
-                            <Icon name="camera" size={16} color={`${colors.primary}50`} />
-                          </View>
-                        )}
-                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.80)']} style={[StyleSheet.absoluteFill, { borderRadius: 14 }]} />
-                        {/* Author strip */}
-                        <View style={s.previewAuthorStrip}>
-                          <View style={[s.previewAvatar, { borderColor: colors.primary }]}>
-                            {avatarSource
-                              ? <Image source={avatarSource} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-                              : <Text style={{ fontSize: 8, color: '#fff', fontFamily: 'Satoshi-Bold' }}>
-                                  {(character.name ?? '?').charAt(0).toUpperCase()}
-                                </Text>
-                            }
-                          </View>
-                          <View style={{ flex: 1, gap: 1 }}>
-                            <Text style={s.previewAuthorName} numberOfLines={1}>{character.name}</Text>
-                            <Text style={s.previewOutfitName} numberOfLines={1}>{outfit.name}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  </View>
+                  {/* ── See how others view it ── */}
+                  <TouchableOpacity
+                    style={[s.actionBtn, {
+                      backgroundColor: `${colors.primary}10`,
+                      borderColor: `${colors.primary}55`,
+                    }]}
+                    onPress={() => {
+                      onClose();
+                      router.push({
+                        pathname: '/user-outfit',
+                        params: {
+                          outfitName:   outfit.name,
+                          outfitDesc:   outfit.description ?? '',
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                          outfitStory:  (outfit as any).story ?? '',
+                          outfitImage:  outfit.imageUri ?? '',
+                          outfitTags:   JSON.stringify(outfit.tags ?? []),
+                          outfitDate:   outfit.date ?? '',
+                          authorUserId: user?.id ?? '',
+                          authorName:   character.name ?? '',
+                          authorHandle: character.username ?? '',
+                          authorBio:    character.bio ?? '',
+                          authorMood:   character.mood ?? '',
+                          authorTraits: JSON.stringify(character.traits ?? []),
+                        },
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      } as any);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Icon name="eye" size={14} color={colors.primary} />
+                    <Text style={[s.actionBtnText, { color: colors.primary }]}>See how others view it</Text>
+                  </TouchableOpacity>
 
                   {/* ── Your character ── */}
                   <View style={s.divider}>
@@ -349,17 +324,6 @@ const s = StyleSheet.create({
   divider:       { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 4 },
   dividerLine:   { flex: 1, height: 1 },
   dividerLabel:  { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.5 },
-  // Public preview
-  publicPreviewRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  previewLabel:     { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center' },
-  previewCard:      { height: 130, borderRadius: 12, overflow: 'hidden', borderWidth: 1, position: 'relative', justifyContent: 'flex-end' },
-  previewCardName:  { position: 'absolute', bottom: 7, left: 8, right: 8, fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)' },
-  previewActiveDot: { position: 'absolute', top: 7, right: 7, width: 18, height: 18, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
-  previewDiscover:  { height: 130, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative' },
-  previewAuthorStrip: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: 7, padding: 9 },
-  previewAvatar:    { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, overflow: 'hidden', backgroundColor: 'rgba(107,91,149,0.4)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  previewAuthorName:{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)' },
-  previewOutfitName:{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.75)' },
   // Character section
   charRow:       { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
   charAvatar:    { width: 52, height: 52, borderRadius: 26, borderWidth: 2, overflow: 'hidden', flexShrink: 0 },

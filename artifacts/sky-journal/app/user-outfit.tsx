@@ -1,6 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
-import { VibeOverlay } from '@/components/VibeOverlay';
+import { VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -170,9 +170,15 @@ export default function UserOutfitScreen() {
   // ── Cinematic: Live dot blink ────────────────────────────────────────────
   const liveDot = useRef(new Animated.Value(1)).current;
 
+  const [reportVisible, setReportVisible]   = useState(false);
+  const [appreciated, setAppreciated]       = useState(false);
+  const [previewVibe, setPreviewVibe]       = useState<string | null>(null);
+  const [vibePickerOpen, setVibePickerOpen] = useState(false);
+
   const outfit     = allOutfits[currentIdx] ?? allOutfits[0];
   const vibe       = extractVibe(outfit?.tags ?? []);
-  const vibeInfo   = vibe ? VIBE_LABELS[vibe] : null;
+  const activeVibe = previewVibe ?? vibe;
+  const vibeInfo   = activeVibe ? (VIBE_DEFS[activeVibe] ?? VIBE_LABELS[activeVibe] ?? null) : null;
   const tags       = visibleTags(outfit?.tags ?? []);
   const traits     = params.authorTraits ? (JSON.parse(params.authorTraits) as string[]) : [];
   const moodColor  = MOOD_COLORS[params.authorMood ?? ''] ?? colors.primary;
@@ -183,9 +189,6 @@ export default function UserOutfitScreen() {
 
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 80 : insets.bottom + 24;
-
-  const [reportVisible, setReportVisible] = useState(false);
-  const [appreciated, setAppreciated]     = useState(false);
 
   // Scroll-derived animations
   const stickyOpacity = scrollY.interpolate({
@@ -250,6 +253,12 @@ export default function UserOutfitScreen() {
     step();
     return () => { isMounted = false; kbAnim.current?.stop(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentIdx]);
+
+  // Reset effect preview when switching outfit
+  useEffect(() => {
+    setPreviewVibe(null);
+    setVibePickerOpen(false);
   }, [currentIdx]);
 
   // Studio light sweep
@@ -422,7 +431,7 @@ export default function UserOutfitScreen() {
           </Animated.View>
 
           {/* ── Vibe particles ── */}
-          {vibe ? <VibeOverlay vibe={vibe} /> : null}
+          {activeVibe ? <VibeOverlay vibe={activeVibe} /> : null}
 
           {/* ── Studio light sweep ── */}
           <Animated.View
@@ -460,14 +469,84 @@ export default function UserOutfitScreen() {
             <Text style={[styles.liveText, { color: moodColor }]}>Modeling Now</Text>
           </Animated.View>
 
-          {/* ── Vibe badge (top-right corner) ── */}
-          {vibeInfo && (
-            <Animated.View
-              style={[styles.vibeBadge, { top: topPad + 12, opacity: heroFade }]}
-              pointerEvents="none"
+          {/* ── Vibe badge (top-right corner, tappable to open picker) ── */}
+          <Animated.View style={[styles.vibeBadge, { top: topPad + 12, opacity: heroFade }]}>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setVibePickerOpen(o => !o);
+              }}
+              activeOpacity={0.8}
             >
-              <Text style={[styles.vibeBadgeSymbol, { color: vibeInfo.color }]}>{vibeInfo.symbol}</Text>
-              <Text style={[styles.vibeBadgeLabel, { color: vibeInfo.color }]}>{vibeInfo.label}</Text>
+              {vibeInfo ? (
+                <>
+                  <Text style={[styles.vibeBadgeSymbol, { color: vibeInfo.color }]}>{vibeInfo.symbol}</Text>
+                  <Text style={[styles.vibeBadgeLabel, { color: vibeInfo.color }]}>{vibeInfo.label}</Text>
+                </>
+              ) : (
+                <>
+                  <Icon name="sparkles" size={12} color="rgba(200,184,232,0.75)" />
+                  <Text style={[styles.vibeBadgeLabel, { color: 'rgba(200,184,232,0.75)' }]}>Add effect</Text>
+                </>
+              )}
+              <Icon
+                name={vibePickerOpen ? 'chevron-up' : 'chevron-down'}
+                size={10}
+                color={vibeInfo ? vibeInfo.color : 'rgba(200,184,232,0.55)'}
+              />
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* ── Vibe picker strip ── */}
+          {vibePickerOpen && (
+            <Animated.View
+              style={[styles.vibePickerWrap, { top: topPad + 52, opacity: heroFade }]}
+            >
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.vibePickerRow}
+              >
+                {/* "None" option */}
+                <TouchableOpacity
+                  style={[
+                    styles.vibeChip,
+                    !activeVibe && styles.vibeChipActive,
+                    !activeVibe && { borderColor: 'rgba(200,184,232,0.70)' },
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setPreviewVibe(null);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[styles.vibeChipSymbol, { color: 'rgba(200,184,232,0.70)' }]}>✕</Text>
+                  <Text style={[styles.vibeChipLabel, { color: 'rgba(200,184,232,0.70)' }]}>None</Text>
+                </TouchableOpacity>
+                {Object.entries(VIBE_DEFS).map(([key, def]) => {
+                  const isActive = activeVibe === key;
+                  return (
+                    <TouchableOpacity
+                      key={key}
+                      style={[
+                        styles.vibeChip,
+                        isActive && styles.vibeChipActive,
+                        isActive && { borderColor: def.color },
+                        isActive && { backgroundColor: `${def.color}22` },
+                      ]}
+                      onPress={() => {
+                        Haptics.selectionAsync();
+                        setPreviewVibe(key);
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.vibeChipSymbol, { color: def.color }]}>{def.symbol}</Text>
+                      <Text style={[styles.vibeChipLabel, { color: isActive ? def.color : 'rgba(220,210,248,0.78)' }]}>{def.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </Animated.View>
           )}
 
@@ -760,13 +839,32 @@ const styles = StyleSheet.create({
   // ── Vibe badge ──────────────────────────────────────────────────────────
   vibeBadge: {
     position: 'absolute', right: 16,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
     backgroundColor: 'rgba(8,6,15,0.58)',
     borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
   },
   vibeBadgeSymbol: { fontSize: 13 },
   vibeBadgeLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4 },
+
+  // ── Vibe picker ─────────────────────────────────────────────────────────
+  vibePickerWrap: {
+    position: 'absolute', right: 0, left: 0,
+  },
+  vibePickerRow: {
+    paddingHorizontal: 14, paddingVertical: 6, gap: 8, flexDirection: 'row',
+  },
+  vibeChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(8,6,15,0.65)',
+    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+  },
+  vibeChipActive: {
+    backgroundColor: 'rgba(14,10,32,0.82)',
+    borderWidth: 1.5,
+  },
+  vibeChipSymbol: { fontSize: 13 },
+  vibeChipLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
 
   // ── Hero content ────────────────────────────────────────────────────────
   heroContent: {
