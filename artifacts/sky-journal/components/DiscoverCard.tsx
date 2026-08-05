@@ -309,7 +309,7 @@ export function DiscoverCard({
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={onPress} style={styles.readBtn} activeOpacity={0.82}>
-              <Text style={styles.readBtnText}>Read</Text>
+              <Text style={styles.readBtnText}>{post.contentType === 'video' ? 'Watch' : 'Read'}</Text>
               <Icon name="chevron-right" size={11} color="#B8A8E0" />
             </TouchableOpacity>
           </View>

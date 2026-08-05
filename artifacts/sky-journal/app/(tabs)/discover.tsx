@@ -1,5 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { DiscoverCard } from '@/components/DiscoverCard';
+import { DiscoverVideoPlayerModal } from '@/components/DiscoverVideoPlayerModal';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { ReportSheet } from '@/components/ReportSheet';
 import { MoodDoorModal } from '@/components/MoodDoorModal';
@@ -127,7 +128,8 @@ export default function DiscoverScreen() {
   const [booksData,    setBooksData]    = useState<DiscoverBook[]>([]);
   const [booksLoading, setBooksLoading] = useState(false);
   const [booksError,   setBooksError]   = useState<string | null>(null);
-  const [moodDoorVisible, setMoodDoorVisible] = useState(false);
+  const [moodDoorVisible,    setMoodDoorVisible]    = useState(false);
+  const [selectedVideoPost, setSelectedVideoPost] = useState<import('@/context/AppContext').DiscoverPost | null>(null);
   const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchRef     = useRef<number>(0);
   const guidesLoaded     = useRef(false);
@@ -429,9 +431,11 @@ export default function DiscoverScreen() {
               post={item}
               delay={Math.min(index * 75, 400)}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={item.contentType === 'video' ? undefined : () => item.bookId
-                ? router.push({ pathname: '/book-public', params: { bookId: item.bookId } } as any)
-                : router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
+              onPress={item.contentType === 'video'
+                ? () => setSelectedVideoPost(item)
+                : () => item.bookId
+                  ? router.push({ pathname: '/book-public', params: { bookId: item.bookId } } as any)
+                  : router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -616,6 +620,12 @@ export default function DiscoverScreen() {
           setDiscoverMoodFilter(null);
           setMoodDoorVisible(false);
         }}
+      />
+
+      {/* ── Fullscreen video player ────────────────────────── */}
+      <DiscoverVideoPlayerModal
+        post={selectedVideoPost}
+        onClose={() => setSelectedVideoPost(null)}
       />
 
       {/* ── Guides ─────────────────────────────────────────── */}
