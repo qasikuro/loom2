@@ -1721,33 +1721,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       return updated;
     });
     const outfitUpdateBody = JSON.stringify(updates);
-    apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody }).catch(() => {
-      if (!originalOutfit) return;
-      // Revert only the edited outfit — don't clobber concurrent changes to others.
-      setOutfits(prev => {
-        const reverted = prev.map(o => o.id === id ? originalOutfit : o);
-        writeOutfitCache(JSON.stringify(reverted));
-        return reverted;
-      });
-      showToastGlobal("Couldn't save outfit changes — tap to retry", 'error', () => {
-        // Re-apply only this outfit's edit and retry the PATCH.
+    apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody })
+      .then(() => { clearMutation(`/outfits/${id}`, 'PATCH').catch(() => null); })
+      .catch(() => {
+        if (!originalOutfit) return;
+        // Revert only the edited outfit — don't clobber concurrent changes to others.
         setOutfits(prev => {
-          const reapplied = prev.map(o => o.id === id ? { ...o, ...updates } : o);
-          writeOutfitCache(JSON.stringify(reapplied));
-          return reapplied;
+          const reverted = prev.map(o => o.id === id ? originalOutfit : o);
+          writeOutfitCache(JSON.stringify(reverted));
+          return reverted;
         });
-        apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody })
-          .catch(() => {
-            // Retry also failed — revert the single outfit again and queue.
-            setOutfits(prev => {
-              const rereverted = prev.map(o => o.id === id ? originalOutfit : o);
-              writeOutfitCache(JSON.stringify(rereverted));
-              return rereverted;
-            });
-            enqueueMutation(`/outfits/${id}`, 'PATCH', outfitUpdateBody).catch(() => null);
+        showToastGlobal("Couldn't save outfit changes — tap to retry", 'error', () => {
+          // Re-apply only this outfit's edit and retry the PATCH.
+          setOutfits(prev => {
+            const reapplied = prev.map(o => o.id === id ? { ...o, ...updates } : o);
+            writeOutfitCache(JSON.stringify(reapplied));
+            return reapplied;
           });
+          apiFetch(`/outfits/${id}`, { method: 'PATCH', body: outfitUpdateBody })
+            .then(() => { clearMutation(`/outfits/${id}`, 'PATCH').catch(() => null); })
+            .catch(() => {
+              // Retry also failed — revert the single outfit again and queue.
+              setOutfits(prev => {
+                const rereverted = prev.map(o => o.id === id ? originalOutfit : o);
+                writeOutfitCache(JSON.stringify(rereverted));
+                return rereverted;
+              });
+              enqueueMutation(`/outfits/${id}`, 'PATCH', outfitUpdateBody).catch(() => null);
+            });
+        });
       });
-    });
   }, []);
 
   const deleteOutfit = useCallback((id: string) => {
@@ -1780,13 +1783,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
       // Persist to server (fire-and-forget)
       const cosmeticsBody = JSON.stringify({ activeCosmetics: next });
-      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody }).catch(() => {
-        showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
-          // H-1: Queue if retry fails (markPurchased gap — mirrors setActiveCosmetic)
-          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody })
-            .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsBody).catch(() => null));
+      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody })
+        .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
+        .catch(() => {
+          showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
+            // H-1: Queue if retry fails (markPurchased gap — mirrors setActiveCosmetic)
+            apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody })
+              .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
+              .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsBody).catch(() => null));
+          });
         });
-      });
       return next;
     });
   }, []);
@@ -1804,13 +1810,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
       // Persist to server (fire-and-forget)
       const cosmeticsToggleBody = JSON.stringify({ activeCosmetics: next });
-      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody }).catch(() => {
-        showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
-          // H-1: Queue if retry fails
-          apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody })
-            .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsToggleBody).catch(() => null));
+      apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody })
+        .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
+        .catch(() => {
+          showToastGlobal("Couldn't save cosmetic preference", 'warning', () => {
+            // H-1: Queue if retry fails
+            apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody })
+              .then(() => { clearMutation('/rewards/active-cosmetics', 'PUT').catch(() => null); })
+              .catch(() => enqueueMutation('/rewards/active-cosmetics', 'PUT', cosmeticsToggleBody).catch(() => null));
+          });
         });
-      });
       return next;
     });
   }, []);
@@ -1824,13 +1833,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     // Sync to server so other users can see the selected outfit
     const outfitSyncBody = JSON.stringify({ activeOutfitId: id });
-    apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody }).catch(() => {
-      showToastGlobal("Couldn't sync outfit choice", 'warning', () => {
-        // H-1: Queue if retry fails
-        apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody })
-          .catch(() => enqueueMutation('/character/active-outfit', 'PATCH', outfitSyncBody).catch(() => null));
+    apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody })
+      .then(() => { clearMutation('/character/active-outfit', 'PATCH').catch(() => null); })
+      .catch(() => {
+        showToastGlobal("Couldn't sync outfit choice", 'warning', () => {
+          // H-1: Queue if retry fails
+          apiFetch('/character/active-outfit', { method: 'PATCH', body: outfitSyncBody })
+            .then(() => { clearMutation('/character/active-outfit', 'PATCH').catch(() => null); })
+            .catch(() => enqueueMutation('/character/active-outfit', 'PATCH', outfitSyncBody).catch(() => null));
+        });
       });
-    });
   }, []);
 
   // ── Gallery ────────────────────────────────────────────────────────────────
