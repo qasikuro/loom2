@@ -1434,13 +1434,25 @@ export default function HomeScreen() {
 
         <View style={s.dashboardActions}>
           {[
-            { label: 'Add your post', icon: 'edit-2', color: '#D45CFF', onPress: () => router.push('/(tabs)/create') },
-            { label: 'Chats', icon: 'message-circle', color: '#55B8FF', onPress: () => router.push('/messages' as never) },
-            { label: 'Discover games', icon: 'gamepad-2', color: '#FF914D', onPress: () => router.push('/(tabs)/discover') },
-            { label: 'Lumi AI Chat', icon: 'star', color: '#B878FF', onPress: () => router.push('/(tabs)/drift') },
-            { label: 'Daily prompt', icon: 'lightbulb', color: '#F4CB55', onPress: () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never) },
+            { label: 'Add your post', icon: 'edit-2', color: '#D45CFF', comingSoon: false, onPress: () => router.push('/(tabs)/create') },
+            { label: 'Chats', icon: 'message-circle', color: '#55B8FF', comingSoon: false, onPress: () => router.push('/messages' as never) },
+            { label: 'Discover games', icon: 'gamepad-2', color: '#FF914D', comingSoon: true, onPress: undefined },
+            { label: 'Lumi AI Chat', icon: 'star', color: '#B878FF', comingSoon: false, onPress: () => router.push('/(tabs)/drift') },
+            { label: 'Daily prompt', icon: 'lightbulb', color: '#F4CB55', comingSoon: false, onPress: () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never) },
           ].map(action => (
-            <TouchableOpacity key={action.label} style={s.dashboardAction} onPress={action.onPress} activeOpacity={0.76}>
+            <TouchableOpacity
+              key={action.label}
+              style={[s.dashboardAction, action.comingSoon && s.dashboardActionPlaceholder]}
+              onPress={action.onPress}
+              disabled={action.comingSoon}
+              activeOpacity={0.76}
+              accessibilityLabel={action.comingSoon ? `${action.label}, coming soon` : action.label}
+            >
+              {action.comingSoon && (
+                <View style={s.dashboardSoonBadge}>
+                  <Text style={s.dashboardSoonText}>SOON</Text>
+                </View>
+              )}
               <View style={[s.dashboardActionIcon, { backgroundColor: `${action.color}14`, borderColor: `${action.color}35` }]}>
                 <Icon name={action.icon as never} size={21} color={action.color} />
               </View>
@@ -2269,6 +2281,9 @@ const s = StyleSheet.create({
     flex: 1, height: 91, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
     backgroundColor: 'rgba(19,14,45,0.88)', borderWidth: 1, borderColor: 'rgba(174,145,240,0.10)',
   },
+  dashboardActionPlaceholder: { borderStyle: 'dashed', borderColor: 'rgba(255,145,77,0.30)' },
+  dashboardSoonBadge: { position: 'absolute', top: 6, right: 5, paddingHorizontal: 4, height: 13, borderRadius: 7, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,145,77,0.13)' },
+  dashboardSoonText: { fontSize: 5.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5, color: '#FFAD78' },
   dashboardActionIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   dashboardActionLabel: { fontSize: 9.5, lineHeight: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(244,238,255,0.86)', textAlign: 'center' },
   dashboardSectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 20 },
