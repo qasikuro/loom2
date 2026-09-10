@@ -21,7 +21,6 @@ import {
 } from '@/context/AppContext';
 // import { RewardBalance } from '@/components/RewardBalance'; // kept for future use
 import { RewardBanner } from '@/components/RewardBanner';
-import { FloatingMenu } from '@/components/FloatingMenu';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -1366,7 +1365,9 @@ export default function HomeScreen() {
     return 'A perfect time to write something';
   })();
   const dashboardPrompt = getDailyPrompt(character.mood);
-  const isShortScreen = screenHeight < 760;
+  // Browser chrome reduces the reported viewport height substantially on mobile.
+  // Only use the compact fallback on genuinely tiny devices.
+  const isShortScreen = screenHeight < 560;
   const dashboardFriends = circleAuthors.slice(0, screenWidth < 390 ? 4 : 5);
   const dashboardDiscover = discoverPreview.slice(0, screenWidth < 390 ? 2 : 3);
 
@@ -1405,7 +1406,7 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <View style={[s.dashboard, { paddingTop: topPad + 8, paddingBottom: Math.max(insets.bottom, 8) + 76 }]}>
+      <View style={[s.dashboard, { paddingTop: topPad + 4, paddingBottom: Math.max(insets.bottom, 4) }]}>
         <View style={s.dashboardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={s.dashboardGreeting}>{greetingWord},</Text>
@@ -1433,11 +1434,11 @@ export default function HomeScreen() {
 
         <View style={s.dashboardActions}>
           {[
-            { label: 'Add post', icon: 'edit-2', color: '#D45CFF', onPress: () => router.push('/(tabs)/create') },
+            { label: 'Add your post', icon: 'edit-2', color: '#D45CFF', onPress: () => router.push('/(tabs)/create') },
             { label: 'Chats', icon: 'message-circle', color: '#55B8FF', onPress: () => router.push('/messages' as never) },
-            { label: 'Discover', icon: 'compass', color: '#FF914D', onPress: () => router.push('/(tabs)/discover') },
-            { label: 'Lumi', icon: 'star', color: '#B878FF', onPress: () => router.push('/(tabs)/drift') },
-            { label: 'Prompt', icon: 'lightbulb', color: '#F4CB55', onPress: () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never) },
+            { label: 'Discover games', icon: 'gamepad-2', color: '#FF914D', onPress: () => router.push('/(tabs)/discover') },
+            { label: 'Lumi AI Chat', icon: 'star', color: '#B878FF', onPress: () => router.push('/(tabs)/drift') },
+            { label: 'Daily prompt', icon: 'lightbulb', color: '#F4CB55', onPress: () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never) },
           ].map(action => (
             <TouchableOpacity key={action.label} style={s.dashboardAction} onPress={action.onPress} activeOpacity={0.76}>
               <View style={[s.dashboardActionIcon, { backgroundColor: `${action.color}14`, borderColor: `${action.color}35` }]}>
@@ -1492,7 +1493,7 @@ export default function HomeScreen() {
           <View style={s.dashboardLumiCopy}>
             <Text style={[s.dashboardLumiEyebrow, { color: accent }]}>✦ LUMI</Text>
             <Text style={s.dashboardLumiTitle}>Talk to Lumi</Text>
-            {!isShortScreen && <Text style={s.dashboardLumiText} numberOfLines={2}>Your companion who listens, supports and understands.</Text>}
+            <Text style={s.dashboardLumiText} numberOfLines={2}>Your AI companion who listens, supports and understands.</Text>
             <View style={[s.dashboardLumiButton, { backgroundColor: accent }]}>
               <Text style={s.dashboardLumiButtonText}>Chat with Lumi</Text>
               <Icon name="arrow-right" size={13} color="#FFFFFF" />
@@ -1539,6 +1540,51 @@ export default function HomeScreen() {
             </View>
           </>
         )}
+
+        <View style={s.dashboardSectionHeader}>
+          <View style={s.dashboardSectionTitleRow}>
+            <Icon name="message-circle" size={14} color="#D774FF" />
+            <Text style={s.dashboardSectionTitle}>Live chats</Text>
+          </View>
+          <TouchableOpacity onPress={() => router.push('/campfire' as never)}>
+            <Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={s.dashboardLiveRow}>
+          {(campfires.length > 0 ? campfires.slice(0, 2) : [{ guide: null, isMine: false }]).map((item, index) => {
+            const guide = item.guide;
+            return (
+              <TouchableOpacity
+                key={guide?.userId ?? `live-empty-${index}`}
+                style={s.dashboardLiveCard}
+                onPress={() => router.push('/campfire' as never)}
+                activeOpacity={0.8}
+              >
+                <View style={[s.dashboardLiveAvatar, { borderColor: guide?.isAvailableNow ? '#45D992' : '#8E65D7' }]}>
+                  {guide?.avatarUri
+                    ? <Image source={{ uri: guide.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    : <Text style={s.dashboardLiveInitial}>{guide?.name?.charAt(0).toUpperCase() ?? 'S'}</Text>}
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={s.dashboardLiveName} numberOfLines={1}>{guide?.name ?? 'Sky'}</Text>
+                  <View style={s.dashboardLiveStatusRow}>
+                    <View style={[s.dashboardLiveDot, { backgroundColor: guide?.isAvailableNow ? '#45D992' : '#A879F8' }]} />
+                    <Text style={s.dashboardLiveStatus} numberOfLines={1}>
+                      {guide?.isAvailableNow ? 'Online now' : guide ? (nextSession(guide.guideAvailability) ?? 'Join the chat') : 'Online'}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity style={s.dashboardLiveCard} onPress={() => router.push('/campfire' as never)} activeOpacity={0.8}>
+            <View style={s.dashboardBrowseIcon}><Icon name="compass" size={17} color="#B98BFF" /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.dashboardLiveName}>Browse</Text>
+              <Text style={s.dashboardLiveStatus}>Discover more</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={s.dashboardPrompt}
@@ -2197,36 +2243,18 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* ── Floating action menu — Shop · Season · Constellation ── */}
-      <View
-        style={{ position: 'absolute', right: 0, bottom: 220, zIndex: 100 }}
-        pointerEvents="box-none"
-      >
-        <FloatingMenu
-          items={[
-            { label: 'Shop',          icon: '🛍',  onPress: () => router.push('/shop') },
-            { label: 'Season',        icon: '✨',  onPress: () => router.push('/season') },
-            { label: 'Constellation', icon: '🔮', onPress: () => router.push('/constellation') },
-          ]}
-        />
-      </View>
-
     </Animated.View>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  dashboard: {
-    flex: 1,
-    paddingHorizontal: 18,
-    gap: 10,
-  },
+  dashboard: { flex: 1, paddingHorizontal: 18, gap: 7 },
   dashboardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    minHeight: 64,
+    minHeight: 58,
   },
   dashboardGreeting: { fontSize: 15, fontFamily: 'Satoshi-Medium', color: 'rgba(246,241,255,0.92)' },
   dashboardName: { fontSize: 24, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5, marginTop: 1 },
@@ -2238,7 +2266,7 @@ const s = StyleSheet.create({
   dashboardAvatarRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, overflow: 'hidden', backgroundColor: '#160C32' },
   dashboardActions: { flexDirection: 'row', gap: 7 },
   dashboardAction: {
-    flex: 1, height: 82, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+    flex: 1, height: 91, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
     backgroundColor: 'rgba(19,14,45,0.88)', borderWidth: 1, borderColor: 'rgba(174,145,240,0.10)',
   },
   dashboardActionIcon: { width: 38, height: 38, borderRadius: 12, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
@@ -2258,21 +2286,30 @@ const s = StyleSheet.create({
   dashboardFriendInitial: { fontSize: 18, fontFamily: 'Satoshi-Bold' },
   dashboardOnlineDot: { position: 'absolute', right: -1, bottom: 1, width: 9, height: 9, borderRadius: 5, backgroundColor: '#43DC8D', borderWidth: 2, borderColor: '#080513' },
   dashboardFriendName: { width: 58, fontSize: 8.5, fontFamily: 'Satoshi-Medium', color: 'rgba(231,221,250,0.75)', textAlign: 'center' },
-  dashboardLumi: { height: 145, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(190,142,255,0.24)' },
+  dashboardLumi: { height: 155, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(190,142,255,0.24)' },
   dashboardLumiShort: { height: 118 },
   dashboardLumiGlow: { position: 'absolute', left: -35, bottom: -55, width: 180, height: 180, borderRadius: 90, backgroundColor: '#8E55FF', opacity: 0.18 },
-  dashboardLumiImage: { position: 'absolute', left: -2, bottom: -12, width: 145, height: 145 },
-  dashboardLumiCopy: { flex: 1, justifyContent: 'center', paddingLeft: 145, paddingRight: 14 },
+  dashboardLumiImage: { position: 'absolute', left: -2, bottom: -8, width: 150, height: 150 },
+  dashboardLumiCopy: { flex: 1, justifyContent: 'center', paddingLeft: 151, paddingRight: 14 },
   dashboardLumiEyebrow: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, marginBottom: 2 },
   dashboardLumiTitle: { fontSize: 19, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.3 },
   dashboardLumiText: { fontSize: 10.5, lineHeight: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(230,217,255,0.70)', marginTop: 2 },
   dashboardLumiButton: { marginTop: 8, height: 30, alignSelf: 'flex-start', paddingHorizontal: 13, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 7 },
   dashboardLumiButtonText: { fontSize: 10.5, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
-  dashboardDiscoverRow: { flexDirection: 'row', gap: 8, minHeight: 68 },
-  dashboardDiscoverCard: { flex: 1, height: 68, borderRadius: 12, overflow: 'hidden', justifyContent: 'flex-end', padding: 8, borderWidth: 1, borderColor: 'rgba(185,142,255,0.13)' },
+  dashboardDiscoverRow: { flexDirection: 'row', gap: 8, minHeight: 82 },
+  dashboardDiscoverCard: { flex: 1, height: 82, borderRadius: 12, overflow: 'hidden', justifyContent: 'flex-end', padding: 8, borderWidth: 1, borderColor: 'rgba(185,142,255,0.13)' },
   dashboardDiscoverTitle: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
   dashboardDiscoverEmpty: { flex: 1, height: 58, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(33,20,68,0.72)', borderWidth: 1, borderColor: 'rgba(185,142,255,0.13)' },
   dashboardDiscoverEmptyText: { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(231,219,255,0.70)' },
+  dashboardLiveRow: { flexDirection: 'row', gap: 7 },
+  dashboardLiveCard: { flex: 1, minWidth: 0, height: 48, borderRadius: 13, paddingHorizontal: 8, flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: 'rgba(25,17,53,0.88)', borderWidth: 1, borderColor: 'rgba(174,145,240,0.10)' },
+  dashboardLiveAvatar: { width: 31, height: 31, borderRadius: 16, borderWidth: 1.3, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: '#160D31' },
+  dashboardLiveInitial: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#C39BFF' },
+  dashboardLiveName: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', color: '#F1EBFF' },
+  dashboardLiveStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
+  dashboardLiveDot: { width: 4, height: 4, borderRadius: 2 },
+  dashboardLiveStatus: { fontSize: 7.5, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,245,0.52)' },
+  dashboardBrowseIcon: { width: 31, height: 31, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(146,91,230,0.11)', borderWidth: 1, borderColor: 'rgba(185,139,255,0.20)' },
   dashboardPrompt: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 11, borderRadius: 14, backgroundColor: 'rgba(34,24,32,0.94)', borderWidth: 1, borderColor: 'rgba(244,203,85,0.13)' },
   dashboardPromptIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(244,203,85,0.09)' },
   dashboardPromptTitle: { fontSize: 10.5, fontFamily: 'Satoshi-Bold', color: '#F2E8CE' },
