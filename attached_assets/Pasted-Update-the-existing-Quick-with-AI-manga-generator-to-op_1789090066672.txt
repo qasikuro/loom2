@@ -1,0 +1,329 @@
+Update the existing "Quick with AI" manga generator to optimize OpenAI costs.
+
+IMPORTANT:
+Do NOT change the existing UI unless necessary.
+Do NOT remove any existing functionality.
+Focus on the image-processing pipeline, OpenAI API integration, and cost control.
+
+========================================
+1. OPENAI IMAGE GENERATION
+========================================
+
+Use the lowest-cost suitable OpenAI image model:
+
+IMAGE_MODEL = "gpt-image-1-mini"
+IMAGE_QUALITY = "low"
+IMAGE_SIZE = "1024x1024"
+
+Generate exactly ONE manga page per Generate button press.
+
+Never generate multiple variations.
+
+Never automatically regenerate.
+
+Never retry an image-generation request automatically.
+
+========================================
+2. IMAGE UPLOAD LIMIT
+========================================
+
+Allow the user to upload a maximum of 10 images.
+
+MAX_IMAGES = 10
+
+Show thumbnails of uploaded images.
+
+Allow users to remove individual images.
+
+Prevent uploading more than 10 images.
+
+========================================
+3. COMPRESS IMAGES BEFORE OPENAI
+========================================
+
+This is extremely important for reducing API input costs.
+
+Before sending uploaded images to OpenAI:
+
+1. Resize each image.
+2. Compress each image.
+3. Convert it to JPEG where appropriate.
+4. Remove unnecessary metadata.
+5. Preserve enough visual detail for characters, environments, poses and important objects.
+
+Target processing:
+
+MAX_WIDTH = 1536
+MAX_HEIGHT = 1536
+JPEG_QUALITY = 75
+
+If an uploaded image is already smaller than this, do not upscale it.
+
+If the image is larger, resize it while preserving its aspect ratio.
+
+Do NOT aggressively compress images to the point where faces, characters or important scene details become unclear.
+
+The goal is:
+
+"small enough to reduce API input cost, but detailed enough for AI to understand the scene."
+
+Use a reliable server-side image-processing library such as Sharp if the project is Node.js.
+
+IMPORTANT:
+Compression must happen BEFORE the image is sent to OpenAI.
+
+Do not send the original full-resolution images to OpenAI.
+
+========================================
+4. IMAGE FORMAT
+========================================
+
+After compression:
+
+Preferred format:
+JPEG
+
+Use reasonable JPEG quality around 75.
+
+If transparency is genuinely required, preserve PNG/WebP where necessary, but otherwise prefer JPEG for photographs/game screenshots.
+
+Do not increase image dimensions.
+
+========================================
+5. OPENAI REQUEST
+========================================
+
+The backend should receive:
+
+- compressed images
+- user's text prompt
+
+Then make ONE OpenAI image generation request.
+
+The generated result should be ONE manga story page combining the uploaded moments into a coherent visual story.
+
+Example user prompt:
+
+"Turn these moments into a heartwarming adventure between two friends exploring a magical world."
+
+The AI should understand that the uploaded images are references for:
+
+- characters
+- environments
+- events
+- poses
+- visual continuity
+
+========================================
+6. API SECURITY
+========================================
+
+The OpenAI API key must NEVER exist in the Expo/React Native client.
+
+Use:
+
+OPENAI_API_KEY
+
+stored as a Replit Secret/environment variable.
+
+All OpenAI calls must happen on the backend.
+
+Never expose the API key to the user.
+
+========================================
+7. PREVENT ACCIDENTAL COSTS
+========================================
+
+When the user presses:
+
+"Generate Manga Story"
+
+Immediately disable the button.
+
+Show:
+
+"Creating your manga..."
+
+Do not allow another generation request until the current request finishes.
+
+Prevent double taps from creating two API requests.
+
+Implement server-side protection against duplicate requests.
+
+Do not automatically retry failed image-generation requests.
+
+If OpenAI fails:
+
+Show a friendly error message:
+
+"Something went wrong creating your manga. Please try again."
+
+Do NOT automatically call OpenAI again.
+
+========================================
+8. RATE LIMITING
+========================================
+
+Add server-side rate limiting for manga generation.
+
+Create a configurable value:
+
+MAX_GENERATIONS_PER_USER_PER_DAY
+
+Keep this configurable rather than hard-coded.
+
+Initially set it to:
+
+5
+
+This will allow us to later change the free daily allowance without modifying the application logic.
+
+========================================
+9. COST TRACKING
+========================================
+
+For every successful generation, record:
+
+- user ID
+- timestamp
+- number of uploaded images
+- original image sizes
+- compressed image sizes
+- OpenAI model
+- OpenAI quality
+- OpenAI output size
+- generation status
+- estimated generation cost
+
+Create a simple server-side cost calculation so we can monitor how much each generation costs.
+
+IMPORTANT:
+Do not charge the user yet.
+
+This is only internal cost tracking.
+
+========================================
+10. IMAGE STORAGE
+========================================
+
+Do not permanently store the user's original uploaded images unless the existing application specifically requires it.
+
+Process/compress them for the generation request.
+
+Delete temporary processed files after the OpenAI request has completed, unless they are required for an existing saved-story workflow.
+
+Do not unnecessarily increase storage costs.
+
+========================================
+11. CONFIGURATION
+========================================
+
+Create a centralized configuration:
+
+IMAGE_MODEL = "gpt-image-1-mini"
+IMAGE_QUALITY = "low"
+IMAGE_SIZE = "1024x1024"
+
+MAX_IMAGES = 10
+
+MAX_WIDTH = 1536
+MAX_HEIGHT = 1536
+JPEG_QUALITY = 75
+
+MAX_GENERATIONS_PER_USER_PER_DAY = 5
+
+Do not scatter these values throughout the code.
+
+========================================
+12. IMPORTANT COST PRINCIPLE
+========================================
+
+The intended pipeline is:
+
+USER IMAGES
+↓
+Resize
+↓
+Compress
+↓
+Remove unnecessary metadata
+↓
+Send compressed images to backend
+↓
+ONE OpenAI image generation request
+↓
+ONE 1024x1024 low-quality manga page
+↓
+Display result
+
+Never:
+
+Original images
+↓
+OpenAI
+
+We specifically want to minimize image-input cost while maintaining useful visual quality.
+
+========================================
+13. DO NOT BREAK EXISTING APP
+========================================
+
+Before modifying the code:
+
+Inspect the existing Quick with AI implementation.
+
+Identify:
+
+- current upload component
+- current backend endpoint
+- current OpenAI integration
+- current database/storage
+- current authentication
+- current UI state
+
+Reuse the existing architecture where possible.
+
+Do not create duplicate endpoints or duplicate OpenAI integrations.
+
+Keep the implementation compatible with the existing Expo/React Native application.
+
+========================================
+14. TESTING
+========================================
+
+After implementation test:
+
+1 image → generation
+
+5 images → generation
+
+10 images → generation
+
+11 images → blocked
+
+Very large image → resized/compressed
+
+Small image → not upscaled
+
+Two rapid Generate taps → only ONE API request
+
+Failed OpenAI request → no automatic retry
+
+Missing OPENAI_API_KEY → clear server error
+
+Daily generation limit → enforced
+
+Verify that the OpenAI API key is never present in the client bundle.
+
+========================================
+
+FINAL GOAL:
+
+Build a cost-efficient Quick with AI manga generator where users can upload up to 10 images and write a story prompt, while the system intelligently compresses the images before sending them to OpenAI and generates exactly ONE affordable manga page.
+
+Prioritize:
+1. Low API cost
+2. Good visual quality
+3. Preventing accidental duplicate generations
+4. API security
+5. Simple scalable architecture

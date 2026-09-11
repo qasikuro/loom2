@@ -23,14 +23,15 @@ type MangaStyle = 'manga' | 'color' | 'chibi' | 'cinematic' | 'webtoon';
 const STYLES: Array<{
   id: MangaStyle;
   label: string;
+  promptInstruction: string;
   image: (typeof Images)[keyof typeof Images];
   tint?: string;
 }> = [
-  { id: 'manga', label: 'Manga\n(B&W)', image: Images.create_quick, tint: 'rgba(15,10,28,0.38)' },
-  { id: 'color', label: 'Color Manga', image: Images.create_quick },
-  { id: 'chibi', label: 'Chibi', image: Images.story_bg3, tint: 'rgba(255,186,220,0.18)' },
-  { id: 'cinematic', label: 'Cinematic', image: Images.story_bg2, tint: 'rgba(62,38,105,0.18)' },
-  { id: 'webtoon', label: 'Webtoon', image: Images.create_video, tint: 'rgba(238,84,155,0.14)' },
+  { id: 'manga', label: 'Manga\n(B&W)', promptInstruction: 'black-and-white Japanese manga with expressive ink lines, screentones, and readable panel composition', image: Images.create_quick, tint: 'rgba(15,10,28,0.38)' },
+  { id: 'color', label: 'Color Manga', promptInstruction: 'full-color manga with clean line art, vivid lighting, and readable panel composition', image: Images.create_quick },
+  { id: 'chibi', label: 'Chibi', promptInstruction: 'cute chibi manga with small bodies, oversized expressive faces, and playful colorful panels', image: Images.story_bg3, tint: 'rgba(255,186,220,0.18)' },
+  { id: 'cinematic', label: 'Cinematic', promptInstruction: 'cinematic manga with dramatic framing, detailed lighting, strong depth, and film-like panels', image: Images.story_bg2, tint: 'rgba(62,38,105,0.18)' },
+  { id: 'webtoon', label: 'Webtoon', promptInstruction: 'polished color webtoon with clean digital line art, expressive characters, and vertical-comic storytelling', image: Images.create_video, tint: 'rgba(238,84,155,0.14)' },
 ];
 
 export default function MangaStoryScreen() {
@@ -43,6 +44,7 @@ export default function MangaStoryScreen() {
   const [style, setStyle] = useState<MangaStyle>('manga');
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const selectedStyle = useMemo(() => STYLES.find(item => item.id === style) ?? STYLES[0], [style]);
@@ -85,6 +87,9 @@ export default function MangaStoryScreen() {
     }
     setError(null);
     setGenerating(true);
+    setGeneratedPrompt(
+      `Create one ${selectedStyle.promptInstruction} story page. Use the uploaded images as references for characters, environments, events, poses, and visual continuity. Story: ${prompt.trim() || 'Create a warm, coherent adventure from these moments.'} Add a small, readable “Made by Gamejo” credit on the finished page.`,
+    );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setTimeout(() => {
       setGenerating(false);
@@ -203,7 +208,10 @@ export default function MangaStoryScreen() {
                   <Text style={s.resultText}>Applying the {selectedStyle.label.replace('\n', ' ')} style</Text>
                 </View>
               ) : generated ? (
-                <View style={s.generatedGrid}>
+                <View
+                  style={s.generatedGrid}
+                  accessibilityLabel={`Generated manga page. ${generatedPrompt}`}
+                >
                   {images.slice(0, 4).map((uri, index) => (
                     <View key={`${uri}-${index}`} style={[s.generatedPanel, images.length === 1 && { width: '100%' }]}>
                       <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -214,6 +222,9 @@ export default function MangaStoryScreen() {
                     <Text style={s.generatedCaptionText} numberOfLines={2}>
                       {prompt.trim() || 'A new story begins beneath a sky full of possibilities…'}
                     </Text>
+                  </View>
+                  <View style={s.gamejoCredit}>
+                    <Text style={s.gamejoCreditText}>Made by Gamejo</Text>
                   </View>
                 </View>
               ) : (
@@ -336,6 +347,8 @@ const s = StyleSheet.create({
   generatedPanel: { width: '49%', height: 90, borderRadius: 6, overflow: 'hidden', backgroundColor: '#171126' },
   generatedCaption: { position: 'absolute', left: 12, right: 12, bottom: 10, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: 'rgba(7,4,18,0.82)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)' },
   generatedCaptionText: { fontSize: 10, lineHeight: 14, fontFamily: 'Satoshi-Medium', color: '#FFFFFF', textAlign: 'center', fontStyle: 'italic' },
+  gamejoCredit: { position: 'absolute', right: 8, top: 8, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(7,4,18,0.78)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
+  gamejoCreditText: { fontSize: 8, fontFamily: 'Satoshi-Bold', color: 'rgba(255,255,255,0.88)', letterSpacing: 0.2 },
   error: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,83,126,0.10)', borderWidth: 1, borderColor: 'rgba(255,83,126,0.22)' },
   errorText: { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#FFB0C1' },
   generateBar: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, backgroundColor: 'rgba(5,4,15,0.94)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
