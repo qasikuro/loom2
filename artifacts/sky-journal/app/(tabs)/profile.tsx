@@ -67,7 +67,7 @@ export default function CharacterScreen() {
   const activeFrame  = activeCosmetics['frame']  as string | undefined;
   const activeEffect = activeCosmetics['effect'] as string | undefined;
   const activeOutfit = activeOutfitId ? outfits.find(o => o.id === activeOutfitId) ?? null : null;
-  const topPad       = Platform.OS === 'web' ? 67 : insets.top;
+  const topPad       = Platform.OS === 'web' ? 10 : insets.top;
   const bottomPad    = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
   const totalWitnessed  = stories.reduce((sum, s) => sum + s.witnessedCount, 0);
@@ -174,7 +174,7 @@ export default function CharacterScreen() {
       )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }} scrollEventThrottle={16}>
-        <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 8} activeEffect={activeEffect}>
+        <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 4} activeEffect={activeEffect}>
           <ProfileHeaderSection
             character={character} setCharacter={setCharacter}
             constellation={constellation} availableTitles={availableTitles}
@@ -207,7 +207,7 @@ export default function CharacterScreen() {
         </View>
 
         {/* Section content - completely un-tabbed */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
           {(!isLoading || character.name !== 'Player') && (
             <ProfileStyleSection
@@ -270,11 +270,11 @@ export default function CharacterScreen() {
 const s = StyleSheet.create({
   container:    { flex: 1 },
   statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 4, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
-  statCol:      { flex: 1, alignItems: 'center', paddingVertical: 14, gap: 4 },
-  statNum:      { fontSize: 24, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.5 },
+  statCol:      { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 3 },
+  statNum:      { fontSize: 21, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.5 },
   statMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)', letterSpacing: 1.0 },
-  statDivider:  { width: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 14 },
+  statDivider:  { width: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 10 },
   wornBanner:   { height: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(193,151,255,0.18)', backgroundColor: '#130F24' },
   wornBadge:    { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, marginBottom: 5, backgroundColor: 'rgba(232,120,156,0.13)', borderWidth: 1, borderColor: 'rgba(232,120,156,0.25)' },
   wornBadgeText:{ fontSize: 7, fontFamily: 'Satoshi-Bold', color: '#E88EAE', letterSpacing: 1.0 },

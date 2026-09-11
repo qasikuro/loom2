@@ -197,5 +197,5 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }
 export { ACCENT_CONFIGS, FRAME_CONFIGS };
 
 const s = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingBottom: 24 },
+  header: { paddingHorizontal: 20, paddingBottom: 12 },
 });
