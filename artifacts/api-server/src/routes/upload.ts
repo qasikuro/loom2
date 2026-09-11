@@ -19,6 +19,7 @@ import multer from "multer";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
 import { registerPendingUpload, startOrphanCleanup } from "../lib/uploadTracking";
+import { pool } from "@workspace/db";
 
 const BUCKET_ID     = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
 const MAX_DIM       = 1600;
@@ -167,12 +168,19 @@ async function processAndSave(
 
     const file = objectStorageClient.bucket(BUCKET_ID).file(`images/${fname}`);
     await file.save(compressed, { metadata: { contentType }, resumable: false });
+    const publicPath = `/api/images/${fname}`;
+    await pool.query(
+      `INSERT INTO uploaded_images (path, user_id, byte_size)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (path) DO UPDATE SET user_id=EXCLUDED.user_id, byte_size=EXCLUDED.byte_size`,
+      [publicPath, getUserId(req), compressed.byteLength],
+    );
 
     // L-3: Register the uploaded file so the orphan-cleanup interval can
     // delete it after 24 h if no story/outfit create ever claims it.
-    registerPendingUpload(`/api/images/${fname}`, `images/${fname}`);
+    registerPendingUpload(publicPath, `images/${fname}`);
 
-    return res.status(201).json({ path: `/api/images/${fname}` });
+    return res.status(201).json({ path: publicPath });
   } catch (err) {
     req.log.error({ err }, "Failed to process / save uploaded image");
     return res.status(500).json({ error: "Internal server error" });

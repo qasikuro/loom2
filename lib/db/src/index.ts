@@ -259,6 +259,53 @@ export async function runStartupMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS last_seen_at       TIMESTAMPTZ
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS manga_generations (
+        id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        request_id            TEXT NOT NULL UNIQUE,
+        user_id               TEXT NOT NULL,
+        style                 TEXT NOT NULL,
+        prompt                TEXT NOT NULL,
+        image_uri             TEXT,
+        image_count           INTEGER NOT NULL,
+        original_sizes        JSONB NOT NULL DEFAULT '[]',
+        compressed_sizes      JSONB NOT NULL DEFAULT '[]',
+        model                 TEXT NOT NULL,
+        quality               TEXT NOT NULL,
+        output_size           TEXT NOT NULL,
+        status                TEXT NOT NULL DEFAULT 'pending',
+        estimated_cost_micros INTEGER NOT NULL DEFAULT 0,
+        error_code            TEXT,
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        completed_at          TIMESTAMPTZ
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS manga_generations_user_created_idx
+      ON manga_generations(user_id, created_at)
+    `);
+    await client.query(`
+      ALTER TABLE manga_generations
+      DROP CONSTRAINT IF EXISTS manga_generations_request_id_unique,
+      DROP CONSTRAINT IF EXISTS manga_generations_request_id_key
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS manga_generations_user_request_idx
+      ON manga_generations(user_id, request_id)
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS uploaded_images (
+        path       TEXT PRIMARY KEY,
+        user_id    TEXT NOT NULL,
+        byte_size  INTEGER NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS uploaded_images_user_id_idx
+      ON uploaded_images(user_id)
+    `);
+
   } finally {
     client.release();
   }

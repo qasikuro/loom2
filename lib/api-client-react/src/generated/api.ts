@@ -27,6 +27,8 @@ import type {
   HealthStatus,
   JournalEntry,
   JournalEntryInput,
+  MangaGenerationInput,
+  MangaGenerationResult,
   Notification,
   Outfit,
   OutfitInput,
@@ -44,6 +46,92 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary Generate one AI manga page from uploaded reference images
+ */
+export const getGenerateMangaPageUrl = () => {
+  return `/api/manga/generate`;
+};
+
+export const generateMangaPage = async (
+  mangaGenerationInput: MangaGenerationInput,
+  options?: RequestInit,
+): Promise<MangaGenerationResult> => {
+  return customFetch<MangaGenerationResult>(getGenerateMangaPageUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(mangaGenerationInput),
+  });
+};
+
+export const getGenerateMangaPageMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateMangaPage>>,
+    TError,
+    { data: BodyType<MangaGenerationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateMangaPage>>,
+  TError,
+  { data: BodyType<MangaGenerationInput> },
+  TContext
+> => {
+  const mutationKey = ["generateMangaPage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateMangaPage>>,
+    { data: BodyType<MangaGenerationInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateMangaPage(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateMangaPageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateMangaPage>>
+>;
+export type GenerateMangaPageMutationBody = BodyType<MangaGenerationInput>;
+export type GenerateMangaPageMutationError = ErrorType<void>;
+
+/**
+ * @summary Generate one AI manga page from uploaded reference images
+ */
+export const useGenerateMangaPage = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateMangaPage>>,
+    TError,
+    { data: BodyType<MangaGenerationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateMangaPage>>,
+  TError,
+  { data: BodyType<MangaGenerationInput> },
+  TContext
+> => {
+  return useMutation(getGenerateMangaPageMutationOptions(options));
+};
 
 /**
  * @summary Health check

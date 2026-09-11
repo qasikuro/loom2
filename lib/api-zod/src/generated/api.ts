@@ -8,6 +8,28 @@
 import * as zod from "zod";
 
 /**
+ * @summary Generate one AI manga page from uploaded reference images
+ */
+export const generateMangaPageBodyImageUrisMax = 10;
+
+export const generateMangaPageBodyPromptMax = 500;
+
+export const GenerateMangaPageBody = zod.object({
+  requestId: zod.string(),
+  imageUris: zod
+    .array(zod.string())
+    .min(1)
+    .max(generateMangaPageBodyImageUrisMax),
+  prompt: zod.string().max(generateMangaPageBodyPromptMax),
+  style: zod.enum(["manga", "color", "chibi", "cinematic", "webtoon"]),
+});
+
+export const GenerateMangaPageResponse = zod.object({
+  imageUri: zod.string(),
+  remainingToday: zod.number(),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

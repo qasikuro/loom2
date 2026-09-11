@@ -5,6 +5,34 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+export type MangaGenerationInputStyle =
+  (typeof MangaGenerationInputStyle)[keyof typeof MangaGenerationInputStyle];
+
+export const MangaGenerationInputStyle = {
+  manga: "manga",
+  color: "color",
+  chibi: "chibi",
+  cinematic: "cinematic",
+  webtoon: "webtoon",
+} as const;
+
+export interface MangaGenerationInput {
+  requestId: string;
+  /**
+   * @minItems 1
+   * @maxItems 10
+   */
+  imageUris: string[];
+  /** @maxLength 500 */
+  prompt: string;
+  style: MangaGenerationInputStyle;
+}
+
+export interface MangaGenerationResult {
+  imageUri: string;
+  remainingToday: number;
+}
+
 export interface HealthStatus {
   status: string;
 }

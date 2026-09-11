@@ -26,8 +26,31 @@ tags:
     description: Activity notifications
   - name: rewards
     description: Rewards, shop, and constellation
+  - name: manga
+    description: AI manga generation
 
 paths:
+  /manga/generate:
+    post:
+      operationId: generateMangaPage
+      tags: [manga]
+      summary: Generate one AI manga page from uploaded reference images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MangaGenerationInput"
+      responses:
+        "200":
+          description: Generated manga page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MangaGenerationResult"
+        "429":
+          description: Daily generation limit reached
+
   /healthz:
     get:
       operationId: healthCheck
@@ -379,6 +402,34 @@ paths:
 
 components:
   schemas:
+    MangaGenerationInput:
+      type: object
+      properties:
+        requestId:
+          type: string
+        imageUris:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: string
+        prompt:
+          type: string
+          maxLength: 500
+        style:
+          type: string
+          enum: [manga, color, chibi, cinematic, webtoon]
+      required: [requestId, imageUris, prompt, style]
+
+    MangaGenerationResult:
+      type: object
+      properties:
+        imageUri:
+          type: string
+        remainingToday:
+          type: integer
+      required: [imageUri, remainingToday]
+
     HealthStatus:
       type: object
       properties:

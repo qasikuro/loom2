@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -17,8 +18,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { safeBack } from '@/utils/navigation';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
+import { apiFetch, ApiError, resolveUri } from '@/context/AppContext';
+import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
 
 type MangaStyle = 'manga' | 'color' | 'chibi' | 'cinematic' | 'webtoon';
+type PendingAttempt = {
+  requestId: string;
+  imageUris: string[];
+  prompt: string;
+  style: MangaStyle;
+};
+
+const PENDING_ATTEMPT_KEY = 'pending_manga_generation_v1';
 
 const STYLES: Array<{
   id: MangaStyle;
@@ -45,9 +56,20 @@ export default function MangaStoryScreen() {
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
+  const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(null);
+  const [remainingToday, setRemainingToday] = useState<number | null>(null);
+  const [pendingAttempt, setPendingAttempt] = useState<PendingAttempt | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selectedStyle = useMemo(() => STYLES.find(item => item.id === style) ?? STYLES[0], [style]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(PENDING_ATTEMPT_KEY)
+      .then(raw => {
+        if (raw) setPendingAttempt(JSON.parse(raw) as PendingAttempt);
+      })
+      .catch(() => undefined);
+  }, []);
 
   async function addPhotos() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -65,6 +87,7 @@ export default function MangaStoryScreen() {
     const next = result.assets.map(asset => asset.uri).filter(Boolean);
     setImages(current => [...current, ...next].slice(0, 10));
     setGenerated(false);
+    setGeneratedImageUri(null);
     setError(null);
   }
 
@@ -72,30 +95,77 @@ export default function MangaStoryScreen() {
     Haptics.selectionAsync();
     setImages(current => current.filter(image => image !== uri));
     setGenerated(false);
+    setGeneratedImageUri(null);
   }
 
   function chooseStyle(next: MangaStyle) {
     Haptics.selectionAsync();
     setStyle(next);
     setGenerated(false);
+    setGeneratedImageUri(null);
   }
 
-  function generateStory() {
+  async function generateStory() {
+    if (generating) return;
     if (!images.length) {
       setError('Add at least one photo to create your manga story.');
       return;
     }
+    const finalPrompt =
+      `Create one ${selectedStyle.promptInstruction} story page. ` +
+      'Use the uploaded images as references for characters, environments, events, poses, and visual continuity. ' +
+      `Story: ${prompt.trim() || 'Create a warm, coherent adventure from these moments.'}`;
     setError(null);
     setGenerating(true);
-    setGeneratedPrompt(
-      `Create one ${selectedStyle.promptInstruction} story page. Use the uploaded images as references for characters, environments, events, poses, and visual continuity. Story: ${prompt.trim() || 'Create a warm, coherent adventure from these moments.'} Add a small, readable “Made by Gamejo” credit on the finished page.`,
-    );
+    setGenerated(false);
+    setGeneratedImageUri(null);
+    setGeneratedPrompt(finalPrompt);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setTimeout(() => {
-      setGenerating(false);
+    try {
+      let attempt = pendingAttempt;
+      if (!attempt) {
+        const imageUris = await Promise.all(images.map(uri => persistImageUri(uri)));
+        attempt = {
+          requestId: `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
+          imageUris,
+          prompt,
+          style,
+        };
+        setPendingAttempt(attempt);
+        await AsyncStorage.setItem(PENDING_ATTEMPT_KEY, JSON.stringify(attempt));
+      }
+      const result = await apiFetch<{ imageUri: string; remainingToday: number }>('/manga/generate', {
+        method: 'POST',
+        body: JSON.stringify(attempt),
+      });
+      const resolved = resolveUri(result.imageUri);
+      if (!resolved) throw new Error('The generated image could not be loaded.');
+      setGeneratedImageUri(resolved);
+      setRemainingToday(result.remainingToday);
       setGenerated(true);
+      setPendingAttempt(null);
+      await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    }, 900);
+    } catch (err) {
+      if (err instanceof ImageUploadError) {
+        setError(err.userMessage);
+      } else if (err instanceof ApiError && err.status === 429) {
+        setError('You have reached today’s manga limit. Please come back tomorrow.');
+        setPendingAttempt(null);
+        await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
+      } else if (err instanceof ApiError && err.status === 409) {
+        setError('Your previous manga request is still being checked. Wait a moment, then tap Generate again.');
+      } else if (err instanceof ApiError && [400, 401, 403, 502].includes(err.status)) {
+        setError('Something went wrong creating your manga. Please try again.');
+        setPendingAttempt(null);
+        await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
+      } else {
+        setError('The result could not be confirmed. Tap Generate again to safely check the same request.');
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setGenerating(false);
+    }
   }
 
   return (
@@ -212,20 +282,9 @@ export default function MangaStoryScreen() {
                   style={s.generatedGrid}
                   accessibilityLabel={`Generated manga page. ${generatedPrompt}`}
                 >
-                  {images.slice(0, 4).map((uri, index) => (
-                    <View key={`${uri}-${index}`} style={[s.generatedPanel, images.length === 1 && { width: '100%' }]}>
-                      <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                      <LinearGradient colors={['transparent', 'rgba(7,4,18,0.48)']} style={StyleSheet.absoluteFill} />
-                    </View>
-                  ))}
-                  <View style={s.generatedCaption}>
-                    <Text style={s.generatedCaptionText} numberOfLines={2}>
-                      {prompt.trim() || 'A new story begins beneath a sky full of possibilities…'}
-                    </Text>
-                  </View>
-                  <View style={s.gamejoCredit}>
-                    <Text style={s.gamejoCreditText}>Made by Gamejo</Text>
-                  </View>
+                  {!!generatedImageUri && (
+                    <Image source={{ uri: generatedImageUri }} style={s.generatedImage} contentFit="contain" />
+                  )}
                 </View>
               ) : (
                 <View style={s.resultEmpty}>
@@ -242,6 +301,9 @@ export default function MangaStoryScreen() {
               <Icon name="alert-circle" size={15} color="#FF8FA9" />
               <Text style={s.errorText}>{error}</Text>
             </View>
+          )}
+          {remainingToday !== null && generated && (
+            <Text style={s.remainingText}>{remainingToday} AI manga pages remaining today</Text>
           )}
         </View>
       </ScrollView>
@@ -343,14 +405,11 @@ const s = StyleSheet.create({
   resultEmpty: { minHeight: 156, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14 },
   resultTitle: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(218,201,240,0.62)', textAlign: 'center' },
   resultText: { fontSize: 9.5, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(201,184,226,0.42)', textAlign: 'center' },
-  generatedGrid: { minHeight: 188, flexDirection: 'row', flexWrap: 'wrap', gap: 3, padding: 3 },
-  generatedPanel: { width: '49%', height: 90, borderRadius: 6, overflow: 'hidden', backgroundColor: '#171126' },
-  generatedCaption: { position: 'absolute', left: 12, right: 12, bottom: 10, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: 'rgba(7,4,18,0.82)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.13)' },
-  generatedCaptionText: { fontSize: 10, lineHeight: 14, fontFamily: 'Satoshi-Medium', color: '#FFFFFF', textAlign: 'center', fontStyle: 'italic' },
-  gamejoCredit: { position: 'absolute', right: 8, top: 8, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8, backgroundColor: 'rgba(7,4,18,0.78)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' },
-  gamejoCreditText: { fontSize: 8, fontFamily: 'Satoshi-Bold', color: 'rgba(255,255,255,0.88)', letterSpacing: 0.2 },
+  generatedGrid: { width: '100%', aspectRatio: 1, padding: 3 },
+  generatedImage: { width: '100%', height: '100%', borderRadius: 9, backgroundColor: '#171126' },
   error: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,83,126,0.10)', borderWidth: 1, borderColor: 'rgba(255,83,126,0.22)' },
   errorText: { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#FFB0C1' },
+  remainingText: { textAlign: 'center', fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(205,187,233,0.56)' },
   generateBar: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, backgroundColor: 'rgba(5,4,15,0.94)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
   generateBtn: { height: 54, borderRadius: 27, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, shadowColor: '#B82EFF', shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
   generateText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
