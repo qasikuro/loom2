@@ -191,6 +191,12 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
       [errorCode, requestId, userId],
     ).catch(() => undefined);
     req.log.error({ err: error, requestId, userId }, "Manga generation failed");
+    if (error && typeof error === "object" && "status" in error && (error as { status?: unknown }).status === 401) {
+      return res.status(503).json({
+        error: "The AI image service is temporarily unavailable. Please try again later.",
+        code: "AI_PROVIDER_UNAVAILABLE",
+      });
+    }
     return res.status(502).json({ error: "Something went wrong creating your manga. Please try again." });
   }
 });

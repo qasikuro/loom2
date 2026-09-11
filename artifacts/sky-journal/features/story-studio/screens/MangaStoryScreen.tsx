@@ -150,7 +150,10 @@ export default function MangaStoryScreen() {
       });
       const resolved = resolveUri(result.imageUri);
       if (!resolved) throw new Error('The generated image could not be loaded.');
-      setGeneratedImageUri(resolved);
+      // Keep a unique cache key so Expo Image does not reuse a failed request
+      // from an earlier generation or a stale browser cache entry.
+      const displayUri = `${resolved}${resolved.includes('?') ? '&' : '?'}generation=${encodeURIComponent(result.generationId)}`;
+      setGeneratedImageUri(displayUri);
       setGenerationId(result.generationId);
       setImageLoading(true);
       setImageLoadFailed(false);
@@ -169,6 +172,10 @@ export default function MangaStoryScreen() {
         await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
       } else if (err instanceof ApiError && err.status === 409) {
         setError('Your previous manga request is still being checked. Wait a moment, then tap Generate again.');
+      } else if (err instanceof ApiError && err.status === 503) {
+        setError('The AI image service is temporarily unavailable. Your request was not charged. Please try again later.');
+        setPendingAttempt(null);
+        await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
       } else if (err instanceof ApiError && [400, 401, 403, 502].includes(err.status)) {
         setError('Something went wrong creating your manga. Please try again.');
         setPendingAttempt(null);
@@ -365,7 +372,7 @@ export default function MangaStoryScreen() {
                       source={{ uri: generatedImageUri }}
                       style={s.generatedImage}
                       contentFit="contain"
-                      cachePolicy="none"
+                      cachePolicy="disk"
                       onLoadStart={() => setImageLoading(true)}
                       onLoad={() => {
                         setImageLoading(false);
