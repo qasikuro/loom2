@@ -2,7 +2,6 @@ import { Images } from '@/assets/images';
 import { ConstellationStarSheet } from '@/components/ConstellationStarSheet';
 import { ShopModal } from '@/components/ShopModal';
 import { SkeletonProfileCard } from '@/components/Skeleton';
-import { WeatherWidget } from '@/components/WeatherWidget';
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -10,7 +9,7 @@ import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,16 +19,11 @@ import { CharacterAuraHeader } from '@/components/profile/CharacterAuraHeader';
 import { GalleryLightboxModal } from '@/components/profile/GalleryLightboxModal';
 import { MoodPickerModal } from '@/components/profile/MoodPickerModal';
 import { OutfitDetailModal } from '@/components/profile/OutfitDetailModal';
-import { PingFriendsCard } from '@/components/profile/PingFriendsCard';
-import { ProfileAboutSection } from '@/components/profile/ProfileAboutSection';
 import { ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection';
-import { ProfileJourneySection } from '@/components/profile/ProfileJourneySection';
-import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { ProfileStyleSection } from '@/components/profile/ProfileStyleSection';
+import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
-import { MOOD_COLORS } from '@/components/profile/profileConstants';
 import { useGalleryState } from '@/hooks/useGalleryState';
-import { usePingState } from '@/hooks/usePingState';
 
 const STAR_TITLES: Record<number, string> = {
   1: 'Star Wanderer', 2: 'Memory Keeper',   3: 'Rising Star',
@@ -62,32 +56,24 @@ export default function CharacterScreen() {
   const { user }    = useUser();
 
   const {
-    character, setCharacter, outfits, stories, journalEntries,
+    character, setCharacter, outfits, stories,
     activeOutfitId, setActiveOutfitId, deleteOutfit, deleteStory,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
     isLoading, apiOnline, storiesLoadError, outfitsLoadError, hasCorruptedStories, reloadData,
     constellation, rewardBalance, reloadConstellation,
-    activeCosmetics, shopCatalog, purchasedIds, setActiveCosmetic,
+    activeCosmetics,
   } = useApp();
 
   const activeFrame  = activeCosmetics['frame']  as string | undefined;
-  const activeAccent = activeCosmetics['accent'] as string | undefined;
   const activeEffect = activeCosmetics['effect'] as string | undefined;
-  const moodAccent   = MOOD_COLORS[character.mood ?? 'Dreamy'] ?? '#9B7AB5';
   const activeOutfit = activeOutfitId ? outfits.find(o => o.id === activeOutfitId) ?? null : null;
   const topPad       = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad    = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
-  // Computed values
   const totalWitnessed  = stories.reduce((sum, s) => sum + s.witnessedCount, 0);
   const xpBase          = rewardBalance?.stars ?? 0;
   const profileLevel    = Math.max(1, Math.floor(xpBase / XP_PER_LEVEL) + 1);
   const profileXpPct    = (xpBase % XP_PER_LEVEL) / XP_PER_LEVEL;
-  const profileTitle    = constellation?.activeTitle ?? (
-    (constellation?.unlockedStars.length ?? 0) >= 5 ? 'Guiding Light'  :
-    (constellation?.unlockedStars.length ?? 0) >= 3 ? 'Dreamwalker'    :
-    (constellation?.unlockedStars.length ?? 0) >= 1 ? 'Star Wanderer'  : 'Newcomer'
-  );
   const availableTitles = constellation
     ? (Array.from({ length: constellation.unlockedStars.length }, (_, i) => STAR_TITLES[i + 1]).filter(Boolean) as string[])
     : [];
@@ -95,17 +81,10 @@ export default function CharacterScreen() {
     ? { uri: character.avatarUri }
     : activeOutfit?.imageUri ? { uri: activeOutfit.imageUri } : Images.character_default;
 
-  // ── Hooks ──────────────────────────────────────────────────────────────────
-  const [animTrigger, setAnimTrigger] = useState(0);
-  useFocusEffect(useCallback(() => { setAnimTrigger(n => n + 1); }, []));
-
-  const { weatherQuery, pingState, cooldownText, bellAnim, handlePing } = usePingState(character.country);
   const { galleryUploading, galleryError, selectedPhoto, deletingPhoto,
           handleAddGalleryPhoto, openPhoto, closePhoto, handleDeletePhoto,
   } = useGalleryState({ galleryUsage, addGalleryPhoto, deleteGalleryPhoto });
 
-  // ── UI state ───────────────────────────────────────────────────────────────
-  const [profileTab,      setProfileTab]      = useState<'style' | 'about'>('style');
   const [showShop,        setShowShop]        = useState(false);
   const [showMoodPicker,  setShowMoodPicker]  = useState(false);
   const [showTitlePicker, setShowTitlePicker] = useState(false);
@@ -121,14 +100,6 @@ export default function CharacterScreen() {
     setSavingTitle(false); setShowTitlePicker(false);
   }, [reloadConstellation]);
 
-  const handleSetActiveTitle = useCallback(async (title: string | null) => {
-    try {
-      await apiFetch('/constellation/title', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: title ?? null }) });
-      await reloadConstellation();
-    } catch { /* skip */ }
-  }, [reloadConstellation]);
-
-  // ── Settings drawer ────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerWidth = screenW * 0.82;
   const drawerX     = useRef(new Animated.Value(drawerWidth)).current;
@@ -140,7 +111,6 @@ export default function CharacterScreen() {
     Animated.timing(drawerX, { toValue: drawerWidth, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => setDrawerOpen(false));
   }
 
-  // ── Sign-out ───────────────────────────────────────────────────────────────
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
   const signOutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   async function handleSignOut() {
@@ -163,7 +133,6 @@ export default function CharacterScreen() {
     setCharacter({ ...character, showOnlineStatus: !(character.showOnlineStatus ?? true) });
   }
 
-  // ── Outfit modal ───────────────────────────────────────────────────────────
   const [selectedOutfitId,      setSelectedOutfitId]      = useState<string | null>(null);
   const [deletingOutfitInModal, setDeletingOutfitInModal] = useState(false);
   const deleteTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -188,10 +157,8 @@ export default function CharacterScreen() {
     setActiveOutfitId(activeOutfitId === selectedOutfit.id ? null : selectedOutfit.id);
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <View style={[s.container, { backgroundColor: colors.background }]}>
-
+    <View style={[s.container, { backgroundColor: '#05030A' }]}>
       {(!apiOnline || storiesLoadError || outfitsLoadError) && !isLoading && (
         <View style={offlineS.row}>
           <View style={offlineS.dot} />
@@ -206,107 +173,73 @@ export default function CharacterScreen() {
         <CorruptionBanner onRefresh={reloadData} />
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad + 40 }} scrollEventThrottle={16}>
-
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }} scrollEventThrottle={16}>
         <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 8} activeEffect={activeEffect}>
           <ProfileHeaderSection
             character={character} setCharacter={setCharacter}
             constellation={constellation} availableTitles={availableTitles}
             setShowTitlePicker={setShowTitlePicker} rewardBalance={rewardBalance}
-            activeFrame={activeFrame} activeAccent={activeAccent} activeOutfit={activeOutfit}
+            activeFrame={activeFrame} activeOutfit={activeOutfit}
             openDrawer={openDrawer} toggleVisibility={toggleVisibility}
-            profileTitle={profileTitle} profileLevel={profileLevel} profileXpPct={profileXpPct}
+            profileLevel={profileLevel} profileXpPct={profileXpPct}
           />
         </CharacterAuraHeader>
 
         {/* Stats card */}
         <View style={s.statsCard}>
           {([
-            { icon: 'book-open', count: stories.length,  label: 'STORIES', tab: 'style' },
-            { icon: 'user',      count: outfits.length,  label: 'OUTFITS', tab: 'style' },
-            { icon: 'heart',     count: totalWitnessed,  label: 'LIKES',   tab: null    },
+            { icon: 'book-open', count: stories.length,  label: 'STORIES' },
+            { icon: 'user',      count: outfits.length,  label: 'OUTFITS' },
+            { icon: 'heart',     count: totalWitnessed,  label: 'LIKES'   },
           ] as const).map((item, i) => (
             <React.Fragment key={item.label}>
               {i > 0 && <View style={s.statDivider} />}
-              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              <TouchableOpacity style={s.statCol} onPress={() => item.tab && (Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light), setProfileTab(item.tab as any))} activeOpacity={item.tab ? 0.75 : 1} disabled={!item.tab}>
+              <View style={s.statCol}>
                 <Text style={s.statNum}>{item.count}</Text>
                 <View style={s.statMeta}>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  <Icon name={item.icon as any} size={11} color={moodAccent} />
+                  <Icon name={item.icon as any} size={11} color="rgba(200,184,232,0.5)" />
                   <Text style={s.statLabel}>{item.label}</Text>
                 </View>
-              </TouchableOpacity>
+              </View>
             </React.Fragment>
           ))}
         </View>
 
-        {/* Tab bar */}
-        <View style={{ flexDirection: 'row', marginHorizontal: 16, marginTop: 14, marginBottom: 2, backgroundColor: 'rgba(200,184,232,0.05)', borderRadius: 14, padding: 3, gap: 2, borderWidth: 1, borderColor: 'rgba(200,184,232,0.10)' }}>
-          {(['style', 'about'] as const).map(tab => {
-            const active = profileTab === tab;
-            return (
-              <TouchableOpacity key={tab} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setProfileTab(tab); }} style={{ flex: 1, paddingVertical: 9, borderRadius: 11, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 5, backgroundColor: active ? 'rgba(107,91,149,0.60)' : 'transparent' }} activeOpacity={0.75}>
-                {tab === 'style' ? (
-                  <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: active ? '#fff' : 'rgba(200,184,232,0.50)' }}>🪐 My Space</Text>
-                ) : (
-                  <>
-                    <Icon name="user" size={12} color={active ? '#fff' : 'rgba(200,184,232,0.50)'} />
-                    <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, color: active ? '#fff' : 'rgba(200,184,232,0.50)' }}>About</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Currently worn outfit hero (Style tab) */}
-        {profileTab === 'style' && activeOutfit && (
-          <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
-            <TouchableOpacity style={[s.outfitHero, { borderColor: `${moodAccent}35` }]} onPress={() => openOutfit(activeOutfit.id)} activeOpacity={0.88}>
-              {activeOutfit.imageUri
-                ? (
-                  <View style={s.outfitHeroImg}>
-                    <Image source={{ uri: activeOutfit.imageUri }} style={{ width: '100%', height: '100%' }} contentFit="cover" cachePolicy="memory-disk" />
-                    <LinearGradient colors={['transparent', 'rgba(8,6,22,0.88)']} start={{ x: 0, y: 0.35 }} end={{ x: 0, y: 1 }} style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 130 }} pointerEvents="none" />
-                  </View>
-                )
-                : <View style={[s.outfitHeroImg, { backgroundColor: 'rgba(200,184,232,0.07)', alignItems: 'center', justifyContent: 'center' }]}><Text style={{ fontSize: 52 }}>✨</Text></View>}
-              <View style={[s.outfitHeroBadge, { backgroundColor: `${moodAccent}22`, borderColor: `${moodAccent}55` }]}>
-                <Text style={[{ fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4 }, { color: moodAccent }]}>CURRENTLY WORN</Text>
-              </View>
-              <View style={s.outfitHeroBottom}>
-                <Text style={s.outfitHeroName} numberOfLines={1}>{activeOutfit.name}</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Weather + ping (About tab) */}
-        {profileTab === 'about' && weatherQuery && (
-          <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
-            <WeatherWidget query={weatherQuery} accentColor={moodAccent} />
-          </View>
-        )}
-        {profileTab === 'about' && (
-          <View style={{ paddingHorizontal: 16, marginTop: 10 }}>
-            <PingFriendsCard pingState={pingState} cooldownText={cooldownText} bellAnim={bellAnim} moodAccent={moodAccent} onPing={handlePing} />
-          </View>
-        )}
-
-        {/* Section content */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 14 }}>
+        {/* Section content - completely un-tabbed */}
+        <View style={{ paddingHorizontal: 20, paddingTop: 16 }}>
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
-          {profileTab === 'about' && (!isLoading || character.name !== 'Player') && (
-            <ProfileAboutSection character={character} setCharacter={setCharacter} />
-          )}
-          {profileTab === 'style' && (!isLoading || character.name !== 'Player') && (
+          {(!isLoading || character.name !== 'Player') && (
             <ProfileStyleSection
               outfits={outfits} stories={stories} openOutfit={openOutfit} deleteStory={deleteStory}
               gallery={gallery} openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
               galleryUploading={galleryUploading} galleryError={galleryError}
-              activeOutfitId={activeOutfitId} moodAccent={moodAccent}
+              activeOutfitId={activeOutfitId}
             />
+          )}
+
+          {activeOutfit && (
+            <TouchableOpacity style={s.wornBanner} onPress={() => openOutfit(activeOutfit.id)} activeOpacity={0.88}>
+              {activeOutfit.imageUri && (
+                <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              )}
+              <LinearGradient
+                colors={['rgba(10,6,22,0.98)', 'rgba(14,9,30,0.76)', 'rgba(14,9,30,0.28)']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={{ flex: 1, zIndex: 1 }}>
+                <View style={s.wornBadge}>
+                  <Text style={s.wornBadgeText}>CURRENTLY WORN</Text>
+                </View>
+                <Text style={s.wornTitleText} numberOfLines={1}>{activeOutfit.name}</Text>
+              </View>
+              <View style={s.wornBtn}>
+                <Icon name="user" size={13} color="rgba(235,225,255,0.88)" />
+                <Text style={s.wornBtnText}>Change outfit</Text>
+              </View>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>
@@ -336,17 +269,18 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
-  statsCard:    { flexDirection: 'row', marginHorizontal: 16, marginTop: 14, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)', overflow: 'hidden' },
-  statCol:      { flex: 1, alignItems: 'center', paddingVertical: 18, gap: 6 },
-  statNum:      { fontSize: 28, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.8 },
+  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 4, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  statCol:      { flex: 1, alignItems: 'center', paddingVertical: 14, gap: 4 },
+  statNum:      { fontSize: 24, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.5 },
   statMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.45)', letterSpacing: 1.0 },
-  statDivider:  { width: 1, backgroundColor: 'rgba(200,184,232,0.10)', marginVertical: 14 },
-  outfitHero:     { borderRadius: 20, overflow: 'hidden', borderWidth: 1, backgroundColor: 'rgba(107,91,149,0.10)' },
-  outfitHeroImg:  { width: '100%', height: 216 },
-  outfitHeroBadge:  { position: 'absolute', top: 12, left: 12, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  outfitHeroBottom: { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 16, paddingBottom: 18 },
-  outfitHeroName:   { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: 0.1 },
+  statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)', letterSpacing: 1.0 },
+  statDivider:  { width: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 14 },
+  wornBanner:   { height: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(193,151,255,0.18)', backgroundColor: '#130F24' },
+  wornBadge:    { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, marginBottom: 5, backgroundColor: 'rgba(232,120,156,0.13)', borderWidth: 1, borderColor: 'rgba(232,120,156,0.25)' },
+  wornBadgeText:{ fontSize: 7, fontFamily: 'Satoshi-Bold', color: '#E88EAE', letterSpacing: 1.0 },
+  wornTitleText:{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#FFF' },
+  wornBtn:      { zIndex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 12, backgroundColor: 'rgba(9,6,20,0.58)' },
+  wornBtnText:  { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(235,225,255,0.88)' },
 });
 
 const offlineS = StyleSheet.create({

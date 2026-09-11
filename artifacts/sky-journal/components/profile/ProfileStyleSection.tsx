@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   Animated,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -33,7 +32,6 @@ const BG_MAP: Record<string, any> = {
 };
 
 function getStoryCover(story: Story) {
-  // Video posts use their extracted thumbnail
   if (story.contentType === 'video' && story.thumbnailUri) {
     return { uri: story.thumbnailUri };
   }
@@ -47,7 +45,8 @@ function getStoryCover(story: Story) {
 const MOOD_COLORS: Record<string, string> = {
   Peaceful: '#8B7AB5', Joyful: '#D4A849', Melancholy: '#5D7BA5',
   Nostalgic: '#A5785D', Hopeful: '#6BA57A', Anxious: '#A56B6B',
-  Dreamy: '#9B7AB5', Mysterious: '#6B6BA5',
+  Dreamy: '#9B7AB5', Mysterious: '#6B6BA5', Romantic: '#D878B0',
+  Chaotic: '#E8784A', Soft: '#C8A0D8',
 };
 
 // ── Fullscreen video player modal ─────────────────────────────────────────────
@@ -67,7 +66,6 @@ function VideoPlayerModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset confirm state whenever the modal opens a new story
   React.useEffect(() => {
     setConfirmDelete(false);
     if (deleteTimer.current) clearTimeout(deleteTimer.current);
@@ -92,7 +90,6 @@ function VideoPlayerModal({
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={[vp.backdrop, { width: W, height: H }]}>
-        {/* Video */}
         <Video
           source={{ uri: story.videoUri }}
           shouldPlay
@@ -102,40 +99,25 @@ function VideoPlayerModal({
           style={StyleSheet.absoluteFill}
           useNativeControls={false}
         />
-
-        {/* Top bar */}
         <View style={[vp.topBar, { paddingTop: insets.top + 8 }]}>
           <TouchableOpacity style={vp.iconBtn} onPress={onClose} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Icon name="x" size={18} color="#fff" />
           </TouchableOpacity>
-
-          {/* Right-side controls */}
           <View style={vp.rightControls}>
-            {/* Delete with confirm */}
-            <TouchableOpacity
-              style={[vp.iconBtn, confirmDelete && vp.iconBtnDanger]}
-              onPress={handleDelete}
-              activeOpacity={0.8}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
+            <TouchableOpacity style={[vp.iconBtn, confirmDelete && vp.iconBtnDanger]} onPress={handleDelete} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Icon name="trash-2" size={18} color={confirmDelete ? '#FF6B6B' : '#fff'} />
             </TouchableOpacity>
-            {/* Mute */}
             <TouchableOpacity style={vp.iconBtn} onPress={() => setMuted(m => !m)} activeOpacity={0.8} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Icon name={muted ? 'volume-x' : 'volume-2'} size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Confirm-delete hint */}
         {confirmDelete && (
           <View style={vp.confirmBanner} pointerEvents="none">
             <Icon name="alert-triangle" size={13} color="#FF6B6B" />
             <Text style={vp.confirmText}>Tap again to delete</Text>
           </View>
         )}
-
-        {/* Bottom info */}
         <View style={[vp.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
           <Text style={vp.title} numberOfLines={2}>{story.chapterTitle}</Text>
           {!!story.description && (
@@ -210,7 +192,6 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
           },
         ]}
       >
-        {/* Story preview row */}
         <View style={ss.previewRow}>
           <View style={[ss.previewThumb, { backgroundColor: `${moodColor}22` }]}>
             {cover ? (
@@ -233,12 +214,6 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
                 <Icon name="bookmark" size={11} color="rgba(200,184,232,0.75)" />
                 <Text style={ss.statChipText}>{story.savedCount} saved</Text>
               </View>
-              {(story.stickerCount ?? 0) > 0 && (
-                <View style={ss.statChip}>
-                  <Text style={{ fontSize: 10, color: 'rgba(255,210,100,0.9)', lineHeight: 13 }}>✦</Text>
-                  <Text style={ss.statChipText}>{story.stickerCount}</Text>
-                </View>
-              )}
             </View>
             <View style={[ss.pubBadge, { backgroundColor: story.isPublic ? `${moodColor}20` : 'rgba(200,184,232,0.08)', borderColor: story.isPublic ? `${moodColor}40` : 'rgba(200,184,232,0.15)' }]}>
               <Icon name={story.isPublic ? 'globe' : 'lock'} size={9} color={story.isPublic ? moodColor : 'rgba(200,184,232,0.5)'} />
@@ -251,7 +226,6 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
         <View style={[ss.divider, { backgroundColor: 'rgba(200,184,232,0.08)' }]} />
 
-        {/* Actions — story-only (hidden for video posts) */}
         {story.contentType !== 'video' && (
           <TouchableOpacity style={ss.action} onPress={() => { dismiss(); setTimeout(() => router.push(`/story/${story.id}` as never), 280); }} activeOpacity={0.75}>
             <View style={[ss.actionIcon, { backgroundColor: 'rgba(155,122,232,0.12)' }]}>
@@ -308,8 +282,8 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
 // ── Story card (horizontal scroll) ───────────────────────────────────────────
 
-const CARD_W = 118;
-const CARD_H = 152;
+const CARD_W = 104;
+const CARD_H = 130;
 
 function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story) => void; onPlay: (s: Story) => void }) {
   const cover      = getStoryCover(story);
@@ -337,7 +311,7 @@ function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story)
       {/* Mood dot */}
       <View style={[sc.moodDot, { backgroundColor: moodColor }]} />
 
-      {/* Video badge — shown in place of globe icon for video posts */}
+      {/* Video badge */}
       {isVideo ? (
         <View style={sc.videoBadge}>
           <Icon name="video" size={8} color="rgba(240,200,255,0.95)" />
@@ -385,14 +359,13 @@ interface Props {
   galleryUploading:    boolean;
   galleryError:        string | null;
   activeOutfitId:      string | null;
-  moodAccent:          string;
 }
 
 export function ProfileStyleSection({
   outfits, stories, openOutfit, deleteStory,
   gallery, openPhoto,
   handleAddGalleryPhoto, galleryUploading, galleryError,
-  activeOutfitId, moodAccent,
+  activeOutfitId,
 }: Props) {
   const colors = useColors();
   const { updateStory } = useApp();
@@ -409,113 +382,94 @@ export function ProfileStyleSection({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={[s.sectionTitle, { color: colors.foreground }]}>My Stories</Text>
             {stories.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: `${moodAccent}18`, borderColor: `${moodAccent}28` }]}>
-                <Text style={[s.countPillText, { color: moodAccent }]}>{stories.length}</Text>
+              <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+                <Text style={[s.countPillText, { color: '#B89AE8' }]}>{stories.length}</Text>
               </View>
             )}
           </View>
           <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+            style={[s.addBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}
             onPress={() => { Haptics.selectionAsync(); router.push('/my-stories' as never); }}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="book-open" size={12} color={colors.primary} />
-            <Text style={[s.addBtnText, { color: colors.primary }]}>See all</Text>
+            <Icon name="book-open" size={12} color="#B89AE8" />
+            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>See all</Text>
           </TouchableOpacity>
         </View>
 
-        {sorted.length === 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
+          {sorted.slice(0, 10).map(story => (
+            <StoryCard key={story.id} story={story} onMenu={setActiveStory} onPlay={setPlayingVideo} />
+          ))}
+          {/* Add Story Card Placeholder */}
           <TouchableOpacity
-            style={[s.emptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]}
+            style={[sc.card, { borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }]}
             onPress={() => router.push('/(tabs)/create' as never)}
             activeOpacity={0.75}
           >
-            <View style={[s.emptyIcon, { backgroundColor: `${colors.primary}14` }]}>
-              <Icon name="book-open" size={20} color={`${colors.primary}70`} />
-            </View>
-            <Text style={[s.emptyTitle, { color: colors.foreground }]}>No stories yet</Text>
-            <Text style={[s.emptySub, { color: colors.mutedForeground }]}>Write your first sky chapter</Text>
+            <Icon name="plus" size={18} color="rgba(255,255,255,0.8)" />
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>New story</Text>
           </TouchableOpacity>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
-            {sorted.slice(0, 10).map(story => (
-              <StoryCard key={story.id} story={story} onMenu={setActiveStory} onPlay={setPlayingVideo} />
-            ))}
-          </ScrollView>
-        )}
+        </ScrollView>
       </View>
 
-      {/* ── Wardrobe ─── */}
+      {/* ── My Wardrobe ─── */}
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={[s.sectionTitle, { color: colors.foreground }]}>My Wardrobe</Text>
             {outfits.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
-                <Text style={[s.countPillText, { color: colors.primary }]}>{outfits.length}</Text>
+              <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+                <Text style={[s.countPillText, { color: '#B89AE8' }]}>{outfits.length}</Text>
               </View>
             )}
           </View>
           <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+            style={[s.addBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}
             onPress={() => router.push('/create-outfit' as never)}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <Icon name="plus" size={13} color={colors.primary} />
-            <Text style={[s.addBtnText, { color: colors.primary }]}>New outfit</Text>
+            <Icon name="plus" size={13} color="#B89AE8" />
+            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>New outfit</Text>
           </TouchableOpacity>
         </View>
 
-        {outfits.length === 0 ? (
-          <TouchableOpacity
-            style={[s.emptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]}
-            onPress={() => router.push('/create-outfit' as never)}
-            activeOpacity={0.75}
-          >
-            <View style={[s.emptyIcon, { backgroundColor: `${colors.primary}14` }]}>
-              <Icon name="camera" size={20} color={`${colors.primary}70`} />
-            </View>
-            <Text style={[s.emptyTitle, { color: colors.foreground }]}>No outfits yet</Text>
-            <Text style={[s.emptySub, { color: colors.mutedForeground }]}>Log your first sky look</Text>
-          </TouchableOpacity>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
-            {outfits.slice(0, 8).map(outfit => {
-              const isActive = outfit.id === activeOutfitId;
-              return (
-                <TouchableOpacity
-                  key={outfit.id}
-                  style={[s.outfitCard, { backgroundColor: colors.card, borderColor: isActive ? colors.primary : colors.border }]}
-                  onPress={() => openOutfit(outfit.id)}
-                  activeOpacity={0.85}
-                >
-                  {outfit.imageUri ? (
-                    <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                  ) : (
-                    <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center' }]}>
-                      <Icon name="camera" size={22} color={`${colors.primary}50`} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
+          {outfits.slice(0, 8).map(outfit => {
+            const isActive = outfit.id === activeOutfitId;
+            return (
+              <TouchableOpacity
+                key={outfit.id}
+                style={[s.outfitCard, { borderColor: isActive ? colors.primary : 'rgba(255,255,255,0.1)' }]}
+                onPress={() => openOutfit(outfit.id)}
+                activeOpacity={0.85}
+              >
+                {outfit.imageUri ? (
+                  <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                ) : (
+                  <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }]}>
+                    <Icon name="camera" size={22} color="rgba(255,255,255,0.3)" />
+                  </View>
+                )}
+                <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]} pointerEvents="none">
+                  <Text style={s.outfitName} numberOfLines={2}>{outfit.name}</Text>
+                  {isActive && (
+                    <View style={[s.activePill, { backgroundColor: colors.primary }]}>
+                      <Text style={s.activePillText}>Worn</Text>
                     </View>
                   )}
-                  <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}>
-                    <Text style={s.outfitName} numberOfLines={2}>{outfit.name}</Text>
-                    {isActive && (
-                      <View style={[s.activePill, { backgroundColor: colors.primary }]}>
-                        <Text style={s.activePillText}>Worn</Text>
-                      </View>
-                    )}
-                  </LinearGradient>
-                  {(outfit.tags ?? []).length > 0 && (
-                    <View style={[s.rarityPill, { backgroundColor: 'rgba(8,6,22,0.75)', top: 7, left: 7 }]}>
-                      <Text style={[s.rarityText, { color: 'rgba(220,200,255,0.9)' }]}>{outfit.tags[0]}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
+                </LinearGradient>
+                {(outfit.tags ?? []).length > 0 && (
+                  <View style={[s.rarityPill, { backgroundColor: 'rgba(8,6,22,0.75)', top: 6, left: 6 }]}>
+                    <Text style={[s.rarityText, { color: 'rgba(220,200,255,0.9)' }]}>{outfit.tags[0]}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* ── Gallery ─── */}
@@ -524,47 +478,41 @@ export function ProfileStyleSection({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={[s.sectionTitle, { color: colors.foreground }]}>Gallery</Text>
             {gallery.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
-                <Text style={[s.countPillText, { color: colors.primary }]}>{gallery.length}</Text>
+              <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+                <Text style={[s.countPillText, { color: '#B89AE8' }]}>{gallery.length}</Text>
               </View>
             )}
           </View>
           <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+            style={[s.addBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}
             onPress={handleAddGalleryPhoto}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             {galleryUploading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <ActivityIndicator size="small" color="#B89AE8" />
             ) : (
-              <Icon name="plus" size={13} color={colors.primary} />
+              <Icon name="plus" size={13} color="#B89AE8" />
             )}
-            <Text style={[s.addBtnText, { color: colors.primary }]}>Add photo</Text>
+            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>Add photo</Text>
           </TouchableOpacity>
         </View>
 
-        {gallery.length === 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
+          {gallery.slice(0, 8).map(photo => (
+            <TouchableOpacity key={photo.id} style={s.galleryThumb} onPress={() => openPhoto(photo)} activeOpacity={0.88}>
+              <Image source={{ uri: photo.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+            </TouchableOpacity>
+          ))}
           <TouchableOpacity
-            style={[s.emptyCard, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}18` }]}
+            style={[s.galleryThumb, { borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }]}
             onPress={handleAddGalleryPhoto}
             activeOpacity={0.75}
           >
-            <View style={[s.emptyIcon, { backgroundColor: `${colors.primary}14` }]}>
-              <Icon name="image" size={20} color={`${colors.primary}70`} />
-            </View>
-            <Text style={[s.emptyTitle, { color: colors.foreground }]}>No photos yet</Text>
-            <Text style={[s.emptySub, { color: colors.mutedForeground }]}>Tap to add your first sky memory</Text>
+            <Icon name="plus" size={18} color="rgba(255,255,255,0.8)" />
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>Add photo</Text>
           </TouchableOpacity>
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
-            {gallery.slice(0, 8).map(photo => (
-              <TouchableOpacity key={photo.id} style={s.galleryThumb} onPress={() => openPhoto(photo)} activeOpacity={0.88}>
-                <Image source={{ uri: photo.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+        </ScrollView>
 
         {galleryError && (
           <Text style={[s.galError, { color: colors.destructive, marginTop: 6 }]}>{galleryError}</Text>
@@ -590,86 +538,69 @@ export function ProfileStyleSection({
 const s = StyleSheet.create({
   section:       { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  sectionTitle:  { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
-  countPill:     { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1 },
-  countPillText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  sectionTitle:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  countPill:     { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
+  countPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1 },
   addBtnText:    { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  scrollPad:     { paddingRight: 16, gap: 10 },
-  outfitCard:    { width: 100, height: 130, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative' },
-  outfitName:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)', lineHeight: 13 },
+  scrollPad:     { paddingRight: 16, gap: 12 },
+  outfitCard:    { width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
+  outfitName:    { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)', lineHeight: 14 },
   activePill:    { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4 },
   activePillText:{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: '#fff' },
-  rarityPill:    { position: 'absolute', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  rarityText:    { fontSize: 9, fontFamily: 'Satoshi-Bold' },
-  galleryThumb:  { width: 100, height: 100, borderRadius: 12, overflow: 'hidden', backgroundColor: '#1A1630' },
+  rarityPill:    { position: 'absolute', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.1)' },
+  rarityText:    { fontSize: 9, fontFamily: 'Satoshi-Medium' },
+  galleryThumb:  { width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' },
   galError:      { fontSize: 12, fontFamily: 'Satoshi-Regular' },
-  emptyCard:     { borderRadius: 16, borderWidth: 1, paddingVertical: 22, paddingHorizontal: 20, alignItems: 'center', gap: 8 },
-  emptyIcon:     { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
-  emptyTitle:    { fontSize: 14, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
-  emptySub:      { fontSize: 12, fontFamily: 'Satoshi-Regular', textAlign: 'center', fontStyle: 'italic', lineHeight: 17 },
 });
 
 // ── Story card styles ─────────────────────────────────────────────────────────
 
 const sc = StyleSheet.create({
-  card:      { width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', backgroundColor: '#1C1840', position: 'relative' },
+  card:      { width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', position: 'relative' },
   grad:      { position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%' },
   moodDot:   { position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: 3.5 },
   globeBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.10)', alignItems: 'center', justifyContent: 'center' },
   videoBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center' },
   menuBtn:   { position: 'absolute', top: 5, right: 3, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   bottom:    { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10, gap: 5 },
-  title:     { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 14 },
+  title:     { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 14 },
   metaRow:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.75)', marginRight: 3 },
 });
 
-// ── Video player modal styles ─────────────────────────────────────────────────
+// ── Action sheet & video modal styles omitted for brevity but remain the same ──
+
+const ss = StyleSheet.create({
+  backdrop:       { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)' },
+  sheet:          { position: 'absolute', bottom: 0, left: 0, right: 0, borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, padding: 20 },
+  previewRow:     { flexDirection: 'row', gap: 14, alignItems: 'center', marginBottom: 16 },
+  previewThumb:   { width: 56, height: 56, borderRadius: 12, overflow: 'hidden' },
+  previewTitle:   { fontSize: 16, fontFamily: 'Satoshi-Bold', marginBottom: 4 },
+  statsRow:       { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  statChip:       { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  statChipText:   { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.7)' },
+  pubBadge:       { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, alignSelf: 'flex-start', marginTop: 8 },
+  pubText:        { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  divider:        { height: 1, marginVertical: 8 },
+  action:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14 },
+  actionIcon:     { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  actionText:     { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Medium' },
+  cancelBtn:      { marginTop: 12, paddingVertical: 14, borderRadius: 14, borderWidth: 1, alignItems: 'center' },
+  cancelText:     { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+});
 
 const vp = StyleSheet.create({
   backdrop:       { flex: 1, backgroundColor: '#000' },
   topBar:         { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, zIndex: 10 },
   rightControls:  { flexDirection: 'row', gap: 8 },
-  iconBtn:        { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  iconBtnDanger:  { backgroundColor: 'rgba(180,40,40,0.55)' },
-  confirmBanner:  { position: 'absolute', top: 90, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, zIndex: 5 },
-  confirmText:    { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#FF6B6B' },
-  bottomBar:      { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, gap: 6, backgroundColor: 'rgba(0,0,0,0.45)' },
-  title:          { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#fff', lineHeight: 24 },
-  desc:           { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(240,234,255,0.75)', lineHeight: 18 },
-  moodPill:       { alignSelf: 'flex-start', backgroundColor: 'rgba(107,91,149,0.55)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
-  moodText:       { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
-});
-
-// ── Action sheet styles ───────────────────────────────────────────────────────
-
-const ss = StyleSheet.create({
-  backdrop:     { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.55)' },
-  sheet: {
-    position:       'absolute',
-    bottom:         0,
-    left:           0,
-    right:          0,
-    borderTopLeftRadius:  28,
-    borderTopRightRadius: 28,
-    borderWidth:    1,
-    paddingTop:     6,
-    paddingHorizontal: 20,
-    ...Platform.select({ ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.3, shadowRadius: 12 }, android: { elevation: 16 } }),
-  },
-  previewRow:   { flexDirection: 'row', gap: 14, paddingVertical: 18, alignItems: 'flex-start' },
-  previewThumb: { width: 66, height: 82, borderRadius: 12, overflow: 'hidden', flexShrink: 0 },
-  previewTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', lineHeight: 20, marginBottom: 6 },
-  statsRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
-  statChip:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(200,184,232,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
-  statChipText: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.80)' },
-  pubBadge:     { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1 },
-  pubText:      { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  divider:      { height: 1, marginBottom: 8 },
-  action:       { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
-  actionIcon:   { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  actionText:   { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Medium' },
-  cancelBtn:    { borderRadius: 16, paddingVertical: 14, alignItems: 'center', marginTop: 6, borderWidth: 1 },
-  cancelText:   { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  iconBtn:        { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  iconBtnDanger:  { backgroundColor: 'rgba(255,100,100,0.2)' },
+  confirmBanner:  { position: 'absolute', top: 100, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 },
+  confirmText:    { color: '#FF6B6B', fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  bottomBar:      { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 20, paddingTop: 60 },
+  title:          { color: '#fff', fontSize: 20, fontFamily: 'Satoshi-Bold', marginBottom: 4, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
+  desc:           { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontFamily: 'Satoshi-Regular', marginBottom: 12, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 },
+  moodPill:       { alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.15)' },
+  moodText:       { color: '#fff', fontSize: 11, fontFamily: 'Satoshi-Bold' },
 });

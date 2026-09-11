@@ -7,6 +7,7 @@
  */
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
@@ -58,6 +59,7 @@ import {
   RefreshCw,
   Search,
   Send,
+  Share2,
   Settings,
   Shield,
   Slash,
@@ -70,6 +72,9 @@ import {
   TrendingUp,
   User,
   Users,
+  Video,
+  Volume2,
+  VolumeX,
   Wind,
   X,
   Zap,
@@ -79,6 +84,7 @@ import React from 'react';
 
 const ICON_MAP = {
   'alert-circle':  AlertCircle,
+  'alert-triangle': AlertTriangle,
   'arrow-down':    ArrowDown,
   'arrow-left':    ArrowLeft,
   'arrow-right':   ArrowRight,
@@ -130,6 +136,7 @@ const ICON_MAP = {
   'refresh-cw':    RefreshCw,
   'search':        Search,
   'send':          Send,
+  'share-2':       Share2,
   'settings':      Settings,
   'shield':        Shield,
   'slash':         Slash,
@@ -142,6 +149,9 @@ const ICON_MAP = {
   'trending-up':   TrendingUp,
   'user':          User,
   'users':         Users,
+  'video':         Video,
+  'volume-2':      Volume2,
+  'volume-x':      VolumeX,
   'wind':          Wind,
   'x':             X,
   'zap':           Zap,
