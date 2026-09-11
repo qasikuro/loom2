@@ -11,50 +11,60 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'expo-image';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
+import { Images } from '@/assets/images';
 
 const { height: H } = Dimensions.get('window');
 
-const SHEET_H = Math.min(H * 0.78, 540);
+const SHEET_H = Math.min(H * 0.92, 820);
 
 const MODES = [
   {
     id:          'quick',
-    icon:        'zap'         as const,
-    name:        'Quick Moment',
-    description: 'One image, one thought. Share in a few taps.',
-    tag:         'Instant',
-    color:       '#C8A84B',
+    icon:        'star'        as const,
+    name:        'Quick with AI',
+    description: 'One image, one thought.\nLet AI turn it into something amazing.',
+    color:       '#FFD05B',
+    border:      '#F8C84A',
+    image:       Images.story_bg2,
+    featured:    true,
     route:       '/quick-moment',
   },
   {
     id:          'chapter',
     icon:        'book-open'   as const,
     name:        'Chapter',
-    description: 'Full multi-panel manga story, any length.',
-    tag:         'Full editor',
-    color:       '#9B7FE8',
+    description: 'Create a full multi-panel\nmanga story, any length.',
+    color:       '#A968FF',
+    border:      '#7D3DDE',
+    image:       Images.story_bg1,
+    featured:    false,
     route:       '/chapter-editor',
   },
   {
     id:          'video',
     icon:        'video'       as const,
     name:        'Post Video',
-    description: 'Share a 10-second moment directly to Discover.',
-    tag:         'Short clip',
-    color:       '#E8787A',
+    description: 'Share a 10-second moment\ndirectly to Discover.',
+    color:       '#FF68A8',
+    border:      '#D63388',
+    image:       Images.story_bg3,
+    featured:    false,
     route:       '/post-video',
   },
   {
     id:          'dashboard',
-    icon:        'bar-chart-2' as const,
+    icon:        'trending-up' as const,
     name:        'Creator Dashboard',
-    description: 'Track reads, followers & manage your books.',
-    tag:         'Analytics',
-    color:       '#78C8A8',
+    description: 'Track reads, followers &\nmanage your books.',
+    color:       '#42E0D0',
+    border:      '#18AFA9',
+    image:       Images.story_bg3,
+    featured:    false,
     route:       '/creator-dashboard',
   },
 ] as const;
@@ -147,28 +157,37 @@ export default function CreateScreen() {
           {MODES.map(mode => (
             <TouchableOpacity
               key={mode.id}
-              style={s.tile}
+              style={[s.tile, mode.featured && s.featuredTile]}
               onPress={() => selectMode(mode.route)}
               activeOpacity={0.82}
             >
-              <LinearGradient
-                colors={[`${mode.color}14`, 'transparent']}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              <Image
+                source={mode.image}
+                style={s.tileArtwork}
+                contentFit="cover"
+                contentPosition="right center"
               />
-              <View style={[s.iconWrap, { backgroundColor: `${mode.color}1C`, borderColor: `${mode.color}38` }]}>
-                <Icon name={mode.icon} size={20} color={mode.color} />
+              <LinearGradient
+                colors={[
+                  mode.id === 'quick' ? 'rgba(36,21,13,0.98)' : 'rgba(15,8,35,0.97)',
+                  `${mode.color}45`,
+                  'rgba(8,5,24,0.16)',
+                ]}
+                locations={[0, 0.58, 1]}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+              />
+              <View pointerEvents="none" style={[s.tileBorder, { borderColor: mode.border }]} />
+              <View style={[s.iconWrap, { backgroundColor: `${mode.color}20`, borderColor: `${mode.color}A0` }]}>
+                <Icon name={mode.icon} size={mode.featured ? 27 : 25} color={mode.color} />
               </View>
               <View style={s.tileText}>
-                <View style={s.titleRow}>
-                  <Text style={[s.tileName, { color: mode.color }]}>{mode.name}</Text>
-                  <View style={[s.tag, { backgroundColor: `${mode.color}18`, borderColor: `${mode.color}35` }]}>
-                    <Text style={[s.tagTxt, { color: `${mode.color}CC` }]}>{mode.tag}</Text>
-                  </View>
-                </View>
+                <Text style={s.tileName}>{mode.name}</Text>
                 <Text style={s.tileDesc}>{mode.description}</Text>
               </View>
-              <Icon name="chevron-right" size={15} color={`${mode.color}55`} />
+              <View style={[s.arrowBtn, { borderColor: `${mode.color}80` }]}>
+                <Icon name="chevron-right" size={20} color="#FFFFFF" />
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -192,13 +211,13 @@ const s = StyleSheet.create({
     position:        'absolute',
     left:            0, right: 0, bottom: 0,
     height:          SHEET_H,
-    backgroundColor: '#0B0820',
-    borderTopLeftRadius:  28,
-    borderTopRightRadius: 28,
+    backgroundColor: '#08051C',
+    borderTopLeftRadius:  30,
+    borderTopRightRadius: 30,
     borderTopWidth:  1,
     borderColor:     'rgba(200,185,255,0.10)',
-    paddingHorizontal: 20,
-    paddingTop:      12,
+    paddingHorizontal: 12,
+    paddingTop:      10,
     shadowColor:     '#000',
     shadowOffset:    { width: 0, height: -8 },
     shadowOpacity:   0.55,
@@ -212,7 +231,7 @@ const s = StyleSheet.create({
     height:          4,
     borderRadius:    2,
     backgroundColor: 'rgba(200,185,255,0.18)',
-    marginBottom:    16,
+    marginBottom:    20,
   },
 
   headerRow: {
@@ -222,23 +241,23 @@ const s = StyleSheet.create({
     marginBottom:    4,
   },
   sheetTitle: {
-    fontSize:    22,
-    fontFamily:  'Satoshi-Bold',
+    fontSize:    34,
+    fontFamily:  'Satoshi-Black',
     color:       'rgba(248,244,255,0.97)',
     letterSpacing: -0.6,
   },
   closeBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1, borderColor: 'rgba(200,185,255,0.09)',
     alignItems: 'center', justifyContent: 'center',
   },
 
   sheetSub: {
-    fontSize:   13,
+    fontSize:   15,
     fontFamily: 'Satoshi-Regular',
     color:      'rgba(200,185,255,0.40)',
-    marginBottom: 18,
+    marginBottom: 22,
   },
 
   eventCtx: {
@@ -256,40 +275,61 @@ const s = StyleSheet.create({
     color: 'rgba(220,210,255,0.72)', lineHeight: 18,
   },
 
-  tiles: { gap: 10 },
+  tiles: { gap: 14 },
 
   tile: {
     flexDirection:   'row',
     alignItems:      'center',
-    gap:             12,
-    borderRadius:    18,
+    gap:             14,
+    height:          126,
+    borderRadius:    20,
     borderWidth:     1,
-    borderColor:     'rgba(200,185,255,0.08)',
-    backgroundColor: 'rgba(255,255,255,0.022)',
-    paddingHorizontal: 14,
-    paddingVertical:   12,
+    borderColor:     'transparent',
+    backgroundColor: 'rgba(255,255,255,0.025)',
+    paddingHorizontal: 17,
+    paddingVertical:   16,
     overflow:        'hidden',
   },
+  featuredTile: {
+    height: 150,
+  },
+  tileArtwork: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '58%',
+    height: '100%',
+    opacity: 0.88,
+  },
+  tileBorder: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 1.25,
+    borderRadius: 20,
+  },
   iconWrap: {
-    width:          44,
-    height:         44,
-    borderRadius:   14,
+    width:          64,
+    height:         64,
+    borderRadius:   18,
     borderWidth:    1,
     alignItems:     'center',
     justifyContent: 'center',
     flexShrink:     0,
   },
   tileText:  { flex: 1 },
-  titleRow:  { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 3 },
-  tileName:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-  tag: {
-    paddingHorizontal: 7, paddingVertical: 2,
-    borderRadius: 8, borderWidth: 1,
-  },
-  tagTxt:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
+  tileName:  { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.35, marginBottom: 6 },
   tileDesc:{
-    fontSize: 12, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,185,255,0.42)', lineHeight: 17,
+    fontSize: 13, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(225,216,246,0.72)', lineHeight: 18,
+  },
+  arrowBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(8,5,24,0.58)',
+    flexShrink: 0,
   },
 
 });
