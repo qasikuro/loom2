@@ -1,5 +1,4 @@
 /**
- * Expo Router entry point — delegates to the Story Studio module.
- * All logic lives in features/story-studio/screens/QuickMomentScreen.tsx
+ * Expo Router entry point — delegates to the AI manga creation flow.
  */
-export { default } from '@/features/story-studio/screens/QuickMomentScreen';
+export { default } from '@/features/story-studio/screens/MangaStoryScreen';
