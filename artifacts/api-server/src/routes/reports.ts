@@ -14,7 +14,7 @@ const VALID_REASONS = [
 ] as const;
 
 const ReportSchema = z.object({
-  targetType: z.enum(["story", "outfit", "user"]),
+  targetType: z.enum(["story", "outfit", "user", "manga_generation"]),
   targetId:   z.string().min(1),
   reason:     z.enum(VALID_REASONS),
   details:    z.string().max(500).default(""),

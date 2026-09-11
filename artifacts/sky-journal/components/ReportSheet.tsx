@@ -30,7 +30,7 @@ type Reason = typeof REASONS[number]['key'];
 export interface ReportSheetProps {
   visible:     boolean;
   onClose:     () => void;
-  targetType:  'story' | 'outfit' | 'user';
+  targetType:  'story' | 'outfit' | 'user' | 'manga_generation';
   targetId:    string;
   targetLabel?: string;
 }
@@ -85,6 +85,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
   const typeLabel =
     targetType === 'story'  ? 'this story' :
     targetType === 'outfit' ? 'this outfit' :
+    targetType === 'manga_generation' ? 'this generated manga' :
     targetLabel ?? 'this user';
 
   return (

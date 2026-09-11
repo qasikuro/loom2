@@ -78,7 +78,7 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
            WHERE user_id=$1 AND status IN ('pending','success') AND created_at >= date_trunc('day', NOW())`,
           [userId],
         );
-        return res.json({ imageUri: row.image_uri, remainingToday: Math.max(0, CONFIG.maxPerDay - Number(count.rows[0]?.count ?? 0)) });
+        return res.json({ generationId: row.id, imageUri: row.image_uri, remainingToday: Math.max(0, CONFIG.maxPerDay - Number(count.rows[0]?.count ?? 0)) });
       }
       if (row.status === "pending") {
         const deterministicFile = objectStorageClient.bucket(bucketId).file(`images/manga_${row.id}.png`);
@@ -89,7 +89,7 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
             "UPDATE manga_generations SET status='success', image_uri=$1, completed_at=NOW() WHERE id=$2",
             [imageUri, row.id],
           );
-          return res.json({ imageUri, remainingToday: Math.max(0, CONFIG.maxPerDay - 1) });
+          return res.json({ generationId: row.id, imageUri, remainingToday: Math.max(0, CONFIG.maxPerDay - 1) });
         }
         const ageMs = Date.now() - new Date(row.created_at).getTime();
         if (ageMs < 15 * 60_000) {
@@ -183,7 +183,7 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
        WHERE user_id=$1 AND status IN ('pending','success') AND created_at >= date_trunc('day', NOW())`,
       [userId],
     );
-    return res.json({ imageUri, remainingToday: Math.max(0, CONFIG.maxPerDay - Number(count.rows[0]?.count ?? 0)) });
+    return res.json({ generationId, imageUri, remainingToday: Math.max(0, CONFIG.maxPerDay - Number(count.rows[0]?.count ?? 0)) });
   } catch (error) {
     const errorCode = error instanceof Error ? error.message.slice(0, 100) : "GENERATION_FAILED";
     await pool.query(

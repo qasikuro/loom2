@@ -14,12 +14,15 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { safeBack } from '@/utils/navigation';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
-import { apiFetch, ApiError, resolveUri } from '@/context/AppContext';
+import { apiFetch, ApiError, resolveUri, useApp } from '@/context/AppContext';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
+import { ReportSheet } from '@/components/ReportSheet';
 
 type MangaStyle = 'manga' | 'color' | 'chibi' | 'cinematic' | 'webtoon';
 type PendingAttempt = {
@@ -46,6 +49,7 @@ const STYLES: Array<{
 ];
 
 export default function MangaStoryScreen() {
+  const { addStory } = useApp();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 14 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 30 : insets.bottom + 24;
@@ -57,6 +61,12 @@ export default function MangaStoryScreen() {
   const [generated, setGenerated] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [posted, setPosted] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
   const [pendingAttempt, setPendingAttempt] = useState<PendingAttempt | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -134,13 +144,17 @@ export default function MangaStoryScreen() {
         setPendingAttempt(attempt);
         await AsyncStorage.setItem(PENDING_ATTEMPT_KEY, JSON.stringify(attempt));
       }
-      const result = await apiFetch<{ imageUri: string; remainingToday: number }>('/manga/generate', {
+      const result = await apiFetch<{ generationId: string; imageUri: string; remainingToday: number }>('/manga/generate', {
         method: 'POST',
         body: JSON.stringify(attempt),
       });
       const resolved = resolveUri(result.imageUri);
       if (!resolved) throw new Error('The generated image could not be loaded.');
       setGeneratedImageUri(resolved);
+      setGenerationId(result.generationId);
+      setImageLoading(true);
+      setImageLoadFailed(false);
+      setPosted(false);
       setRemainingToday(result.remainingToday);
       setGenerated(true);
       setPendingAttempt(null);
@@ -166,6 +180,70 @@ export default function MangaStoryScreen() {
     } finally {
       setGenerating(false);
     }
+  }
+
+  async function shareManga() {
+    if (!generatedImageUri) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      if (Platform.OS === 'web') {
+        await import('react-native').then(({ Share }) =>
+          Share.share({ title: 'My Gamejo manga', message: `My manga story — Made by Gamejo\n${generatedImageUri}` }),
+        );
+        return;
+      }
+      const available = await Sharing.isAvailableAsync();
+      if (!available) throw new Error('Sharing unavailable');
+      const localUri = `${FileSystem.cacheDirectory}gamejo-manga-${generationId ?? 'page'}.png`;
+      const download = await FileSystem.downloadAsync(generatedImageUri, localUri);
+      if (download.status !== 200) throw new Error('Download failed');
+      await Sharing.shareAsync(download.uri, {
+        dialogTitle: 'Share your Gamejo manga',
+        mimeType: 'image/png',
+        UTI: 'public.png',
+      });
+    } catch {
+      setError('Could not open sharing. Please try again.');
+    }
+  }
+
+  async function postManga() {
+    if (!generatedImageUri || posting || posted) return;
+    setPosting(true);
+    setError(null);
+    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    const panel = { id: `${id}_panel`, text: prompt.trim(), bubbleText: '', imageUri: generatedImageUri };
+    const ok = await addStory({
+      id,
+      date: new Date().toISOString(),
+      chapterTitle: prompt.trim().slice(0, 80) || 'My Manga Story',
+      description: `Created in ${selectedStyle.label.replace('\n', ' ')} style with Gamejo AI.`,
+      panels: [panel],
+      mood: 'Creative',
+      location: 'Isle of Dawn',
+      isPublic: true,
+      witnessedCount: 0,
+      savedCount: 0,
+      stickerCount: 0,
+      pageLayoutKey: '1',
+      pages: [{ id: `${id}_page`, layoutKey: '1', panels: [panel] }],
+    });
+    setPosting(false);
+    if (ok) {
+      setPosted(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      setError('Could not post your manga. Check your connection and try again.');
+    }
+  }
+
+  function createNextManga() {
+    setGenerated(false);
+    setGeneratedImageUri(null);
+    setGenerationId(null);
+    setImageLoadFailed(false);
+    setPosted(false);
+    setError(null);
   }
 
   return (
@@ -283,7 +361,31 @@ export default function MangaStoryScreen() {
                   accessibilityLabel={`Generated manga page. ${generatedPrompt}`}
                 >
                   {!!generatedImageUri && (
-                    <Image source={{ uri: generatedImageUri }} style={s.generatedImage} contentFit="contain" />
+                    <Image
+                      source={{ uri: generatedImageUri }}
+                      style={s.generatedImage}
+                      contentFit="contain"
+                      cachePolicy="none"
+                      onLoadStart={() => setImageLoading(true)}
+                      onLoad={() => {
+                        setImageLoading(false);
+                        setImageLoadFailed(false);
+                      }}
+                      onError={() => {
+                        setImageLoading(false);
+                        setImageLoadFailed(true);
+                      }}
+                    />
+                  )}
+                  {imageLoading && <ActivityIndicator style={s.imageStatus} size="large" color="#B55CFF" />}
+                  {imageLoadFailed && (
+                    <TouchableOpacity style={s.imageStatus} onPress={() => {
+                      setImageLoadFailed(false);
+                      setGeneratedImageUri(uri => uri ? `${uri}${uri.includes('?') ? '&' : '?'}retry=${Date.now()}` : uri);
+                    }}>
+                      <Icon name="refresh-cw" size={24} color="#FFFFFF" />
+                      <Text style={s.resultTitle}>Image did not load. Tap to retry.</Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               ) : (
@@ -309,6 +411,14 @@ export default function MangaStoryScreen() {
       </ScrollView>
 
       <View style={[s.generateBar, { paddingBottom: bottomPad }]}>
+        {generated ? (
+          <View style={s.resultActions}>
+            <ActionButton icon="share-2" label="Share" onPress={shareManga} />
+            <ActionButton icon={posted ? 'check' : 'send'} label={posted ? 'Posted' : posting ? 'Posting…' : 'Post'} onPress={postManga} disabled={posting || posted} primary />
+            <ActionButton icon="flag" label="Report" onPress={() => setReportVisible(true)} />
+            <ActionButton icon="plus" label="Next" onPress={createNextManga} />
+          </View>
+        ) : (
         <TouchableOpacity style={s.generateBtn} onPress={generateStory} disabled={generating} activeOpacity={0.86}>
           <LinearGradient
             colors={['#D22DF1', '#8D35FF', '#633CFF']}
@@ -324,8 +434,34 @@ export default function MangaStoryScreen() {
             </View>
           )}
         </TouchableOpacity>
+        )}
       </View>
+      <ReportSheet
+        visible={reportVisible}
+        onClose={() => setReportVisible(false)}
+        targetType="manga_generation"
+        targetId={generationId ?? ''}
+      />
     </View>
+  );
+}
+
+function ActionButton({ icon, label, onPress, disabled, primary }: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  primary?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={[s.actionBtn, primary && s.actionBtnPrimary, disabled && s.actionBtnDisabled]}
+      onPress={onPress}
+      disabled={disabled}
+    >
+      <Icon name={icon} size={18} color="#FFFFFF" />
+      <Text style={s.actionLabel}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -407,11 +543,17 @@ const s = StyleSheet.create({
   resultText: { fontSize: 9.5, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(201,184,226,0.42)', textAlign: 'center' },
   generatedGrid: { width: '100%', aspectRatio: 1, padding: 3 },
   generatedImage: { width: '100%', height: '100%', borderRadius: 9, backgroundColor: '#171126' },
+  imageStatus: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: 'rgba(7,5,18,0.72)' },
   error: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,83,126,0.10)', borderWidth: 1, borderColor: 'rgba(255,83,126,0.22)' },
   errorText: { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#FFB0C1' },
   remainingText: { textAlign: 'center', fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(205,187,233,0.56)' },
   generateBar: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, backgroundColor: 'rgba(5,4,15,0.94)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
   generateBtn: { height: 54, borderRadius: 27, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, shadowColor: '#B82EFF', shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
+  resultActions: { flexDirection: 'row', gap: 7 },
+  actionBtn: { flex: 1, minWidth: 0, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: '#241B3D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  actionBtnPrimary: { backgroundColor: '#8D35FF', borderColor: '#B778FF' },
+  actionBtnDisabled: { opacity: 0.55 },
+  actionLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
   generateText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
   generateArrow: { position: 'absolute', right: 10, width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(36,24,174,0.72)' },
 });
