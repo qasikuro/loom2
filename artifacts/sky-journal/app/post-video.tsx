@@ -20,8 +20,6 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import * as VideoThumbnails from 'expo-video-thumbnails';
-import { Video, ResizeMode } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -104,6 +102,10 @@ export default function PostVideoScreen() {
     // Extract first frame as thumbnail
     let thumb: string | null = null;
     try {
+      // Load this optional native module only when the video flow needs it.
+      // Some Expo Go builds do not include ExpoVideoThumbnails; importing it
+      // at route startup crashes the entire app before navigation can render.
+      const VideoThumbnails = await import('expo-video-thumbnails');
       const tn = await VideoThumbnails.getThumbnailAsync(asset.uri, { time: 0, quality: 0.85 });
       thumb = tn.uri;
     } catch {
