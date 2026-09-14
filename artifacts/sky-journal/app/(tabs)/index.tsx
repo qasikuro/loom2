@@ -1405,7 +1405,18 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <View style={[s.dashboard, { paddingTop: topPad + 4, paddingBottom: Math.max(insets.bottom, 4) }]}>
+      <ScrollView
+        style={s.dashboardScroll}
+        contentContainerStyle={[
+          s.dashboard,
+          screenWidth < 360 && s.dashboardNarrow,
+          { paddingTop: topPad + 4, paddingBottom: bottomPad + 12 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="never"
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
+      >
         <View style={s.dashboardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={s.dashboardGreeting}>{greetingWord},</Text>
@@ -1626,7 +1637,7 @@ export default function HomeScreen() {
             <Icon name="arrow-right" size={13} color="#F4CB55" />
           </View>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
 
       <ScrollView
         style={{ display: 'none' }}
@@ -2264,7 +2275,9 @@ export default function HomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  dashboard: { flex: 1, paddingHorizontal: 18, gap: 5 },
+  dashboardScroll: { flex: 1 },
+  dashboard: { flexGrow: 1, paddingHorizontal: 18, gap: 5 },
+  dashboardNarrow: { paddingHorizontal: 12, gap: 6 },
   dashboardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
