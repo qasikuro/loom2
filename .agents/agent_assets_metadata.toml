@@ -253,3 +253,17 @@ type = "word_document"
 title = "Friends & Social Graph Roadmap"
 description = "22-task roadmap — follow system, discovery, social profiles, notifications."
 logical_id = "6c4196a8-d177-4724-b4f3-822c9012d95c"
+
+[[outputs]]
+id = "2pS-GmiTZwdr7xS0NOowf"
+uri = "file://ADMIN_V1_TASK_SHEET.md"
+type = "text"
+title = "GameJo Admin V1 Task Sheet"
+description = "Controlled non-game V1 admin plan with detailed tasks, current status, dependencies, acceptance criteria, deferred work, and release gates."
+logical_id = "970a11fd-6a81-4488-85bc-6558e2c4e434"
+content_hash = "sha256:e9f026a3e3fa1ecd239055a73edf1d6804332e9890c0c1e946523c7f7fcbf4af"
+size = 16984
+mtime_ms = 1789382279754
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a1cef6ff-3139-40c9-912c-4c93501f36f4/970a11fd-6a81-4488-85bc-6558e2c4e434/7129784b-55c9-47ff-94fc-8d3e6c21a415"
+storage_version_token = "1789382291230401"
+content_type = "text/markdown"
