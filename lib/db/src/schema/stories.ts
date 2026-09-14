@@ -1,6 +1,15 @@
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export type StoryPanel = { id: string; text: string; imageUri?: string };
+export type StoryPanel = {
+  id: string;
+  text: string;
+  imageUri?: string;
+  bgPreset?: string;
+  bubbleText?: string;
+  overlays?: unknown[];
+  imageAspectRatio?: number;
+  contentFit?: "cover" | "contain";
+};
 
 export type StoryPageDB = {
   id: string;

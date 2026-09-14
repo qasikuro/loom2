@@ -8,14 +8,15 @@ import { objectStorageClient } from "../lib/objectStorage";
 
 const CONFIG = {
   model: "gpt-image-1",
-  quality: "low",
-  outputSize: "1024x1024",
+  quality: "high",
+  outputSize: "1024x1536",
   maxImages: 10,
-  maxWidth: 1536,
-  maxHeight: 1536,
-  jpegQuality: 75,
+  maxWidth: 2048,
+  maxHeight: 2048,
+  jpegQuality: 85,
   maxPerDay: positiveInteger(process.env.MAX_GENERATIONS_PER_USER_PER_DAY, 5),
-  estimatedCostMicros: positiveInteger(process.env.MANGA_ESTIMATED_COST_MICROS, 20000),
+  estimatedOutputCostMicros: positiveInteger(process.env.MANGA_ESTIMATED_COST_MICROS, 250000),
+  estimatedInputCostMicrosPerImage: positiveInteger(process.env.MANGA_ESTIMATED_INPUT_COST_MICROS, 10000),
 } as const;
 
 function positiveInteger(value: string | undefined, fallback: number): number {
@@ -94,6 +95,9 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
   }
   const userId = getUserId(req);
   const { requestId, imageUris, prompt, style } = parsed.data;
+  const estimatedCostMicros =
+    CONFIG.estimatedOutputCostMicros +
+    imageUris.length * CONFIG.estimatedInputCostMicrosPerImage;
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) return res.status(503).json({ error: "Image storage is not configured." });
 
@@ -154,10 +158,10 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
     }
     const reservation = await client.query(
       `INSERT INTO manga_generations
-       (request_id, user_id, style, prompt, image_count, model, quality, output_size, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending')
+       (request_id, user_id, style, prompt, image_count, model, quality, output_size, status, estimated_cost_micros)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9)
        RETURNING id`,
-      [requestId, userId, style, prompt, imageUris.length, CONFIG.model, CONFIG.quality, CONFIG.outputSize],
+      [requestId, userId, style, prompt, imageUris.length, CONFIG.model, CONFIG.quality, CONFIG.outputSize, estimatedCostMicros],
     );
     generationId = String(reservation.rows[0]?.id ?? "");
     await client.query("COMMIT");
@@ -195,15 +199,26 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
     }
 
     const generationPrompt =
-      `Create exactly one coherent square manga story page in ${STYLE_PROMPTS[style]}. ` +
-      "Use the uploaded images only as visual references for characters, environments, events, poses, and continuity. " +
-      "Arrange the result as a clear multi-panel page. Do not include logos, watermarks, or unrelated text. " +
-      `Story direction: ${prompt.trim() || "Create a warm, coherent adventure from these moments."}`;
-    const generated = await editImageBuffers(references, generationPrompt);
+      `Create one polished portrait comic page in ${STYLE_PROMPTS[style]}. ` +
+      "Use exactly four clearly separated panels with clean, consistent gutters and an easy top-to-bottom reading order. " +
+      "Treat the uploaded images as strict visual references: preserve the main characters' recognizable face shape, hairstyle, skin tone, clothing colors, and important environment details consistently in every panel. " +
+      "Show a coherent sequence with varied camera framing, expressive faces, natural anatomy, detailed backgrounds, balanced lighting, and a clear beginning, action, and ending. " +
+      "Do not render any words, letters, numbers, captions, signs, logos, watermarks, speech balloons, or thought balloons. Do not leave empty text bubbles. " +
+      "Avoid muddy shadows, featureless silhouettes, distorted hands, duplicate characters, cropped faces, and blurry details. " +
+      `The following user story direction controls plot and mood only: <story_direction>${prompt.trim() || "Create a warm, coherent adventure from these moments."}</story_direction>. ` +
+      "Regardless of the story direction, the finished artwork must contain absolutely no text, letters, numbers, captions, signs, speech balloons, or thought balloons.";
+    const generated = await editImageBuffers(references, generationPrompt, {
+      quality: CONFIG.quality,
+      size: CONFIG.outputSize,
+    });
     const creditSvg = Buffer.from(
-      `<svg width="1024" height="1024"><rect x="775" y="956" width="225" height="44" rx="10" fill="rgba(8,5,22,.78)"/><text x="887" y="984" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="white">Made by Gamejo</text></svg>`,
+      `<svg width="1024" height="1536"><rect x="775" y="1480" width="225" height="44" rx="10" fill="rgba(8,5,22,.78)"/><text x="887" y="1508" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="white">Made by Gamejo</text></svg>`,
     );
-    const finalImage = await sharp(generated).resize(1024, 1024).composite([{ input: creditSvg }]).png().toBuffer();
+    const finalImage = await sharp(generated)
+      .resize(1024, 1536, { fit: "cover" })
+      .composite([{ input: creditSvg }])
+      .png()
+      .toBuffer();
     const filename = `manga_${generationId}.png`;
     await objectStorageClient.bucket(bucketId).file(`images/${filename}`).save(finalImage, {
       resumable: false,
@@ -212,8 +227,8 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
     const imageUri = `/api/images/${filename}`;
     await pool.query(
       `UPDATE manga_generations SET status='success', image_uri=$1, original_sizes=$2,
-       compressed_sizes=$3, estimated_cost_micros=$4, completed_at=NOW() WHERE request_id=$5 AND user_id=$6`,
-      [imageUri, JSON.stringify(originalSizes), JSON.stringify(compressedSizes), CONFIG.estimatedCostMicros, requestId, userId],
+       compressed_sizes=$3, completed_at=NOW() WHERE request_id=$4 AND user_id=$5`,
+      [imageUri, JSON.stringify(originalSizes), JSON.stringify(compressedSizes), requestId, userId],
     );
     const count = await pool.query(
       `SELECT COUNT(*)::int AS count FROM manga_generations

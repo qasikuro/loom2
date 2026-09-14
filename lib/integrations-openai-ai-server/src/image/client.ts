@@ -12,9 +12,15 @@ export const openai = new OpenAI({
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
 });
 
+export interface ImageEditOptions {
+  quality?: "low" | "medium" | "high" | "auto";
+  size?: "1024x1024" | "1536x1024" | "1024x1536" | "auto";
+}
+
 export async function editImageBuffers(
   images: Array<{ buffer: Buffer; filename: string }>,
   prompt: string,
+  options: ImageEditOptions = {},
 ): Promise<Buffer> {
   const files = await Promise.all(
     images.map(({ buffer, filename }) => toFile(buffer, filename, { type: "image/jpeg" })),
@@ -23,8 +29,8 @@ export async function editImageBuffers(
     model: "gpt-image-1",
     image: files,
     prompt,
-    quality: "low",
-    size: "1024x1024",
+    quality: options.quality ?? "low",
+    size: options.size ?? "1024x1024",
   });
   const base64 = response.data?.[0]?.b64_json;
   if (!base64) throw new Error("OpenAI returned no image");

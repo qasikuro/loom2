@@ -419,6 +419,7 @@ export default function StoryScreen() {
       bubbleText:       p.bubbleText,
       overlays:         p.overlays,
       imageAspectRatio: p.imageAspectRatio,
+      contentFit:       p.contentFit,
     };
   }
 

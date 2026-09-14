@@ -384,10 +384,18 @@ describe('toAppStory', () => {
     const pages = [{
       id: 'pg1',
       layoutKey: '1',
-      panels: [{ id: 'panel-1', text: '', imageUri: '/api/images/manga_test.png' }],
+      panels: [{
+        id: 'panel-1',
+        text: '',
+        imageUri: '/api/images/manga_test.png',
+        imageAspectRatio: 2 / 3,
+        contentFit: 'contain' as const,
+      }],
     }];
     const result = toAppStory({ ...base, pages }, 'https://api.example.com/api');
     expect(result.pages?.[0].panels[0].imageUri).toBe('https://api.example.com/api/images/manga_test.png');
+    expect(result.pages?.[0].panels[0].imageAspectRatio).toBe(2 / 3);
+    expect(result.pages?.[0].panels[0].contentFit).toBe('contain');
   });
 });
 

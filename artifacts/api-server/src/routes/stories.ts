@@ -24,13 +24,28 @@ const OverlaySchema = z.object({
 });
 
 const PanelSchema = z.object({
-  id:         z.string(),
-  text:       z.string(),
-  imageUri:   z.string().optional().nullable(),
-  bgPreset:   z.string().optional().nullable(),
-  bubbleText: z.string().optional().nullable(),
-  overlays:   z.array(OverlaySchema).optional().nullable(),
+  id:               z.string(),
+  text:             z.string(),
+  imageUri:         z.string().optional().nullable(),
+  bgPreset:         z.string().optional().nullable(),
+  bubbleText:       z.string().optional().nullable(),
+  overlays:         z.array(OverlaySchema).optional().nullable(),
+  imageAspectRatio: z.number().positive().max(10).optional().nullable(),
+  contentFit:       z.enum(['cover', 'contain']).optional().nullable(),
 });
+
+function sanitizePanel(p: z.infer<typeof PanelSchema>) {
+  return {
+    id:               p.id,
+    text:             p.text,
+    imageUri:         safeImageUri(p.imageUri ?? null) ?? undefined,
+    bgPreset:         p.bgPreset         ?? undefined,
+    bubbleText:       p.bubbleText       ?? undefined,
+    overlays:         p.overlays         ?? undefined,
+    imageAspectRatio: p.imageAspectRatio ?? undefined,
+    contentFit:       p.contentFit       ?? undefined,
+  };
+}
 
 // Base object — used by PATCH (which calls .partial()) so it must stay a ZodObject, not ZodEffects.
 const StoryBaseSchema = z.object({
@@ -121,14 +136,11 @@ router.post("/stories", requireAuth, async (req, res) => {
 
   try {
     const { id, date, panels, ...rest } = parsed.data;
-    const sanitizedPanels = panels.map(p => ({
-      id:         p.id,
-      text:       p.text,
-      imageUri:   safeImageUri(p.imageUri ?? null) ?? undefined,
-      bgPreset:   p.bgPreset   ?? undefined,
-      bubbleText: p.bubbleText ?? undefined,
-      overlays:   p.overlays   ?? undefined,
-    }));
+    const sanitizedPanels = panels.map(sanitizePanel);
+    const sanitizedPages = rest.pages?.map(page => ({
+      ...page,
+      panels: page.panels.map(sanitizePanel),
+    })) ?? null;
 
     const insertValues = {
       ...(id ? { id } : {}),
@@ -136,7 +148,7 @@ router.post("/stories", requireAuth, async (req, res) => {
       date:          new Date(date),
       panels:        sanitizedPanels,
       pageLayoutKey: rest.pageLayoutKey ?? null,
-      pages:         (rest.pages ?? null) as StoryPageDB[] | null,
+      pages:         sanitizedPages as StoryPageDB[] | null,
       chapterTitle:  rest.chapterTitle,
       description:   rest.description ?? '',
       mood:          rest.mood,
@@ -335,16 +347,14 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
     if (parsed.data.location      !== undefined) updateSet.location      = parsed.data.location;
     if (parsed.data.isPublic      !== undefined) updateSet.isPublic      = parsed.data.isPublic;
     if ('pageLayoutKey' in parsed.data)          updateSet.pageLayoutKey = parsed.data.pageLayoutKey ?? null;
-    if ('pages' in parsed.data)                  updateSet.pages         = (parsed.data.pages ?? null) as unknown;
+    if ('pages' in parsed.data) {
+      updateSet.pages = parsed.data.pages?.map(page => ({
+        ...page,
+        panels: page.panels.map(sanitizePanel),
+      })) ?? null;
+    }
     if (parsed.data.panels        !== undefined) {
-      updateSet.panels = parsed.data.panels.map((p: z.infer<typeof PanelSchema>) => ({
-        id:         p.id,
-        text:       p.text,
-        imageUri:   safeImageUri(p.imageUri ?? null) ?? undefined,
-        bgPreset:   p.bgPreset   ?? undefined,
-        bubbleText: p.bubbleText ?? undefined,
-        overlays:   p.overlays   ?? undefined,
-      }));
+      updateSet.panels = parsed.data.panels.map(sanitizePanel);
     }
     if (parsed.data.contentType  !== undefined) updateSet.contentType  = parsed.data.contentType;
     if ('videoUri'    in parsed.data)            updateSet.videoUri     = parsed.data.videoUri    ?? null;

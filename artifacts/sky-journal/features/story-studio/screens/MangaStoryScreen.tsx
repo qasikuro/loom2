@@ -248,7 +248,14 @@ export default function MangaStoryScreen() {
   function buildMangaStory(id: string, isPublic: boolean) {
     const imageUri = generatedStorageUri;
     if (!imageUri) return null;
-    const panel = { id: `${id}_panel`, text: prompt.trim(), bubbleText: '', imageUri };
+    const panel = {
+      id: `${id}_panel`,
+      text: prompt.trim(),
+      bubbleText: '',
+      imageUri,
+      imageAspectRatio: 2 / 3,
+      contentFit: 'contain' as const,
+    };
     return {
       id,
       date: new Date().toISOString(),
@@ -720,7 +727,7 @@ const s = StyleSheet.create({
   resultEmpty: { minHeight: 156, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 14 },
   resultTitle: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(218,201,240,0.62)', textAlign: 'center' },
   resultText: { fontSize: 9.5, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(201,184,226,0.42)', textAlign: 'center' },
-  generatedGrid: { width: '100%', aspectRatio: 1, padding: 3 },
+  generatedGrid: { width: '100%', aspectRatio: 2 / 3, padding: 3 },
   generatedImage: { width: '100%', height: '100%', borderRadius: 9, backgroundColor: '#171126' },
   openHint: { position: 'absolute', right: 10, bottom: 10, height: 28, paddingHorizontal: 10, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(8,5,22,0.76)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' },
   openHintText: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
