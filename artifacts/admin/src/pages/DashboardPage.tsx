@@ -28,7 +28,7 @@ export default function DashboardPage() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Overview of Sky Journal activity</p>
+         <p className="text-sm text-muted-foreground mt-1">Live operational overview for the Gamejo community</p>
       </div>
 
       {!stats ? (

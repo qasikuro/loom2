@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { api, type Report } from "../api";
+import { Flame } from "lucide-react";
 
 const STATUS_TABS = ["pending", "resolved", "dismissed", "all"] as const;
 
@@ -146,7 +147,7 @@ export default function ReportsPage() {
                     {r.targetType === "campfire_message" ? (
                       <div className="mt-1 space-y-0.5">
                         {r.roomName && (
-                          <div className="text-xs font-medium text-foreground">🔥 {r.roomName}</div>
+                          <div className="inline-flex items-center gap-1 text-xs font-medium text-foreground"><Flame size={12} />{r.roomName}</div>
                         )}
                         {r.authorName && (
                           <div className="text-xs text-muted-foreground">by {r.authorName}</div>

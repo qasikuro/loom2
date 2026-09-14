@@ -3,6 +3,7 @@ import { apiFetch } from "../api";
 import { Switch } from "../components/ui/switch";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
+import { AlertTriangle } from "lucide-react";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -165,7 +166,7 @@ export default function SettingsPage() {
         {settings?.maintenance_mode && (
           <div className="px-5 py-3 bg-destructive/10">
             <p className="text-xs text-destructive font-medium">
-              ⚠ Maintenance mode is ON — users see a maintenance screen right now.
+              <span className="inline-flex items-center gap-1.5"><AlertTriangle size={13} />Maintenance mode is ON — users see a maintenance screen right now.</span>
             </p>
           </div>
         )}

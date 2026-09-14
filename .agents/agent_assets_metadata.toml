@@ -41,144 +41,168 @@ id = "i_49T1YoL8OKCG42jULR4"
 uri = "file://sky-journal-marketing.md"
 type = "text"
 title = "Sky Journal — Full Marketing Materials"
+logical_id = "cee372c8-6650-4491-b465-e0407f1f6a98"
 
 [[outputs]]
 id = "mrXrOcqJVPqX1SUNswxVz"
 uri = "file://screenshots/01_welcome.jpg"
 type = "image"
 title = "1 – Welcome Screen"
+logical_id = "b3642d78-0a03-4ee9-9407-f7548390bff7"
 
 [[outputs]]
 id = "HCDtMSVVBApNglR2uoPfR"
 uri = "file://screenshots/02_home.jpg"
 type = "image"
 title = "2 – Home Screen"
+logical_id = "6e817844-f500-4365-88ca-babce6c32839"
 
 [[outputs]]
 id = "L95SrXTyUtqN1qnajeuVC"
 uri = "file://screenshots/03_journal.jpg"
 type = "image"
 title = "3 – Journal Screen"
+logical_id = "067f87b3-bb59-4b02-8492-f2c81c2d90ac"
 
 [[outputs]]
 id = "wurxj7O4RV5h3priPAovv"
 uri = "file://screenshots/04_create.jpg"
 type = "image"
 title = "4 – Create Story Screen"
+logical_id = "c286b0e5-f23b-4845-867d-adf00b8868d0"
 
 [[outputs]]
 id = "uKSVe17wDHs0zIVXq4Qyd"
 uri = "file://screenshots/05_discover.jpg"
 type = "image"
 title = "5 – Discover Screen"
+logical_id = "c3295a68-628f-432b-9ec8-1e493c2a4e83"
 
 [[outputs]]
 id = "vq9bsYoRy8FbW0NwxfO1G"
 uri = "file://screenshots/06_profile.jpg"
 type = "image"
 title = "6 – Profile Screen"
+logical_id = "f0513518-3e49-4e1a-894b-e731e023c491"
 
 [[outputs]]
 id = "l7Aj0OeCC7p7HWsmVAZV7"
 uri = "file://screenshots/both_phones_mockup.jpg"
 type = "image"
 title = "Sky Journal — iPhone 15 Pro + Pixel 8 Pro"
+logical_id = "2b442282-64ed-4a4d-90fd-a4086710bdd9"
 
 [[outputs]]
 id = "TyIaQlPo2KD4DnKswtht2"
 uri = "file://screenshots/iphone_mockup.jpg"
 type = "image"
 title = "Sky Journal — iPhone 15 Pro"
+logical_id = "ebc9b899-5329-4bef-ada7-cc445b90aaa9"
 
 [[outputs]]
 id = "B3nGXcWid-kgEzbP_6elb"
 uri = "file://screenshots/android_mockup.jpg"
 type = "image"
 title = "Sky Journal — Pixel 8 Pro"
+logical_id = "f25db4c1-6037-46af-bf99-ed42288ea43e"
 
 [[outputs]]
 id = "txR-w8kgkA3NGfBwHqS1U"
 uri = "file://screenshots/journey_all_screens.jpg"
 type = "image"
 title = "Sky Journal — Full App Journey (all 5 screens)"
+logical_id = "fdab8680-784e-4612-8917-7a45e6075fc5"
 
 [[outputs]]
 id = "an80OM7WYfgRKMimP2Iml"
 uri = "file://screenshots/mockup_home.jpg"
 type = "image"
 title = "Home Screen"
+logical_id = "e86ce7ef-4793-4449-8217-8fdca0dabb4c"
 
 [[outputs]]
 id = "X0D8aHspXEAvgt2KB9Ryz"
 uri = "file://screenshots/mockup_journal.jpg"
 type = "image"
 title = "Journal Screen"
+logical_id = "89780807-32f6-49e7-a313-884fbe7523d3"
 
 [[outputs]]
 id = "qz7N0Qgna3VR_ddLniZ0m"
 uri = "file://screenshots/mockup_create.jpg"
 type = "image"
 title = "Create Story Screen"
+logical_id = "b185e160-2bfa-4585-92e8-264c1f75e9e6"
 
 [[outputs]]
 id = "etZUfN9Rocce1VLGv0cXd"
 uri = "file://screenshots/mockup_discover.jpg"
 type = "image"
 title = "Discover Screen"
+logical_id = "a34eddcb-924d-41dd-afda-a25bfcb9e699"
 
 [[outputs]]
 id = "vSVocvDVhoyPrw1t-T40S"
 uri = "file://screenshots/mockup_profile.jpg"
 type = "image"
 title = "Profile Screen"
+logical_id = "6515d1a8-2fb3-45b2-9c3a-abda8425147e"
 
 [[outputs]]
 id = "2zKpx5vqy1UUsOk41WJMi"
 uri = "file://SKY_JOURNAL_RECOMMENDATIONS.md"
 type = "text"
 title = "Sky Journal — Recommendations (39 tasks)"
+logical_id = "3f0fc5a8-3c8d-4c0f-9162-5f7d6de1053f"
 
 [[outputs]]
 id = "7rnObAtMHN2Qh0ovJojrB"
 uri = "file://SKY_JOURNAL_AAA_ANALYSIS.md"
 type = "text"
 title = "Sky Journal — CTO + IX Engineer AAA Analysis"
+logical_id = "753e0308-a481-47b2-ae37-68584b5c68e8"
 
 [[outputs]]
 id = "KZ8Ma_bu-Ke0KYfHbqjkw"
 uri = "file://SKY_JOURNAL_ROADMAP.md"
 type = "text"
 title = "Sky Journal — Product Roadmap & Quality Reference"
+logical_id = "f5f83fdb-ba1d-43d1-b24c-d01bc15f0049"
 
 [[outputs]]
 id = "p3iQ7HGnYho2CoKiD9W6u"
 uri = "file://SKY_JOURNAL_PRODUCT_STRATEGY.md"
 type = "text"
 title = "Sky Journal — Product Strategy"
+logical_id = "205ec7df-db1c-4baf-ba85-fbcdf84e7ea0"
 
 [[outputs]]
 id = "c5zQf5CBl_DDFDnZ6qegM"
 uri = "file://SKY_JOURNAL_TASK_OVERVIEW.md"
 type = "text"
 title = "Sky Journal — Task Overview & Roadmap"
+logical_id = "3f0df048-b014-4dad-8477-6cc0271ff3c0"
 
 [[outputs]]
 id = "0qhUetA5JsxzpOlLmUfXn"
 uri = "file://exports/sky-journal-work-plan.zip"
 type = "unspecified"
 title = "Sky Journal — Remaining Work Plan"
+logical_id = "4d588c0b-e955-4cd2-8aec-953464fdcc26"
 
 [[outputs]]
 id = "eO3CrUlLMhDQ5zH8o6Dj0"
 uri = "file://sky-journal-docs.zip"
 type = "unspecified"
 title = "Sky Journal — Full Product Documentation"
+logical_id = "f6934625-85f0-41a5-b9a8-22e3d515406e"
 
 [[outputs]]
 id = "gQX0_HLZ7oSmkH08c2uHl"
 uri = "file://gamejo-release.zip"
 type = "unspecified"
 title = "GameJo Release Package"
+logical_id = "d6db01d9-368c-42d0-8b60-092835f239f7"
 
 [[outputs]]
 id = "A_qtiKsXKESDfrQvXvxm9"
@@ -186,6 +210,7 @@ uri = "file://attached_assets/production-failure-audit-2026-08-01.md"
 type = "text"
 title = "GameJo — Production Failure Audit (August 1, 2026)"
 description = "22 verified findings ranked by severity. 6 Critical issues that can crash the server or corrupt data, 4 High issues causing silent data loss, 8 Medium reliability gaps, and 4 Low edge cases — with file references and a recommended fix order."
+logical_id = "11b9d7ff-7ccb-443f-8360-a9d460e6f60a"
 
 [[outputs]]
 id = "s30XxaLKbdlNxK0ukVrtB"
@@ -193,20 +218,25 @@ uri = "file://admin-panel-gap-analysis.md"
 type = "text"
 title = "GameJo Admin Panel — Gap Analysis"
 description = "Full breakdown of what's built, what's missing, estimated hours, cost per section, and 3-phase build order."
+logical_id = "4fb5a48e-f1a1-4332-95f1-735406e0d38c"
 
 [[outputs]]
 id = "7xMpCxkpZc2M6759tgePN"
 uri = "file://gamejo-admin-gap-analysis.html"
-type = "unspecified"
+type = "text"
 title = "GameJo Admin Panel — Gap Analysis"
 description = "What's built, what's missing, hours, cost per section, and 3-phase build plan."
+logical_id = "b3e7cdc5-58f9-449b-8e99-9e4622be3ec6"
+content_type = "text/html"
 
 [[outputs]]
 id = "aqy3GbAmQiphAhg2RKsb-"
 uri = "file://attached_assets/sky-journal-icons.html"
-type = "unspecified"
+type = "text"
 title = "Sky Journal — Icon Reference"
 description = "All 44 registered icons (lucide-react-native) + 15 icon names found in source but not registered in Icon.tsx. Open in any browser."
+logical_id = "8efbcda1-af51-4e64-804a-2f7057ea4c70"
+content_type = "text/html"
 
 [[outputs]]
 id = "eNPZwZyaUlCwTe0nXnnjv"
@@ -214,6 +244,7 @@ uri = "file://attached_assets/chat-campfire-roadmap.docx"
 type = "word_document"
 title = "Chat & Campfire Roadmap"
 description = "28-task roadmap — DM chat, campfire rooms, shared infrastructure."
+logical_id = "9edc3bb7-2bee-45ca-b915-94b4a45b741a"
 
 [[outputs]]
 id = "GQ2MURusV3EY2paWa6fOG"
@@ -221,3 +252,4 @@ uri = "file://attached_assets/friends-social-roadmap.docx"
 type = "word_document"
 title = "Friends & Social Graph Roadmap"
 description = "22-task roadmap — follow system, discovery, social profiles, notifications."
+logical_id = "6c4196a8-d177-4724-b4f3-822c9012d95c"

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type AdminBadge, type BadgeBody } from "../api";
+import { Award, X } from "lucide-react";
 
 const DEFAULT_FORM: BadgeBody = {
-  slug: "", name: "", emoji: "🏅", color: "#6366f1", description: "", imageUrl: null, sortOrder: 0,
+  slug: "", name: "", emoji: "badge", color: "#6366f1", description: "", imageUrl: null, sortOrder: 0,
 };
 
 export default function BadgesPage() {
@@ -31,7 +32,7 @@ export default function BadgesPage() {
   const openCreate = () => { setEditing(null); setForm(DEFAULT_FORM); setModal("create"); };
   const openEdit   = (b: AdminBadge) => {
     setEditing(b);
-    setForm({ slug: b.slug, name: b.name, emoji: "🏅", color: "#6366f1", description: b.description, imageUrl: b.imageUrl, sortOrder: b.sortOrder });
+    setForm({ slug: b.slug, name: b.name, emoji: "badge", color: "#6366f1", description: b.description, imageUrl: b.imageUrl, sortOrder: b.sortOrder });
     setModal("edit");
   };
 
@@ -105,7 +106,7 @@ export default function BadgesPage() {
         </div>
       ) : badges.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
-          <div className="text-4xl mb-3">🏅</div>
+          <Award size={32} className="mx-auto mb-3 text-muted-foreground" />
           <div className="font-medium">No badges yet</div>
           <div className="text-sm mt-1">Create your first badge above.</div>
         </div>
@@ -183,7 +184,7 @@ export default function BadgesPage() {
           <div className="bg-background rounded-2xl shadow-xl max-w-sm w-full border overflow-hidden">
             <div className="px-5 py-4 border-b bg-muted/30 flex items-center justify-between">
               <h3 className="font-bold text-base">{modal === "create" ? "New Badge" : `Edit: ${editing?.name}`}</h3>
-              <button onClick={() => setModal(null)} className="text-muted-foreground hover:text-foreground">✕</button>
+               <button onClick={() => setModal(null)} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
             </div>
 
             <div className="p-5 space-y-4">

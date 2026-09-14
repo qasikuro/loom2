@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { api, type AdminUser } from "../api";
 import UserDetailDrawer from "../components/UserDetailDrawer";
+import { Crown, FlaskConical, Pencil, X } from "lucide-react";
 
 type ConfirmAction = { type: "ban" | "unban" | "delete" | "admin" | "founder" | "beta"; user: AdminUser };
 type LimitEdit     = { userId: string; value: string };
@@ -170,8 +171,8 @@ export default function UsersPage() {
                         {u.isBanned     && <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 font-medium">Banned</span>}
                         {!u.isAdmin && !u.isBanned && <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 font-medium">Active</span>}
                         {!u.isPublic    && <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600 font-medium">Private</span>}
-                        {u.isFounder    && <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700 font-medium">👑 Founder</span>}
-                        {u.isBetaTester && <span className="px-2 py-0.5 rounded-full text-xs bg-violet-100 text-violet-700 font-medium">🧪 Beta</span>}
+                        {u.isFounder    && <span className="px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-700 font-medium inline-flex items-center gap-1"><Crown size={11} />Founder</span>}
+                        {u.isBetaTester && <span className="px-2 py-0.5 rounded-full text-xs bg-violet-100 text-violet-700 font-medium inline-flex items-center gap-1"><FlaskConical size={11} />Beta</span>}
                       </div>
                     </td>
 
@@ -209,7 +210,7 @@ export default function UsersPage() {
                           <button
                             onClick={() => setLimitEdit(null)}
                             className="px-2 py-1 text-xs rounded border hover:bg-muted"
-                          >✕</button>
+                          ><X size={13} /></button>
                         </div>
                       ) : (
                         <button
@@ -217,7 +218,7 @@ export default function UsersPage() {
                           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground group"
                         >
                           <span className="font-medium tabular-nums">{u.galleryLimit ?? 200}</span>
-                          <span className="opacity-0 group-hover:opacity-60 transition-opacity text-[10px]">✏</span>
+                          <Pencil size={11} className="opacity-0 group-hover:opacity-60 transition-opacity" />
                         </button>
                       )}
                     </td>
@@ -240,11 +241,11 @@ export default function UsersPage() {
                         <button
                           onClick={() => setConfirm({ type: "founder", user: u })}
                           className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isFounder ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-                        >{u.isFounder ? "👑 Unfounder" : "👑 Founder"}</button>
+                        ><span className="inline-flex items-center gap-1"><Crown size={12} />{u.isFounder ? "Unfounder" : "Founder"}</span></button>
                         <button
                           onClick={() => setConfirm({ type: "beta", user: u })}
                           className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${u.isBetaTester ? "bg-violet-100 text-violet-700 hover:bg-violet-200" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}
-                        >{u.isBetaTester ? "🧪 Un-Beta" : "🧪 Beta"}</button>
+                        ><span className="inline-flex items-center gap-1"><FlaskConical size={12} />{u.isBetaTester ? "Un-Beta" : "Beta"}</span></button>
                         <button
                           onClick={() => setConfirm({ type: "delete", user: u })}
                           className="px-2 py-1 text-xs rounded-md font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
@@ -299,12 +300,12 @@ export default function UsersPage() {
                 ? `Unban ${confirm.user.name}? They will regain full access.`
                 : confirm.type === "founder"
                 ? confirm.user.isFounder
-                  ? `Remove the 👑 Founder badge from ${confirm.user.name}? They'll receive a notification.`
-                  : `Grant the 👑 Founder badge to ${confirm.user.name}? They'll be notified immediately.`
+                  ? `Remove the Founder badge from ${confirm.user.name}? They'll receive a notification.`
+                  : `Grant the Founder badge to ${confirm.user.name}? They'll be notified immediately.`
                 : confirm.type === "beta"
                 ? confirm.user.isBetaTester
-                  ? `Remove the 🧪 Beta Tester badge from ${confirm.user.name}?`
-                  : `Grant the 🧪 Beta Tester badge to ${confirm.user.name}?`
+                  ? `Remove the Beta Tester badge from ${confirm.user.name}?`
+                  : `Grant the Beta Tester badge to ${confirm.user.name}?`
                 : confirm.user.isAdmin
                 ? `Remove admin access from ${confirm.user.name}?`
                 : `Grant admin access to ${confirm.user.name}?`}

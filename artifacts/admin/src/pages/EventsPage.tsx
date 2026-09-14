@@ -1,17 +1,18 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, type ReactNode } from "react";
 import { api, type AdminEvent, type EventInventoryItem, type EventBody } from "../api";
+import { CircleDollarSign, Flower2, Gift, Gem, Leaf, Sparkles, Snowflake, Sun, Timer, WandSparkles, X } from "lucide-react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const THEMES = ["spring", "summer", "autumn", "winter", "special"] as const;
 type Theme = (typeof THEMES)[number];
 
-const THEME_META: Record<Theme, { icon: string; color: string; label: string }> = {
-  spring:  { icon: "🌸", color: "bg-pink-100 text-pink-700",    label: "Spring"  },
-  summer:  { icon: "☀️",  color: "bg-yellow-100 text-yellow-700", label: "Summer"  },
-  autumn:  { icon: "🍂", color: "bg-orange-100 text-orange-700", label: "Autumn"  },
-  winter:  { icon: "❄️",  color: "bg-blue-100 text-blue-700",    label: "Winter"  },
-  special: { icon: "✦",  color: "bg-purple-100 text-purple-700", label: "Special" },
+const THEME_META: Record<Theme, { icon: ReactNode; color: string; label: string }> = {
+  spring:  { icon: <Flower2 size={18} />, color: "bg-pink-100 text-pink-700",    label: "Spring"  },
+  summer:  { icon: <Sun size={18} />, color: "bg-yellow-100 text-yellow-700", label: "Summer"  },
+  autumn:  { icon: <Leaf size={18} />, color: "bg-orange-100 text-orange-700", label: "Autumn"  },
+  winter:  { icon: <Snowflake size={18} />, color: "bg-blue-100 text-blue-700",    label: "Winter"  },
+  special: { icon: <Sparkles size={18} />,  color: "bg-purple-100 text-purple-700", label: "Special" },
 };
 
 const STATUS_META: Record<string, { color: string; label: string }> = {
@@ -20,11 +21,11 @@ const STATUS_META: Record<string, { color: string; label: string }> = {
   ended:  { color: "bg-red-100 text-red-600",      label: "Ended"  },
 };
 
-const ITEM_TYPE_META: Record<string, { icon: string; color: string }> = {
-  stars:  { icon: "⭐", color: "text-yellow-600" },
-  aura:   { icon: "🔵", color: "text-blue-600"   },
-  shards: { icon: "💎", color: "text-purple-600" },
-  item:   { icon: "🎁", color: "text-pink-600"   },
+const ITEM_TYPE_META: Record<string, { icon: ReactNode; color: string }> = {
+  stars:  { icon: <CircleDollarSign size={16} />, color: "text-yellow-600" },
+  aura:   { icon: <CircleDollarSign size={16} />, color: "text-blue-600"   },
+  shards: { icon: <Gem size={16} />, color: "text-purple-600" },
+  item:   { icon: <Gift size={16} />, color: "text-pink-600"   },
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -135,7 +136,7 @@ function InventoryRow({
         onClick={onRemove}
         className="ml-auto text-muted-foreground hover:text-red-500 text-sm px-1 transition-colors"
         title="Remove"
-      >✕</button>
+      ><X size={14} /></button>
     </div>
   );
 }
@@ -281,7 +282,7 @@ function EventForm({
       <div className="bg-muted/40 rounded-xl border p-4 space-y-3">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold">✨ AI Inventory Generator</h3>
+            <h3 className="inline-flex items-center gap-1.5 text-sm font-semibold"><WandSparkles size={15} />AI Inventory Generator</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
               Uses Claude to design themed reward drops. Your title + description are the prompt.
             </p>
@@ -392,7 +393,7 @@ function EventCard({
     setGrantState("granting");
     try {
       const r = await api.grantEvent(event.id);
-      setGrantResult(r.message + ` (⭐${r.stars} 🔵${r.aura} 💎${r.shards})`);
+      setGrantResult(r.message + ` (stars ${r.stars}, aura ${r.aura}, shards ${r.shards})`);
       setGrantState("done");
       onGrant();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -441,7 +442,7 @@ function EventCard({
           ))}
           {cosmeticItems.map((it, i) => (
             <span key={i} className="text-xs px-2 py-1 bg-pink-50 text-pink-700 rounded-full">
-              🎁 {it.itemName || it.label}
+              <Gift size={13} /> {it.itemName || it.label}
             </span>
           ))}
         </div>
@@ -450,7 +451,7 @@ function EventCard({
       {/* Grant result */}
       {grantState === "done" && grantResult && (
         <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-          ✓ {grantResult}
+          {grantResult}
         </p>
       )}
 
@@ -471,7 +472,7 @@ function EventCard({
             disabled={event.inventory.length === 0}
             title={event.inventory.length === 0 ? "Add inventory items first" : ""}
           >
-            🎁 Grant to All Users
+            <span className="inline-flex items-center gap-1.5"><Gift size={14} />Grant to All Users</span>
           </button>
         )}
         {grantState === "confirm" && (
@@ -592,7 +593,7 @@ function LiveNowSection({
                 </div>
                 {timeLeft && (
                   <p className={`text-xs mt-0.5 font-medium ${isUrgent ? "text-red-600" : "text-green-700"}`}>
-                    ⏱ {timeLeft}
+                     <span className="inline-flex items-center gap-1"><Timer size={13} />{timeLeft}</span>
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground mt-0.5">
@@ -607,7 +608,7 @@ function LiveNowSection({
                 {ev.inventory.map((it, i) =>
                   it.type === "item" ? (
                     <span key={i} className="text-xs px-2 py-1 bg-pink-50 text-pink-700 rounded-full">
-                      🎁 {it.itemName || it.label}
+                       <Gift size={13} /> {it.itemName || it.label}
                     </span>
                   ) : (
                     <span key={i} className="text-xs px-2 py-1 bg-white border border-green-200 rounded-full">
@@ -829,7 +830,7 @@ export default function EventsPage() {
 
           {!loading && events.length === 0 && (
             <div className="text-center py-16 text-muted-foreground">
-              <div className="text-4xl mb-3">✦</div>
+              <Sparkles size={32} className="mx-auto mb-3 text-muted-foreground" />
               <p className="text-sm">No events yet — create your first one!</p>
             </div>
           )}

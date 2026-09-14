@@ -1,9 +1,16 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { api, type AdminSticker, type ContentItem, type StoryPanel } from "../api";
 import UserDetailDrawer from "../components/UserDetailDrawer";
+import { BookOpen, Eye, Mail, Shirt, X } from "lucide-react";
 
-export default function ContentPage() {
-  const [contentType, setContentType] = useState<"stories" | "outfits">("stories");
+export default function ContentPage({
+  initialType = "stories",
+  initialShowStickers = false,
+}: {
+  initialType?: "stories" | "outfits";
+  initialShowStickers?: boolean;
+}) {
+  const [contentType, setContentType] = useState<"stories" | "outfits">(initialType);
   const [items, setItems]   = useState<ContentItem[]>([]);
   const [total, setTotal]   = useState(0);
   const [offset, setOffset] = useState(0);
@@ -20,7 +27,7 @@ export default function ContentPage() {
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [preview, setPreview] = useState<ContentItem | null>(null);
 
-  const [showStickers, setShowStickers]         = useState(false);
+  const [showStickers, setShowStickers]         = useState(initialShowStickers);
   const [stickers, setStickers]                 = useState<AdminSticker[]>([]);
   const [stickerTotal, setStickerTotal]         = useState(0);
   const [stickerOffset, setStickerOffset]       = useState(0);
@@ -146,7 +153,7 @@ export default function ContentPage() {
           <button
             onClick={switchToStickers}
             className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${showStickers ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground hover:bg-muted"}`}
-          >💌 Stickers</button>
+          ><span className="inline-flex items-center gap-1.5"><Mail size={14} />Stickers</span></button>
         </div>
 
         {/* Author search — hidden on stickers tab */}
@@ -182,7 +189,7 @@ export default function ContentPage() {
                 onClick={clearFilters}
                 className="px-2 py-1.5 text-xs rounded-lg border hover:bg-muted transition-colors text-muted-foreground"
                 title="Clear all filters"
-              >✕ Clear</button>
+              ><span className="inline-flex items-center gap-1"><X size={12} />Clear</span></button>
             )}
           </div>
         )}
@@ -308,7 +315,7 @@ export default function ContentPage() {
                           <img src={thumb} alt="" className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-lg text-muted-foreground">
-                            {contentType === "stories" ? "📖" : "👗"}
+                            {contentType === "stories" ? <BookOpen size={19} /> : <Shirt size={19} />}
                           </span>
                         )}
                       </div>
@@ -328,7 +335,7 @@ export default function ContentPage() {
                           <span className="text-xs text-muted-foreground">{item.panels.length} panel{item.panels.length !== 1 ? "s" : ""}</span>
                         )}
                         {contentType === "stories" && (item.witnessedCount ?? 0) > 0 && (
-                          <span className="text-xs text-muted-foreground">👁 {item.witnessedCount}</span>
+                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><Eye size={12} />{item.witnessedCount}</span>
                         )}
                         {item.tags && item.tags.length > 0 && (
                           <span className="text-xs text-muted-foreground">{item.tags.slice(0, 3).join(", ")}</span>
@@ -414,7 +421,7 @@ export default function ContentPage() {
                   {!preview.isPublic && !preview.isHidden && <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 font-medium">Private</span>}
                 </div>
               </div>
-              <button onClick={() => setPreview(null)} className="ml-4 p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground flex-shrink-0">✕</button>
+              <button onClick={() => setPreview(null)} className="ml-4 p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground flex-shrink-0"><X size={16} /></button>
             </div>
 
             {contentType === "stories" && preview.panels && preview.panels.length > 0 && (
@@ -466,7 +473,7 @@ export default function ContentPage() {
             <div className="flex items-center justify-between p-4 border-t bg-muted/20">
               <div className="text-xs text-muted-foreground">
                 {new Date(preview.date).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}
-                {(preview.witnessedCount ?? 0) > 0 && <span className="ml-3">👁 {preview.witnessedCount} witnessed</span>}
+                {(preview.witnessedCount ?? 0) > 0 && <span className="ml-3 inline-flex items-center gap-1"><Eye size={12} />{preview.witnessedCount} witnessed</span>}
               </div>
               <div className="flex gap-2">
                 <button onClick={() => { setDetailUserId(preview.userId); setPreview(null); }}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, type ProfileEffectRow, type EffectConfig, type EffectBody } from "../api";
+import { CircleDollarSign, Gem, Sparkles, X } from "lucide-react";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -157,14 +158,14 @@ function blankBody(): EffectBody {
   return {
     name:          "",
     description:   "",
-    icon:          "✨",
+    icon:          "effect",
     theme:         "special",
     rarity:        "common",
     isActive:      true,
     shopCost:      {},
     previewColors: [],
     config: {
-      particles:  ["✦", "✧", "⋆"],
+      particles:  ["spark", "glint", "star"],
       count:      8,
       mode:       "glow",
       fontSize:   18,
@@ -184,7 +185,7 @@ function ConfigEditor({ config, onChange }: { config: EffectConfig; onChange: (c
     <div className="space-y-4">
       {/* Particles */}
       <div>
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Particles (comma-separated emoji)</label>
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Particles (comma-separated symbols)</label>
         <input
           className="w-full mt-1 px-3 py-2 text-sm bg-background border rounded-lg focus:ring-1 focus:ring-primary outline-none"
           value={config.particles.join(", ")}
@@ -274,7 +275,7 @@ function ConfigEditor({ config, onChange }: { config: EffectConfig; onChange: (c
       {/* Glyph colors (optional) */}
       <div>
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Glyph colors (optional, for abstract symbols like ✦ ⋆)
+          Glyph colors (optional, for abstract particle symbols)
         </label>
         <input
           className="w-full mt-1 px-3 py-2 text-sm bg-background border rounded-lg focus:ring-1 focus:ring-primary outline-none font-mono"
@@ -311,7 +312,7 @@ function ConfigEditor({ config, onChange }: { config: EffectConfig; onChange: (c
               const existing = (config.corners ?? []).map(c => c.pos);
               const next = positions.find(p => !existing.includes(p));
               if (!next) return;
-              set("corners", [...(config.corners ?? []), { pos: next, emoji: "🌿", size: 38 }]);
+               set("corners", [...(config.corners ?? []), { pos: next, emoji: "leaf", size: 38 }]);
             }}
             className="text-xs text-primary hover:underline"
           >
@@ -358,7 +359,7 @@ function ConfigEditor({ config, onChange }: { config: EffectConfig; onChange: (c
                 onClick={() => set("corners", (config.corners ?? []).filter((_, j) => j !== i))}
                 className="ml-auto text-destructive hover:opacity-80 text-sm"
               >
-                ✕
+                <X size={14} />
               </button>
             </div>
           ))}
@@ -434,7 +435,7 @@ function EffectModal({
         {/* Header */}
         <div className="sticky top-0 bg-card border-b px-6 py-4 flex items-center justify-between z-10">
           <h2 className="text-lg font-semibold">{initial ? "Edit Effect" : "Create Profile Effect"}</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none">✕</button>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl leading-none"><X size={17} /></button>
         </div>
 
         <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -502,9 +503,9 @@ function EffectModal({
                 <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Shop cost (0 = free)</label>
                 <div className="grid grid-cols-3 gap-2 mt-1">
                   {[
-                    { key: "stars" as const, icon: "⭐", label: "Stars" },
-                    { key: "aura"  as const, icon: "🔵", label: "Aura"  },
-                    { key: "shards"as const, icon: "💎", label: "Shards" },
+                    { key: "stars" as const, icon: <CircleDollarSign size={13} />, label: "Stars" },
+                    { key: "aura"  as const, icon: <CircleDollarSign size={13} />, label: "Aura"  },
+                    { key: "shards"as const, icon: <Gem size={13} />, label: "Shards" },
                   ].map(({ key, icon, label }) => (
                     <div key={key}>
                       <label className="text-xs text-muted-foreground">{icon} {label}</label>
@@ -534,7 +535,7 @@ function EffectModal({
             {/* AI generation */}
             <div className="border-t pt-4">
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-semibold">✨ Generate config with AI</span>
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold"><Sparkles size={15} />Generate config with AI</span>
               </div>
               <textarea
                 rows={2}
@@ -553,7 +554,7 @@ function EffectModal({
                 {generating ? (
                   <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" /> Generating…</>
                 ) : (
-                  "✨ Generate animation config"
+                  "Generate animation config"
                 )}
               </button>
               <p className="text-xs text-muted-foreground mt-1.5">
@@ -660,8 +661,8 @@ function EffectCard({
         {/* Cost */}
         <div className="text-xs text-muted-foreground">
           {(cost.stars || 0) > 0 && <span className="mr-2">⭐ {cost.stars}</span>}
-          {(cost.aura  || 0) > 0 && <span className="mr-2">🔵 {cost.aura}</span>}
-          {(cost.shards || 0) > 0 && <span className="mr-2">💎 {cost.shards}</span>}
+          {(cost.aura  || 0) > 0 && <span className="mr-2">Aura {cost.aura}</span>}
+          {(cost.shards || 0) > 0 && <span className="mr-2">Shards {cost.shards}</span>}
           {!(cost.stars || cost.aura || cost.shards) && <span className="text-green-600">Free</span>}
         </div>
 
@@ -773,7 +774,7 @@ export default function EffectsPage() {
           onClick={() => { setEditing(undefined); setShowModal(true); }}
           className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
         >
-          ✦ Create effect
+          <span className="inline-flex items-center gap-1.5"><Sparkles size={14} />Create effect</span>
         </button>
       </div>
 
@@ -796,7 +797,7 @@ export default function EffectsPage() {
         </div>
       ) : effects.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
-          <div className="text-5xl mb-3">✦</div>
+          <Sparkles size={40} className="mx-auto mb-3 text-muted-foreground" />
           <p className="font-medium text-foreground">No effects yet</p>
           <p className="text-sm mt-1">Create your first AI-generated profile effect</p>
         </div>
