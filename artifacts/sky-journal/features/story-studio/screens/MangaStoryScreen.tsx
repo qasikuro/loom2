@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { safeBack } from '@/utils/navigation';
 import { Icon } from '@/components/Icon';
@@ -49,7 +52,7 @@ const STYLES: Array<{
 ];
 
 export default function MangaStoryScreen() {
-  const { addStory } = useApp();
+  const { addStory, reloadData } = useApp();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 14 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 30 : insets.bottom + 24;
@@ -61,11 +64,17 @@ export default function MangaStoryScreen() {
   const [generated, setGenerated] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
   const [generatedImageUri, setGeneratedImageUri] = useState<string | null>(null);
+  const [generatedRemoteUri, setGeneratedRemoteUri] = useState<string | null>(null);
+  const [generatedStorageUri, setGeneratedStorageUri] = useState<string | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
   const [imageLoading, setImageLoading] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const [posting, setPosting] = useState(false);
   const [posted, setPosted] = useState(false);
+  const [savedStoryId, setSavedStoryId] = useState<string | null>(null);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [lifecycleBusy, setLifecycleBusy] = useState<'saving' | 'posting' | 'deleting' | null>(null);
   const [reportVisible, setReportVisible] = useState(false);
   const [remainingToday, setRemainingToday] = useState<number | null>(null);
   const [pendingAttempt, setPendingAttempt] = useState<PendingAttempt | null>(null);
@@ -98,6 +107,8 @@ export default function MangaStoryScreen() {
     setImages(current => [...current, ...next].slice(0, 10));
     setGenerated(false);
     setGeneratedImageUri(null);
+    setGeneratedRemoteUri(null);
+    setGeneratedStorageUri(null);
     setError(null);
   }
 
@@ -106,6 +117,8 @@ export default function MangaStoryScreen() {
     setImages(current => current.filter(image => image !== uri));
     setGenerated(false);
     setGeneratedImageUri(null);
+    setGeneratedRemoteUri(null);
+    setGeneratedStorageUri(null);
   }
 
   function chooseStyle(next: MangaStyle) {
@@ -113,6 +126,8 @@ export default function MangaStoryScreen() {
     setStyle(next);
     setGenerated(false);
     setGeneratedImageUri(null);
+    setGeneratedRemoteUri(null);
+    setGeneratedStorageUri(null);
   }
 
   async function generateStory() {
@@ -129,6 +144,8 @@ export default function MangaStoryScreen() {
     setGenerating(true);
     setGenerated(false);
     setGeneratedImageUri(null);
+    setGeneratedRemoteUri(null);
+    setGeneratedStorageUri(null);
     setGeneratedPrompt(finalPrompt);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
@@ -150,14 +167,24 @@ export default function MangaStoryScreen() {
       });
       const resolved = resolveUri(result.imageUri);
       if (!resolved) throw new Error('The generated image could not be loaded.');
-      // Keep a unique cache key so Expo Image does not reuse a failed request
-      // from an earlier generation or a stale browser cache entry.
-      const displayUri = `${resolved}${resolved.includes('?') ? '&' : '?'}generation=${encodeURIComponent(result.generationId)}`;
+      const remoteUri = `${resolved}${resolved.includes('?') ? '&' : '?'}generation=${encodeURIComponent(result.generationId)}`;
+      let displayUri = remoteUri;
+      if (Platform.OS !== 'web') {
+        const localUri = `${FileSystem.cacheDirectory}gamejo-manga-${result.generationId}.png`;
+        const download = await FileSystem.downloadAsync(remoteUri, localUri);
+        if (download.status !== 200) {
+          throw new Error(`Generated image download failed with status ${download.status}`);
+        }
+        displayUri = download.uri;
+      }
       setGeneratedImageUri(displayUri);
+      setGeneratedRemoteUri(resolved);
+      setGeneratedStorageUri(result.imageUri);
       setGenerationId(result.generationId);
       setImageLoading(true);
       setImageLoadFailed(false);
       setPosted(false);
+      setSavedStoryId(null);
       setRemainingToday(result.remainingToday);
       setGenerated(true);
       setPendingAttempt(null);
@@ -201,10 +228,14 @@ export default function MangaStoryScreen() {
       }
       const available = await Sharing.isAvailableAsync();
       if (!available) throw new Error('Sharing unavailable');
-      const localUri = `${FileSystem.cacheDirectory}gamejo-manga-${generationId ?? 'page'}.png`;
-      const download = await FileSystem.downloadAsync(generatedImageUri, localUri);
-      if (download.status !== 200) throw new Error('Download failed');
-      await Sharing.shareAsync(download.uri, {
+      let shareUri = generatedImageUri;
+      if (!shareUri.startsWith('file:')) {
+        const localUri = `${FileSystem.cacheDirectory}gamejo-manga-${generationId ?? 'page'}.png`;
+        const download = await FileSystem.downloadAsync(shareUri, localUri);
+        if (download.status !== 200) throw new Error('Download failed');
+        shareUri = download.uri;
+      }
+      await Sharing.shareAsync(shareUri, {
         dialogTitle: 'Share your Gamejo manga',
         mimeType: 'image/png',
         UTI: 'public.png',
@@ -214,13 +245,11 @@ export default function MangaStoryScreen() {
     }
   }
 
-  async function postManga() {
-    if (!generatedImageUri || posting || posted) return;
-    setPosting(true);
-    setError(null);
-    const id = `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
-    const panel = { id: `${id}_panel`, text: prompt.trim(), bubbleText: '', imageUri: generatedImageUri };
-    const ok = await addStory({
+  function buildMangaStory(id: string, isPublic: boolean) {
+    const imageUri = generatedStorageUri;
+    if (!imageUri) return null;
+    const panel = { id: `${id}_panel`, text: prompt.trim(), bubbleText: '', imageUri };
+    return {
       id,
       date: new Date().toISOString(),
       chapterTitle: prompt.trim().slice(0, 80) || 'My Manga Story',
@@ -228,15 +257,64 @@ export default function MangaStoryScreen() {
       panels: [panel],
       mood: 'Creative',
       location: 'Isle of Dawn',
-      isPublic: true,
+      isPublic,
       witnessedCount: 0,
       savedCount: 0,
       stickerCount: 0,
       pageLayoutKey: '1',
       pages: [{ id: `${id}_page`, layoutKey: '1', panels: [panel] }],
-    });
+    };
+  }
+
+  async function saveManga() {
+    if (savedStoryId || !generatedImageUri || lifecycleBusy) return;
+    setLifecycleBusy('saving');
+    setError(null);
+    const id = Crypto.randomUUID();
+    const story = buildMangaStory(id, false);
+    try {
+      if (!story) return;
+      const ok = await addStory(story);
+      if (ok) {
+        setSavedStoryId(id);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setError('Could not save your manga. Check your connection and try again.');
+      }
+    } finally {
+      setLifecycleBusy(null);
+    }
+  }
+
+  async function postManga() {
+    if (!generatedImageUri || posting || posted || lifecycleBusy) return;
+    setLifecycleBusy('posting');
+    setPosting(true);
+    setError(null);
+    if (savedStoryId) {
+      try {
+        await apiFetch(`/stories/${savedStoryId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ isPublic: true }),
+        });
+        await reloadData();
+        setPosted(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        setError('Could not post your manga. Check your connection and try again.');
+      } finally {
+        setPosting(false);
+        setLifecycleBusy(null);
+      }
+      return;
+    }
+    const id = Crypto.randomUUID();
+    const story = buildMangaStory(id, true);
+    const ok = story ? await addStory(story) : false;
     setPosting(false);
+    setLifecycleBusy(null);
     if (ok) {
+      setSavedStoryId(id);
       setPosted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
@@ -244,12 +322,52 @@ export default function MangaStoryScreen() {
     }
   }
 
+  function deleteManga() {
+    if (!generationId || deleting || lifecycleBusy) return;
+    Alert.alert(
+      'Delete manga?',
+      'This will permanently remove the generated manga and its saved story.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            if (lifecycleBusy) return;
+            setLifecycleBusy('deleting');
+            setDeleting(true);
+            setError(null);
+            try {
+              if (savedStoryId) {
+                await apiFetch(`/stories/${savedStoryId}`, { method: 'DELETE' });
+              }
+              await apiFetch(`/manga/${generationId}`, { method: 'DELETE' });
+              await reloadData();
+              setPreviewVisible(false);
+              createNextManga();
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } catch {
+              setError('Could not delete your manga. Please try again.');
+            } finally {
+              setDeleting(false);
+              setLifecycleBusy(null);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   function createNextManga() {
     setGenerated(false);
     setGeneratedImageUri(null);
+    setGeneratedRemoteUri(null);
+    setGeneratedStorageUri(null);
     setGenerationId(null);
     setImageLoadFailed(false);
     setPosted(false);
+    setSavedStoryId(null);
+    setLifecycleBusy(null);
     setError(null);
   }
 
@@ -363,9 +481,13 @@ export default function MangaStoryScreen() {
                   <Text style={s.resultText}>Applying the {selectedStyle.label.replace('\n', ' ')} style</Text>
                 </View>
               ) : generated ? (
-                <View
+                <TouchableOpacity
                   style={s.generatedGrid}
                   accessibilityLabel={`Generated manga page. ${generatedPrompt}`}
+                  accessibilityRole="button"
+                  accessibilityHint="Opens the manga with share, save, report, and delete actions"
+                  onPress={() => setPreviewVisible(true)}
+                  activeOpacity={0.9}
                 >
                   {!!generatedImageUri && (
                     <Image
@@ -388,13 +510,32 @@ export default function MangaStoryScreen() {
                   {imageLoadFailed && (
                     <TouchableOpacity style={s.imageStatus} onPress={() => {
                       setImageLoadFailed(false);
-                      setGeneratedImageUri(uri => uri ? `${uri}${uri.includes('?') ? '&' : '?'}retry=${Date.now()}` : uri);
+                      if (!generatedRemoteUri || !generationId) return;
+                      const retryUri = `${generatedRemoteUri}${generatedRemoteUri.includes('?') ? '&' : '?'}retry=${Date.now()}`;
+                      if (Platform.OS === 'web') {
+                        setGeneratedImageUri(retryUri);
+                        return;
+                      }
+                      setImageLoading(true);
+                      FileSystem.downloadAsync(
+                        retryUri,
+                        `${FileSystem.cacheDirectory}gamejo-manga-${generationId}-${Date.now()}.png`,
+                      ).then(download => {
+                        if (download.status !== 200) throw new Error('Download failed');
+                        setGeneratedImageUri(download.uri);
+                      }).catch(() => setImageLoadFailed(true)).finally(() => setImageLoading(false));
                     }}>
                       <Icon name="refresh-cw" size={24} color="#FFFFFF" />
                       <Text style={s.resultTitle}>Image did not load. Tap to retry.</Text>
                     </TouchableOpacity>
                   )}
-                </View>
+                  {!imageLoading && !imageLoadFailed && (
+                    <View style={s.openHint}>
+                      <Icon name="maximize-2" size={13} color="#FFFFFF" />
+                      <Text style={s.openHintText}>Tap to open</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
               ) : (
                 <View style={s.resultEmpty}>
                   <Icon name="image" size={44} color="rgba(190,155,255,0.48)" />
@@ -420,10 +561,10 @@ export default function MangaStoryScreen() {
       <View style={[s.generateBar, { paddingBottom: bottomPad }]}>
         {generated ? (
           <View style={s.resultActions}>
-            <ActionButton icon="share-2" label="Share" onPress={shareManga} />
-            <ActionButton icon={posted ? 'check' : 'send'} label={posted ? 'Posted' : posting ? 'Posting…' : 'Post'} onPress={postManga} disabled={posting || posted} primary />
-            <ActionButton icon="flag" label="Report" onPress={() => setReportVisible(true)} />
-            <ActionButton icon="plus" label="Next" onPress={createNextManga} />
+            <ActionButton icon="share-2" label="Share" onPress={shareManga} disabled={!!lifecycleBusy} />
+            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} />
+            <ActionButton icon={posted ? 'check' : 'send'} label={posted ? 'Posted' : posting ? 'Posting…' : 'Post'} onPress={postManga} disabled={!!lifecycleBusy || posted} primary />
+            <ActionButton icon="maximize-2" label="Open" onPress={() => setPreviewVisible(true)} disabled={!!lifecycleBusy} />
           </View>
         ) : (
         <TouchableOpacity style={s.generateBtn} onPress={generateStory} disabled={generating} activeOpacity={0.86}>
@@ -449,6 +590,37 @@ export default function MangaStoryScreen() {
         targetType="manga_generation"
         targetId={generationId ?? ''}
       />
+      <Modal
+        visible={previewVisible}
+        animationType="fade"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setPreviewVisible(false)}
+      >
+        <View style={s.previewRoot}>
+          <LinearGradient colors={['#08051A', '#030208']} style={StyleSheet.absoluteFill} />
+          <View style={[s.previewHeader, { paddingTop: topPad + 8 }]}>
+            <TouchableOpacity style={s.previewClose} onPress={() => setPreviewVisible(false)}>
+              <Icon name="x" size={21} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={s.previewTitle}>Your Manga</Text>
+            <View style={s.previewHeaderSpacer} />
+          </View>
+          <View style={s.previewImageWrap}>
+            {!!generatedImageUri && (
+              <Image source={{ uri: generatedImageUri }} style={s.previewImage} contentFit="contain" cachePolicy="memory-disk" />
+            )}
+          </View>
+          <View style={[s.previewActions, { paddingBottom: bottomPad }]}>
+            <ActionButton icon="share-2" label="Share" onPress={shareManga} disabled={!!lifecycleBusy} />
+            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} primary />
+            <ActionButton icon="flag" label="Report" disabled={!!lifecycleBusy} onPress={() => {
+              setPreviewVisible(false);
+              setTimeout(() => setReportVisible(true), 250);
+            }} />
+            <ActionButton icon="trash-2" label={deleting ? 'Deleting…' : 'Delete'} onPress={deleteManga} disabled={!!lifecycleBusy} />
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -550,6 +722,8 @@ const s = StyleSheet.create({
   resultText: { fontSize: 9.5, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(201,184,226,0.42)', textAlign: 'center' },
   generatedGrid: { width: '100%', aspectRatio: 1, padding: 3 },
   generatedImage: { width: '100%', height: '100%', borderRadius: 9, backgroundColor: '#171126' },
+  openHint: { position: 'absolute', right: 10, bottom: 10, height: 28, paddingHorizontal: 10, borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(8,5,22,0.76)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' },
+  openHintText: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
   imageStatus: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: 'rgba(7,5,18,0.72)' },
   error: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, backgroundColor: 'rgba(255,83,126,0.10)', borderWidth: 1, borderColor: 'rgba(255,83,126,0.22)' },
   errorText: { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#FFB0C1' },
@@ -561,6 +735,14 @@ const s = StyleSheet.create({
   actionBtnPrimary: { backgroundColor: '#8D35FF', borderColor: '#B778FF' },
   actionBtnDisabled: { opacity: 0.55 },
   actionLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
+  previewRoot: { flex: 1, backgroundColor: '#030208' },
+  previewHeader: { minHeight: 64, paddingHorizontal: 16, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  previewClose: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
+  previewTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
+  previewHeaderSpacer: { width: 42, height: 42 },
+  previewImageWrap: { flex: 1, paddingHorizontal: 10, paddingVertical: 8, alignItems: 'center', justifyContent: 'center' },
+  previewImage: { width: '100%', height: '100%' },
+  previewActions: { paddingHorizontal: 14, paddingTop: 12, flexDirection: 'row', gap: 7, backgroundColor: 'rgba(8,5,22,0.96)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
   generateText: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
   generateArrow: { position: 'absolute', right: 10, width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(36,24,174,0.72)' },
 });

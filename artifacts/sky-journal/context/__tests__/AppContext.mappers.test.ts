@@ -379,6 +379,16 @@ describe('toAppStory', () => {
     const result = toAppStory({ ...base, pages });
     expect(result.pages).toEqual(pages);
   });
+
+  it('resolves relative manga image URIs inside page panels', () => {
+    const pages = [{
+      id: 'pg1',
+      layoutKey: '1',
+      panels: [{ id: 'panel-1', text: '', imageUri: '/api/images/manga_test.png' }],
+    }];
+    const result = toAppStory({ ...base, pages }, 'https://api.example.com/api');
+    expect(result.pages?.[0].panels[0].imageUri).toBe('https://api.example.com/api/images/manga_test.png');
+  });
 });
 
 // ── toAppOutfit ───────────────────────────────────────────────────────────────
@@ -571,5 +581,15 @@ describe('toRawDiscoverPost', () => {
     const pages = [{ id: 'pg1', layoutKey: 'lk', panels: [] }];
     const result = toRawDiscoverPost({ id: 'p1', pages });
     expect(result.pages).toEqual(pages);
+  });
+
+  it('resolves relative manga image URIs inside discover page panels', () => {
+    const pages = [{
+      id: 'pg1',
+      layoutKey: '1',
+      panels: [{ id: 'panel-1', text: '', imageUri: '/api/images/manga_test.png' }],
+    }];
+    const result = toRawDiscoverPost({ id: 'p1', pages }, 'https://api.example.com/api');
+    expect(result.pages?.[0].panels[0].imageUri).toBe('https://api.example.com/api/images/manga_test.png');
   });
 });

@@ -325,6 +325,23 @@ export function resolveUri(
   return `${domainBase}${uri}`;
 }
 
+function resolveStoryPages(pages: unknown[], apiBase?: string): StoryPage[] {
+  return pages.map((rawPage, pageIndex) => {
+    const page = (rawPage ?? {}) as Partial<StoryPage>;
+    const panels = Array.isArray(page.panels) ? page.panels : [];
+    return {
+      id: page.id ?? `page-${pageIndex + 1}`,
+      layoutKey: page.layoutKey ?? '1',
+      panels: panels.map((panel, panelIndex) => ({
+        ...panel,
+        id: panel.id ?? `panel-${panelIndex + 1}`,
+        text: panel.text ?? '',
+        imageUri: resolveUri(panel.imageUri, apiBase),
+      })),
+    };
+  });
+}
+
 export function relativeTimeDiscover(dateStr: string): string {
   const diff  = Date.now() - new Date(dateStr).getTime();
   const mins  = Math.floor(diff / 60_000);
@@ -409,7 +426,7 @@ export function toAppStory(raw: RawStoryResponse, apiBase?: string): Story {
     stickerCount:      raw.stickerCount   ?? 0,
     witnessMilestones: Array.isArray(raw.witnessMilestones) ? raw.witnessMilestones : [],
     pageLayoutKey:     raw.pageLayoutKey  ?? raw.page_layout_key ?? undefined,
-    pages:             Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
+    pages:             Array.isArray(raw.pages) ? resolveStoryPages(raw.pages, apiBase) : undefined,
     contentType:       raw.contentType === 'video' ? 'video' : 'story',
     videoUri:          resolveUri(raw.videoUri ?? undefined, apiBase) ?? null,
     thumbnailUri:      resolveUri(raw.thumbnailUri ?? undefined, apiBase) ?? null,
@@ -460,7 +477,7 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
       imageUri: resolveUri(p.imageUri ?? undefined, apiBase),
       overlays: Array.isArray(p.overlays) ? (p.overlays as PanelOverlay[]) : undefined,
     })) : [],
-    pages:            Array.isArray(raw.pages) ? (raw.pages as StoryPage[]) : undefined,
+    pages:            Array.isArray(raw.pages) ? resolveStoryPages(raw.pages, apiBase) : undefined,
     pageLayoutKey:    raw.pageLayoutKey ?? undefined,
     bookId:           raw.bookId,
     bookTitle:        raw.bookTitle,

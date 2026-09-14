@@ -147,23 +147,24 @@ router.post("/stories", requireAuth, async (req, res) => {
       thumbnailUri:  rest.thumbnailUri ?? null,
     };
 
-    const [created] = await db
+    const [inserted] = await db
       .insert(storiesTable)
       .values(insertValues)
-      .onConflictDoUpdate({
-        target: storiesTable.id,
-        set: {
-          userId, date: new Date(date), panels: sanitizedPanels,
-          pageLayoutKey: rest.pageLayoutKey ?? null,
-          pages: (rest.pages ?? null) as StoryPageDB[] | null,
-          chapterTitle: rest.chapterTitle, description: rest.description ?? '',
-          mood: rest.mood, location: rest.location, isPublic: rest.isPublic,
-          contentType: rest.contentType ?? 'story',
-          videoUri:    rest.videoUri ?? null,
-          thumbnailUri: rest.thumbnailUri ?? null,
-        },
-      })
+      .onConflictDoNothing({ target: storiesTable.id })
       .returning();
+
+    if (!inserted) {
+      const [existing] = await db
+        .select()
+        .from(storiesTable)
+        .where(eq(storiesTable.id, id!))
+        .limit(1);
+      if (!existing || existing.userId !== userId) {
+        return res.status(409).json({ error: "A story with this id already exists" });
+      }
+      return res.status(200).json(serializeStory(existing));
+    }
+    const created = inserted;
 
     // L-3: Mark every panel image as claimed so the orphan-cleanup interval
     // won't delete files that are intentionally referenced by this story.

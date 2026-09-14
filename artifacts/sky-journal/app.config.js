@@ -37,8 +37,8 @@ module.exports = ({ config }) => ({
       projectId: config.extra?.eas?.projectId,
     },
     apiUrl: process.env.PRODUCTION_API_URL
-      ?? (process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}/api`
+      ?? ((process.env.EXPO_PUBLIC_DOMAIN || process.env.REPLIT_DEV_DOMAIN)
+        ? `https://${process.env.EXPO_PUBLIC_DOMAIN || process.env.REPLIT_DEV_DOMAIN}/api`
         : null),
   },
 });

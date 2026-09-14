@@ -50,6 +50,43 @@ function storageFilename(uri: string): string | null {
 
 const router: IRouter = Router();
 
+router.delete("/manga/:generationId", requireAuth, async (req: Request, res: Response) => {
+  const generationId = z.string().uuid().safeParse(req.params.generationId);
+  if (!generationId.success) {
+    return res.status(400).json({ error: "Invalid manga generation id" });
+  }
+
+  const userId = getUserId(req);
+  try {
+    const existing = await pool.query(
+      "SELECT image_uri FROM manga_generations WHERE id=$1 AND user_id=$2",
+      [generationId.data, userId],
+    );
+    if (!existing.rowCount) {
+      return res.status(404).json({ error: "Manga generation not found" });
+    }
+
+    const imageUri = existing.rows[0]?.image_uri as string | null | undefined;
+    const filename = imageUri ? storageFilename(imageUri) : null;
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (filename && bucketId) {
+      await objectStorageClient
+        .bucket(bucketId)
+        .file(`images/${filename}`)
+        .delete({ ignoreNotFound: true });
+    }
+
+    await pool.query(
+      "DELETE FROM manga_generations WHERE id=$1 AND user_id=$2",
+      [generationId.data, userId],
+    );
+    return res.status(204).end();
+  } catch (error) {
+    req.log.error({ err: error, generationId: generationId.data, userId }, "Failed to delete manga generation");
+    return res.status(500).json({ error: "Could not delete manga generation" });
+  }
+});
+
 router.post("/manga/generate", requireAuth, async (req: Request, res: Response) => {
   const parsed = BodySchema.safeParse(req.body);
   if (!parsed.success) {
