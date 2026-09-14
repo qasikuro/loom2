@@ -29,6 +29,7 @@ import { ToastProvider } from '@/components/Toast';
 import { AppProvider, setAuthTokenGetter, useApp, apiFetch, getAuthToken } from '@/context/AppContext';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
+import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
 
 // expo-notifications throws at import time in Expo Go SDK 53+ because Android push
@@ -358,20 +359,16 @@ export default function RootLayout() {
           when Expo Router initialised routes before fonts finished loading.
         */}
         <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache} proxyUrl={clerkProxyUrl}>
-          {/* Show a spinner while fonts load (AppSplashScreen overlays this) */}
-          {!fontsReady ? (
-            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1A1630' }}>
-              <ActivityIndicator size="large" color="#C8A84B" />
-            </View>
-          ) : (
-            <>
-            <ClerkLoading>
-              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1A1630' }}>
-                <ActivityIndicator size="large" color="#C8A84B" />
-              </View>
-            </ClerkLoading>
-            <ClerkLoaded>
-              <SafeAreaProvider>
+          <SafeAreaProvider>
+            {/* Show a spinner while fonts load (AppSplashScreen overlays this) */}
+            {!fontsReady ? (
+              <SkyLoadingOverlay />
+            ) : (
+              <>
+              <ClerkLoading>
+                <SkyLoadingOverlay />
+              </ClerkLoading>
+              <ClerkLoaded>
                 <ErrorBoundary>
                   <QueryClientProvider client={queryClient}>
                     <SoundProvider>
@@ -460,15 +457,15 @@ export default function RootLayout() {
                     </SoundProvider>
                   </QueryClientProvider>
                 </ErrorBoundary>
-              </SafeAreaProvider>
-            </ClerkLoaded>
-            </>
-          )}
+              </ClerkLoaded>
+              </>
+            )}
+          </SafeAreaProvider>
         </ClerkProvider>
 
         {/* Custom splash — overlays everything, fades out when ready */}
         {!splashDone && (
-          <AppSplashScreen onReady={handleSplashReady} />
+           <AppSplashScreen onReady={handleSplashReady} ready={fontsReady} />
         )}
       </ThemedRoot>
     </ThemeProvider>

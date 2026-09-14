@@ -9,7 +9,6 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   FlatList,
   Platform,
@@ -32,6 +31,7 @@ import { Icon } from '@/components/Icon';
 import { useApiFetch } from '../utils/apiClient';
 import type { PanelOverlay } from '@/context/AppContext';
 import { Images } from '@/assets/images/index';
+import { SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -211,12 +211,15 @@ export default function ChapterReaderScreen() {
 
   // Load chapter
   useEffect(() => {
-    if (!chapterId) return;
+    if (!chapterId || !bookId) {
+      setLoading(false);
+      return;
+    }
     apiFetch<ChapterData>(`/chapters/${chapterId}/read`)
       .then(data => setChapter(data))
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [chapterId]);
+  }, [chapterId, bookId]);
 
   // Auto-hide controls
   useEffect(() => {
@@ -270,9 +273,16 @@ export default function ChapterReaderScreen() {
   // ── Loading / Error ────────────────────────────────────────────────────────
 
   if (loading) {
+    return <View style={styles.root}><SkyLoadingOverlay message="Opening chapter…" /></View>;
+  }
+
+  if (!chapterId || !bookId) {
     return (
-      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={ACCENT} size="large" />
+      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={styles.errorTxt}>This chapter link is missing an ID.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+          <Text style={{ color: ACCENT, fontSize: 14 }}>Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }

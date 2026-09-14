@@ -4,7 +4,6 @@
  */
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   StyleSheet,
@@ -19,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
+import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -63,9 +63,13 @@ export default function BookDetailsScreen() {
   const [descDraft,  setDescDraft]  = useState('');
   const [descFocused, setDescFocused] = useState(false);
   const [descSaving, setDescSaving] = useState(false);
+  const [deletingChapterId, setDeletingChapterId] = useState<string | null>(null);
 
   async function loadData() {
-    if (!bookId) return;
+    if (!bookId) {
+      setLoading(false);
+      return;
+    }
     try {
       const [bookData, chapData] = await Promise.all([
         fetch<Book>(`/books/${bookId}`),
@@ -127,12 +131,15 @@ export default function BookDetailsScreen() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete', style: 'destructive', onPress: async () => {
+          setDeletingChapterId(chapterId);
           try {
             await fetch<void>(`/chapters/${chapterId}`, { method: 'DELETE' });
             setChapters(prev => prev.filter(c => c.id !== chapterId));
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           } catch {
             Alert.alert('Error', 'Could not delete chapter');
+          } finally {
+            setDeletingChapterId(null);
           }
         },
       },
@@ -184,7 +191,9 @@ export default function BookDetailsScreen() {
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             style={s.actionBtn}
           >
-            <Icon name="trash-2" size={14} color="rgba(200,185,255,0.28)" />
+            {deletingChapterId === item.id
+              ? <SkyLoadingMark size={17} />
+              : <Icon name="trash-2" size={14} color="rgba(200,185,255,0.28)" />}
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -192,9 +201,16 @@ export default function BookDetailsScreen() {
   }
 
   if (loading) {
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Opening your book…" /></View>;
+  }
+
+  if (!bookId) {
     return (
-      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={accent} />
+      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={s.emptyTxt}>This book link is missing an ID.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+          <Text style={{ color: accent, fontSize: 14 }}>Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -261,7 +277,7 @@ export default function BookDetailsScreen() {
               disabled={descSaving}
             >
               {descSaving
-                ? <ActivityIndicator size="small" color="#fff" />
+                ? <SkyLoadingMark size={17} color="#fff" />
                 : <Text style={s.descSaveTxt}>Save</Text>}
             </TouchableOpacity>
           )}
@@ -294,7 +310,7 @@ export default function BookDetailsScreen() {
           activeOpacity={0.85}
         >
           {adding
-            ? <ActivityIndicator color="#fff" size="small" />
+            ? <SkyLoadingMark size={18} color="#fff" />
             : <>
                 <Icon name="plus" size={16} color="#fff" />
                 <Text style={s.fabTxt}>New Chapter</Text>

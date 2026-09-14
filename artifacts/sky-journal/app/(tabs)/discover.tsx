@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import { DiscoverCard } from '@/components/DiscoverCard';
 import { DiscoverVideoPlayerModal } from '@/components/DiscoverVideoPlayerModal';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
+import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { ReportSheet } from '@/components/ReportSheet';
 import { MoodDoorModal } from '@/components/MoodDoorModal';
 import { apiFetch, useApp } from '@/context/AppContext';
@@ -14,7 +15,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   RefreshControl,
@@ -294,7 +294,7 @@ export default function DiscoverScreen() {
               <Text style={styles.headerTitle}>{t('discover.title')}</Text>
               {isRefreshing && !refreshing && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.12)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
-                  <ActivityIndicator size="small" color="rgba(200,184,232,0.55)" style={{ transform: [{ scale: 0.55 }] }} />
+                  <SkyLoadingMark size={14} color="rgba(200,184,232,0.7)" />
                   <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' }}>Updating</Text>
                 </View>
               )}
@@ -515,7 +515,9 @@ export default function DiscoverScreen() {
 
           {/* Loading */}
           {booksLoading && booksData.length === 0 ? (
-            <ActivityIndicator color="rgba(155,120,232,0.7)" style={{ marginTop: 40 }} />
+            <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 10 }}>
+              {[0, 1, 2].map(i => <LoadingCard key={i} style={{ opacity: 1 - i * 0.18 }} />)}
+            </View>
           ) : booksData.length === 0 ? (
             <View style={styles.emptyWrap}>
               <View style={[styles.emptyIconBox, { backgroundColor: 'rgba(155,120,232,0.12)' }]}>
@@ -698,7 +700,9 @@ export default function DiscoverScreen() {
 
           {/* Loading */}
           {guidesLoading ? (
-            <ActivityIndicator color="rgba(155,120,232,0.7)" style={{ marginTop: 40 }} />
+            <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 10 }}>
+              {[0, 1, 2].map(i => <LoadingCard key={i} style={{ opacity: 1 - i * 0.18 }} />)}
+            </View>
           ) : guidesData.length === 0 ? (
             <View style={styles.emptyWrap}>
               <View style={[styles.emptyIconBox, { backgroundColor: 'rgba(155,120,232,0.12)' }]}>
@@ -819,7 +823,7 @@ export default function DiscoverScreen() {
               returnKeyType="search"
             />
             {peopleLoading && (
-              <ActivityIndicator size="small" color={colors.primary} />
+              <SkyLoadingMark size={16} color={colors.primary} />
             )}
             {!peopleLoading && peopleQuery.length > 0 && (
               <TouchableOpacity

@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { useAuth } from '@clerk/expo';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -10,7 +11,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Platform,
   ScrollView,
@@ -107,7 +107,11 @@ export default function GuideProfileScreen() {
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 110;
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setError('This guide link is missing a user.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     apiFetch<GuideProfile>(`/guides/${userId}`)
       .then(g => {
@@ -144,7 +148,9 @@ export default function GuideProfileScreen() {
     return (
       <View style={[styles.loadWrap, { backgroundColor: colors.background, paddingTop: topPad }]}>
         <BackButton />
-        <ActivityIndicator color={colors.primary} size="large" style={{ marginTop: 80 }} />
+        <View style={{ flex: 1 }}>
+          <SkyLoadingOverlay message="Finding this guide…" />
+        </View>
       </View>
     );
   }

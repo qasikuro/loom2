@@ -5,7 +5,6 @@
  */
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -22,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
+import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -62,19 +62,24 @@ export default function PublishChapterScreen() {
   const [chapter,    setChapter]    = useState<ChapterDetail | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [publishing, setPublishing] = useState(false);
+  const [publishingStatus, setPublishingStatus] = useState<'published' | 'draft' | null>(null);
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
 
   useFocusEffect(useCallback(() => {
-    if (!chapterId) return;
+    if (!chapterId || !bookId) {
+      setLoading(false);
+      return;
+    }
     apiFetch<ChapterDetail>(`/chapters/${chapterId}`)
       .then(data => { setChapter(data); })
       .catch(() => Alert.alert('Error', 'Could not load chapter'))
       .finally(() => setLoading(false));
-  }, [chapterId]));
+  }, [chapterId, bookId]));
 
   async function publish(status: 'published' | 'draft') {
     if (!chapterId) return;
     setPublishing(true);
+    setPublishingStatus(status);
     try {
       await apiFetch<ChapterDetail>(`/chapters/${chapterId}`, {
         method: 'PATCH',
@@ -90,6 +95,7 @@ export default function PublishChapterScreen() {
       Alert.alert('Error', err instanceof Error ? err.message : 'Could not update chapter');
     } finally {
       setPublishing(false);
+      setPublishingStatus(null);
     }
   }
 
@@ -108,9 +114,16 @@ export default function PublishChapterScreen() {
   const isPublished = chapter?.status === 'published';
 
   if (loading) {
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Preparing your chapter…" /></View>;
+  }
+
+  if (!chapterId || !bookId) {
     return (
-      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={accent} />
+      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>This publish link is missing a chapter ID.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+          <Text style={{ color: '#8B70C8', fontSize: 14 }}>Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -210,8 +223,10 @@ export default function PublishChapterScreen() {
             onPress={() => publish('draft')}
             disabled={publishing}
           >
-            <Icon name="edit-3" size={14} color="rgba(200,185,255,0.70)" />
-            <Text style={s.draftBtnTxt}>Save as Draft</Text>
+            {publishingStatus === 'draft'
+              ? <SkyLoadingMark size={18} color="rgba(200,185,255,0.70)" />
+              : <Icon name="edit-3" size={14} color="rgba(200,185,255,0.70)" />}
+            <Text style={s.draftBtnTxt}>{publishingStatus === 'draft' ? 'Saving…' : 'Save as Draft'}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -220,7 +235,7 @@ export default function PublishChapterScreen() {
             disabled={publishing}
           >
             {publishing
-              ? <ActivityIndicator color="#fff" size="small" />
+              ? <SkyLoadingMark size={18} color="#fff" />
               : <>
                   <Icon name="send" size={15} color="#fff" />
                   <Text style={s.publishBtnTxt}>Publish Chapter</Text>

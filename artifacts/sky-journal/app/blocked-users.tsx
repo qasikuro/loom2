@@ -1,11 +1,11 @@
 import { Icon } from '@/components/Icon';
+import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch, resolveUri, useApp } from '@/context/AppContext';
 import { safeBack } from '@/utils/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -96,9 +96,12 @@ export default function BlockedUsersScreen() {
 
       {/* ── Content ── */}
       {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator color="rgba(200,184,232,0.6)" />
-        </View>
+        <ScrollView
+          contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 40 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {[0, 1, 2].map(i => <LoadingCard key={i} style={{ opacity: 1 - i * 0.18 }} />)}
+        </ScrollView>
       ) : hasError ? (
         <View style={s.center}>
           <View style={s.emptyIconWrap}>
@@ -157,7 +160,7 @@ export default function BlockedUsersScreen() {
                   activeOpacity={0.75}
                 >
                   {isPending ? (
-                    <ActivityIndicator size="small" color="rgba(200,184,232,0.6)" style={{ width: 52 }} />
+                    <SkyLoadingMark size={20} color="rgba(200,184,232,0.7)" />
                   ) : (
                     <Text style={s.unblockText}>Unblock</Text>
                   )}

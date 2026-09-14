@@ -7,7 +7,6 @@
  */
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -21,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
+import { LoadingCard } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -160,8 +160,10 @@ export default function MyBooksScreen() {
 
       {/* Body */}
       {loading && !books.length ? (
-        <View style={s.center}>
-          <ActivityIndicator color={accentColor} size="large" />
+        <View style={s.loadingList}>
+          <LoadingCard />
+          <LoadingCard />
+          <LoadingCard />
         </View>
       ) : error ? (
         <View style={s.center}>
@@ -241,6 +243,7 @@ const s = StyleSheet.create({
   newBtnTxt: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   list: { paddingHorizontal: 16, paddingTop: 6 },
+  loadingList: { paddingHorizontal: 16, paddingTop: 14, gap: 10 },
 
   bookRow: {
     flexDirection: 'row', alignItems: 'center', gap: 12,

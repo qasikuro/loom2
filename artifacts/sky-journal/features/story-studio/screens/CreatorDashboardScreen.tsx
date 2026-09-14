@@ -1,6 +1,5 @@
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
+import { SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -178,11 +178,7 @@ export default function CreatorDashboardScreen() {
   const topPad = insets.top + 10;
 
   if (loading && !dashboard) {
-    return (
-      <View style={[s.root, s.center]}>
-        <ActivityIndicator color={accentColor} size="large" />
-      </View>
-    );
+    return <View style={s.root}><SkyLoadingOverlay message="Gathering your studio insights…" /></View>;
   }
 
   return (

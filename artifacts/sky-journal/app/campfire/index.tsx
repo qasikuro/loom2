@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   FlatList,
@@ -23,6 +22,7 @@ import { safeBack } from '@/utils/navigation';
 import * as Haptics from 'expo-haptics';
 
 import { Icon } from '@/components/Icon';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch } from '@/context/AppContext';
 import { useApp } from '@/context/AppContext';
 
@@ -261,7 +261,7 @@ function KindleSheet({
           activeOpacity={0.78}
         >
           {busy ? (
-            <ActivityIndicator color="#fff" size="small" />
+            <SkyLoadingMark size={20} color="#fff" />
           ) : (
             <Text style={ks.confirmText}>Kindle</Text>
           )}
@@ -427,7 +427,8 @@ export default function CampfireLobby() {
       {/* Room grid */}
       {loading ? (
         <View style={L.centre}>
-          <ActivityIndicator color="rgba(155,120,232,0.8)" size="large" />
+          <SkyLoadingMark size={42} color="rgba(155,120,232,0.85)" />
+          <Text style={[L.loadingText, { marginTop: 14 }]}>Gathering the live fires…</Text>
         </View>
       ) : (
         <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
@@ -505,6 +506,7 @@ const L = StyleSheet.create({
   },
   kindleBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.85)' },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  loadingText: { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.55)' },
   grid:   { paddingTop: 24, maxWidth: 760 },
   intro:  { paddingHorizontal: 20, marginBottom: 20, alignItems: 'center' },
   introText: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.38)', fontStyle: 'italic', textAlign: 'center' },

@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -27,6 +26,7 @@ import { Images } from '@/assets/images';
 import { apiFetch, ApiError, resolveUri, useApp } from '@/context/AppContext';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
 import { ReportSheet } from '@/components/ReportSheet';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 type MangaStyle = 'manga' | 'color' | 'chibi' | 'cinematic' | 'webtoon';
 type PendingAttempt = {
@@ -75,6 +75,7 @@ export default function MangaStoryScreen() {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageLoadFailed, setImageLoadFailed] = useState(false);
   const [posting, setPosting] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [posted, setPosted] = useState(false);
   const [savedStoryId, setSavedStoryId] = useState<string | null>(null);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -225,7 +226,8 @@ export default function MangaStoryScreen() {
   }
 
   async function shareManga() {
-    if (!generatedImageUri) return;
+    if (!generatedImageUri || sharing) return;
+    setSharing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       if (Platform.OS === 'web') {
@@ -250,6 +252,8 @@ export default function MangaStoryScreen() {
       });
     } catch {
       setError('Could not open sharing. Please try again.');
+    } finally {
+      setSharing(false);
     }
   }
 
@@ -492,7 +496,7 @@ export default function MangaStoryScreen() {
             <View style={[s.result, generated && s.resultReady]}>
               {generating ? (
                 <View style={s.resultEmpty}>
-                  <ActivityIndicator size="large" color="#B55CFF" />
+                  <SkyLoadingMark size={44} color="#B55CFF" />
                   <Text style={s.resultTitle}>Creating your manga page…</Text>
                   <Text style={s.resultText}>Applying the {selectedStyle.label.replace('\n', ' ')} style</Text>
                 </View>
@@ -522,7 +526,7 @@ export default function MangaStoryScreen() {
                       }}
                     />
                   )}
-                  {imageLoading && <ActivityIndicator style={s.imageStatus} size="large" color="#B55CFF" />}
+                  {imageLoading && <View style={s.imageStatus}><SkyLoadingMark size={40} color="#B55CFF" /></View>}
                   {imageLoadFailed && (
                     <TouchableOpacity style={s.imageStatus} onPress={() => {
                       setImageLoadFailed(false);
@@ -577,9 +581,9 @@ export default function MangaStoryScreen() {
       <View style={[s.generateBar, { paddingBottom: bottomPad }]}>
         {generated ? (
           <View style={s.resultActions}>
-            <ActionButton icon="share-2" label="Share" onPress={shareManga} disabled={!!lifecycleBusy} />
-            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} />
-            <ActionButton icon={posted ? 'check' : 'send'} label={posted ? 'Posted' : posting ? 'Posting…' : 'Post'} onPress={postManga} disabled={!!lifecycleBusy || posted} primary />
+            <ActionButton icon="share-2" label={sharing ? 'Sharing…' : 'Share'} onPress={shareManga} disabled={!!lifecycleBusy || sharing} loading={sharing} />
+            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} loading={lifecycleBusy === 'saving'} />
+            <ActionButton icon={posted ? 'check' : 'send'} label={posted ? 'Posted' : posting ? 'Posting…' : 'Post'} onPress={postManga} disabled={!!lifecycleBusy || posted} loading={posting} primary />
             <ActionButton icon="maximize-2" label="Open" onPress={() => setPreviewVisible(true)} disabled={!!lifecycleBusy} />
           </View>
         ) : (
@@ -590,7 +594,7 @@ export default function MangaStoryScreen() {
             end={{ x: 1, y: 0.5 }}
             style={StyleSheet.absoluteFill}
           />
-          {generating ? <ActivityIndicator color="#FFFFFF" /> : <Icon name="star" size={20} color="#FFFFFF" />}
+          {generating ? <SkyLoadingMark size={22} color="#FFFFFF" /> : <Icon name="star" size={20} color="#FFFFFF" />}
           <Text style={s.generateText}>{generating ? 'Generating…' : generated ? 'Generate Again' : 'Generate Manga Story'}</Text>
           {!generating && (
             <View style={s.generateArrow}>
@@ -627,13 +631,13 @@ export default function MangaStoryScreen() {
             )}
           </View>
           <View style={[s.previewActions, { paddingBottom: bottomPad }]}>
-            <ActionButton icon="share-2" label="Share" onPress={shareManga} disabled={!!lifecycleBusy} />
-            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} primary />
+            <ActionButton icon="share-2" label={sharing ? 'Sharing…' : 'Share'} onPress={shareManga} disabled={!!lifecycleBusy || sharing} loading={sharing} />
+            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} loading={lifecycleBusy === 'saving'} primary />
             <ActionButton icon="flag" label="Report" disabled={!!lifecycleBusy} onPress={() => {
               setPreviewVisible(false);
               setTimeout(() => setReportVisible(true), 250);
             }} />
-            <ActionButton icon="trash-2" label={deleting ? 'Deleting…' : 'Delete'} onPress={deleteManga} disabled={!!lifecycleBusy} />
+            <ActionButton icon="trash-2" label={deleting ? 'Deleting…' : 'Delete'} onPress={deleteManga} disabled={!!lifecycleBusy} loading={deleting} />
           </View>
         </View>
       </Modal>
@@ -641,11 +645,12 @@ export default function MangaStoryScreen() {
   );
 }
 
-function ActionButton({ icon, label, onPress, disabled, primary }: {
+function ActionButton({ icon, label, onPress, disabled, loading, primary }: {
   icon: string;
   label: string;
   onPress: () => void;
   disabled?: boolean;
+  loading?: boolean;
   primary?: boolean;
 }) {
   return (
@@ -654,7 +659,7 @@ function ActionButton({ icon, label, onPress, disabled, primary }: {
       onPress={onPress}
       disabled={disabled}
     >
-      <Icon name={icon} size={18} color="#FFFFFF" />
+      {loading ? <SkyLoadingMark size={18} color="#FFFFFF" /> : <Icon name={icon} size={18} color="#FFFFFF" />}
       <Text style={s.actionLabel}>{label}</Text>
     </TouchableOpacity>
   );

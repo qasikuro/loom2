@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Image } from 'expo-image';
@@ -7,7 +8,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   Platform,
@@ -52,6 +52,7 @@ export default function MessagesInboxScreen() {
   const [threads,  setThreads]  = useState<Thread[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
+  const [clearingId, setClearingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -111,6 +112,7 @@ export default function MessagesInboxScreen() {
                   onPress: async () => {
                     // Remove from list immediately for instant feedback
                     setThreads(prev => prev.filter(t => t.partnerId !== thread.partnerId));
+                    setClearingId(thread.partnerId);
                     try {
                       await apiFetch(`/messages/conversation/${thread.partnerId}`, { method: 'DELETE' });
                     } catch {
@@ -119,6 +121,8 @@ export default function MessagesInboxScreen() {
                         (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
                       ));
                       Alert.alert('Error', 'Could not clear the conversation. Try again.');
+                    } finally {
+                      setClearingId(null);
                     }
                   },
                 },
@@ -183,6 +187,7 @@ export default function MessagesInboxScreen() {
         {item.unread && (
           <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
         )}
+        {clearingId === item.partnerId && <SkyLoadingMark size={18} color={colors.primary} />}
       </TouchableOpacity>
     );
   };
@@ -211,8 +216,8 @@ export default function MessagesInboxScreen() {
 
       {/* Body */}
       {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
+        <View style={{ width: Math.min(windowWidth, 680), alignSelf: 'center', padding: 16, gap: 10 }}>
+          {[0, 1, 2, 3].map(i => <LoadingCard key={i} style={{ opacity: 1 - i * 0.16 }} />)}
         </View>
       ) : error ? (
         <View style={styles.center}>

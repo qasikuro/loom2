@@ -4,7 +4,6 @@
  */
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   StyleSheet,
@@ -18,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
+import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -43,7 +43,10 @@ export default function ChaptersListScreen() {
   const [saving,   setSaving]   = useState(false);
 
   async function loadChapters() {
-    if (!bookId) return;
+    if (!bookId) {
+      setLoading(false);
+      return;
+    }
     try {
       const data = await fetch<Chapter[]>(`/books/${bookId}/chapters`);
       setChapters(data.sort((a, b) => a.orderIndex - b.orderIndex));
@@ -137,9 +140,16 @@ export default function ChaptersListScreen() {
   }
 
   if (loading) {
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Loading chapters…" /></View>;
+  }
+
+  if (!bookId) {
     return (
-      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color="#8B70C8" />
+      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={s.emptyTxt}>This chapter link is missing a book ID.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+          <Text style={{ color: '#8B70C8', fontSize: 14 }}>Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -152,7 +162,7 @@ export default function ChaptersListScreen() {
         </TouchableOpacity>
         <Text style={s.headerTitle}>All Chapters</Text>
         {saving
-          ? <ActivityIndicator size="small" color="#8B70C8" style={{ width: 36 }} />
+          ? <SkyLoadingMark size={18} color="#8B70C8" />
           : <View style={{ width: 36 }} />}
       </View>
 

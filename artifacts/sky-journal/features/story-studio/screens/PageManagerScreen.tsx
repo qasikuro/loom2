@@ -5,7 +5,6 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   ScrollView,
@@ -22,6 +21,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { DraftStore } from '../utils/draftStore';
+import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -87,7 +87,10 @@ export default function PageManagerScreen() {
   const dirtyRef = useRef(false);
 
   async function loadChapter() {
-    if (!chapterId) return;
+    if (!chapterId || !bookId) {
+      setLoading(false);
+      return;
+    }
     try {
       const data = await apiFetch<ChapterDetail>(`/chapters/${chapterId}`);
       setChapter(data);
@@ -108,7 +111,7 @@ export default function PageManagerScreen() {
     } else {
       void loadChapter();
     }
-  }, [chapterId]));
+  }, [chapterId, bookId]));
 
   async function persistPages(updatedPages: Page[]) {
     if (!chapterId) return;
@@ -189,9 +192,16 @@ export default function PageManagerScreen() {
   const accent = '#8B70C8';
 
   if (loading) {
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Loading pages…" /></View>;
+  }
+
+  if (!chapterId || !bookId) {
     return (
-      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={accent} />
+      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>This page link is missing a chapter ID.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+          <Text style={{ color: '#8B70C8', fontSize: 14 }}>Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -205,7 +215,7 @@ export default function PageManagerScreen() {
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.headerTitle} numberOfLines={1}>{chapter?.title ?? 'Pages'}</Text>
-          {saving && <ActivityIndicator size="small" color={accent} style={{ marginLeft: 8 }} />}
+          {saving && <SkyLoadingMark size={18} color={accent} />}
         </View>
         <TouchableOpacity
           onPress={() => router.push(`/publish-chapter?chapterId=${chapterId}&bookId=${bookId}` as never)}

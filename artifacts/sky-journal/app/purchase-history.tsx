@@ -1,10 +1,10 @@
 import { Icon } from '@/components/Icon';
+import { LoadingCard } from '@/components/SkyLoading';
 import { apiFetch } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Platform,
   ScrollView,
   StyleSheet,
@@ -103,9 +103,12 @@ export default function PurchaseHistoryScreen() {
 
       {/* ── Content ── */}
       {loading ? (
-        <View style={s.center}>
-          <ActivityIndicator color="#C8A84B" />
-        </View>
+        <ScrollView
+          contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 40 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {[0, 1, 2].map(i => <LoadingCard key={i} style={{ opacity: 1 - i * 0.18 }} />)}
+        </ScrollView>
       ) : hasError ? (
         <View style={s.center}>
           <Text style={{ fontSize: 32, marginBottom: 8 }}>✦</Text>

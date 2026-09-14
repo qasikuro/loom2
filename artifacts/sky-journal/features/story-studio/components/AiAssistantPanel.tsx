@@ -8,7 +8,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Modal,
   ScrollView,
@@ -21,6 +20,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApiFetch } from '../utils/apiClient';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -206,7 +206,7 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
         {loading && (
           <View style={s.loadingArea}>
             <View style={s.loadingCard}>
-              <ActivityIndicator color="#9B7FE8" size="large" />
+              <SkyLoadingMark color="#9B7FE8" size={42} />
               <Text style={s.loadingTitle}>
                 {TOOLS.find(t => t.key === activeTool)?.label ?? 'Writing'} …
               </Text>

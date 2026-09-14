@@ -57,6 +57,7 @@ vi.mock('react-native-safe-area-context', () => ({
 }));
 
 vi.mock('@/components/AppSplashScreen', () => ({ AppSplashScreen: () => null }));
+vi.mock('@/components/SkyLoading',      () => ({ SkyLoadingOverlay: () => null }));
 vi.mock('@/components/XPFlash',         () => ({ XPFlash: () => null }));
 vi.mock('@/components/ErrorBoundary',   () => ({ ErrorBoundary: ({ children }: { children: unknown }) => children }));
 vi.mock('@/components/Toast',           () => ({ ToastProvider: ({ children }: { children: unknown }) => children }));

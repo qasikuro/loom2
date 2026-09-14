@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal } from '@/components/Toast';
@@ -13,7 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -309,7 +309,11 @@ export default function MessagesScreen() {
   }, [drainStickerQueue]);
 
   const load = useCallback(async () => {
-    if (!userId) return;
+    if (!userId) {
+      setError('This conversation link is missing a user.');
+      setLoading(false);
+      return;
+    }
     try {
       const data = await apiFetch<Message[]>(`/messages/${userId}`);
       const msgs = data ?? [];
@@ -583,7 +587,7 @@ export default function MessagesScreen() {
 
       {/* ── Messages ─────────────────────────────────────────── */}
       {loading ? (
-        <View style={styles.centerWrap}><ActivityIndicator color={PURPLE} /></View>
+        <SkyLoadingOverlay message="Opening your conversation…" />
       ) : error ? (
         <View style={styles.centerWrap}>
           <Text style={{ color: MUTED, fontFamily: 'Satoshi-Regular' }}>{error}</Text>
@@ -763,7 +767,7 @@ export default function MessagesScreen() {
               activeOpacity={0.8}
             >
               {sending
-                ? <ActivityIndicator size="small" color="rgba(255,255,255,0.8)" />
+                ? <SkyLoadingMark size={19} color="rgba(255,255,255,0.9)" />
                 : (
                   <LinearGradient
                     colors={input.trim() ? [PURPLE, PURPLE2] : ['rgba(107,78,232,0.25)', 'rgba(59,42,140,0.25)']}

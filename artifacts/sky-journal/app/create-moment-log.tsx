@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 const MOODS = [
   { label: 'Hopeful',  icon: 'sun'     as const, color: '#C8A84B' },
@@ -108,8 +109,9 @@ export default function CreateMomentLogScreen() {
           style={[styles.saveBtn, { backgroundColor: saving ? 'rgba(255,255,255,0.08)' : 'rgba(200,184,232,0.22)', borderColor: 'rgba(200,184,232,0.4)', borderWidth: 1 }]}
           onPress={handleSave} disabled={saving}
         >
+          {saving && <SkyLoadingMark size={16} color="rgba(200,184,232,0.4)" />}
           <Text style={[styles.saveBtnText, { color: saving ? 'rgba(200,184,232,0.4)' : 'rgba(200,184,232,0.9)' }]}>
-            {saving ? '...' : 'Save'}
+            {saving ? 'Saving…' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -189,7 +191,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.9)', flexShrink: 1 },
   privatePill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: 'rgba(200,184,232,0.1)' },
   privatePillText: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.7)' },
-  saveBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  saveBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
   saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   scroll: { paddingHorizontal: 18, paddingTop: 4 },
   promptCard: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 14 },

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  AccessibilityInfo,
   Easing,
   Keyboard,
   Modal,
@@ -104,6 +105,29 @@ async function clearDraft(uid: string): Promise<void> {
   try { await AsyncStorage.removeItem(draftKey(uid)); } catch { /* ignore */ }
 }
 
+function useReducedMotion(): boolean {
+  const [reducedMotion, setReducedMotion] = useState(true);
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then(enabled => {
+      if (mounted) setReducedMotion(enabled);
+    }).catch(() => {});
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReducedMotion);
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
+  return reducedMotion;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timed out')), timeoutMs)),
+  ]);
+}
+
 /** Earliest step that still needs a selection (used for invalid resume). */
 function earliestIncomplete(d: DraftState): number {
   if (!d.mood) return STEP_MOOD;
@@ -135,6 +159,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
   const [journalText, setJournalText]     = useState('');
   const [saving, setSaving]               = useState(false);
   const [seedError, setSeedError]         = useState(false);
+  const reducedMotion = useReducedMotion();
 
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const slideAnim  = useRef(new Animated.Value(0)).current;
@@ -147,14 +172,36 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       sc: new Animated.Value(1),
     }))
   ).current;
+  const emojiAnimationRef = useRef<Animated.CompositeAnimation | null>(null);
+  const emojiEntranceRef = useRef<Animated.CompositeAnimation | null>(null);
+  const sparkAnimationsRef = useRef<Animated.CompositeAnimation[]>([]);
+  const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function stopTrackedAnimations() {
+    emojiEntranceRef.current?.stop();
+    emojiAnimationRef.current?.stop();
+    emojiEntranceRef.current = null;
+    emojiAnimationRef.current = null;
+    sparkAnimationsRef.current.forEach(animation => animation.stop());
+    sparkAnimationsRef.current = [];
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = null;
+    }
+  }
+
+  useEffect(() => () => stopTrackedAnimations(), []);
 
   // ── Load saved draft on open ───────────────────────────────────────────────
   useEffect(() => {
+    stopTrackedAnimations();
     if (!visible) return;
     setSeedError(false);
 
     if (!userId) return;
+    let cancelled = false;
     loadDraft(userId).then(draft => {
+      if (cancelled) return;
       let startStep = STEP_WELCOME;
       if (draft) {
         // Restore all saved selections
@@ -180,27 +227,61 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       entranceEmoji();
       if (startStep === STEP_REVEAL) fireSparks();
     });
+    return () => {
+      cancelled = true;
+      stopTrackedAnimations();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible, userId]);
 
+  // Stop all decorative loops immediately when the system preference changes.
+  // When motion is re-enabled, restart only while the modal is visible.
+  useEffect(() => {
+    if (reducedMotion) {
+      stopTrackedAnimations();
+      emojiScale.setValue(1);
+      sparkAnims.forEach(p => {
+        p.x.setValue(0); p.y.setValue(0); p.op.setValue(0); p.sc.setValue(1);
+      });
+    } else if (visible) {
+      entranceEmoji();
+      if (step === STEP_REVEAL) fireSparks();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion]);
+
   // ── Emoji entrance spring ──────────────────────────────────────────────────
   function entranceEmoji() {
+    emojiEntranceRef.current?.stop();
+    emojiAnimationRef.current?.stop();
     emojiScale.setValue(0);
-    Animated.spring(emojiScale, { toValue: 1, tension: 55, friction: 7, useNativeDriver: true }).start(() => {
-      Animated.loop(Animated.sequence([
+    if (reducedMotion) {
+      emojiScale.setValue(1);
+      return;
+    }
+    const entrance = Animated.spring(emojiScale, { toValue: 1, tension: 55, friction: 7, useNativeDriver: true });
+    emojiEntranceRef.current = entrance;
+    entrance.start(({ finished }) => {
+      if (!finished) return;
+      const loop = Animated.loop(Animated.sequence([
         Animated.timing(emojiScale, { toValue: 1.08, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
         Animated.timing(emojiScale, { toValue: 1.00, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ])).start();
+      ]));
+      emojiAnimationRef.current = loop;
+      loop.start();
     });
   }
 
   // ── Spark burst ────────────────────────────────────────────────────────────
   function fireSparks() {
+    if (reducedMotion) return;
+    sparkAnimationsRef.current.forEach(animation => animation.stop());
+    sparkAnimationsRef.current = [];
     sparkAnims.forEach((p, i) => {
       p.x.setValue(0); p.y.setValue(0); p.op.setValue(0); p.sc.setValue(1);
       const angle = (i / sparkAnims.length) * Math.PI * 2;
       const dist  = 60 + Math.random() * 50;
-      Animated.sequence([
+      const animation = Animated.sequence([
         Animated.timing(p.op, { toValue: 1, duration: 60, useNativeDriver: true }),
         Animated.parallel([
           Animated.timing(p.x,  { toValue: Math.cos(angle) * dist, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
@@ -208,7 +289,13 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
           Animated.timing(p.op, { toValue: 0, duration: 600, easing: Easing.in(Easing.quad), useNativeDriver: true }),
           Animated.timing(p.sc, { toValue: 0.2, duration: 600, useNativeDriver: true }),
         ]),
-      ]).start();
+      ]);
+      sparkAnimationsRef.current.push(animation);
+      animation.start(({ finished }) => {
+        if (finished) {
+          sparkAnimationsRef.current = sparkAnimationsRef.current.filter(item => item !== animation);
+        }
+      });
     });
   }
 
@@ -263,91 +350,74 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
 
     const mood = selectedMood ?? 'Dreamy';
     const type = selectedType ?? 'dreamer';
+    const deadline = Date.now() + 25_000;
+    const remaining = () => Math.max(250, deadline - Date.now());
 
-    // ── Wait for a valid Clerk auth token before any API calls ──────────────
-    // Brand-new accounts need a moment after sign-up for the token to propagate.
-    // Poll with exponential back-off (100 → 200 → 400 → 800 → 1000 ms) up to 12 s.
-    {
-      const deadline = Date.now() + 12_000;
+    try {
+      // Brand-new accounts need a moment after sign-up for the token to propagate,
+      // but never leave the completion button spinning indefinitely.
       let delay = 0;
       let token: string | null = null;
       while (Date.now() < deadline) {
-        if (delay > 0) await new Promise<void>(r => setTimeout(r, delay));
-        token = await getAuthToken();
+        if (delay > 0) await new Promise<void>(r => setTimeout(r, Math.min(delay, remaining())));
+        token = await withTimeout(getAuthToken(), Math.min(2_000, remaining()));
         if (token) break;
         delay = delay === 0 ? 100 : Math.min(delay * 2 + 100, 1000);
       }
-      if (!token) {
-        setSaving(false);
-        setSeedError(true);
-        return;
-      }
-    }
+      if (!token) throw new Error('Authentication timed out');
 
-    // Fetch existing character fields so the PUT doesn't overwrite unrelated data
-    // (e.g. username, bio, traits set before this feature).
-    type CharMerge = { name?: string | null; bio?: string | null; traits?: string[] | null };
-    let mergeBase: CharMerge = {};
-    try {
-      const existing = await apiFetch<CharMerge>('/character');
-      if (existing) mergeBase = existing;
-    } catch { /* ok — fall back to schema defaults if fetch fails */ }
-
-    // Character PUT is required — retry up to 3 times with back-off.
-    let characterOk = false;
-    const delays = [1000, 2000];
-    for (let attempt = 0; attempt < 3 && !characterOk; attempt++) {
+      // Preserve unrelated character fields while seeding onboarding fields.
+      type CharMerge = { name?: string | null; bio?: string | null; traits?: string[] | null };
+      let mergeBase: CharMerge = {};
       try {
-        await apiFetch('/character', {
-          method:  'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({
-            name:              mergeBase.name  ?? 'Sky Child',
-            bio:               mergeBase.bio   ?? '',
-            traits:            Array.isArray(mergeBase.traits) ? mergeBase.traits : [],
-            mood,
-            constellationType: type,
-          }),
-        });
-        characterOk = true;
-      } catch {
-        if (attempt < 2) await new Promise(r => setTimeout(r, delays[attempt] ?? 2000));
+        const existing = await withTimeout(apiFetch<CharMerge>('/character'), Math.min(5_000, remaining()));
+        if (existing) mergeBase = existing;
+      } catch { /* use schema defaults if the optional read fails */ }
+
+      let characterOk = false;
+      const delays = [1000, 2000];
+      for (let attempt = 0; attempt < 3 && !characterOk && Date.now() < deadline; attempt++) {
+        try {
+          await withTimeout(apiFetch('/character', {
+            method:  'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+              name:              mergeBase.name  ?? 'Sky Child',
+              bio:               mergeBase.bio   ?? '',
+              traits:            Array.isArray(mergeBase.traits) ? mergeBase.traits : [],
+              mood,
+              constellationType: type,
+            }),
+          }), Math.min(7_000, remaining()));
+          characterOk = true;
+        } catch {
+          if (attempt < 2 && Date.now() < deadline) {
+            await new Promise(r => setTimeout(r, Math.min(delays[attempt] ?? 2000, remaining())));
+          }
+        }
       }
-    }
+      if (!characterOk) throw new Error('Could not save your sky');
 
-    if (!characterOk) {
-      setSaving(false);
+      const firstEntry: JournalEntry = {
+        id:         crypto.randomUUID(),
+        date:       new Date().toISOString().slice(0, 10),
+        type:       'diary',
+        text:       journalText.trim() || 'The sky called to me today. This is where my story begins.',
+        mood,
+        imageUri:   undefined,
+        friendName: undefined,
+      };
+      await withTimeout(Promise.resolve(addJournalEntry(firstEntry)), Math.min(7_000, remaining()));
+      if (userId) await withTimeout(clearDraft(userId), Math.min(2_000, remaining()));
+      reloadData().catch(() => null);
+      playSound('chime');
+      Animated.timing(fadeAnim, { toValue: 0, duration: reducedMotion ? 0 : 350, useNativeDriver: true }).start(onComplete);
+    } catch {
+      // Keep the draft and expose both retry and skip actions on the reveal step.
       setSeedError(true);
-      return;
+    } finally {
+      setSaving(false);
     }
-
-    // Journal: always create a first entry (required by onboarding done-condition).
-    // If user left the field blank, use a gentle default sentence so the profile
-    // is never hollow. addJournalEntry is the single authoritative write path —
-    // it updates local state optimistically AND POSTs to the server.
-    // We await it before reloadData() to prevent reload racing the POST and
-    // overwriting optimistic state before the entry lands on the server.
-    const journalLineText =
-      journalText.trim() ||
-      'The sky called to me today. This is where my story begins.';
-
-    const firstEntry: JournalEntry = {
-      id:         crypto.randomUUID(),
-      date:       new Date().toISOString().slice(0, 10),
-      type:       'diary',
-      text:       journalLineText,
-      mood,
-      imageUri:   undefined,
-      friendName: undefined,
-    };
-    await addJournalEntry(firstEntry);
-
-    // All required writes done — clear draft and complete
-    if (userId) await clearDraft(userId);
-    reloadData().catch(() => null);
-    setSaving(false);
-    playSound('chime');
-    Animated.timing(fadeAnim, { toValue: 0, duration: 350, useNativeDriver: true }).start(onComplete);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMood, selectedType, journalText, userId, addJournalEntry, reloadData, onComplete, playSound]);
 
@@ -366,7 +436,11 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
   function handleNext() {
     if (step === STEP_JOURNAL) {
       goToStep(STEP_REVEAL);
-      setTimeout(() => { fireSparks(); playSound('chime'); }, 350);
+      revealTimerRef.current = setTimeout(() => {
+        revealTimerRef.current = null;
+        fireSparks();
+        playSound('chime');
+      }, 350);
       return;
     }
     if (step === STEP_REVEAL) {

@@ -31,6 +31,7 @@ import { useApp, type JournalEntryType } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useSound } from '@/context/SoundContext';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 const MOODS = [
   { label: 'Hopeful',  icon: 'sun'     as const, color: '#C8A84B' },
@@ -333,8 +334,9 @@ export default function CreateJournalEntryScreen() {
           onPress={handleSave}
           disabled={saving || uploadingImage}
         >
+          {(saving || uploadingImage) && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
           <Text style={[styles.saveBtnText, { color: (saving || uploadingImage) ? colors.mutedForeground : '#fff' }]}>
-            {uploadingImage ? '↑' : saving ? '...' : tr('journal.save')}
+            {uploadingImage ? 'Uploading…' : saving ? 'Saving…' : tr('journal.save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -595,7 +597,7 @@ const styles = StyleSheet.create({
   headerTitle:     { fontSize: 17, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
   privatePill:     { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   privatePillText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
-  saveBtn:         { paddingHorizontal: 22, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  saveBtn:         { paddingHorizontal: 22, height: 44, borderRadius: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   saveBtnText:     { fontSize: 15, fontFamily: 'Satoshi-Bold' },
   scroll:          { paddingHorizontal: 18, paddingTop: 4, gap: 0 },
 

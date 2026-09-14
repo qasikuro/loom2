@@ -8,7 +8,6 @@ import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
-  ActivityIndicator,
   Animated,
   KeyboardAvoidingView,
   PanResponder,
@@ -33,6 +32,7 @@ import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
 import { ImageSourceSheet } from '@/components/ImageSourceSheet';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 const GAP      = 3;
 const CANVAS_H = 390;
@@ -643,9 +643,9 @@ export default function PanelEditorScreen() {
           onPress={handleSave}
           disabled={uploadingSet.size > 0 || failedPanels.size > 0}
         >
-          <Text style={styles.saveBtnText}>
-            {uploadingSet.size > 0 ? t('common.uploading') : failedPanels.size > 0 ? t('common.uploadFailed') : t('common.save')}
-          </Text>
+          {uploadingSet.size > 0
+            ? <><SkyLoadingMark size={16} color="rgba(235,228,255,0.9)" /><Text style={styles.saveBtnText}>{t('common.uploading')}</Text></>
+            : <Text style={styles.saveBtnText}>{failedPanels.size > 0 ? t('common.uploadFailed') : t('common.save')}</Text>}
         </TouchableOpacity>
       </View>
 
@@ -713,7 +713,7 @@ export default function PanelEditorScreen() {
                           {/* Upload spinner overlay */}
                           {uploadingSet.has(pIdx) && (
                             <Animated.View style={[styles.uploadOverlay, { opacity: uploadPulse }]}>
-                              <ActivityIndicator color="rgba(200,184,232,0.9)" size="large" />
+                              <SkyLoadingMark size={38} color="rgba(200,184,232,0.9)" />
                               <Text style={styles.uploadOverlayText}>Saving…</Text>
                             </Animated.View>
                           )}
@@ -1055,6 +1055,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontFamily: 'Satoshi-Bold', color: 'rgba(235,228,255,0.95)' },
   saveBtn: {
     paddingHorizontal: 20, paddingVertical: 9, borderRadius: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
     backgroundColor: 'rgba(139,122,181,0.25)',
     borderWidth: 1, borderColor: 'rgba(139,122,181,0.50)',
   },

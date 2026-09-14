@@ -57,6 +57,10 @@ vi.mock('@clerk/expo', () => ({
 }));
 vi.mock('@/utils/navigation', () => ({ safeBack: vi.fn() }));
 vi.mock('@/components/Icon',  () => ({ Icon: () => null }));
+vi.mock('@/components/SkyLoading', () => ({
+  SkyLoadingMark:    () => null,
+  SkyLoadingOverlay: () => null,
+}));
 vi.mock('@/components/Toast', () => ({ showToastGlobal: vi.fn() }));
 vi.mock('@/hooks/useSSE',     () => ({
   useSSE: () => ({ connected: false }),

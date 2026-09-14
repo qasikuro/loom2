@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { BadgeTray, type BadgeItem } from '@/components/profile/BadgeTray';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -801,7 +801,7 @@ export default function UserProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <SkyLoadingOverlay message="Looking up this profile…" />
       </View>
     );
   }

@@ -183,9 +183,11 @@ function LoadingBar() {
 
 interface Props {
   onReady: () => void;
+  /** Root content may still be hydrating; keep the branded reveal until it is ready. */
+  ready?: boolean;
 }
 
-export function AppSplashScreen({ onReady }: Props) {
+export function AppSplashScreen({ onReady, ready = true }: Props) {
   const { width, height } = useWindowDimensions();
   const screenFade  = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
@@ -198,21 +200,42 @@ export function AppSplashScreen({ onReady }: Props) {
       useNativeDriver: true,
     }).start();
 
-    // Fade out and dismiss
-    const t = setTimeout(() => {
+    // Dismiss after a short branded minimum once the root is ready. A hard
+    // maximum prevents a blank/blocked screen if a provider never resolves.
+    let dismissed = false;
+    const startedAt = Date.now();
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
       Animated.timing(screenFade, {
         toValue:  0,
         duration: 600,
         useNativeDriver: true,
       }).start(() => onReady());
-    }, 2900);
+    };
+    const minimumTimer = setTimeout(() => {
+      if (ready) dismiss();
+    }, Math.max(0, 1200 - (Date.now() - startedAt)));
+    const maximumTimer = setTimeout(dismiss, 6000);
 
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      clearTimeout(minimumTimer);
+      clearTimeout(maximumTimer);
+      contentFade.stopAnimation();
+      screenFade.stopAnimation();
+    };
+  }, [onReady, ready, contentFade, screenFade]);
 
   return (
-    <Animated.View style={[styles.root, { opacity: screenFade }]} pointerEvents="none">
+    <Animated.View
+      style={[styles.root, { opacity: screenFade }]}
+      pointerEvents="auto"
+      accessible
+      accessibilityViewIsModal
+      accessibilityLabel="Loading Sky Journal"
+      accessibilityRole="progressbar"
+      accessibilityState={{ busy: true }}
+    >
       {/* Background — react-native Image for synchronous bundled asset loading */}
       <Image
         source={SPLASH_IMG}

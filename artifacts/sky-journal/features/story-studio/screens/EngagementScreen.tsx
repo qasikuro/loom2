@@ -10,7 +10,6 @@
  */
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
@@ -28,6 +27,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { useAuth } from '@clerk/expo';
+import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -214,7 +214,7 @@ export default function EngagementScreen() {
           {!isReply && expanded[item.id] !== undefined && (
             <View style={s.replies}>
               {expanded[item.id] === null
-                ? <ActivityIndicator color={ACCENT} size="small" style={{ margin: 8 }} />
+                 ? <SkyLoadingMark size={18} color={ACCENT} />
                 : expanded[item.id]!.map(r => <CommentItem key={r.id} item={r} isReply />)
               }
             </View>
@@ -229,7 +229,14 @@ export default function EngagementScreen() {
   function renderTabContent() {
     switch (tab) {
       case 'comments':
-        if (loading) return <ActivityIndicator color={ACCENT} style={{ marginTop: 40 }} />;
+        if (loading) {
+          return (
+            <View style={s.loadingList}>
+              <LoadingCard />
+              <LoadingCard />
+            </View>
+          );
+        }
         if (comments.length === 0) {
           return (
             <View style={s.empty}>
@@ -339,7 +346,7 @@ export default function EngagementScreen() {
               activeOpacity={0.8}
             >
               {posting
-                ? <ActivityIndicator color="#fff" size="small" />
+                ? <SkyLoadingMark size={18} color="#fff" />
                 : <Icon name="send" size={15} color="#fff" />}
             </TouchableOpacity>
           </View>
@@ -362,6 +369,7 @@ const s = StyleSheet.create({
   tabTxt:        { color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: '500' },
   tabTxtActive:  { color: 'rgba(255,255,255,0.90)' },
   commentList:   { padding: 16, gap: 0 },
+  loadingList:   { padding: 16, gap: 10 },
   commentRow:    { flexDirection: 'row', gap: 10, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   replyRow:      { paddingLeft: 4, marginTop: 8, borderBottomWidth: 0 },
   avatar:        { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(139,112,200,0.25)', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

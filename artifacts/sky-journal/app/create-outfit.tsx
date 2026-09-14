@@ -12,7 +12,6 @@ import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Platform,
@@ -29,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 const VIBE_TAGS = [
   { label: 'Casual',    color: '#78A8C8' },
@@ -271,8 +271,9 @@ export default function CreateOutfitScreen() {
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
             onPress={handleSave} disabled={saving || uploading}
           >
+            {saving && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
             <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-              {saving ? '...' : tr('outfit.saveOutfit')}
+              {saving ? 'Saving…' : tr('outfit.saveOutfit')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -295,7 +296,7 @@ export default function CreateOutfitScreen() {
             {uploading ? (
               <View style={styles.imagePlaceholder}>
                 <View style={[styles.cameraCircle, { backgroundColor: 'rgba(107,91,149,0.18)' }]}>
-                  <ActivityIndicator color="#C8B8E8" size="large" />
+                  <SkyLoadingMark color="#C8B8E8" size={42} />
                 </View>
                 <Text style={[styles.imagePlaceholderTitle, { color: 'rgba(200,184,232,0.72)', fontSize: 14 }]}>
                   Uploading…
@@ -494,7 +495,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
-  saveBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20 },
+  saveBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
   saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   scroll: { paddingHorizontal: 18, paddingTop: 0, gap: 0 },
   imagePicker: { width: '100%', aspectRatio: 3 / 4, borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', overflow: 'hidden', marginBottom: 20 },

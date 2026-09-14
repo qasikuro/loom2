@@ -9,7 +9,6 @@
  */
 import React, { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Platform,
   ScrollView,
@@ -26,6 +25,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
+import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -101,7 +101,10 @@ export default function BookPublicScreen() {
   const [followLoading, setFollowLoading] = useState(false);
 
   useFocusEffect(useCallback(() => {
-    if (!bookId) return;
+    if (!bookId) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     apiFetch<PublicBook>(`/books/${bookId}/public`)
       .then(data => {
@@ -282,9 +285,16 @@ export default function BookPublicScreen() {
   // ── Loading ────────────────────────────────────────────────────────────────
 
   if (loading) {
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Loading story details…" /></View>;
+  }
+
+  if (!bookId) {
     return (
-      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color={ACCENT} />
+      <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <Text style={s.emptyTxt}>This story link is missing a book ID.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={s.backInline}>
+          <Text style={{ color: ACCENT, fontSize: 14 }}>Go back</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -386,7 +396,7 @@ export default function BookPublicScreen() {
               activeOpacity={0.8}
             >
               {followLoading
-                ? <ActivityIndicator color={following ? ACCENT : '#fff'} size="small" />
+                ? <SkyLoadingMark size={18} color={following ? ACCENT : '#fff'} />
                 : <>
                     <Icon name={following ? 'check' : 'plus'} size={13} color={following ? ACCENT : '#fff'} />
                     <Text style={[s.followTxt, following && { color: ACCENT }]}>

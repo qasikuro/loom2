@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -25,6 +24,7 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '@clerk/expo';
 
 import { Icon } from '@/components/Icon';
+import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
 import { KeyboardAvoidingViewCompat as KeyboardAvoidingView } from '../../components/KeyboardAwareScrollViewCompat';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal, type ToastLevel } from '@/components/Toast';
@@ -605,7 +605,10 @@ export default function CampfireRoom() {
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchData = useCallback(async (silent = false) => {
-    if (!roomId) return;
+    if (!roomId) {
+      if (!silent) setLoading(false);
+      return;
+    }
     try {
       const res = await apiFetch<RoomData>(`/campfire/${roomId}`);
       if (res) {
@@ -772,6 +775,19 @@ export default function CampfireRoom() {
   const messages = (data?.messages ?? []).filter(m => !blockedIds.includes(m.userId));
   const totalMsg = messages.length;
 
+  if (!roomId) {
+    return (
+      <View style={[R.root, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
+        <TouchableOpacity onPress={() => safeBack()} style={R.backBtn}>
+          <Icon name="arrow-left" size={15} color="rgba(200,184,232,0.70)" />
+        </TouchableOpacity>
+        <Text style={{ color: 'rgba(220,210,255,0.75)', fontFamily: 'Satoshi-Medium', textAlign: 'center' }}>
+          This campfire link is missing a room.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -852,9 +868,7 @@ export default function CampfireRoom() {
 
         {/* Messages scroll */}
         {loading ? (
-          <View style={R.loadingWrap}>
-            <Text style={[R.loadingText, { color: `${palette.ember}80` }]}>Tending the fire…</Text>
-          </View>
+          <SkyLoadingOverlay message="Tending the fire…" />
         ) : (
            <ScrollView
             ref={scrollRef}
@@ -914,7 +928,10 @@ export default function CampfireRoom() {
                   disabled={!text.trim() || sending}
                   activeOpacity={0.75}
                 >
-                  <Text style={[R.sendIcon, { color: palette.ember }]}>✦</Text>
+                  {sending
+                    ? <SkyLoadingMark size={19} color={palette.ember} />
+                    : <Text style={[R.sendIcon, { color: palette.ember }]}>✦</Text>
+                  }
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => { setShowInput(false); setText(''); }} style={R.cancelBtn} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                   <Icon name="x" size={14} color="rgba(200,184,232,0.40)" />
@@ -948,7 +965,7 @@ export default function CampfireRoom() {
           <View style={PR.handle} />
           <Text style={PR.title}>Souls around the fire</Text>
           {presenceLoading ? (
-            <ActivityIndicator color={palette.ember} style={{ marginVertical: 20 }} />
+            <SkyLoadingMark size={28} color={palette.ember} />
           ) : presenceData.length === 0 ? (
             <Text style={PR.empty}>No one active in the last 5 minutes</Text>
           ) : (

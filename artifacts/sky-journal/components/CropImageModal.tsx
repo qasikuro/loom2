@@ -10,7 +10,6 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Image as RNImage,
   Modal,
   PanResponder,
@@ -26,6 +25,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 export interface CropImageModalProps {
   visible:      boolean;
@@ -329,7 +329,7 @@ export default function CropImageModal({
               </View>
             ) : (
               <View style={styles.loadingCenter}>
-                <ActivityIndicator color="#fff" size="large" />
+                <SkyLoadingMark color="#fff" size={42} />
               </View>
             )}
 
@@ -374,8 +374,8 @@ export default function CropImageModal({
             onPress={applyCrop}
             disabled={applying || !naturalSize}
           >
-            {applying
-              ? <ActivityIndicator color="#fff" size="small" />
+             {applying
+               ? <SkyLoadingMark color="#fff" size={18} />
               : <>
                   <Icon name="check" size={14} color="#fff" />
                   <Text style={[styles.actionBtnText, { color: '#fff' }]}>Use This Crop</Text>

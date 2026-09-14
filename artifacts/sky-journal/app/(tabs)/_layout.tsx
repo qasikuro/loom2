@@ -17,6 +17,7 @@ import { useColors } from '@/hooks/useColors';
 import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 import { useSound } from '@/context/SoundContext';
 import { useApp } from '@/context/AppContext';
+import { SkyLoadingOverlay } from '@/components/SkyLoading';
 
 const BAR_HEIGHT = 66;
 const BTN_SIZE   = 56;
@@ -286,11 +287,7 @@ export default function TabLayout() {
   const colors = useColors();
 
   if (!isLoaded) {
-    return (
-      <View style={[styles.loader, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.gold} size="large" />
-      </View>
-    );
+    return <SkyLoadingOverlay />;
   }
 
   if (!isSignedIn) {

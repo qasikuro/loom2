@@ -6,13 +6,13 @@ import React, { useState } from 'react';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
 import { Image } from 'expo-image';
 import {
-  ActivityIndicator,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 import type { StoryPanel } from '@/context/AppContext';
 
@@ -122,7 +122,7 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
           {/* State overlays */}
           {uploading ? (
             <View style={pm.stateOverlay}>
-              <ActivityIndicator color="rgba(220,205,255,0.85)" size="large" />
+              <SkyLoadingMark size={38} color="rgba(220,205,255,0.85)" />
               <Text style={pm.stateOverlayTxt}>Uploading…</Text>
             </View>
           ) : uploadError ? (

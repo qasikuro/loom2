@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 const MOODS = [
   { label: 'Warm',      icon: 'sun'     as const, color: '#C8A84B' },
@@ -101,8 +102,9 @@ export default function CreateFriendLogScreen() {
           style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : '#3A78B8' }]}
           onPress={handleSave} disabled={saving}
         >
+          {saving && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
           <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-            {saving ? '...' : 'Save'}
+            {saving ? 'Saving…' : 'Save'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -227,7 +229,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
   privatePill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   privatePillText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
-  saveBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20 },
+  saveBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
   saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   scroll: { paddingHorizontal: 18, paddingTop: 4 },
   label: { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },

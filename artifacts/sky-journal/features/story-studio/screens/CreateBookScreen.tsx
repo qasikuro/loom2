@@ -4,7 +4,6 @@
  */
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Platform,
   StyleSheet,
@@ -20,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -226,7 +226,7 @@ export default function CreateBookScreen() {
           disabled={loading}
         >
           {loading
-            ? <ActivityIndicator color="#fff" size="small" />
+            ? <SkyLoadingMark size={18} color="#fff" />
             : <Text style={s.createBtnTxt}>Create Book →</Text>}
         </TouchableOpacity>
       </KeyboardAwareScrollView>

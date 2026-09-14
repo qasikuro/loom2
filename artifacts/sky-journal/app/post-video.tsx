@@ -4,7 +4,6 @@
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -29,6 +28,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { apiFetch } from '@/context/AppContext';
 import { persistImageUri, persistVideoUri, ImageUploadError } from '@/utils/persistImage';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 
 const MAX_VIDEO_DURATION_S = 10;
 
@@ -183,7 +183,7 @@ export default function PostVideoScreen() {
   if (step === 'picking') {
     return (
       <View style={[s.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#9B78E8" />
+        <SkyLoadingMark size={44} color="#9B78E8" />
         <Text style={s.pickingLabel}>Opening gallery…</Text>
       </View>
     );
@@ -296,7 +296,7 @@ export default function PostVideoScreen() {
           {/* Post button */}
           {step === 'uploading' ? (
             <View style={s.uploadingRow}>
-              <ActivityIndicator size="small" color="#9B78E8" />
+              <SkyLoadingMark size={20} color="#9B78E8" />
               <Text style={s.uploadingText}>{progress}</Text>
             </View>
           ) : (

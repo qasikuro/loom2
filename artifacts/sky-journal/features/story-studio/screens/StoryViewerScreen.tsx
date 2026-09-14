@@ -33,6 +33,7 @@ import { useColors } from '@/hooks/useColors';
 import type { PanelOverlay } from '@/context/AppContext';
 import { useTranslation } from 'react-i18next';
 import { shareStory } from '@/utils/shareContent';
+import { SkyLoadingOverlay } from '@/components/SkyLoading';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -504,6 +505,10 @@ export default function StoryScreen() {
   const storyNotFound  = !story && !post;
   const storyCorrupted = (story != null && (!story.chapterTitle || !Array.isArray(story.panels))) ||
                          (post  != null && !post.chapterTitle);
+
+  if (isLoading && storyNotFound) {
+    return <SkyLoadingOverlay message="Opening story…" />;
+  }
 
   if (storyNotFound || storyCorrupted) {
     return (
