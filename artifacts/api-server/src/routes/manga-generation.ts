@@ -27,7 +27,7 @@ function positiveInteger(value: string | undefined, fallback: number): number {
 const STYLE_PROMPTS = {
   manga: "black-and-white Japanese manga with expressive ink lines, screentones, and readable panels",
   color: "full-color manga with clean line art, vivid lighting, and readable panels",
-  chibi: "cute chibi manga with small bodies, oversized expressive faces, and playful colorful panels",
+  chibi: "faithful full-color manga that preserves the people, clothing, locations, colors, and events from the reference pictures",
   cinematic: "cinematic manga with dramatic framing, detailed lighting, strong depth, and film-like panels",
   webtoon: "polished color webtoon with clean digital line art and expressive characters",
 } as const;
@@ -198,15 +198,17 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
       references.push({ buffer: compressed, filename: `reference-${references.length + 1}.jpg` });
     }
 
+    const panelCount = Math.min(6, Math.max(2, imageUris.length));
     const generationPrompt =
       `Create one polished portrait comic page in ${STYLE_PROMPTS[style]}. ` +
-      "Use exactly four clearly separated panels with clean, consistent gutters and an easy top-to-bottom reading order. " +
-      "Treat the uploaded images as strict visual references: preserve the main characters' recognizable face shape, hairstyle, skin tone, clothing colors, and important environment details consistently in every panel. " +
-      "Show a coherent sequence with varied camera framing, expressive faces, natural anatomy, detailed backgrounds, balanced lighting, and a clear beginning, action, and ending. " +
-      "Do not render any words, letters, numbers, captions, signs, logos, watermarks, speech balloons, or thought balloons. Do not leave empty text bubbles. " +
+      `Use ${panelCount} clearly separated panels with clean, consistent gutters and an easy top-to-bottom reading order. ` +
+      "Base every panel directly on the uploaded pictures. Preserve each person's recognizable face shape, hairstyle, skin tone, body proportions, clothing, pose, and the important location details. Keep the original events and their order instead of inventing unrelated scenes or characters. " +
+      "Connect the pictured moments into a simple coherent story with expressive faces, natural anatomy, clear details, balanced lighting, and a beginning and ending. " +
+      "Add short manga-style story text directly inside the panels using captions and speech bubbles. Use clear, correctly spelled English, large readable lettering, high contrast, and no more than eight words in each caption or bubble. Keep text away from faces and important details. " +
+      "Do not include logos, watermarks, random symbols, decorative lettering, or text unrelated to the pictured story. " +
       "Avoid muddy shadows, featureless silhouettes, distorted hands, duplicate characters, cropped faces, and blurry details. " +
-      `The following user story direction controls plot and mood only: <story_direction>${prompt.trim() || "Create a warm, coherent adventure from these moments."}</story_direction>. ` +
-      "Regardless of the story direction, the finished artwork must contain absolutely no text, letters, numbers, captions, signs, speech balloons, or thought balloons.";
+      `Follow this user direction when shaping the story: <story_direction>${prompt.trim() || "Infer a simple story from the uploaded pictures."}</story_direction>. ` +
+      "Regardless of style or user direction, keep all story text short, correctly spelled, readable, relevant to the pictures, and placed only in captions or speech bubbles.";
     const generated = await editImageBuffers(references, generationPrompt, {
       quality: CONFIG.quality,
       size: CONFIG.outputSize,

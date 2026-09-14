@@ -35,7 +35,9 @@ type PendingAttempt = {
   style: MangaStyle;
 };
 
-const PENDING_ATTEMPT_KEY = 'pending_manga_generation_v1';
+const PENDING_ATTEMPT_KEY = 'pending_manga_generation_v2';
+const DEFAULT_PROMPT =
+  'Turn these pictures into a clear manga story. Keep the people, clothes, places, colors, and events faithful to the original pictures. Add short, simple, readable story captions and speech bubbles directly on the pictures. Do not add unrelated characters or scenes.';
 
 const STYLES: Array<{
   id: MangaStyle;
@@ -46,7 +48,7 @@ const STYLES: Array<{
 }> = [
   { id: 'manga', label: 'Manga\n(B&W)', promptInstruction: 'black-and-white Japanese manga with expressive ink lines, screentones, and readable panel composition', image: Images.create_quick, tint: 'rgba(15,10,28,0.38)' },
   { id: 'color', label: 'Color Manga', promptInstruction: 'full-color manga with clean line art, vivid lighting, and readable panel composition', image: Images.create_quick },
-  { id: 'chibi', label: 'Chibi', promptInstruction: 'cute chibi manga with small bodies, oversized expressive faces, and playful colorful panels', image: Images.story_bg3, tint: 'rgba(255,186,220,0.18)' },
+  { id: 'chibi', label: 'Default', promptInstruction: 'faithful full-color manga that keeps the people, clothing, places, colors, and events close to the uploaded pictures', image: Images.story_bg3, tint: 'rgba(255,186,220,0.18)' },
   { id: 'cinematic', label: 'Cinematic', promptInstruction: 'cinematic manga with dramatic framing, detailed lighting, strong depth, and film-like panels', image: Images.story_bg2, tint: 'rgba(62,38,105,0.18)' },
   { id: 'webtoon', label: 'Webtoon', promptInstruction: 'polished color webtoon with clean digital line art, expressive characters, and vertical-comic storytelling', image: Images.create_video, tint: 'rgba(238,84,155,0.14)' },
 ];
@@ -58,8 +60,8 @@ export default function MangaStoryScreen() {
   const bottomPad = Platform.OS === 'web' ? 30 : insets.bottom + 24;
 
   const [images, setImages] = useState<string[]>([]);
-  const [prompt, setPrompt] = useState('');
-  const [style, setStyle] = useState<MangaStyle>('manga');
+  const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
+  const [style, setStyle] = useState<MangaStyle>('chibi');
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
@@ -80,7 +82,10 @@ export default function MangaStoryScreen() {
   const [pendingAttempt, setPendingAttempt] = useState<PendingAttempt | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedStyle = useMemo(() => STYLES.find(item => item.id === style) ?? STYLES[0], [style]);
+  const selectedStyle = useMemo(
+    () => STYLES.find(item => item.id === style) ?? STYLES.find(item => item.id === 'chibi')!,
+    [style],
+  );
 
   useEffect(() => {
     AsyncStorage.getItem(PENDING_ATTEMPT_KEY)
@@ -139,7 +144,7 @@ export default function MangaStoryScreen() {
     const finalPrompt =
       `Create one ${selectedStyle.promptInstruction} story page. ` +
       'Use the uploaded images as references for characters, environments, events, poses, and visual continuity. ' +
-      `Story: ${prompt.trim() || 'Create a warm, coherent adventure from these moments.'}`;
+      `Story direction: ${prompt.trim() || 'Infer a simple story from the uploaded pictures.'}`;
     setError(null);
     setGenerating(true);
     setGenerated(false);
@@ -248,9 +253,10 @@ export default function MangaStoryScreen() {
   function buildMangaStory(id: string, isPublic: boolean) {
     const imageUri = generatedStorageUri;
     if (!imageUri) return null;
+    const customStory = prompt.trim() === DEFAULT_PROMPT ? '' : prompt.trim();
     const panel = {
       id: `${id}_panel`,
-      text: prompt.trim(),
+      text: customStory,
       bubbleText: '',
       imageUri,
       imageAspectRatio: 2 / 3,
@@ -259,7 +265,7 @@ export default function MangaStoryScreen() {
     return {
       id,
       date: new Date().toISOString(),
-      chapterTitle: prompt.trim().slice(0, 80) || 'My Manga Story',
+      chapterTitle: customStory.slice(0, 80) || 'My Manga Story',
       description: `Created in ${selectedStyle.label.replace('\n', ' ')} style with Gamejo AI.`,
       panels: [panel],
       mood: 'Creative',
@@ -446,7 +452,7 @@ export default function MangaStoryScreen() {
                   setGenerated(false);
                 }}
                 style={s.prompt}
-                placeholder={'Write a short prompt...\ne.g. “Turn these images into a heartwarming story about two friends exploring a new world, in a cute manga style.”'}
+                placeholder="Describe the story you want, or leave this empty and let AI tell the story from your pictures."
                 placeholderTextColor="rgba(215,202,244,0.42)"
                 multiline
                 maxLength={500}
@@ -711,7 +717,7 @@ const s = StyleSheet.create({
   photoWrap: { width: 92, height: 92, borderRadius: 10, overflow: 'hidden', backgroundColor: '#18122C' },
   photo: { width: '100%', height: '100%' },
   removePhoto: { position: 'absolute', top: 5, right: 5, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(7,4,18,0.82)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)' },
-  promptWrap: { height: 100, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(160,104,232,0.42)', backgroundColor: 'rgba(8,6,22,0.40)', overflow: 'hidden' },
+  promptWrap: { height: 142, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(160,104,232,0.42)', backgroundColor: 'rgba(8,6,22,0.40)', overflow: 'hidden' },
   prompt: { flex: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 22, fontSize: 11.5, lineHeight: 17, fontFamily: 'Satoshi-Regular', color: '#F4EEFF' },
   count: { position: 'absolute', bottom: 6, right: 9, fontSize: 8.5, fontFamily: 'Satoshi-Regular', color: 'rgba(205,187,233,0.34)' },
   styleRow: { gap: 8 },
