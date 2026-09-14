@@ -311,7 +311,7 @@ function Layout({ children, route, onNavigate }: { children: ReactNode; route: s
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1.5 text-[10px] text-emerald-300 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />All systems operational</div>
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1.5 text-[10px] text-emerald-300 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Admin API connected</div>
             <button aria-label="Notifications" className="relative rounded-md p-2 text-muted-foreground hover:bg-card hover:text-foreground"><Bell size={16} /><span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-destructive" /></button>
             <div className="flex items-center gap-2 border-l border-border pl-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{(user?.firstName?.[0] ?? "O")}{(user?.lastName?.[0] ?? "")}</div>
