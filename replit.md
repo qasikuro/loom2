@@ -209,6 +209,12 @@ Do not add or change game APIs, game-data providers, game schemas, game discover
 
 Use the existing non-game infrastructure for current work: Resend for email, the existing PostgreSQL/Neon database, existing storage, existing authentication, Expo-compatible push notifications, and the existing backend infrastructure. Game API integration is reserved for the final development stage.
 
+### V1 Integration Policy
+
+For V1, reuse services already present in the GameJo codebase and do not introduce new external providers unless a requirement cannot be met with the existing backend. Use Resend for email, the existing game API for game data, the existing PostgreSQL/Neon database, existing storage, and Expo-compatible push notifications. Build analytics, support, moderation, operations, security, and audit functionality using the existing backend where practical.
+
+All integrations and service settings must be configurable through environment variables. Production must not use mock data. Before adding any new paid service, identify the requirement and ask for approval.
+
 ### Database (`lib/db/src/schema/events.ts`)
 - `events` table: id (uuid PK), title, description, theme (spring|summer|autumn|winter|special), status (draft|active|ended), startsAt, endsAt, inventory (jsonb), aiPrompt, createdBy, createdAt
 
