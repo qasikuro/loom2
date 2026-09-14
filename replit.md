@@ -201,6 +201,14 @@ DiscoverPost { authorUserId, authorName, authorHandle, chapterTitle,
 
 ## Admin Events System
 
+## Current Development Boundary — Game System
+
+The GameJo game system is frozen during the current development stage. Admin and infrastructure work must not modify existing game functionality.
+
+Do not add or change game APIs, game-data providers, game schemas, game discovery, game search, game pages, game metadata, game synchronization, game-related UI, game environment variables, or game refactors. If an admin feature needs game-related data, use the existing interface without changing its implementation. If a requirement would require changing the game system, stop and report the dependency instead of implementing it.
+
+Use the existing non-game infrastructure for current work: Resend for email, the existing PostgreSQL/Neon database, existing storage, existing authentication, Expo-compatible push notifications, and the existing backend infrastructure. Game API integration is reserved for the final development stage.
+
 ### Database (`lib/db/src/schema/events.ts`)
 - `events` table: id (uuid PK), title, description, theme (spring|summer|autumn|winter|special), status (draft|active|ended), startsAt, endsAt, inventory (jsonb), aiPrompt, createdBy, createdAt
 
