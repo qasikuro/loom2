@@ -39,40 +39,69 @@
 }
 
 :root {
-  --background: 228 33% 97%;
-  --foreground: 235 28% 16%;
-  --border: 226 23% 88%;
-  --card: 0 0% 100%;
-  --card-foreground: 235 28% 16%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 235 28% 16%;
-  --primary: 261 56% 52%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 228 28% 93%;
-  --secondary-foreground: 238 29% 26%;
-  --muted: 228 24% 94%;
-  --muted-foreground: 229 13% 48%;
-  --accent: 32 89% 94%;
-  --accent-foreground: 25 42% 28%;
-  --destructive: 0 66% 51%;
-  --destructive-foreground: 0 0% 100%;
-  --input: 226 23% 84%;
-  --ring: 261 56% 52%;
-  --sidebar: 244 31% 15%;
-  --sidebar-foreground: 230 27% 91%;
-  --sidebar-border: 244 25% 23%;
-  --sidebar-primary: 37 96% 64%;
-  --sidebar-primary-foreground: 245 30% 15%;
-  --sidebar-accent: 244 25% 22%;
-  --sidebar-accent-foreground: 230 27% 97%;
+  --background: 224 47% 8%;
+  --foreground: 215 30% 92%;
+  --border: 220 32% 19%;
+  --card: 222 43% 11%;
+  --card-foreground: 215 30% 92%;
+  --popover: 222 43% 12%;
+  --popover-foreground: 215 30% 92%;
+  --primary: 231 92% 66%;
+  --primary-foreground: 223 45% 10%;
+  --secondary: 220 29% 16%;
+  --secondary-foreground: 215 27% 80%;
+  --muted: 221 31% 14%;
+  --muted-foreground: 218 19% 57%;
+  --accent: 264 65% 63%;
+  --accent-foreground: 220 40% 97%;
+  --destructive: 351 76% 63%;
+  --destructive-foreground: 225 45% 10%;
+  --input: 220 29% 24%;
+  --ring: 231 92% 66%;
+  --sidebar: 224 49% 7%;
+  --sidebar-foreground: 218 30% 83%;
+  --sidebar-border: 220 35% 16%;
+  --sidebar-primary: 231 92% 66%;
+  --sidebar-primary-foreground: 225 45% 10%;
+  --sidebar-accent: 223 38% 15%;
+  --sidebar-accent-foreground: 220 25% 96%;
   --app-font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   --app-font-mono: 'DM Mono', ui-monospace, monospace;
-  --radius: 0.7rem;
+  --radius: 0.45rem;
+}
+
+.dark {
+  --background: 224 47% 8%;
+  --foreground: 215 30% 92%;
+  --border: 220 32% 19%;
+  --card: 222 43% 11%;
+  --card-foreground: 215 30% 92%;
+  --popover: 222 43% 12%;
+  --popover-foreground: 215 30% 92%;
+  --primary: 231 92% 66%;
+  --primary-foreground: 223 45% 10%;
+  --secondary: 220 29% 16%;
+  --secondary-foreground: 215 27% 80%;
+  --muted: 221 31% 14%;
+  --muted-foreground: 218 19% 57%;
+  --accent: 264 65% 63%;
+  --accent-foreground: 220 40% 97%;
+  --destructive: 351 76% 63%;
+  --destructive-foreground: 225 45% 10%;
+  --input: 220 29% 24%;
+  --ring: 231 92% 66%;
+  --sidebar: 224 49% 7%;
+  --sidebar-foreground: 218 30% 83%;
+  --sidebar-border: 220 35% 16%;
+  --sidebar-primary: 231 92% 66%;
+  --sidebar-primary-foreground: 225 45% 10%;
+  --sidebar-accent: 223 38% 15%;
+  --sidebar-accent-foreground: 220 25% 96%;
 }
 
 @layer base {
   * { @apply border-border box-border; }
-  body { @apply bg-background text-foreground font-sans antialiased; }
+  body { @apply bg-background text-foreground font-sans antialiased; min-width: 320px; }
   button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 }
 
@@ -86,6 +115,17 @@
 }
 
 .admin-enter { animation: admin-rise 280ms ease-out both; }
+.admin-grid {
+  background-image: linear-gradient(hsl(220 35% 18% / .28) 1px, transparent 1px), linear-gradient(90deg, hsl(220 35% 18% / .28) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.admin-panel {
+  border: 1px solid hsl(var(--border));
+  background: linear-gradient(145deg, hsl(222 43% 12% / .96), hsl(224 43% 10% / .96));
+  box-shadow: 0 12px 32px hsl(225 55% 3% / .18);
+}
+.admin-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.admin-scrollbar::-webkit-scrollbar-thumb { background: hsl(220 24% 26%); border-radius: 99px; }
 .admin-noise::after {
   content: "";
   position: fixed;

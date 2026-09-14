@@ -232,30 +232,30 @@ function Sidebar({
   return (
     <>
       {mobileOpen && <button aria-label="Close navigation" data-testid="button-close-navigation-overlay" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-30 bg-slate-950/45 lg:hidden" />}
-      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[276px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-2xl shadow-slate-950/10 transition-transform duration-200 lg:static lg:translate-x-0 lg:shadow-none ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[76px]" : ""}`}>
-        <div className={`flex h-[76px] shrink-0 items-center border-b border-sidebar-border ${collapsed ? "justify-center px-3" : "justify-between px-5"}`}>
+      <aside className={`fixed inset-y-0 left-0 z-40 flex w-[246px] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-2xl shadow-slate-950/30 transition-transform duration-200 lg:static lg:translate-x-0 lg:shadow-none ${mobileOpen ? "translate-x-0" : "-translate-x-full"} ${collapsed ? "lg:w-[72px]" : ""}`}>
+        <div className={`flex h-[64px] shrink-0 items-center border-b border-sidebar-border ${collapsed ? "justify-center px-3" : "justify-between px-4"}`}>
           <button data-testid="button-gamejo-home" onClick={() => onNavigate("dashboard")} className="flex items-center gap-3 text-left">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/10"><Command size={19} strokeWidth={2.2} /></span>
-            {!collapsed && <span><span className="block text-[15px] font-extrabold tracking-[-0.04em] text-white">GAMEJO</span><span className="block font-mono text-[9px] uppercase tracking-[0.16em] text-sidebar-foreground/50">Command center</span></span>}
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/10"><Command size={17} strokeWidth={2.2} /></span>
+            {!collapsed && <span><span className="block text-[14px] font-extrabold tracking-[-0.04em] text-white">GAMEJO</span><span className="block font-mono text-[8px] uppercase tracking-[0.16em] text-sidebar-foreground/50">Admin console</span></span>}
           </button>
           <button data-testid="button-collapse-sidebar" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed(!collapsed)} className="hidden rounded-lg p-2 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-white lg:block">
             {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>
 
-        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-          <button data-testid="nav-dashboard" onClick={() => onNavigate("dashboard")} title={collapsed ? "Dashboard" : undefined} className={`mb-4 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-colors ${route === "dashboard" ? "bg-sidebar-primary text-sidebar-primary-foreground" : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white"} ${collapsed ? "justify-center" : ""}`}>
+        <nav className="admin-scrollbar min-h-0 flex-1 overflow-y-auto px-2.5 py-3">
+          <button data-testid="nav-dashboard" onClick={() => onNavigate("dashboard")} title={collapsed ? "Dashboard" : undefined} className={`mb-3 flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-[12px] font-semibold transition-colors ${route === "dashboard" ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/10" : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-white"} ${collapsed ? "justify-center" : ""}`}>
             <LayoutDashboard size={17} />
             {!collapsed && "Dashboard"}
           </button>
-          {!collapsed && <p className="mb-2 px-3 font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground/35">Workspaces</p>}
-          <div className="space-y-1">
+           {!collapsed && <p className="mb-2 px-3 font-mono text-[9px] font-medium uppercase tracking-[0.2em] text-sidebar-foreground/35">Workspaces</p>}
+           <div className="space-y-0.5">
             {NAV_GROUPS.map((group) => {
               const groupActive = activeItem?.group === group.label;
               const isOpen = openGroups[group.id];
               return (
                 <div key={group.id}>
-                  <button data-testid={`nav-group-${group.id}`} onClick={() => collapsed ? onNavigate(group.items[0].page ?? group.items[0].id) : setOpenGroups((current) => ({ ...current, [group.id]: !current[group.id] }))} title={collapsed ? group.label : undefined} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-[12px] font-semibold transition-colors ${groupActive ? "text-sidebar-primary" : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-white"} ${collapsed ? "justify-center" : ""}`}>
+                   <button data-testid={`nav-group-${group.id}`} onClick={() => collapsed ? onNavigate(group.items[0].page ?? group.items[0].id) : setOpenGroups((current) => ({ ...current, [group.id]: !current[group.id] }))} title={collapsed ? group.label : undefined} className={`flex w-full items-center gap-3 rounded-md px-3 py-1.5 text-left text-[11px] font-semibold transition-colors ${groupActive ? "text-sidebar-primary" : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-white"} ${collapsed ? "justify-center" : ""}`}>
                     <group.icon size={16} strokeWidth={1.8} />
                     {!collapsed && <><span className="flex-1">{group.label}</span>{isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</>}
                   </button>
@@ -264,7 +264,7 @@ function Sidebar({
                       const itemRoute = item.page ?? item.id;
                       const active = route === itemRoute || (item.page === "content" && route === "content");
                       return (
-                        <button key={item.id} data-testid={`nav-${item.id}`} onClick={() => onNavigate(itemRoute)} className={`my-0.5 flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-[12px] transition-colors ${active ? "bg-sidebar-accent font-semibold text-white" : "text-sidebar-foreground/60 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"}`}>
+                         <button key={item.id} data-testid={`nav-${item.id}`} onClick={() => onNavigate(itemRoute)} className={`my-0.5 flex w-full items-center gap-2.5 rounded px-3 py-1.5 text-left text-[11px] transition-colors ${active ? "bg-sidebar-accent font-semibold text-white" : "text-sidebar-foreground/60 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground"}`}>
                           <item.icon size={14} strokeWidth={1.8} />
                           <span className="truncate">{item.label}</span>
                         </button>
@@ -277,7 +277,7 @@ function Sidebar({
           </div>
         </nav>
 
-        <div className={`border-t border-sidebar-border p-3 ${collapsed ? "flex justify-center" : ""}`}>
+        <div className={`border-t border-sidebar-border p-2.5 ${collapsed ? "flex justify-center" : ""}`}>
           <button data-testid="button-sign-out" onClick={() => signOut()} title={collapsed ? "Sign out" : undefined} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-sidebar-foreground/55 transition-colors hover:bg-sidebar-accent hover:text-white ${collapsed ? "justify-center" : ""}`}>
             <LogOut size={16} />
             {!collapsed && "Sign out"}
@@ -291,22 +291,33 @@ function Sidebar({
 function Layout({ children, route, onNavigate }: { children: ReactNode; route: string; onNavigate: (route: string) => void }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useUser();
   const active = ALL_ITEMS.find((item) => (item.page ?? item.id) === route || item.id === route);
   return (
     <div className="admin-noise flex min-h-[100dvh] bg-background">
       <Sidebar route={route} collapsed={collapsed} mobileOpen={mobileOpen} setCollapsed={setCollapsed} setMobileOpen={setMobileOpen} onNavigate={(next) => { setMobileOpen(false); onNavigate(next); }} />
       <main className="min-w-0 flex-1 overflow-y-auto">
-        <header className="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b bg-background/90 px-5 backdrop-blur-md sm:px-8 lg:px-10">
-          <div className="flex items-center gap-3">
-            <button data-testid="button-open-navigation" aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="rounded-lg border bg-card p-2 text-muted-foreground hover:text-foreground lg:hidden"><Menu size={18} /></button>
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Gamejo / {active?.group ?? "Dashboard"}</p>
-              <h1 className="mt-0.5 text-sm font-bold tracking-tight text-foreground">{active?.label ?? (route === "dashboard" ? "Dashboard" : "Workspace")}</h1>
+        <header className="sticky top-0 z-20 flex min-h-[64px] items-center justify-between gap-3 border-b border-border bg-background/95 px-3 backdrop-blur-md sm:px-5 lg:px-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <button data-testid="button-open-navigation" aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="rounded-md border border-border bg-card p-2 text-muted-foreground hover:text-foreground lg:hidden"><Menu size={17} /></button>
+            <div className="hidden min-w-[190px] md:block">
+              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Gamejo / {active?.group ?? "Dashboard"}</p>
+              <h1 className="mt-0.5 truncate text-xs font-bold tracking-tight text-foreground">{active?.label ?? (route === "dashboard" ? "Dashboard" : "Workspace")}</h1>
+            </div>
+            <div className="flex h-8 min-w-0 items-center gap-2 rounded-md border border-border bg-card/80 px-3 text-[11px] text-muted-foreground sm:w-[280px] lg:w-[350px]">
+              <Search size={14} className="shrink-0 text-muted-foreground/70" />
+              <span className="truncate">Search users, content, games...</span>
+              <span className="ml-auto hidden rounded border border-border px-1 font-mono text-[9px] text-muted-foreground/70 sm:inline">⌘ K</span>
             </div>
           </div>
-          <div className="hidden items-center gap-3 sm:flex">
-            <div className="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-xs text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Systems nominal</div>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">GO</div>
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/5 px-3 py-1.5 text-[10px] text-emerald-300 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />All systems operational</div>
+            <button aria-label="Notifications" className="relative rounded-md p-2 text-muted-foreground hover:bg-card hover:text-foreground"><Bell size={16} /><span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-destructive" /></button>
+            <div className="flex items-center gap-2 border-l border-border pl-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">{(user?.firstName?.[0] ?? "O")}{(user?.lastName?.[0] ?? "")}</div>
+              <div className="hidden leading-tight lg:block"><p className="text-[11px] font-semibold text-foreground">{user?.fullName ?? "Operator"}</p><p className="font-mono text-[9px] text-muted-foreground">Admin</p></div>
+              <ChevronDown size={13} className="hidden text-muted-foreground lg:block" />
+            </div>
           </div>
         </header>
         <div key={route}>{children}</div>
