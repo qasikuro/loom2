@@ -24,6 +24,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -103,6 +104,7 @@ interface GuideResult {
 export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
+  const { width: viewportWidth } = useWindowDimensions();
   const { t }     = useTranslation();
   const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
           apiOnline, discoverLoadError, reloadData, isRefreshing,
@@ -144,6 +146,7 @@ export default function DiscoverScreen() {
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
+  const contentMaxWidth = viewportWidth >= 760 ? 760 : undefined;
 
   // Refresh the discover feed when the tab comes into focus,
   // but at most once every 2 minutes to avoid hammering the API.
@@ -285,7 +288,7 @@ export default function DiscoverScreen() {
         <View style={{ position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(244,168,200,0.14)', bottom: 8, right: 80, pointerEvents: 'none' }} />
 
         {/* Title row */}
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, contentMaxWidth != null && { maxWidth: contentMaxWidth }]}>
           <View style={styles.headerText}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
               <Text style={styles.headerTitle}>{t('discover.title')}</Text>
@@ -298,7 +301,7 @@ export default function DiscoverScreen() {
             </View>
             <Text style={styles.headerSub}>{t('discover.subTitle')}</Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 8, flexShrink: 0 }}>
             <TouchableOpacity
               style={styles.usersBtn}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -492,7 +495,7 @@ export default function DiscoverScreen() {
           {/* Banner */}
           <LinearGradient
             colors={['rgba(80,40,180,0.22)', 'rgba(40,80,220,0.10)', 'transparent']}
-            style={styles.booksBanner}
+             style={[styles.booksBanner, contentMaxWidth != null && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
               <Icon name="book-open" size={15} color="#C8A84B" />
@@ -560,7 +563,7 @@ export default function DiscoverScreen() {
                   </View>
 
                   {/* Info */}
-                  <View style={{ flex: 1, gap: 5 }}>
+                     <View style={{ flex: 1, minWidth: 0, gap: 5 }}>
                     <Text style={styles.bookCardTitle} numberOfLines={2}>{book.title}</Text>
                     {book.authorName ? (
                       <TouchableOpacity
@@ -637,7 +640,7 @@ export default function DiscoverScreen() {
           {/* Header banner */}
           <LinearGradient
             colors={['rgba(80,40,180,0.28)', 'rgba(60,120,240,0.14)', 'transparent']}
-            style={styles.guideBanner}
+             style={[styles.guideBanner, contentMaxWidth != null && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           >
             <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(100,60,220,0.18)', top: -40, right: -20, pointerEvents: 'none' }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -743,8 +746,8 @@ export default function DiscoverScreen() {
                     </View>
 
                     {/* Info */}
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                     <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 }}>
                         <Text style={styles.guideCardName} numberOfLines={1}>{g.name}</Text>
                         {g.isAvailableNow && (
                           <View style={styles.guideNowBadge}>
@@ -991,11 +994,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
+    width: '100%',
+    alignSelf: 'center',
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 10,
   },
-  headerText:  { flex: 1, gap: 3 },
+  headerText:  { flex: 1, minWidth: 0, gap: 3 },
   headerTitle: {
     fontSize: 22, fontFamily: 'Satoshi-Bold',
     letterSpacing: -0.6, color: '#EDE8FF',
@@ -1035,6 +1040,8 @@ const styles = StyleSheet.create({
   // Stories sort toggle
   storiesSortRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
     paddingHorizontal: 0,
     paddingTop: 14,
@@ -1072,6 +1079,7 @@ const styles = StyleSheet.create({
   },
   bookCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
+    width: '100%', maxWidth: 760, alignSelf: 'center',
     backgroundColor: 'rgba(30,20,60,0.65)',
     borderRadius: 18, borderWidth: 1,
     borderColor: 'rgba(155,120,232,0.18)', padding: 14,
@@ -1123,6 +1131,7 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
     marginBottom: 4,
     overflow: 'hidden',
+    width: '100%',
   },
   guideBannerTitle: {
     fontSize: 17,
@@ -1174,6 +1183,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
+    width: '100%', maxWidth: 760, alignSelf: 'center',
     backgroundColor: 'rgba(30,20,60,0.65)',
     borderRadius: 18,
     borderWidth: 1,
@@ -1205,7 +1215,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(12,8,32,0.9)',
   },
-  guideCardName:   { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
+  guideCardName:   { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)', flexShrink: 1 },
   guideCardHandle: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(155,120,232,0.70)' },
   guideCardBio:    { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', lineHeight: 17 },
   guideNowBadge: {
@@ -1232,6 +1242,7 @@ const styles = StyleSheet.create({
   peopleList: { paddingHorizontal: 16, gap: 10 },
   personCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
+    width: '100%', maxWidth: 760, alignSelf: 'center',
     borderRadius: 18, borderWidth: 1,
     padding: 14,
     shadowColor: '#000',

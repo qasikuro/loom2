@@ -1,22 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   Keyboard,
   Modal,
   Platform,
   StyleSheet,
+  ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSound } from '@/context/SoundContext';
-
-const { width: W, height: H } = Dimensions.get('window');
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DONE_KEY = 'first_publish_done';
 
@@ -58,6 +58,8 @@ interface FirstPublishOverlayProps {
 
 export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPublishOverlayProps) {
   const { playSound } = useSound();
+  const { width: W, height: H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [step, setStep]   = useState(STEP_MOOD);
   const [mood, setMood]   = useState<MoodId | null>(
@@ -121,7 +123,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
           style={StyleSheet.absoluteFill}
         />
 
-        <Animated.View style={[s.card, { transform: [{ translateX: slideAnim }] }]}>
+        <Animated.View style={[s.card, { width: Math.min(W - 24, 520), minHeight: Math.min(360, Math.max(260, H - insets.top - insets.bottom - 16)), maxHeight: Math.max(300, H - insets.top - insets.bottom - 16), transform: [{ translateX: slideAnim }] }]}>
           {/* Step indicator */}
           <View style={s.stepRow}>
             {[0, 1, 2].map(i => (
@@ -135,6 +137,12 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
             ))}
           </View>
 
+          <ScrollView
+            style={s.cardScroll}
+            contentContainerStyle={s.cardScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           {/* ── Step 0: Mood ───────────────────────────────────────────────── */}
           {step === STEP_MOOD && (
             <>
@@ -236,6 +244,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
               </TouchableOpacity>
             </>
           )}
+          </ScrollView>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -247,14 +256,16 @@ const s = StyleSheet.create({
     flex: 1, alignItems: 'center', justifyContent: 'flex-end',
   },
   card: {
-    width: W, paddingHorizontal: 28, paddingTop: 36, paddingBottom: 52,
+    width: '94%', maxWidth: 520, paddingHorizontal: 28, paddingTop: 36, paddingBottom: 52,
     backgroundColor: 'rgba(8,5,28,0.98)',
     borderTopLeftRadius: 32, borderTopRightRadius: 32,
     borderTopWidth: 1, borderColor: 'rgba(200,185,255,0.10)',
-    minHeight: H * 0.62,
+    minHeight: 360,
     alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: -12 }, shadowOpacity: 0.5, shadowRadius: 24, elevation: 32,
   },
+  cardScroll: { width: '100%' },
+  cardScrollContent: { alignItems: 'center', paddingBottom: 4 },
   stepRow: {
     flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 28,
   },

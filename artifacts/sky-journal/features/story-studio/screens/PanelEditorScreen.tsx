@@ -10,7 +10,6 @@ import { Image } from 'expo-image';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   KeyboardAvoidingView,
   PanResponder,
   Platform,
@@ -22,6 +21,7 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -34,7 +34,6 @@ import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
 import { ImageSourceSheet } from '@/components/ImageSourceSheet';
 
-const { width: SW } = Dimensions.get('window');
 const GAP      = 3;
 const CANVAS_H = 390;
 
@@ -258,8 +257,9 @@ export default function PanelEditorScreen() {
   const colors  = useColors();
   const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
-  const topPad  = Platform.OS === 'web' ? 48 : insets.top;
-  const botPad  = Platform.OS === 'web' ? 20 : insets.bottom + 8;
+  const { width: windowWidth } = useWindowDimensions();
+  const topPad  = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad  = Platform.OS === 'web' ? 34 : insets.bottom + 8;
 
   const draft = DraftStore.get();
   const initPanels = draft?.panels ?? [];
@@ -296,7 +296,10 @@ export default function PanelEditorScreen() {
   const [activeIdx,   setActiveIdx]   = useState(draft?.activePanelIndex ?? 0);
   const [selId,       setSelId]       = useState<string | null>(null);
   const [toolMode,    setToolMode]    = useState<'bubble' | 'text' | 'sticker' | null>(null);
-  const [canvasW,     setCanvasW]     = useState(SW - 36);
+  // The wrapper is measured after layout so panels and draggable overlays use
+  // the actual width on phones, tablets, landscape, and web. The window width
+  // is only an initial value before the first layout pass.
+  const [canvasW,     setCanvasW]     = useState(() => Math.max(0, Math.min(windowWidth, 760) - 36));
   const [pendingUri,    setPendingUri]    = useState<string | null>(null);
   const [pendingIdx,    setPendingIdx]    = useState<number>(0);
   const [uploadingSet,   setUploadingSet]   = useState<Set<number>>(new Set());
@@ -607,7 +610,8 @@ export default function PanelEditorScreen() {
   }
 
   const selOverlay = getSelOverlay();
-  const rowH       = getPanelH(currentLayout, CANVAS_H);
+  const canvasH    = Math.min(CANVAS_H, Math.max(280, canvasW * 1.2));
+  const rowH       = getPanelH(currentLayout, canvasH);
 
   // Precompute row start indices
   const rowStarts: number[] = [];
@@ -626,7 +630,7 @@ export default function PanelEditorScreen() {
     >
       {/* Header */}
       <LinearGradient colors={['#1A1640', '#1E1A48']} style={[styles.headerGrad, { height: topPad + 58 }]} />
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+      <View style={[styles.header, { paddingTop: topPad + 10, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
         <BackButton
           style={styles.headerBtn}
           color="rgba(235,228,255,0.9)"
@@ -654,7 +658,7 @@ export default function PanelEditorScreen() {
         {/* ── Manga panel canvas ────────────────────────────── */}
         <View style={[styles.mangaWrapper, { backgroundColor: '#0B091A', borderColor: 'rgba(200,184,232,0.07)' }]}>
           <View
-            style={[styles.mangaCanvas, { height: CANVAS_H }]}
+            style={[styles.mangaCanvas, { height: canvasH }]}
             onLayout={e => setCanvasW(e.nativeEvent.layout.width)}
           >
             {currentLayout.rows.map((cols, ri) => {
@@ -1057,7 +1061,7 @@ const styles = StyleSheet.create({
   saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
 
   scroll:        { flex: 1 },
-  scrollContent: { paddingHorizontal: 14, paddingTop: 8, gap: 12 },
+  scrollContent: { paddingHorizontal: 14, paddingTop: 8, gap: 12, width: '100%', maxWidth: 800, alignSelf: 'center' },
 
   mangaWrapper: {
     borderRadius: 16, borderWidth: 1, overflow: 'hidden', padding: 4,
@@ -1119,9 +1123,9 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', zIndex: 30,
   },
 
-  toolbar: { flexDirection: 'row', borderWidth: 1, borderRadius: 16, padding: 4, gap: 4 },
+  toolbar: { flexDirection: 'row', flexWrap: 'wrap', borderWidth: 1, borderRadius: 16, padding: 4, gap: 4 },
   toolBtn: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
+    flex: 1, minWidth: 84, alignItems: 'center', justifyContent: 'center',
     gap: 5, paddingVertical: 11, borderRadius: 12, borderWidth: 1,
   },
   toolLabel: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
@@ -1149,10 +1153,10 @@ const styles = StyleSheet.create({
 
   fontBar: {
     flexDirection: 'row', alignItems: 'center',
-    borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4, gap: 2,
+    flexWrap: 'wrap', borderRadius: 12, borderWidth: 1, paddingHorizontal: 4, paddingVertical: 4, gap: 2,
   },
   fontBarBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4,
+    flex: 1, minWidth: 64, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 4,
     borderRadius: 9, borderWidth: 1, borderColor: 'transparent', gap: 2,
   },
   fontBarSample: { fontSize: 16 },

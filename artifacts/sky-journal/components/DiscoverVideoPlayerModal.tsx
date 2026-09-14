@@ -4,6 +4,7 @@ import { Video, ResizeMode } from 'expo-av';
 import React, { useState } from 'react';
 import {
   Modal,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -20,6 +21,8 @@ interface Props {
 export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
   const insets              = useSafeAreaInsets();
   const { width: W, height: H } = useWindowDimensions();
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
   const [muted, setMuted]   = useState(false);
 
   // Reset mute state whenever the modal opens a new post
@@ -50,7 +53,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
         />
 
         {/* Top bar */}
-        <View style={[vp.topBar, { paddingTop: insets.top + 8 }]}>
+        <View style={[vp.topBar, { paddingTop: topInset + 8 }]}>
           <TouchableOpacity
             style={vp.iconBtn}
             onPress={onClose}
@@ -72,7 +75,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
         </View>
 
         {/* Bottom info */}
-        <View style={[vp.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
+        <View style={[vp.bottomBar, { paddingBottom: bottomInset + 16 }]}>
           {/* Author */}
           <Text style={vp.author} numberOfLines={1}>
             {post.authorHandle || post.authorName}
@@ -119,11 +122,11 @@ const vp = StyleSheet.create({
   },
   title: {
     fontSize: 18, fontFamily: 'Satoshi-Bold',
-    color: '#fff', lineHeight: 24,
+    color: '#fff', lineHeight: 24, flexShrink: 1,
   },
   desc: {
     fontSize: 13, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(240,234,255,0.75)', lineHeight: 18,
+    color: 'rgba(240,234,255,0.75)', lineHeight: 18, flexShrink: 1,
   },
   moodPill: {
     alignSelf: 'flex-start',

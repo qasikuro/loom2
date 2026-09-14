@@ -1068,7 +1068,7 @@ export default function HomeScreen() {
   const { userId: clerkUserId } = useAuth();
   const { playSound } = useSound();
 
-  const topPad    = Platform.OS === 'web' ? 48 : insets.top;
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 84 : insets.bottom + 90;
 
   const [showNotifs,  setShowNotifs]  = useState(false);
@@ -1418,7 +1418,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
         <View style={s.dashboardHeader}>
-          <View style={{ flex: 1 }}>
+           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.dashboardGreeting}>{greetingWord},</Text>
             <Text style={[s.dashboardName, { color: accent }]} numberOfLines={1}>
               {character.name || 'Player'}
@@ -1626,7 +1626,7 @@ export default function HomeScreen() {
           <View style={s.dashboardPromptIcon}>
             <Icon name={activeEvent && !eventDismissed ? 'star' : 'lightbulb'} size={17} color="#F4CB55" />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.dashboardPromptTitle}>{activeEvent && !eventDismissed ? activeEvent.title : 'Daily prompt'}</Text>
             <Text style={s.dashboardPromptText} numberOfLines={1}>
               {activeEvent && !eventDismissed ? activeEvent.description : dashboardPrompt.text}
@@ -2276,7 +2276,7 @@ export default function HomeScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
   dashboardScroll: { flex: 1 },
-  dashboard: { flexGrow: 1, paddingHorizontal: 18, gap: 5 },
+  dashboard: { flexGrow: 1, width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 18, gap: 5 },
   dashboardNarrow: { paddingHorizontal: 12, gap: 6 },
   dashboardHeader: {
     flexDirection: 'row',
@@ -2292,9 +2292,9 @@ const s = StyleSheet.create({
   },
   dashboardAlertDot: { position: 'absolute', top: 7, right: 8, width: 7, height: 7, borderRadius: 4, backgroundColor: '#A96AFF', borderWidth: 1, borderColor: '#080513' },
   dashboardAvatarRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, overflow: 'hidden', backgroundColor: '#160C32' },
-  dashboardActions: { flexDirection: 'row', gap: 7 },
+  dashboardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   dashboardAction: {
-    flex: 1, height: 84, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+    flex: 1, minWidth: 48, maxWidth: 140, height: 84, borderRadius: 13, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
     backgroundColor: 'rgba(19,14,45,0.88)', borderWidth: 1, borderColor: 'rgba(174,145,240,0.10)',
   },
   dashboardActionPlaceholder: { borderStyle: 'dashed', borderColor: 'rgba(255,145,77,0.30)' },
@@ -2353,7 +2353,7 @@ const s = StyleSheet.create({
   dashboardPromptIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(244,203,85,0.09)' },
   dashboardPromptTitle: { fontSize: 10.5, fontFamily: 'Satoshi-Bold', color: '#F2E8CE' },
   dashboardPromptText: { fontSize: 8.5, fontFamily: 'Satoshi-Regular', color: 'rgba(231,218,202,0.55)', marginTop: 2 },
-  dashboardWriteButton: { height: 30, paddingHorizontal: 11, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(244,203,85,0.08)', borderWidth: 1, borderColor: 'rgba(244,203,85,0.18)' },
+  dashboardWriteButton: { height: 30, paddingHorizontal: 11, borderRadius: 15, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(244,203,85,0.08)', borderWidth: 1, borderColor: 'rgba(244,203,85,0.18)', flexShrink: 1 },
   dashboardWriteText: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', color: '#F4CB55' },
   root: { flex: 1, backgroundColor: '#04030C' },
 

@@ -26,6 +26,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -200,6 +201,7 @@ export default function MessagesScreen() {
     isGuide?:   string;
   }>();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { markDmThreadRead, blockedIds, blockUser, unblockUser } = useApp();
   const { playStickerSound } = useSound();
   const { userId: myUserId } = useAuth();
@@ -221,8 +223,9 @@ export default function MessagesScreen() {
   const typingTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'ios'  ? insets.bottom : 8;
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : Platform.OS === 'ios' ? insets.bottom : 8;
+  const contentWidth = Math.min(windowWidth, 680);
 
   const partnerSubtitle = isGuide === 'true'
     ? 'Constellation Guide'
@@ -541,7 +544,7 @@ export default function MessagesScreen() {
           <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(60,140,240,0.08)', top: 10, left: 40 }} />
         </View>
 
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, { width: contentWidth, alignSelf: 'center' }]}>
           <BackButton color="rgba(210,200,255,0.85)" />
 
           <View style={styles.partnerInfo}>
@@ -595,8 +598,9 @@ export default function MessagesScreen() {
             ref={flatRef}
             data={listData}
             keyExtractor={item => item.key}
-            contentContainerStyle={[styles.listPad, { paddingBottom: 14 }]}
+             contentContainerStyle={[styles.listPad, { width: contentWidth, alignSelf: 'center', paddingBottom: 14 }]}
             showsVerticalScrollIndicator={false}
+             keyboardShouldPersistTaps="handled"
             onContentSizeChange={scrollToBottom}
             onLayout={scrollToBottom}
             ListFooterComponent={partnerTyping ? (
@@ -715,7 +719,7 @@ export default function MessagesScreen() {
           )}
 
           {/* ── Input bar ─────────────────────────────────── */}
-          <View style={[styles.inputBar, { paddingBottom: Math.max(bottomPad, 8) }]}>
+           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: Math.max(bottomPad, 8) }]}>
             <TouchableOpacity
               style={[
                 styles.stickerToggleBtn,
@@ -861,6 +865,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderColor: BORDER,
     paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6,
     maxHeight: 310,
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
   },
   pickerHandle: {
     width: 36, height: 3, borderRadius: 2,
@@ -889,6 +896,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingTop: 10,
     backgroundColor: NIGHT2,
     borderTopWidth: 1, borderColor: BORDER,
+    alignSelf: 'center',
   },
   stickerToggleBtn: {
     width: 38, height: 38, borderRadius: 19,

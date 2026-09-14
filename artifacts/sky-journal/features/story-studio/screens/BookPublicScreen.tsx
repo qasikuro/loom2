@@ -11,6 +11,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -87,7 +88,9 @@ function readTime(pageCount: number): string {
 export default function BookPublicScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const webTopInset = Platform.OS === 'web' ? 67 : insets.top;
   const apiFetch = useApiFetch();
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
 
@@ -298,13 +301,13 @@ export default function BookPublicScreen() {
     );
   }
 
-  const coverW = width * 0.38;
+  const coverW = Math.min(isLandscape ? 190 : 150, Math.max(104, width * (isLandscape ? 0.24 : 0.34)));
   const coverH = coverW * 1.45;
 
   return (
     <View style={[s.root, { backgroundColor: colors.background }]}>
       {/* Top nav */}
-      <View style={[s.topNav, { paddingTop: insets.top + 8 }]}>
+      <View style={[s.topNav, { paddingTop: webTopInset + 8 }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.navBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
@@ -319,7 +322,7 @@ export default function BookPublicScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + (Platform.OS === 'web' ? 34 : 40) + 96 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Hero */}
@@ -446,14 +449,14 @@ const s = StyleSheet.create({
   hero:            { flexDirection: 'row', padding: 20, gap: 16, alignItems: 'flex-start' },
   cover:           { borderRadius: 10, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   coverPlaceholder:{ alignItems: 'center', justifyContent: 'center' },
-  heroMeta:        { flex: 1, gap: 8 },
-  bookTitle:       { color: 'rgba(255,255,255,0.94)', fontSize: 18, fontWeight: '700', lineHeight: 24 },
-  bookSubtitle:    { color: 'rgba(255,255,255,0.40)', fontSize: 13, fontStyle: 'italic' },
+  heroMeta:        { flex: 1, minWidth: 0, gap: 8 },
+  bookTitle:       { color: 'rgba(255,255,255,0.94)', fontSize: 18, fontWeight: '700', lineHeight: 24, flexShrink: 1 },
+  bookSubtitle:    { color: 'rgba(255,255,255,0.40)', fontSize: 13, fontStyle: 'italic', flexShrink: 1 },
   chips:           { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   chip:            { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: 'rgba(139,112,200,0.12)', borderWidth: 1, borderColor: 'rgba(139,112,200,0.22)' },
   chipTxt:         { color: 'rgba(200,185,255,0.60)', fontSize: 10 },
-  statsRow:        { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 },
-  statItem:        { alignItems: 'center', gap: 1 },
+  statsRow:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2, flexWrap: 'wrap' },
+  statItem:        { alignItems: 'center', gap: 1, minWidth: 38, flexShrink: 1 },
   statVal:         { color: 'rgba(255,255,255,0.80)', fontSize: 12, fontWeight: '600' },
   statLbl:         { color: 'rgba(200,185,255,0.35)', fontSize: 9 },
   statDivider:     { width: 1, height: 20, backgroundColor: 'rgba(255,255,255,0.08)' },
@@ -466,7 +469,7 @@ const s = StyleSheet.create({
   tabBtnActive:    { borderBottomWidth: 2, borderBottomColor: ACCENT },
   tabTxt:          { color: 'rgba(255,255,255,0.38)', fontSize: 13, fontWeight: '500' },
   tabTxtActive:    { color: 'rgba(255,255,255,0.90)' },
-  tabContent:      { paddingHorizontal: 0 },
+  tabContent:      { paddingHorizontal: 0, minWidth: 0 },
   sectionLabel:    { color: 'rgba(200,185,255,0.30)', fontSize: 10, fontWeight: '700', letterSpacing: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
   chapterRow:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, gap: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.04)' },
   chapterNum:      { width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' },

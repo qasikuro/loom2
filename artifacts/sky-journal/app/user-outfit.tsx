@@ -13,7 +13,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image } from 'expo-image';
 import {
   Animated,
-  Dimensions,
   Platform,
   Pressable,
   ScrollView,
@@ -21,10 +20,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const { width: SW, height: SCREEN_H } = Dimensions.get('window');
 
 const MOOD_COLORS: Record<string, string> = {
   Peaceful:    '#8B7AB5',
@@ -106,6 +104,7 @@ export default function UserOutfitScreen() {
   const colors    = useColors();
   const { t }     = useTranslation();
   const insets    = useSafeAreaInsets();
+  const { width: windowWidth, height: screenHeight } = useWindowDimensions();
   const { followingIds, followUser, unfollowUser } = useApp();
   const scrollRef = useRef<ScrollView>(null);
 
@@ -161,7 +160,7 @@ export default function UserOutfitScreen() {
   const kbAnim  = useRef<Animated.CompositeAnimation | null>(null);
 
   // ── Cinematic: Studio light sweep ───────────────────────────────────────
-  const sweepX    = useRef(new Animated.Value(-SW * 0.4)).current;
+  const sweepX    = useRef(new Animated.Value(-windowWidth * 0.4)).current;
   const sweepAnim = useRef<Animated.CompositeAnimation | null>(null);
 
   // ── Cinematic: Ambient color pulse ──────────────────────────────────────
@@ -187,24 +186,24 @@ export default function UserOutfitScreen() {
   const initial    = (params.authorName ?? '?').charAt(0).toUpperCase();
   const total      = allOutfits.length;
 
-  const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 80 : insets.bottom + 24;
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 24;
 
   // Scroll-derived animations
   const stickyOpacity = scrollY.interpolate({
-    inputRange: [SCREEN_H * 0.72, SCREEN_H * 0.88],
+    inputRange: [screenHeight * 0.72, screenHeight * 0.88],
     outputRange: [0, 1], extrapolate: 'clamp',
   });
   const imageParallax = scrollY.interpolate({
-    inputRange: [0, SCREEN_H],
-    outputRange: [0, -SCREEN_H * 0.22], extrapolate: 'clamp',
+    inputRange: [0, screenHeight],
+    outputRange: [0, -screenHeight * 0.22], extrapolate: 'clamp',
   });
   const imagePullScale = scrollY.interpolate({
-    inputRange: [-SCREEN_H * 0.2, 0],
+    inputRange: [-screenHeight * 0.2, 0],
     outputRange: [1.22, 1], extrapolate: 'clamp',
   });
   const heroFade = scrollY.interpolate({
-    inputRange: [0, SCREEN_H * 0.32],
+    inputRange: [0, screenHeight * 0.32],
     outputRange: [1, 0], extrapolate: 'clamp',
   });
   const entryY = entryAnim.interpolate({ inputRange: [0, 1], outputRange: [55, 0] });
@@ -215,7 +214,7 @@ export default function UserOutfitScreen() {
       toValue: 1, duration: 1000, delay: 300, useNativeDriver: true,
     }).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [windowWidth]);
 
   // Scroll hint bob
   useEffect(() => {
@@ -266,17 +265,17 @@ export default function UserOutfitScreen() {
     let isMounted = true;
     const doSweep = () => {
       if (!isMounted) return;
-      sweepX.setValue(-SW * 0.5);
+      sweepX.setValue(-windowWidth * 0.5);
       sweepAnim.current = Animated.sequence([
         Animated.delay(rnd(3500, 7000)),
-        Animated.timing(sweepX, { toValue: SW * 1.5, duration: rnd(1800, 2800), useNativeDriver: true }),
+        Animated.timing(sweepX, { toValue: windowWidth * 1.5, duration: rnd(1800, 2800), useNativeDriver: true }),
       ]);
       sweepAnim.current.start(({ finished }) => { if (finished && isMounted) doSweep(); });
     };
     doSweep();
     return () => { isMounted = false; sweepAnim.current?.stop(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [windowWidth]);
 
   // Ambient color pulse
   useEffect(() => {
@@ -383,7 +382,7 @@ export default function UserOutfitScreen() {
         {/* ══════════════════════════════════════════════════
             HERO
             ══════════════════════════════════════════════════ */}
-        <Pressable style={[styles.hero, { height: SCREEN_H }]} onPress={handleTap}>
+        <Pressable style={[styles.hero, { height: screenHeight }]} onPress={handleTap}>
 
           {/* ── Photo with Ken Burns parallax ── */}
           <Animated.View

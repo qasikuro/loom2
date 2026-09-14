@@ -13,6 +13,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -127,10 +128,12 @@ function MiniPageGrid({ page, getPanelImg }: { page: StoryPage; getPanelImg: (p:
 export default function ChapterEditorScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { t: tr } = useTranslation();
   const { addStory, updateStory, stories, storiesLoadError, apiOnline, isLoading, reloadData } = useApp();
-  const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 120;
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 120;
+  const contentWidth = Math.min(windowWidth, 760);
 
   const [title,    setTitle]    = useState('');
   const [desc,     setDesc]     = useState('');
@@ -485,7 +488,7 @@ export default function ChapterEditorScreen() {
       )}
 
       {/* ── Header ─────────────────────────────────────────────── */}
-      <View style={[c.header, { paddingTop: topPad + 10 }]}>
+      <View style={[c.header, { paddingTop: topPad + 10, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={c.navBtn}
@@ -522,7 +525,7 @@ export default function ChapterEditorScreen() {
         bottomOffset={20}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[c.scroll, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[c.scroll, { paddingBottom: bottomPad, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
       >
 
         {/* ── Draft banner ───────────────────────────────────── */}
@@ -850,9 +853,9 @@ const c = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)',
   },
-  headerCenter:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerCenter:    { flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1, minWidth: 0 },
   headerMoodDot:   { width: 8, height: 8, borderRadius: 4, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 6 },
-  headerTitle:     { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.92)', letterSpacing: -0.3 },
+  headerTitle:     { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(248,244,255,0.92)', letterSpacing: -0.3, flexShrink: 1 },
   headerPageCount: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,185,255,0.28)', letterSpacing: 0.2 },
 
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
@@ -879,7 +882,7 @@ const c = StyleSheet.create({
     marginTop: 6, marginBottom: 6,
     shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 8,
   },
-  identityInner: { flex: 1 },
+  identityInner: { flex: 1, minWidth: 0 },
 
   // Mood pills
   moodRow: { flexDirection: 'row', gap: 6, paddingBottom: 14, paddingRight: 12 },
@@ -956,12 +959,12 @@ const c = StyleSheet.create({
     marginBottom: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 12, elevation: 4,
   },
-  pageCardInfo:        { flex: 1, gap: 5 },
+  pageCardInfo:        { flex: 1, minWidth: 0, gap: 5 },
   pageCardTopRow:      { flexDirection: 'row', alignItems: 'center', gap: 7 },
   pageCardNum:         { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.86)' },
   pageLayoutTag:       { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
   pageLayoutTagTxt:    { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  pageCardPreview:     { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,185,255,0.52)', lineHeight: 17 },
+  pageCardPreview:     { flexShrink: 1, fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,185,255,0.52)', lineHeight: 17 },
   pageCardPreviewEmpty:{ color: 'rgba(200,185,255,0.22)', fontStyle: 'normal' },
   pageCardDotRow:      { flexDirection: 'row', gap: 4, marginTop: 2 },
   pageCardDot:         { width: 16, height: 3, borderRadius: 2 },

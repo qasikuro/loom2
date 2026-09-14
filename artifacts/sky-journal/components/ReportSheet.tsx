@@ -10,12 +10,15 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const REASONS = [
   { key: 'Inappropriate content',    icon: 'alert-triangle' as const },
@@ -37,6 +40,8 @@ export interface ReportSheetProps {
 
 export function ReportSheet({ visible, onClose, targetType, targetId, targetLabel }: ReportSheetProps) {
   const colors  = useColors();
+  const insets  = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const slideY  = useRef(new Animated.Value(400)).current;
   const fadeIn  = useRef(new Animated.Value(0)).current;
 
@@ -104,12 +109,22 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
           style={[
             styles.sheet,
             { backgroundColor: colors.card, borderColor: colors.border },
+            {
+              maxHeight: Math.max(300, height - (Platform.OS === 'web' ? 67 : insets.top) - 12),
+              paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 12,
+            },
             { transform: [{ translateY: slideY }] },
           ]}
         >
           {/* Handle */}
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
 
+          <ScrollView
+            style={styles.sheetScroll}
+            contentContainerStyle={styles.sheetScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           {/* Header */}
           <View style={styles.sheetHeader}>
             <View style={[styles.flagIconWrap, { backgroundColor: 'rgba(224,68,85,0.12)' }]}>
@@ -234,6 +249,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
               </Text>
             </>
           )}
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -252,6 +268,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderBottomWidth: 0,
     paddingHorizontal: 20, paddingBottom: 36,
   },
+  sheetScroll: { flexGrow: 0 },
+  sheetScrollContent: { paddingBottom: 2 },
   handle: {
     width: 40, height: 4, borderRadius: 2,
     alignSelf: 'center', marginTop: 12, marginBottom: 18,
@@ -265,7 +283,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   sheetTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
-  sheetSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 2 },
+  sheetSub:   { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 2, flexShrink: 1 },
   closeBtn: {
     width: 32, height: 32, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',

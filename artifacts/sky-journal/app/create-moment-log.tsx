@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -44,10 +45,12 @@ export default function CreateMomentLogScreen() {
   useColors();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { addJournalEntry } = useApp();
   const inputRef = useRef<TextInput>(null);
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const contentWidth = Math.min(windowWidth, 720);
 
   const [text, setText] = useState('');
   const [mood, setMood] = useState('Peaceful');
@@ -91,7 +94,7 @@ export default function CreateMomentLogScreen() {
         }]} />
       ))}
 
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+      <View style={[styles.header, { paddingTop: topPad + 10, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
         <BackButton style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.09)' }]} iconName="x" size={18} color="rgba(240,234,248,0.75)" />
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🌙</Text>
@@ -114,7 +117,7 @@ export default function CreateMomentLogScreen() {
       <KeyboardAwareScrollView
         bottomOffset={20} keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
       >
         {/* Prompt */}
         <TouchableOpacity
@@ -181,9 +184,9 @@ const styles = StyleSheet.create({
   star: { position: 'absolute', borderRadius: 99 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { alignItems: 'center', gap: 2 },
+  headerCenter: { alignItems: 'center', gap: 2, minWidth: 0, flexShrink: 1 },
   headerEmoji: { fontSize: 20 },
-  headerTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.9)' },
+  headerTitle: { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.9)', flexShrink: 1 },
   privatePill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10, backgroundColor: 'rgba(200,184,232,0.1)' },
   privatePillText: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.7)' },
   saveBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },

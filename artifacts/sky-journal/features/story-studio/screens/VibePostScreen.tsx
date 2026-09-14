@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   BackHandler,
-  Dimensions,
   Easing,
   KeyboardAvoidingView,
   Platform,
@@ -12,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -31,8 +31,6 @@ import {
 } from '../components/FirstPublishOverlay';
 import { CompletionMoment } from '@/components/CompletionMoment';
 
-const { width: W } = Dimensions.get('window');
-
 const MOODS = [
   { id: 'Dreamy',      emoji: '🌙', color: '#9B78E8', desc: 'soft and otherworldly' },
   { id: 'Hopeful',     emoji: '☀️', color: '#C8A84B', desc: 'warm and forward-looking' },
@@ -51,8 +49,15 @@ const STEP_TEXT = 1;
 
 export default function VibePostScreen() {
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 48 : insets.top;
-  const botPad = Platform.OS === 'web' ? 24 : insets.bottom + 16;
+  const { width: windowWidth } = useWindowDimensions();
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
+  const contentWidth = Math.min(windowWidth, 640);
+  const horizontalPad = windowWidth < 360 ? 16 : 22;
+  const moodCardWidth = Math.max(
+    0,
+    (contentWidth - horizontalPad * 2 - 10) / 2,
+  );
 
   const { addStory, stories } = useApp();
   const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
@@ -125,9 +130,9 @@ export default function VibePostScreen() {
   function goToText() {
     if (!mood) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Animated.timing(slideAnim, { toValue: -W, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
+    Animated.timing(slideAnim, { toValue: -windowWidth, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
       setStep(STEP_TEXT);
-      slideAnim.setValue(W);
+      slideAnim.setValue(windowWidth);
       Animated.spring(slideAnim, { toValue: 0, tension: 52, friction: 9, useNativeDriver: true }).start();
     });
   }
@@ -192,13 +197,13 @@ export default function VibePostScreen() {
       />
 
       {/* Header */}
-      <View style={[s.header, { paddingTop: topPad + 8 }]}>
+      <View style={[s.header, { paddingTop: topPad + 8, maxWidth: 760, width: '100%', alignSelf: 'center' }]}>
         <TouchableOpacity style={s.backBtn} onPress={step === STEP_TEXT ? () => setStep(STEP_MOOD) : () => safeBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.76)" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Icon name="feather" size={14} color={accentColor} />
-          <Text style={[s.headerTitle, { color: accentColor }]}>Vibe Post</Text>
+          <Text style={[s.headerTitle, { color: accentColor }]} numberOfLines={1}>Vibe Post</Text>
         </View>
         <TouchableOpacity
           style={[s.visBtn, { borderColor: isPublic ? '#78C8A055' : '#9B7FE855', backgroundColor: isPublic ? '#78C8A012' : '#9B7FE812' }]}
@@ -228,7 +233,7 @@ export default function VibePostScreen() {
         {step === STEP_MOOD && (
           <ScrollView
             style={{ flex: 1 }}
-            contentContainerStyle={[s.stepContainer, { paddingBottom: botPad }]}
+             contentContainerStyle={[s.stepContainer, { paddingHorizontal: horizontalPad, paddingBottom: botPad, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
             showsVerticalScrollIndicator={false}
           >
             {pendingDraft && (
@@ -260,7 +265,7 @@ export default function VibePostScreen() {
                 return (
                   <TouchableOpacity
                     key={m.id}
-                    style={[s.moodCard, {
+                       style={[s.moodCard, { width: moodCardWidth, maxWidth: 280 }, {
                       borderColor:     active ? m.color : 'rgba(255,255,255,0.07)',
                       backgroundColor: active ? `${m.color}1E` : 'rgba(255,255,255,0.03)',
                     }]}
@@ -298,7 +303,7 @@ export default function VibePostScreen() {
           >
             <ScrollView
               style={{ flex: 1 }}
-              contentContainerStyle={[s.stepContainer, { paddingBottom: botPad }]}
+               contentContainerStyle={[s.stepContainer, { paddingHorizontal: horizontalPad, paddingBottom: botPad, maxWidth: 640, width: '100%', alignSelf: 'center' }]}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
             >
@@ -405,7 +410,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1, borderColor: 'rgba(200,185,255,0.09)',
   },
-  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1, minWidth: 0 },
   headerTitle:  { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   visBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -420,7 +425,7 @@ const s = StyleSheet.create({
   },
   stepDot: { height: 6, borderRadius: 3 },
 
-  stepContainer: { paddingHorizontal: 22, paddingTop: 4 },
+  stepContainer: { paddingTop: 4 },
   stepTitle: {
     fontSize: 26, fontFamily: 'Satoshi-Bold',
     color: 'rgba(248,244,255,0.97)', letterSpacing: -0.7,
@@ -437,10 +442,10 @@ const s = StyleSheet.create({
     marginBottom: 28,
   },
   moodCard: {
-    width: (W - 44 - 10) / 2,
     borderRadius: 18, borderWidth: 1,
     padding: 16, gap: 5,
     position: 'relative',
+    minWidth: 0,
   },
   moodCardEmoji: { fontSize: 26, marginBottom: 4 },
   moodCardName:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },

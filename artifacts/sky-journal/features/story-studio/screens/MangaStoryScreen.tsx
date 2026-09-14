@@ -11,6 +11,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -56,8 +57,10 @@ const STYLES: Array<{
 export default function MangaStoryScreen() {
   const { addStory, reloadData } = useApp();
   const insets = useSafeAreaInsets();
-  const topPad = Platform.OS === 'web' ? 14 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 30 : insets.bottom + 24;
+  const { width: windowWidth } = useWindowDimensions();
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 24;
+  const contentWidth = Math.min(windowWidth, 760);
 
   const [images, setImages] = useState<string[]>([]);
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
@@ -423,7 +426,7 @@ export default function MangaStoryScreen() {
           </View>
         </View>
 
-        <View style={s.content}>
+        <View style={[s.content, { width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}>
           <SectionCard icon="image" title="1. Upload Images (Max 10)" rightText={`${images.length}/10`}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.photoRow}>
               {images.length < 10 && (
@@ -692,7 +695,7 @@ function SectionCard({ icon, title, optional, rightText, children }: {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#060410' },
-  hero: { minHeight: 238, paddingHorizontal: 20, paddingBottom: 16, overflow: 'hidden' },
+  hero: { minHeight: 238, paddingHorizontal: 20, paddingBottom: 16, overflow: 'hidden', width: '100%', maxWidth: 760, alignSelf: 'center' },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 13 },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
   howBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, height: 34, borderRadius: 17, backgroundColor: 'rgba(8,5,25,0.62)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)' },
@@ -707,8 +710,8 @@ const s = StyleSheet.create({
   miniCaption: { fontSize: 8.5, lineHeight: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(220,208,242,0.64)' },
   content: { paddingHorizontal: 14, gap: 10, marginTop: -2 },
   section: { padding: 11, borderRadius: 17, backgroundColor: 'rgba(27,20,53,0.82)', borderWidth: 1, borderColor: 'rgba(184,130,255,0.10)' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 9 },
-  sectionTitle: { fontSize: 13.5, fontFamily: 'Satoshi-Bold', color: '#F3EEFF' },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 9, flexWrap: 'wrap' },
+  sectionTitle: { fontSize: 13.5, fontFamily: 'Satoshi-Bold', color: '#F3EEFF', flexShrink: 1 },
   optional: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(213,199,239,0.55)' },
   rightText: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#B994E9' },
   photoRow: { gap: 8 },
@@ -743,8 +746,8 @@ const s = StyleSheet.create({
   remainingText: { textAlign: 'center', fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(205,187,233,0.56)' },
   generateBar: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 14, paddingTop: 10, backgroundColor: 'rgba(5,4,15,0.94)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
   generateBtn: { height: 54, borderRadius: 27, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, shadowColor: '#B82EFF', shadowOpacity: 0.55, shadowRadius: 14, shadowOffset: { width: 0, height: 0 }, elevation: 10 },
-  resultActions: { flexDirection: 'row', gap: 7 },
-  actionBtn: { flex: 1, minWidth: 0, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: '#241B3D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
+  resultActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  actionBtn: { flex: 1, minWidth: 64, height: 54, borderRadius: 16, alignItems: 'center', justifyContent: 'center', gap: 3, backgroundColor: '#241B3D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)' },
   actionBtnPrimary: { backgroundColor: '#8D35FF', borderColor: '#B778FF' },
   actionBtnDisabled: { opacity: 0.55 },
   actionLabel: { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },

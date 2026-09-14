@@ -17,6 +17,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
@@ -46,6 +47,10 @@ type Step = 'picking' | 'form' | 'uploading' | 'done';
 
 export default function PostVideoScreen() {
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
+  const contentWidth = Math.min(windowWidth, 640);
 
   const [step,         setStep]         = useState<Step>('picking');
   const [videoUri,     setVideoUri]      = useState<string | null>(null);
@@ -205,17 +210,17 @@ export default function PostVideoScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       {/* Header */}
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[s.header, { paddingTop: topInset + 12, maxWidth: 720, width: '100%', alignSelf: 'center' }]}>
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Icon name="chevron-left" size={20} color="rgba(200,185,255,0.80)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Post Video</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>Post Video</Text>
         <View style={{ width: 36 }} />
       </View>
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <ScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 24 }]}
+          contentContainerStyle={[s.scroll, { paddingBottom: bottomInset + 24, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -340,6 +345,7 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 16, fontFamily: 'Satoshi-Bold',
     color: 'rgba(240,236,255,0.95)', letterSpacing: -0.3,
+    flexShrink: 1,
   },
 
   scroll: { padding: 20, gap: 20 },

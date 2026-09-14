@@ -4,6 +4,9 @@ import {
   Animated,
   Easing,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   Modal,
   Pressable,
   StyleSheet,
@@ -142,7 +145,7 @@ function FireOrb({ room, onPress }: { room: CampfireRoom; onPress: () => void })
 }
 
 const fo = StyleSheet.create({
-  wrap:        { alignItems: 'center', width: '46%', marginBottom: 24, paddingHorizontal: 4 },
+  wrap:        { alignItems: 'center', width: '46%', minWidth: 120, maxWidth: 320, marginBottom: 24, paddingHorizontal: 4 },
   glowRing: {
     position: 'absolute', top: -4, width: 88, height: 88, borderRadius: 44,
     borderWidth: 1.5, shadowOpacity: 0.8, shadowRadius: 14, shadowOffset: { width: 0, height: 0 },
@@ -213,8 +216,12 @@ function KindleSheet({
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={ks.overlay} onPress={onClose} />
-      <Animated.View style={[ks.sheet, { paddingBottom: insets.bottom + 20, transform: [{ translateY: slideAnim }] }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={ks.modalRoot}
+      >
+        <Pressable style={ks.overlay} onPress={onClose} />
+        <Animated.View style={[ks.sheet, { paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 20, transform: [{ translateY: slideAnim }] }]}>
         <View style={ks.handle} />
         <Text style={ks.title}>Kindle a Fire</Text>
         <Text style={ks.sub}>Name your campfire and choose its vibe</Text>
@@ -259,18 +266,20 @@ function KindleSheet({
             <Text style={ks.confirmText}>Kindle</Text>
           )}
         </TouchableOpacity>
-      </Animated.View>
+        </Animated.View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const ks = StyleSheet.create({
+  modalRoot: { flex: 1, justifyContent: 'flex-end' },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(4,2,14,0.65)' },
   sheet: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: '#0E0B24', borderTopLeftRadius: 26, borderTopRightRadius: 26,
     borderTopWidth: 1, borderColor: 'rgba(107,91,149,0.28)',
-    paddingHorizontal: 22, paddingTop: 12, gap: 14,
+    paddingHorizontal: 22, paddingTop: 12, gap: 14, maxHeight: '90%',
     shadowColor: '#000', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.45, shadowRadius: 20, elevation: 20,
   },
   handle: { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.20)', alignSelf: 'center', marginBottom: 6 },
@@ -299,7 +308,8 @@ const ks = StyleSheet.create({
 
 export default function CampfireLobby() {
   const insets  = useSafeAreaInsets();
-  useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
   useApp();
 
   const [rooms,       setRooms]       = useState<CampfireRoom[]>([]);
@@ -367,7 +377,7 @@ export default function CampfireLobby() {
       </View>
 
       {/* Header */}
-      <View style={[L.header, { paddingTop: insets.top + 10 }]}>
+       <View style={[L.header, { paddingTop: topInset + 10 }]}>
         <TouchableOpacity onPress={() => safeBack()} style={L.backBtn} activeOpacity={0.7} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
           <Icon name="arrow-left" size={16} color="rgba(200,184,232,0.75)" />
         </TouchableOpacity>
@@ -392,7 +402,12 @@ export default function CampfireLobby() {
           clearButtonMode="while-editing"
         />
       </View>
-      <View style={L.moodRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={L.moodRow}
+        keyboardShouldPersistTaps="handled"
+      >
         {['', 'Dreamy', 'Peaceful', 'Lonely', 'Soft', 'Romantic', 'Adventurous', 'Chaotic'].map(m => {
           const cfg = m ? (MOOD_FIRE[m] ?? MOOD_FIRE.default) : MOOD_FIRE.default;
           const active = moodFilter === m;
@@ -407,7 +422,7 @@ export default function CampfireLobby() {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* Room grid */}
       {loading ? (
@@ -420,7 +435,11 @@ export default function CampfireLobby() {
             data={rooms}
             keyExtractor={r => r.id}
             numColumns={2}
-            contentContainerStyle={[L.grid, { paddingBottom: insets.bottom + 60 }]}
+             contentContainerStyle={[L.grid, {
+               width: Math.min(windowWidth, 760),
+               alignSelf: 'center',
+               paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 60,
+             }]}
             columnWrapperStyle={{ justifyContent: 'space-between', paddingHorizontal: 20 }}
             ListHeaderComponent={() => (
               <View style={L.intro}>
@@ -462,7 +481,7 @@ const L = StyleSheet.create({
     color: 'rgba(230,220,255,0.85)',
   },
   moodRow: {
-    flexDirection: 'row', flexWrap: 'nowrap',
+    flexDirection: 'row',
     paddingHorizontal: 14, paddingVertical: 6, gap: 6,
   },
   moodChip: {
@@ -486,7 +505,7 @@ const L = StyleSheet.create({
   },
   kindleBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.85)' },
   centre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  grid:   { paddingTop: 24 },
+  grid:   { paddingTop: 24, maxWidth: 760 },
   intro:  { paddingHorizontal: 20, marginBottom: 20, alignItems: 'center' },
   introText: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.38)', fontStyle: 'italic', textAlign: 'center' },
 });

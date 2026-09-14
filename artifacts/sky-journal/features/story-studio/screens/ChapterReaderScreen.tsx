@@ -14,6 +14,7 @@ import {
   FlatList,
   Platform,
   Share,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -186,7 +187,7 @@ function MangaPage({ page, screenW }: { page: ChapterPage; screenW: number }) {
 
 export default function ChapterReaderScreen() {
   const insets = useSafeAreaInsets();
-  const { width: screenW } = useWindowDimensions();
+  const { width: screenW, height: screenH } = useWindowDimensions();
   const apiFetch = useApiFetch();
   const { chapterId, bookId } = useLocalSearchParams<{ chapterId: string; bookId: string }>();
 
@@ -263,6 +264,8 @@ export default function ChapterReaderScreen() {
 
   const totalPages = chapter?.pages.length ?? 0;
   const isLast = currentPage === totalPages - 1;
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 
   // ── Loading / Error ────────────────────────────────────────────────────────
 
@@ -289,7 +292,7 @@ export default function ChapterReaderScreen() {
   // ── End-of-chapter card ────────────────────────────────────────────────────
 
   const endCard = (
-    <View style={[styles.endCard, { width: screenW, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 40, gap: 20 }]}>
+    <View style={[styles.endCard, { width: screenW, minHeight: screenH, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingBottom: bottomInset + 72, gap: 20 }]}>
       <Icon name="check-circle" size={44} color={ACCENT} />
       <Text style={styles.endTitle}>End of Chapter {chapter.orderIndex + 1}</Text>
       <Text style={styles.endSub}>"{chapter.title}"</Text>
@@ -333,8 +336,15 @@ export default function ChapterReaderScreen() {
           renderItem={({ item }) => {
             if (item === 'end') return endCard;
             return (
-              <View style={{ width: screenW, backgroundColor: '#0D0B1A' }}>
-                <MangaPage page={item} screenW={screenW} />
+              <View style={{ width: screenW, minHeight: screenH, backgroundColor: '#0D0B1A' }}>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ minHeight: screenH, paddingBottom: bottomInset + 72 }}
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                >
+                  <MangaPage page={item} screenW={screenW} />
+                </ScrollView>
               </View>
             );
           }}
@@ -344,7 +354,7 @@ export default function ChapterReaderScreen() {
 
       {/* Top controls overlay */}
       <Animated.View
-        style={[styles.topBar, { paddingTop: insets.top + 8, opacity: controlsOpacity }]}
+        style={[styles.topBar, { paddingTop: topInset + 8, opacity: controlsOpacity }]}
         pointerEvents={showControls ? 'box-none' : 'none'}
       >
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -380,7 +390,7 @@ export default function ChapterReaderScreen() {
 
       {/* Font size picker */}
       {showFontMenu && showControls && (
-        <View style={[styles.fontMenu, { top: insets.top + 52 }]}>
+        <View style={[styles.fontMenu, { top: topInset + 52 }]}>
           {[12, 14, 16, 18, 20].map(sz => (
             <TouchableOpacity
               key={sz}
@@ -395,7 +405,7 @@ export default function ChapterReaderScreen() {
 
       {/* Bottom action bar */}
       <Animated.View
-        style={[styles.bottomBar, { paddingBottom: insets.bottom + 8, opacity: controlsOpacity }]}
+        style={[styles.bottomBar, { paddingBottom: bottomInset + 8, opacity: controlsOpacity }]}
         pointerEvents={showControls ? 'box-none' : 'none'}
       >
         <TouchableOpacity
@@ -434,23 +444,23 @@ const styles = StyleSheet.create({
   overlayTxt:     { textShadowColor: 'rgba(0,0,0,0.8)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 3 },
   caption:        { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.72)', paddingVertical: 7, paddingHorizontal: 10 },
   captionTxt:     { color: 'rgba(255,255,255,0.88)', fontSize: 11, lineHeight: 16 },
-  topBar:         { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 10, backgroundColor: 'rgba(13,11,26,0.75)' },
+  topBar:         { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingBottom: 10, backgroundColor: 'rgba(13,11,26,0.75)' },
   iconBtn:        { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  progressPill:   { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.10)' },
+  progressPill:   { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.10)', flexShrink: 1 },
   progressTxt:    { color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600' },
-  topActions:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  topActions:     { flexDirection: 'row', alignItems: 'center', gap: 2, flexShrink: 0 },
   aaBtn:          { color: 'rgba(255,255,255,0.80)', fontSize: 16, fontWeight: '700' },
-  fontMenu:       { position: 'absolute', right: 16, flexDirection: 'row', gap: 6, backgroundColor: 'rgba(30,24,60,0.95)', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', zIndex: 50 },
+  fontMenu:       { position: 'absolute', right: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 6, backgroundColor: 'rgba(30,24,60,0.95)', borderRadius: 12, padding: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', zIndex: 50, maxWidth: '94%' },
   fontOption:     { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   fontOptionActive:{ backgroundColor: 'rgba(139,112,200,0.20)' },
   fontOptionTxt:  { color: 'rgba(255,255,255,0.55)' },
   bottomBar:      { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', justifyContent: 'space-around', paddingTop: 12, backgroundColor: 'rgba(13,11,26,0.85)', borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)' },
-  barBtn:         { alignItems: 'center', gap: 4, paddingBottom: 4 },
+  barBtn:         { alignItems: 'center', gap: 4, paddingBottom: 4, minWidth: 72, flexShrink: 1 },
   barBtnTxt:      { color: 'rgba(255,255,255,0.45)', fontSize: 10 },
   endCard:        { backgroundColor: '#0D0B1A' },
   endTitle:       { color: 'rgba(255,255,255,0.88)', fontSize: 22, fontWeight: '700', textAlign: 'center' },
   endSub:         { color: 'rgba(200,185,255,0.45)', fontSize: 14, textAlign: 'center', fontStyle: 'italic' },
-  endBtn:         { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 24, paddingVertical: 13, borderRadius: 26, backgroundColor: ACCENT },
+  endBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 13, borderRadius: 26, backgroundColor: ACCENT, maxWidth: '100%' },
   endBtnSecondary:{ backgroundColor: 'rgba(139,112,200,0.12)', borderWidth: 1, borderColor: `${ACCENT}44` },
   endBtnTxt:      { color: '#fff', fontSize: 14, fontWeight: '600' },
   errorTxt:       { color: 'rgba(200,185,255,0.45)', fontSize: 15, marginTop: 12, textAlign: 'center', paddingHorizontal: 32 },

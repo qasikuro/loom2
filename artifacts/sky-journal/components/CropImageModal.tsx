@@ -62,6 +62,7 @@ export default function CropImageModal({
 
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [canvasH, setCanvasH]         = useState(0);
+  const [canvasW, setCanvasW]         = useState(0);
   const [applying, setApplying]       = useState(false);
   const [ratio, setRatio]             = useState(aspectRatio ?? 3 / 4);
 
@@ -76,7 +77,9 @@ export default function CropImageModal({
 
   // ── Frame geometry ────────────────────────────────────────────────────────
 
-  const frameW = screenW - 32;               // 16 px padding each side
+  const availableW = canvasW || screenW;
+  const availableH = canvasH || Number.POSITIVE_INFINITY;
+  const frameW = Math.max(1, Math.min(availableW - 32, availableH === Number.POSITIVE_INFINITY ? availableW - 32 : (availableH - 32) * ratio));
   const frameH = frameW / ratio;
 
   // Vertical centre of the frame within the canvas
@@ -295,7 +298,10 @@ export default function CropImageModal({
         {/* ── Canvas (gesture area + frame) ── */}
         <View
           style={styles.canvas}
-          onLayout={e => setCanvasH(e.nativeEvent.layout.height)}
+          onLayout={e => {
+            setCanvasW(e.nativeEvent.layout.width);
+            setCanvasH(e.nativeEvent.layout.height);
+          }}
           {...panResponder.panHandlers}
         >
           {/* Dark strips outside the frame */}
@@ -435,10 +441,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.10)',
     marginTop: 2,
   },
-  topCenter:    { flex: 1, alignItems: 'center', paddingTop: 4 },
-  topTitle:     { color: '#fff', fontSize: 15, fontFamily: 'Satoshi-Bold' },
-  topSub:       { color: 'rgba(255,255,255,0.42)', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2, textAlign: 'center' },
-  zoomBtns:     { flexDirection: 'row', gap: 6, marginTop: 2 },
+  topCenter:    { flex: 1, minWidth: 0, alignItems: 'center', paddingTop: 4, paddingHorizontal: 6 },
+  topTitle:     { color: '#fff', fontSize: 15, fontFamily: 'Satoshi-Bold', textAlign: 'center', flexShrink: 1 },
+  topSub:       { color: 'rgba(255,255,255,0.42)', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2, textAlign: 'center', flexShrink: 1 },
+  zoomBtns:     { flexDirection: 'row', gap: 6, marginTop: 2, flexShrink: 0 },
   zoomBtn:      {
     width: 36, height: 36, borderRadius: 10,
     alignItems: 'center', justifyContent: 'center',
@@ -454,7 +460,7 @@ const styles = StyleSheet.create({
   loadingCenter:{ flex: 1, alignItems: 'center', justifyContent: 'center' },
 
   ratioStrip: {
-    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center',
     gap: 8, paddingVertical: 10, backgroundColor: '#08060F',
   },
   ratioBtn: {
@@ -472,14 +478,14 @@ const styles = StyleSheet.create({
   },
   ratioBtnTextActive: { color: PRIMARY },
   bottomBar:    {
-    flexDirection: 'row', gap: 10,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
     paddingHorizontal: 16, paddingTop: 14,
     backgroundColor: '#08060F',
   },
   actionBtn:    {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
+    flex: 1, minWidth: 140, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 7,
     paddingVertical: 14, borderRadius: 14,
   },
-  actionBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  actionBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
 });

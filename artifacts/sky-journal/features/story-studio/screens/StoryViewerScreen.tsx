@@ -331,7 +331,8 @@ export default function StoryScreen() {
   const { stories, discoverPosts, savedStoryIds, toggleSavePost, deleteStory, updateStory,
           showRewardToast, reloadRewards, reloadConstellation, reloadData, isLoading } = useApp();
 
-  const { width: screenW } = useWindowDimensions();
+  const { width: screenW, height: screenH } = useWindowDimensions();
+  const isLandscape = screenW > screenH;
   const [witnessed,        setWitnessed]        = useState(false);
   const [showWitnessFlash, setShowWitnessFlash] = useState(false);
   const [savedOffset,      setSavedOffset]      = useState(0);
@@ -553,7 +554,7 @@ export default function StoryScreen() {
   if (!isLoading && (renderPages.length === 0 || (!story && !post))) {
     return (
       <View style={[errStyles.wrap, { backgroundColor: colors.background, paddingTop: topPad + 12 }]}>
-        <BackButton style={errStyles.back} />
+        <BackButton style={[errStyles.back, { top: topPad + 8 }]} />
         <Text style={errStyles.glyph}>✦</Text>
         <Text style={[errStyles.title, { color: colors.text }]}>This story couldn't be opened</Text>
         <Text style={[errStyles.sub, { color: colors.secondary }]}>
@@ -575,6 +576,17 @@ export default function StoryScreen() {
   }, []);
   const heroImgSrc = getPanelImageSource(firstPanel?.imageUri, firstPanel?.bgPreset);
   const totalPanelCount = renderPages.reduce((acc, pg) => acc + pg.panels.length, 0);
+  const heroDescription = story?.description ?? post?.description ?? '';
+  // The hero overlay is bottom-anchored. On a narrow portrait viewport,
+  // estimate wrapped lines conservatively so long user-authored copy expands
+  // the hero instead of being clipped by its overflow-hidden image.
+  const portraitHeroHeight = Math.max(
+    topPad + Math.min(340, Math.max(280, screenH * 0.42)),
+    184
+      + Math.ceil(title.length / 16) * 32
+      + (heroDescription ? Math.ceil(heroDescription.length / 30) * 20 : 0),
+  );
+  const heroHeight = isLandscape ? topPad + 250 : portraitHeroHeight;
 
   function handleShare() {
     const panels = story?.panels ?? post?.panels ?? [];
@@ -645,7 +657,7 @@ export default function StoryScreen() {
         onScrollEndDrag={handleScrollEnd}
       >
         {/* ── Hero cover ─────────────────────────────────── */}
-        <View style={[styles.hero, { height: topPad + 300 }]}>
+        <View style={[styles.hero, { height: heroHeight }]}>
           {heroImgSrc ? (
             <Image source={heroImgSrc} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
           ) : (
@@ -726,9 +738,9 @@ export default function StoryScreen() {
               </View>
             </View>
             <Text style={styles.heroTitle}>{title}</Text>
-            {!!(story?.description ?? post?.description) && (
+            {!!heroDescription && (
               <Text style={styles.heroDescription}>
-                {story?.description ?? post?.description}
+                {heroDescription}
               </Text>
             )}
             <View style={styles.heroMoodRow}>
@@ -980,9 +992,9 @@ const styles = StyleSheet.create({
   heroAvatarText: { color: '#fff', fontSize: 14, fontFamily: 'Satoshi-Bold' },
   heroAuthor:  { color: 'rgba(255,255,255,0.9)', fontSize: 13, fontFamily: 'Satoshi-Bold' },
   heroChapter: { color: 'rgba(255,255,255,0.5)', fontSize: 11, fontFamily: 'Satoshi-Regular' },
-  heroTitle:       { color: '#fff', fontSize: 24, fontFamily: 'Satoshi-Bold', lineHeight: 32 },
-  heroDescription: { color: 'rgba(255,255,255,0.72)', fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 20, fontStyle: 'italic' },
-  heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  heroTitle:       { color: '#fff', fontSize: 24, fontFamily: 'Satoshi-Bold', lineHeight: 32, flexShrink: 1 },
+  heroDescription: { color: 'rgba(255,255,255,0.72)', fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 20, fontStyle: 'italic', flexShrink: 1 },
+  heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   infoBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 9, paddingVertical: 4,
@@ -1093,13 +1105,13 @@ const styles = StyleSheet.create({
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 14, borderTopWidth: 1,
+    paddingHorizontal: 12, paddingTop: 14, borderTopWidth: 1, flexWrap: 'wrap',
   },
-  witnessedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  witnessedRow: { flexDirection: 'row', alignItems: 'center', gap: 5, minWidth: 100, flexShrink: 1 },
   witnessedNum: { color: 'rgba(240,234,248,0.6)', fontSize: 14, fontFamily: 'Satoshi-Regular' },
   dotDivider: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: 'rgba(240,234,248,0.3)', marginHorizontal: 4 },
   bottomStickerIcon: { fontSize: 12, color: 'rgba(240,234,248,0.6)' },
-  actionRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  actionRow: { flexDirection: 'row', gap: 6, alignItems: 'center', flexShrink: 1, marginLeft: 'auto', flexWrap: 'wrap', justifyContent: 'flex-end' },
   shareIconBtn: {
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: 'rgba(255,255,255,0.07)',
@@ -1108,11 +1120,11 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 10, paddingVertical: 9, borderRadius: 20, borderWidth: 1, flexShrink: 1,
   },
   witnessBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, borderWidth: 1,
+    paddingHorizontal: 12, paddingVertical: 9, borderRadius: 20, borderWidth: 1, flexShrink: 1,
   },
   actionBtnText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 

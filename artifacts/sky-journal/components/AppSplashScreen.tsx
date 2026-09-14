@@ -3,19 +3,17 @@
  * Uses the splash image as background with twinkling stars + animated loading bar.
  */
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   Image,
   Platform,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const SPLASH_IMG = require('../assets/images/gamejo_splash.png');
@@ -26,24 +24,28 @@ function pseudoRand(seed: number): number {
 }
 
 // Stars — scattered across top 68% of screen, mix of gold + white
-const STARS = Array.from({ length: 48 }, (_, i) => ({
-  id:      i,
-  x:       pseudoRand(i * 3)  * width,
-  y:       pseudoRand(i * 7)  * height * 0.68,
-  size:    1.2 + pseudoRand(i * 11) * 3.2,
-  opacity: 0.25 + pseudoRand(i * 13) * 0.75,
-  delay:   Math.floor(pseudoRand(i * 17) * 2200),
-  color:   pseudoRand(i * 23) > 0.55 ? '#FFD700' : '#FFFFFF',
-}));
+function buildStars(width: number, height: number) {
+  return Array.from({ length: 48 }, (_, i) => ({
+    id:      i,
+    x:       pseudoRand(i * 3)  * width,
+    y:       pseudoRand(i * 7)  * height * 0.68,
+    size:    1.2 + pseudoRand(i * 11) * 3.2,
+    opacity: 0.25 + pseudoRand(i * 13) * 0.75,
+    delay:   Math.floor(pseudoRand(i * 17) * 2200),
+    color:   pseudoRand(i * 23) > 0.55 ? '#FFD700' : '#FFFFFF',
+  }));
+}
 
 function StarField() {
-  const anims = useRef(STARS.map(() => new Animated.Value(0))).current;
+  const { width, height } = useWindowDimensions();
+  const stars = useMemo(() => buildStars(width, height), [width, height]);
+  const anims = useMemo(() => stars.map(() => new Animated.Value(0)), [stars]);
 
   useEffect(() => {
     const loops = anims.map((anim, i) =>
       Animated.loop(
         Animated.sequence([
-          Animated.delay(STARS[i].delay),
+          Animated.delay(stars[i].delay),
           Animated.timing(anim, { toValue: 1, duration: 700 + (i % 7) * 210, useNativeDriver: true }),
           Animated.timing(anim, { toValue: 0, duration: 700 + (i % 5) * 210, useNativeDriver: true }),
         ])
@@ -51,12 +53,11 @@ function StarField() {
     );
     loops.forEach(l => l.start());
     return () => loops.forEach(l => l.stop());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [anims, stars]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      {STARS.map((star, i) => (
+      {stars.map((star, i) => (
         <Animated.View
           key={star.id}
           style={{
@@ -80,34 +81,39 @@ function StarField() {
 
 // ── Loading bar with shimmer + pulsing dots ───────────────────────────────────
 
-const BAR_W = width * 0.62;
-
 function LoadingBar() {
+  const { width } = useWindowDimensions();
+  const barWidth = width * 0.62;
   const shimmerX = useRef(new Animated.Value(-100)).current;
-  const barWidth = useRef(new Animated.Value(0)).current;
+  const barProgress = useRef(new Animated.Value(0)).current;
   const dot1     = useRef(new Animated.Value(0.3)).current;
   const dot2     = useRef(new Animated.Value(0.3)).current;
   const dot3     = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
+    barProgress.setValue(0);
+    shimmerX.setValue(-100);
+
     // Fill bar to ~82%
-    Animated.timing(barWidth, {
-      toValue:  BAR_W * 0.82,
+    Animated.timing(barProgress, {
+      toValue:  barWidth * 0.82,
       duration: 2300,
       easing:   Easing.out(Easing.cubic),
       useNativeDriver: false,
     }).start();
 
     // Shimmer sweep loop
-    Animated.loop(
+    const shimmerLoop = Animated.loop(
       Animated.sequence([
-        Animated.timing(shimmerX, { toValue: BAR_W + 100, duration: 950, useNativeDriver: true }),
+        Animated.timing(shimmerX, { toValue: barWidth + 100, duration: 950, useNativeDriver: true }),
         Animated.timing(shimmerX, { toValue: -100, duration: 0, useNativeDriver: true }),
         Animated.delay(400),
       ])
-    ).start();
+    );
+    shimmerLoop.start();
 
     // Dot cascade
+    let cancelled = false;
     const pulseDots = () => {
       Animated.sequence([
         Animated.timing(dot1, { toValue: 1, duration: 280, useNativeDriver: true }),
@@ -120,18 +126,28 @@ function LoadingBar() {
           Animated.timing(dot3, { toValue: 0.3, duration: 200, useNativeDriver: true }),
         ]),
         Animated.delay(180),
-      ]).start(() => pulseDots());
+      ]).start(({ finished }) => {
+        if (finished && !cancelled) pulseDots();
+      });
     };
     pulseDots();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    return () => {
+      cancelled = true;
+      shimmerLoop.stop();
+      barProgress.stopAnimation();
+      shimmerX.stopAnimation();
+      dot1.stopAnimation();
+      dot2.stopAnimation();
+      dot3.stopAnimation();
+    };
+  }, [barWidth, barProgress, shimmerX, dot1, dot2, dot3]);
 
   return (
     <View style={styles.loadingWrap}>
       {/* Track */}
-      <View style={[styles.barTrack, { width: BAR_W }]}>
+      <View style={[styles.barTrack, { width: barWidth }]}>
         {/* Animated fill */}
-        <Animated.View style={[styles.barFill, { width: barWidth }]}>
+        <Animated.View style={[styles.barFill, { width: barProgress }]}>
           <LinearGradient
             colors={['#7C3AED', '#C026D3', '#F59E0B']}
             start={{ x: 0, y: 0 }}
@@ -170,6 +186,7 @@ interface Props {
 }
 
 export function AppSplashScreen({ onReady }: Props) {
+  const { width, height } = useWindowDimensions();
   const screenFade  = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
 
@@ -199,7 +216,7 @@ export function AppSplashScreen({ onReady }: Props) {
       {/* Background — react-native Image for synchronous bundled asset loading */}
       <Image
         source={SPLASH_IMG}
-        style={styles.bg}
+        style={[styles.bg, { width, height }]}
         resizeMode="cover"
         fadeDuration={0}
       />
@@ -210,7 +227,7 @@ export function AppSplashScreen({ onReady }: Props) {
       </Animated.View>
 
       {/* Loading bar pinned to bottom */}
-      <Animated.View style={[styles.bottom, { opacity: contentFade }]}>
+      <Animated.View style={[styles.bottom, { opacity: contentFade, paddingBottom: height * 0.09 }]}>
         <LoadingBar />
       </Animated.View>
     </Animated.View>
@@ -228,13 +245,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top:      0,
     left:     0,
-    width,
-    height,
   },
   bottom: {
     width:         '100%',
     alignItems:    'center',
-    paddingBottom: height * 0.09,
   },
 
   // Loading bar

@@ -332,6 +332,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.28,
     shadowRadius: 16,
     elevation: 8,
+    width: '100%',
+    maxWidth: 760,
+    alignSelf: 'center',
   },
 
   // ── Hero image ──
@@ -362,6 +365,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
+    maxWidth: '72%',
   },
   avatar: {
     width: 30, height: 30, borderRadius: 15,
@@ -374,6 +378,7 @@ const styles = StyleSheet.create({
   imageAuthorName:  {
     fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#F0ECFF',
     textShadowColor: 'rgba(0,0,0,0.7)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4,
+    flexShrink: 1,
   },
   authorBadge: { width: 18, height: 18 },
 
@@ -447,16 +452,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     paddingHorizontal: 12,
     paddingVertical: 9,
     backgroundColor: 'rgba(255,255,255,0.025)',
   },
 
-  statsGroup: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1 },
+  statsGroup: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 36 },
   statPill:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
   statText:   { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' },
 
-  actionsGroup: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  actionsGroup: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', maxWidth: '100%' },
   iconBtn: {
     width: 30, height: 30, borderRadius: 9,
     alignItems: 'center', justifyContent: 'center',

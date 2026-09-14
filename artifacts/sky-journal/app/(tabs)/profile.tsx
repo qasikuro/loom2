@@ -67,7 +67,7 @@ export default function CharacterScreen() {
   const activeFrame  = activeCosmetics['frame']  as string | undefined;
   const activeEffect = activeCosmetics['effect'] as string | undefined;
   const activeOutfit = activeOutfitId ? outfits.find(o => o.id === activeOutfitId) ?? null : null;
-  const topPad       = Platform.OS === 'web' ? 10 : insets.top;
+  const topPad       = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad    = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
   const totalWitnessed  = stories.reduce((sum, s) => sum + s.witnessedCount, 0);
@@ -101,7 +101,7 @@ export default function CharacterScreen() {
   }, [reloadConstellation]);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const drawerWidth = screenW * 0.82;
+  const drawerWidth = Math.min(Math.max(screenW * 0.82, 280), 420);
   const drawerX     = useRef(new Animated.Value(drawerWidth)).current;
   function openDrawer() {
     setDrawerOpen(true);
@@ -186,7 +186,7 @@ export default function CharacterScreen() {
         </CharacterAuraHeader>
 
         {/* Stats card */}
-        <View style={s.statsCard}>
+        <View style={[s.statsCard, screenW >= 760 && { maxWidth: 760, alignSelf: 'center' }]}>
           {([
             { icon: 'book-open', count: stories.length,  label: 'STORIES' },
             { icon: 'user',      count: outfits.length,  label: 'OUTFITS' },
@@ -207,7 +207,7 @@ export default function CharacterScreen() {
         </View>
 
         {/* Section content - completely un-tabbed */}
-        <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+        <View style={[{ paddingHorizontal: 20, paddingTop: 12 }, screenW >= 760 && { maxWidth: 800, alignSelf: 'center', width: '100%' }]}>
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
           {(!isLoading || character.name !== 'Player') && (
             <ProfileStyleSection
@@ -229,7 +229,7 @@ export default function CharacterScreen() {
                 end={{ x: 1, y: 0.5 }}
                 style={StyleSheet.absoluteFill}
               />
-              <View style={{ flex: 1, zIndex: 1 }}>
+              <View style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
                 <View style={s.wornBadge}>
                   <Text style={s.wornBadgeText}>CURRENTLY WORN</Text>
                 </View>
@@ -269,22 +269,22 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
-  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 4, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 4, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', minWidth: 0 },
   statCol:      { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 3 },
   statNum:      { fontSize: 21, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.5 },
   statMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)', letterSpacing: 1.0 },
   statDivider:  { width: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 10 },
-  wornBanner:   { height: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(193,151,255,0.18)', backgroundColor: '#130F24' },
+  wornBanner:   { minHeight: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(193,151,255,0.18)', backgroundColor: '#130F24' },
   wornBadge:    { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, marginBottom: 5, backgroundColor: 'rgba(232,120,156,0.13)', borderWidth: 1, borderColor: 'rgba(232,120,156,0.25)' },
   wornBadgeText:{ fontSize: 7, fontFamily: 'Satoshi-Bold', color: '#E88EAE', letterSpacing: 1.0 },
-  wornTitleText:{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#FFF' },
-  wornBtn:      { zIndex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 12, backgroundColor: 'rgba(9,6,20,0.58)' },
+  wornTitleText:{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#FFF', flexShrink: 1 },
+  wornBtn:      { zIndex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 11, paddingVertical: 7, borderRadius: 12, backgroundColor: 'rgba(9,6,20,0.58)', flexShrink: 1 },
   wornBtnText:  { fontSize: 10.5, fontFamily: 'Satoshi-Medium', color: 'rgba(235,225,255,0.88)' },
 });
 
 const offlineS = StyleSheet.create({
-  row:     { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 14, marginTop: 8, marginBottom: 2, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(14,10,32,0.88)', borderColor: 'rgba(200,168,75,0.35)', zIndex: 10 },
+  row:     { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginHorizontal: 14, marginTop: 8, marginBottom: 2, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(14,10,32,0.88)', borderColor: 'rgba(200,168,75,0.35)', zIndex: 10 },
   dot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C8A84B', flexShrink: 0 },
   msg:     { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(220,210,240,0.78)' },
   btn:     { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)' },

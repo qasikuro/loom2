@@ -625,6 +625,7 @@ export default function UserProfileScreen() {
   const colors              = useColors();
   const { t }               = useTranslation();
   const insets              = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { userId: meId }    = useAuth();
   const { followingIds, followUser, unfollowUser, blockedIds, blockUser, unblockUser } = useApp();
 
@@ -824,7 +825,14 @@ export default function UserProfileScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          width: Math.min(windowWidth, 720),
+          alignSelf: 'center',
+          paddingBottom: bottomPad,
+        }}
+      >
 
         {/* ── ANIMATED AURA BANNER ────────────────────────────────── */}
         <AuraBanner mood={mood} bannerH={bannerH} isFounder={isFounder} isBeta={isBeta}>
@@ -873,6 +881,8 @@ export default function UserProfileScreen() {
           style={[
             styles.profileCard,
             {
+              width: Math.min(Math.max(windowWidth - 28, 0), 720),
+              alignSelf: 'center',
               backgroundColor: colors.card,
               borderColor: isFounder ? '#C8A84B55' : isBeta ? '#9B78E855' : colors.border,
             },
@@ -1606,7 +1616,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  name: { fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  name: { flexShrink: 1, minWidth: 0, fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   nameBadge: {
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: 8, borderWidth: 1,

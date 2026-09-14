@@ -12,17 +12,15 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  Dimensions,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-Dimensions.get('window');
 
 interface GuideAvailability {
   days:     number[];
@@ -92,6 +90,7 @@ export default function GuideProfileScreen() {
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const colors     = useColors();
   const insets     = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { userId: myUserId } = useAuth();
   const { followingIds, followUser, unfollowUser } = useApp();
   const isOwnProfile = !!myUserId && myUserId === userId;
@@ -104,8 +103,8 @@ export default function GuideProfileScreen() {
   const fadeIn  = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(28)).current;
 
-  const topPad    = Platform.OS === 'web' ? 48 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 80 : insets.bottom + 110;
+  const topPad    = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 110;
 
   useEffect(() => {
     if (!userId) return;
@@ -236,7 +235,11 @@ export default function GuideProfileScreen() {
       {/* ── Scrollable content ───────────────────────────────── */}
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: bottomPad }}
+        contentContainerStyle={{
+          width: Math.min(windowWidth, 720),
+          alignSelf: 'center',
+          paddingBottom: bottomPad,
+        }}
       >
         <Animated.View style={{ opacity: fadeIn, transform: [{ translateY: slideUp }] }}>
 
@@ -404,6 +407,7 @@ const styles = StyleSheet.create({
   // Hero
   hero: {
     paddingHorizontal: 20,
+    width: '100%',
     paddingBottom: 28,
   },
   heroBackRow: {

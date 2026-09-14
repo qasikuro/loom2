@@ -373,8 +373,8 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
       ? BG_PRESET_MAP[panel.bgPreset]
       : null;
   const hasCaption = panel.text.trim().length > 0;
-  const topPad     = Platform.OS === 'web' ? 52 : insets.top;
-  const botPad     = Platform.OS === 'web' ? 28 : insets.bottom;
+  const topPad     = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad     = Platform.OS === 'web' ? 34 : insets.bottom;
   const showDots   = panels.length <= 14;
 
   return (
@@ -474,7 +474,7 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
       {!isZoomed && (
         <>
           <TouchableOpacity
-            style={[styles.tapZone, { left: 0, width: screenW * 0.28 }]}
+             style={[styles.tapZone, { top: topPad + 48, bottom: botPad + (hasCaption && captionOn ? 72 : 16), left: 0, width: screenW * 0.28 }]}
             onPress={(e) => {
               const now = Date.now();
               const tx  = e.nativeEvent.pageX;
@@ -500,13 +500,13 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
 
           {/* Centre zone — single tap = toggle caption, double tap = zoom to point */}
           <TouchableOpacity
-            style={[styles.tapZone, { left: screenW * 0.28, width: screenW * 0.44 }]}
+            style={[styles.tapZone, { top: topPad + 48, bottom: botPad + (hasCaption && captionOn ? 72 : 16), left: screenW * 0.28, width: screenW * 0.44 }]}
             onPress={(e) => handleZoneTap(e.nativeEvent.pageX, e.nativeEvent.pageY)}
             activeOpacity={0.001}
           />
 
           <TouchableOpacity
-            style={[styles.tapZone, { right: 0, width: screenW * 0.28 }]}
+             style={[styles.tapZone, { top: topPad + 48, bottom: botPad + (hasCaption && captionOn ? 72 : 16), right: 0, width: screenW * 0.28 }]}
             onPress={(e) => {
               const now = Date.now();
               const tx  = e.nativeEvent.pageX;
@@ -599,7 +599,7 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
           ]}
           pointerEvents="none"
         >
-          <Text style={styles.captionTxt}>{panel.text}</Text>
+           <Text style={styles.captionTxt} numberOfLines={4}>{panel.text}</Text>
         </Animated.View>
       )}
     </Animated.View>
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   counterPill: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, maxWidth: '34%',
     backgroundColor: 'rgba(0,0,0,0.42)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
   },
@@ -628,16 +628,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14,
     backgroundColor: 'rgba(0,0,0,0.5)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)',
-    minWidth: 72, justifyContent: 'center',
+    minWidth: 60, maxWidth: '34%', justifyContent: 'center',
   },
   zoomResetTxt: { color: 'rgba(255,255,255,0.72)', fontSize: 12, fontFamily: 'Satoshi-Medium' },
   hintPill: {
     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
     backgroundColor: 'rgba(0,0,0,0.28)',
     borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)',
-    minWidth: 72, alignItems: 'center',
+    minWidth: 60, maxWidth: '34%', alignItems: 'center',
   },
-  hintTxt: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontFamily: 'Satoshi-Regular' },
+  hintTxt: { color: 'rgba(255,255,255,0.35)', fontSize: 10, fontFamily: 'Satoshi-Regular', flexShrink: 1, textAlign: 'center' },
 
   tapZone: {
     position: 'absolute', top: 70, bottom: 80, zIndex: 50,
@@ -661,14 +661,14 @@ const styles = StyleSheet.create({
 
   captionStrip: {
     position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 60,
-    paddingHorizontal: 24, paddingTop: 18,
+    paddingHorizontal: 18, paddingTop: 14, maxHeight: '30%',
     backgroundColor: 'rgba(5,3,16,0.90)',
     borderTopWidth: 1, borderTopColor: 'rgba(200,184,232,0.14)',
   },
   captionTxt: {
     color: 'rgba(240,234,248,0.96)', fontSize: 15.5,
     fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
-    lineHeight: 24, textAlign: 'center',
+    lineHeight: 24, textAlign: 'center', flexShrink: 1,
   },
 
   bubble: {

@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -69,8 +70,6 @@ const t = StyleSheet.create({
 });
 
 // ── Screen ────────────────────────────────────────────────────────────────────
-
-const COLS = 3;
 
 export default function PageManagerScreen() {
   const colors    = useColors();
@@ -200,7 +199,7 @@ export default function PageManagerScreen() {
   return (
     <View style={[s.root, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[s.header, { paddingTop: (Platform.OS === 'web' ? 67 : insets.top) + 12, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
@@ -217,7 +216,7 @@ export default function PageManagerScreen() {
       </View>
 
       {/* Page grid */}
-      <ScrollView contentContainerStyle={[s.grid, { paddingBottom: insets.bottom + 100 }]}>
+       <ScrollView contentContainerStyle={[s.grid, { paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 100, width: '100%', maxWidth: 800, alignSelf: 'center' }]}>
         {pages.map((page, idx) => (
           <View key={page.id} style={s.pageCell}>
             {/* Thumbnail */}
@@ -256,7 +255,7 @@ export default function PageManagerScreen() {
       </ScrollView>
 
       {/* Review FAB */}
-      <View style={[s.fab, { bottom: insets.bottom + 24 }]}>
+       <View style={[s.fab, { bottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 24 }]}>
         <TouchableOpacity
           style={[s.fabBtn, { backgroundColor: accent }]}
           onPress={() => router.push(`/publish-chapter?chapterId=${chapterId}&bookId=${bookId}` as never)}
@@ -272,18 +271,16 @@ export default function PageManagerScreen() {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const GAP  = 10;
-const COLS_COUNT = COLS;
-
 const s = StyleSheet.create({
   root:         { flex: 1 },
   header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   backBtn:      { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  headerTitle:  { color: 'rgba(255,255,255,0.92)', fontSize: 16, fontWeight: '600' },
+  headerCenter: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
+  headerTitle:  { color: 'rgba(255,255,255,0.92)', fontSize: 16, fontWeight: '600', flexShrink: 1 },
   publishBtn:   { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(139,112,200,0.38)', backgroundColor: 'rgba(139,112,200,0.12)' },
   publishBtnTxt:{ color: '#8B70C8', fontSize: 13, fontWeight: '600' },
   grid:         { padding: GAP, flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
-  pageCell:     { width: `${(100 - GAP * (COLS_COUNT + 1) / COLS_COUNT) / COLS_COUNT}%` as unknown as number, gap: 5 },
+  pageCell:     { width: '30%', minWidth: 88, flexGrow: 1, gap: 5 },
   addCell:      { aspectRatio: 0.7, borderRadius: 8, borderWidth: 1.5, borderColor: 'rgba(139,112,200,0.25)', borderStyle: 'dashed', backgroundColor: 'rgba(139,112,200,0.05)', alignItems: 'center', justifyContent: 'center', gap: 6 },
   addTxt:       { fontSize: 11, fontWeight: '600' },
   pageNum:      { color: 'rgba(255,255,255,0.40)', fontSize: 10, textAlign: 'center', marginTop: 2 },

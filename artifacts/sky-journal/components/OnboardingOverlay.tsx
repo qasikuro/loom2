@@ -1,17 +1,18 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   Keyboard,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,12 +20,11 @@ import { useAuth, useClerk } from '@clerk/expo';
 import { useSound } from '@/context/SoundContext';
 import { apiFetch, getAuthToken, useApp } from '@/context/AppContext';
 import type { JournalEntry } from '@/context/AppContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Keys are scoped per userId so different accounts on the same device are isolated.
 const doneKey  = (uid: string) => `onboarding_v1:${uid}`;
 const draftKey = (uid: string) => `onboarding_draft_v1:${uid}`;
-const { width: W, height: H } = Dimensions.get('window');
-
 // ── Moods ──────────────────────────────────────────────────────────────────────
 
 const MOODS = [
@@ -120,6 +120,10 @@ interface OnboardingOverlayProps {
 }
 
 export function OnboardingOverlay({ visible, onComplete, onDismiss }: OnboardingOverlayProps) {
+  const { width: W, height: H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom;
   const { userId }                  = useAuth();
   const { signOut }                 = useClerk();
   const { playSound }               = useSound();
@@ -384,28 +388,34 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
                    : true;
 
   if (!visible) return null;
+  const starPositions = Array.from({ length: 48 }, (_, i) => ({
+    x: (i * 137.508) % W,
+    y: (i * 97.301) % H,
+    op: 0.06 + (i % 5) * 0.05,
+    sz: 1 + (i % 3),
+  }));
 
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
-      <Animated.View style={[s.root, { opacity: fadeAnim }]}>
+      <Animated.View style={[s.root, { opacity: fadeAnim, paddingTop: topPad, paddingBottom: bottomPad }]}>
 
         {/* Static starfield */}
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           <LinearGradient colors={['rgba(6,4,18,0.96)', 'rgba(12,8,32,0.98)']} style={StyleSheet.absoluteFill} />
-          {STAR_POSITIONS.map((st, i) => (
+          {starPositions.map((st, i) => (
             <View key={i} style={[s.star, { left: st.x, top: st.y, opacity: st.op, width: st.sz, height: st.sz, borderRadius: st.sz / 2 }]} />
           ))}
         </View>
 
         {/* Skip (top-right, all steps except reveal) */}
         {step !== STEP_REVEAL && (
-          <Pressable style={s.earlySkip} onPress={handleSkip} hitSlop={16}>
+          <Pressable style={[s.earlySkip, { top: topPad + 12 }]} onPress={handleSkip} hitSlop={16}>
             <Text style={s.earlySkipText}>Skip</Text>
           </Pressable>
         )}
 
         {/* Main card */}
-        <Animated.View style={[s.card, { transform: [{ translateX: slideAnim }] }]}>
+        <Animated.View style={[s.card, { width: Math.min(W - 32, 400), maxHeight: Math.max(300, H - topPad - bottomPad - 24), transform: [{ translateX: slideAnim }] }]}>
           <LinearGradient
             colors={
               step === STEP_CONSTELLATION && typeDef ? typeDef.gradient
@@ -415,7 +425,12 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
             style={StyleSheet.absoluteFill}
             start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}
           />
-
+          <ScrollView
+            style={s.cardScroll}
+            contentContainerStyle={s.cardScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           {step === STEP_WELCOME       && <WelcomeStep emojiScale={emojiScale} />}
           {step === STEP_MOOD          && (
             <MoodStep emojiScale={emojiScale} selectedMood={selectedMood} onSelect={pickMood} />
@@ -503,6 +518,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
               </TouchableOpacity>
             </>
           )}
+          </ScrollView>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -704,15 +720,6 @@ export async function markOnboardingDone(uid: string): Promise<void> {
   try { await AsyncStorage.setItem(doneKey(uid), 'done'); } catch { /* ignore */ }
 }
 
-// ── Static star field ──────────────────────────────────────────────────────────
-
-const STAR_POSITIONS = Array.from({ length: 48 }, (_, i) => ({
-  x:  (i * 137.508) % W,
-  y:  (i * 97.301)  % H,
-  op: 0.06 + (i % 5) * 0.05,
-  sz: 1 + (i % 3),
-}));
-
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
@@ -767,8 +774,8 @@ const s = StyleSheet.create({
   },
 
   card: {
-    width:             Math.min(W - 32, 400),
-    maxHeight:         H * 0.90,
+    width:             '92%',
+    maxWidth:          400,
     borderRadius:      28,
     paddingTop:        36,
     paddingBottom:     32,
@@ -783,6 +790,8 @@ const s = StyleSheet.create({
     shadowOpacity:     0.75,
     shadowRadius:      36,
   },
+  cardScroll: { width: '100%' },
+  cardScrollContent: { alignItems: 'center' },
 
   // Orb
   orbWrap: {

@@ -184,7 +184,11 @@ function ClassicTabLayout() {
         tabBarStyle: {
           marginHorizontal: isWeb ? 0 : 16,
           marginBottom: barMarginBottom,
-          height: isWeb ? 64 : BAR_HEIGHT,
+           // Web has no native home-indicator inset; reserve the same 34px
+           // visual breathing room so the bar never covers the final row.
+           height: isWeb ? 84 : BAR_HEIGHT,
+           paddingBottom: isWeb ? 30 : 0,
+           paddingTop: isWeb ? 4 : 0,
           borderRadius: isWeb ? 0 : 32,
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
@@ -208,6 +212,10 @@ function ClassicTabLayout() {
 
         tabBarIconStyle: {
           marginTop: Platform.OS === 'android' ? 2 : 4,
+        },
+        tabBarItemStyle: {
+          minWidth: 0,
+          flex: 1,
         },
       }}
     >

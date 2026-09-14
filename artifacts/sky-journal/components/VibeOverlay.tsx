@@ -1,7 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Dimensions, StyleSheet, View } from 'react-native';
-
-const { width: SW, height: SH } = Dimensions.get('window');
+import React, { useEffect } from 'react';
+import { Animated, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 type VibeMode = 'float' | 'twinkle' | 'sparkle';
 
@@ -44,11 +42,11 @@ interface Particle {
   size:        number;
 }
 
-function buildParticles(def: VibeDef): Particle[] {
+function buildParticles(def: VibeDef, width: number, height: number): Particle[] {
   return Array.from({ length: def.count }, (_, i) => ({
     id:          i,
-    x:           rnd(0.04, 0.90) * SW,
-    startY:      rnd(0.15, 0.85) * SH,
+    x:           rnd(0.04, 0.90) * width,
+    startY:      rnd(0.15, 0.85) * height,
     yAnim:       new Animated.Value(0),
     opacityAnim: new Animated.Value(0),
     scaleAnim:   new Animated.Value(rnd(0.6, 1.2)),
@@ -122,14 +120,13 @@ function startSparkle(p: Particle) {
 
 export function VibeOverlay({ vibe }: { vibe: string }) {
   const def = VIBE_DEFS[vibe];
-  const particlesRef = useRef<Particle[]>([]);
-
-  if (def && particlesRef.current.length === 0) {
-    particlesRef.current = buildParticles(def);
-  }
+  const { width, height } = useWindowDimensions();
+  const particles = React.useMemo(
+    () => def ? buildParticles(def, width, height) : [],
+    [def, width, height],
+  );
 
   useEffect(() => {
-    const particles = particlesRef.current;
     particles.forEach(p => {
       if (p.def.mode === 'float')   startFloat(p);
       if (p.def.mode === 'twinkle') startTwinkle(p);
@@ -142,13 +139,13 @@ export function VibeOverlay({ vibe }: { vibe: string }) {
         p.scaleAnim.stopAnimation();
       });
     };
-  }, []);
+  }, [particles]);
 
   if (!def) return null;
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.overlay]}>
-      {particlesRef.current.map(p => (
+      {particles.map(p => (
         <Animated.Text
           key={p.id}
           style={{

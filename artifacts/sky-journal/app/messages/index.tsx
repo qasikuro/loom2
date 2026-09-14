@@ -15,6 +15,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,7 +46,8 @@ function fmtThreadTime(iso: string): string {
 export default function MessagesInboxScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
-  const topPad  = Platform.OS === 'web' ? 48 : insets.top;
+  const { width: windowWidth } = useWindowDimensions();
+  const topPad  = Platform.OS === 'web' ? 67 : insets.top;
 
   const [threads,  setThreads]  = useState<Thread[]>([]);
   const [loading,  setLoading]  = useState(true);
@@ -217,11 +219,14 @@ export default function MessagesInboxScreen() {
           <Text style={{ fontFamily: 'Satoshi-Regular', color: colors.mutedForeground }}>{error}</Text>
         </View>
       ) : (
-        <FlatList<Thread>
+         <FlatList<Thread>
           data={threads}
           keyExtractor={t => t.partnerId}
           renderItem={renderThread}
-          contentContainerStyle={threads.length === 0 ? styles.emptyContainer : { paddingBottom: insets.bottom + 24 }}
+           contentContainerStyle={[
+             threads.length === 0 ? styles.emptyContainer : { paddingBottom: insets.bottom + 24 },
+             { width: Math.min(windowWidth, 680), alignSelf: 'center' },
+           ]}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
@@ -264,12 +269,12 @@ const styles = StyleSheet.create({
   avatar:            { width: 50, height: 50, borderRadius: 25, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   avatarInitial:     { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#E8E0FF', position: 'absolute' },
   threadContent:     { flex: 1, gap: 2 },
-  threadTopRow:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  threadTopRow:      { flexDirection: 'row', alignItems: 'center', minWidth: 0 },
   threadName:        { fontSize: 15, fontFamily: 'Satoshi-Medium', flex: 1, marginRight: 8 },
   threadNameUnread:  { fontFamily: 'Satoshi-Bold' },
   threadHandle:      { fontSize: 12, fontFamily: 'Satoshi-Regular' },
   threadLastMsg:     { fontSize: 13, fontFamily: 'Satoshi-Regular' },
-  threadTime:        { fontSize: 12, fontFamily: 'Satoshi-Regular' },
+  threadTime:        { flexShrink: 0, marginLeft: 8, fontSize: 12, fontFamily: 'Satoshi-Regular' },
   unreadDot:         { width: 8, height: 8, borderRadius: 4 },
 
   emptyContainer:    { flex: 1 },

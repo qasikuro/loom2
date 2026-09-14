@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   BackHandler,
-  Dimensions,
   Easing,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +10,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,8 +34,6 @@ import {
 } from '../components/FirstPublishOverlay';
 import { CompletionMoment } from '@/components/CompletionMoment';
 
-const { width: W } = Dimensions.get('window');
-
 const MOODS = [
   { id: 'Dreamy',      emoji: '🌙', color: '#9B78E8' },
   { id: 'Hopeful',     emoji: '☀️', color: '#C8A84B' },
@@ -54,9 +52,10 @@ const STEP_CAPTION = 1;
 const STEP_PREVIEW = 2;
 
 export default function QuickMomentScreen() {
+  const { width } = useWindowDimensions();
   const insets  = useSafeAreaInsets();
-  const topPad  = Platform.OS === 'web' ? 48 : insets.top;
-  const botPad  = Platform.OS === 'web' ? 24 : insets.bottom + 16;
+  const topPad  = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad  = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
   const { addStory, stories } = useApp();
   const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
@@ -129,9 +128,9 @@ export default function QuickMomentScreen() {
 
   function goToStep(next: number) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Animated.timing(slideAnim, { toValue: -W, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
+    Animated.timing(slideAnim, { toValue: -width, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }).start(() => {
       setStep(next);
-      slideAnim.setValue(W);
+      slideAnim.setValue(width);
       Animated.spring(slideAnim, { toValue: 0, tension: 52, friction: 9, useNativeDriver: true }).start();
     });
   }

@@ -7,13 +7,13 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Image } from 'expo-image';
 import {
-  Dimensions,
   FlatList,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,11 +21,8 @@ import { useApp, type Story } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 
-const { width: SW } = Dimensions.get('window');
 const GUTTER  = 14;
 const GAP     = 8;
-const CARD_W  = (SW - GUTTER * 2 - GAP) / 2;
-const CARD_H  = CARD_W * 1.28;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const BG_MAP: Record<string, any> = {
@@ -53,13 +50,13 @@ function getMoodColor(mood: string) {
 }
 
 // ── Story card ────────────────────────────────────────────────────────────────
-function StoryCard({ story, colors: _colors }: { story: Story; colors: ReturnType<typeof useColors> }) {
+function StoryCard({ story, colors: _colors, cardWidth }: { story: Story; colors: ReturnType<typeof useColors>; cardWidth: number }) {
   const cover = getCover(story);
   const moodColor = getMoodColor(story.mood);
 
   return (
     <TouchableOpacity
-      style={[styles.card, { width: CARD_W, height: CARD_H }]}
+      style={[styles.card, { width: cardWidth, height: cardWidth * 1.28 }]}
       onPress={() => {
         Haptics.selectionAsync();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -161,17 +158,19 @@ export default function MyStoriesScreen() {
   const { t: tr } = useTranslation();
   const insets = useSafeAreaInsets();
   const { stories } = useApp();
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = Math.max(128, (Math.min(windowWidth, 560) - GUTTER * 2 - GAP) / 2);
 
-  const topPad = Platform.OS === 'web' ? 48 : insets.top;
-  const botPad = Platform.OS === 'web' ? 20 : insets.bottom + 16;
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
   const sorted = [...stories].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
   const renderItem = ({ item, index }: { item: Story; index: number }) => (
-    <View style={{ marginLeft: index % 2 === 1 ? GAP : 0 }}>
-      <StoryCard story={item} colors={colors} />
+    <View style={{ marginLeft: index % 2 === 1 ? GAP : 0, minWidth: 0 }}>
+      <StoryCard story={item} colors={colors} cardWidth={cardWidth} />
     </View>
   );
 
@@ -205,7 +204,7 @@ export default function MyStoriesScreen() {
           keyExtractor={s => s.id}
           renderItem={renderItem}
           numColumns={2}
-          contentContainerStyle={[styles.grid, { paddingBottom: botPad }]}
+          contentContainerStyle={[styles.grid, { width: Math.min(windowWidth, 560), alignSelf: 'center', paddingBottom: botPad }]}
           columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
         />
@@ -252,7 +251,7 @@ const styles = StyleSheet.create({
   tabBtnText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 
   // Grid
-  grid:  { paddingHorizontal: GUTTER, paddingTop: 4 },
+  grid:  { paddingHorizontal: GUTTER, paddingTop: 4, maxWidth: 560 },
   row:   { marginBottom: GAP },
 
   // Card

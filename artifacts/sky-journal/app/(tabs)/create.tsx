@@ -1,14 +1,15 @@
 import React, { useCallback, useRef } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
@@ -17,10 +18,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
-
-const { height: H } = Dimensions.get('window');
-
-const SHEET_H = Math.min(H * 0.92, 820);
 
 const MODES = [
   {
@@ -71,28 +68,30 @@ const MODES = [
 
 export default function CreateScreen() {
   const insets  = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const sheetHeight = Math.min(windowHeight * 0.92, 820);
   const botPad  = Platform.OS === 'web' ? 32 : insets.bottom + 16;
 
   const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
   const hasEventContext = !!eventPrompt;
 
-  const sheetY    = useRef(new Animated.Value(SHEET_H)).current;
+  const sheetY    = useRef(new Animated.Value(sheetHeight)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
 
   useFocusEffect(useCallback(() => {
     // Slide sheet in every time the Create tab is focused
-    sheetY.setValue(SHEET_H);
+    sheetY.setValue(sheetHeight);
     bgOpacity.setValue(0);
     Animated.parallel([
       Animated.spring(sheetY,    { toValue: 0,   tension: 48, friction: 9,                         useNativeDriver: true }),
       Animated.timing(bgOpacity, { toValue: 1,   duration: 260, easing: Easing.out(Easing.quad),   useNativeDriver: true }),
     ]).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only entrance animation; Animated.Value refs are stable
-  }, []));
+  }, [sheetHeight]));
 
   function dismiss() {
     Animated.parallel([
-      Animated.timing(sheetY,    { toValue: SHEET_H, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(sheetY,    { toValue: sheetHeight, duration: 220, easing: Easing.in(Easing.quad), useNativeDriver: true }),
       Animated.timing(bgOpacity, { toValue: 0,        duration: 180,                                 useNativeDriver: true }),
     ]).start(() => {
       // Navigate back to the Home tab
@@ -104,7 +103,7 @@ export default function CreateScreen() {
   function selectMode(route: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     Animated.parallel([
-      Animated.timing(sheetY,    { toValue: SHEET_H, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      Animated.timing(sheetY,    { toValue: sheetHeight, duration: 200, easing: Easing.in(Easing.quad), useNativeDriver: true }),
       Animated.timing(bgOpacity, { toValue: 0,        duration: 160,                                 useNativeDriver: true }),
     ]).start(() => {
       if (hasEventContext) {
@@ -130,7 +129,7 @@ export default function CreateScreen() {
 
       {/* ── Bottom sheet ─────────────────────────────────────────── */}
       <Animated.View
-        style={[s.sheet, { paddingBottom: botPad, transform: [{ translateY: sheetY }] }]}
+        style={[s.sheet, { height: sheetHeight, paddingBottom: botPad, transform: [{ translateY: sheetY }] }]}
         pointerEvents="box-none"
       >
         {/* Drag handle */}
@@ -152,8 +151,13 @@ export default function CreateScreen() {
           <Text style={s.sheetSub}>What kind of story today?</Text>
         )}
 
-        {/* Mode tiles */}
-        <View style={s.tiles}>
+        {/* Mode tiles — scroll independently on short phones/landscape */}
+        <ScrollView
+          style={s.tilesScroll}
+          contentContainerStyle={s.tiles}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {MODES.map(mode => (
             <TouchableOpacity
               key={mode.id}
@@ -190,7 +194,7 @@ export default function CreateScreen() {
               </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
       </Animated.View>
     </View>
@@ -210,7 +214,6 @@ const s = StyleSheet.create({
   sheet: {
     position:        'absolute',
     left:            0, right: 0, bottom: 0,
-    height:          SHEET_H,
     backgroundColor: '#08051C',
     borderTopLeftRadius:  30,
     borderTopRightRadius: 30,
@@ -275,18 +278,19 @@ const s = StyleSheet.create({
     color: 'rgba(220,210,255,0.72)', lineHeight: 18,
   },
 
-  tiles: { gap: 10 },
+  tilesScroll: { flex: 1, minHeight: 0 },
+  tiles: { gap: 10, paddingBottom: 4 },
 
   tile: {
     flexDirection:   'row',
     alignItems:      'center',
-    gap:             12,
+    gap:             10,
     height:          114,
     borderRadius:    18,
     borderWidth:     1,
     borderColor:     'transparent',
     backgroundColor: 'rgba(255,255,255,0.025)',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical:   12,
     overflow:        'hidden',
   },
@@ -315,8 +319,8 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     flexShrink:     0,
   },
-  tileText:  { flex: 1 },
-  tileName:  { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.3, marginBottom: 4 },
+  tileText:  { flex: 1, minWidth: 0 },
+  tileName:  { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.3, marginBottom: 4, flexShrink: 1 },
   tileDesc:{
     fontSize: 12, fontFamily: 'Satoshi-Regular',
     color: 'rgba(225,216,246,0.72)', lineHeight: 16,

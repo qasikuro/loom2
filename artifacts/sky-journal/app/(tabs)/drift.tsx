@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +10,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,8 +18,6 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useApp, apiFetch } from '@/context/AppContext';
-
-const { width: SW } = Dimensions.get('window');
 
 // ─── Flow ────────────────────────────────────────────────────────────────────
 type FlowStep =
@@ -621,6 +619,7 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip, emotion = 'n
   message: string; color?: string; onTapLumi?: () => void; tapQuip?: string;
   emotion?: LumiEmotion; whisper?: string;
 }) {
+  const { width } = useWindowDimensions();
   const msgFade     = useRef(new Animated.Value(0)).current;
   const quipFade    = useRef(new Animated.Value(0)).current;
   const whisperFade = useRef(new Animated.Value(0)).current;
@@ -671,7 +670,7 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip, emotion = 'n
           <Animated.View style={{
             marginBottom: 10, opacity: quipFade,
             backgroundColor: `${color}F0`, borderRadius: 16, borderBottomLeftRadius: 4,
-            paddingHorizontal: 14, paddingVertical: 10, maxWidth: SW - 80,
+            paddingHorizontal: 14, paddingVertical: 10, maxWidth: Math.max(width - 80, 220),
             shadowColor: color, shadowOpacity: 0.55, shadowRadius: 10,
           }}>
             <Text style={{ fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: '#fff', lineHeight: 20, textAlign: 'center' }}>
@@ -975,9 +974,11 @@ const oc = StyleSheet.create({
 
 // ─── Shared buttons ───────────────────────────────────────────────────────────
 function PrimaryBtn({ label, onPress, color, muted = false }: { label: string; onPress: () => void; color: string; muted?: boolean }) {
+  const { width } = useWindowDimensions();
+  const buttonWidth = Math.min(Math.max(width - 48, 240), 520);
   return (
     <TouchableOpacity
-      style={[pb.btn, muted
+      style={[pb.btn, { width: buttonWidth }, muted
         ? { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: `${color}45` }
         : { backgroundColor: color, shadowColor: color, shadowOpacity: 0.55, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 14 }
       ]}
@@ -989,7 +990,7 @@ function PrimaryBtn({ label, onPress, color, muted = false }: { label: string; o
   );
 }
 const pb = StyleSheet.create({
-  btn:  { width: SW - 48, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  btn:  { height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', maxWidth: '100%' },
   text: { fontSize: 17, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: 0.3 },
 });
 
@@ -1089,6 +1090,7 @@ function SurveyScreen({ question, qIdx, total, onAnswer, answers }: {
 
 function AllSetScreen({ onBegin }: { onBegin: () => void }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -1112,7 +1114,7 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
           <Text style={{ fontSize: 16, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.70)', textAlign: 'center', lineHeight: 26, marginBottom: 36 }}>
             We'll personalise your journey just for you.
           </Text>
-          <View style={{ width: SW - 56, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(176,144,255,0.20)', padding: 22, marginBottom: 36 }}>
+           <View style={{ width: Math.min(Math.max(width - 56, 240), 520), maxWidth: '100%', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(176,144,255,0.20)', padding: 22, marginBottom: 36 }}>
             {points.map((p, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14, marginBottom: i < points.length - 1 ? 18 : 0 }}>
                 <Text style={{ fontSize: 14, color: '#B090FF', marginTop: 2 }}>✦</Text>
@@ -1169,6 +1171,7 @@ function AnalyzingScreen({ confidence }: { confidence: number }) {
 
 function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; confidence: number; onContinue: () => void }) {
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
   const archScale = useRef(new Animated.Value(0.7)).current;
@@ -1210,7 +1213,7 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
           ) : null}
         </Animated.View>
 
-        <Animated.View style={{ opacity: enter, width: SW - 56, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 22, marginBottom: 20 }}>
+         <Animated.View style={{ opacity: enter, width: Math.min(Math.max(width - 56, 240), 520), maxWidth: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 22, marginBottom: 20 }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.85)', lineHeight: 25, marginBottom: 20 }}>
             {cfg.description}
@@ -1258,7 +1261,11 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
         <Animated.View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: `${cfg.color}30`, transform: [{ scale: circleS }] }} />
       </View>
       <StarField />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+       <ScrollView
+         style={{ flex: 1 }}
+         contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 24 }}
+         showsVerticalScrollIndicator={false}
+       >
         <Animated.Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: `${cfg.color}AA`, letterSpacing: 4, textTransform: 'uppercase', opacity: textIn, marginBottom: 16 }}>
           Activating
         </Animated.Text>
@@ -1271,7 +1278,7 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
         <Animated.Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: `${cfg.color}CC`, textAlign: 'center', opacity: textIn, marginBottom: 40 }}>
           {cfg.tagline}
         </Animated.Text>
-        <Animated.View style={{ flexDirection: 'row', gap: 16, marginBottom: 48, opacity: textIn }}>
+        <Animated.View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 16, marginBottom: 48, opacity: textIn }}>
           {stats.map(s => (
             <View key={s.label} style={{ alignItems: 'center', backgroundColor: `${cfg.color}12`, borderRadius: 14, borderWidth: 1, borderColor: `${cfg.color}30`, paddingHorizontal: 16, paddingVertical: 10 }}>
               <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: cfg.color }}>{s.val}</Text>
@@ -1282,7 +1289,7 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
         <Animated.View style={{ opacity: textIn, width: '100%' }}>
           <PrimaryBtn label={`Enter ${cfg.name} ✦`} onPress={onEnter} color={cfg.color} />
         </Animated.View>
-      </View>
+       </ScrollView>
     </View>
   );
 }
@@ -1299,11 +1306,15 @@ function ModePerksScreen({ cfg, onGotIt }: { cfg: ModeConfig; onGotIt: () => voi
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
       <LinearGradient colors={cfg.gradient} style={StyleSheet.absoluteFill} />
       <StarField />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+       <ScrollView
+         style={{ flex: 1 }}
+         contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 24 }}
+         showsVerticalScrollIndicator={false}
+       >
         <Animated.View style={{ opacity: enter, width: '100%', alignItems: 'center' }}>
           <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: `${cfg.color}25`, borderWidth: 1.5, borderColor: `${cfg.color}50`, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
             <Text style={{ fontSize: 28 }}>{cfg.symbol}</Text>
-          </View>
+           </View>
           <Text style={{ fontSize: 28, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', marginBottom: 6 }}>Mode Activated.</Text>
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.65)', textAlign: 'center', marginBottom: 32 }}>
             Your journey has shifted.
@@ -1320,7 +1331,7 @@ function ModePerksScreen({ cfg, onGotIt }: { cfg: ModeConfig; onGotIt: () => voi
           </View>
           <PrimaryBtn label="Got it" onPress={onGotIt} color={cfg.color} />
         </Animated.View>
-      </View>
+       </ScrollView>
     </View>
   );
 }
@@ -1344,7 +1355,11 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (dur
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
       <LinearGradient colors={cfg.gradient} style={StyleSheet.absoluteFill} />
       <StarField />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+       <ScrollView
+         style={{ flex: 1 }}
+         contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 24 }}
+         showsVerticalScrollIndicator={false}
+       >
         <Animated.View style={{ opacity: enter, alignItems: 'center', width: '100%' }}>
           <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 20 }}>
             Meet Lumi 🌙
@@ -1354,7 +1369,7 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (dur
             <Text style={{ fontSize: 14.5, fontFamily: 'Satoshi-Regular', color: 'rgba(230,215,255,0.88)', lineHeight: 24, fontStyle: 'italic', textAlign: 'center' }}>
               "{cfg.lumiIntro}"
             </Text>
-          </View>
+           </View>
 
           {/* Duration picker */}
           <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.50)', letterSpacing: 1.5, marginBottom: 14 }}>HOW LONG?</Text>
@@ -1379,7 +1394,7 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (dur
           </View>
           <PrimaryBtn label={`Begin · ${selectedMins} min`} onPress={() => onContinue(selectedMins * 60)} color={cfg.color} />
         </Animated.View>
-      </View>
+       </ScrollView>
     </View>
   );
 }
@@ -1870,7 +1885,11 @@ function ReflectionScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: ()
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
       <LinearGradient colors={cfg.gradient} style={StyleSheet.absoluteFill} />
       <StarField />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+       <ScrollView
+         style={{ flex: 1 }}
+         contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 24 }}
+         showsVerticalScrollIndicator={false}
+       >
         <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
           <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 28 }}>REFLECTION</Text>
           <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: `${cfg.color}AA`, letterSpacing: 1, marginBottom: 20 }}>" "</Text>
@@ -1882,7 +1901,7 @@ function ReflectionScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: ()
           </Text>
           <PrimaryBtn label="Continue ✦" onPress={onContinue} color={cfg.color} />
         </Animated.View>
-      </View>
+       </ScrollView>
     </View>
   );
 }
@@ -1970,7 +1989,11 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad }]}>
       <LinearGradient colors={cfg.gradient} style={StyleSheet.absoluteFill} />
       <StarField />
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28 }}>
+       <ScrollView
+         style={{ flex: 1 }}
+         contentContainerStyle={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 28, paddingVertical: 24 }}
+         showsVerticalScrollIndicator={false}
+       >
         <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
           <LumiCharacter color={cfg.color} size={110} />
           <Text style={{ fontSize: 34, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', marginTop: 32, marginBottom: 12, lineHeight: 42 }}>
@@ -1981,7 +2004,7 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
           </Text>
           <PrimaryBtn label="Home" onPress={onHome} color={cfg.color} />
         </Animated.View>
-      </View>
+       </ScrollView>
     </View>
   );
 }
@@ -2027,6 +2050,7 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
   cfg: ModeConfig; characterName: string; intention?: string; onBack: () => void;
 }) {
   const insets  = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
   const topPad  = Platform.OS === 'web' ? 48 : insets.top;
   const btmPad  = Platform.OS === 'web' ? 80 : insets.bottom;
   const scrollRef = useRef<ScrollView>(null);
@@ -2101,6 +2125,8 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
         ref={scrollRef}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 16, gap: 12 }}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
         style={{ flex: 1 }}
       >
         {messages.map((m, i) => (
@@ -2111,7 +2137,7 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
               </View>
             )}
             <View style={[
-              { maxWidth: SW * 0.75, borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12 },
+              { maxWidth: Math.min(width * 0.75, 520), borderRadius: 18, paddingHorizontal: 16, paddingVertical: 12 },
               m.role === 'user'
                 ? { backgroundColor: `${cfg.color}30`, borderWidth: 1, borderColor: `${cfg.color}50`, borderBottomRightRadius: 4 }
                 : { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(200,180,255,0.15)', borderBottomLeftRadius: 4 },

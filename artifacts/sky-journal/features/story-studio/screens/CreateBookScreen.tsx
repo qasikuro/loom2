@@ -6,13 +6,14 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  ScrollView,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -49,6 +50,8 @@ export default function CreateBookScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const fetch   = useApiFetch();
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
 
   const [title,      setTitle]      = useState('');
   const [subtitle,   setSubtitle]   = useState('');
@@ -85,15 +88,20 @@ export default function CreateBookScreen() {
 
   return (
     <View style={[s.root, { backgroundColor: colors.background }]}>
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[s.header, { paddingTop: topInset + 12, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>New Book</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>New Book</Text>
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
+      <KeyboardAwareScrollView
+        bottomOffset={20}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[s.scroll, { paddingBottom: bottomInset + 32, width: '100%', maxWidth: 800, alignSelf: 'center' }]}
+      >
         {/* Title & Subtitle */}
         <View style={s.section}>
           <Text style={s.sectionLabel}>TITLE</Text>
@@ -221,7 +229,7 @@ export default function CreateBookScreen() {
             ? <ActivityIndicator color="#fff" size="small" />
             : <Text style={s.createBtnTxt}>Create Book →</Text>}
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
@@ -232,13 +240,13 @@ const s = StyleSheet.create({
   root:          { flex: 1 },
   header:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   backBtn:       { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:   { color: 'rgba(255,255,255,0.92)', fontSize: 17, fontWeight: '600' },
+   headerTitle:   { color: 'rgba(255,255,255,0.92)', fontSize: 17, fontWeight: '600', flexShrink: 1 },
   scroll:        { padding: 20, gap: 4 },
   section:       { marginBottom: 22 },
   sectionLabel:  { color: 'rgba(200,185,255,0.45)', fontSize: 11, fontWeight: '700', letterSpacing: 1.1, marginBottom: 10 },
   input:         { backgroundColor: 'rgba(255,255,255,0.05)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, color: 'rgba(255,255,255,0.90)', fontSize: 15, marginBottom: 14 },
-  typeRow:       { flexDirection: 'row', gap: 10 },
-  typeCard:      { flex: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: 12, backgroundColor: 'rgba(255,255,255,0.03)' },
+   typeRow:       { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+   typeCard:      { flexGrow: 1, flexBasis: 120, minWidth: 120, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: 12, backgroundColor: 'rgba(255,255,255,0.03)' },
   typeCardTitle: { color: 'rgba(255,255,255,0.82)', fontSize: 13, fontWeight: '600', marginBottom: 3 },
   typeCardDesc:  { color: 'rgba(255,255,255,0.36)', fontSize: 11 },
   chipWrap:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

@@ -10,11 +10,13 @@ import {
   Easing,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
@@ -39,6 +41,7 @@ export function ImageSourceSheet({
   onCancel,
 }: ImageSourceSheetProps) {
   const insets     = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const [shown, setShown]   = useState(visible);
   const slideY     = useRef(new Animated.Value(420)).current;
   const bgOpacity  = useRef(new Animated.Value(0)).current;
@@ -100,9 +103,14 @@ export function ImageSourceSheet({
       <Animated.View
         style={[
           styles.sheet,
-          { paddingBottom: bottomPad, transform: [{ translateY: slideY }] },
+           { maxHeight: Math.max(280, height - 12), paddingBottom: bottomPad, transform: [{ translateY: slideY }] },
         ]}
       >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.sheetScrollContent}
+        >
         {/* Pull handle */}
         <View style={styles.handle} />
 
@@ -151,6 +159,7 @@ export function ImageSourceSheet({
         >
           <Text style={styles.cancelText}>Cancel</Text>
         </TouchableOpacity>
+        </ScrollView>
       </Animated.View>
     </Modal>
   );
@@ -207,6 +216,7 @@ const styles = StyleSheet.create({
     paddingHorizontal:     14,
     gap:                   2,
   },
+  sheetScrollContent: { paddingBottom: 2 },
   handle: {
     alignSelf:       'center',
     width:           36,

@@ -26,6 +26,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -45,6 +46,8 @@ export default function SignInScreen() {
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
 
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
@@ -135,7 +138,7 @@ export default function SignInScreen() {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
-          contentContainerStyle={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 40 }]}
+          contentContainerStyle={[styles.container, { width: Math.min(windowWidth, 516), paddingTop: topInset + 24, paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 40 }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -252,7 +255,7 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   star: { position: 'absolute', color: 'rgba(200,184,232,0.18)', fontFamily: 'Satoshi-Regular' },
-  container: { paddingHorizontal: 28, alignItems: 'stretch' },
+  container: { paddingHorizontal: 20, alignSelf: 'center', alignItems: 'stretch' },
 
   logoWrap: { alignItems: 'center', marginBottom: 10 },
   logo: { width: 110, height: 110 },
@@ -274,7 +277,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   googleLogo: { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#4285F4', lineHeight: 24 },
-  googleBtnText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#1F1F1F', letterSpacing: 0.1 },
+  googleBtnText: { flexShrink: 1, fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#1F1F1F', letterSpacing: 0.1 },
 
   dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 22 },
   dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(107,91,149,0.22)' },
@@ -305,7 +308,7 @@ const styles = StyleSheet.create({
   primaryBtnDisabled: { opacity: 0.38 },
   primaryBtnText: { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff', letterSpacing: 0.2 },
 
-  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 28 },
-  footerText: { fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginTop: 28 },
+  footerText: { flexShrink: 1, fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)' },
   footerLink: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(180,160,240,0.85)' },
 });

@@ -9,21 +9,18 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image } from 'expo-image';
 import {
-  Dimensions,
   FlatList,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width: SW } = Dimensions.get('window');
 const GUTTER = 14;
 const GAP    = 10;
-const CARD_W = (SW - GUTTER * 2 - GAP) / 2;
-const IMG_H  = CARD_W * 1.18;
 
 // ── Tag gradient pools ────────────────────────────────────────────────────────
 const TAG_COLORS: Record<string, [string, string]> = {
@@ -73,19 +70,20 @@ function moodEmoji(tags: string[]): string {
 }
 
 // ── Outfit card ───────────────────────────────────────────────────────────────
-function OutfitCard({ outfit, isActive, onSetActive, colors }: {
+function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
   outfit:      Outfit;
   isActive:    boolean;
   onSetActive: (id: string) => void;
   colors:      ReturnType<typeof useColors>;
+  cardWidth:   number;
 }) {
   const grad = getGradient(outfit.id);
   const emoji = moodEmoji(outfit.tags);
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }]}>
+    <View style={[styles.card, { backgroundColor: colors.card, width: cardWidth }]}>
       {/* Image area */}
-      <View style={styles.imgWrap}>
+      <View style={[styles.imgWrap, { width: cardWidth, height: cardWidth * 1.18 }]}>
         {outfit.imageUri ? (
           <Image
             source={{ uri: outfit.imageUri }}
@@ -201,9 +199,11 @@ export default function WardrobeScreen() {
   const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { outfits, activeOutfitId, setActiveOutfitId } = useApp();
+  const { width: windowWidth } = useWindowDimensions();
+  const cardWidth = Math.max(128, (Math.min(windowWidth, 560) - GUTTER * 2 - GAP) / 2);
 
-  const topPad = Platform.OS === 'web' ? 48 : insets.top;
-  const botPad = Platform.OS === 'web' ? 20 : insets.bottom + 16;
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const botPad = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
   const [tab, setTab] = useState<'outfits' | 'accessories'>('outfits');
 
@@ -216,12 +216,13 @@ export default function WardrobeScreen() {
   }
 
   const renderItem = ({ item, index }: { item: Outfit; index: number }) => (
-    <View style={{ marginLeft: index % 2 === 1 ? GAP : 0 }}>
+      <View style={{ marginLeft: index % 2 === 1 ? GAP : 0, minWidth: 0 }}>
       <OutfitCard
         outfit={item}
         isActive={activeOutfitId === item.id}
         onSetActive={handleSetActive}
         colors={colors}
+        cardWidth={cardWidth}
       />
     </View>
   );
@@ -291,7 +292,7 @@ export default function WardrobeScreen() {
           keyExtractor={o => o.id}
           renderItem={renderItem}
           numColumns={2}
-          contentContainerStyle={[styles.grid, { paddingBottom: botPad }]}
+          contentContainerStyle={[styles.grid, { width: Math.min(windowWidth, 560), alignSelf: 'center', paddingBottom: botPad }]}
           columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
         />
@@ -336,12 +337,12 @@ const styles = StyleSheet.create({
 
   // Card
   card: {
-    width: CARD_W, borderRadius: 20, overflow: 'hidden',
+    borderRadius: 20, overflow: 'hidden', minWidth: 0,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
   imgWrap: {
-    width: CARD_W, height: IMG_H,
+    height: 180,
     backgroundColor: '#1C1840', overflow: 'hidden',
   },
   placeholderCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },

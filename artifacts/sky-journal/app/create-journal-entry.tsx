@@ -21,6 +21,7 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -88,6 +89,7 @@ export default function CreateJournalEntryScreen() {
   const colors  = useColors();
   const { playSound } = useSound();
   const insets  = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { t: tr } = useTranslation();
   const { addJournalEntry, character } = useApp();
   const { type: typeParam, initialPrompt, initialMood } = useLocalSearchParams<{ type?: string; initialPrompt?: string; initialMood?: string }>();
@@ -99,6 +101,7 @@ export default function CreateJournalEntryScreen() {
   const inputRef  = useRef<TextInput>(null);
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const contentWidth = Math.min(windowWidth, 720);
 
   const today = startOfDay(new Date());
 
@@ -304,7 +307,7 @@ export default function CreateJournalEntryScreen() {
       />
 
       {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+      <View style={[styles.header, { paddingTop: topPad + 10, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
         <BackButton
           style={[styles.iconBtn, { backgroundColor: colors.muted }]}
           iconName="x"
@@ -340,7 +343,7 @@ export default function CreateJournalEntryScreen() {
         bottomOffset={20}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
+         contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
       >
         {/* ── Resume draft banner ─────────────────────────────── */}
         {pendingDraft && (
@@ -522,7 +525,7 @@ export default function CreateJournalEntryScreen() {
         {/* Optional image */}
         {imageUri ? (
           <View style={styles.imagePreviewWrap}>
-            <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
+             <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="contain" />
             <TouchableOpacity
               style={[styles.removeImg, { backgroundColor: 'rgba(0,0,0,0.5)' }]}
               onPress={() => setImageUri(undefined)}
@@ -587,9 +590,9 @@ const styles = StyleSheet.create({
   headerGrad:      { position: 'absolute', top: 0, left: 0, right: 0 },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
   iconBtn:         { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  headerCenter:    { alignItems: 'center', gap: 4 },
+  headerCenter:    { alignItems: 'center', gap: 4, minWidth: 0, flexShrink: 1 },
   headerTitleRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  headerTitle:     { fontSize: 17, fontFamily: 'Satoshi-Bold' },
+  headerTitle:     { fontSize: 17, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
   privatePill:     { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   privatePillText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
   saveBtn:         { paddingHorizontal: 22, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },

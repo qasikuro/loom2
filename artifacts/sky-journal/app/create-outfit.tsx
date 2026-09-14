@@ -21,6 +21,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -54,10 +55,12 @@ const VIBES = [
 export default function CreateOutfitScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { t: tr } = useTranslation();
   const { addOutfit, updateOutfit } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const contentWidth = Math.min(windowWidth, 720);
 
   const params = useLocalSearchParams<{
     editId?:          string;
@@ -261,7 +264,7 @@ export default function CreateOutfitScreen() {
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <LinearGradient colors={['#E8E0F4', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
 
-        <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+         <View style={[styles.header, { paddingTop: topPad + 10, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
           <BackButton style={[styles.iconBtn, { backgroundColor: colors.muted }]} iconName="x" size={18} color={colors.foreground} onPress={() => navigation.goBack()} />
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')}</Text>
           <TouchableOpacity
@@ -276,7 +279,7 @@ export default function CreateOutfitScreen() {
 
         <KeyboardAwareScrollView
           bottomOffset={20} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}
+           contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
         >
           {/* Image picker — tall portrait */}
           <TouchableOpacity
@@ -490,7 +493,7 @@ const styles = StyleSheet.create({
   headerGrad: { position: 'absolute', top: 0, left: 0, right: 0 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold' },
+  headerTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
   saveBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20 },
   saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   scroll: { paddingHorizontal: 18, paddingTop: 0, gap: 0 },

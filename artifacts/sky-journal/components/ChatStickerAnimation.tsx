@@ -3,11 +3,7 @@
  * Uses pure React Native Animated (nativeDriver) — no extra deps.
  */
 import React, { useEffect } from 'react';
-import { Animated, Dimensions, Easing, StyleSheet, View } from 'react-native';
-
-const { width: W, height: H } = Dimensions.get('window');
-const CX = W / 2;
-const CY = H / 2;
+import { Animated, Easing, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 function rnd(a: number, b: number) { return a + Math.random() * (b - a); }
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -53,66 +49,69 @@ function makeP(
 }
 
 // ── Particle factories per animation type ─────────────────────────────────────
-function buildParticles(type: StickerAnimType): Particle[] {
+function buildParticles(type: StickerAnimType, width: number, height: number): Particle[] {
+  const centerX = width / 2;
+  const centerY = height / 2;
+
   switch (type) {
 
     case 'explode': {
       const sparks = ['💥', '✦', '★', '·', '⬥', '◆', '🔥'];
       return Array.from({ length: 22 }, (_, i) =>
-        makeP(`p${i}`, CX, CY, { emoji: pick(sparks), size: rnd(14, 28) }),
+        makeP(`p${i}`, centerX, centerY, { emoji: pick(sparks), size: rnd(14, 28) }),
       );
     }
 
     case 'throw': {
       const dust = ['·', '·', '·', '·', '○', '◌'];
       const impact = Array.from({ length: 7 }, (_, i) =>
-        makeP(`d${i}`, CX + rnd(-30, 30), H * 0.75, { emoji: pick(dust), size: rnd(10, 16) }),
+        makeP(`d${i}`, centerX + rnd(-30, 30), height * 0.75, { emoji: pick(dust), size: rnd(10, 16) }),
       );
-      return [makeP('main', W * 0.85, H * 0.55, { emoji: '🪨', size: 48 }), ...impact];
+      return [makeP('main', width * 0.85, height * 0.55, { emoji: '🪨', size: 48 }), ...impact];
     }
 
     case 'shatter': {
       const shards = ['◇', '◈', '◆', '▷', '◁', '△', '▽', '❖', '◇', '◈', '◆', '◇'];
-      return shards.map((emoji, i) => makeP(`s${i}`, CX, CY, { emoji, size: rnd(16, 30) }));
+      return shards.map((emoji, i) => makeP(`s${i}`, centerX, centerY, { emoji, size: rnd(16, 30) }));
     }
 
     case 'hearts': {
       const hearts = ['💋', '💋', '💋', '❤️', '❤️', '🩷', '💕', '💕', '💞', '💖', '💗', '🤍'];
       return hearts.map((emoji, i) =>
-        makeP(`h${i}`, CX + rnd(-W * 0.35, W * 0.35), H * 0.78, { emoji, size: rnd(18, 36) }),
+        makeP(`h${i}`, centerX + rnd(-width * 0.35, width * 0.35), height * 0.78, { emoji, size: rnd(18, 36) }),
       );
     }
 
     case 'starburst': {
       return Array.from({ length: 18 }, (_, i) =>
-        makeP(`st${i}`, CX, CY, { emoji: pick(['⭐', '✦', '★', '✧', '✦', '⭐']), size: rnd(14, 32) }),
+        makeP(`st${i}`, centerX, centerY, { emoji: pick(['⭐', '✦', '★', '✧', '✦', '⭐']), size: rnd(14, 32) }),
       );
     }
 
     case 'fire': {
       const flames = ['🔥', '🔥', '🔥', '🔥', '🔥', '🌡️', '✦', '·', '○'];
       return Array.from({ length: 16 }, (_, i) =>
-        makeP(`f${i}`, CX + rnd(-W * 0.4, W * 0.4), H * 0.88, { emoji: pick(flames), size: rnd(20, 38) }),
+        makeP(`f${i}`, centerX + rnd(-width * 0.4, width * 0.4), height * 0.88, { emoji: pick(flames), size: rnd(20, 38) }),
       );
     }
 
     case 'snow': {
       const flakes = ['❄️', '❄️', '❄️', '❅', '❆', '·', '○', '◌'];
       return Array.from({ length: 20 }, (_, i) =>
-        makeP(`sn${i}`, rnd(0, W), rnd(-60, -10), { emoji: pick(flakes), size: rnd(14, 30) }),
+        makeP(`sn${i}`, rnd(0, width), rnd(-60, -10), { emoji: pick(flakes), size: rnd(14, 30) }),
       );
     }
 
     case 'confetti': {
       const colors = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#C77DFF','#FF9F1C','#FF6BD6','#4CC9F0'];
       return Array.from({ length: 26 }, (_, i) =>
-        makeP(`c${i}`, rnd(0, W), rnd(-60, -10), { bgColor: pick(colors), isRect: true, size: rnd(8, 16) }),
+        makeP(`c${i}`, rnd(0, width), rnd(-60, -10), { bgColor: pick(colors), isRect: true, size: rnd(8, 16) }),
       );
     }
 
     case 'sparkle': {
       return Array.from({ length: 12 }, (_, i) =>
-        makeP(`sp${i}`, CX + rnd(-W * 0.25, W * 0.25), CY + rnd(-H * 0.2, H * 0.2), {
+        makeP(`sp${i}`, centerX + rnd(-width * 0.25, width * 0.25), centerY + rnd(-height * 0.2, height * 0.2), {
           emoji: pick(['✦', '✧', '★', '⭐', '✦']), size: rnd(12, 24),
         }),
       );
@@ -123,10 +122,10 @@ function buildParticles(type: StickerAnimType): Particle[] {
       const donkeyParts = ['💨', '💨', '·', '·', '○', '◌', '~', '~', '🌾', '🌾'];
       return [
         // Donkey bouncing center
-        makeP('dk0', CX, CY * 0.7, { emoji: '🫏', size: 72 }),
+        makeP('dk0', centerX, centerY * 0.7, { emoji: '🫏', size: 72 }),
         // Dust and debris
         ...Array.from({ length: 10 }, (_, i) =>
-          makeP(`dd${i}`, CX + rnd(-W * 0.4, W * 0.4), H * 0.70 + rnd(-20, 20), {
+          makeP(`dd${i}`, centerX + rnd(-width * 0.4, width * 0.4), height * 0.70 + rnd(-20, 20), {
             emoji: pick(donkeyParts), size: rnd(14, 28),
           })
         ),
@@ -138,10 +137,10 @@ function buildParticles(type: StickerAnimType): Particle[] {
       const wolfParts = ['🌕', '⭐', '✦', '★', '✧', '🌙', '◈', '·'];
       return [
         // Wolf center
-        makeP('wf0', CX, CY * 0.75, { emoji: '🐺', size: 72 }),
+        makeP('wf0', centerX, centerY * 0.75, { emoji: '🐺', size: 72 }),
         // Stars rising in arcs
         ...Array.from({ length: 14 }, (_, i) =>
-          makeP(`ws${i}`, CX + rnd(-W * 0.45, W * 0.45), H * 0.60 + rnd(-30, 30), {
+          makeP(`ws${i}`, centerX + rnd(-width * 0.45, width * 0.45), height * 0.60 + rnd(-30, 30), {
             emoji: pick(wolfParts), size: rnd(14, 32),
           })
         ),
@@ -160,6 +159,8 @@ function buildParticles(type: StickerAnimType): Particle[] {
 function runAnimation(
   type: StickerAnimType,
   particles: Particle[],
+  width: number,
+  height: number,
   mainScale:   Animated.Value,
   mainOpacity: Animated.Value,
   flashOpacity: Animated.Value,
@@ -169,6 +170,10 @@ function runAnimation(
             : type === 'wolf' ? 2400
             : type === 'donkey' ? 2000
             : 1400;
+
+  mainScale.setValue(0);
+  mainOpacity.setValue(0);
+  flashOpacity.setValue(0);
 
   switch (type) {
     case 'explode':
@@ -317,10 +322,10 @@ function runAnimation(
       case 'throw': {
         if (p.emoji === '🪨') {
           Animated.parallel([
-            Animated.timing(p.x, { toValue: -(W * 0.7), duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+            Animated.timing(p.x, { toValue: -(width * 0.7), duration: 700, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
             Animated.sequence([
-              Animated.timing(p.y, { toValue: -(H * 0.2), duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-              Animated.timing(p.y, { toValue: H * 0.08, duration: 350, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+              Animated.timing(p.y, { toValue: -(height * 0.2), duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+              Animated.timing(p.y, { toValue: height * 0.08, duration: 350, easing: Easing.in(Easing.quad), useNativeDriver: true }),
             ]),
             Animated.timing(p.rot, { toValue: 1.5, duration: 700, useNativeDriver: true }),
           ]).start();
@@ -419,7 +424,7 @@ function runAnimation(
 
       case 'snow': {
         const drift = rnd(-40, 40);
-        const fall  = rnd(H * 0.65, H * 0.9);
+        const fall  = rnd(height * 0.65, height * 0.9);
         Animated.sequence([
           Animated.delay(delay * 50),
           Animated.parallel([
@@ -441,7 +446,7 @@ function runAnimation(
       }
 
       case 'confetti': {
-        const fall  = rnd(H * 0.65, H * 0.95);
+        const fall  = rnd(height * 0.65, height * 0.95);
         const drift = rnd(-60, 60);
         Animated.sequence([
           Animated.delay(delay * 25),
@@ -578,7 +583,20 @@ function runAnimation(
     }
   });
 
-  setTimeout(onComplete, dur);
+  const completionTimer = setTimeout(onComplete, dur);
+  return () => {
+    clearTimeout(completionTimer);
+    mainScale.stopAnimation();
+    mainOpacity.stopAnimation();
+    flashOpacity.stopAnimation();
+    particles.forEach(p => {
+      p.x.stopAnimation();
+      p.y.stopAnimation();
+      p.opacity.stopAnimation();
+      p.scale.stopAnimation();
+      p.rot.stopAnimation();
+    });
+  };
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -589,15 +607,29 @@ interface Props {
 }
 
 export function ChatStickerAnimation({ type, mainEmoji, onComplete }: Props) {
-  const particles   = React.useMemo(() => buildParticles(type), [type]);
+  const { width, height } = useWindowDimensions();
+  const particles   = React.useMemo(() => buildParticles(type, width, height), [type, width, height]);
   const mainScale   = React.useMemo(() => new Animated.Value(0), []);
   const mainOpacity = React.useMemo(() => new Animated.Value(0), []);
   const flashOpacity = React.useMemo(() => new Animated.Value(0), []);
+  const onCompleteRef = React.useRef(onComplete);
 
   useEffect(() => {
-    runAnimation(type, particles, mainScale, mainOpacity, flashOpacity, onComplete);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
+
+  useEffect(() => {
+    return runAnimation(
+      type,
+      particles,
+      width,
+      height,
+      mainScale,
+      mainOpacity,
+      flashOpacity,
+      () => onCompleteRef.current(),
+    );
+  }, [type, particles, width, height, mainScale, mainOpacity, flashOpacity]);
 
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
@@ -607,7 +639,10 @@ export function ChatStickerAnimation({ type, mainEmoji, onComplete }: Props) {
       {/* Central main emoji (hidden for donkey/wolf — they use particles) */}
       {type !== 'donkey' && type !== 'wolf' && (
         <Animated.Text
-          style={[styles.mainEmoji, { opacity: mainOpacity, transform: [{ scale: mainScale }] }]}
+          style={[
+            styles.mainEmoji,
+            { left: width / 2, top: height / 2, opacity: mainOpacity, transform: [{ scale: mainScale }] },
+          ]}
         >
           {mainEmoji}
         </Animated.Text>
@@ -667,8 +702,6 @@ const styles = StyleSheet.create({
   },
   mainEmoji: {
     position:   'absolute',
-    left:       CX,
-    top:        CY,
     fontSize:   64,
     marginLeft: -40,
     marginTop:  -40,

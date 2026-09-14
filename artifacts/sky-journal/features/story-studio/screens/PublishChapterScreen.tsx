@@ -7,11 +7,13 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +55,7 @@ const AVG_SECONDS_PER_PAGE = 45; // reading time estimate
 export default function PublishChapterScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const apiFetch  = useApiFetch();
   const { chapterId, bookId } = useLocalSearchParams<{ chapterId: string; bookId: string }>();
 
@@ -97,6 +100,9 @@ export default function PublishChapterScreen() {
   }
 
   const accent = '#8B70C8';
+  const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
+  const contentWidth = Math.min(windowWidth, 720);
   const firstPage = chapter?.pages?.[0];
   const firstImage = firstPage?.panels?.find(p => p.imageUri)?.imageUri;
   const isPublished = chapter?.status === 'published';
@@ -112,15 +118,15 @@ export default function PublishChapterScreen() {
   return (
     <View style={[s.root, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[s.header, { paddingTop: insets.top + 12 }]}>
+      <View style={[s.header, { paddingTop: topInset + 12, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Review Chapter</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>Review Chapter</Text>
         <View style={{ width: 36 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: insets.bottom + 32 }]}>
+      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: bottomInset + 32, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         {/* Chapter title */}
         <View style={s.titleBlock}>
@@ -159,7 +165,7 @@ export default function PublishChapterScreen() {
             <Text style={s.previewLabel}>FIRST PAGE PREVIEW</Text>
             <View style={s.previewCard}>
               {firstImage
-                ? <Image source={{ uri: firstImage }} style={s.previewImg} contentFit="cover" />
+                ? <Image source={{ uri: firstImage }} style={s.previewImg} contentFit="contain" />
                 : <View style={s.previewEmpty}>
                     <Icon name="image" size={28} color="rgba(140,120,180,0.25)" />
                     <Text style={s.previewEmptyTxt}>No image on first page</Text>
@@ -232,15 +238,15 @@ const s = StyleSheet.create({
   root:            { flex: 1 },
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   backBtn:         { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
-  headerTitle:     { flex: 1, color: 'rgba(255,255,255,0.92)', fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  headerTitle:     { flex: 1, minWidth: 0, color: 'rgba(255,255,255,0.92)', fontSize: 17, fontWeight: '600', textAlign: 'center' },
   scroll:          { padding: 20, gap: 22 },
   titleBlock:      { gap: 6 },
   chapterLabel:    { color: 'rgba(200,185,255,0.40)', fontSize: 11, fontWeight: '700', letterSpacing: 1.1 },
   chapterTitle:    { color: 'rgba(255,255,255,0.92)', fontSize: 22, fontWeight: '700', lineHeight: 28 },
   publishedBadge:  { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   publishedBadgeTxt: { color: '#78C8A0', fontSize: 12 },
-  statsRow:        { flexDirection: 'row', gap: 12 },
-  statCard:        { flex: 1, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 16, alignItems: 'center', gap: 6 },
+  statsRow:        { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  statCard:        { flex: 1, minWidth: 92, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', borderRadius: 12, padding: 16, alignItems: 'center', gap: 6 },
   statValue:       { color: 'rgba(255,255,255,0.88)', fontSize: 16, fontWeight: '700' },
   statLabel:       { color: 'rgba(200,185,255,0.40)', fontSize: 11 },
   previewSection:  { gap: 10 },
@@ -253,13 +259,13 @@ const s = StyleSheet.create({
   previewText:     { color: 'rgba(255,255,255,0.82)', fontSize: 13, lineHeight: 18 },
   visSection:      { gap: 10 },
   visLabel:        { color: 'rgba(200,185,255,0.40)', fontSize: 11, fontWeight: '700', letterSpacing: 1.1 },
-  visRow:          { flexDirection: 'row', gap: 10 },
+  visRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   visBtn:          { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', backgroundColor: 'rgba(255,255,255,0.03)' },
   visBtnTxt:       { color: 'rgba(200,185,255,0.45)', fontSize: 13 },
   visHint:         { color: 'rgba(200,185,255,0.30)', fontSize: 12 },
-  ctaRow:          { flexDirection: 'row', gap: 12, marginTop: 8 },
-  draftBtn:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 15, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(200,185,255,0.18)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  ctaRow:          { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
+  draftBtn:        { flex: 1, minWidth: 130, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 15, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(200,185,255,0.18)', backgroundColor: 'rgba(255,255,255,0.04)' },
   draftBtnTxt:     { color: 'rgba(200,185,255,0.70)', fontSize: 14, fontWeight: '600' },
-  publishBtn:      { flex: 1.4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 15, borderRadius: 14 },
+  publishBtn:      { flex: 1.4, minWidth: 150, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 15, borderRadius: 14 },
   publishBtnTxt:   { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

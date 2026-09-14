@@ -1,18 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
-  Dimensions,
   Easing,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-
-const { width: W, height: H } = Dimensions.get('window');
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface MilestoneInfo {
   threshold:   number;
@@ -124,6 +124,8 @@ interface Props {
 }
 
 export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
+  const { width: W, height: H } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const particles  = useBurstParticles();
   const fadeAnim   = useRef(new Animated.Value(0)).current;
   const scaleAnim  = useRef(new Animated.Value(0.7)).current;
@@ -205,7 +207,13 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
         })}
 
         {/* Card */}
-        <Animated.View style={[s.card, { transform: [{ scale: scaleAnim }] }]}>
+          <Animated.View style={[s.card, { width: Math.min(W - 24, 380), maxHeight: Math.max(300, H - insets.top - insets.bottom - 24), transform: [{ scale: scaleAnim }] }]}>
+          <ScrollView
+            style={s.cardScroll}
+            contentContainerStyle={s.cardScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
           <Animated.View
             pointerEvents="none"
             style={[s.shineSweep, {
@@ -244,6 +252,7 @@ export function MilestoneModal({ visible, milestone, onDismiss }: Props) {
           <TouchableOpacity style={s.laterBtn} onPress={onDismiss} activeOpacity={0.70}>
             <Text style={s.laterBtnTxt}>Later</Text>
           </TouchableOpacity>
+          </ScrollView>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -257,11 +266,11 @@ const s = StyleSheet.create({
   particle: {
     position: 'absolute',
     fontSize: 14,
-    top: H / 2,
-    left: W / 2,
+    top: '50%',
+    left: '50%',
   },
   card: {
-    width: W - 48, maxWidth: 380,
+    width: '90%', maxWidth: 380,
     backgroundColor: 'rgba(10,7,28,0.98)',
     borderRadius: 28,
     padding: 32,
@@ -270,6 +279,8 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.7, shadowRadius: 40, elevation: 40,
   },
+  cardScroll: { width: '100%' },
+  cardScrollContent: { alignItems: 'center', paddingVertical: 4, gap: 10 },
   shineSweep: {
     position: 'absolute', top: 0, bottom: 0, width: 60,
     backgroundColor: 'rgba(255,255,255,1)',

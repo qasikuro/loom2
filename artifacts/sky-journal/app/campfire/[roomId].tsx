@@ -6,7 +6,6 @@ import {
   Easing,
   FlatList,
   Image,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -26,6 +25,7 @@ import * as Haptics from 'expo-haptics';
 import { useAuth } from '@clerk/expo';
 
 import { Icon } from '@/components/Icon';
+import { KeyboardAvoidingViewCompat as KeyboardAvoidingView } from '../../components/KeyboardAwareScrollViewCompat';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal, type ToastLevel } from '@/components/Toast';
 import { useSSE } from '@/hooks/useSSE';
@@ -579,6 +579,10 @@ export default function CampfireRoom() {
   const [text,            setText]            = useState('');
   const [sending,         setSending]         = useState(false);
   const [showInput,       setShowInput]       = useState(false);
+  // Reserve the actual composer footprint in the message scroll area. This
+  // keeps the newest whisper above the composer even while it grows for a
+  // multiline draft or moves with the keyboard.
+  const [composerHeight,   setComposerHeight]   = useState(0);
   const [presenceVisible, setPresenceVisible] = useState(false);
   const [presenceData,    setPresenceData]    = useState<{
     userId: string; name: string; username: string | null; avatarUri: string | null; mood: string | null;
@@ -594,6 +598,9 @@ export default function CampfireRoom() {
   const scrollTimerRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   const palette = data ? (MOOD_PALETTE[data.room.mood] ?? MOOD_PALETTE.default) : MOOD_PALETTE.default;
+  const topPad = Platform.OS === 'web' ? 67 : insets.top;
+  const bottomPad = Platform.OS === 'web' ? 34 : Math.max(insets.bottom, 12);
+  const composerReserve = Math.max(composerHeight, 104) + bottomPad;
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -768,7 +775,7 @@ export default function CampfireRoom() {
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       keyboardVerticalOffset={0}
     >
       <View style={R.root}>
@@ -787,7 +794,7 @@ export default function CampfireRoom() {
         )}
 
         {/* Header */}
-        <View style={[R.header, { paddingTop: insets.top + 8 }]}>
+         <View style={[R.header, { paddingTop: topPad + 8 }]}>
           <TouchableOpacity onPress={() => safeBack()} style={R.backBtn} activeOpacity={0.7} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
             <Icon name="arrow-left" size={15} color="rgba(200,184,232,0.70)" />
           </TouchableOpacity>
@@ -849,11 +856,13 @@ export default function CampfireRoom() {
             <Text style={[R.loadingText, { color: `${palette.ember}80` }]}>Tending the fire…</Text>
           </View>
         ) : (
-          <ScrollView
+           <ScrollView
             ref={scrollRef}
             style={R.scroll}
-            contentContainerStyle={[R.scrollContent, { paddingBottom: 20 }]}
+             contentContainerStyle={[R.scrollContent, { paddingBottom: composerReserve + 16 }]}
             showsVerticalScrollIndicator={false}
+             keyboardShouldPersistTaps="handled"
+             keyboardDismissMode="interactive"
             onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
           >
             {messages.length === 0 ? (
@@ -875,53 +884,55 @@ export default function CampfireRoom() {
         )}
 
         {/* Expressions + input */}
-        <View style={[R.bottomArea, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          {/* Expression bar */}
-          <ExprBar ember={palette.ember} onExpr={sendExpression} />
+        <View style={[R.bottomArea, { paddingBottom: bottomPad }]}>
+          <View onLayout={event => setComposerHeight(event.nativeEvent.layout.height)}>
+            {/* Expression bar */}
+            <ExprBar ember={palette.ember} onExpr={sendExpression} />
 
-          {/* Divider */}
-          <View style={[R.divider, { backgroundColor: `${palette.ember}15` }]} />
+            {/* Divider */}
+            <View style={[R.divider, { backgroundColor: `${palette.ember}15` }]} />
 
-          {/* Text input row */}
-          {showInput ? (
-            <View style={R.inputRow}>
-              <TextInput
-                style={[R.input, { color: palette.text, borderColor: `${palette.ember}28` }]}
-                placeholder="Whisper to the fire…"
-                placeholderTextColor={`${palette.ember}40`}
-                value={text}
-                onChangeText={setText}
-                multiline
-                maxLength={500}
-                autoFocus
-                returnKeyType="send"
-                onSubmitEditing={sendText}
-                blurOnSubmit={false}
-              />
-              <TouchableOpacity
-                style={[R.sendBtn, { backgroundColor: `${palette.ember}22`, borderColor: `${palette.ember}40` }, (!text.trim() || sending) && { opacity: 0.4 }]}
-                onPress={sendText}
-                disabled={!text.trim() || sending}
-                activeOpacity={0.75}
-              >
-                <Text style={[R.sendIcon, { color: palette.ember }]}>✦</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => { setShowInput(false); setText(''); }} style={R.cancelBtn} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                <Icon name="x" size={14} color="rgba(200,184,232,0.40)" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[R.whisperBtn, { borderColor: `${palette.ember}22`, backgroundColor: `${palette.ember}08` }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowInput(true); }}
-              activeOpacity={0.78}
-            >
-              <Text style={[R.whisperPlaceholder, { color: `${palette.ember}55` }]}>Whisper to the fire…</Text>
-              <View style={[R.whisperIcon, { backgroundColor: `${palette.ember}18` }]}>
-                <Icon name="edit-2" size={12} color={`${palette.ember}90`} />
+            {/* Text input row */}
+            {showInput ? (
+              <View style={R.inputRow}>
+                <TextInput
+                  style={[R.input, { color: palette.text, borderColor: `${palette.ember}28` }]}
+                  placeholder="Whisper to the fire…"
+                  placeholderTextColor={`${palette.ember}40`}
+                  value={text}
+                  onChangeText={setText}
+                  multiline
+                  maxLength={500}
+                  autoFocus
+                  returnKeyType="send"
+                  onSubmitEditing={sendText}
+                  blurOnSubmit={false}
+                />
+                <TouchableOpacity
+                  style={[R.sendBtn, { backgroundColor: `${palette.ember}22`, borderColor: `${palette.ember}40` }, (!text.trim() || sending) && { opacity: 0.4 }]}
+                  onPress={sendText}
+                  disabled={!text.trim() || sending}
+                  activeOpacity={0.75}
+                >
+                  <Text style={[R.sendIcon, { color: palette.ember }]}>✦</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => { setShowInput(false); setText(''); }} style={R.cancelBtn} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+                  <Icon name="x" size={14} color="rgba(200,184,232,0.40)" />
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          )}
+            ) : (
+              <TouchableOpacity
+                style={[R.whisperBtn, { borderColor: `${palette.ember}22`, backgroundColor: `${palette.ember}08` }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowInput(true); }}
+                activeOpacity={0.78}
+              >
+                <Text style={[R.whisperPlaceholder, { color: `${palette.ember}55` }]}>Whisper to the fire…</Text>
+                <View style={[R.whisperIcon, { backgroundColor: `${palette.ember}18` }]}>
+                  <Icon name="edit-2" size={12} color={`${palette.ember}90`} />
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
 
@@ -1005,8 +1016,8 @@ const R = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(107,91,149,0.20)',
     flexShrink: 0,
   },
-  headerCenter: { flex: 1, alignItems: 'center', gap: 2 },
-  roomName:     { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.92)', letterSpacing: -0.2 },
+  headerCenter: { flex: 1, minWidth: 0, alignItems: 'center', gap: 2 },
+  roomName:     { maxWidth: '100%', flexShrink: 1, fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.92)', letterSpacing: -0.2 },
   soulOrbs:     { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
   soulOrb:      { width: 6, height: 6, borderRadius: 3, shadowOpacity: 0.9, shadowRadius: 4, shadowOffset: { width: 0, height: 0 }, elevation: 2 },
   soulOrbMore:  { fontSize: 8, fontFamily: 'Satoshi-Bold', marginLeft: 2 },

@@ -252,7 +252,7 @@ function TimelineCard({ entry, onDelete, index = 0, theme }: { entry: JournalEnt
 const tc = StyleSheet.create({
   card: { borderRadius:16, borderWidth:1, padding:15, paddingLeft:18, gap:10, marginBottom:10, overflow:'hidden' },
   accentStrip: { position:'absolute', left:0, top:0, bottom:0, width:3, borderTopLeftRadius:16, borderBottomLeftRadius:16 },
-  topRow: { flexDirection:'row', alignItems:'center', gap:12 },
+  topRow: { flexDirection:'row', alignItems:'center', gap:12, minWidth:0 },
   avatar: {
     width:44, height:44, borderRadius:14,
     alignItems:'center', justifyContent:'center', flexShrink:0,
@@ -264,7 +264,7 @@ const tc = StyleSheet.create({
   contentRow: { flexDirection:'row', gap:12, alignItems:'flex-start' },
   snippet: { flex:1, fontSize:13, fontFamily:'Satoshi-Regular', lineHeight:20, fontStyle:'italic' },
   thumbnail: { width:64, height:64, borderRadius:12, flexShrink:0 },
-  footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap' },
+  footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap', minWidth:0 },
   typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, borderWidth:1 },
   typePillText: { fontSize:10, fontFamily:'Satoshi-Medium' },
   deleteBtn:     { height:28, paddingHorizontal:8, borderRadius:9, alignItems:'center', justifyContent:'center' },
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
   // Header (dark)
   headerGrad: { paddingBottom: 0 },
   header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:20, paddingTop:12, paddingBottom:8 },
-  headerLeft: { flexDirection:'row', alignItems:'center', gap:10 },
+  headerLeft: { flexDirection:'row', alignItems:'center', gap:10, flex:1, minWidth:0, flexWrap:'wrap' },
   title: { fontSize:20, fontFamily:'Satoshi-Bold', letterSpacing:-0.3, color:'rgba(235,228,255,0.97)' },
   privateBadge: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, backgroundColor:'rgba(255,255,255,0.06)', borderWidth:1, borderColor:'rgba(200,184,232,0.12)' },
   privateBadgeText: { fontSize:10, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.60)' },
@@ -856,7 +856,7 @@ const styles = StyleSheet.create({
   hdrBtnActive: { backgroundColor:'rgba(120,86,255,0.28)', borderColor:'rgba(120,86,255,0.40)' },
 
   // Filter tabs inside dark header
-  streakRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 18, paddingBottom: 10, paddingTop: 2 },
+  streakRow:      { flexDirection: 'row', alignItems: 'center', gap: 5, flexWrap: 'wrap', paddingHorizontal: 18, paddingBottom: 10, paddingTop: 2 },
   streakFlame:    { fontSize: 14, lineHeight: 18 },
   streakText:     { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.82)' },
   streakSub:      { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)' },
@@ -882,7 +882,7 @@ const styles = StyleSheet.create({
   searchHint: { fontSize:12, fontFamily:'Satoshi-Regular', fontStyle:'italic', marginHorizontal:16, marginBottom:6 },
 
   // Timeline
-  timelineContent: { paddingHorizontal:16, paddingTop:16 },
+  timelineContent: { paddingHorizontal:16, paddingTop:16, width:'100%', maxWidth:760, alignSelf:'center' },
   timelineRow: { flexDirection:'row', gap:14 },
   timelineLeft: { width:22, alignItems:'center', paddingTop:4 },
   dot: { width:12, height:12, borderRadius:6, borderWidth:1.5, zIndex:1 },
