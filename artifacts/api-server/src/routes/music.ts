@@ -1,9 +1,8 @@
 /**
  * Audius music discovery.
  *
- * Audius exposes public discovery-provider endpoints. Keeping the request
- * server-side gives the mobile client one stable API and avoids relying on
- * Audius CORS behavior or exposing provider details throughout the app.
+ * Keep Audius credentials server-side. The mobile client talks only to this
+ * authenticated app route and never receives either provider credential.
  */
 import { Router, type IRouter } from "express";
 import { z } from "zod";
@@ -12,6 +11,8 @@ import { requireAuth } from "../middleware/auth";
 const router: IRouter = Router();
 const AUDIUS_BASE = "https://discoveryprovider.audius.co/v1";
 const AUDIUS_APP_NAME = "GameJo";
+const AUDIUS_API_KEY = process.env.AUDIUS_API_KEY;
+const AUDIUS_API_BEARER_TOKEN = process.env.AUDIUS_API_BEARER_TOKEN;
 
 const QuerySchema = z.object({
   q: z.string().trim().min(1).max(80).default("peaceful"),
@@ -52,12 +53,23 @@ router.get("/music/search", requireAuth, async (req, res) => {
   }
 
   try {
+    if (!AUDIUS_API_KEY || !AUDIUS_API_BEARER_TOKEN) {
+      req.log.error("Audius credentials are not configured");
+      return res.status(503).json({ error: "Audius music is not configured" });
+    }
+
     const url = new URL(`${AUDIUS_BASE}/tracks/search`);
     url.searchParams.set("query", parsed.data.q);
     url.searchParams.set("limit", "30");
     url.searchParams.set("app_name", AUDIUS_APP_NAME);
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "X-API-Key": AUDIUS_API_KEY,
+        Authorization: `Bearer ${AUDIUS_API_BEARER_TOKEN}`,
+      },
+    });
     if (!response.ok) {
       return res.status(502).json({ error: "Audius search is temporarily unavailable" });
     }
