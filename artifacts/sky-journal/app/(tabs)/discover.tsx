@@ -4,7 +4,6 @@ import { DiscoverVideoPlayerModal } from '@/components/DiscoverVideoPlayerModal'
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { ReportSheet } from '@/components/ReportSheet';
-import { MoodDoorModal } from '@/components/MoodDoorModal';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
@@ -130,13 +129,11 @@ export default function DiscoverScreen() {
   const [booksData,    setBooksData]    = useState<DiscoverBook[]>([]);
   const [booksLoading, setBooksLoading] = useState(false);
   const [booksError,   setBooksError]   = useState<string | null>(null);
-  const [moodDoorVisible,    setMoodDoorVisible]    = useState(false);
   const [selectedVideoPost, setSelectedVideoPost] = useState<import('@/context/AppContext').DiscoverPost | null>(null);
   const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchRef     = useRef<number>(0);
   const guidesLoaded     = useRef(false);
   const booksLoaded      = useRef(false);
-  const moodDoorShown    = useRef(false);
   // Track which story-card is ≥60 % visible for video autoplay
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60, minimumViewTime: 300 });
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: { item: { id: string; contentType?: string } }[] }) => {
@@ -150,18 +147,11 @@ export default function DiscoverScreen() {
 
   // Refresh the discover feed when the tab comes into focus,
   // but at most once every 2 minutes to avoid hammering the API.
-  // Also show the mood door on the first focus of each app session.
   useFocusEffect(useCallback(() => {
     const now = Date.now();
     if (now - lastFetchRef.current > 2 * 60 * 1000) {
       lastFetchRef.current = now;
       refreshFeed().catch(() => null);
-    }
-    if (!moodDoorShown.current) {
-      moodDoorShown.current = true;
-      // Small delay so the tab transition finishes before overlay appears
-      const t = setTimeout(() => setMoodDoorVisible(true), 350);
-      return () => clearTimeout(t);
     }
   }, [refreshFeed]));
 
@@ -394,15 +384,6 @@ export default function DiscoverScreen() {
                 >
                   <Text style={[styles.sortChipText, { color: storiesSort === 'new' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>◎ New</Text>
                 </TouchableOpacity>
-                <View style={{ flex: 1 }} />
-                <TouchableOpacity
-                  style={styles.moodDoorBtn}
-                  onPress={() => { Haptics.selectionAsync(); setMoodDoorVisible(true); }}
-                  activeOpacity={0.75}
-                >
-                  <Icon name="eye" size={12} color="rgba(200,184,232,0.55)" />
-                  <Text style={styles.moodDoorBtnTxt}>Mood</Text>
-                </TouchableOpacity>
               </View>
               {discoverMoodFilter && (
                 <View style={styles.moodFilterRow}>
@@ -612,19 +593,6 @@ export default function DiscoverScreen() {
         targetType="story"
         targetId={reportTargetId ?? ''}
         onClose={() => setReportTargetId(null)}
-      />
-
-      {/* ── Mood door overlay ─────────────────────────────── */}
-      <MoodDoorModal
-        visible={moodDoorVisible}
-        onSelect={(mood) => {
-          setDiscoverMoodFilter(mood);
-          setMoodDoorVisible(false);
-        }}
-        onDismiss={() => {
-          setDiscoverMoodFilter(null);
-          setMoodDoorVisible(false);
-        }}
       />
 
       {/* ── Fullscreen video player ────────────────────────── */}
