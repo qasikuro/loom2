@@ -34,6 +34,7 @@ import type { PanelOverlay } from '@/context/AppContext';
 import { useTranslation } from 'react-i18next';
 import { shareStory } from '@/utils/shareContent';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
+import { AudiusTrackPlayer } from '../components/AudiusMusicPicker';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -763,6 +764,17 @@ export default function StoryScreen() {
                 </View>
               )}
             </View>
+            {!!(story?.music ?? post?.music) && (
+              <View style={styles.musicBar}>
+                <AudiusTrackPlayer track={(story?.music ?? post?.music)!} compact />
+                <View style={styles.musicBarCopy}>
+                  <Text style={styles.musicBarLabel}>NOW PLAYING · AUDIUS</Text>
+                  <Text style={styles.musicBarTitle} numberOfLines={1}>{(story?.music ?? post?.music)!.title}</Text>
+                  <Text style={styles.musicBarArtist} numberOfLines={1}>{(story?.music ?? post?.music)!.artist}</Text>
+                </View>
+                <Icon name="volume-2" size={15} color="#F0C95D" />
+              </View>
+            )}
           </View>
         </View>
 
@@ -1000,6 +1012,17 @@ const styles = StyleSheet.create({
   heroTitle:       { color: '#fff', fontSize: 24, fontFamily: 'Satoshi-Bold', lineHeight: 32, flexShrink: 1 },
   heroDescription: { color: 'rgba(255,255,255,0.72)', fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 20, fontStyle: 'italic', flexShrink: 1 },
   heroMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  musicBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 9,
+    borderRadius: 15, borderWidth: 1,
+    borderColor: 'rgba(240,201,93,0.34)',
+    backgroundColor: 'rgba(18,12,45,0.72)',
+    padding: 8, paddingRight: 12, maxWidth: 360,
+  },
+  musicBarCopy: { flex: 1, minWidth: 0 },
+  musicBarLabel: { color: '#F0C95D', fontSize: 8, fontFamily: 'Satoshi-Bold', letterSpacing: 1 },
+  musicBarTitle: { color: '#FFF', fontSize: 11, fontFamily: 'Satoshi-Bold', marginTop: 2 },
+  musicBarArtist: { color: 'rgba(255,255,255,0.55)', fontSize: 9, fontFamily: 'Satoshi-Regular', marginTop: 1 },
   infoBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     paddingHorizontal: 9, paddingVertical: 4,

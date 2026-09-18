@@ -249,7 +249,8 @@ export async function runStartupMigrations(): Promise<void> {
       ALTER TABLE stories
         ADD COLUMN IF NOT EXISTS content_type  TEXT NOT NULL DEFAULT 'story',
         ADD COLUMN IF NOT EXISTS video_uri     TEXT,
-        ADD COLUMN IF NOT EXISTS thumbnail_uri TEXT
+        ADD COLUMN IF NOT EXISTS thumbnail_uri TEXT,
+        ADD COLUMN IF NOT EXISTS music         JSONB
     `);
 
     // ── Online presence ────────────────────────────────────────────────────────

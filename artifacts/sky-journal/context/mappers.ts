@@ -58,6 +58,17 @@ export interface StoryPage {
   panels:    StoryPanel[];
 }
 
+export interface StoryMusic {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string | null;
+  duration: number;
+  genre: string | null;
+  mood: string | null;
+  streamUrl: string;
+}
+
 export interface Character {
   name:               string;
   bio:                string;
@@ -119,6 +130,7 @@ export interface Story {
   contentType?:       'story' | 'video';
   videoUri?:          string | null;
   thumbnailUri?:      string | null;
+  music?:             StoryMusic | null;
 }
 
 export interface Outfit {
@@ -169,6 +181,7 @@ export interface DiscoverPost {
   videoUri?:        string | null;
   /** URI of the video thumbnail image (video posts only). */
   thumbnailUri?:    string | null;
+  music?:           StoryMusic | null;
 }
 
 // ── Raw server response shapes ─────────────────────────────────────────────────
@@ -252,6 +265,7 @@ export interface RawStoryResponse {
   contentType?:       'story' | 'video';
   videoUri?:          string | null;
   thumbnailUri?:      string | null;
+  music?:             StoryMusic | null;
 }
 
 export interface RawOutfitResponse {
@@ -297,6 +311,7 @@ export interface RawDiscoverApiItem {
   contentType?:     'story' | 'video';
   videoUri?:        string | null;
   thumbnailUri?:    string | null;
+  music?:           StoryMusic | null;
 }
 
 // ── Defaults ───────────────────────────────────────────────────────────────────
@@ -430,6 +445,7 @@ export function toAppStory(raw: RawStoryResponse, apiBase?: string): Story {
     contentType:       raw.contentType === 'video' ? 'video' : 'story',
     videoUri:          resolveUri(raw.videoUri ?? undefined, apiBase) ?? null,
     thumbnailUri:      resolveUri(raw.thumbnailUri ?? undefined, apiBase) ?? null,
+    music:             raw.music ?? null,
   };
 }
 
@@ -484,5 +500,6 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     contentType:      (raw.contentType === 'video' ? 'video' : 'story') as 'story' | 'video',
     videoUri:         raw.videoUri ?? null,
     thumbnailUri:     raw.thumbnailUri ?? null,
+    music:            raw.music ?? null,
   };
 }

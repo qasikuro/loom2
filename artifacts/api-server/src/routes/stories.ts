@@ -34,6 +34,17 @@ const PanelSchema = z.object({
   contentFit:       z.enum(['cover', 'contain']).optional().nullable(),
 });
 
+const MusicSchema = z.object({
+  id:         z.string().min(1).max(100),
+  title:      z.string().min(1).max(300),
+  artist:     z.string().min(1).max(300),
+  artworkUrl: z.string().url().max(2000).nullable(),
+  duration:   z.number().int().min(0).max(3600),
+  genre:      z.string().max(100).nullable(),
+  mood:       z.string().max(100).nullable(),
+  streamUrl:  z.string().url().max(2000),
+});
+
 function sanitizePanel(p: z.infer<typeof PanelSchema>) {
   return {
     id:               p.id,
@@ -66,6 +77,7 @@ const StoryBaseSchema = z.object({
   contentType:  z.enum(['story', 'video']).default('story'),
   videoUri:     z.string().optional().nullable(),
   thumbnailUri: z.string().optional().nullable(),
+  music:        MusicSchema.optional().nullable(),
 });
 
 // Full POST schema — adds cross-field validation on top of the base.
@@ -157,6 +169,7 @@ router.post("/stories", requireAuth, async (req, res) => {
       contentType:   rest.contentType ?? 'story',
       videoUri:      rest.videoUri ?? null,
       thumbnailUri:  rest.thumbnailUri ?? null,
+      music:         rest.music ?? null,
     };
 
     const [inserted] = await db
@@ -359,6 +372,7 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
     if (parsed.data.contentType  !== undefined) updateSet.contentType  = parsed.data.contentType;
     if ('videoUri'    in parsed.data)            updateSet.videoUri     = parsed.data.videoUri    ?? null;
     if ('thumbnailUri' in parsed.data)           updateSet.thumbnailUri = parsed.data.thumbnailUri ?? null;
+    if ('music'        in parsed.data)            updateSet.music        = parsed.data.music ?? null;
 
     // Cross-field validation: preserve valid story/video invariant after patch
     const currentContentType = parsed.data.contentType ?? 'story';
@@ -800,6 +814,7 @@ function serializeStory(row: typeof storiesTable.$inferSelect, stickerCount = 0)
     contentType:       (row.contentType ?? 'story') as 'story' | 'video',
     videoUri:          row.videoUri ?? null,
     thumbnailUri:      row.thumbnailUri ?? null,
+    music:             row.music ?? null,
   };
 }
 

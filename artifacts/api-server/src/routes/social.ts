@@ -558,6 +558,7 @@ router.get("/discover", requireAuth, async (req, res) => {
         contentType:     storiesTable.contentType,
         videoUri:        storiesTable.videoUri,
         thumbnailUri:    storiesTable.thumbnailUri,
+        music:           storiesTable.music,
         authorName:      characterTable.name,
         authorUsername:  characterTable.username,
         authorAvatarUri: characterTable.avatarUri,
@@ -734,6 +735,7 @@ router.get("/discover", requireAuth, async (req, res) => {
           contentType:     (row.contentType ?? 'story') as 'story' | 'video',
           videoUri:        row.videoUri ?? null,
           thumbnailUri:    row.thumbnailUri ?? null,
+          music:          row.music ?? null,
           isFollowing,
         };
       } else {

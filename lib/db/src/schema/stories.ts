@@ -17,6 +17,17 @@ export type StoryPageDB = {
   panels: StoryPanel[];
 };
 
+export type StoryMusic = {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string | null;
+  duration: number;
+  genre: string | null;
+  mood: string | null;
+  streamUrl: string;
+};
+
 export const storiesTable = pgTable("stories", {
   id:             uuid("id").primaryKey().defaultRandom(),
   userId:         text("user_id").notNull().default("legacy"),
@@ -39,6 +50,7 @@ export const storiesTable = pgTable("stories", {
   contentType:  text("content_type").notNull().default("story"),
   videoUri:     text("video_uri"),
   thumbnailUri: text("thumbnail_uri"),
+  music:        jsonb("music").$type<StoryMusic | null>(),
 }, (table) => [
   index("stories_user_id_idx").on(table.userId),
   index("stories_is_public_is_hidden_idx").on(table.isPublic, table.isHidden),

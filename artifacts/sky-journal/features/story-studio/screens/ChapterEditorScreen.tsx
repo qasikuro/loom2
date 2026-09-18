@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CompletionMoment } from '@/components/CompletionMoment';
-import { useApp, type StoryPanel, type StoryPage } from '@/context/AppContext';
+import { useApp, type StoryMusic, type StoryPanel, type StoryPage } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { DraftStore } from '../utils/draftStore';
@@ -31,6 +31,7 @@ import {
   markFirstPublishDone,
 } from '../components/FirstPublishOverlay';
 import { AiAssistantPanel } from '../components/AiAssistantPanel';
+import { AudiusMusicPicker } from '../components/AudiusMusicPicker';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -141,6 +142,7 @@ export default function ChapterEditorScreen() {
   const [location, setLocation] = useState('Daylight Prairie');
   const [isPublic, setIsPublic] = useState(true);
   const [pages,    setPages]    = useState<StoryPage[]>([makePage()]);
+  const [music,    setMusic]    = useState<StoryMusic | null>(null);
   const [posting,  setPosting]  = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [error,    setError]    = useState<string | null>(null);
@@ -179,6 +181,7 @@ export default function ChapterEditorScreen() {
         setLocation(s.location);
         setIsPublic(s.isPublic);
         setPages(loadedPages);
+         setMusic(s.music ?? null);
         // Capture snapshot so isDirty compares against loaded values,
         // not content presence (which would always be true for an existing story).
         setEditSnapshot({
@@ -198,6 +201,7 @@ export default function ChapterEditorScreen() {
       setLocation('Daylight Prairie');
       setIsPublic(true);
       setPages([makePage()]);
+       setMusic(null);
       setEditSnapshot(null);
       prevEditIdRef.current = null;
     }
@@ -214,6 +218,7 @@ export default function ChapterEditorScreen() {
         location !== editSnapshot.location ||
         isPublic !== editSnapshot.isPublic ||
         JSON.stringify(pages) !== editSnapshot.pagesJson
+         || (music?.id ?? null) !== (stories.find(s => s.id === editId)?.music?.id ?? null)
       )
     : (
         title.trim().length > 0 ||
@@ -223,7 +228,8 @@ export default function ChapterEditorScreen() {
         !isPublic ||
         pages.some(pg => pg.panels.some(
           panel => panel.text.trim() || panel.bubbleText?.trim() || panel.imageUri || panel.bgPreset || (panel.overlays?.length ?? 0) > 0,
-        ))
+         )) ||
+         music !== null
       );
   // Use the local navigation object so the header back button routes through
   // the same navigator that usePreventRemove is registered on, preventing a
@@ -279,11 +285,12 @@ export default function ChapterEditorScreen() {
         AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({
           title, desc, mood, location, isPublic,
           pages: stripPageImages(pages),
+          music,
         })).catch(() => null);
       }
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
-  }, [title, desc, mood, location, isPublic, pages, editId]);
+  }, [title, desc, mood, location, isPublic, pages, music, editId]);
 
   async function loadDraft() {
     const raw = await AsyncStorage.getItem(DRAFT_KEY).catch(() => null);
@@ -296,6 +303,7 @@ export default function ChapterEditorScreen() {
       setLocation(d.location ?? 'Daylight Prairie');
       setIsPublic(d.isPublic ?? true);
       setPages(d.pages?.length ? d.pages : [makePage()]);
+      setMusic(d.music ?? null);
       setHasDraft(false);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch { setHasDraft(false); }
@@ -372,6 +380,7 @@ export default function ChapterEditorScreen() {
         isPublic,
         pageLayoutKey:  filledPages[0].layoutKey,
         pages:          filledPages,
+        music,
       });
       setPosting(false);
       markSaved(); // allow navigation without prompting after a successful update
@@ -416,6 +425,7 @@ export default function ChapterEditorScreen() {
       stickerCount:   0,
       pageLayoutKey:  filledPages[0].layoutKey,
       pages:          filledPages,
+      music,
     });
     setPosting(false);
     if (!ok) {
@@ -677,6 +687,8 @@ export default function ChapterEditorScreen() {
         )}
 
         {/* ── Pages ──────────────────────────────────────────── */}
+        <AudiusMusicPicker value={music} mood={mood} onChange={setMusic} />
+
         <View style={c.pagesSection}>
           <View style={c.pagesSectionHeader}>
             <Text style={c.pagesSectionTitle}>Pages</Text>

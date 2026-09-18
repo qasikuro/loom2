@@ -35,7 +35,9 @@ import {
 // logged as mismatch and never reach mapper functions.
 export const ApiCharacterSchema = GetCharacterResponse.partial().passthrough();
 export const ApiJournalEntriesSchema = ListJournalEntriesResponse;
-export const ApiStoriesSchema = ListStoriesResponse;
+// Preserve newer server fields such as story music while older generated
+// OpenAPI types catch up.
+export const ApiStoriesSchema = zod.array(ListStoriesResponse.element.passthrough());
 export const ApiOutfitsSchema = ListOutfitsResponse;
 
 // Schemas for previously unvalidated endpoints

@@ -30,6 +30,7 @@ import bookReaderRouter from "./book-reader";
 import creatorDashboardRouter from "./creator-dashboard";
 import aiAssistRouter from "./ai-assist";
 import mangaGenerationRouter from "./manga-generation";
+import musicRouter from "./music";
 
 const router: IRouter = Router();
 
@@ -64,5 +65,6 @@ router.use(bookReaderRouter);
 router.use(creatorDashboardRouter);
 router.use(aiAssistRouter);
 router.use(mangaGenerationRouter);
+router.use(musicRouter);
 
 export default router;

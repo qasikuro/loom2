@@ -42,6 +42,7 @@ import type {
   Character,
   JournalEntry,
   Story,
+  StoryMusic,
   Outfit,
   DiscoverPost,
   RawCharacterResponse,
@@ -58,6 +59,7 @@ export type {
   PanelOverlay,
   StoryPanel,
   StoryPage,
+  StoryMusic,
   Character,
   JournalEntryType,
   JournalEntry,
@@ -1572,6 +1574,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isPublic:      story.isPublic,
       pageLayoutKey: story.pageLayoutKey ?? null,
       pages:         sanitizedPages ?? null,
+      music:         story.music ?? null,
     });
 
     // Optimistic local update
@@ -1639,6 +1642,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isPublic:      updates.isPublic,
       pageLayoutKey: updates.pageLayoutKey ?? null,
       pages:         updates.pages ?? null,
+      music:         updates.music ?? null,
     });
     handleUpdateStory(
       id,
