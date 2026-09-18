@@ -307,7 +307,7 @@ export function AudiusMusicPicker({
             ) : (
               <ScrollView
                 style={styles.results}
-                contentContainerStyle={{ paddingBottom: insets.bottom + 58 }}
+                contentContainerStyle={[styles.resultsContent, { paddingBottom: insets.bottom + 58 }]}
                 keyboardShouldPersistTaps="handled"
               >
                 {tracks.map(track => (
@@ -378,7 +378,8 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: 'rgba(240,201,93,0.60)', backgroundColor: 'rgba(240,201,93,0.18)' },
   chipText: { color: 'rgba(215,201,255,0.62)', fontSize: 10, fontFamily: 'Satoshi-Medium' },
   chipTextActive: { color: '#F5D368' },
-  results: { flex: 1 },
+  results: { flex: 1, minHeight: 0 },
+  resultsContent: { flexGrow: 0, justifyContent: 'flex-start' },
   trackRow: { flexDirection: 'row', alignItems: 'center', minHeight: 75, borderBottomWidth: 1, borderBottomColor: 'rgba(215,201,255,0.08)', paddingVertical: 9, position: 'relative' },
   trackInfo: { flex: 1, minWidth: 0, marginHorizontal: 9 },
   trackTitle: { color: '#F8F4FF', fontSize: 12, fontFamily: 'Satoshi-Bold' },
