@@ -273,7 +273,11 @@ export function AudiusMusicPicker({
               />
             </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.chips}
+              >
               {['For You', 'Cozy', 'Dreamy', 'Epic', 'Nostalgic', 'Chill', 'Adventure', 'Emotional'].map(chip => (
                 <TouchableOpacity
                   key={chip}
@@ -301,7 +305,11 @@ export function AudiusMusicPicker({
                 <Text style={styles.emptyText}>Try another mood, artist, or song title.</Text>
               </View>
             ) : (
-              <ScrollView style={styles.results} contentContainerStyle={{ paddingBottom: insets.bottom + 24 }} keyboardShouldPersistTaps="handled">
+              <ScrollView
+                style={styles.results}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 58 }}
+                keyboardShouldPersistTaps="handled"
+              >
                 {tracks.map(track => (
                   <View key={track.id} style={styles.trackRow}>
                     <TrackArtwork track={track} />
@@ -365,8 +373,8 @@ const styles = StyleSheet.create({
   modalSubtitle: { color: 'rgba(215,201,255,0.48)', fontSize: 10, fontFamily: 'Satoshi-Regular', marginTop: 3 },
   searchBox: { height: 43, flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(184,157,255,0.22)', backgroundColor: 'rgba(91,64,157,0.21)', paddingHorizontal: 14 },
   searchInput: { flex: 1, color: '#F8F4FF', fontSize: 13, fontFamily: 'Satoshi-Regular', paddingVertical: 0 },
-  chips: { gap: 7, paddingVertical: 13 },
-  chip: { borderRadius: 15, borderWidth: 1, borderColor: 'rgba(210,194,255,0.12)', backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 11, paddingVertical: 6 },
+  chips: { alignItems: 'flex-start', gap: 7, paddingTop: 13, paddingBottom: 11, paddingRight: 16 },
+  chip: { height: 32, alignItems: 'center', justifyContent: 'center', borderRadius: 15, borderWidth: 1, borderColor: 'rgba(210,194,255,0.12)', backgroundColor: 'rgba(255,255,255,0.04)', paddingHorizontal: 11 },
   chipActive: { borderColor: 'rgba(240,201,93,0.60)', backgroundColor: 'rgba(240,201,93,0.18)' },
   chipText: { color: 'rgba(215,201,255,0.62)', fontSize: 10, fontFamily: 'Satoshi-Medium' },
   chipTextActive: { color: '#F5D368' },
