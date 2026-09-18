@@ -20,3 +20,4 @@
 - [HMR resets _getToken → 401 on writes](hmr-token-getter-reset.md) — Expo Go HMR re-evaluates AppContext.tsx resetting _getToken to null; fix: store in globalThis, not a plain let; auto-queue mutations, never require toast tap
 - [Mutation queue stale full-character snapshots](mutation-queue-stale-snapshots.md) — drain replays old full-body snapshots and can overwrite newer DB values; call clearMutation() after every successful PUT
 - [Nested story image URI normalization](nested-story-image-uri-normalization.md) — resolve image URIs in pages[].panels as well as top-level panels or native readers receive broken relative paths
+- [Audius story music](audius-story-music.md) — keep discovery server-proxied and persist stable track metadata plus the unsigned stream endpoint, never temporary redirects

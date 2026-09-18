@@ -115,14 +115,22 @@ function useAudiusPreview() {
   return { playingId, toggle, stop };
 }
 
+type PreviewController = {
+  playingId: string | null;
+  toggle: (track: AudiusTrack) => Promise<void>;
+};
+
 export function AudiusTrackPlayer({
   track,
   compact = false,
+  preview,
 }: {
   track: AudiusTrack;
   compact?: boolean;
+  preview?: PreviewController;
 }) {
-  const { playingId, toggle } = useAudiusPreview();
+  const localPreview = useAudiusPreview();
+  const { playingId, toggle } = preview ?? localPreview;
   const isPlaying = playingId === track.id;
   return (
     <TouchableOpacity
@@ -210,7 +218,7 @@ export function AudiusMusicPicker({
             <Text style={styles.selectedHint}>This music will play across the story</Text>
           </View>
           <View style={styles.selectedActions}>
-            <AudiusTrackPlayer track={value} compact />
+            <AudiusTrackPlayer track={value} compact preview={{ playingId, toggle }} />
             <TouchableOpacity onPress={() => setVisible(true)} style={styles.actionPill} activeOpacity={0.78}>
               <Icon name="refresh-cw" size={12} color="#EAC55E" />
               <Text style={styles.actionText}>Change</Text>
@@ -297,7 +305,7 @@ export function AudiusMusicPicker({
                 {tracks.map(track => (
                   <View key={track.id} style={styles.trackRow}>
                     <TrackArtwork track={track} />
-                    <AudiusTrackPlayer track={track} compact />
+                    <AudiusTrackPlayer track={track} compact preview={{ playingId, toggle }} />
                     <View style={styles.trackInfo}>
                       <Text style={styles.trackTitle} numberOfLines={1}>{track.title}</Text>
                       <Text style={styles.trackArtist} numberOfLines={1}>{track.artist}</Text>
