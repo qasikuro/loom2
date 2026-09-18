@@ -4,6 +4,7 @@ import { registerNativeSound, unregisterNativeSound } from '@/utils/soundRegistr
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
   Image,
   Modal,
   ScrollView,
@@ -305,12 +306,14 @@ export function AudiusMusicPicker({
                 <Text style={styles.emptyText}>Try another mood, artist, or song title.</Text>
               </View>
             ) : (
-              <ScrollView
+              <FlatList
                 style={styles.results}
-                contentContainerStyle={[styles.resultsContent, { paddingBottom: insets.bottom + 58 }]}
+                data={tracks}
+                keyExtractor={track => track.id}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 58 }}
                 keyboardShouldPersistTaps="handled"
-              >
-                {tracks.map(track => (
+                showsVerticalScrollIndicator={false}
+                renderItem={({ item: track }) => (
                   <View key={track.id} style={styles.trackRow}>
                     <TrackArtwork track={track} />
                     <AudiusTrackPlayer track={track} compact preview={{ playingId, toggle }} />
@@ -330,9 +333,13 @@ export function AudiusMusicPicker({
                     </View>
                     {playingId === track.id && <View style={styles.playingDot} />}
                   </View>
-                ))}
-                <Text style={styles.attribution}>Music from Audius · Only tracks available for use in Sky Journal are shown.</Text>
-              </ScrollView>
+                )}
+                ListFooterComponent={
+                  <Text style={styles.attribution}>
+                    Music from Audius · Only tracks available for use in Sky Journal are shown.
+                  </Text>
+                }
+              />
             )}
           </View>
         </View>
@@ -379,7 +386,6 @@ const styles = StyleSheet.create({
   chipText: { color: 'rgba(215,201,255,0.62)', fontSize: 10, fontFamily: 'Satoshi-Medium' },
   chipTextActive: { color: '#F5D368' },
   results: { flex: 1, minHeight: 0 },
-  resultsContent: { flexGrow: 0, justifyContent: 'flex-start' },
   trackRow: { flexDirection: 'row', alignItems: 'center', minHeight: 75, borderBottomWidth: 1, borderBottomColor: 'rgba(215,201,255,0.08)', paddingVertical: 9, position: 'relative' },
   trackInfo: { flex: 1, minWidth: 0, marginHorizontal: 9 },
   trackTitle: { color: '#F8F4FF', fontSize: 12, fontFamily: 'Satoshi-Bold' },
