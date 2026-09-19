@@ -313,6 +313,29 @@ export async function runStartupMigrations(): Promise<void> {
       ON uploaded_images(user_id)
     `);
 
+    // ── Video composition claims ─────────────────────────────────────────────
+    // Composition outputs are durable and owner-bound until a story claims them.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS media_compositions (
+        id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id        TEXT NOT NULL,
+        video_path     TEXT NOT NULL,
+        thumbnail_path TEXT NOT NULL,
+        status         TEXT NOT NULL DEFAULT 'pending',
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at     TIMESTAMPTZ NOT NULL,
+        claimed_at     TIMESTAMPTZ
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS media_compositions_status_expires_idx
+      ON media_compositions(status, expires_at)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS media_compositions_user_id_idx
+      ON media_compositions(user_id)
+    `);
+
   } finally {
     client.release();
   }

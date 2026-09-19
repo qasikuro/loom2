@@ -7,13 +7,12 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth } from "../middleware/auth";
+import { AUDIUS_BASE, AUDIUS_APP_NAME, audiusStreamUrl } from "../services/audius";
 
 const router: IRouter = Router();
-const AUDIUS_BASE = "https://discoveryprovider.audius.co/v1";
-const AUDIUS_APP_NAME = "GameJo";
 const AUDIUS_API_KEY = process.env.AUDIUS_API_KEY;
 const AUDIUS_API_BEARER_TOKEN = process.env.AUDIUS_API_BEARER_TOKEN;
-const MAX_MUSIC_DURATION_SECONDS = 75;
+const MAX_MUSIC_DURATION_SECONDS = 3600;
 
 const QuerySchema = z.object({
   q: z.string().trim().min(1).max(80).default("peaceful"),
@@ -43,7 +42,7 @@ function trackToClient(track: AudiusApiTrack) {
     mood:       track.mood ?? null,
     tags:       track.tags ?? null,
     // This URL is stable; Audius signs the redirect when it is requested.
-    streamUrl:  `${AUDIUS_BASE}/tracks/${encodeURIComponent(String(track.id))}/stream?app_name=${encodeURIComponent(AUDIUS_APP_NAME)}`,
+    streamUrl:  audiusStreamUrl(String(track.id)),
   };
 }
 

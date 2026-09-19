@@ -1,5 +1,5 @@
-import { db, storiesTable, storySavesTable, storyWitnessesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable, userPurchasesTable, type StoryPageDB } from "@workspace/db";
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { db, mediaCompositionsTable, storiesTable, storySavesTable, storyWitnessesTable, followsTable, characterTable, notificationsTable, stickerReactionsTable, userPurchasesTable, type StoryPageDB } from "@workspace/db";
+import { and, count, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
@@ -39,10 +39,16 @@ const MusicSchema = z.object({
   title:      z.string().min(1).max(300),
   artist:     z.string().min(1).max(300),
   artworkUrl: z.string().url().max(2000).nullable(),
-  duration:   z.number().int().min(1).max(75),
+  duration:   z.number().int().min(1).max(3600),
   genre:      z.string().max(100).nullable(),
   mood:       z.string().max(100).nullable(),
   streamUrl:  z.string().url().max(2000),
+  embedded: z.boolean().optional(),
+  baked: z.boolean().optional(),
+  segmentStartSeconds: z.number().min(0).optional(),
+  segmentDurationSeconds: z.number().positive().max(60).optional(),
+  originalVolume: z.number().min(0).max(1).optional(),
+  musicVolume: z.number().min(0).max(1).optional(),
 });
 
 function sanitizePanel(p: z.infer<typeof PanelSchema>) {
@@ -75,6 +81,7 @@ const StoryBaseSchema = z.object({
     panels:    z.array(PanelSchema),
   })).optional().nullable(),
   contentType:  z.enum(['story', 'video']).default('story'),
+  compositionId: z.string().uuid().optional().nullable(),
   videoUri:     z.string().optional().nullable(),
   thumbnailUri: z.string().optional().nullable(),
   music:        MusicSchema.optional().nullable(),
@@ -83,11 +90,11 @@ const StoryBaseSchema = z.object({
 // Full POST schema — adds cross-field validation on top of the base.
 const StoryInputSchema = StoryBaseSchema.superRefine((data, ctx) => {
   if (data.contentType === 'video') {
-    if (!data.videoUri) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['videoUri'], message: 'videoUri is required for video posts' });
+    if (!data.compositionId) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['compositionId'], message: 'compositionId is required for video posts' });
     }
-    if (!data.thumbnailUri) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['thumbnailUri'], message: 'thumbnailUri is required for video posts' });
+    if (data.videoUri || data.thumbnailUri) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['videoUri'], message: 'Video posts must use compositionId; direct media paths are not accepted' });
     }
   } else {
     if (data.panels.length === 0) {
@@ -95,6 +102,8 @@ const StoryInputSchema = StoryBaseSchema.superRefine((data, ctx) => {
     }
   }
 });
+
+class StoryCompositionError extends Error {}
 
 const StoryOutputSchema = z.object({
   id:           z.string().uuid(),
@@ -154,47 +163,93 @@ router.post("/stories", requireAuth, async (req, res) => {
       panels: page.panels.map(sanitizePanel),
     })) ?? null;
 
-    const insertValues = {
-      ...(id ? { id } : {}),
-      userId,
-      date:          new Date(date),
-      panels:        sanitizedPanels,
-      pageLayoutKey: rest.pageLayoutKey ?? null,
-      pages:         sanitizedPages as StoryPageDB[] | null,
-      chapterTitle:  rest.chapterTitle,
-      description:   rest.description ?? '',
-      mood:          rest.mood,
-      location:      rest.location,
-      isPublic:      rest.isPublic,
-      contentType:   rest.contentType ?? 'story',
-      videoUri:      rest.videoUri ?? null,
-      thumbnailUri:  rest.thumbnailUri ?? null,
-      music:         rest.music ?? null,
-    };
-
-    const [inserted] = await db
-      .insert(storiesTable)
-      .values(insertValues)
-      .onConflictDoNothing({ target: storiesTable.id })
-      .returning();
-
-    if (!inserted) {
-      const [existing] = await db
-        .select()
-        .from(storiesTable)
-        .where(eq(storiesTable.id, id!))
-        .limit(1);
-      if (!existing || existing.userId !== userId) {
-        return res.status(409).json({ error: "A story with this id already exists" });
+    const { created, existing } = await db.transaction(async tx => {
+      // A repeated idempotent create returns the existing story and must not
+      // consume a newly supplied composition claim.
+      if (id) {
+        const [alreadyCreated] = await tx
+          .select()
+          .from(storiesTable)
+          .where(eq(storiesTable.id, id))
+          .limit(1);
+        if (alreadyCreated) {
+          if (alreadyCreated.userId !== userId) return { created: undefined, existing: undefined };
+          return { created: undefined, existing: alreadyCreated };
+        }
       }
-      return res.status(200).json(serializeStory(existing));
-    }
-    const created = inserted;
+
+      let videoUri = rest.videoUri ?? null;
+      let thumbnailUri = rest.thumbnailUri ?? null;
+      if (rest.contentType === "video") {
+        const [composition] = await tx
+          .select()
+          .from(mediaCompositionsTable)
+          .where(and(
+            eq(mediaCompositionsTable.id, rest.compositionId!),
+            eq(mediaCompositionsTable.userId, userId),
+            eq(mediaCompositionsTable.status, "pending"),
+            gt(mediaCompositionsTable.expiresAt, new Date()),
+          ))
+          .for("update");
+        if (!composition) {
+          throw new StoryCompositionError("The video composition is missing, expired, already claimed, or belongs to another user.");
+        }
+        videoUri = composition.videoPath;
+        thumbnailUri = composition.thumbnailPath;
+
+        const [insertedVideo] = await tx.insert(storiesTable).values({
+          ...(id ? { id } : {}),
+          userId,
+          date: new Date(date),
+          panels: sanitizedPanels,
+          pageLayoutKey: rest.pageLayoutKey ?? null,
+          pages: sanitizedPages as StoryPageDB[] | null,
+          chapterTitle: rest.chapterTitle,
+          description: rest.description ?? '',
+          mood: rest.mood,
+          location: rest.location,
+          isPublic: rest.isPublic,
+          contentType: 'video',
+          videoUri,
+          thumbnailUri,
+          music: rest.music ?? null,
+        }).returning();
+        if (!insertedVideo) throw new StoryCompositionError("A story with this id already exists.");
+        await tx.update(mediaCompositionsTable)
+          .set({ status: "claimed", claimedAt: new Date() })
+          .where(and(eq(mediaCompositionsTable.id, composition.id), eq(mediaCompositionsTable.status, "pending")));
+        return { created: insertedVideo, existing: undefined };
+      }
+
+      const [inserted] = await tx
+        .insert(storiesTable)
+        .values({
+          ...(id ? { id } : {}),
+          userId,
+          date: new Date(date),
+          panels: sanitizedPanels,
+          pageLayoutKey: rest.pageLayoutKey ?? null,
+          pages: sanitizedPages as StoryPageDB[] | null,
+          chapterTitle: rest.chapterTitle,
+          description: rest.description ?? '',
+          mood: rest.mood,
+          location: rest.location,
+          isPublic: rest.isPublic,
+          contentType: rest.contentType ?? 'story',
+          videoUri,
+          thumbnailUri,
+          music: rest.music ?? null,
+        })
+        .returning();
+      return { created: inserted, existing: undefined };
+    });
+
+    if (!created && existing) return res.status(200).json(serializeStory(existing));
+    if (!created) return res.status(409).json({ error: "A story with this id already exists" });
 
     // L-3: Mark every panel image as claimed so the orphan-cleanup interval
     // won't delete files that are intentionally referenced by this story.
     panels.forEach(p => claimUpload(p.imageUri ?? null));
-
     // Fan-out notifications to followers (fire & forget, non-blocking)
     if (rest.isPublic) {
       fanOutStoryNotification(userId, created.id, rest.chapterTitle, req).catch(() => null);
@@ -209,6 +264,9 @@ router.post("/stories", requireAuth, async (req, res) => {
 
     return res.status(201).json({ ...serializeStory(created), rewardGranted, rewardAmounts });
   } catch (err) {
+    if (err instanceof StoryCompositionError) {
+      return res.status(400).json({ error: err.message });
+    }
     req.log.error({ err }, "Failed to create story");
     return res.status(500).json({ error: "Internal server error" });
   }

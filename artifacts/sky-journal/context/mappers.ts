@@ -67,6 +67,11 @@ export interface StoryMusic {
   genre: string | null;
   mood: string | null;
   streamUrl: string;
+  embedded?: boolean;
+  musicStartSeconds?: number;
+  durationSeconds?: number;
+  originalVolume?: number;
+  musicVolume?: number;
 }
 
 export interface Character {

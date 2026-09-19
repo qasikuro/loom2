@@ -13,10 +13,29 @@ export interface StoryMusic {
   artworkUrl: string | null;
   /**
    * @minimum 1
-   * @maximum 75
+   * @maximum 3600
    */
   duration: number;
   genre: string | null;
   mood: string | null;
   streamUrl: string;
+  embedded?: boolean;
+  baked?: boolean;
+  /** @minimum 0 */
+  segmentStartSeconds?: number;
+  /**
+   * @maximum 60
+   * @exclusiveMinimum 0
+   */
+  segmentDurationSeconds?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  originalVolume?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  musicVolume?: number;
 }

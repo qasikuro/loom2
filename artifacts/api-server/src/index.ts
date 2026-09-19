@@ -1,6 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { runStartupMigrations } from "@workspace/db";
+import {
+  cleanupExpiredMediaCompositions,
+  startMediaCompositionCleanup,
+} from "./services/mediaCompositionCleanup";
 
 const rawPort = process.env["PORT"];
 
@@ -28,6 +32,10 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   runStartupMigrations()
-    .then(() => logger.info("Startup migrations completed"))
+    .then(async () => {
+      await cleanupExpiredMediaCompositions();
+      startMediaCompositionCleanup();
+      logger.info("Startup migrations completed");
+    })
     .catch((err) => logger.error({ err }, "Startup migrations failed (non-fatal)"));
 });

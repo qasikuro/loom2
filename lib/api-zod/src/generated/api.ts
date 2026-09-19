@@ -110,7 +110,18 @@ export const DeleteJournalEntryParams = zod.object({
 /**
  * @summary List all stories newest first
  */
-export const listStoriesResponseMusicDurationMax = 75;
+export const listStoriesResponseMusicDurationMax = 3600;
+
+export const listStoriesResponseMusicSegmentStartSecondsMin = 0;
+
+export const listStoriesResponseMusicSegmentDurationSecondsExclusiveMin = 0;
+export const listStoriesResponseMusicSegmentDurationSecondsMax = 60;
+
+export const listStoriesResponseMusicOriginalVolumeMin = 0;
+export const listStoriesResponseMusicOriginalVolumeMax = 1;
+
+export const listStoriesResponseMusicMusicVolumeMin = 0;
+export const listStoriesResponseMusicMusicVolumeMax = 1;
 
 export const ListStoriesResponseItem = zod.object({
   id: zod.string(),
@@ -136,6 +147,27 @@ export const ListStoriesResponseItem = zod.object({
       genre: zod.string().nullable(),
       mood: zod.string().nullable(),
       streamUrl: zod.string().url(),
+      embedded: zod.boolean().optional(),
+      baked: zod.boolean().optional(),
+      segmentStartSeconds: zod
+        .number()
+        .min(listStoriesResponseMusicSegmentStartSecondsMin)
+        .optional(),
+      segmentDurationSeconds: zod
+        .number()
+        .gt(listStoriesResponseMusicSegmentDurationSecondsExclusiveMin)
+        .max(listStoriesResponseMusicSegmentDurationSecondsMax)
+        .optional(),
+      originalVolume: zod
+        .number()
+        .min(listStoriesResponseMusicOriginalVolumeMin)
+        .max(listStoriesResponseMusicOriginalVolumeMax)
+        .optional(),
+      musicVolume: zod
+        .number()
+        .min(listStoriesResponseMusicMusicVolumeMin)
+        .max(listStoriesResponseMusicMusicVolumeMax)
+        .optional(),
     })
     .nullish(),
   witnessedCount: zod.number(),
@@ -148,7 +180,18 @@ export const ListStoriesResponse = zod.array(ListStoriesResponseItem);
 /**
  * @summary Create a new story
  */
-export const createStoryBodyMusicDurationMax = 75;
+export const createStoryBodyMusicDurationMax = 3600;
+
+export const createStoryBodyMusicSegmentStartSecondsMin = 0;
+
+export const createStoryBodyMusicSegmentDurationSecondsExclusiveMin = 0;
+export const createStoryBodyMusicSegmentDurationSecondsMax = 60;
+
+export const createStoryBodyMusicOriginalVolumeMin = 0;
+export const createStoryBodyMusicOriginalVolumeMax = 1;
+
+export const createStoryBodyMusicMusicVolumeMin = 0;
+export const createStoryBodyMusicMusicVolumeMax = 1;
 
 export const CreateStoryBody = zod.object({
   id: zod.string().nullish(),
@@ -174,6 +217,27 @@ export const CreateStoryBody = zod.object({
       genre: zod.string().nullable(),
       mood: zod.string().nullable(),
       streamUrl: zod.string().url(),
+      embedded: zod.boolean().optional(),
+      baked: zod.boolean().optional(),
+      segmentStartSeconds: zod
+        .number()
+        .min(createStoryBodyMusicSegmentStartSecondsMin)
+        .optional(),
+      segmentDurationSeconds: zod
+        .number()
+        .gt(createStoryBodyMusicSegmentDurationSecondsExclusiveMin)
+        .max(createStoryBodyMusicSegmentDurationSecondsMax)
+        .optional(),
+      originalVolume: zod
+        .number()
+        .min(createStoryBodyMusicOriginalVolumeMin)
+        .max(createStoryBodyMusicOriginalVolumeMax)
+        .optional(),
+      musicVolume: zod
+        .number()
+        .min(createStoryBodyMusicMusicVolumeMin)
+        .max(createStoryBodyMusicMusicVolumeMax)
+        .optional(),
     })
     .nullish(),
 });
@@ -185,7 +249,18 @@ export const GetStoryParams = zod.object({
   id: zod.coerce.string(),
 });
 
-export const getStoryResponseMusicDurationMax = 75;
+export const getStoryResponseMusicDurationMax = 3600;
+
+export const getStoryResponseMusicSegmentStartSecondsMin = 0;
+
+export const getStoryResponseMusicSegmentDurationSecondsExclusiveMin = 0;
+export const getStoryResponseMusicSegmentDurationSecondsMax = 60;
+
+export const getStoryResponseMusicOriginalVolumeMin = 0;
+export const getStoryResponseMusicOriginalVolumeMax = 1;
+
+export const getStoryResponseMusicMusicVolumeMin = 0;
+export const getStoryResponseMusicMusicVolumeMax = 1;
 
 export const GetStoryResponse = zod.object({
   id: zod.string(),
@@ -211,6 +286,27 @@ export const GetStoryResponse = zod.object({
       genre: zod.string().nullable(),
       mood: zod.string().nullable(),
       streamUrl: zod.string().url(),
+      embedded: zod.boolean().optional(),
+      baked: zod.boolean().optional(),
+      segmentStartSeconds: zod
+        .number()
+        .min(getStoryResponseMusicSegmentStartSecondsMin)
+        .optional(),
+      segmentDurationSeconds: zod
+        .number()
+        .gt(getStoryResponseMusicSegmentDurationSecondsExclusiveMin)
+        .max(getStoryResponseMusicSegmentDurationSecondsMax)
+        .optional(),
+      originalVolume: zod
+        .number()
+        .min(getStoryResponseMusicOriginalVolumeMin)
+        .max(getStoryResponseMusicOriginalVolumeMax)
+        .optional(),
+      musicVolume: zod
+        .number()
+        .min(getStoryResponseMusicMusicVolumeMin)
+        .max(getStoryResponseMusicMusicVolumeMax)
+        .optional(),
     })
     .nullish(),
   witnessedCount: zod.number(),
@@ -233,7 +329,18 @@ export const WitnessStoryParams = zod.object({
   id: zod.coerce.string(),
 });
 
-export const witnessStoryResponseMusicDurationMax = 75;
+export const witnessStoryResponseMusicDurationMax = 3600;
+
+export const witnessStoryResponseMusicSegmentStartSecondsMin = 0;
+
+export const witnessStoryResponseMusicSegmentDurationSecondsExclusiveMin = 0;
+export const witnessStoryResponseMusicSegmentDurationSecondsMax = 60;
+
+export const witnessStoryResponseMusicOriginalVolumeMin = 0;
+export const witnessStoryResponseMusicOriginalVolumeMax = 1;
+
+export const witnessStoryResponseMusicMusicVolumeMin = 0;
+export const witnessStoryResponseMusicMusicVolumeMax = 1;
 
 export const WitnessStoryResponse = zod.object({
   id: zod.string(),
@@ -259,6 +366,27 @@ export const WitnessStoryResponse = zod.object({
       genre: zod.string().nullable(),
       mood: zod.string().nullable(),
       streamUrl: zod.string().url(),
+      embedded: zod.boolean().optional(),
+      baked: zod.boolean().optional(),
+      segmentStartSeconds: zod
+        .number()
+        .min(witnessStoryResponseMusicSegmentStartSecondsMin)
+        .optional(),
+      segmentDurationSeconds: zod
+        .number()
+        .gt(witnessStoryResponseMusicSegmentDurationSecondsExclusiveMin)
+        .max(witnessStoryResponseMusicSegmentDurationSecondsMax)
+        .optional(),
+      originalVolume: zod
+        .number()
+        .min(witnessStoryResponseMusicOriginalVolumeMin)
+        .max(witnessStoryResponseMusicOriginalVolumeMax)
+        .optional(),
+      musicVolume: zod
+        .number()
+        .min(witnessStoryResponseMusicMusicVolumeMin)
+        .max(witnessStoryResponseMusicMusicVolumeMax)
+        .optional(),
     })
     .nullish(),
   witnessedCount: zod.number(),
@@ -270,7 +398,18 @@ export const WitnessStoryResponse = zod.object({
 /**
  * @summary List all outfit logs newest first
  */
-export const listOutfitsResponseMusicDurationMax = 75;
+export const listOutfitsResponseMusicDurationMax = 3600;
+
+export const listOutfitsResponseMusicSegmentStartSecondsMin = 0;
+
+export const listOutfitsResponseMusicSegmentDurationSecondsExclusiveMin = 0;
+export const listOutfitsResponseMusicSegmentDurationSecondsMax = 60;
+
+export const listOutfitsResponseMusicOriginalVolumeMin = 0;
+export const listOutfitsResponseMusicOriginalVolumeMax = 1;
+
+export const listOutfitsResponseMusicMusicVolumeMin = 0;
+export const listOutfitsResponseMusicMusicVolumeMax = 1;
 
 export const ListOutfitsResponseItem = zod.object({
   id: zod.string(),
@@ -289,6 +428,27 @@ export const ListOutfitsResponseItem = zod.object({
       genre: zod.string().nullable(),
       mood: zod.string().nullable(),
       streamUrl: zod.string().url(),
+      embedded: zod.boolean().optional(),
+      baked: zod.boolean().optional(),
+      segmentStartSeconds: zod
+        .number()
+        .min(listOutfitsResponseMusicSegmentStartSecondsMin)
+        .optional(),
+      segmentDurationSeconds: zod
+        .number()
+        .gt(listOutfitsResponseMusicSegmentDurationSecondsExclusiveMin)
+        .max(listOutfitsResponseMusicSegmentDurationSecondsMax)
+        .optional(),
+      originalVolume: zod
+        .number()
+        .min(listOutfitsResponseMusicOriginalVolumeMin)
+        .max(listOutfitsResponseMusicOriginalVolumeMax)
+        .optional(),
+      musicVolume: zod
+        .number()
+        .min(listOutfitsResponseMusicMusicVolumeMin)
+        .max(listOutfitsResponseMusicMusicVolumeMax)
+        .optional(),
     })
     .nullish(),
   isPublic: zod.boolean(),
@@ -299,7 +459,18 @@ export const ListOutfitsResponse = zod.array(ListOutfitsResponseItem);
 /**
  * @summary Create an outfit log
  */
-export const createOutfitBodyMusicDurationMax = 75;
+export const createOutfitBodyMusicDurationMax = 3600;
+
+export const createOutfitBodyMusicSegmentStartSecondsMin = 0;
+
+export const createOutfitBodyMusicSegmentDurationSecondsExclusiveMin = 0;
+export const createOutfitBodyMusicSegmentDurationSecondsMax = 60;
+
+export const createOutfitBodyMusicOriginalVolumeMin = 0;
+export const createOutfitBodyMusicOriginalVolumeMax = 1;
+
+export const createOutfitBodyMusicMusicVolumeMin = 0;
+export const createOutfitBodyMusicMusicVolumeMax = 1;
 
 export const CreateOutfitBody = zod.object({
   id: zod.string().nullish(),
@@ -318,6 +489,27 @@ export const CreateOutfitBody = zod.object({
       genre: zod.string().nullable(),
       mood: zod.string().nullable(),
       streamUrl: zod.string().url(),
+      embedded: zod.boolean().optional(),
+      baked: zod.boolean().optional(),
+      segmentStartSeconds: zod
+        .number()
+        .min(createOutfitBodyMusicSegmentStartSecondsMin)
+        .optional(),
+      segmentDurationSeconds: zod
+        .number()
+        .gt(createOutfitBodyMusicSegmentDurationSecondsExclusiveMin)
+        .max(createOutfitBodyMusicSegmentDurationSecondsMax)
+        .optional(),
+      originalVolume: zod
+        .number()
+        .min(createOutfitBodyMusicOriginalVolumeMin)
+        .max(createOutfitBodyMusicOriginalVolumeMax)
+        .optional(),
+      musicVolume: zod
+        .number()
+        .min(createOutfitBodyMusicMusicVolumeMin)
+        .max(createOutfitBodyMusicMusicVolumeMax)
+        .optional(),
     })
     .nullish(),
   isPublic: zod.boolean(),

@@ -39,6 +39,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
   const playbackGenerationRef = useRef(0);
   const lifecycleRef = useRef(0);
+  const hasExternalSoundtrack = !!post?.music && !post.music.embedded;
 
   const stopSoundtrack = useCallback(async () => {
     playbackGenerationRef.current += 1;
@@ -62,7 +63,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
   }, []);
 
   const startSoundtrack = useCallback(async (lifecycleId?: number) => {
-    const streamUrl = post?.music?.streamUrl;
+    const streamUrl = hasExternalSoundtrack ? post?.music?.streamUrl : undefined;
     if (!streamUrl) {
       setSoundtrackStarted(false);
       return;
@@ -137,7 +138,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
       }
       // A later tap on Music retries creation and playback.
     }
-  }, [post?.music?.streamUrl, stopSoundtrack]);
+  }, [hasExternalSoundtrack, post?.music?.streamUrl, stopSoundtrack]);
 
   const toggleSoundtrack = useCallback(async () => {
     if (soundtrackStarted) {
@@ -169,11 +170,11 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
 
   // Reset independent audio controls whenever the modal opens a new post.
   useEffect(() => {
-    setVideoMuted(!!post?.music);
+    setVideoMuted(!!post?.music && !post.music.embedded);
     soundtrackMutedRef.current = false;
     setSoundtrackMuted(false);
     setSoundtrackStarted(false);
-  }, [post?.id, post?.music?.streamUrl]);
+  }, [post?.id, post?.music?.streamUrl, post?.music?.embedded]);
 
   // Start the soundtrack automatically when possible and clean it up whenever
   // the post changes or the modal unmounts.
@@ -184,7 +185,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
       if (lifecycleRef.current === lifecycleId) lifecycleRef.current += 1;
       void stopSoundtrack();
     };
-  }, [post?.id, post?.music?.streamUrl, startSoundtrack, stopSoundtrack]);
+  }, [hasExternalSoundtrack, post?.id, post?.music?.streamUrl, startSoundtrack, stopSoundtrack]);
 
   useEffect(() => {
     soundtrackMutedRef.current = soundtrackMuted;
@@ -227,7 +228,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
           </TouchableOpacity>
 
           <View style={vp.audioControls}>
-            {post.music && (
+            {hasExternalSoundtrack && (
               <TouchableOpacity
                 style={vp.audioBtn}
                 onPress={() => { void toggleSoundtrack(); }}

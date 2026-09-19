@@ -173,6 +173,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Story"
 
+  /media/compose-video:
+    post:
+      operationId: composeVideo
+      tags: [stories]
+      summary: Compose a trimmed video and optional Audius music track
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ComposeVideoRequest"
+      responses:
+        "201":
+          description: Composed video awaiting story claim
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComposeVideoResponse"
+
   /stories/{id}:
     get:
       operationId: getStory
@@ -503,7 +522,7 @@ components:
         duration:
           type: integer
           minimum: 1
-          maximum: 75
+          maximum: 3600
         genre:
           type: string
           nullable: true
@@ -513,6 +532,25 @@ components:
         streamUrl:
           type: string
           format: uri
+        embedded:
+          type: boolean
+        baked:
+          type: boolean
+        segmentStartSeconds:
+          type: number
+          minimum: 0
+        segmentDurationSeconds:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 60
+        originalVolume:
+          type: number
+          minimum: 0
+          maximum: 1
+        musicVolume:
+          type: number
+          minimum: 0
+          maximum: 1
       required: [id, title, artist, artworkUrl, duration, genre, mood, streamUrl]
 
     Story:
@@ -537,6 +575,15 @@ components:
           type: boolean
         music:
           $ref: "#/components/schemas/StoryMusic"
+          nullable: true
+        contentType:
+          type: string
+          enum: [story, video]
+        videoUri:
+          type: string
+          nullable: true
+        thumbnailUri:
+          type: string
           nullable: true
         witnessedCount:
           type: integer
@@ -573,7 +620,113 @@ components:
         music:
           $ref: "#/components/schemas/StoryMusic"
           nullable: true
+        contentType:
+          type: string
+          enum: [story, video]
+        compositionId:
+          type: string
+          format: uuid
+          nullable: true
       required: [date, chapterTitle, panels, mood, location, isPublic]
+
+    ComposeMusicInput:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        artworkUrl:
+          type: string
+          format: uri
+          nullable: true
+        duration:
+          type: integer
+          minimum: 1
+          maximum: 3600
+        genre:
+          type: string
+          nullable: true
+        mood:
+          type: string
+          nullable: true
+        streamUrl:
+          type: string
+          format: uri
+          nullable: true
+        embedded:
+          type: boolean
+        baked:
+          type: boolean
+        segmentStartSeconds:
+          type: number
+          minimum: 0
+        segmentDurationSeconds:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 60
+        originalVolume:
+          type: number
+          minimum: 0
+          maximum: 1
+        musicVolume:
+          type: number
+          minimum: 0
+          maximum: 1
+      required: [id, title, artist, artworkUrl, duration, genre, mood]
+
+    ComposeVideoRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+        videoStartSeconds:
+          type: number
+          minimum: 0
+        videoDurationSeconds:
+          type: number
+          exclusiveMinimum: 0
+          maximum: 60
+        music:
+          type: string
+          description: JSON-encoded ComposeMusicInput metadata
+        musicStartSeconds:
+          type: number
+          minimum: 0
+        originalVolume:
+          type: number
+          minimum: 0
+          maximum: 1
+        musicVolume:
+          type: number
+          minimum: 0
+          maximum: 1
+      required: [file, videoStartSeconds, videoDurationSeconds]
+
+    ComposeVideoResponse:
+      type: object
+      properties:
+        compositionId:
+          type: string
+          format: uuid
+        path:
+          type: string
+          description: Canonical relative API path for the composed video
+        thumbnailPath:
+          type: string
+          description: Canonical relative API path for the composed thumbnail
+        duration:
+          type: number
+        width:
+          type: integer
+        height:
+          type: integer
+        fileSize:
+          type: integer
+      required: [compositionId, path, thumbnailPath, duration, width, height, fileSize]
 
     JournalEntry:
       type: object

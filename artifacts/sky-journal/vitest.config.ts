@@ -8,6 +8,7 @@ export default defineConfig({
       'app/__tests__/**/*.test.ts',
       'context/__tests__/**/*.test.ts',
       'hooks/__tests__/**/*.test.ts',
+      'utils/__tests__/**/*.test.ts',
     ],
   },
 });

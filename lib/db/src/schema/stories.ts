@@ -26,6 +26,12 @@ export type StoryMusic = {
   genre: string | null;
   mood: string | null;
   streamUrl: string;
+  embedded?: boolean;
+  baked?: boolean;
+  segmentStartSeconds?: number;
+  segmentDurationSeconds?: number;
+  originalVolume?: number;
+  musicVolume?: number;
 };
 
 export const storiesTable = pgTable("stories", {

@@ -1,468 +1,321 @@
-/**
- * Post-video screen — pick a short video from the gallery, auto-extract a
- * thumbnail, add a title + mood, then upload and publish to Discover.
- */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Animated,
-  Easing,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-
 import { Icon } from '@/components/Icon';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch } from '@/context/AppContext';
 import type { StoryMusic } from '@/context/mappers';
-import { AudiusMusicPicker, type AudiusTrack } from '@/features/story-studio/components/AudiusMusicPicker';
-import { persistImageUri, persistVideoUri, ImageUploadError } from '@/utils/persistImage';
-import { SkyLoadingMark } from '@/components/SkyLoading';
+import { composeVideo, type ComposeVideoController } from '@/utils/composeVideo';
+import { calculateMusicSegment, normalizeVideoTrim } from '@/utils/videoEditing';
+import { VideoEditor, type VideoEditorMetadata, type VideoEditorValue } from '@/components/video/VideoEditor';
 
-const MAX_VIDEO_DURATION_S = 60;
-const MAX_VIDEO_SIZE_BYTES = 25 * 1024 * 1024;
-
+const TEMP_SOURCE_CAP_BYTES = 500 * 1024 * 1024;
 const MOODS = [
-  { label: 'Hopeful',     color: '#C8A84B' },
-  { label: 'Peaceful',    color: '#78A8C8' },
-  { label: 'Dreamy',      color: '#8B6BA8' },
-  { label: 'Soft',        color: '#9888C0' },
-  { label: 'Lonely',      color: '#7090C0' },
-  { label: 'Chaotic',     color: '#D0784A' },
+  { label: 'Hopeful', color: '#C8A84B' },
+  { label: 'Peaceful', color: '#78A8C8' },
+  { label: 'Dreamy', color: '#8B6BA8' },
+  { label: 'Soft', color: '#9888C0' },
+  { label: 'Lonely', color: '#7090C0' },
+  { label: 'Chaotic', color: '#D0784A' },
   { label: 'Adventurous', color: '#60A878' },
-  { label: 'Romantic',    color: '#C870A0' },
+  { label: 'Romantic', color: '#C870A0' },
 ];
 
-type Step = 'picking' | 'form' | 'uploading' | 'done';
+type Step = 'picking' | 'editing' | 'publishing' | 'done';
+
+function inferMime(uri: string, mimeType?: string | null): string {
+  if (mimeType) return mimeType;
+  if (/\.mov($|\?)/i.test(uri)) return 'video/quicktime';
+  if (/\.m4v($|\?)/i.test(uri)) return 'video/x-m4v';
+  return 'video/mp4';
+}
 
 export default function PostVideoScreen() {
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
-  const topInset = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
-  const contentWidth = Math.min(windowWidth, 640);
+  const [step, setStep] = useState<Step>('picking');
+  const [metadata, setMetadata] = useState<VideoEditorMetadata | null>(null);
+  const [editorValue, setEditorValue] = useState<VideoEditorValue | null>(null);
+  const [title, setTitle] = useState('');
+  const [mood, setMood] = useState(MOODS[0].label);
+  const [progress, setProgress] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const composeRef = useRef<ComposeVideoController | null>(null);
 
-  const [step,         setStep]         = useState<Step>('picking');
-  const [videoUri,     setVideoUri]      = useState<string | null>(null);
-  const [videoMimeType, setVideoMimeType] = useState<string | null>(null);
-  const [videoFileName, setVideoFileName] = useState<string | null>(null);
-  const [thumbUri,     setThumbUri]      = useState<string | null>(null);
-  const [title,        setTitle]         = useState('');
-  const [mood,         setMood]          = useState(MOODS[0].label);
-  const [music,        setMusic]         = useState<StoryMusic | null>(null);
-  const [progress,     setProgress]      = useState('');
-  const [error,        setError]         = useState<string | null>(null);
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  // Launch picker once on mount
-  useEffect(() => { pickVideo(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const updatePlaybackMetadata = useCallback((patch: Partial<VideoEditorMetadata>) => {
+    setMetadata(previous => {
+      if (!previous) return previous;
+      return {
+        ...previous,
+        durationSeconds: previous.durationSeconds > 0
+          ? previous.durationSeconds
+          : (patch.durationSeconds && patch.durationSeconds > 0 ? patch.durationSeconds : previous.durationSeconds),
+        width: previous.width && previous.width > 0 ? previous.width : patch.width ?? previous.width,
+        height: previous.height && previous.height > 0 ? previous.height : patch.height ?? previous.height,
+      };
+    });
+    if (patch.durationSeconds && patch.durationSeconds > 0) {
+      const durationSeconds = patch.durationSeconds;
+      setEditorValue(previous => {
+        if (!previous || previous.trim.endSeconds > 0) return previous;
+        return {
+          ...previous,
+          trim: normalizeVideoTrim(durationSeconds, 0, Math.min(60, durationSeconds)),
+        };
+      });
+    }
+  }, []);
 
   const pickVideo = useCallback(async () => {
     setStep('picking');
     setError(null);
-
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission required', 'Allow access to your photo library to post a video.', [
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== 'granted') {
+      Alert.alert('Permission required', 'Allow access to your photo library to choose a video.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
       return;
     }
-
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['videos'],
       allowsEditing: false,
       quality: 1,
-      videoMaxDuration: MAX_VIDEO_DURATION_S,
     });
-
     if (result.canceled || !result.assets?.[0]) {
       router.back();
       return;
     }
-
     const asset = result.assets[0];
-
-    if (asset.fileSize && asset.fileSize > MAX_VIDEO_SIZE_BYTES) {
-      Alert.alert(
-        'Video too large',
-        'Please pick a video that is 25 MB or smaller.',
-        [
-          { text: 'Try again', onPress: pickVideo },
-          { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
-        ],
-      );
+    if (asset.fileSize && asset.fileSize > TEMP_SOURCE_CAP_BYTES) {
+      Alert.alert('Video too large', 'Choose a video smaller than 500 MB so it can be processed safely.', [
+        { text: 'Try again', onPress: () => void pickVideo() },
+        { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+      ]);
       return;
     }
+    const durationSeconds = Math.max(0, (asset.duration ?? 0) / 1000);
+    const nextMetadata: VideoEditorMetadata = {
+      uri: asset.uri,
+      mimeType: inferMime(asset.uri, asset.mimeType),
+      fileName: asset.fileName,
+      fileSize: asset.fileSize,
+      durationSeconds,
+      width: asset.width,
+      height: asset.height,
+    };
+    setMetadata(nextMetadata);
+    setEditorValue({
+      trim: normalizeVideoTrim(durationSeconds, 0, Math.min(60, durationSeconds)),
+      music: null,
+      musicStartSeconds: 0,
+      originalVolume: 1,
+      musicVolume: 1,
+    });
+    setStep('editing');
+  }, []);
 
-    // Check duration (picker limit is advisory; verify explicitly)
-    if (asset.duration && asset.duration > MAX_VIDEO_DURATION_S * 1000) {
-      Alert.alert(
-        'Video too long',
-        'Please pick a video that is 1 minute or shorter.',
-        [
-          { text: 'Try again', onPress: pickVideo },
-          { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
-        ],
-      );
-      return;
-    }
+  useEffect(() => {
+    void pickVideo();
+  }, [pickVideo]);
 
-    // Extract first frame as thumbnail
-    let thumb: string | null = null;
-    try {
-      // Load this optional native module only when the video flow needs it.
-      // Some Expo Go builds do not include ExpoVideoThumbnails; importing it
-      // at route startup crashes the entire app before navigation can render.
-      const VideoThumbnails = await import('expo-video-thumbnails');
-      const tn = await VideoThumbnails.getThumbnailAsync(asset.uri, { time: 0, quality: 0.85 });
-      thumb = tn.uri;
-    } catch {
-      // Expo Go doesn't support video thumbnails — fall back to null (no preview)
-    }
-
-    setVideoUri(asset.uri);
-    setVideoMimeType(asset.mimeType ?? null);
-    setVideoFileName(asset.fileName ?? null);
-    setThumbUri(thumb);
-    setStep('form');
-
-    Animated.timing(fadeAnim, { toValue: 1, duration: 300, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  async function handlePost() {
-    if (!videoUri) return;
+  const handlePublish = async () => {
+    if (!metadata || !editorValue) return;
     if (!title.trim()) {
-      setError('Please add a title for your video.');
+      setError('Add a caption before publishing.');
+      return;
+    }
+    const finalDuration = editorValue.trim.endSeconds - editorValue.trim.startSeconds;
+    if (finalDuration <= 0 || finalDuration > 60) {
+      setError('Choose a video segment between 1 second and 1 minute.');
       return;
     }
     setError(null);
-    setStep('uploading');
+    setStep('publishing');
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
+    const segment = editorValue.music
+      ? calculateMusicSegment(finalDuration, editorValue.music.duration, editorValue.musicStartSeconds)
+      : null;
+    const controller = composeVideo({
+      videoUri: metadata.uri,
+      mimeType: metadata.mimeType ?? undefined,
+      fileName: metadata.fileName,
+      videoStartSeconds: editorValue.trim.startSeconds,
+      videoDurationSeconds: finalDuration,
+      music: editorValue.music,
+      musicStartSeconds: segment?.startSeconds ?? 0,
+      originalVolume: editorValue.originalVolume,
+      musicVolume: editorValue.musicVolume,
+      onProgress: value => setProgress(
+        value >= 1
+          ? 'Processing and compressing…'
+          : `Uploading video… ${Math.round(value * 100)}%`,
+      ),
+    });
+    composeRef.current = controller;
     try {
-      // 1. Upload video
-      setProgress('Uploading video…');
-      const uploadedVideoUri = await persistVideoUri(videoUri, {
-        mimeType: videoMimeType ?? undefined,
-        fileName: videoFileName,
-      });
-
-      // 2. Upload thumbnail (if extracted)
-      setProgress('Uploading thumbnail…');
-      let uploadedThumbUri = uploadedVideoUri; // fallback: reuse video url (won't display but prevents null)
-      if (thumbUri) {
-        uploadedThumbUri = await persistImageUri(thumbUri);
-      }
-
-      // 3. Create the post
+      setProgress('Uploading and preparing your video…');
+      const output = await controller.promise;
       setProgress('Publishing…');
+      const embeddedMusic: StoryMusic | null = editorValue.music && segment
+        ? {
+            ...editorValue.music,
+            embedded: true,
+            musicStartSeconds: segment.startSeconds,
+            durationSeconds: segment.durationSeconds,
+            originalVolume: editorValue.originalVolume,
+            musicVolume: editorValue.musicVolume,
+          }
+        : null;
       await apiFetch('/stories', {
         method: 'POST',
         body: JSON.stringify({
           chapterTitle: title.trim(),
           mood,
-          date:         new Date().toISOString().slice(0, 10),
-          isPublic:     true,
-          panels:       [],
-          contentType:  'video',
-          videoUri:     uploadedVideoUri,
-          thumbnailUri: uploadedThumbUri,
-          music,
+          date: new Date().toISOString().slice(0, 10),
+          isPublic: true,
+          panels: [],
+          contentType: 'video',
+          videoUri: output.path,
+          thumbnailUri: output.thumbnailPath ?? output.path,
+          music: embeddedMusic,
         }),
       });
-
       setStep('done');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Navigate to Discover so the user can see their post
-      setTimeout(() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        router.replace('/(tabs)/discover' as any);
-      }, 800);
-
+      setTimeout(() => router.replace('/(tabs)/discover' as never), 800);
     } catch (err) {
-      const msg = err instanceof ImageUploadError
-        ? err.userMessage
-        : (err instanceof Error ? err.message : 'Something went wrong. Please try again.');
-      setError(msg);
-      setStep('form');
+      setError(err instanceof Error ? err.message : 'Could not publish this video. Please try again.');
+      setStep('editing');
+    } finally {
+      composeRef.current = null;
     }
-  }
+  };
 
-  // ── Picking state ────────────────────────────────────────────────────────
+  const cancelPublishing = () => {
+    composeRef.current?.cancel();
+    composeRef.current = null;
+    setProgress('');
+    setStep('editing');
+  };
+
   if (step === 'picking') {
     return (
-      <View style={[s.root, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.root, styles.center]}>
         <SkyLoadingMark size={44} color="#9B78E8" />
-        <Text style={s.pickingLabel}>Opening gallery…</Text>
+        <Text style={styles.loadingText}>Opening your videos…</Text>
       </View>
     );
   }
-
-  // ── Done state ───────────────────────────────────────────────────────────
   if (step === 'done') {
     return (
-      <View style={[s.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <View style={s.doneRing}>
-          <Icon name="check" size={32} color="#9B78E8" />
-        </View>
-        <Text style={s.doneTitle}>Posted!</Text>
-        <Text style={s.doneSub}>Your video is live in Discover.</Text>
+      <View style={[styles.root, styles.center]}>
+        <View style={styles.doneRing}><Icon name="check" size={32} color="#9B78E8" /></View>
+        <Text style={styles.doneTitle}>Posted!</Text>
+        <Text style={styles.doneSub}>Your finished video is live in Discover.</Text>
       </View>
     );
   }
 
-  const selectedMoodDef = MOODS.find(m => m.label === mood) ?? MOODS[0];
-
   return (
-    <KeyboardAvoidingView
-      style={s.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Header */}
-      <View style={[s.header, { paddingTop: topInset + 12, maxWidth: 720, width: '100%', alignSelf: 'center' }]}>
-        <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-          <Icon name="chevron-left" size={20} color="rgba(200,185,255,0.80)" />
+    <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={[styles.header, { paddingTop: (Platform.OS === 'web' ? 67 : insets.top) + 10 }]}>
+        <TouchableOpacity
+          onPress={() => step === 'publishing' ? cancelPublishing() : router.back()}
+          style={styles.backBtn}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          accessibilityRole="button"
+          accessibilityLabel={step === 'publishing' ? 'Cancel publishing' : 'Go back'}
+        >
+          <Icon name="chevron-left" size={20} color="rgba(220,205,255,0.84)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>Post Video</Text>
+        <View style={styles.headerCopy}>
+          <Text style={styles.headerTitle}>Make a video moment</Text>
+          <Text style={styles.headerSub}>Trim → soundtrack → preview → publish</Text>
+        </View>
         <View style={{ width: 36 }} />
       </View>
-
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <ScrollView
-          contentContainerStyle={[s.scroll, { paddingBottom: bottomInset + 24, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-
-          {/* Video preview */}
-          <View style={s.previewWrap}>
-            {thumbUri ? (
-              <Image source={{ uri: thumbUri }} style={s.preview} contentFit="cover" />
-            ) : (
-              <LinearGradient
-                colors={['#1A1040', '#2A1860', '#1C1040']}
-                style={s.preview}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 28 }]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Caption</Text>
+          <TextInput
+            value={title}
+            onChangeText={setTitle}
+            style={styles.input}
+            placeholder="What should this moment feel like?"
+            placeholderTextColor="rgba(200,185,255,0.30)"
+            maxLength={150}
+            accessibilityLabel="Video caption"
+          />
+        </View>
+        <View style={styles.fieldWrap}>
+          <Text style={styles.fieldLabel}>Mood</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodRow}>
+            {MOODS.map(item => (
+              <TouchableOpacity
+                key={item.label}
+                onPress={() => { setMood(item.label); Haptics.selectionAsync(); }}
+                style={[styles.moodPill, mood === item.label && { borderColor: `${item.color}90`, backgroundColor: `${item.color}22` }]}
+                accessibilityRole="button"
+                accessibilityState={{ selected: mood === item.label }}
+                accessibilityLabel={`Mood: ${item.label}`}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Icon name="video" size={40} color="rgba(155,120,232,0.55)" />
-              </LinearGradient>
-            )}
-
-            {/* Play overlay to confirm video was picked */}
-            <View style={s.playBadge}>
-              <Icon name="play" size={13} color="#9B78E8" />
-              <Text style={s.playBadgeText}>Video selected</Text>
-            </View>
-          </View>
-
-          {/* Error */}
-          {error && (
-            <View style={s.errorRow}>
-              <Icon name="alert-circle" size={14} color="#E06070" />
-              <Text style={s.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {/* Title input */}
-          <View style={s.fieldWrap}>
-            <Text style={s.fieldLabel}>Caption</Text>
-            <TextInput
-              style={s.input}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="What's this moment about?"
-              placeholderTextColor="rgba(200,185,255,0.28)"
-              maxLength={150}
-              returnKeyType="done"
-              autoCapitalize="sentences"
-            />
-          </View>
-
-          {/* Mood picker */}
-          <View style={s.fieldWrap}>
-            <Text style={s.fieldLabel}>Mood</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.moodRow}>
-              {MOODS.map(m => {
-                const active = m.label === mood;
-                return (
-                  <Pressable
-                    key={m.label}
-                    onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
-                    style={[
-                      s.moodPill,
-                      active && { backgroundColor: `${m.color}22`, borderColor: `${m.color}70` },
-                    ]}
-                  >
-                    <Text style={[s.moodPillText, { color: active ? m.color : 'rgba(200,185,255,0.45)' }]}>
-                      {m.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          </View>
-
-          {/* Optional soundtrack */}
-          <View style={s.fieldWrap}>
-            <Text style={s.fieldLabel}>Soundtrack</Text>
-            <AudiusMusicPicker
-              value={music as AudiusTrack | null}
-              mood={mood}
-              onChange={track => setMusic(track)}
-            />
-          </View>
-
-          {/* Post button */}
-          {step === 'uploading' ? (
-            <View style={s.uploadingRow}>
-              <SkyLoadingMark size={20} color="#9B78E8" />
-              <Text style={s.uploadingText}>{progress}</Text>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={[s.postBtn, { borderColor: `${selectedMoodDef.color}50` }]}
-              onPress={handlePost}
-              activeOpacity={0.80}
-            >
-              <LinearGradient
-                colors={[`${selectedMoodDef.color}28`, `${selectedMoodDef.color}14`]}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              />
-              <Icon name="video" size={16} color={selectedMoodDef.color} />
-              <Text style={[s.postBtnText, { color: selectedMoodDef.color }]}>Post to Discover</Text>
-            </TouchableOpacity>
-          )}
-
-        </ScrollView>
-      </Animated.View>
+                <Text style={[styles.moodText, { color: mood === item.label ? item.color : 'rgba(200,185,255,0.48)' }]}>{item.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+        {metadata && editorValue && (
+          <VideoEditor
+            metadata={metadata}
+            value={editorValue}
+            onChange={setEditorValue}
+            onMetadata={updatePlaybackMetadata}
+            onPublish={() => void handlePublish()}
+            onCancel={step === 'publishing' ? cancelPublishing : () => void pickVideo()}
+            publishing={step === 'publishing'}
+            progress={progress}
+            error={error}
+          />
+        )}
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const s = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#080616',
-  },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: 'rgba(200,185,255,0.08)',
-  },
-  backBtn: {
-    width: 36, height: 36, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(200,185,255,0.09)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 16, fontFamily: 'Satoshi-Bold',
-    color: 'rgba(240,236,255,0.95)', letterSpacing: -0.3,
-    flexShrink: 1,
-  },
-
-  scroll: { padding: 20, gap: 20 },
-
-  previewWrap: {
-    width: '100%',
-    aspectRatio: 16 / 9,
-    borderRadius: 18,
-    overflow: 'hidden',
-    backgroundColor: '#1A1040',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  preview: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playBadge: {
-    position: 'absolute', bottom: 10, left: 10,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4,
-    borderWidth: 0.5, borderColor: 'rgba(155,120,232,0.45)',
-  },
-  playBadgeText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9B78E8' },
-
-  errorRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    backgroundColor: 'rgba(224,96,112,0.10)',
-    borderRadius: 12, borderWidth: 1, borderColor: 'rgba(224,96,112,0.30)',
-    paddingHorizontal: 12, paddingVertical: 9,
-  },
-  errorText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Regular', color: '#E07080' },
-
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: '#080616' },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  loadingText: { marginTop: 16, color: 'rgba(210,195,255,0.60)', fontSize: 13, fontFamily: 'Satoshi-Regular' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 13, borderBottomWidth: 0.5, borderBottomColor: 'rgba(200,185,255,0.08)' },
+  backBtn: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)' },
+  headerCopy: { flex: 1, alignItems: 'center', marginHorizontal: 8 },
+  headerTitle: { color: '#F1ECFF', fontSize: 16, fontFamily: 'Satoshi-Bold' },
+  headerSub: { marginTop: 3, color: 'rgba(210,195,255,0.48)', fontSize: 10, fontFamily: 'Satoshi-Regular' },
+  scroll: { width: '100%', maxWidth: 680, alignSelf: 'center', padding: 18, gap: 17 },
   fieldWrap: { gap: 8 },
-  fieldLabel: {
-    fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2,
-    textTransform: 'uppercase', color: 'rgba(200,185,255,0.40)',
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1, borderColor: 'rgba(200,185,255,0.12)',
-    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(240,236,255,0.90)',
-  },
-
-  moodRow: { gap: 8, paddingRight: 8 },
-  moodPill: {
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 1,
-    borderColor: 'rgba(200,185,255,0.14)',
-    backgroundColor: 'rgba(255,255,255,0.035)',
-  },
-  moodPillText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
-
-  postBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9,
-    height: 52, borderRadius: 18, borderWidth: 1,
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    overflow: 'hidden',
-    marginTop: 4,
-  },
-  postBtnText: { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-
-  uploadingRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    height: 52,
-  },
-  uploadingText: { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.65)' },
-
-  pickingLabel: {
-    marginTop: 16, fontSize: 13, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,185,255,0.50)',
-  },
-
-  doneRing: {
-    width: 80, height: 80, borderRadius: 40,
-    borderWidth: 2, borderColor: 'rgba(155,120,232,0.50)',
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: 18,
-  },
-  doneTitle: { fontSize: 22, fontFamily: 'Satoshi-Bold', color: '#F0ECFF', marginBottom: 8 },
-  doneSub:   { fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,185,255,0.55)' },
+  fieldLabel: { color: 'rgba(205,190,255,0.48)', fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
+  input: { color: '#F5F0FF', backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(200,185,255,0.12)', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Satoshi-Regular' },
+  moodRow: { gap: 8, paddingRight: 10 },
+  moodPill: { borderRadius: 18, borderWidth: 1, borderColor: 'rgba(200,185,255,0.14)', backgroundColor: 'rgba(255,255,255,0.035)', paddingHorizontal: 12, paddingVertical: 7 },
+  moodText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  doneRing: { width: 80, height: 80, borderRadius: 40, borderWidth: 2, borderColor: 'rgba(155,120,232,0.50)', alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
+  doneTitle: { color: '#F0ECFF', fontSize: 22, fontFamily: 'Satoshi-Bold' },
+  doneSub: { color: 'rgba(200,185,255,0.55)', fontSize: 13, fontFamily: 'Satoshi-Regular', marginTop: 8 },
 });

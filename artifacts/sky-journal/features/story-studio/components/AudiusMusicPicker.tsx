@@ -142,6 +142,7 @@ export function AudiusTrackPlayer({
       accessibilityRole="button"
       accessibilityLabel={isPlaying ? `Pause ${track.title}` : `Preview ${track.title}`}
       activeOpacity={0.78}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       <Icon name={isPlaying ? 'pause' : 'play'} size={compact ? 13 : 15} color="#FFF" />
     </TouchableOpacity>
@@ -229,18 +230,18 @@ export function AudiusMusicPicker({
           </View>
           <View style={styles.selectedActions}>
             <AudiusTrackPlayer track={value} compact preview={{ playingId, toggle }} />
-            <TouchableOpacity onPress={() => setVisible(true)} style={styles.actionPill} activeOpacity={0.78}>
+            <TouchableOpacity onPress={() => setVisible(true)} style={styles.actionPill} activeOpacity={0.78} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Icon name="refresh-cw" size={12} color="#EAC55E" />
               <Text style={styles.actionText}>Change</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => { void stop(); onChange(null); }} style={[styles.actionPill, styles.removePill]} activeOpacity={0.78}>
+            <TouchableOpacity onPress={() => { void stop(); onChange(null); }} style={[styles.actionPill, styles.removePill]} activeOpacity={0.78} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Icon name="trash-2" size={12} color="#D88B9A" />
               <Text style={[styles.actionText, { color: '#D88B9A' }]}>Remove</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : (
-        <TouchableOpacity style={styles.addCard} onPress={() => setVisible(true)} activeOpacity={0.82}>
+        <TouchableOpacity style={styles.addCard} onPress={() => setVisible(true)} activeOpacity={0.82} accessibilityRole="button" accessibilityLabel="Add story music">
           <View style={styles.musicIcon}>
             <Icon name="volume-2" size={24} color="#C89BFF" />
           </View>
@@ -260,7 +261,7 @@ export function AudiusMusicPicker({
         <View style={styles.modalBackdrop}>
           <View style={[styles.modal, { paddingTop: Math.max(insets.top, 18) }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={close} style={styles.backButton} activeOpacity={0.78}>
+              <TouchableOpacity onPress={close} style={styles.backButton} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel="Close music picker" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Icon name="arrow-left" size={18} color="#E8E0FF" />
               </TouchableOpacity>
               <View style={styles.modalTitleWrap}>
@@ -280,6 +281,7 @@ export function AudiusMusicPicker({
                 placeholderTextColor="rgba(215,201,255,0.42)"
                 style={styles.searchInput}
                 returnKeyType="search"
+                accessibilityLabel="Search music"
               />
             </View>
 
@@ -294,6 +296,9 @@ export function AudiusMusicPicker({
                   onPress={() => { setQuery(chip); void searchTracks(chip); }}
                   style={[styles.chip, query.toLowerCase() === chip.toLowerCase() && styles.chipActive]}
                   activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: query.toLowerCase() === chip.toLowerCase() }}
+                  hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                 >
                   <Text style={[styles.chipText, query.toLowerCase() === chip.toLowerCase() && styles.chipTextActive]}>{chip}</Text>
                 </TouchableOpacity>
@@ -306,7 +311,7 @@ export function AudiusMusicPicker({
               <View style={styles.emptyState}>
                 <Icon name="alert-circle" size={22} color="#D88B9A" />
                 <Text style={styles.emptyTitle}>{error}</Text>
-                <TouchableOpacity onPress={() => void searchTracks(query)} style={styles.retryButton}><Text style={styles.retryText}>Try again</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => void searchTracks(query)} style={styles.retryButton} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={styles.retryText}>Try again</Text></TouchableOpacity>
               </View>
             ) : tracks.length === 0 ? (
               <View style={styles.emptyState}>
@@ -340,7 +345,7 @@ export function AudiusMusicPicker({
                     </View>
                     <View style={styles.trackRight}>
                       <Text style={styles.duration}>{formatDuration(track.duration)}</Text>
-                      <TouchableOpacity onPress={() => choose(track)} style={styles.useButton} activeOpacity={0.8}>
+                      <TouchableOpacity onPress={() => choose(track)} style={styles.useButton} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Use track ${track.title}`} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                         <Text style={styles.useButtonText}>Use this track</Text>
                       </TouchableOpacity>
                     </View>
