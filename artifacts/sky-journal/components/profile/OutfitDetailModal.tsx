@@ -163,6 +163,7 @@ export function OutfitDetailModal({
                           outfitImage:  outfit.imageUri ?? '',
                           outfitTags:   JSON.stringify(outfit.tags ?? []),
                           outfitDate:   outfit.date ?? '',
+                          outfitMusic:  outfit.music ? JSON.stringify(outfit.music) : '',
                           authorUserId: user?.id ?? '',
                           authorName:   character.name ?? '',
                           authorHandle: character.username ?? '',

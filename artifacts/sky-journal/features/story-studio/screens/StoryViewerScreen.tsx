@@ -766,7 +766,7 @@ export default function StoryScreen() {
             </View>
             {!!(story?.music ?? post?.music) && (
               <View style={styles.musicBar}>
-                <AudiusTrackPlayer track={(story?.music ?? post?.music)!} compact />
+                <AudiusTrackPlayer track={(story?.music ?? post?.music)!} compact autoPlay />
                 <View style={styles.musicBarCopy}>
                   <Text style={styles.musicBarLabel}>NOW PLAYING · AUDIUS</Text>
                   <Text style={styles.musicBarTitle} numberOfLines={1}>{(story?.music ?? post?.music)!.title}</Text>

@@ -127,14 +127,26 @@ export function AudiusTrackPlayer({
   track,
   compact = false,
   preview,
+  autoPlay = false,
 }: {
   track: AudiusTrack;
   compact?: boolean;
   preview?: PreviewController;
+  autoPlay?: boolean;
 }) {
   const localPreview = useAudiusPreview();
   const { playingId, toggle } = preview ?? localPreview;
   const isPlaying = playingId === track.id;
+  const autoPlayedTrackRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    // Story readers pass autoPlay without a shared preview controller. Picker
+    // rows pass `preview`, so opening the picker never starts a track by itself.
+    if (!autoPlay || preview || autoPlayedTrackRef.current === track.id) return;
+    autoPlayedTrackRef.current = track.id;
+    void toggle(track);
+  }, [autoPlay, preview, toggle, track]);
+
   return (
     <TouchableOpacity
       onPress={() => { void toggle(track); }}
