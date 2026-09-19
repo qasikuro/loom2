@@ -35,4 +35,5 @@ export * from "./shopResponse";
 export * from "./shopResponseActiveCosmetics";
 export * from "./story";
 export * from "./storyInput";
+export * from "./storyMusic";
 export * from "./storyPanel";

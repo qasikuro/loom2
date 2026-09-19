@@ -488,6 +488,33 @@ components:
           nullable: true
       required: [id, text]
 
+    StoryMusic:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        artist:
+          type: string
+        artworkUrl:
+          type: string
+          nullable: true
+        duration:
+          type: integer
+          minimum: 1
+          maximum: 75
+        genre:
+          type: string
+          nullable: true
+        mood:
+          type: string
+          nullable: true
+        streamUrl:
+          type: string
+          format: uri
+      required: [id, title, artist, artworkUrl, duration, genre, mood, streamUrl]
+
     Story:
       type: object
       properties:
@@ -508,6 +535,9 @@ components:
           type: string
         isPublic:
           type: boolean
+        music:
+          $ref: "#/components/schemas/StoryMusic"
+          nullable: true
         witnessedCount:
           type: integer
         savedCount:
@@ -540,6 +570,9 @@ components:
           type: string
         isPublic:
           type: boolean
+        music:
+          $ref: "#/components/schemas/StoryMusic"
+          nullable: true
       required: [date, chapterTitle, panels, mood, location, isPublic]
 
     JournalEntry:
@@ -611,6 +644,9 @@ components:
           type: array
           items:
             type: string
+        music:
+          $ref: "#/components/schemas/StoryMusic"
+          nullable: true
         isPublic:
           type: boolean
         createdAt:
@@ -638,6 +674,9 @@ components:
           type: array
           items:
             type: string
+        music:
+          $ref: "#/components/schemas/StoryMusic"
+          nullable: true
         isPublic:
           type: boolean
       required: [date, name, description, tags, isPublic]

@@ -199,7 +199,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
     // Fetch active outfit data if one is set
     let activeOutfit: null | {
       id: string; name: string; description: string; story: string;
-      imageUri: string | null; tags: string[];
+      imageUri: string | null; tags: string[]; music: typeof outfitsTable.$inferSelect.music;
     } = null;
 
     if (char.activeOutfitId) {
@@ -211,6 +211,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
           story:       outfitsTable.story,
           imageUri:    outfitsTable.imageUri,
           tags:        outfitsTable.tags,
+          music:       outfitsTable.music,
           isPublic:    outfitsTable.isPublic,
         })
         .from(outfitsTable)
@@ -231,6 +232,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
           story:       outfitRow.story ?? '',
           imageUri:    safeDiscoverUri(outfitRow.imageUri),
           tags:        Array.isArray(outfitRow.tags) ? outfitRow.tags : [],
+          music:       outfitRow.music ?? null,
         };
       }
     }
@@ -388,6 +390,7 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
         story:       outfitsTable.story,
         imageUri:    outfitsTable.imageUri,
         tags:        outfitsTable.tags,
+        music:       outfitsTable.music,
         date:        outfitsTable.date,
       })
       .from(outfitsTable)
@@ -414,6 +417,7 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
       story:       r.story ?? '',
       imageUri:    safeImageUri(r.imageUri),
       tags:        r.tags,
+      music:       r.music ?? null,
       date:        r.date.toISOString(),
     })));
   } catch (err) {

@@ -23,6 +23,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { registerNativeSound, unregisterNativeSound } from '@/utils/soundRegistry';
 
 const MOOD_COLORS: Record<string, string> = {
   Peaceful:    '#8B7AB5',
@@ -80,6 +81,7 @@ interface SlimOutfit {
   imageUri:    string;
   tags:        string[];
   date:        string;
+  music?:      import('@/context/mappers').StoryMusic | null;
 }
 
 function extractVibe(tags: string[]): string | null {
@@ -122,6 +124,7 @@ export default function UserOutfitScreen() {
     authorMood:     string;
     authorTraits:   string;
     allOutfitsJson: string;
+    outfitMusic:    string;
     initialIndex:   string;
   }>();
 
@@ -137,6 +140,7 @@ export default function UserOutfitScreen() {
       imageUri:    params.outfitImage ?? '',
       tags:        params.outfitTags  ? (JSON.parse(params.outfitTags) as string[]) : [],
       date:        params.outfitDate  ?? '',
+      music:       params.outfitMusic ? JSON.parse(params.outfitMusic) : null,
     }];
   })();
 
@@ -144,6 +148,7 @@ export default function UserOutfitScreen() {
     const i = parseInt(params.initialIndex ?? '0', 10);
     return isNaN(i) ? 0 : Math.max(0, Math.min(i, allOutfits.length - 1));
   });
+  const outfit = allOutfits[currentIdx] ?? allOutfits[0];
 
   // ── Scroll / entry animations ────────────────────────────────────────────
   const scrollY       = useRef(new Animated.Value(0)).current;
@@ -173,8 +178,88 @@ export default function UserOutfitScreen() {
   const [appreciated, setAppreciated]       = useState(false);
   const [previewVibe, setPreviewVibe]       = useState<string | null>(null);
   const [vibePickerOpen, setVibePickerOpen] = useState(false);
+  const [musicMuted, setMusicMuted] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [musicRetry, setMusicRetry] = useState(0);
+  const musicRef = useRef<any>(null);
+  const webAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioGeneration = useRef(0);
 
-  const outfit     = allOutfits[currentIdx] ?? allOutfits[0];
+  useEffect(() => {
+    const generation = ++audioGeneration.current;
+    let cancelled = false;
+    const track = outfit?.music;
+    if (!track?.streamUrl) return () => { cancelled = true; };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const audio = new window.Audio(track.streamUrl);
+      audio.loop = true;
+      audio.volume = 0.5;
+      audio.muted = musicMuted;
+      webAudioRef.current = audio;
+      const markPlaying = () => {
+        if (!cancelled && generation === audioGeneration.current) setMusicPlaying(true);
+      };
+      const markPaused = () => {
+        if (!cancelled && generation === audioGeneration.current) setMusicPlaying(false);
+      };
+      audio.addEventListener('playing', markPlaying);
+      audio.addEventListener('pause', markPaused);
+      audio.play().then(markPlaying).catch(() => markPaused());
+      return () => {
+        cancelled = true;
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+        audio.removeEventListener('playing', markPlaying);
+        audio.removeEventListener('pause', markPaused);
+        if (webAudioRef.current === audio) webAudioRef.current = null;
+        setMusicPlaying(false);
+      };
+    }
+
+    const start = async () => {
+      try {
+        const { Audio } = await import('expo-av');
+        const result = await Audio.Sound.createAsync(
+          { uri: track.streamUrl },
+          { shouldPlay: true, isLooping: true, volume: 0.5, isMuted: musicMuted },
+        );
+        if (cancelled || generation !== audioGeneration.current) {
+          await result.sound.unloadAsync().catch(() => null);
+          return;
+        }
+        musicRef.current = result.sound;
+        registerNativeSound(result.sound);
+        result.sound.setOnPlaybackStatusUpdate((status: any) => {
+          if (cancelled || generation !== audioGeneration.current) return;
+          if (status.isLoaded) setMusicPlaying(status.isPlaying);
+          else if (status.error) setMusicPlaying(false);
+        });
+      } catch {
+        // Autoplay can be blocked by the platform; the manual control remains available.
+        setMusicPlaying(false);
+      }
+    };
+    void start();
+    return () => {
+      cancelled = true;
+      const sound = musicRef.current;
+      musicRef.current = null;
+      if (sound) {
+        unregisterNativeSound(sound);
+        void sound.stopAsync().catch(() => null);
+        void sound.unloadAsync().catch(() => null);
+      }
+      setMusicPlaying(false);
+    };
+  }, [currentIdx, musicRetry, outfit?.music?.streamUrl]);
+
+  useEffect(() => {
+    if (musicRef.current) void musicRef.current.setIsMutedAsync(musicMuted).catch(() => null);
+    if (webAudioRef.current) webAudioRef.current.muted = musicMuted;
+  }, [musicMuted]);
+
   const vibe       = extractVibe(outfit?.tags ?? []);
   const activeVibe = previewVibe ?? vibe;
   const vibeInfo   = activeVibe ? (VIBE_DEFS[activeVibe] ?? VIBE_LABELS[activeVibe] ?? null) : null;
@@ -415,6 +500,40 @@ export default function UserOutfitScreen() {
               />
             )}
           </Animated.View>
+          {!!outfit?.music && (
+            <Animated.View style={[styles.musicPill, { top: topPad + 62, opacity: heroFade }]}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (!musicPlaying) {
+                    if (Platform.OS === 'web') {
+                      const audio = webAudioRef.current;
+                      if (audio) {
+                        audio.muted = false;
+                        audio.play().then(() => setMusicPlaying(true)).catch(() => setMusicPlaying(false));
+                        setMusicMuted(false);
+                      }
+                    } else {
+                      setMusicMuted(false);
+                      setMusicRetry(value => value + 1);
+                    }
+                  } else {
+                    setMusicMuted(value => {
+                      const next = !value;
+                      if (Platform.OS === 'web' && webAudioRef.current) webAudioRef.current.muted = next;
+                      return next;
+                    });
+                  }
+                }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={!musicPlaying ? 'Play outfit music' : musicMuted ? 'Unmute outfit music' : 'Mute outfit music'}
+              >
+                <Icon name={!musicPlaying || musicMuted ? 'volume-x' : 'volume-2'} size={13} color="#FFF" />
+                <Text style={styles.musicText} numberOfLines={1}>{!musicPlaying ? 'Play music' : musicMuted ? 'Unmute' : outfit.music.title}</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          )}
 
           {/* ── Ambient color pulse glow ── */}
           <Animated.View
@@ -833,6 +952,16 @@ const styles = StyleSheet.create({
   liveText: {
     fontSize: 11, fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.5,
+  },
+  musicPill: {
+    position: 'absolute', left: 16,
+    backgroundColor: 'rgba(8,6,15,0.58)',
+    borderRadius: 20, paddingHorizontal: 11, paddingVertical: 7,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
+    maxWidth: '68%',
+  },
+  musicText: {
+    color: '#FFF', fontSize: 11, fontFamily: 'Satoshi-Bold',
   },
 
   // ── Vibe badge ──────────────────────────────────────────────────────────

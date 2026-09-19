@@ -5,6 +5,7 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+import type { StoryMusic } from "./storyMusic";
 
 export interface OutfitInput {
   id?: string | null;
@@ -13,5 +14,6 @@ export interface OutfitInput {
   description: string;
   imageUri?: string | null;
   tags: string[];
+  music?: StoryMusic | null;
   isPublic: boolean;
 }

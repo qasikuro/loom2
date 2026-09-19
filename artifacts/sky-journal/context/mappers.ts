@@ -142,6 +142,7 @@ export interface Outfit {
   imageUri?:   string;
   tags:        string[];
   isPublic:    boolean;
+  music?:      StoryMusic | null;
 }
 
 export interface DiscoverPost {
@@ -279,6 +280,7 @@ export interface RawOutfitResponse {
   tags?:        unknown;
   isPublic?:    boolean;
   is_public?:   boolean;
+  music?:       StoryMusic | null;
 }
 
 export interface RawDiscoverApiItem {
@@ -459,6 +461,7 @@ export function toAppOutfit(raw: RawOutfitResponse, apiBase?: string): Outfit {
     imageUri:    resolveUri(raw.imageUri ?? raw.image_uri, apiBase),
     tags:        Array.isArray(raw.tags) ? raw.tags : [],
     isPublic:    raw.isPublic ?? raw.is_public ?? false,
+    music:       raw.music ?? null,
   };
 }
 

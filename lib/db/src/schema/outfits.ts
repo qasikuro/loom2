@@ -1,4 +1,5 @@
 import { boolean, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import type { StoryMusic } from "./stories";
 
 export const outfitsTable = pgTable("outfits", {
   id:          uuid("id").primaryKey().defaultRandom(),
@@ -8,6 +9,7 @@ export const outfitsTable = pgTable("outfits", {
   story:       text("story").notNull().default(""),
   imageUri:    text("image_uri"),
   tags:        jsonb("tags").$type<string[]>().notNull().default([]),
+  music:       jsonb("music").$type<StoryMusic | null>(),
   isPublic:    boolean("is_public").notNull().default(false),
   isHidden:    boolean("is_hidden").notNull().default(false),
   date:        timestamp("date", { withTimezone: true }).notNull(),

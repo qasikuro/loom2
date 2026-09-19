@@ -61,6 +61,21 @@ export interface StoryPanel {
   imageUri?: string | null;
 }
 
+export interface StoryMusic {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string | null;
+  /**
+   * @minimum 1
+   * @maximum 75
+   */
+  duration: number;
+  genre: string | null;
+  mood: string | null;
+  streamUrl: string;
+}
+
 export interface Story {
   id: string;
   date: string;
@@ -69,6 +84,7 @@ export interface Story {
   mood: string;
   location: string;
   isPublic: boolean;
+  music?: StoryMusic | null;
   witnessedCount: number;
   savedCount: number;
   stickerCount: number;
@@ -83,6 +99,7 @@ export interface StoryInput {
   mood: string;
   location: string;
   isPublic: boolean;
+  music?: StoryMusic | null;
 }
 
 export type JournalEntryType =
@@ -131,6 +148,7 @@ export interface Outfit {
   description: string;
   imageUri?: string | null;
   tags: string[];
+  music?: StoryMusic | null;
   isPublic: boolean;
   createdAt: string;
 }
@@ -142,6 +160,7 @@ export interface OutfitInput {
   description: string;
   imageUri?: string | null;
   tags: string[];
+  music?: StoryMusic | null;
   isPublic: boolean;
 }
 

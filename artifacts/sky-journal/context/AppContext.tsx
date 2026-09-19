@@ -1690,6 +1690,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       imageUri:    safeImageUri,
       tags:        safeOutfit.tags,
       isPublic:    safeOutfit.isPublic,
+      music:       safeOutfit.music ?? null,
     });
     apiFetch('/outfits', { method: 'POST', body: outfitBody })
     .then(() => {

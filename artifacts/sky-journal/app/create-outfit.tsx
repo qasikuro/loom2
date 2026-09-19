@@ -29,6 +29,8 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { SkyLoadingMark } from '@/components/SkyLoading';
+import { AudiusMusicPicker } from '@/features/story-studio/components/AudiusMusicPicker';
+import type { StoryMusic } from '@/context/mappers';
 
 const VIBE_TAGS = [
   { label: 'Casual',    color: '#78A8C8' },
@@ -70,6 +72,7 @@ export default function CreateOutfitScreen() {
     editImageUri?:    string;
     editTags?:        string;
     editIsPublic?:    string;
+    editMusic?:       string;
   }>();
 
   const editId = params.editId;
@@ -97,6 +100,10 @@ export default function CreateOutfitScreen() {
     catch { return null; }
   });
   const [isPublic, setIsPublic]       = useState(params.editIsPublic !== 'false');
+  const [music, setMusic] = useState<StoryMusic | null>(() => {
+    try { return params.editMusic ? JSON.parse(params.editMusic) as StoryMusic : null; }
+    catch { return null; }
+  });
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState<string | null>(null);
   const [showSheet, setShowSheet]     = useState(false);
@@ -129,6 +136,10 @@ export default function CreateOutfitScreen() {
       } catch { return null; }
     })(),
     isPublic:     params.editIsPublic !== 'false',
+    music: (() => {
+      try { return params.editMusic ? JSON.stringify(JSON.parse(params.editMusic)) : ''; }
+      catch { return ''; }
+    })(),
   }));
 
   const isDirty =
@@ -138,7 +149,8 @@ export default function CreateOutfitScreen() {
     imageUri    !== initBaseline.imageUri     ||
     selectedTags.slice().sort().join(',') !== initBaseline.tags ||
     selectedVibe !== initBaseline.vibe        ||
-    isPublic    !== initBaseline.isPublic;
+    isPublic    !== initBaseline.isPublic ||
+    JSON.stringify(music) !== initBaseline.music;
 
   const markSaved = useNavigationGuard(isDirty);
 
@@ -155,6 +167,8 @@ export default function CreateOutfitScreen() {
         setSelectedVibe(vt ? vt.slice(5) : null);
       } catch { setSelectedTags([]); setSelectedVibe(null); }
       setIsPublic(params.editIsPublic !== 'false');
+      try { setMusic(params.editMusic ? JSON.parse(params.editMusic) as StoryMusic : null); }
+      catch { setMusic(null); }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
@@ -241,6 +255,7 @@ export default function CreateOutfitScreen() {
         imageUri,
         tags:        allTags,
         isPublic,
+        music,
       });
     } else {
       addOutfit({
@@ -252,6 +267,7 @@ export default function CreateOutfitScreen() {
         imageUri,
         tags:        allTags,
         isPublic,
+        music,
       });
     }
     setSaving(false);
@@ -394,6 +410,12 @@ export default function CreateOutfitScreen() {
                 );
               })}
             </View>
+          </View>
+
+          {/* Vibe Animation */}
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Outfit Music</Text>
+            <AudiusMusicPicker value={music} mood={selectedVibe ?? undefined} onChange={setMusic} />
           </View>
 
           {/* Vibe Animation */}

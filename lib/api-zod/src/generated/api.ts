@@ -110,6 +110,8 @@ export const DeleteJournalEntryParams = zod.object({
 /**
  * @summary List all stories newest first
  */
+export const listStoriesResponseMusicDurationMax = 75;
+
 export const ListStoriesResponseItem = zod.object({
   id: zod.string(),
   date: zod.coerce.date(),
@@ -124,6 +126,18 @@ export const ListStoriesResponseItem = zod.object({
   mood: zod.string(),
   location: zod.string(),
   isPublic: zod.boolean(),
+  music: zod
+    .object({
+      id: zod.string(),
+      title: zod.string(),
+      artist: zod.string(),
+      artworkUrl: zod.string().nullable(),
+      duration: zod.number().min(1).max(listStoriesResponseMusicDurationMax),
+      genre: zod.string().nullable(),
+      mood: zod.string().nullable(),
+      streamUrl: zod.string().url(),
+    })
+    .nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
   stickerCount: zod.number(),
@@ -134,6 +148,8 @@ export const ListStoriesResponse = zod.array(ListStoriesResponseItem);
 /**
  * @summary Create a new story
  */
+export const createStoryBodyMusicDurationMax = 75;
+
 export const CreateStoryBody = zod.object({
   id: zod.string().nullish(),
   date: zod.coerce.date(),
@@ -148,6 +164,18 @@ export const CreateStoryBody = zod.object({
   mood: zod.string(),
   location: zod.string(),
   isPublic: zod.boolean(),
+  music: zod
+    .object({
+      id: zod.string(),
+      title: zod.string(),
+      artist: zod.string(),
+      artworkUrl: zod.string().nullable(),
+      duration: zod.number().min(1).max(createStoryBodyMusicDurationMax),
+      genre: zod.string().nullable(),
+      mood: zod.string().nullable(),
+      streamUrl: zod.string().url(),
+    })
+    .nullish(),
 });
 
 /**
@@ -156,6 +184,8 @@ export const CreateStoryBody = zod.object({
 export const GetStoryParams = zod.object({
   id: zod.coerce.string(),
 });
+
+export const getStoryResponseMusicDurationMax = 75;
 
 export const GetStoryResponse = zod.object({
   id: zod.string(),
@@ -171,6 +201,18 @@ export const GetStoryResponse = zod.object({
   mood: zod.string(),
   location: zod.string(),
   isPublic: zod.boolean(),
+  music: zod
+    .object({
+      id: zod.string(),
+      title: zod.string(),
+      artist: zod.string(),
+      artworkUrl: zod.string().nullable(),
+      duration: zod.number().min(1).max(getStoryResponseMusicDurationMax),
+      genre: zod.string().nullable(),
+      mood: zod.string().nullable(),
+      streamUrl: zod.string().url(),
+    })
+    .nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
   stickerCount: zod.number(),
@@ -191,6 +233,8 @@ export const WitnessStoryParams = zod.object({
   id: zod.coerce.string(),
 });
 
+export const witnessStoryResponseMusicDurationMax = 75;
+
 export const WitnessStoryResponse = zod.object({
   id: zod.string(),
   date: zod.coerce.date(),
@@ -205,6 +249,18 @@ export const WitnessStoryResponse = zod.object({
   mood: zod.string(),
   location: zod.string(),
   isPublic: zod.boolean(),
+  music: zod
+    .object({
+      id: zod.string(),
+      title: zod.string(),
+      artist: zod.string(),
+      artworkUrl: zod.string().nullable(),
+      duration: zod.number().min(1).max(witnessStoryResponseMusicDurationMax),
+      genre: zod.string().nullable(),
+      mood: zod.string().nullable(),
+      streamUrl: zod.string().url(),
+    })
+    .nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
   stickerCount: zod.number(),
@@ -214,6 +270,8 @@ export const WitnessStoryResponse = zod.object({
 /**
  * @summary List all outfit logs newest first
  */
+export const listOutfitsResponseMusicDurationMax = 75;
+
 export const ListOutfitsResponseItem = zod.object({
   id: zod.string(),
   date: zod.coerce.date(),
@@ -221,6 +279,18 @@ export const ListOutfitsResponseItem = zod.object({
   description: zod.string(),
   imageUri: zod.string().nullish(),
   tags: zod.array(zod.string()),
+  music: zod
+    .object({
+      id: zod.string(),
+      title: zod.string(),
+      artist: zod.string(),
+      artworkUrl: zod.string().nullable(),
+      duration: zod.number().min(1).max(listOutfitsResponseMusicDurationMax),
+      genre: zod.string().nullable(),
+      mood: zod.string().nullable(),
+      streamUrl: zod.string().url(),
+    })
+    .nullish(),
   isPublic: zod.boolean(),
   createdAt: zod.coerce.date(),
 });
@@ -229,6 +299,8 @@ export const ListOutfitsResponse = zod.array(ListOutfitsResponseItem);
 /**
  * @summary Create an outfit log
  */
+export const createOutfitBodyMusicDurationMax = 75;
+
 export const CreateOutfitBody = zod.object({
   id: zod.string().nullish(),
   date: zod.coerce.date(),
@@ -236,6 +308,18 @@ export const CreateOutfitBody = zod.object({
   description: zod.string(),
   imageUri: zod.string().nullish(),
   tags: zod.array(zod.string()),
+  music: zod
+    .object({
+      id: zod.string(),
+      title: zod.string(),
+      artist: zod.string(),
+      artworkUrl: zod.string().nullable(),
+      duration: zod.number().min(1).max(createOutfitBodyMusicDurationMax),
+      genre: zod.string().nullable(),
+      mood: zod.string().nullable(),
+      streamUrl: zod.string().url(),
+    })
+    .nullish(),
   isPublic: zod.boolean(),
 });
 

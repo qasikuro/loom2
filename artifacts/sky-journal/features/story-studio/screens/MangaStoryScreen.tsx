@@ -24,6 +24,8 @@ import { safeBack } from '@/utils/navigation';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import { apiFetch, ApiError, resolveUri, useApp } from '@/context/AppContext';
+import { AudiusMusicPicker } from '@/features/story-studio/components/AudiusMusicPicker';
+import type { StoryMusic } from '@/context/mappers';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
 import { ReportSheet } from '@/components/ReportSheet';
 import { SkyLoadingMark } from '@/components/SkyLoading';
@@ -65,6 +67,7 @@ export default function MangaStoryScreen() {
   const [images, setImages] = useState<string[]>([]);
   const [prompt, setPrompt] = useState(DEFAULT_PROMPT);
   const [style, setStyle] = useState<MangaStyle>('chibi');
+  const [music, setMusic] = useState<StoryMusic | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
@@ -283,6 +286,7 @@ export default function MangaStoryScreen() {
       stickerCount: 0,
       pageLayoutKey: '1',
       pages: [{ id: `${id}_page`, layoutKey: '1', panels: [panel] }],
+      music,
     };
   }
 
@@ -315,7 +319,7 @@ export default function MangaStoryScreen() {
       try {
         await apiFetch(`/stories/${savedStoryId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ isPublic: true }),
+          body: JSON.stringify({ isPublic: true, music }),
         });
         await reloadData();
         setPosted(true);
@@ -492,7 +496,11 @@ export default function MangaStoryScreen() {
             </ScrollView>
           </SectionCard>
 
-          <SectionCard icon="image" title="4. Your Manga Page">
+          <SectionCard icon="volume-2" title="4. Add Music" optional="(Optional)">
+            <AudiusMusicPicker value={music} mood="Creative" onChange={setMusic} />
+          </SectionCard>
+
+          <SectionCard icon="image" title="5. Your Manga Page">
             <View style={[s.result, generated && s.resultReady]}>
               {generating ? (
                 <View style={s.resultEmpty}>

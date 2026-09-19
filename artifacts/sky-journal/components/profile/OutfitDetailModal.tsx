@@ -259,6 +259,7 @@ export function OutfitDetailModal({
                           editImageUri:    outfit.imageUri ?? '',
                           editTags:        JSON.stringify(outfit.tags ?? []),
                           editIsPublic:    outfit.isPublic ? 'true' : 'false',
+                          editMusic:       outfit.music ? JSON.stringify(outfit.music) : '',
                         },
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       } as any);

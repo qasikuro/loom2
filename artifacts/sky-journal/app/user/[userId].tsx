@@ -559,6 +559,7 @@ interface ActiveOutfit {
   story:       string;
   imageUri:    string | null;
   tags:        string[];
+  music?:      import('@/context/mappers').StoryMusic | null;
 }
 
 interface PublicProfile {
@@ -608,6 +609,7 @@ interface PublicOutfit {
   story:       string;
   imageUri:    string | null;
   tags:        string[];
+  music?:      import('@/context/mappers').StoryMusic | null;
   date:        string;
 }
 
@@ -1198,6 +1200,7 @@ export default function UserProfileScreen() {
                     outfitStory:    profile.activeOutfit!.story ?? '',
                     outfitImage:    profile.activeOutfit!.imageUri ?? '',
                     outfitTags:     JSON.stringify(profile.activeOutfit!.tags),
+                    outfitMusic:    profile.activeOutfit!.music ? JSON.stringify(profile.activeOutfit!.music) : '',
                     outfitDate:     '',
                     authorUserId:   profile.userId,
                     authorName:     profile.name,
@@ -1206,8 +1209,8 @@ export default function UserProfileScreen() {
                     authorMood:     profile.mood ?? '',
                     authorTraits:   JSON.stringify(profile.traits),
                     allOutfitsJson: JSON.stringify([
-                      { name: profile.activeOutfit!.name, description: profile.activeOutfit!.description ?? '', story: profile.activeOutfit!.story ?? '', imageUri: profile.activeOutfit!.imageUri ?? '', tags: profile.activeOutfit!.tags, date: '' },
-                      ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, date: o.date })),
+                      { name: profile.activeOutfit!.name, description: profile.activeOutfit!.description ?? '', story: profile.activeOutfit!.story ?? '', imageUri: profile.activeOutfit!.imageUri ?? '', tags: profile.activeOutfit!.tags, music: profile.activeOutfit!.music ?? null, date: '' },
+                      ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
                     ]),
                     initialIndex:   '0',
                   },
@@ -1298,8 +1301,8 @@ export default function UserProfileScreen() {
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       const _allList = [
-                        ...(profile.activeOutfit ? [{ name: profile.activeOutfit.name, description: profile.activeOutfit.description ?? '', story: profile.activeOutfit.story ?? '', imageUri: profile.activeOutfit.imageUri ?? '', tags: profile.activeOutfit.tags, date: '' }] : []),
-                        ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, date: o.date })),
+                         ...(profile.activeOutfit ? [{ name: profile.activeOutfit.name, description: profile.activeOutfit.description ?? '', story: profile.activeOutfit.story ?? '', imageUri: profile.activeOutfit.imageUri ?? '', tags: profile.activeOutfit.tags, music: profile.activeOutfit.music ?? null, date: '' }] : []),
+                         ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
                       ];
                       router.push({
                         pathname: '/user-outfit',
@@ -1309,6 +1312,7 @@ export default function UserProfileScreen() {
                           outfitStory:    outfit.story ?? '',
                           outfitImage:    outfit.imageUri ?? '',
                           outfitTags:     JSON.stringify(outfit.tags),
+                           outfitMusic:    outfit.music ? JSON.stringify(outfit.music) : '',
                           outfitDate:     outfit.date,
                           authorUserId:   profile.userId,
                           authorName:     profile.name,

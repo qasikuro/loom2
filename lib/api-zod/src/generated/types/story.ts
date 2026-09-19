@@ -5,6 +5,7 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+import type { StoryMusic } from "./storyMusic";
 import type { StoryPanel } from "./storyPanel";
 
 export interface Story {
@@ -15,6 +16,7 @@ export interface Story {
   mood: string;
   location: string;
   isPublic: boolean;
+  music?: StoryMusic | null;
   witnessedCount: number;
   savedCount: number;
   stickerCount: number;

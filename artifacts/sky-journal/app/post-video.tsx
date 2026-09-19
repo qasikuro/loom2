@@ -27,6 +27,8 @@ import * as Haptics from 'expo-haptics';
 
 import { Icon } from '@/components/Icon';
 import { apiFetch } from '@/context/AppContext';
+import type { StoryMusic } from '@/context/mappers';
+import { AudiusMusicPicker, type AudiusTrack } from '@/features/story-studio/components/AudiusMusicPicker';
 import { persistImageUri, persistVideoUri, ImageUploadError } from '@/utils/persistImage';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 
@@ -60,6 +62,7 @@ export default function PostVideoScreen() {
   const [thumbUri,     setThumbUri]      = useState<string | null>(null);
   const [title,        setTitle]         = useState('');
   const [mood,         setMood]          = useState(MOODS[0].label);
+  const [music,        setMusic]         = useState<StoryMusic | null>(null);
   const [progress,     setProgress]      = useState('');
   const [error,        setError]         = useState<string | null>(null);
 
@@ -179,6 +182,7 @@ export default function PostVideoScreen() {
           contentType:  'video',
           videoUri:     uploadedVideoUri,
           thumbnailUri: uploadedThumbUri,
+          music,
         }),
       });
 
@@ -311,6 +315,16 @@ export default function PostVideoScreen() {
                 );
               })}
             </ScrollView>
+          </View>
+
+          {/* Optional soundtrack */}
+          <View style={s.fieldWrap}>
+            <Text style={s.fieldLabel}>Soundtrack</Text>
+            <AudiusMusicPicker
+              value={music as AudiusTrack | null}
+              mood={mood}
+              onChange={track => setMusic(track)}
+            />
           </View>
 
           {/* Post button */}

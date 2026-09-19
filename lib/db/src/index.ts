@@ -253,6 +253,12 @@ export async function runStartupMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS music         JSONB
     `);
 
+    // ── Outfit music ─────────────────────────────────────────────────────────
+    await client.query(`
+      ALTER TABLE outfits
+        ADD COLUMN IF NOT EXISTS music JSONB
+    `);
+
     // ── Online presence ────────────────────────────────────────────────────────
     await client.query(`
       ALTER TABLE character

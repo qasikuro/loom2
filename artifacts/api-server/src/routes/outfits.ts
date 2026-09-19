@@ -14,6 +14,17 @@ function safeImageUri(uri: string | null | undefined): string | null {
 
 const router: IRouter = Router();
 
+const MusicSchema = z.object({
+  id:         z.string().min(1).max(100),
+  title:      z.string().min(1).max(300),
+  artist:     z.string().min(1).max(300),
+  artworkUrl: z.string().url().max(2000).nullable(),
+  duration:   z.number().int().min(1).max(75),
+  genre:      z.string().max(100).nullable(),
+  mood:       z.string().max(100).nullable(),
+  streamUrl:  z.string().url().max(2000),
+}).nullable().optional();
+
 const OutfitInputSchema = z.object({
   id:          z.string().uuid().optional().nullable(),
   date:        z.string(),
@@ -22,6 +33,7 @@ const OutfitInputSchema = z.object({
   story:       z.string().max(2000).default(""),
   imageUri:    z.string().nullable().optional(),
   tags:        z.array(z.string()).default([]),
+  music:       MusicSchema,
   isPublic:    z.boolean().default(false),
 });
 
@@ -132,6 +144,7 @@ router.patch("/outfits/:id", requireAuth, async (req, res) => {
     if ('story' in rawBody && rawBody.story  !== undefined) updateSet.story = String(rawBody.story ?? '');
     if ('imageUri' in parsed.data)             updateSet.imageUri    = safeImageUri(parsed.data.imageUri);
     if (parsed.data.tags        !== undefined) updateSet.tags        = parsed.data.tags;
+    if ('music' in rawBody)                   updateSet.music       = parsed.data.music ?? null;
     if (parsed.data.isPublic    !== undefined) updateSet.isPublic    = parsed.data.isPublic;
 
     const [updated] = await db
@@ -171,6 +184,7 @@ function serializeOutfit(row: typeof outfitsTable.$inferSelect) {
     imageUri:    row.imageUri ?? undefined,
     tags:        row.tags,
     isPublic:    row.isPublic,
+    music:       row.music ?? null,
     createdAt:   row.createdAt.toISOString(),
   };
 }
