@@ -528,6 +528,22 @@ describe('toRawDiscoverPost', () => {
     expect(result.panels![0].imageUri).toBe('https://cdn.example.com/p1.jpg');
   });
 
+  it('resolves relative video and thumbnail paths for native playback', () => {
+    const result = toRawDiscoverPost({
+      id: 'video-post',
+      authorUserId: 'user-42',
+      authorName: 'Luna',
+      chapterTitle: 'A moving moment',
+      contentType: 'video',
+      panels: [],
+      videoUri: '/api/videos/composed.mp4',
+      thumbnailUri: '/api/images/composed.jpg',
+    }, 'https://api.example.com/api');
+
+    expect(result.videoUri).toBe('https://api.example.com/api/videos/composed.mp4');
+    expect(result.thumbnailUri).toBe('https://api.example.com/api/images/composed.jpg');
+  });
+
   it('maps a minimal payload with safe defaults', () => {
     const result = toRawDiscoverPost({ id: 'post-1' });
     expect(result.id).toBe('post-1');

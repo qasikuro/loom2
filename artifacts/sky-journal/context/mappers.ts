@@ -510,8 +510,11 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     bookId:           raw.bookId,
     bookTitle:        raw.bookTitle,
     contentType:      (raw.contentType === 'video' ? 'video' : 'story') as 'story' | 'video',
-    videoUri:         raw.videoUri ?? null,
-    thumbnailUri:     raw.thumbnailUri ?? null,
+    // Video compositions are persisted as API-relative paths (for example
+    // /api/videos/<id>.mp4). Resolve them just like story images so native
+    // Expo playback receives an absolute URL outside the web proxy.
+    videoUri:          resolveUri(raw.videoUri ?? undefined, apiBase) ?? null,
+    thumbnailUri:      resolveUri(raw.thumbnailUri ?? undefined, apiBase) ?? null,
     music:            raw.music ?? null,
   };
 }
