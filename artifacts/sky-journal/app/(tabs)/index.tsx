@@ -2275,7 +2275,10 @@ export default function HomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  dashboardScroll: { flex: 1 },
+  // The native tab scene can resolve a flex-only ScrollView to the height of
+  // its first measured content block. Absolute fill keeps the viewport tied
+  // to the Home scene, so content after the Lumi card remains scrollable.
+  dashboardScroll: { ...StyleSheet.absoluteFillObject },
   dashboard: { flexGrow: 1, width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 18, gap: 5 },
   dashboardNarrow: { paddingHorizontal: 12, gap: 6 },
   dashboardHeader: {
