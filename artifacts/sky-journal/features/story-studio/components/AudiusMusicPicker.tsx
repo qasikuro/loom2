@@ -27,7 +27,7 @@ export type AudiusTrack = {
   streamUrl: string;
 };
 
-const MAX_MUSIC_DURATION_SECONDS = 75;
+const MAX_MUSIC_DURATION_SECONDS = 3600;
 
 type PlayerSound = {
   stopAsync: () => Promise<void>;
@@ -266,7 +266,7 @@ export function AudiusMusicPicker({
               </TouchableOpacity>
               <View style={styles.modalTitleWrap}>
                 <Text style={styles.modalTitle}>Choose your soundtrack</Text>
-                <Text style={styles.modalSubtitle}>Music sets the mood · Tracks up to 1:15</Text>
+                <Text style={styles.modalSubtitle}>Music sets the mood · Tracks up to 60:00</Text>
               </View>
               <Icon name="volume-2" size={22} color="#F0C95D" />
             </View>

@@ -68,10 +68,14 @@ export interface StoryMusic {
   mood: string | null;
   streamUrl: string;
   embedded?: boolean;
-  musicStartSeconds?: number;
-  durationSeconds?: number;
+  baked?: boolean;
+  segmentStartSeconds?: number;
+  segmentDurationSeconds?: number;
   originalVolume?: number;
   musicVolume?: number;
+  // Kept for older persisted stories created before the embedded-audio contract.
+  musicStartSeconds?: number;
+  durationSeconds?: number;
 }
 
 export interface Character {

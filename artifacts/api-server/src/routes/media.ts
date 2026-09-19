@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type IRouter, type Request, type Response as ExpressResponse } from "express";
 import multer from "multer";
 import { lookup } from "node:dns/promises";
 import { createWriteStream } from "node:fs";
@@ -11,7 +11,6 @@ import { readFile } from "node:fs/promises";
 import { isIP } from "node:net";
 import { z } from "zod";
 import { db, mediaCompositionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
 import { audiusStreamUrl } from "../services/audius";
@@ -196,7 +195,7 @@ router.post(
       return next();
     });
   },
-  async (req: Request, res: Response) => {
+  async (req: Request, res: ExpressResponse) => {
     const file = (req as Request & { file?: Express.Multer.File }).file;
     if (!file) return res.status(400).json({ error: "A video file is required." });
     if (!BUCKET_ID) {

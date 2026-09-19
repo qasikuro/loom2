@@ -172,8 +172,8 @@ export default function PostVideoScreen() {
         ? {
             ...editorValue.music,
             embedded: true,
-            musicStartSeconds: segment.startSeconds,
-            durationSeconds: segment.durationSeconds,
+            segmentStartSeconds: segment.startSeconds,
+            segmentDurationSeconds: segment.durationSeconds,
             originalVolume: editorValue.originalVolume,
             musicVolume: editorValue.musicVolume,
           }
@@ -187,8 +187,7 @@ export default function PostVideoScreen() {
           isPublic: true,
           panels: [],
           contentType: 'video',
-          videoUri: output.path,
-          thumbnailUri: output.thumbnailPath ?? output.path,
+          compositionId: output.compositionId,
           music: embeddedMusic,
         }),
       });

@@ -6,6 +6,7 @@ import type { StoryMusic } from '@/context/mappers';
 import { ImageUploadError } from '@/utils/persistImage';
 
 export type ComposeVideoResult = {
+  compositionId: string;
   path: string;
   thumbnailPath: string | null;
   duration: number;
@@ -38,19 +39,15 @@ function resolveApiBase(): string {
   return (extra?.apiUrl as string | undefined) ?? '/api';
 }
 
-function absolutePath(path: string): string {
-  if (/^https?:\/\//.test(path)) return path;
-  return `${resolveApiBase().replace(/\/api$/, '')}${path}`;
-}
-
 function normalizeResult(value: unknown): ComposeVideoResult {
   const result = (value ?? {}) as Partial<ComposeVideoResult>;
-  if (!result.path || typeof result.duration !== 'number') {
+  if (!result.compositionId || !result.path || typeof result.duration !== 'number') {
     throw new ImageUploadError('The video processor returned an unexpected response. Please try again.');
   }
   return {
-    path: absolutePath(result.path),
-    thumbnailPath: result.thumbnailPath ? absolutePath(result.thumbnailPath) : null,
+    compositionId: result.compositionId,
+    path: result.path,
+    thumbnailPath: result.thumbnailPath ?? null,
     duration: result.duration,
     width: result.width ?? 0,
     height: result.height ?? 0,
