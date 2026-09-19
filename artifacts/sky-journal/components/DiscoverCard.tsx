@@ -120,16 +120,19 @@ export function DiscoverCard({
               ) : (
                 <LinearGradient colors={gradient} style={styles.image} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
               )}
-              {/* Video overlaid; opacity 0 when paused so thumbnail shows through */}
-              <Video
-                source={{ uri: post.videoUri }}
-                shouldPlay={isVideoPlaying}
-                isLooping
-                isMuted={videoMuted}
-                resizeMode={ResizeMode.COVER}
-                style={[StyleSheet.absoluteFill, { opacity: isVideoPlaying ? 1 : 0 }]}
-                useNativeControls={false}
-              />
+              {/* Only mount the native player for the visible card. Keeping
+                  paused players mounted still allocates native decoders. */}
+              {isVideoPlaying && (
+                <Video
+                  source={{ uri: post.videoUri }}
+                  shouldPlay
+                  isLooping
+                  isMuted={videoMuted}
+                  resizeMode={ResizeMode.COVER}
+                  style={StyleSheet.absoluteFill}
+                  useNativeControls={false}
+                />
+              )}
               {/* Tap overlay to toggle mute — catches tap before outer Pressable */}
               <TouchableOpacity
                 style={StyleSheet.absoluteFill}

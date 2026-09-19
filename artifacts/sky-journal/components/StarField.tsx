@@ -87,7 +87,12 @@ interface StarFieldProps {
 }
 
 export function StarField({ density = 'medium', style }: StarFieldProps) {
-  const count = density === 'low' ? 22 : density === 'high' ? 54 : 38;
+  // Native dev builds already spend extra time on Metro/Hermes and Fast
+  // Refresh. Keep the ambient effect, but avoid dozens of independent
+  // animation loops competing with interactive screens during development.
+  const count = __DEV__
+    ? density === 'low' ? 10 : density === 'high' ? 26 : 18
+    : density === 'low' ? 22 : density === 'high' ? 54 : 38;
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.root, style]}>
       {STAR_DATA.slice(0, count).map((s, i) => <Twinkle key={i} s={s} />)}

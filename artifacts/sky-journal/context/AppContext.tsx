@@ -174,10 +174,6 @@ export async function apiFetch<T>(
   const token = await _getToken();
   const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-  if (__DEV__) {
-    console.info(`[apiFetch] base=${API_BASE} token=${token ? 'present' : 'NULL'} path=${path}`);
-  }
-
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: {
@@ -2047,30 +2043,54 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const contextValue = useMemo<AppContextValue>(() => ({
+    isLoading, apiOnline,
+    journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
+    hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
+    character, setCharacter,
+    stories, addStory, updateStory, deleteStory,
+    journalEntries, addJournalEntry, deleteJournalEntry,
+    outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
+    gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
+    discoverPosts, savedStoryIds, toggleSavePost,
+    friends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
+    rewards, dismissReward, showRewardToast,
+    rewardBalance, constellation, reloadRewards, reloadConstellation,
+    shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
+    serverNotifications, markServerNotificationsRead, deleteServerNotification,
+    campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
+    dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
+    discoverMoodFilter, setDiscoverMoodFilter,
+    reloadData,
+    refreshFeed,
+    clearUserData,
+    isRefreshing,
+  }), [
+    isLoading, apiOnline,
+    journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
+    hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
+    character, setCharacter,
+    stories, addStory, updateStory, deleteStory,
+    journalEntries, addJournalEntry, deleteJournalEntry,
+    outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
+    gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
+    discoverPosts, savedStoryIds, toggleSavePost,
+    friends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
+    rewards, dismissReward, showRewardToast,
+    rewardBalance, constellation, reloadRewards, reloadConstellation,
+    shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
+    serverNotifications, markServerNotificationsRead, deleteServerNotification,
+    campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
+    dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
+    discoverMoodFilter, setDiscoverMoodFilter,
+    reloadData,
+    refreshFeed,
+    clearUserData,
+    isRefreshing,
+  ]);
+
   return (
-    <AppContext.Provider value={{
-      isLoading, apiOnline,
-      journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
-      hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
-      character, setCharacter,
-      stories, addStory, updateStory, deleteStory,
-      journalEntries, addJournalEntry, deleteJournalEntry,
-      outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
-      gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
-      discoverPosts, savedStoryIds, toggleSavePost,
-      friends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
-      rewards, dismissReward, showRewardToast,
-      rewardBalance, constellation, reloadRewards, reloadConstellation,
-      shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
-      serverNotifications, markServerNotificationsRead, deleteServerNotification,
-      campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
-      dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
-      discoverMoodFilter, setDiscoverMoodFilter,
-      reloadData,
-      refreshFeed,
-      clearUserData,
-      isRefreshing,
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );
