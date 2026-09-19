@@ -46,8 +46,11 @@ function useAudiusPreview() {
   const activeIdRef = useRef<string | null>(null);
   const nativeSoundRef = useRef<PlayerSound | null>(null);
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
+  const playbackGenerationRef = useRef(0);
+  const mountedRef = useRef(true);
 
   const stop = useCallback(async () => {
+    playbackGenerationRef.current += 1;
     const native = nativeSoundRef.current;
     nativeSoundRef.current = null;
     if (native) {
@@ -72,6 +75,9 @@ function useAudiusPreview() {
       return;
     }
     await stop();
+    const generation = playbackGenerationRef.current;
+    const isCurrent = () =>
+      mountedRef.current && playbackGenerationRef.current === generation;
 
     if (typeof window !== 'undefined' && typeof window.Audio === 'function') {
       const audio = new window.Audio(track.streamUrl);
@@ -85,9 +91,24 @@ function useAudiusPreview() {
       activeIdRef.current = track.id;
       try {
         await audio.play();
+        if (!isCurrent()) {
+          audio.onended = null;
+          audio.pause();
+          audio.currentTime = 0;
+          if (webAudioRef.current === audio) webAudioRef.current = null;
+          if (activeIdRef.current === track.id) activeIdRef.current = null;
+          return;
+        }
         setPlayingId(track.id);
       } catch {
-        await stop();
+        if (isCurrent()) await stop();
+        else {
+          audio.onended = null;
+          audio.pause();
+          audio.currentTime = 0;
+          if (webAudioRef.current === audio) webAudioRef.current = null;
+          if (activeIdRef.current === track.id) activeIdRef.current = null;
+        }
       }
       return;
     }
@@ -99,8 +120,16 @@ function useAudiusPreview() {
         { shouldPlay: true, volume: 0.45 },
       );
       const sound = result.sound as unknown as PlayerSound;
-      nativeSoundRef.current = sound;
+      // Register before checking cancellation so every created native sound
+      // remains visible to coordinated ExoPlayer cleanup.
       registerNativeSound(sound);
+      if (!isCurrent()) {
+        unregisterNativeSound(sound);
+        await sound.stopAsync().catch(() => null);
+        await sound.unloadAsync().catch(() => null);
+        return;
+      }
+      nativeSoundRef.current = sound;
       activeIdRef.current = track.id;
       sound.setOnPlaybackStatusUpdate(status => {
         if (status.isLoaded && status.didJustFinish) {
@@ -109,11 +138,17 @@ function useAudiusPreview() {
       });
       setPlayingId(track.id);
     } catch {
-      await stop();
+      if (isCurrent()) await stop();
     }
   }, [stop]);
 
-  useEffect(() => () => { void stop(); }, [stop]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      void stop();
+    };
+  }, [stop]);
 
   return { playingId, toggle, stop };
 }
