@@ -108,3 +108,19 @@ CLERK_PROXY_URL = "/api/__clerk"
 [nix]
 channel = "stable-25_05"
 packages = ["eas-cli"]
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
+[[ports]]
+localPort = 20450
+externalPort = 80
+
+[[ports]]
+localPort = 23744
+externalPort = 3000
