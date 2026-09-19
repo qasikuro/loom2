@@ -281,22 +281,104 @@ export async function persistImageUriSafe(uri: string): Promise<string | null> {
   }
 }
 
+export interface VideoUploadOptions {
+  mimeType?: string;
+  fileName?: string | null;
+}
+
+function inferVideoMimeType(uri: string, fileName?: string | null): string {
+  const source = (fileName ?? uri).split('?')[0].toLowerCase();
+  if (source.endsWith('.mov')) return 'video/quicktime';
+  if (source.endsWith('.m4v')) return 'video/x-m4v';
+  if (source.endsWith('.webm')) return 'video/webm';
+  if (source.endsWith('.3gp')) return 'video/3gpp';
+  return 'video/mp4';
+}
+
+function videoFileName(options: VideoUploadOptions, mimeType: string): string {
+  if (options.fileName) return options.fileName;
+  const extension = mimeType === 'video/quicktime'
+    ? 'mov'
+    : mimeType === 'video/x-m4v'
+      ? 'm4v'
+      : 'mp4';
+  return `video.${extension}`;
+}
+
+async function uploadVideoWeb(uri: string, options: VideoUploadOptions): Promise<string> {
+  const apiBase = resolveApiBase();
+  const token   = await getAuthToken();
+  if (!token) throw new ImageUploadError('You need to be signed in to upload videos.');
+
+  const mimeType = options.mimeType ?? inferVideoMimeType(uri, options.fileName);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60_000);
+
+  try {
+    const sourceResponse = await fetch(uri);
+    if (!sourceResponse.ok) {
+      throw new ImageUploadError('Could not read the selected video. Please try again.');
+    }
+
+    const sourceBlob = await sourceResponse.blob();
+    const blob = sourceBlob.type
+      ? sourceBlob
+      : new Blob([sourceBlob], { type: mimeType });
+    const form = new FormData();
+    form.append('file', blob, videoFileName(options, mimeType));
+
+    const result = await fetch(`${apiBase}/upload-video`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+      signal: controller.signal,
+    });
+
+    if (result.ok) {
+      try {
+        const json = await result.json() as { path: string };
+        const domain = apiBase.replace(/\/api$/, '');
+        return `${domain}${json.path}`;
+      } catch {
+        throw new ImageUploadError('The server returned an unexpected response. Please try again.');
+      }
+    }
+    if (result.status === 401 || result.status === 403) {
+      throw new ImageUploadError('Session expired — please sign out and back in, then try again.');
+    }
+    if (result.status === 413) {
+      throw new ImageUploadError('That video is too large. Try a shorter clip.');
+    }
+    let errMsg = '';
+    try { errMsg = ((await result.json()) as { error?: string }).error ?? ''; } catch { /* ignore */ }
+    throw new ImageUploadError(errMsg || `Upload failed (${result.status}) — please try again.`);
+  } catch (err) {
+    if (err instanceof ImageUploadError) throw err;
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ImageUploadError('Upload timed out — check your connection and try again.');
+    }
+    throw new ImageUploadError('Could not reach the server — check your connection and try again.', err);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * Uploads a local video URI to the server and returns the permanent https URL.
- * Like persistImageUri but skips image resize and sends video/mp4 mime type.
- * Only supported on native (Android/iOS) — not web.
+ * Like persistImageUri but skips image resize. The selected MIME type is
+ * preserved so MOV files are not uploaded as MP4. Browser blob/data URIs use
+ * fetch + multipart; native file URIs use Expo's binary uploader.
  * Throws `ImageUploadError` on failure.
  */
-export async function persistVideoUri(uri: string): Promise<string> {
+export async function persistVideoUri(uri: string, options: VideoUploadOptions = {}): Promise<string> {
   if (!uri) throw new ImageUploadError('No video was selected.');
   if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
-  if (Platform.OS === 'web') {
-    throw new ImageUploadError('Video upload is not supported on web.');
-  }
+  if (Platform.OS === 'web') return uploadVideoWeb(uri, options);
 
   const apiBase = resolveApiBase();
   const token   = await getAuthToken();
   if (!token) throw new ImageUploadError('You need to be signed in to upload videos.');
+  const mimeType = options.mimeType ?? inferVideoMimeType(uri, options.fileName);
 
   const timeoutPromise = new Promise<never>((_, reject) =>
     setTimeout(
@@ -312,7 +394,7 @@ export async function persistVideoUri(uri: string): Promise<string> {
         httpMethod:  'POST',
         uploadType:  FileSystem.FileSystemUploadType.MULTIPART,
         fieldName:   'file',
-        mimeType:    'video/mp4',
+        mimeType,
         headers:     { Authorization: `Bearer ${token}` },
       }),
       timeoutPromise,

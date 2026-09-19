@@ -30,7 +30,8 @@ import { apiFetch } from '@/context/AppContext';
 import { persistImageUri, persistVideoUri, ImageUploadError } from '@/utils/persistImage';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 
-const MAX_VIDEO_DURATION_S = 10;
+const MAX_VIDEO_DURATION_S = 60;
+const MAX_VIDEO_SIZE_BYTES = 25 * 1024 * 1024;
 
 const MOODS = [
   { label: 'Hopeful',     color: '#C8A84B' },
@@ -54,6 +55,8 @@ export default function PostVideoScreen() {
 
   const [step,         setStep]         = useState<Step>('picking');
   const [videoUri,     setVideoUri]      = useState<string | null>(null);
+  const [videoMimeType, setVideoMimeType] = useState<string | null>(null);
+  const [videoFileName, setVideoFileName] = useState<string | null>(null);
   const [thumbUri,     setThumbUri]      = useState<string | null>(null);
   const [title,        setTitle]         = useState('');
   const [mood,         setMood]          = useState(MOODS[0].label);
@@ -91,11 +94,23 @@ export default function PostVideoScreen() {
 
     const asset = result.assets[0];
 
+    if (asset.fileSize && asset.fileSize > MAX_VIDEO_SIZE_BYTES) {
+      Alert.alert(
+        'Video too large',
+        'Please pick a video that is 25 MB or smaller.',
+        [
+          { text: 'Try again', onPress: pickVideo },
+          { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+        ],
+      );
+      return;
+    }
+
     // Check duration (picker limit is advisory; verify explicitly)
     if (asset.duration && asset.duration > MAX_VIDEO_DURATION_S * 1000) {
       Alert.alert(
         'Video too long',
-        `Please pick a video that's ${MAX_VIDEO_DURATION_S} seconds or shorter.`,
+        'Please pick a video that is 1 minute or shorter.',
         [
           { text: 'Try again', onPress: pickVideo },
           { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
@@ -118,6 +133,8 @@ export default function PostVideoScreen() {
     }
 
     setVideoUri(asset.uri);
+    setVideoMimeType(asset.mimeType ?? null);
+    setVideoFileName(asset.fileName ?? null);
     setThumbUri(thumb);
     setStep('form');
 
@@ -137,7 +154,10 @@ export default function PostVideoScreen() {
     try {
       // 1. Upload video
       setProgress('Uploading video…');
-      const uploadedVideoUri = await persistVideoUri(videoUri);
+      const uploadedVideoUri = await persistVideoUri(videoUri, {
+        mimeType: videoMimeType ?? undefined,
+        fileName: videoFileName,
+      });
 
       // 2. Upload thumbnail (if extracted)
       setProgress('Uploading thumbnail…');

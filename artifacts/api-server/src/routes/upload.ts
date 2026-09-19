@@ -16,6 +16,11 @@ import express from "express";
 import { z } from "zod";
 import sharp from "sharp";
 import multer from "multer";
+import { execFile } from "node:child_process";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
 import { registerPendingUpload, startOrphanCleanup } from "../lib/uploadTracking";
@@ -25,6 +30,8 @@ const BUCKET_ID     = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
 const MAX_DIM       = 1600;
 const SIZE_TARGET   = 200 * 1024;
 const QUALITY_STEPS = [82, 68, 52];
+const MAX_VIDEO_DURATION_SECONDS = 60;
+const execFileAsync = promisify(execFile);
 
 // ── Per-user upload rate limiter (in-memory, 10 uploads / 60 s) ───────────────
 // Assumes single-process deployment — in-memory counters will not enforce
@@ -78,10 +85,10 @@ const upload = multer({
   limits:  { fileSize: 10 * 1024 * 1024 },
 });
 
-// ── Multer: 100 MB cap for video uploads ──────────────────────────────────────
+// ── Multer: 25 MB cap for video uploads ───────────────────────────────────────
 const uploadVideo = multer({
   storage: multer.memoryStorage(),
-  limits:  { fileSize: 100 * 1024 * 1024 },
+  limits:  { fileSize: 25 * 1024 * 1024 },
 });
 
 // ── Video magic-byte validation ───────────────────────────────────────────────
@@ -94,6 +101,41 @@ function isValidVideoBuffer(buf: Buffer): boolean {
     buf[4] === 0x66 && buf[5] === 0x74 &&
     buf[6] === 0x79 && buf[7] === 0x70
   );
+}
+
+function getVideoStorageFormat(buf: Buffer): { extension: string; contentType: string } {
+  const majorBrand = buf.slice(8, 12).toString("ascii");
+  if (majorBrand === "qt  ") {
+    return { extension: "mov", contentType: "video/quicktime" };
+  }
+  if (majorBrand === "M4V ") {
+    return { extension: "m4v", contentType: "video/x-m4v" };
+  }
+  return { extension: "mp4", contentType: "video/mp4" };
+}
+
+async function getVideoDurationSeconds(buf: Buffer, extension: string): Promise<number> {
+  const tempDirectory = await mkdtemp(join(tmpdir(), "gamejo-video-"));
+  const tempFile = join(tempDirectory, `upload.${extension}`);
+  try {
+    await writeFile(tempFile, buf);
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v", "error",
+      "-show_entries", "format=duration",
+      "-of", "default=noprint_wrappers=1:nokey=1",
+      tempFile,
+    ], {
+      timeout: 15_000,
+      maxBuffer: 1024 * 1024,
+    });
+    const duration = Number.parseFloat(stdout.trim());
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw new Error("Video duration could not be read");
+    }
+    return duration;
+  } finally {
+    await rm(tempDirectory, { recursive: true, force: true });
+  }
 }
 
 const JsonUploadSchema = z.object({
@@ -256,10 +298,16 @@ router.post(
     }
     return next();
   },
-  // ── 100 MB multipart parser ────────────────────────────────────────────────
+  // ── 25 MB multipart parser ─────────────────────────────────────────────────
   (req, res, next) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    uploadVideo.single("file")(req as any, res as any, next);
+    uploadVideo.single("file")(req as any, res as any, (err?: unknown) => {
+      if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+        return res.status(413).json({ error: "That video is too large. Please choose a video that is 25 MB or smaller." });
+      }
+      if (err) return next(err);
+      return next();
+    });
   },
   async (req: Request, res: Response) => {
     if (!BUCKET_ID) {
@@ -275,14 +323,19 @@ router.post(
 
     // ── Validate magic bytes ─────────────────────────────────────────────────
     if (!isValidVideoBuffer(multipartFile.buffer)) {
-      return res.status(400).json({ error: "Unsupported file type. Please upload an MP4 or MOV video." });
+      return res.status(400).json({ error: "Unsupported video format. Please upload an MP4, MOV, or M4V video." });
     }
 
     try {
-      const fname = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}.mp4`;
+      const format = getVideoStorageFormat(multipartFile.buffer);
+      const duration = await getVideoDurationSeconds(multipartFile.buffer, format.extension);
+      if (duration > MAX_VIDEO_DURATION_SECONDS) {
+        return res.status(400).json({ error: "That video is too long. Please choose a video that is 1 minute or shorter." });
+      }
+      const fname = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${format.extension}`;
       const file  = objectStorageClient.bucket(BUCKET_ID).file(`videos/${fname}`);
       await file.save(multipartFile.buffer, {
-        metadata:  { contentType: "video/mp4" },
+        metadata:  { contentType: format.contentType },
         resumable: false,
       });
 

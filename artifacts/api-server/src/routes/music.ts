@@ -13,6 +13,7 @@ const AUDIUS_BASE = "https://discoveryprovider.audius.co/v1";
 const AUDIUS_APP_NAME = "GameJo";
 const AUDIUS_API_KEY = process.env.AUDIUS_API_KEY;
 const AUDIUS_API_BEARER_TOKEN = process.env.AUDIUS_API_BEARER_TOKEN;
+const MAX_MUSIC_DURATION_SECONDS = 75;
 
 const QuerySchema = z.object({
   q: z.string().trim().min(1).max(80).default("peaceful"),
@@ -60,7 +61,8 @@ router.get("/music/search", requireAuth, async (req, res) => {
 
     const url = new URL(`${AUDIUS_BASE}/tracks/search`);
     url.searchParams.set("query", parsed.data.q);
-    url.searchParams.set("limit", "30");
+    // Ask for a wider pool because most full songs exceed the 75-second limit.
+    url.searchParams.set("limit", "100");
     url.searchParams.set("app_name", AUDIUS_APP_NAME);
 
     const response = await fetch(url, {
@@ -74,7 +76,12 @@ router.get("/music/search", requireAuth, async (req, res) => {
       return res.status(502).json({ error: "Audius search is temporarily unavailable" });
     }
     const payload = await response.json() as { data?: AudiusApiTrack[] };
-    const tracks = (payload.data ?? []).map(trackToClient).filter((track): track is NonNullable<ReturnType<typeof trackToClient>> => !!track);
+    const tracks = (payload.data ?? [])
+      .map(trackToClient)
+      .filter((track): track is NonNullable<ReturnType<typeof trackToClient>> =>
+        !!track && track.duration > 0 && track.duration <= MAX_MUSIC_DURATION_SECONDS
+      )
+      .slice(0, 30);
 
     res.setHeader("Cache-Control", "private, max-age=30");
     return res.json({ tracks, source: "Audius" });

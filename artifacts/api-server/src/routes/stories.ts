@@ -39,7 +39,7 @@ const MusicSchema = z.object({
   title:      z.string().min(1).max(300),
   artist:     z.string().min(1).max(300),
   artworkUrl: z.string().url().max(2000).nullable(),
-  duration:   z.number().int().min(0).max(3600),
+  duration:   z.number().int().min(1).max(75),
   genre:      z.string().max(100).nullable(),
   mood:       z.string().max(100).nullable(),
   streamUrl:  z.string().url().max(2000),

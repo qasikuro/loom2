@@ -27,6 +27,8 @@ export type AudiusTrack = {
   streamUrl: string;
 };
 
+const MAX_MUSIC_DURATION_SECONDS = 75;
+
 type PlayerSound = {
   stopAsync: () => Promise<void>;
   unloadAsync: () => Promise<void>;
@@ -171,6 +173,7 @@ export function AudiusMusicPicker({
   const [tracks, setTracks] = useState<AudiusTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const resultsRef = useRef<FlatList<AudiusTrack>>(null);
   const { playingId, toggle, stop } = useAudiusPreview();
 
   const searchTracks = useCallback(async (text: string) => {
@@ -180,7 +183,13 @@ export function AudiusMusicPicker({
     setError(null);
     try {
       const result = await apiFetch<{ tracks: AudiusTrack[] }>(`/music/search?q=${encodeURIComponent(trimmed)}`);
-      setTracks(result.tracks ?? []);
+      const shortTracks = (result.tracks ?? []).filter(
+        track => track.duration > 0 && track.duration <= MAX_MUSIC_DURATION_SECONDS,
+      );
+      setTracks(shortTracks);
+      requestAnimationFrame(() => {
+        resultsRef.current?.scrollToOffset({ offset: 0, animated: false });
+      });
     } catch {
       setError('Music search is unavailable right now. Try again in a moment.');
     } finally {
@@ -256,7 +265,7 @@ export function AudiusMusicPicker({
               </TouchableOpacity>
               <View style={styles.modalTitleWrap}>
                 <Text style={styles.modalTitle}>Choose your soundtrack</Text>
-                <Text style={styles.modalSubtitle}>Music sets the mood for your story</Text>
+                <Text style={styles.modalSubtitle}>Music sets the mood · Tracks up to 1:15</Text>
               </View>
               <Icon name="volume-2" size={22} color="#F0C95D" />
             </View>
@@ -307,12 +316,16 @@ export function AudiusMusicPicker({
               </View>
             ) : (
               <FlatList
+                ref={resultsRef}
+                key={tracks.map(track => track.id).join('-')}
                 style={styles.results}
                 data={tracks}
                 keyExtractor={track => track.id}
-                contentContainerStyle={{ paddingBottom: insets.bottom + 58 }}
+                contentContainerStyle={[styles.resultsContent, { paddingBottom: insets.bottom + 58 }]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
+                removeClippedSubviews={false}
+                scrollEnabled={tracks.length > 0}
                 renderItem={({ item: track }) => (
                   <View key={track.id} style={styles.trackRow}>
                     <TrackArtwork track={track} />
@@ -385,7 +398,8 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: 'rgba(240,201,93,0.60)', backgroundColor: 'rgba(240,201,93,0.18)' },
   chipText: { color: 'rgba(215,201,255,0.62)', fontSize: 10, fontFamily: 'Satoshi-Medium' },
   chipTextActive: { color: '#F5D368' },
-  results: { flex: 1, minHeight: 0 },
+  results: { flex: 1, minHeight: 0, alignSelf: 'stretch' },
+  resultsContent: { flexGrow: 0, justifyContent: 'flex-start', paddingTop: 0 },
   trackRow: { flexDirection: 'row', alignItems: 'center', minHeight: 75, borderBottomWidth: 1, borderBottomColor: 'rgba(215,201,255,0.08)', paddingVertical: 9, position: 'relative' },
   trackInfo: { flex: 1, minWidth: 0, marginHorizontal: 9 },
   trackTitle: { color: '#F8F4FF', fontSize: 12, fontFamily: 'Satoshi-Bold' },
