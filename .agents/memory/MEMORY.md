@@ -21,3 +21,4 @@
 - [Mutation queue stale full-character snapshots](mutation-queue-stale-snapshots.md) — drain replays old full-body snapshots and can overwrite newer DB values; call clearMutation() after every successful PUT
 - [Nested story image URI normalization](nested-story-image-uri-normalization.md) — resolve image URIs in pages[].panels as well as top-level panels or native readers receive broken relative paths
 - [Audius story music](audius-story-music.md) — keep discovery server-proxied and persist stable track metadata plus the unsigned stream endpoint, never temporary redirects
+- [Expo Go SDK alignment](expo-go-sdk-alignment.md) — Expo Go bundle-download failures can come from native Expo packages being on a newer SDK than the app
