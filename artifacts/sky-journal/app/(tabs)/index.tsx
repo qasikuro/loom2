@@ -1376,7 +1376,13 @@ export default function HomeScreen() {
   const dashboardFriends = circleAuthors.slice(0, screenWidth < 390 ? 4 : 5);
 
   return (
-    <Animated.View style={[s.root, { opacity: fadeIn }]} pointerEvents="box-none">
+    <Animated.View
+      style={[s.root, { opacity: fadeIn }]}
+      pointerEvents="box-none"
+      onTouchStart={() => {
+        if (__DEV__) console.log('[TouchDebug] Home root touch');
+      }}
+    >
       {/* ── Deep space void ── */}
       <LinearGradient
         colors={['#100A28', '#08061A', '#04030C']}

@@ -11,15 +11,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-// react-native-keyboard-controller is a custom native module — not bundled in Expo Go.
-// Lazy-require it so a missing native module can't crash _layout.tsx on startup.
-let KeyboardProvider: React.ComponentType<{ children: React.ReactNode }> | null = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  KeyboardProvider = require('react-native-keyboard-controller').KeyboardProvider;
-} catch { /* not available in Expo Go — fall back to a plain wrapper below */ }
+// Do not mount react-native-keyboard-controller at the navigation root.
+// Its Android provider adds a native event view to the app root; that view can
+// sit above the navigation tree and consume taps without forwarding them.
+// Keyboard-aware screens still import their own scroll component as needed.
 const KeyboardProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
-  KeyboardProvider ? <KeyboardProvider>{children}</KeyboardProvider> : <>{children}</>;
+  <>{children}</>;
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppSplashScreen } from '@/components/AppSplashScreen';

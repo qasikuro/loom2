@@ -175,7 +175,12 @@ function ClassicTabLayout() {
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 10);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View
+      style={{ flex: 1 }}
+      onTouchStart={() => {
+        if (__DEV__) console.log('[TouchDebug] tab layout touch');
+      }}
+    >
     <Tabs
       screenOptions={{
         headerShown: false,
