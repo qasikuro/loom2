@@ -222,7 +222,13 @@ function AppOverlays() {
           await markOnboardingDone(userId);
           return;
         }
-      } catch { /* ignore — show onboarding if server is unreachable */ }
+      } catch {
+        // Do not put a full-screen onboarding Modal over an already usable app
+        // when the character request fails transiently (for example, a native
+        // client receiving a 304 response). Only show onboarding after a
+        // successful response confirms this is a fresh profile.
+        return;
+      }
 
       setShowOnboarding(true);
     })();
