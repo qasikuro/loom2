@@ -1378,7 +1378,6 @@ export default function HomeScreen() {
   return (
     <Animated.View
       style={[s.root, { opacity: fadeIn }]}
-      pointerEvents="box-none"
       onTouchStart={() => {
         if (__DEV__) console.log('[TouchDebug] Home root touch');
       }}
