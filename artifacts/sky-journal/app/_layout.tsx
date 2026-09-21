@@ -176,9 +176,23 @@ function AuthTokenBridge() {
 
 function AppOverlays() {
   const { isSignedIn, isLoaded, userId } = useAuth();
+  const { isLoading: appLoading, character, journalEntries, stories, outfits } = useApp();
   const [showOnboarding, setShowOnboarding] = useState(false);
   // Keyed by userId so a new account signing into the same device always runs the check.
   const checkedRef = useRef<string | null>(null);
+
+  // Home can already be usable from cache while the onboarding eligibility
+  // request is still resolving. Never leave a modal above an existing profile
+  // or content just because that request raced with hydration.
+  const hasHydratedProfile = !appLoading && !!(
+    character.username ||
+    character.avatarUri ||
+    character.constellationType ||
+    character.name !== 'Sky Child' ||
+    journalEntries.length > 0 ||
+    stories.length > 0 ||
+    outfits.length > 0
+  );
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !userId || checkedRef.current === userId) return;
@@ -244,7 +258,13 @@ function AppOverlays() {
     setShowOnboarding(false);
   }
 
-  return <OnboardingOverlay visible={showOnboarding} onComplete={handleComplete} onDismiss={handleDismiss} />;
+  return (
+    <OnboardingOverlay
+      visible={showOnboarding && !hasHydratedProfile}
+      onComplete={handleComplete}
+      onDismiss={handleDismiss}
+    />
+  );
 }
 
 /**

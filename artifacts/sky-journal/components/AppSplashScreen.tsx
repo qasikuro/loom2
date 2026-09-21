@@ -3,7 +3,7 @@
  * Uses the splash image as background with twinkling stars + animated loading bar.
  */
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import {
   Animated,
   Easing,
@@ -191,7 +191,6 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
   const { width, height } = useWindowDimensions();
   const screenFade  = useRef(new Animated.Value(1)).current;
   const contentFade = useRef(new Animated.Value(0)).current;
-  const [blocksTouches, setBlocksTouches] = useState(true);
 
   useEffect(() => {
     // Fade overlay elements in
@@ -208,10 +207,6 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
-      // Release the app underneath immediately. In a native development build
-      // the animation completion callback can be delayed; keeping this overlay
-      // touchable would leave the visible Home screen completely inert.
-      setBlocksTouches(false);
       Animated.timing(screenFade, {
         toValue:  0,
         duration: 600,
@@ -234,7 +229,9 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
   return (
     <Animated.View
       style={[styles.root, { opacity: screenFade }]}
-      pointerEvents={blocksTouches ? 'auto' : 'none'}
+      // The splash is visual-only. It must never become a native touch shield
+      // over the app if the native animation completion callback is delayed.
+      pointerEvents="none"
       accessible
       accessibilityViewIsModal
       accessibilityLabel="Loading Sky Journal"
