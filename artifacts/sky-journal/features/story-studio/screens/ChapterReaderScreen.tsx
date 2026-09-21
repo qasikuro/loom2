@@ -349,7 +349,12 @@ export default function ChapterReaderScreen() {
               <View style={{ width: screenW, minHeight: screenH, backgroundColor: '#0D0B1A' }}>
                 <ScrollView
                   style={{ flex: 1 }}
-                  contentContainerStyle={{ minHeight: screenH, paddingBottom: bottomInset + 72 }}
+                  contentContainerStyle={{
+                    minHeight: screenH,
+                    paddingTop: topInset + 52,
+                    paddingBottom: bottomInset + 72,
+                    justifyContent: 'center',
+                  }}
                   showsVerticalScrollIndicator={false}
                   nestedScrollEnabled
                 >
