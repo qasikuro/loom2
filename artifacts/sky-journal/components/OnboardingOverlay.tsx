@@ -159,6 +159,10 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
   const [journalText, setJournalText]     = useState('');
   const [saving, setSaving]               = useState(false);
   const [seedError, setSeedError]         = useState(false);
+  // Do not mount the native Modal until the draft has loaded. A transparent
+  // Modal is still a separate full-screen native window and would intercept
+  // Home touches while fadeAnim is at its initial value of 0.
+  const [draftReady, setDraftReady]       = useState(false);
   const reducedMotion = useReducedMotion();
 
   const fadeAnim   = useRef(new Animated.Value(0)).current;
@@ -195,10 +199,14 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
   // ── Load saved draft on open ───────────────────────────────────────────────
   useEffect(() => {
     stopTrackedAnimations();
+    setDraftReady(false);
     if (!visible) return;
     setSeedError(false);
 
-    if (!userId) return;
+    if (!userId) {
+      setDraftReady(true);
+      return;
+    }
     let cancelled = false;
     loadDraft(userId).then(draft => {
       if (cancelled) return;
@@ -226,6 +234,19 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       }).start();
       entranceEmoji();
       if (startStep === STEP_REVEAL) fireSparks();
+      setDraftReady(true);
+    }).catch(() => {
+      // Storage can fail on a fresh native install. Show the first step rather
+      // than leaving an invisible native Modal mounted indefinitely.
+      if (cancelled) return;
+      setStep(STEP_WELCOME);
+      slideAnim.setValue(0);
+      fadeAnim.setValue(0);
+      Animated.timing(fadeAnim, {
+        toValue: 1, duration: 480, easing: Easing.out(Easing.quad), useNativeDriver: true,
+      }).start();
+      entranceEmoji();
+      setDraftReady(true);
     });
     return () => {
       cancelled = true;
@@ -470,7 +491,15 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
   }));
 
   return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent>
+    <Modal
+      visible={visible && draftReady}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onShow={() => {
+        if (__DEV__) console.warn('[TouchDebug] onboarding modal shown');
+      }}
+    >
       <Animated.View style={[s.root, { opacity: fadeAnim, paddingTop: topPad, paddingBottom: bottomPad }]}>
 
         {/* Static starfield */}

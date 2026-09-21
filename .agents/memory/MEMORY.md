@@ -24,3 +24,4 @@
 - [Expo Go SDK alignment](expo-go-sdk-alignment.md) — Expo Go bundle-download failures can come from native Expo packages being on a newer SDK than the app
 - [Native splash touch blocking](native-splash-touch-blocking.md) — a faded absolute splash overlay can leave the visible app inert if it keeps pointer events during a delayed animation callback
 - [Fail-open onboarding checks](onboarding-fail-open.md) — never gate an authenticated user behind a full-screen onboarding modal when profile hydration fails
+- [Invisible native Modal touch shield](invisible-native-modal-touch-shield.md) — gate full-screen Modal mounting on async content readiness; opacity-zero children still intercept native touches

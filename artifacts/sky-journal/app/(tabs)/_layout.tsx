@@ -222,7 +222,12 @@ function ClassicTabLayout() {
     >
       <Tabs.Screen
         name="index"
-        listeners={{ tabPress: () => playSound('navigate') }}
+        listeners={{
+          tabPress: () => {
+            if (__DEV__) console.log('[TouchDebug] tab home press');
+            playSound('navigate');
+          },
+        }}
         options={{
           title: t('nav.home'),
           tabBarIcon: ({ color, focused }) => (
@@ -232,7 +237,12 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="log"
-        listeners={{ tabPress: () => playSound('navigate') }}
+        listeners={{
+          tabPress: () => {
+            if (__DEV__) console.log('[TouchDebug] tab journal press');
+            playSound('navigate');
+          },
+        }}
         options={{
           title: t('nav.journal'),
           tabBarIcon: ({ color, focused }) => (
@@ -242,7 +252,12 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="create"
-        listeners={{ tabPress: () => playSound('chime') }}
+        listeners={{
+          tabPress: () => {
+            if (__DEV__) console.log('[TouchDebug] tab create press');
+            playSound('chime');
+          },
+        }}
         options={{
           title: '',
           tabBarLabel: () => null,
@@ -252,7 +267,12 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="discover"
-        listeners={{ tabPress: () => playSound('navigate') }}
+        listeners={{
+          tabPress: () => {
+            if (__DEV__) console.log('[TouchDebug] tab discover press');
+            playSound('navigate');
+          },
+        }}
         options={{
           title: t('nav.discover'),
           tabBarIcon: ({ color, focused }) => (
@@ -268,7 +288,12 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="profile"
-        listeners={{ tabPress: () => playSound('navigate') }}
+        listeners={{
+          tabPress: () => {
+            if (__DEV__) console.log('[TouchDebug] tab profile press');
+            playSound('navigate');
+          },
+        }}
         options={{
           title: t('nav.profile'),
           tabBarIcon: ({ color, focused }) => (

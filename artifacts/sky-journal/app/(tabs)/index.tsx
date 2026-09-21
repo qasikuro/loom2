@@ -71,6 +71,11 @@ const MOOD_COLOR: Record<string, string> = {
 };
 const DEF_ACCENT = '#9B78E8';
 
+function logHomePress(label: string, action: () => void): void {
+  if (__DEV__) console.log(`[TouchDebug] Home ${label} press`);
+  action();
+}
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -1415,6 +1420,9 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
+        onTouchStart={() => {
+          if (__DEV__) console.log('[TouchDebug] Home ScrollView touch');
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
         <View style={s.dashboardHeader}>
@@ -1425,7 +1433,10 @@ export default function HomeScreen() {
             </Text>
           </View>
           <TouchableOpacity
-            onPress={() => { openNotificationsPanel(); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+            onPress={() => logHomePress('notifications', () => {
+              openNotificationsPanel();
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            })}
             style={s.dashboardRoundButton}
             activeOpacity={0.76}
           >
@@ -1433,7 +1444,7 @@ export default function HomeScreen() {
             {(unread > 0 || campfireDot || dmDot) && <View style={s.dashboardAlertDot} />}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => router.push('/(tabs)/profile')}
+            onPress={() => logHomePress('profile', () => router.push('/(tabs)/profile'))}
             onLongPress={() => setShowOutfits(true)}
             style={[s.dashboardAvatarRing, { borderColor: accent }]}
             activeOpacity={0.82}
@@ -1444,11 +1455,11 @@ export default function HomeScreen() {
 
         <View style={s.dashboardActions}>
           {[
-            { label: 'Add your post', icon: 'edit-2', color: '#D45CFF', comingSoon: false, onPress: () => router.push('/(tabs)/create') },
-            { label: 'Chats', icon: 'message-circle', color: '#55B8FF', comingSoon: false, onPress: () => router.push('/messages' as never) },
+             { label: 'Add your post', icon: 'edit-2', color: '#D45CFF', comingSoon: false, onPress: () => logHomePress('add post', () => router.push('/(tabs)/create')) },
+             { label: 'Chats', icon: 'message-circle', color: '#55B8FF', comingSoon: false, onPress: () => logHomePress('chats', () => router.push('/messages' as never)) },
             { label: 'Discover games', icon: 'gamepad-2', color: '#FF914D', comingSoon: true, onPress: undefined },
-            { label: 'Lumi AI Chat', icon: 'star', color: '#B878FF', comingSoon: false, onPress: () => router.push('/(tabs)/drift') },
-            { label: 'Daily prompt', icon: 'lightbulb', color: '#F4CB55', comingSoon: false, onPress: () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never) },
+             { label: 'Lumi AI Chat', icon: 'star', color: '#B878FF', comingSoon: false, onPress: () => logHomePress('Lumi AI Chat', () => router.push('/(tabs)/drift')) },
+             { label: 'Daily prompt', icon: 'lightbulb', color: '#F4CB55', comingSoon: false, onPress: () => logHomePress('daily prompt', () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never)) },
           ].map(action => (
             <TouchableOpacity
               key={action.label}
@@ -1476,10 +1487,10 @@ export default function HomeScreen() {
             <Text style={s.dashboardSectionTitle}>Friends</Text>
             <View style={s.dashboardCount}><Text style={s.dashboardCountText}>{circleAuthors.length}</Text></View>
           </View>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/discover')}><Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text></TouchableOpacity>
+           <TouchableOpacity onPress={() => logHomePress('friends see all', () => router.push('/(tabs)/discover'))}><Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text></TouchableOpacity>
         </View>
         <View style={s.dashboardFriends}>
-          <TouchableOpacity style={s.dashboardFriend} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
+           <TouchableOpacity style={s.dashboardFriend} onPress={() => logHomePress('add friend', () => router.push('/(tabs)/discover'))} activeOpacity={0.78}>
             <View style={s.dashboardAddFriend}><Icon name="plus" size={23} color="#C995FF" /></View>
             <Text style={s.dashboardFriendName}>Add</Text>
           </TouchableOpacity>
@@ -1489,7 +1500,7 @@ export default function HomeScreen() {
               <TouchableOpacity
                 key={post.authorUserId}
                 style={s.dashboardFriend}
-                onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: post.authorUserId } } as never)}
+                 onPress={() => logHomePress('friend', () => router.push({ pathname: '/user/[userId]', params: { userId: post.authorUserId } } as never))}
                 activeOpacity={0.8}
               >
                 <View style={[s.dashboardFriendAvatar, { borderColor: friendColor }]}>
@@ -1506,7 +1517,10 @@ export default function HomeScreen() {
 
         <TouchableOpacity
           style={[s.dashboardLumi, isShortScreen && s.dashboardLumiShort]}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/drift'); }}
+           onPress={() => logHomePress('Lumi card', () => {
+             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+             router.push('/(tabs)/drift');
+           })}
           activeOpacity={0.84}
         >
           <LinearGradient colors={['#241058', '#37157A', '#180A42']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />

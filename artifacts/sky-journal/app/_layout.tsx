@@ -193,6 +193,16 @@ function AppOverlays() {
     stories.length > 0 ||
     outfits.length > 0
   );
+  const onboardingVisible = showOnboarding && !hasHydratedProfile;
+
+  useEffect(() => {
+    if (__DEV__) {
+      console.log(
+        `[TouchDebug] onboarding visible=${onboardingVisible} appLoading=${appLoading} ` +
+        `profile=${hasHydratedProfile} show=${showOnboarding}`,
+      );
+    }
+  }, [appLoading, hasHydratedProfile, onboardingVisible, showOnboarding]);
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !userId || checkedRef.current === userId) return;
@@ -260,7 +270,7 @@ function AppOverlays() {
 
   return (
     <OnboardingOverlay
-      visible={showOnboarding && !hasHydratedProfile}
+      visible={onboardingVisible}
       onComplete={handleComplete}
       onDismiss={handleDismiss}
     />
@@ -405,7 +415,12 @@ export default function RootLayout() {
                         <AuthNavigator />
                         <AppOverlays />
                         <ToastProvider>
-                        <GestureHandlerRootView style={{ flex: 1 }}>
+                        <GestureHandlerRootView
+                          style={{ flex: 1 }}
+                          onTouchStart={() => {
+                            if (__DEV__) console.log('[TouchDebug] root touch');
+                          }}
+                        >
                         <KeyboardProviderWrapper>
                           <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="(auth)" />
