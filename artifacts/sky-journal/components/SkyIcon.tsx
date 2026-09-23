@@ -9,6 +9,7 @@ import Svg, { Path, Circle, Line, Rect, G } from 'react-native-svg';
 export type SkyIconName =
   | 'sky-home'         // Soft cloud with sparkle star
   | 'sky-journal'      // Open book with feather quill
+  | 'sky-reels'        // Stacked story frames with play mark
   | 'sky-lantern'      // Floating sky lantern (for Discover)
   | 'sky-profile'      // Sky kid silhouette with wings
   | 'sky-create'       // Blooming star / plus-star
@@ -95,6 +96,26 @@ export function SkyIcon({
               stroke={accent}
               d="M15 8L14.5 10.5"
             />
+          </G>
+        );
+
+      // ── Stacked story frames with play mark (Reels tab) ────────────────────
+      case 'sky-reels':
+        return (
+          <G>
+            <Rect {...common} x="5" y="3.5" width="14" height="17" rx="3.5" />
+            <Path
+              {...common}
+              strokeOpacity={0.45}
+              d="M3.5 7V17C3.5 19 5 20.5 7 20.5"
+            />
+            <Path
+              d="M10 9L15 12L10 15Z"
+              fill={accent}
+              fillOpacity={0.82}
+              stroke="none"
+            />
+            <Circle cx="16.5" cy="6.5" r="1" fill={color} fillOpacity={0.7} stroke="none" />
           </G>
         );
 

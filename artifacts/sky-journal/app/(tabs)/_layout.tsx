@@ -241,17 +241,17 @@ function ClassicTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="log"
+        name="reels"
         listeners={{
           tabPress: () => {
-            if (__DEV__) console.log('[TouchDebug] tab journal press');
+            if (__DEV__) console.log('[TouchDebug] tab reels press');
             playSound('navigate');
           },
         }}
         options={{
-          title: t('nav.journal'),
+          title: 'Reels',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="sky-journal" color={color} focused={focused} primaryColor={colors.primary} />
+            <TabIcon name="sky-reels" color={color} focused={focused} primaryColor={colors.primary} />
           ),
         }}
       />
@@ -289,6 +289,10 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="drift"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="log"
         options={{ href: null }}
       />
       <Tabs.Screen
