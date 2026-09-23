@@ -1,6 +1,6 @@
-import { DiscoverCard } from '@/components/DiscoverCard';
 import { DiscoverVideoPlayerModal } from '@/components/DiscoverVideoPlayerModal';
 import { Icon } from '@/components/Icon';
+import { ReelCard } from '@/components/ReelCard';
 import { ReportSheet } from '@/components/ReportSheet';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { useApp, type DiscoverPost } from '@/context/AppContext';
@@ -11,13 +11,14 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   FlatList,
+  Alert,
   Platform,
   RefreshControl,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -28,7 +29,6 @@ const FILTERS: ReelFilter[] = ['All', 'Stories', 'Videos'];
 export default function ReelsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { width: viewportWidth } = useWindowDimensions();
   const {
     discoverPosts,
     toggleSavePost,
@@ -45,11 +45,12 @@ export default function ReelsScreen() {
   const [videosMuted, setVideosMuted] = useState(true);
   const [selectedVideoPost, setSelectedVideoPost] = useState<DiscoverPost | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
+  const [feedHeight, setFeedHeight] = useState(0);
+  const listRef = useRef<FlatList<DiscoverPost>>(null);
   const lastFetchRef = useRef(0);
 
   const topPad = Platform.OS === 'web' ? 54 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 110 : insets.bottom + 120;
-  const contentMaxWidth = viewportWidth >= 760 ? 760 : undefined;
+  const reelHeight = Math.max(420, feedHeight);
 
   const reels = useMemo(() => {
     if (filter === 'Stories') {
@@ -102,106 +103,64 @@ export default function ReelsScreen() {
     router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'reels' } });
   }, []);
 
+  async function sharePost(post: DiscoverPost) {
+    const path = post.bookId
+      ? `book-public?bookId=${encodeURIComponent(post.bookId)}`
+      : `story/${encodeURIComponent(post.id)}`;
+    const appLink = `sky-journal:///${path}`;
+    const mediaLink = post.contentType === 'video' && post.videoUri?.startsWith('https://')
+      ? post.videoUri
+      : null;
+    try {
+      await Share.share({
+        title: post.chapterTitle,
+        message: `${post.chapterTitle} by ${post.authorName}\n${mediaLink ?? appLink}${mediaLink ? `\nOpen in GameJo: ${appLink}` : ''}`,
+        ...(Platform.OS === 'ios' ? { url: mediaLink ?? appLink } : {}),
+      });
+    } catch {
+      Alert.alert('Unable to share', 'Please try sharing this reel again.');
+    }
+  }
+
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <LinearGradient
-        colors={['#0A0718', '#1A0A43', '#2A0B58']}
-        style={[styles.header, { paddingTop: topPad }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.headerOrbLarge} pointerEvents="none" />
-        <View style={styles.headerOrbSmall} pointerEvents="none" />
-        <View style={[styles.headerInner, contentMaxWidth != null && { maxWidth: contentMaxWidth }]}>
-          <View style={styles.titleRow}>
-            <View>
-              <Text style={styles.title}>Reels</Text>
-              <Text style={styles.subtitle}>Stories and videos shared by the community</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.createButton}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push('/(tabs)/create');
-              }}
-              accessibilityLabel="Create a story or video"
-              activeOpacity={0.78}
-            >
-              <Icon name="plus" size={19} color="#F4EEFF" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.filterRow}>
-            {FILTERS.map(item => {
-              const active = item === filter;
-              return (
-                <TouchableOpacity
-                  key={item}
-                  style={[styles.filterChip, active && styles.filterChipActive]}
-                  onPress={() => {
-                    setFilter(item);
-                    Haptics.selectionAsync();
-                  }}
-                  activeOpacity={0.76}
-                >
-                  <Icon
-                    name={item === 'Videos' ? 'video' : item === 'Stories' ? 'book-open' : 'layers'}
-                    size={12}
-                    color={active ? '#D9C7FF' : 'rgba(205,192,235,0.48)'}
-                  />
-                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{item}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      </LinearGradient>
-
-      {(!apiOnline || discoverLoadError) && !isLoading && (
-        <View style={styles.statusBanner}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>
-            {discoverLoadError && apiOnline
-              ? "Couldn't load reels — pull to retry"
-              : 'Offline — showing saved reels'}
-          </Text>
-        </View>
-      )}
-
+    <View
+      style={[styles.root, { backgroundColor: colors.background }]}
+      onLayout={event => {
+        const next = Math.round(event.nativeEvent.layout.height);
+        if (next > 0 && next !== feedHeight) setFeedHeight(next);
+      }}
+    >
       <FlatList
+        ref={listRef}
         data={reels}
         keyExtractor={item => item.id}
-        renderItem={({ item, index }) => (
-          <DiscoverCard
+        renderItem={({ item }) => (
+          <ReelCard
             post={item}
-            delay={Math.min(index * 60, 360)}
-            onPress={() => openPost(item)}
-            onSave={() => toggleSavePost(item.id)}
-            onReport={() => setReportTargetId(item.id)}
+            height={reelHeight}
+            topInset={topPad}
+            onOpen={() => openPost(item)}
             onAuthorPress={() => router.push({
               pathname: '/user/[userId]',
               params: { userId: item.authorUserId },
             } as never)}
-            isVideoPlaying={item.id === visiblePostId && item.contentType === 'video'}
-            videoMuted={videosMuted}
+            playing={item.id === visiblePostId && item.contentType === 'video'}
+            muted={videosMuted}
             onMuteToggle={() => setVideosMuted(muted => !muted)}
+            onShare={() => { void sharePost(item); }}
+            onSave={() => toggleSavePost(item.id)}
+            onReport={() => setReportTargetId(item.id)}
           />
         )}
-        ListHeaderComponent={hasCorruptedDiscover ? (
-          <View style={styles.corruptBanner}>
-            <Icon name="alert-triangle" size={13} color="#C8A84B" />
-            <Text style={styles.corruptText}>Some reels could not be loaded.</Text>
-          </View>
-        ) : null}
         ListEmptyComponent={
           isLoading && discoverPosts.length === 0 ? (
-            <View>
+            <View style={{ paddingTop: topPad + 116 }}>
               {[0, 1, 2].map(index => (
                 <SkeletonDiscoverCard key={index} style={{ opacity: 1 - index * 0.22 }} />
               ))}
             </View>
           ) : (
-            <View style={styles.empty}>
+            <View style={[styles.empty, { paddingTop: topPad + 170 }]}>
               <View style={styles.emptyIcon}>
                 <Icon
                   name={filter === 'Videos' ? 'video' : 'star'}
@@ -228,11 +187,9 @@ export default function ReelsScreen() {
         }
         viewabilityConfig={viewabilityConfig.current}
         onViewableItemsChanged={onViewableItemsChanged.current}
-        contentContainerStyle={[
-          styles.list,
-          contentMaxWidth != null && { maxWidth: contentMaxWidth },
-          { paddingBottom: bottomPad },
-        ]}
+        snapToInterval={reelHeight}
+        decelerationRate="fast"
+        contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -243,6 +200,71 @@ export default function ReelsScreen() {
           />
         }
       />
+
+      <LinearGradient
+        colors={['rgba(9,6,24,0.92)', 'rgba(9,6,24,0.55)', 'transparent']}
+        style={[styles.header, { paddingTop: topPad }]}
+        pointerEvents="box-none"
+      >
+        <View style={styles.headerInner}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>Reels <Text style={styles.titleStar}>✦</Text></Text>
+            <TouchableOpacity
+              style={styles.createButton}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push('/(tabs)/create');
+              }}
+              accessibilityLabel="Create a story or video"
+              activeOpacity={0.78}
+            >
+              <Icon name="plus" size={19} color="#F4EEFF" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.filterRow}>
+            {FILTERS.map(item => {
+              const active = item === filter;
+              return (
+                <TouchableOpacity
+                  key={item}
+                  style={[styles.filterChip, active && styles.filterChipActive]}
+                  onPress={() => {
+                    setFilter(item);
+                    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+                    Haptics.selectionAsync();
+                  }}
+                  activeOpacity={0.76}
+                >
+                  <Icon
+                    name={item === 'Videos' ? 'video' : item === 'Stories' ? 'book-open' : 'layers'}
+                    size={12}
+                    color={active ? '#D9C7FF' : 'rgba(205,192,235,0.48)'}
+                  />
+                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{item}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </LinearGradient>
+
+      {(!apiOnline || discoverLoadError) && !isLoading && (
+        <View style={[styles.statusBanner, { top: topPad + 111 }]}>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>
+            {discoverLoadError && apiOnline
+              ? "Couldn't load reels — pull to retry"
+              : 'Offline — showing saved reels'}
+          </Text>
+        </View>
+      )}
+      {hasCorruptedDiscover && apiOnline && !discoverLoadError && (
+        <View style={[styles.corruptBanner, { top: topPad + 111 }]}>
+          <Icon name="alert-triangle" size={13} color="#C8A84B" />
+          <Text style={styles.corruptText}>Some reels could not be loaded.</Text>
+        </View>
+      )}
 
       <ReportSheet
         visible={!!reportTargetId}
@@ -263,34 +285,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    overflow: 'hidden',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(185,150,255,0.14)',
-  },
-  headerOrbLarge: {
     position: 'absolute',
-    width: 190,
-    height: 190,
-    borderRadius: 95,
-    right: -48,
-    top: -62,
-    backgroundColor: 'rgba(150,80,255,0.19)',
-  },
-  headerOrbSmall: {
-    position: 'absolute',
-    width: 95,
-    height: 95,
-    borderRadius: 48,
-    left: -24,
-    bottom: -38,
-    backgroundColor: 'rgba(255,90,180,0.11)',
+    left: 0, right: 0, top: 0, zIndex: 2,
   },
   headerInner: {
     width: '100%',
-    alignSelf: 'center',
     paddingHorizontal: 18,
-    paddingTop: 13,
-    paddingBottom: 13,
+    paddingTop: 5,
+    paddingBottom: 9,
   },
   titleRow: {
     flexDirection: 'row',
@@ -299,17 +301,12 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   title: {
-    fontSize: 28,
+    fontSize: 27,
     fontFamily: 'Satoshi-Black',
     color: '#F6F0FF',
     letterSpacing: -0.7,
   },
-  subtitle: {
-    marginTop: 2,
-    fontSize: 12,
-    fontFamily: 'Satoshi-Regular',
-    color: 'rgba(214,200,242,0.54)',
-  },
+  titleStar: { color: '#D6B8FF', fontSize: 22 },
   createButton: {
     width: 40,
     height: 40,
@@ -322,13 +319,13 @@ const styles = StyleSheet.create({
   },
   filterRow: {
     flexDirection: 'row',
-    gap: 7,
-    marginTop: 13,
+    gap: 8,
+    marginTop: 10,
   },
   filterChip: {
-    height: 32,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    height: 35,
+    paddingHorizontal: 15,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -350,13 +347,12 @@ const styles = StyleSheet.create({
   },
   list: {
     width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 14,
-    paddingTop: 14,
   },
   statusBanner: {
-    marginHorizontal: 14,
-    marginTop: 10,
+    position: 'absolute',
+    zIndex: 3,
+    left: 14,
+    right: 14,
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 12,
@@ -380,7 +376,10 @@ const styles = StyleSheet.create({
     color: 'rgba(220,210,240,0.78)',
   },
   corruptBanner: {
-    marginBottom: 10,
+    position: 'absolute',
+    zIndex: 3,
+    left: 14,
+    right: 14,
     paddingHorizontal: 12,
     paddingVertical: 9,
     borderRadius: 11,

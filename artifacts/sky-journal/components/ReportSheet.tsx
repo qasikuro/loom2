@@ -49,12 +49,14 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
   const [details,   setDetails]   = useState('');
   const [loading,   setLoading]   = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setSelected(null);
       setDetails('');
       setSubmitted(false);
+      setSubmitError(false);
       setLoading(false);
       Animated.parallel([
         Animated.timing(fadeIn, { toValue: 1, duration: 220, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
@@ -73,6 +75,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
     if (!selected) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
+    setSubmitError(false);
     try {
       await apiFetch('/reports', {
         method: 'POST',
@@ -80,8 +83,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
       });
       setSubmitted(true);
     } catch {
-      // still show success — don't reveal failures to avoid manipulation
-      setSubmitted(true);
+      setSubmitError(true);
     } finally {
       setLoading(false);
     }
@@ -225,6 +227,11 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
               />
 
               {/* Submit */}
+              {submitError && (
+                <Text style={{ color: '#E89A9A', fontSize: 12, marginBottom: 12 }}>
+                  Couldn't send your report. Check your connection and try again.
+                </Text>
+              )}
               <TouchableOpacity
                 style={[
                   styles.submitBtn,
