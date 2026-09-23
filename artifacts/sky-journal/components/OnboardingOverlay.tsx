@@ -497,7 +497,6 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
       animationType="none"
       statusBarTranslucent
       onShow={() => {
-        if (__DEV__) console.warn('[TouchDebug] onboarding modal shown');
       }}
     >
       <Animated.View style={[s.root, { opacity: fadeAnim, paddingTop: topPad, paddingBottom: bottomPad }]}>

@@ -175,12 +175,7 @@ function ClassicTabLayout() {
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 10);
 
   return (
-    <View
-      style={{ flex: 1 }}
-      onTouchStart={() => {
-        if (__DEV__) console.log('[TouchDebug] tab layout touch');
-      }}
-    >
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -229,7 +224,6 @@ function ClassicTabLayout() {
         name="index"
         listeners={{
           tabPress: () => {
-            if (__DEV__) console.log('[TouchDebug] tab home press');
             playSound('navigate');
           },
         }}
@@ -244,7 +238,6 @@ function ClassicTabLayout() {
         name="reels"
         listeners={{
           tabPress: () => {
-            if (__DEV__) console.log('[TouchDebug] tab reels press');
             playSound('navigate');
           },
         }}
@@ -259,7 +252,6 @@ function ClassicTabLayout() {
         name="create"
         listeners={{
           tabPress: () => {
-            if (__DEV__) console.log('[TouchDebug] tab create press');
             playSound('chime');
           },
         }}
@@ -274,7 +266,6 @@ function ClassicTabLayout() {
         name="discover"
         listeners={{
           tabPress: () => {
-            if (__DEV__) console.log('[TouchDebug] tab discover press');
             playSound('navigate');
           },
         }}
@@ -299,7 +290,6 @@ function ClassicTabLayout() {
         name="profile"
         listeners={{
           tabPress: () => {
-            if (__DEV__) console.log('[TouchDebug] tab profile press');
             playSound('navigate');
           },
         }}

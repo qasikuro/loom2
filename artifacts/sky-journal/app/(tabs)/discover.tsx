@@ -1,8 +1,5 @@
 import { Icon } from '@/components/Icon';
-import { DiscoverCard } from '@/components/DiscoverCard';
-import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
-import { ReportSheet } from '@/components/ReportSheet';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
@@ -10,8 +7,8 @@ import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   FlatList,
   Platform,
@@ -26,11 +23,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TABS = ['Stories', 'Guides', 'Books', 'People'] as const;
+const TABS = ['Guides', 'Books', 'People'] as const;
 type TabType = (typeof TABS)[number];
 
 const TAB_ICONS: Record<TabType, string> = {
-  Stories: '✦',
   Guides:  '★',
   Books:   '◎',
   People:  '◉',
@@ -104,19 +100,13 @@ export default function DiscoverScreen() {
   const insets    = useSafeAreaInsets();
   const { width: viewportWidth } = useWindowDimensions();
   const { t }     = useTranslation();
-  const { discoverPosts, toggleSavePost, followingIds, followUser, unfollowUser, refreshFeed, isLoading,
-          apiOnline, discoverLoadError, reloadData, isRefreshing,
-          discoverMoodFilter, setDiscoverMoodFilter,
-          hasCorruptedDiscover } = useApp();
+  const { followingIds, followUser, unfollowUser, isRefreshing } = useApp();
 
-  const [activeTab,     setActiveTab]     = useState<TabType>('Stories');
-  const [storiesSort,   setStoriesSort]   = useState<'for-you' | 'new'>('for-you');
+  const [activeTab,     setActiveTab]     = useState<TabType>('Guides');
   const [peopleQuery,   setPeopleQuery]   = useState('');
   const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
   const [peopleLoading, setPeopleLoading] = useState(false);
   const [peopleError,   setPeopleError]   = useState<string | null>(null);
-  const [reportTargetId, setReportTargetId] = useState<string | null>(null);
-  const [refreshing,    setRefreshing]    = useState(false);
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
@@ -126,29 +116,11 @@ export default function DiscoverScreen() {
   const [booksLoading, setBooksLoading] = useState(false);
   const [booksError,   setBooksError]   = useState<string | null>(null);
   const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastFetchRef     = useRef<number>(0);
   const guidesLoaded     = useRef(false);
   const booksLoaded      = useRef(false);
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
   const contentMaxWidth = viewportWidth >= 760 ? 760 : undefined;
-
-  // Refresh the discover feed when the tab comes into focus,
-  // but at most once every 2 minutes to avoid hammering the API.
-  useFocusEffect(useCallback(() => {
-    const now = Date.now();
-    if (now - lastFetchRef.current > 2 * 60 * 1000) {
-      lastFetchRef.current = now;
-      refreshFeed().catch(() => null);
-    }
-  }, [refreshFeed]));
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    lastFetchRef.current = Date.now();
-    await refreshFeed().catch(() => null);
-    setRefreshing(false);
-  }, [refreshFeed]);
 
   function selectTab(tab: TabType) {
     setActiveTab(tab);
@@ -242,18 +214,6 @@ export default function DiscoverScreen() {
     else followUser(g.userId);
   }
 
-  // Reels have their own full-screen tab. Keep Discover focused on stories
-  // so the same video/story post is not shown in both feeds.
-  const storyPosts = discoverPosts.filter(post => post.contentType !== 'video');
-  const filteredByMoodDoor = discoverMoodFilter
-    ? storyPosts.filter(p => p.mood === discoverMoodFilter || p.vibe === discoverMoodFilter)
-    : storyPosts;
-
-  const sortedByNew = [...filteredByMoodDoor].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-  const activePosts = storiesSort === 'new' ? sortedByNew : filteredByMoodDoor;
-
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
 
@@ -273,7 +233,7 @@ export default function DiscoverScreen() {
           <View style={styles.headerText}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
               <Text style={styles.headerTitle}>{t('discover.title')}</Text>
-              {isRefreshing && !refreshing && (
+              {isRefreshing && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.12)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
                   <SkyLoadingMark size={14} color="rgba(200,184,232,0.7)" />
                   <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' }}>Updating</Text>
@@ -338,110 +298,8 @@ export default function DiscoverScreen() {
         </ScrollView>
       </LinearGradient>
 
-      {/* ── Offline / error banner ──────────────────────────────────── */}
-      {(!apiOnline || discoverLoadError) && !isLoading && (
-        <View style={offlineBannerS.row}>
-          <View style={offlineBannerS.dot} />
-          <Text style={offlineBannerS.msg}>{discoverLoadError && apiOnline ? "Couldn't load stories" : "Offline — showing cached stories"}</Text>
-          <TouchableOpacity style={offlineBannerS.btn} onPress={discoverLoadError && apiOnline ? refreshFeed : reloadData} activeOpacity={0.75}>
-            <Text style={offlineBannerS.btnText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* Thin separator */}
       <View style={[styles.sep, { backgroundColor: colors.border }]} />
-
-      {/* ── Stories ────────────────────────────────────────── */}
-      {activeTab === 'Stories' && (
-        <FlatList
-          key="stories"
-          data={activePosts}
-          keyExtractor={item => item.id}
-          ListHeaderComponent={
-            <View>
-              <View style={styles.storiesSortRow}>
-                <TouchableOpacity
-                  style={[styles.sortChip, storiesSort === 'for-you' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
-                  onPress={() => { setStoriesSort('for-you'); Haptics.selectionAsync(); }}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.sortChipText, { color: storiesSort === 'for-you' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>✦ For You</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.sortChip, storiesSort === 'new' && { backgroundColor: 'rgba(155,120,232,0.18)', borderColor: 'rgba(155,120,232,0.45)' }]}
-                  onPress={() => { setStoriesSort('new'); Haptics.selectionAsync(); }}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.sortChipText, { color: storiesSort === 'new' ? '#C8B0FF' : 'rgba(200,184,232,0.45)' }]}>◎ New</Text>
-                </TouchableOpacity>
-              </View>
-              {discoverMoodFilter && (
-                <View style={styles.moodFilterRow}>
-                  <Text style={styles.moodFilterLabel}>Showing</Text>
-                  <View style={styles.moodFilterChip}>
-                    <Text style={styles.moodFilterChipTxt}>{discoverMoodFilter}</Text>
-                    <TouchableOpacity
-                      onPress={() => { setDiscoverMoodFilter(null); Haptics.selectionAsync(); }}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <Icon name="x" size={11} color="rgba(200,184,232,0.65)" />
-                    </TouchableOpacity>
-                  </View>
-                  <Text style={styles.moodFilterLabel}>stories</Text>
-                </View>
-              )}
-              {hasCorruptedDiscover && (
-                <View style={corruptBannerS.row}>
-                  <Icon name="alert-triangle" size={13} color="#C8A84B" />
-                  <Text style={corruptBannerS.msg}>
-                    Some stories couldn't be loaded — they may have been removed or corrupted.
-                  </Text>
-                </View>
-              )}
-            </View>
-          }
-          renderItem={({ item, index }) => (
-            <DiscoverCard
-              post={item}
-              delay={Math.min(index * 75, 400)}
-              onPress={() => item.bookId
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  ? router.push({ pathname: '/book-public', params: { bookId: item.bookId } } as any)
-                  : router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
-              onSave={() => toggleSavePost(item.id)}
-              onReport={() => setReportTargetId(item.id)}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
-            />
-          )}
-          contentContainerStyle={[styles.listPad, { paddingBottom: bottomPad }]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          ListEmptyComponent={
-            isLoading && discoverPosts.length === 0 ? (
-              <View>
-                {[0, 1, 2].map(i => (
-                  <SkeletonDiscoverCard key={i} style={{ opacity: 1 - i * 0.22 }} />
-                ))}
-              </View>
-            ) : (
-              <EmptyFeed
-                tab="Stories"
-                colors={colors}
-                onCreatePress={() => router.push('/(tabs)/create')}
-              />
-            )
-          }
-        />
-      )}
 
       {/* ── Books ─────────────────────────────────────────── */}
       {activeTab === 'Books' && (
@@ -570,14 +428,6 @@ export default function DiscoverScreen() {
           )}
         </ScrollView>
       )}
-
-      {/* ── Report sheet ──────────────────────────────────── */}
-      <ReportSheet
-        visible={!!reportTargetId}
-        targetType="story"
-        targetId={reportTargetId ?? ''}
-        onClose={() => setReportTargetId(null)}
-      />
 
       {/* ── Guides ─────────────────────────────────────────── */}
       {activeTab === 'Guides' && (
@@ -872,30 +722,6 @@ export default function DiscoverScreen() {
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function EmptyFeed({ tab: _tab, colors, onCreatePress }: { tab: string; colors: any; onCreatePress: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.emptyWrap}>
-      <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
-        <Icon name="compass" size={30} color={`${colors.primary}70`} />
-      </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discover.emptyFeed')}</Text>
-      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        {t('discover.emptyFeedSub')}
-      </Text>
-      <TouchableOpacity
-        style={[styles.ctaBtn, { backgroundColor: colors.primary }]}
-        onPress={onCreatePress}
-        activeOpacity={0.85}
-      >
-        <Icon name="plus" size={14} color="#fff" />
-        <Text style={styles.ctaBtnText}>{t('discover.beFirst')}</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function PeopleEmptyStart({ colors }: { colors: any }) {
   return (
     <View style={styles.emptyWrap}>
@@ -987,30 +813,7 @@ const styles = StyleSheet.create({
   tabIcon: { fontSize: 9, fontFamily: 'Satoshi-Bold' },
   tabText: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
-  // Stories sort toggle
-  storiesSortRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    paddingHorizontal: 0,
-    paddingTop: 14,
-    paddingBottom: 4,
-  },
-  sortChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(200,184,232,0.15)',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-  },
-  sortChipText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
-
   sep: { height: StyleSheet.hairlineWidth },
-
-  // Feed list
-  listPad: { paddingHorizontal: 16, paddingTop: 18 },
 
   // Books
   booksBanner: {
@@ -1245,76 +1048,4 @@ const styles = StyleSheet.create({
   },
   searchHintText: { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 
-  ctaBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 28, height: 48, borderRadius: 24,
-    marginTop: 6,
-    shadowColor: '#9B78FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.40,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  ctaBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
-
-  moodDoorBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 14, borderWidth: 1,
-    backgroundColor: 'rgba(200,184,232,0.06)',
-    borderColor: 'rgba(200,184,232,0.14)',
-  },
-  moodDoorBtnTxt: {
-    fontSize: 11, fontFamily: 'Satoshi-Bold',
-    color: 'rgba(200,184,232,0.50)', letterSpacing: 0.4,
-  },
-  moodFilterRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 16, paddingBottom: 10,
-  },
-  moodFilterLabel: {
-    fontSize: 12, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.40)',
-  },
-  moodFilterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 12, borderWidth: 1,
-    backgroundColor: 'rgba(155,120,232,0.15)',
-    borderColor: 'rgba(155,120,232,0.35)',
-  },
-  moodFilterChipTxt: {
-    fontSize: 12, fontFamily: 'Satoshi-Bold',
-    color: '#C8B0FF', letterSpacing: 0.2,
-  },
-});
-
-const offlineBannerS = StyleSheet.create({
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    marginHorizontal: 14, marginTop: 8, marginBottom: 2,
-    paddingHorizontal: 12, paddingVertical: 9,
-    borderRadius: 12, borderWidth: 1,
-    backgroundColor: 'rgba(14, 10, 32, 0.88)',
-    borderColor: 'rgba(200, 168, 75, 0.35)',
-  },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C8A84B', flexShrink: 0 },
-  msg: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(220, 210, 240, 0.78)' },
-  btn: {
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)',
-  },
-  btnText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9B78E8' },
-});
-
-const corruptBannerS = StyleSheet.create({
-  row: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 16, marginBottom: 8,
-    paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 10, borderWidth: 1,
-    backgroundColor: 'rgba(200, 168, 75, 0.08)',
-    borderColor: 'rgba(200, 168, 75, 0.25)',
-  },
-  msg: { flex: 1, fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(220, 210, 190, 0.65)' },
 });

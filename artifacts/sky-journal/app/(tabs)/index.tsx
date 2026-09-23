@@ -72,7 +72,6 @@ const MOOD_COLOR: Record<string, string> = {
 const DEF_ACCENT = '#9B78E8';
 
 function logHomePress(label: string, action: () => void): void {
-  if (__DEV__) console.log(`[TouchDebug] Home ${label} press`);
   action();
 }
 
@@ -1382,12 +1381,7 @@ export default function HomeScreen() {
   const dashboardFriends = circleAuthors.slice(0, screenWidth < 390 ? 4 : 5);
 
   return (
-    <Animated.View
-      style={[s.root, { opacity: fadeIn }]}
-      onTouchStart={() => {
-        if (__DEV__) console.log('[TouchDebug] Home root touch');
-      }}
-    >
+    <Animated.View style={[s.root, { opacity: fadeIn }]}>
       {/* ── Deep space void ── */}
       <LinearGradient
         colors={['#100A28', '#08061A', '#04030C']}
@@ -1431,9 +1425,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
-        onTouchStart={() => {
-          if (__DEV__) console.log('[TouchDebug] Home ScrollView touch');
-        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
         <View style={s.dashboardHeader}>

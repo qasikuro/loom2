@@ -187,6 +187,16 @@ export default function ReelsScreen() {
         }
         viewabilityConfig={viewabilityConfig.current}
         onViewableItemsChanged={onViewableItemsChanged.current}
+        initialNumToRender={1}
+        maxToRenderPerBatch={2}
+        updateCellsBatchingPeriod={80}
+        windowSize={3}
+        removeClippedSubviews={Platform.OS === 'android'}
+        getItemLayout={(_, index) => ({
+          length: reelHeight,
+          offset: reelHeight * index,
+          index,
+        })}
         snapToInterval={reelHeight}
         decelerationRate="fast"
         contentContainerStyle={styles.list}
