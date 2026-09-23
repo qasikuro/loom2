@@ -33,6 +33,7 @@ import {
   markFirstPublishDone,
 } from '../components/FirstPublishOverlay';
 import { CompletionMoment } from '@/components/CompletionMoment';
+import CropImageModal from '@/components/CropImageModal';
 
 const MOODS = [
   { id: 'Dreamy',      emoji: '🌙', color: '#9B78E8' },
@@ -62,6 +63,9 @@ export default function QuickMomentScreen() {
 
   const [step,          setStep]          = useState(STEP_IMAGE);
   const [imageUri,      setImageUri]      = useState<string | null>(null);
+  const [pendingCropUri, setPendingCropUri] = useState<string | null>(null);
+  const [imageFit, setImageFit] = useState<'cover' | 'contain'>('cover');
+  const [imageRatio, setImageRatio] = useState<number | undefined>(undefined);
   const [caption,       setCaption]       = useState('');
   const [mood,          setMood]          = useState<MoodId>('Dreamy');
 
@@ -96,11 +100,11 @@ export default function QuickMomentScreen() {
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     if (!caption.trim() && !imageUri) return;
     draftTimerRef.current = setTimeout(() => {
-      quickMomentDraft.save({ caption, mood, isPublic, imageUri: imageUri ?? undefined, step });
+      quickMomentDraft.save({ caption, mood, isPublic, imageUri: imageUri ?? undefined, imageFit, imageRatio, step });
     }, 800);
     return () => { if (draftTimerRef.current) clearTimeout(draftTimerRef.current); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [caption, mood, isPublic, imageUri, step]);
+  }, [caption, mood, isPublic, imageUri, imageFit, imageRatio, step]);
   const [uploading,     setUploading]     = useState(false);
   const [posting,       setPosting]       = useState(false);
   const [error,         setError]         = useState<string | null>(null);
@@ -139,11 +143,17 @@ export default function QuickMomentScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const res = await ImagePicker.launchImageLibraryAsync({
       mediaTypes:    ['images'],
-      allowsEditing: true,
+      allowsEditing: false,
       quality:       1,
     });
     if (res.canceled || !res.assets[0]) return;
-    const localUri = res.assets[0].uri;
+    setPendingCropUri(res.assets[0].uri);
+  }
+
+  async function handleCropDone(localUri: string, ratio: number, fit: 'cover' | 'contain') {
+    setPendingCropUri(null);
+    setImageFit(fit);
+    setImageRatio(ratio);
     setImageUri(localUri);
     setUploading(true);
     setError(null);
@@ -182,7 +192,7 @@ export default function QuickMomentScreen() {
     const panelText = caption.trim();
     const panelId   = crypto.randomUUID();
     const pageId    = crypto.randomUUID();
-    const panel     = { id: panelId, text: panelText, bubbleText: '', imageUri: imageUri ?? undefined };
+    const panel     = { id: panelId, text: panelText, bubbleText: '', imageUri: imageUri ?? undefined, imageAspectRatio: imageRatio, contentFit: imageFit };
 
     const ok = await addStory({
       id:             crypto.randomUUID(),
@@ -272,6 +282,8 @@ export default function QuickMomentScreen() {
                     if (m) setMood(m.id);
                     setIsPublic(pendingDraft.isPublic);
                     if (pendingDraft.imageUri) setImageUri(pendingDraft.imageUri);
+                    setImageFit(pendingDraft.imageFit ?? 'cover');
+                    setImageRatio(pendingDraft.imageRatio);
                     setPendingDraft(null);
                     // Jump to caption step since the draft was from there
                     setStep(STEP_CAPTION);
@@ -287,7 +299,7 @@ export default function QuickMomentScreen() {
 
               <TouchableOpacity style={s.imagePicker} onPress={pickImage} activeOpacity={0.85}>
                 {imageUri ? (
-                  <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit={imageFit} />
                 ) : (
                   <View style={s.imagePickerInner}>
                     <View style={[s.imagePickerIcon, { backgroundColor: `${accentColor}20`, borderColor: `${accentColor}40` }]}>
@@ -332,6 +344,8 @@ export default function QuickMomentScreen() {
                     if (m) setMood(m.id);
                     setIsPublic(pendingDraft.isPublic);
                     if (pendingDraft.imageUri) setImageUri(pendingDraft.imageUri);
+                    setImageFit(pendingDraft.imageFit ?? 'cover');
+                    setImageRatio(pendingDraft.imageRatio);
                     setPendingDraft(null);
                   }}
                   onDiscard={() => {
@@ -404,7 +418,7 @@ export default function QuickMomentScreen() {
                   <Image
                     source={{ uri: imageUri }}
                     style={s.previewImage}
-                    contentFit="cover"
+                    contentFit={imageFit}
                     transition={200}
                   />
                 )}
@@ -459,6 +473,14 @@ export default function QuickMomentScreen() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onFinish={() => { markSaved(); router.push('/(tabs)' as any); }}
       />
+      {pendingCropUri && (
+        <CropImageModal
+          visible
+          uri={pendingCropUri}
+          onDone={handleCropDone}
+          onCancel={() => setPendingCropUri(null)}
+        />
+      )}
     </View>
   );
 }

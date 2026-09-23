@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import CropImageModal from '@/components/CropImageModal';
 import { BadgeTray } from '@/components/profile/BadgeTray';
 import { Images } from '@/assets/images';
 import type { ConstellationState } from '@/components/ConstellationMap';
@@ -66,6 +67,7 @@ export function ProfileHeaderSection({
   useEffect(() => { if (!editingName) setNameVal(character.name); },      [character.name, editingName]);
   useEffect(() => { if (!editingBio)  setBioVal(character.bio ?? ''); },  [character.bio,  editingBio]);
   const [avatarUploading,   setAvatarUploading]   = useState(false);
+  const [pendingAvatarUri, setPendingAvatarUri] = useState<string | null>(null);
   const [avatarError,       setAvatarError]       = useState<string | null>(null);
   const [newTrait,          setNewTrait]          = useState('');
   const [addingTrait,       setAddingTrait]       = useState(false);
@@ -118,13 +120,17 @@ export function ProfileHeaderSection({
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if ((perm.status as string) === 'denied' || (perm.status as string) === 'restricted') return;
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85,
+      mediaTypes: ['images'], allowsEditing: false, quality: 1,
     });
     if (result.canceled || !result.assets[0]) return;
+    setPendingAvatarUri(result.assets[0].uri);
+  }
+  async function handleAvatarCrop(uri: string) {
+    setPendingAvatarUri(null);
     setAvatarUploading(true); setAvatarError(null);
     try {
-      const uri = await persistImageUri(result.assets[0].uri);
-      setCharacter({ ...character, avatarUri: uri });
+      const persisted = await persistImageUri(uri);
+      setCharacter({ ...character, avatarUri: persisted });
     } catch (err: unknown) {
       const msg = err instanceof ImageUploadError ? err.userMessage : 'Upload failed — check your connection.';
       setAvatarError(msg);
@@ -178,7 +184,7 @@ export function ProfileHeaderSection({
               ? FRAME_CONFIGS[activeFrame].color
               : `${currentMoodData.accent}70`,
           }]}>
-            <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
+            <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit={character.avatarUri ? 'contain' : 'cover'} />
           </View>
           <BreathingAvatarRing mood={currentMood} />
           {activeFrame && <FrameRing frameId={activeFrame} />}
@@ -439,6 +445,15 @@ export function ProfileHeaderSection({
         <Text style={{ color: '#DC2626', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 6 }}>
           {avatarError}
         </Text>
+      )}
+      {pendingAvatarUri && (
+        <CropImageModal
+          visible
+          uri={pendingAvatarUri}
+          aspectRatio={1}
+          onDone={handleAvatarCrop}
+          onCancel={() => setPendingAvatarUri(null)}
+        />
       )}
     </>
   );

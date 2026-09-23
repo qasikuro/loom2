@@ -23,6 +23,8 @@ export type QuickMomentDraft = {
   mood:      string;
   isPublic:  boolean;
   imageUri?: string;
+  imageFit?: 'cover' | 'contain';
+  imageRatio?: number;
   step:      number;
   savedAt:   number;
 };

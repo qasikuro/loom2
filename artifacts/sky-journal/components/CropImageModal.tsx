@@ -1,15 +1,6 @@
-/**
- * CropImageModal — Instagram-style zoom + reframe editor
- *
- * • Fixed 3:4 crop frame (matches the panel aspect ratio)
- * • Pinch to zoom in/out on native; +/− buttons on web
- * • Drag to pan the image inside the frame
- * • Image always covers the frame — no empty/black areas
- * • "Use This Crop" → pixel-perfect crop via expo-image-manipulator
- * • "Use Original"  → skip crop, pass URI as-is
- */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Image as RNImage,
   Modal,
   PanResponder,
@@ -19,7 +10,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { Image } from 'expo-image';
@@ -28,359 +18,259 @@ import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 
 export interface CropImageModalProps {
-  visible:      boolean;
-  uri:          string;
+  visible: boolean;
+  uri: string;
   aspectRatio?: number;
-  onDone:       (croppedUri: string, aspectRatio: number, fit: 'cover' | 'contain') => void;
-  onCancel:     () => void;
+  onDone: (croppedUri: string, aspectRatio: number, fit: 'cover' | 'contain') => void;
+  onCancel: () => void;
 }
 
-const PRIMARY     = '#6B5B95';
-const CORNER_LEN  = 22;
-const CORNER_W    = 3;
-
+type CropRect = { x: number; y: number; w: number; h: number };
+type Corner = 'TL' | 'TR' | 'BL' | 'BR';
+const CORNERS: Corner[] = ['TL', 'TR', 'BL', 'BR'];
+const MIN_SIZE = 48;
+const PRIMARY = '#9880D0';
 const RATIO_OPTS = [
+  { label: 'Free', value: null },
   { label: '3 : 4', value: 3 / 4 },
-  { label: '1 : 1', value: 1     },
+  { label: '1 : 1', value: 1 },
   { label: '4 : 3', value: 4 / 3 },
 ] as const;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function touchDist(touches: any[]): number {
-  const dx = touches[0].pageX - touches[1].pageX;
-  const dy = touches[0].pageY - touches[1].pageY;
-  return Math.sqrt(dx * dx + dy * dy);
+function limit(value: number, low: number, high: number) {
+  return Math.max(low, Math.min(high, value));
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
+function centeredRect(w: number, h: number, ratio: number | null): CropRect {
+  let cropW = w * 0.84;
+  let cropH = h * 0.84;
+  if (ratio) {
+    cropW = Math.min(cropW, cropH * ratio);
+    cropH = cropW / ratio;
+  }
+  return { x: (w - cropW) / 2, y: (h - cropH) / 2, w: cropW, h: cropH };
+}
 
-export default function CropImageModal({
-  visible, uri, aspectRatio, onDone, onCancel,
-}: CropImageModalProps) {
-  const insets                       = useSafeAreaInsets();
-  const { width: screenW } = useWindowDimensions();
-
+export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCancel }: CropImageModalProps) {
+  const insets = useSafeAreaInsets();
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
-  const [canvasH, setCanvasH]         = useState(0);
-  const [canvasW, setCanvasW]         = useState(0);
-  const [applying, setApplying]       = useState(false);
-  const [ratio, setRatio]             = useState(aspectRatio ?? 3 / 4);
+  const [canvas, setCanvas] = useState({ w: 0, h: 0 });
+  const [ratio, setRatio] = useState<number | null>(aspectRatio ?? null);
+  const [selection, setSelection] = useState<CropRect | null>(null);
+  const [applying, setApplying] = useState(false);
+  const rectRef = useRef<CropRect | null>(null);
+  const gestureStart = useRef<CropRect | null>(null);
 
-  // Mutable refs for transform (gesture handlers read/write these directly)
-  const scaleRef = useRef(1);
-  const txRef    = useRef(0);  // image-centre offset from frame-centre, px
-  const tyRef    = useRef(0);
+  const image = useMemo(() => {
+    if (!naturalSize || !canvas.w || !canvas.h) return null;
+    const scale = Math.min((canvas.w - 32) / naturalSize.w, (canvas.h - 32) / naturalSize.h);
+    const w = naturalSize.w * scale;
+    const h = naturalSize.h * scale;
+    return { x: (canvas.w - w) / 2, y: (canvas.h - h) / 2, w, h };
+  }, [naturalSize, canvas]);
 
-  // Bump this to force a re-render after gesture mutations
-  const [_tick, setTick] = useState(0);
-  const bump = () => setTick(t => t + 1);
-
-  // ── Frame geometry ────────────────────────────────────────────────────────
-
-  const availableW = canvasW || screenW;
-  const availableH = canvasH || Number.POSITIVE_INFINITY;
-  const frameW = Math.max(1, Math.min(availableW - 32, availableH === Number.POSITIVE_INFINITY ? availableW - 32 : (availableH - 32) * ratio));
-  const frameH = frameW / ratio;
-
-  // Vertical centre of the frame within the canvas
-  const frameTop = Math.max(16, (canvasH - frameH) / 2);
-
-  // ── Scale helpers ─────────────────────────────────────────────────────────
-
-  // baseScale makes the image fill the frame (cover, not contain)
-  const baseScale = useMemo(() => {
-    if (!naturalSize) return 1;
-    return Math.max(frameW / naturalSize.w, frameH / naturalSize.h);
-  }, [naturalSize, frameW, frameH]);
-
-  // Derived display size at current zoom
-  const displayW = (naturalSize?.w ?? frameW) * baseScale * scaleRef.current;
-  const displayH = (naturalSize?.h ?? frameH) * baseScale * scaleRef.current;
-
-  // Clamp translate so image always fully covers the frame
-  function clamp(tx: number, ty: number, scale: number) {
-    if (!naturalSize) return { tx: 0, ty: 0 };
-    const dw   = naturalSize.w * baseScale * scale;
-    const dh   = naturalSize.h * baseScale * scale;
-    const maxX = Math.max(0, (dw - frameW) / 2);
-    const maxY = Math.max(0, (dh - frameH) / 2);
-    return {
-      tx: Math.max(-maxX, Math.min(maxX, tx)),
-      ty: Math.max(-maxY, Math.min(maxY, ty)),
-    };
+  function updateRect(rect: CropRect) {
+    rectRef.current = rect;
+    setSelection(rect);
   }
 
-  // ── Reset when URI changes ────────────────────────────────────────────────
-
   useEffect(() => {
-    if (!uri) return;
+    if (!visible || !uri) return;
     setNaturalSize(null);
-    scaleRef.current = 1;
-    txRef.current    = 0;
-    tyRef.current    = 0;
-    RNImage.getSize(uri, (w, h) => setNaturalSize({ w, h }), () => null);
-  }, [uri]);
+    rectRef.current = null;
+    setSelection(null);
+    setRatio(aspectRatio ?? null);
+    let active = true;
+    RNImage.getSize(uri, (w, h) => {
+      if (active) setNaturalSize({ w, h });
+    }, () => {
+      if (active) Alert.alert('Photo unavailable', 'Could not read this photo. Please choose another one.');
+    });
+    return () => { active = false; };
+  }, [uri, visible, aspectRatio]);
 
-  // Re-clamp when layout changes (e.g. orientation)
   useEffect(() => {
-    if (!naturalSize) return;
-    const c = clamp(txRef.current, tyRef.current, scaleRef.current);
-    txRef.current = c.tx;
-    tyRef.current = c.ty;
-    bump();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [naturalSize, baseScale]);
+    if (!image) return;
+    updateRect(centeredRect(image.w, image.h, ratio));
+    // Reset the selection only when the image/layout changes, not on a drag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [image]);
 
-  // ── Gesture: pinch-to-zoom + pan ──────────────────────────────────────────
-
-  const prevDist   = useRef(0);
-  const panStart   = useRef({ tx: 0, ty: 0 });
-  const isPinching = useRef(false);
-
-  const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder:  () => true,
-    onMoveShouldSetPanResponder:   () => true,
-
-    onPanResponderGrant: (e) => {
-      panStart.current   = { tx: txRef.current, ty: tyRef.current };
-      isPinching.current = e.nativeEvent.touches.length >= 2;
-      prevDist.current   = 0;
-    },
-
-    onPanResponderMove: (e, gs) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const touches = e.nativeEvent.touches as any[];
-
-      if (touches.length >= 2) {
-        // ── Pinch zoom ──
-        isPinching.current = true;
-        const d = touchDist(touches);
-        if (prevDist.current > 0) {
-          const newScale = Math.max(1, Math.min(8, scaleRef.current * (d / prevDist.current)));
-          scaleRef.current = newScale;
-          const c = clamp(txRef.current, tyRef.current, newScale);
-          txRef.current = c.tx;
-          tyRef.current = c.ty;
-          bump();
-        }
-        prevDist.current = d;
-      } else if (!isPinching.current) {
-        // ── Pan ──
-        const c = clamp(panStart.current.tx + gs.dx, panStart.current.ty + gs.dy, scaleRef.current);
-        txRef.current = c.tx;
-        tyRef.current = c.ty;
-        bump();
-      }
-    },
-
-    onPanResponderRelease: () => {
-      prevDist.current   = 0;
-      isPinching.current = false;
-    },
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [baseScale, naturalSize, frameW, frameH]);
-
-  // ── Zoom buttons (web + accessibility) ───────────────────────────────────
-
-  function zoomBy(delta: number) {
-    const newScale   = Math.max(1, Math.min(8, scaleRef.current + delta));
-    scaleRef.current = newScale;
-    const c          = clamp(txRef.current, tyRef.current, newScale);
-    txRef.current    = c.tx;
-    tyRef.current    = c.ty;
-    bump();
+  function changeRatio(next: number | null) {
+    setRatio(next);
+    if (image) updateRect(centeredRect(image.w, image.h, next));
   }
 
-  // ── Apply crop ────────────────────────────────────────────────────────────
+  const moveResponder = useMemo(() => PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: () => { gestureStart.current = rectRef.current; },
+    onPanResponderMove: (_, gesture) => {
+      const start = gestureStart.current;
+      if (!start || !image) return;
+      updateRect({
+        ...start,
+        x: limit(start.x + gesture.dx, 0, image.w - start.w),
+        y: limit(start.y + gesture.dy, 0, image.h - start.h),
+      });
+    },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [image]);
+
+  function makeResizeResponder(corner: Corner) {
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => { gestureStart.current = rectRef.current; },
+      onPanResponderMove: (_, gesture) => {
+        const start = gestureStart.current;
+        if (!start || !image) return;
+        const fromLeft = corner === 'TL' || corner === 'BL';
+        const fromTop = corner === 'TL' || corner === 'TR';
+        const anchorX = fromLeft ? start.x + start.w : start.x;
+        const anchorY = fromTop ? start.y + start.h : start.y;
+        const maxW = fromLeft ? anchorX : image.w - anchorX;
+        const maxH = fromTop ? anchorY : image.h - anchorY;
+        const horizontal = start.w + (fromLeft ? -gesture.dx : gesture.dx);
+        const vertical = start.h + (fromTop ? -gesture.dy : gesture.dy);
+        let w: number;
+        let h: number;
+        if (ratio) {
+          const deltaX = horizontal - start.w;
+          const deltaY = (vertical - start.h) * ratio;
+          const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
+          w = limit(start.w + delta, Math.min(MIN_SIZE, maxW, maxH * ratio), Math.min(maxW, maxH * ratio));
+          h = w / ratio;
+        } else {
+          w = limit(horizontal, Math.min(MIN_SIZE, maxW), maxW);
+          h = limit(vertical, Math.min(MIN_SIZE, maxH), maxH);
+        }
+        updateRect({ x: fromLeft ? anchorX - w : anchorX, y: fromTop ? anchorY - h : anchorY, w, h });
+      },
+    });
+  }
+
+  // A corner owns its touch rather than letting the move responder intercept it.
+  const resizeResponders = useMemo(
+    () => Object.fromEntries(CORNERS.map(corner => [corner, makeResizeResponder(corner)])) as Record<Corner, ReturnType<typeof PanResponder.create>>,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [image, ratio],
+  );
 
   async function applyCrop() {
-    if (!naturalSize) { onDone(uri, ratio, 'cover'); return; }
+    const rect = rectRef.current;
+    if (!naturalSize || !image || !rect || applying) return;
     setApplying(true);
     try {
-      const totalScale = baseScale * scaleRef.current;
-
-      // Top-left corner of the frame in original-image pixel space
-      const originX = Math.max(0, Math.round((displayW / 2 - frameW / 2 - txRef.current) / totalScale));
-      const originY = Math.max(0, Math.round((displayH / 2 - frameH / 2 - tyRef.current) / totalScale));
-      const cropW   = Math.max(1, Math.min(naturalSize.w - originX, Math.round(frameW / totalScale)));
-      const cropH   = Math.max(1, Math.min(naturalSize.h - originY, Math.round(frameH / totalScale)));
-
-      const MAX_DIM = 1600;
+      const left = limit(Math.round(rect.x * naturalSize.w / image.w), 0, naturalSize.w - 1);
+      const top = limit(Math.round(rect.y * naturalSize.h / image.h), 0, naturalSize.h - 1);
+      const right = limit(Math.round((rect.x + rect.w) * naturalSize.w / image.w), left + 1, naturalSize.w);
+      const bottom = limit(Math.round((rect.y + rect.h) * naturalSize.h / image.h), top + 1, naturalSize.h);
+      const cropW = right - left;
+      const cropH = bottom - top;
       const actions: ImageManipulator.Action[] = [
-        { crop: { originX, originY, width: cropW, height: cropH } },
+        { crop: { originX: left, originY: top, width: cropW, height: cropH } },
       ];
-      if (cropW > MAX_DIM || cropH > MAX_DIM) {
-        actions.push(
-          cropW >= cropH
-            ? { resize: { width: MAX_DIM } }
-            : { resize: { height: MAX_DIM } },
-        );
+      if (cropW > 1600 || cropH > 1600) {
+        actions.push(cropW >= cropH ? { resize: { width: 1600 } } : { resize: { height: 1600 } });
       }
-      const result = await ImageManipulator.manipulateAsync(
-        uri,
-        actions,
-        { compress: 0.92, format: ImageManipulator.SaveFormat.JPEG },
-      );
-      onDone(result.uri, ratio, 'cover');
+      const result = await ImageManipulator.manipulateAsync(uri, actions, {
+        compress: 0.92,
+        format: ImageManipulator.SaveFormat.JPEG,
+      });
+      onDone(result.uri, cropW / cropH, 'contain');
     } catch {
-      onDone(uri, ratio, 'cover');
+      Alert.alert('Crop failed', 'The selected area could not be saved. Please try again or use the original.');
     } finally {
       setApplying(false);
     }
   }
 
-  // ── Ratio change ─────────────────────────────────────────────────────────
-
-  function changeRatio(newRatio: number) {
-    setRatio(newRatio);
-    scaleRef.current = 1;
-    txRef.current    = 0;
-    tyRef.current    = 0;
-    bump();
-  }
-
-  // ── Layout constants ──────────────────────────────────────────────────────
-
-  const topInset    = Platform.OS === 'web' ? 48 : insets.top;
+  const topInset = Platform.OS === 'web' ? 48 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 20 : insets.bottom;
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <Modal visible={visible} animationType="fade" transparent={false} statusBarTranslucent>
-      <View style={[styles.root, { backgroundColor: '#08060F' }]}>
+      <View style={styles.root}>
         <StatusBar barStyle="light-content" />
-
-        {/* ── Top bar ── */}
         <View style={[styles.topBar, { paddingTop: topInset + 6 }]}>
-          <TouchableOpacity style={styles.topBtn} onPress={onCancel}>
+          <TouchableOpacity style={styles.topBtn} onPress={onCancel} accessibilityLabel="Cancel crop">
             <Icon name="x" size={18} color="#fff" />
           </TouchableOpacity>
-
           <View style={styles.topCenter}>
-            <Text style={styles.topTitle}>Reframe Photo</Text>
-            <Text style={styles.topSub}>
-              {Platform.OS === 'web'
-                ? 'Use +/− to zoom · drag to reframe'
-                : 'Pinch to zoom · drag to choose what to show'}
-            </Text>
-          </View>
-
-          <View style={styles.zoomBtns}>
-            <TouchableOpacity style={styles.zoomBtn} onPress={() => zoomBy(0.3)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon name="plus" size={15} color="rgba(255,255,255,0.85)" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.zoomBtn} onPress={() => zoomBy(-0.3)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Icon name="minus" size={15} color="rgba(255,255,255,0.85)" />
-            </TouchableOpacity>
+            <Text style={styles.topTitle}>Crop Photo</Text>
+            <Text style={styles.topSub}>Drag the box to choose an area · drag corners to resize</Text>
           </View>
         </View>
 
-        {/* ── Aspect ratio strip ── */}
         <View style={styles.ratioStrip}>
-          {RATIO_OPTS.map(opt => {
-            const active = Math.abs(ratio - opt.value) < 0.01;
-            return (
-              <TouchableOpacity
-                key={opt.label}
-                style={[styles.ratioBtn, active && styles.ratioBtnActive]}
-                onPress={() => changeRatio(opt.value)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          {RATIO_OPTS.map(opt => (
+            <TouchableOpacity
+              key={opt.label}
+              style={[styles.ratioBtn, ratio === opt.value && styles.ratioBtnActive]}
+              onPress={() => changeRatio(opt.value)}
+              accessibilityLabel={`${opt.label} crop`}
+            >
+              <Text style={[styles.ratioBtnText, ratio === opt.value && styles.ratioBtnTextActive]}>{opt.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <View style={styles.canvas} onLayout={e => setCanvas({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+          {image && selection ? (
+            <View style={{ position: 'absolute', left: image.x, top: image.y, width: image.w, height: image.h }}>
+              <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="fill" cachePolicy="memory" />
+              <View pointerEvents="none" style={[styles.dim, { top: 0, left: 0, right: 0, height: selection.y }]} />
+              <View pointerEvents="none" style={[styles.dim, { top: selection.y + selection.h, left: 0, right: 0, bottom: 0 }]} />
+              <View pointerEvents="none" style={[styles.dim, { top: selection.y, left: 0, width: selection.x, height: selection.h }]} />
+              <View pointerEvents="none" style={[styles.dim, { top: selection.y, left: selection.x + selection.w, right: 0, height: selection.h }]} />
+              <View
+                style={[styles.selection, { left: selection.x, top: selection.y, width: selection.w, height: selection.h }]}
+                {...moveResponder.panHandlers}
               >
-                <Text style={[styles.ratioBtnText, active && styles.ratioBtnTextActive]}>
-                  {opt.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                <View pointerEvents="none" style={[styles.gridLine, { left: '33.33%', top: 0, bottom: 0, width: 1 }]} />
+                <View pointerEvents="none" style={[styles.gridLine, { left: '66.66%', top: 0, bottom: 0, width: 1 }]} />
+                <View pointerEvents="none" style={[styles.gridLine, { top: '33.33%', left: 0, right: 0, height: 1 }]} />
+                <View pointerEvents="none" style={[styles.gridLine, { top: '66.66%', left: 0, right: 0, height: 1 }]} />
+                {CORNERS.map(corner => (
+                  <View
+                    key={corner}
+                    style={[styles.handle, {
+                      left: corner.endsWith('L') ? -16 : undefined,
+                      right: corner.endsWith('R') ? -16 : undefined,
+                      top: corner.startsWith('T') ? -16 : undefined,
+                      bottom: corner.startsWith('B') ? -16 : undefined,
+                    }]}
+                    {...resizeResponders[corner].panHandlers}
+                  >
+                    <View style={styles.handleDot} pointerEvents="none" />
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.loadingCenter}><SkyLoadingMark color="#fff" size={42} /></View>
+          )}
         </View>
 
-        {/* ── Canvas (gesture area + frame) ── */}
-        <View
-          style={styles.canvas}
-          onLayout={e => {
-            setCanvasW(e.nativeEvent.layout.width);
-            setCanvasH(e.nativeEvent.layout.height);
-          }}
-          {...panResponder.panHandlers}
-        >
-          {/* Dark strips outside the frame */}
-          <View style={[styles.dim, { top: 0, left: 0, right: 0, height: frameTop }]} />
-          <View style={[styles.dim, { top: frameTop + frameH, left: 0, right: 0, bottom: 0 }]} />
-          <View style={[styles.dim, { top: frameTop, left: 0, width: 16, height: frameH }]} />
-          <View style={[styles.dim, { top: frameTop, right: 0, width: 16, height: frameH }]} />
-
-          {/* Crop frame — clips the image */}
-          <View style={[styles.frame, { left: 16, top: frameTop, width: frameW, height: frameH }]}>
-            {naturalSize ? (
-              <View style={{
-                position: 'absolute',
-                width:    displayW,
-                height:   displayH,
-                left:     frameW / 2 - displayW / 2 + txRef.current,
-                top:      frameH / 2 - displayH / 2 + tyRef.current,
-              }}>
-                <Image
-                  source={{ uri }}
-                  style={{ width: '100%', height: '100%' }}
-                  contentFit="fill"
-                  cachePolicy="memory"
-                />
-              </View>
-            ) : (
-              <View style={styles.loadingCenter}>
-                <SkyLoadingMark color="#fff" size={42} />
-              </View>
-            )}
-
-            {/* Grid lines (rule of thirds) */}
-            <View style={[styles.gridLine, { top: 0, bottom: 0, width: 1, left: '33.33%' }]} />
-            <View style={[styles.gridLine, { top: 0, bottom: 0, width: 1, left: '66.66%' }]} />
-            <View style={[styles.gridLine, { left: 0, right: 0, height: 1, top: '33.33%' }]} />
-            <View style={[styles.gridLine, { left: 0, right: 0, height: 1, top: '66.66%' }]} />
-
-            {/* Frame border */}
-            <View style={styles.frameBorder} />
-
-            {/* Corner tick marks */}
-            <CornerMark pos="TL" />
-            <CornerMark pos="TR" />
-            <CornerMark pos="BL" />
-            <CornerMark pos="BR" />
-          </View>
-        </View>
-
-        {/* ── Bottom bar ── */}
         <View style={[styles.bottomBar, { paddingBottom: bottomInset + 12 }]}>
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: 'rgba(255,255,255,0.10)' }]}
-            onPress={() => {
-              // Pass the image's true aspect ratio so the panel isn't forced
-              // into the currently-selected crop box dimensions.
-              const naturalRatio = naturalSize
-                ? naturalSize.w / naturalSize.h
-                : ratio;
-              // 'contain' so the panel shows the full image without cropping.
-              onDone(uri, naturalRatio, 'contain');
-            }}
-            disabled={applying}
-          >
-            <Icon name="image" size={14} color="rgba(255,255,255,0.7)" />
-            <Text style={[styles.actionBtnText, { color: 'rgba(255,255,255,0.7)' }]}>Use Original</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: PRIMARY, opacity: applying ? 0.7 : 1 }]}
-            onPress={applyCrop}
+            style={[styles.actionBtn, styles.originalBtn]}
+            onPress={() => onDone(uri, naturalSize ? naturalSize.w / naturalSize.h : 1, 'contain')}
             disabled={applying || !naturalSize}
           >
-             {applying
-               ? <SkyLoadingMark color="#fff" size={18} />
-              : <>
-                  <Icon name="check" size={14} color="#fff" />
-                  <Text style={[styles.actionBtnText, { color: '#fff' }]}>Use This Crop</Text>
-                </>
-            }
+            <Icon name="image" size={14} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.actionBtnText}>Use Original</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.cropBtn, applying && { opacity: 0.7 }]}
+            onPress={applyCrop}
+            disabled={applying || !selection}
+          >
+            {applying ? <SkyLoadingMark color="#fff" size={18} /> : <>
+              <Icon name="check" size={14} color="#fff" />
+              <Text style={[styles.actionBtnText, { color: '#fff' }]}>Use This Crop</Text>
+            </>}
           </TouchableOpacity>
         </View>
       </View>
@@ -388,104 +278,28 @@ export default function CropImageModal({
   );
 }
 
-// ── Corner tick marks ──────────────────────────────────────────────────────────
-
-function CornerMark({ pos }: { pos: 'TL' | 'TR' | 'BL' | 'BR' }) {
-  const isR = pos === 'TR' || pos === 'BR';
-  const isB = pos === 'BL' || pos === 'BR';
-  return (
-    <View style={{
-      position: 'absolute',
-      [isR ? 'right' : 'left']: 0,
-      [isB ? 'bottom' : 'top']: 0,
-      width: CORNER_LEN,
-      height: CORNER_LEN,
-    }}>
-      {/* Horizontal arm */}
-      <View style={{
-        position: 'absolute',
-        [isB ? 'bottom' : 'top']: 0,
-        [isR ? 'right' : 'left']: 0,
-        width: CORNER_LEN,
-        height: CORNER_W,
-        borderRadius: CORNER_W / 2,
-        backgroundColor: '#fff',
-      }} />
-      {/* Vertical arm */}
-      <View style={{
-        position: 'absolute',
-        [isB ? 'bottom' : 'top']: 0,
-        [isR ? 'right' : 'left']: 0,
-        width: CORNER_W,
-        height: CORNER_LEN,
-        borderRadius: CORNER_W / 2,
-        backgroundColor: '#fff',
-      }} />
-    </View>
-  );
-}
-
-// ── Styles ─────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  root:         { flex: 1 },
-
-  topBar:       {
-    flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingBottom: 12,
-  },
-  topBtn:       {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
-    marginTop: 2,
-  },
-  topCenter:    { flex: 1, minWidth: 0, alignItems: 'center', paddingTop: 4, paddingHorizontal: 6 },
-  topTitle:     { color: '#fff', fontSize: 15, fontFamily: 'Satoshi-Bold', textAlign: 'center', flexShrink: 1 },
-  topSub:       { color: 'rgba(255,255,255,0.42)', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 2, textAlign: 'center', flexShrink: 1 },
-  zoomBtns:     { flexDirection: 'row', gap: 6, marginTop: 2, flexShrink: 0 },
-  zoomBtn:      {
-    width: 36, height: 36, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.10)',
-  },
-
-  canvas:       { flex: 1 },
-  dim:          { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.65)' },
-
-  frame:        { position: 'absolute', overflow: 'hidden', backgroundColor: '#000' },
-  frameBorder:  { ...StyleSheet.absoluteFillObject, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.55)' },
-  gridLine:     { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.18)' },
-  loadingCenter:{ flex: 1, alignItems: 'center', justifyContent: 'center' },
-
-  ratioStrip: {
-    flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center',
-    gap: 8, paddingVertical: 10, backgroundColor: '#08060F',
-  },
-  ratioBtn: {
-    paddingHorizontal: 16, paddingVertical: 7, borderRadius: 18,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  ratioBtnActive: {
-    backgroundColor: 'rgba(107,91,149,0.28)',
-    borderColor: 'rgba(107,91,149,0.65)',
-  },
-  ratioBtnText: {
-    color: 'rgba(255,255,255,0.42)', fontSize: 13,
-    fontFamily: 'Satoshi-Bold', letterSpacing: 0.3,
-  },
-  ratioBtnTextActive: { color: PRIMARY },
-  bottomBar:    {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
-    paddingHorizontal: 16, paddingTop: 14,
-    backgroundColor: '#08060F',
-  },
-  actionBtn:    {
-    flex: 1, minWidth: 140, flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'center', gap: 7,
-    paddingVertical: 14, borderRadius: 14,
-  },
-  actionBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
+  root: { flex: 1, backgroundColor: '#08060F' },
+  topBar: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 14, paddingBottom: 10 },
+  topBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.10)' },
+  topCenter: { flex: 1, alignItems: 'center', paddingHorizontal: 8 },
+  topTitle: { color: '#fff', fontSize: 17, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
+  topSub: { color: 'rgba(255,255,255,0.58)', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 4, textAlign: 'center' },
+  ratioStrip: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 12 },
+  ratioBtn: { paddingHorizontal: 13, paddingVertical: 8, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.17)', backgroundColor: 'rgba(255,255,255,0.06)' },
+  ratioBtnActive: { backgroundColor: 'rgba(152,128,208,0.25)', borderColor: PRIMARY },
+  ratioBtnText: { color: 'rgba(255,255,255,0.62)', fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  ratioBtnTextActive: { color: '#D9C9FF' },
+  canvas: { flex: 1 },
+  dim: { position: 'absolute', backgroundColor: 'rgba(0,0,0,0.65)' },
+  selection: { position: 'absolute', borderWidth: 2, borderColor: '#fff', backgroundColor: 'transparent' },
+  gridLine: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.35)' },
+  handle: { position: 'absolute', width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  handleDot: { width: 16, height: 16, borderRadius: 4, borderWidth: 3, borderColor: '#fff', backgroundColor: PRIMARY },
+  loadingCenter: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  bottomBar: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingTop: 14 },
+  actionBtn: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 14, borderRadius: 14 },
+  originalBtn: { backgroundColor: 'rgba(255,255,255,0.10)' },
+  cropBtn: { backgroundColor: PRIMARY },
+  actionBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(255,255,255,0.8)', flexShrink: 1 },
 });

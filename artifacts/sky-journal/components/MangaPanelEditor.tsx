@@ -42,13 +42,13 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
     }
   }
 
-  async function doUpload(uri: string) {
+  async function doUpload(uri: string, aspectRatio?: number, fit: 'cover' | 'contain' = 'contain') {
     setUploadError(null);
     setFailedUri(null);
     setUploading(true);
     try {
       const persisted = await persistImageUri(uri);
-      onChange({ ...panel, imageUri: persisted });
+      onChange({ ...panel, imageUri: persisted, imageAspectRatio: aspectRatio ?? panel.imageAspectRatio, contentFit: fit });
     } catch (err: unknown) {
       const msg = err instanceof ImageUploadError ? err.userMessage : 'Upload failed — check your connection and tap Retry.';
       setUploadError(msg);
@@ -58,9 +58,9 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
     }
   }
 
-  async function handleCropDone(croppedUri: string) {
+  async function handleCropDone(croppedUri: string, aspectRatio: number, fit: 'cover' | 'contain') {
     setPendingUri(null);
-    await doUpload(croppedUri);
+    await doUpload(croppedUri, aspectRatio, fit);
   }
 
   async function handleRetry() {
@@ -84,7 +84,7 @@ export function MangaPanelEditor({ panel, index, total, onChange, onDelete }: Ma
             <Image
               source={{ uri: panel.imageUri }}
               style={StyleSheet.absoluteFill}
-              contentFit="cover"
+              contentFit={panel.contentFit ?? 'cover'}
               cachePolicy="memory-disk"
             />
           ) : (
