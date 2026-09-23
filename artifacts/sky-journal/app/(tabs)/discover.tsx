@@ -1,6 +1,5 @@
 import { Icon } from '@/components/Icon';
 import { DiscoverCard } from '@/components/DiscoverCard';
-import { DiscoverVideoPlayerModal } from '@/components/DiscoverVideoPlayerModal';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { ReportSheet } from '@/components/ReportSheet';
@@ -120,27 +119,16 @@ export default function DiscoverScreen() {
   const [refreshing,    setRefreshing]    = useState(false);
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
-  // Video auto-play / mute state
-  const [visiblePostId, setVisiblePostId] = useState<string | null>(null);
-  const [videosMuted,   setVideosMuted]   = useState(true);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
   const [guideTopicFilter, setGuideTopicFilter] = useState<string | null>(null);
   const [guideAvailNow,    setGuideAvailNow]    = useState(false);
   const [booksData,    setBooksData]    = useState<DiscoverBook[]>([]);
   const [booksLoading, setBooksLoading] = useState(false);
   const [booksError,   setBooksError]   = useState<string | null>(null);
-  const [selectedVideoPost, setSelectedVideoPost] = useState<import('@/context/AppContext').DiscoverPost | null>(null);
   const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchRef     = useRef<number>(0);
   const guidesLoaded     = useRef(false);
   const booksLoaded      = useRef(false);
-  // Track which story-card is ≥60 % visible for video autoplay
-  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60, minimumViewTime: 300 });
-  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: { item: { id: string; contentType?: string } }[] }) => {
-    const videoItem = viewableItems.find(v => v.item.contentType === 'video');
-    setVisiblePostId(videoItem ? videoItem.item.id : null);
-  });
-
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
   const contentMaxWidth = viewportWidth >= 760 ? 760 : undefined;
@@ -254,9 +242,12 @@ export default function DiscoverScreen() {
     else followUser(g.userId);
   }
 
+  // Reels have their own full-screen tab. Keep Discover focused on stories
+  // so the same video/story post is not shown in both feeds.
+  const storyPosts = discoverPosts.filter(post => post.contentType !== 'video');
   const filteredByMoodDoor = discoverMoodFilter
-    ? discoverPosts.filter(p => p.mood === discoverMoodFilter || p.vibe === discoverMoodFilter)
-    : discoverPosts;
+    ? storyPosts.filter(p => p.mood === discoverMoodFilter || p.vibe === discoverMoodFilter)
+    : storyPosts;
 
   const sortedByNew = [...filteredByMoodDoor].sort((a, b) =>
     new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -414,23 +405,16 @@ export default function DiscoverScreen() {
             <DiscoverCard
               post={item}
               delay={Math.min(index * 75, 400)}
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={item.contentType === 'video'
-                ? () => setSelectedVideoPost(item)
-                : () => item.bookId
+              onPress={() => item.bookId
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   ? router.push({ pathname: '/book-public', params: { bookId: item.bookId } } as any)
                   : router.push({ pathname: '/story/[id]', params: { id: item.id, source: 'discover' } })}
               onSave={() => toggleSavePost(item.id)}
               onReport={() => setReportTargetId(item.id)}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               onAuthorPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.authorUserId } } as any)}
-              isVideoPlaying={item.id === visiblePostId && item.contentType === 'video'}
-              videoMuted={videosMuted}
-              onMuteToggle={() => setVideosMuted(m => !m)}
             />
           )}
-          viewabilityConfig={viewabilityConfig.current}
-          onViewableItemsChanged={onViewableItemsChanged.current}
           contentContainerStyle={[styles.listPad, { paddingBottom: bottomPad }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
@@ -593,12 +577,6 @@ export default function DiscoverScreen() {
         targetType="story"
         targetId={reportTargetId ?? ''}
         onClose={() => setReportTargetId(null)}
-      />
-
-      {/* ── Fullscreen video player ────────────────────────── */}
-      <DiscoverVideoPlayerModal
-        post={selectedVideoPost}
-        onClose={() => setSelectedVideoPost(null)}
       />
 
       {/* ── Guides ─────────────────────────────────────────── */}
