@@ -40,7 +40,7 @@ type PendingAttempt = {
 
 const PENDING_ATTEMPT_KEY = 'pending_manga_generation_v2';
 const DEFAULT_PROMPT =
-  'Turn these pictures into a clear manga story. Keep the people, clothes, places, colors, and events faithful to the original pictures. Add short, simple, readable story captions and speech bubbles directly on the pictures. Do not add unrelated characters or scenes.';
+  'Turn these pictures into one cinematic manga page with a clear emotional journey. Keep the game characters, costumes, silhouettes, locations, colors, and events recognizable. Preserve hidden or masked faces instead of inventing new faces. Use short, evocative captions and a memorable final panel.';
 
 const STYLES: Array<{
   id: MangaStyle;
@@ -51,7 +51,7 @@ const STYLES: Array<{
 }> = [
   { id: 'manga', label: 'Manga\n(B&W)', promptInstruction: 'black-and-white Japanese manga with expressive ink lines, screentones, and readable panel composition', image: Images.create_quick, tint: 'rgba(15,10,28,0.38)' },
   { id: 'color', label: 'Color Manga', promptInstruction: 'full-color manga with clean line art, vivid lighting, and readable panel composition', image: Images.create_quick },
-  { id: 'chibi', label: 'Default', promptInstruction: 'faithful full-color manga that keeps the people, clothing, places, colors, and events close to the uploaded pictures', image: Images.story_bg3, tint: 'rgba(255,186,220,0.18)' },
+  { id: 'chibi', label: 'Game Faithful', promptInstruction: 'cinematic full-color manga that preserves the game character designs, silhouettes, costumes, locations, colors, atmosphere, and events from the uploaded pictures', image: Images.story_bg3, tint: 'rgba(255,186,220,0.18)' },
   { id: 'cinematic', label: 'Cinematic', promptInstruction: 'cinematic manga with dramatic framing, detailed lighting, strong depth, and film-like panels', image: Images.story_bg2, tint: 'rgba(62,38,105,0.18)' },
   { id: 'webtoon', label: 'Webtoon', promptInstruction: 'polished color webtoon with clean digital line art, expressive characters, and vertical-comic storytelling', image: Images.create_video, tint: 'rgba(238,84,155,0.14)' },
 ];
@@ -150,8 +150,8 @@ export default function MangaStoryScreen() {
     }
     const finalPrompt =
       `Create one ${selectedStyle.promptInstruction} story page. ` +
-      'Use the uploaded images as references for characters, environments, events, poses, and visual continuity. ' +
-      `Story direction: ${prompt.trim() || 'Infer a simple story from the uploaded pictures.'}`;
+      'Use the uploaded images as canonical references for characters, environments, events, poses, and visual continuity. Preserve hidden faces and distinctive game-avatar features. ' +
+      `Story direction: ${prompt.trim() || 'Create an emotionally engaging manga sequence from the uploaded pictures.'}`;
     setError(null);
     setGenerating(true);
     setGenerated(false);

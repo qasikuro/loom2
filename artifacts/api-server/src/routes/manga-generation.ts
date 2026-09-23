@@ -25,11 +25,11 @@ function positiveInteger(value: string | undefined, fallback: number): number {
 }
 
 const STYLE_PROMPTS = {
-  manga: "black-and-white Japanese manga with expressive ink lines, screentones, and readable panels",
-  color: "full-color manga with clean line art, vivid lighting, and readable panels",
-  chibi: "faithful full-color manga that preserves the people, clothing, locations, colors, and events from the reference pictures",
-  cinematic: "cinematic manga with dramatic framing, detailed lighting, strong depth, and film-like panels",
-  webtoon: "polished color webtoon with clean digital line art and expressive characters",
+  manga: "black-and-white Japanese manga with expressive ink lines, screentones, dramatic composition, and polished editorial paneling",
+  color: "premium full-color manga with clean line art, rich environmental color, expressive lighting, and polished editorial paneling",
+  chibi: "faithful cinematic full-color manga that retains the original game's art direction, character design, atmosphere, colors, and visual identity",
+  cinematic: "cinematic manga with dramatic framing, detailed lighting, strong depth, environmental storytelling, and film-like panels",
+  webtoon: "polished color webtoon with clean digital line art, atmospheric lighting, expressive composition, and strong visual continuity",
 } as const;
 
 const BodySchema = z.object({
@@ -198,20 +198,23 @@ router.post("/manga/generate", requireAuth, async (req: Request, res: Response) 
       references.push({ buffer: compressed, filename: `reference-${references.length + 1}.jpg` });
     }
 
-    const panelCount = Math.min(6, Math.max(2, imageUris.length));
+    const panelCount = Math.min(6, Math.max(3, imageUris.length));
     const generationPrompt =
-      `Create one polished portrait comic page in ${STYLE_PROMPTS[style]}. ` +
-      `Use ${panelCount} clearly separated panels with clean, consistent gutters and an easy top-to-bottom reading order. ` +
-      "Base every panel directly on the uploaded pictures. Preserve each person's recognizable face shape, hairstyle, skin tone, body proportions, clothing, pose, and the important location details. Keep the original events and their order instead of inventing unrelated scenes or characters. " +
-      "Connect the pictured moments into a simple coherent story with expressive faces, natural anatomy, clear details, balanced lighting, and a beginning and ending. " +
-      "Add short manga-style story text directly inside the panels using captions and speech bubbles. Use clear, correctly spelled English, large readable lettering, high contrast, and no more than eight words in each caption or bubble. Keep text away from faces and important details. " +
-      "Do not include logos, watermarks, random symbols, decorative lettering, or text unrelated to the pictured story. " +
-      "Avoid muddy shadows, featureless silhouettes, distorted hands, duplicate characters, cropped faces, and blurry details. " +
-      `Follow this user direction when shaping the story: <story_direction>${prompt.trim() || "Infer a simple story from the uploaded pictures."}</story_direction>. ` +
-      "Regardless of style or user direction, keep all story text short, correctly spelled, readable, relevant to the pictures, and placed only in captions or speech bubbles.";
+      `Create one publication-quality portrait manga page in ${STYLE_PROMPTS[style]}. ` +
+      "First study all uploaded images together as canonical visual source frames. Infer which character appears repeatedly, the shared world, the chronological order, the mood, and the important visual motifs before composing the page. " +
+      "These references may be stylized video-game screenshots rather than photographs. Preserve the game's visual language instead of converting it into ordinary real-world people. Lock the main character's identity across every panel: retain the exact silhouette, body proportions, skin or mask treatment, hairstyle or headpiece, cape or wings, costume layers, colors, glowing marks, accessories, and other recognizable design features. " +
+      "If a face is hidden, masked, shadowed, featureless, or turned away in the references, keep it that way. Never invent a visible human face, ethnicity, hairstyle, or generic anime identity that is not shown. Do not replace a non-human or stylized game avatar with a generic boy or girl. " +
+      `Use ${panelCount} clearly separated panels. Give the page a professional manga rhythm: begin with a wide establishing panel, use varied medium and close compositions for emotional progression, and finish with a visually strong resolving panel. Use clean gutters, intentional panel shapes, and an easy top-to-bottom reading order rather than a repetitive equal-sized grid. ` +
+      "Map the uploaded images into one continuous scene. Preserve their locations, lighting, weather, poses, events, and order, while using cinematic reframing and subtle in-between moments to create continuity. Do not invent unrelated locations, costumes, characters, or events. " +
+      "Create a concise emotional story with a hook, progression, turning point, and satisfying final beat. Let the imagery carry most of the story. Favor specific, evocative narration over generic exposition. " +
+      "Add only short manga captions or speech bubbles directly inside the panels. Use clear, correctly spelled English, large readable lettering, strong contrast, and roughly three to nine words per text box. Keep text away from characters and important details. " +
+      "Use detailed foregrounds and backgrounds, crisp character edges, natural hands and anatomy appropriate to the source design, coherent lighting, and strong depth. Avoid muddy shadows, accidental silhouettes, duplicate characters, cropped heads, blurry details, logos, watermarks, random symbols, or decorative nonsense text. " +
+      `Follow this user direction when shaping the story: <story_direction>${prompt.trim() || "Create an emotionally engaging manga sequence from the uploaded pictures."}</story_direction>. ` +
+      "The final page must feel like the uploaded game moments were intentionally storyboarded into a manga—not loosely reimagined from them.";
     const generated = await editImageBuffers(references, generationPrompt, {
       quality: CONFIG.quality,
       size: CONFIG.outputSize,
+      inputFidelity: "high",
     });
     const creditSvg = Buffer.from(
       `<svg width="1024" height="1536"><rect x="775" y="1480" width="225" height="44" rx="10" fill="rgba(8,5,22,.78)"/><text x="887" y="1508" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="white">Made by Gamejo</text></svg>`,

@@ -15,6 +15,7 @@ export const openai = new OpenAI({
 export interface ImageEditOptions {
   quality?: "low" | "medium" | "high" | "auto";
   size?: "1024x1024" | "1536x1024" | "1024x1536" | "auto";
+  inputFidelity?: "low" | "high";
 }
 
 export async function editImageBuffers(
@@ -31,6 +32,7 @@ export async function editImageBuffers(
     prompt,
     quality: options.quality ?? "low",
     size: options.size ?? "1024x1024",
+    input_fidelity: options.inputFidelity ?? "low",
   });
   const base64 = response.data?.[0]?.b64_json;
   if (!base64) throw new Error("OpenAI returned no image");
