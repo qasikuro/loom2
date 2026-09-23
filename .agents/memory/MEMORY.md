@@ -27,3 +27,4 @@
 - [Invisible native Modal touch shield](invisible-native-modal-touch-shield.md) — gate full-screen Modal mounting on async content readiness; opacity-zero children still intercept native touches
 - [Hidden native ScrollView touch shield](hidden-scrollview-touch-shield.md) — display:none is not enough for legacy scroll/refresh trees behind an absolute Home scene; do not mount them
 - [Static server path safety](static-server-path-safety.md) — serve only pre-indexed files under the static root; request-derived filesystem reads trigger traversal risk and scanner findings
+- [Concurrent validation pressure](concurrent-validation-pressure.md) — simultaneous whole-workspace checks can starve Expo and targeted checks on this small workspace

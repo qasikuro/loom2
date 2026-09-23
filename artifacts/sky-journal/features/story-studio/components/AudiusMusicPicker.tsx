@@ -210,10 +210,12 @@ export function AudiusMusicPicker({
   value,
   mood,
   onChange,
+  context = 'story',
 }: {
   value: AudiusTrack | null;
   mood?: string;
   onChange: (track: AudiusTrack | null) => void;
+  context?: 'story' | 'outfit';
 }) {
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
@@ -270,10 +272,10 @@ export function AudiusMusicPicker({
         <View style={styles.selectedCard}>
           <TrackArtwork track={value} size={58} />
           <View style={styles.selectedInfo}>
-            <Text style={styles.eyebrow}>STORY MUSIC · AUDIUS</Text>
+            <Text style={styles.eyebrow}>{context === 'outfit' ? 'OUTFIT MUSIC' : 'STORY MUSIC'} · AUDIUS</Text>
             <Text style={styles.selectedTitle} numberOfLines={1}>{value.title}</Text>
             <Text style={styles.selectedArtist} numberOfLines={1}>{value.artist} · {formatDuration(value.duration)}</Text>
-            <Text style={styles.selectedHint}>This music will play across the story</Text>
+            <Text style={styles.selectedHint}>{context === 'outfit' ? 'This music will play with your outfit' : 'This music will play across the story'}</Text>
           </View>
           <View style={styles.selectedActions}>
             <AudiusTrackPlayer track={value} compact preview={{ playingId, toggle }} />
@@ -288,14 +290,14 @@ export function AudiusMusicPicker({
           </View>
         </View>
       ) : (
-        <TouchableOpacity style={styles.addCard} onPress={() => setVisible(true)} activeOpacity={0.82} accessibilityRole="button" accessibilityLabel="Add story music">
+        <TouchableOpacity style={styles.addCard} onPress={() => setVisible(true)} activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={`Add ${context} music`}>
           <View style={styles.musicIcon}>
             <Icon name="volume-2" size={24} color="#C89BFF" />
           </View>
           <View style={styles.addCopy}>
-            <Text style={styles.addTitle}>Story Music</Text>
-            <Text style={styles.addSubtitle}>Give this story a soundtrack</Text>
-            <Text style={styles.addHint}>Music will play across all pages</Text>
+            <Text style={styles.addTitle}>{context === 'outfit' ? 'Add music' : 'Story Music'}</Text>
+            <Text style={styles.addSubtitle}>{context === 'outfit' ? 'Choose a song to set the mood' : 'Give this story a soundtrack'}</Text>
+            <Text style={styles.addHint}>{context === 'outfit' ? 'Plays with your outfit' : 'Music will play across all pages'}</Text>
           </View>
           <View style={styles.addButton}>
             <Text style={styles.addButtonText}>Add music</Text>

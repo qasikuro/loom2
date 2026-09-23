@@ -15,6 +15,7 @@ import {
   Animated,
   Easing,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -26,21 +27,21 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
-import { useColors } from '@/hooks/useColors';
+import palette from '@/constants/colors';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { AudiusMusicPicker } from '@/features/story-studio/components/AudiusMusicPicker';
 import type { StoryMusic } from '@/context/mappers';
 
 const VIBE_TAGS = [
-  { label: 'Casual',    color: '#78A8C8' },
-  { label: 'Formal',    color: '#6B5B95' },
-  { label: 'Dreamy',    color: '#9888C0' },
-  { label: 'Adventure', color: '#60A878' },
-  { label: 'Cozy',      color: '#C8A84B' },
-  { label: 'Dark',      color: '#504070' },
-  { label: 'Soft',      color: '#C870A0' },
-  { label: 'Ethereal',  color: '#78C8C8' },
+  { label: 'Casual',    color: '#B48AFF', icon: 'star' },
+  { label: 'Formal',    color: '#D6B3FF', icon: 'star' },
+  { label: 'Dreamy',    color: '#A5A3FF', icon: 'moon' },
+  { label: 'Adventure', color: '#70DAAB', icon: 'compass' },
+  { label: 'Cozy',      color: '#FFB36B', icon: 'sun' },
+  { label: 'Dark',      color: '#AF94EB', icon: 'circle' },
+  { label: 'Soft',      color: '#F38CCA', icon: 'heart' },
+  { label: 'Ethereal',  color: '#77DDF6', icon: 'zap' },
 ];
 
 const VIBES = [
@@ -55,13 +56,13 @@ const VIBES = [
 ];
 
 export default function CreateOutfitScreen() {
-  const colors = useColors();
+  const colors = palette.dark;
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { t: tr } = useTranslation();
   const { addOutfit, updateOutfit } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
+  const bottomPad = 24;
   const contentWidth = Math.min(windowWidth, 720);
 
   const params = useLocalSearchParams<{
@@ -137,8 +138,8 @@ export default function CreateOutfitScreen() {
     })(),
     isPublic:     params.editIsPublic !== 'false',
     music: (() => {
-      try { return params.editMusic ? JSON.stringify(JSON.parse(params.editMusic)) : ''; }
-      catch { return ''; }
+      try { return JSON.stringify(params.editMusic ? JSON.parse(params.editMusic) : null); }
+      catch { return 'null'; }
     })(),
   }));
 
@@ -233,7 +234,7 @@ export default function CreateOutfitScreen() {
 
   function toggleTag(tag: string) {
     Haptics.selectionAsync();
-    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+    setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : prev.length < 3 ? [...prev, tag] : prev);
   }
 
   function handleSave() {
@@ -278,96 +279,100 @@ export default function CreateOutfitScreen() {
   return (
     <>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <LinearGradient colors={['#E8E0F4', '#F8F4EE']} style={[styles.headerGrad, { height: topPad + 70 }]} />
+        <LinearGradient colors={['#26164D', '#121027', '#0A0818']} style={[styles.headerGrad, { height: topPad + 118 }]} />
 
-         <View style={[styles.header, { paddingTop: topPad + 10, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
-          <BackButton style={[styles.iconBtn, { backgroundColor: colors.muted }]} iconName="x" size={18} color={colors.foreground} onPress={() => navigation.goBack()} />
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')}</Text>
+        <View style={[styles.header, { paddingTop: topPad + 8, maxWidth: 720, width: '100%', alignSelf: 'center' }]}>
+          <BackButton style={styles.iconBtn} iconName="arrow-left" size={21} color={colors.foreground} onPress={() => navigation.goBack()} />
+          <View style={styles.headerCopy}>
+            <Text style={styles.headerTitle}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')} <Text style={{ color: colors.primary }}>✦</Text></Text>
+            <Text style={styles.headerSubtitle}>Capture your look, story and vibe</Text>
+          </View>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
             onPress={handleSave} disabled={saving || uploading}
+            accessibilityRole="button"
+            accessibilityLabel={isEditing ? 'Save outfit changes' : 'Save outfit'}
           >
             {saving && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
-            <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-              {saving ? 'Saving…' : tr('outfit.saveOutfit')}
-            </Text>
+            <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
 
         <KeyboardAwareScrollView
           bottomOffset={20} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}
-           contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
+          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
         >
-          {/* Image picker — tall portrait */}
-          <TouchableOpacity
-            style={[styles.imagePicker, {
-              backgroundColor: imageUri ? 'transparent' : colors.muted,
-              borderColor: imageUri ? 'transparent' : error && !imageUri ? '#DC2626' : colors.border,
-              borderWidth: error && !imageUri ? 2 : 1.5,
-            }]}
-            onPress={() => !uploading && setShowSheet(true)}
-            activeOpacity={0.8}
-            disabled={uploading}
-          >
-            {uploading ? (
-              <View style={styles.imagePlaceholder}>
-                <View style={[styles.cameraCircle, { backgroundColor: 'rgba(107,91,149,0.18)' }]}>
-                  <SkyLoadingMark color="#C8B8E8" size={42} />
-                </View>
-                <Text style={[styles.imagePlaceholderTitle, { color: 'rgba(200,184,232,0.72)', fontSize: 14 }]}>
-                  Uploading…
-                </Text>
-                <View style={styles.uploadBarTrack}>
-                  <Animated.View
-                    style={[styles.uploadBarFill, {
-                      width: uploadProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
-                    }]}
-                  />
-                </View>
-              </View>
-            ) : imageUri ? (
-              <>
-                <Image source={{ uri: imageUri }} style={styles.outfitImage} contentFit="contain" />
-                <View style={styles.changeOverlay}>
-                  <View style={[styles.changeChip, { backgroundColor: 'rgba(255,255,255,0.9)' }]}>
-                    <Icon name="camera" size={13} color={colors.foreground} />
-                    <Text style={[styles.changeChipText, { color: colors.foreground }]}>{tr('outfit.changePhoto')}</Text>
+          <View style={styles.photoRow}>
+            <TouchableOpacity
+              style={[styles.imagePicker, { borderColor: error && !imageUri ? colors.destructive : '#8F79BA' }]}
+              onPress={() => !uploading && setShowSheet(true)}
+              activeOpacity={0.8}
+              disabled={uploading}
+              accessibilityRole="button"
+              accessibilityLabel={imageUri ? 'Change outfit photo' : 'Add outfit photo, required'}
+            >
+              {uploading ? (
+                <View style={styles.imagePlaceholder}>
+                  <SkyLoadingMark color={colors.lavender} size={32} />
+                  <Text style={styles.imagePlaceholderTitle}>Uploading…</Text>
+                  <View style={styles.uploadBarTrack}>
+                    <Animated.View
+                      style={[styles.uploadBarFill, {
+                        width: uploadProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
+                      }]}
+                    />
                   </View>
                 </View>
-              </>
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <View style={[styles.cameraCircle, { backgroundColor: `${colors.primary}15` }]}>
-                  <Icon name="camera" size={28} color={`${colors.primary}80`} />
+              ) : imageUri ? (
+                <>
+                  <Image source={{ uri: imageUri }} style={styles.outfitImage} contentFit="contain" />
+                  <View style={styles.changeOverlay}>
+                    <View style={styles.changeChip}>
+                      <Icon name="camera" size={13} color="#fff" />
+                      <Text style={styles.changeChipText}>{tr('outfit.changePhoto')}</Text>
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <View style={styles.cameraCircle}><Icon name="camera" size={24} color={colors.lavender} /></View>
+                  <Text style={styles.imagePlaceholderTitle}>{tr('outfit.addPhoto')}</Text>
+                  <Text style={styles.imagePlaceholderSub}>Tap to upload · Required</Text>
                 </View>
-                <Text style={[styles.imagePlaceholderTitle, { color: colors.mutedForeground }]}>{tr('outfit.addPhoto')}</Text>
-                <Text style={[styles.imagePlaceholderSub, { color: `${colors.mutedForeground}70` }]}>{tr('outfit.photoHint')}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+            <View style={styles.photoTips}>
+              <View style={styles.tipsHeader}><Icon name="sun" size={16} color={colors.gold} /><Text style={styles.tipsTitle}>Photo Tips</Text></View>
+              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>Show the full outfit</Text></View>
+              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>Use good lighting</Text></View>
+              <View style={styles.tipRow}><Icon name="alert-circle" size={14} color={colors.destructive} /><Text style={styles.tipText}>Avoid blurry shots</Text></View>
+            </View>
+          </View>
 
           {/* Name */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.name')}</Text>
+            <View style={styles.fieldHeading}><Icon name="edit-2" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfit.name')}</Text><Text style={styles.counter}>{name.length}/50</Text></View>
             <TextInput
-              style={[styles.nameInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+              style={styles.nameInput}
               placeholder={tr('outfit.namePlaceholder')}
-              placeholderTextColor={`${colors.mutedForeground}80`}
+              placeholderTextColor={colors.mutedForeground}
               value={name}
               onChangeText={t => { setName(t); if (error) setError(null); }}
+              maxLength={50}
               returnKeyType="done"
             />
           </View>
 
           {/* Description / notes */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.notes')}</Text>
+            <View style={styles.fieldHeading}><Icon name="file-text" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfit.notes')} <Text style={styles.optional}>(Optional)</Text></Text><Text style={styles.counter}>{description.length}/200</Text></View>
             <TextInput
-              style={[styles.descInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
+              style={styles.descInput}
               placeholder={tr('outfit.notesPlaceholder')}
-              placeholderTextColor={`${colors.mutedForeground}70`}
+              placeholderTextColor={colors.mutedForeground}
               value={description}
               onChangeText={setDescription}
+              maxLength={200}
               multiline
               textAlignVertical="top"
             />
@@ -375,16 +380,15 @@ export default function CreateOutfitScreen() {
 
           {/* Character story — visible to other users */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Character Story</Text>
-            <Text style={[styles.storyHint, { color: `${colors.mutedForeground}80` }]}>
-              A moment or memory linked to this outfit — visible on your public profile
-            </Text>
+            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>Character Story</Text><Text style={styles.counter}>{story.length}/300</Text></View>
+            <Text style={styles.storyHint}>A moment or memory linked to this outfit · {isPublic ? 'visible on your profile' : 'private'}</Text>
             <TextInput
-              style={[styles.storyInput, { color: colors.foreground, borderColor: colors.primary + '50', backgroundColor: colors.card }]}
+              style={styles.storyInput}
               placeholder="Write the story behind this outfit…"
-              placeholderTextColor={`${colors.mutedForeground}60`}
+              placeholderTextColor={colors.mutedForeground}
               value={story}
               onChangeText={setStory}
+              maxLength={300}
               multiline
               textAlignVertical="top"
             />
@@ -392,20 +396,24 @@ export default function CreateOutfitScreen() {
 
           {/* Style Tags */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('outfit.vibeTags')}</Text>
+            <View style={styles.fieldHeading}><Icon name="heart" size={17} color={colors.blush} /><Text style={styles.fieldLabel}>{tr('outfit.vibeTags')}</Text><Text style={styles.counter}>{selectedTags.length}/3 selected</Text></View>
+            <Text style={styles.storyHint}>Choose up to 3 tags</Text>
             <View style={styles.tagsGrid}>
               {VIBE_TAGS.map(t => {
                 const active = selectedTags.includes(t.label);
                 return (
                   <TouchableOpacity key={t.label}
                     style={[styles.tagChip, {
-                      backgroundColor: active ? `${t.color}22` : `${t.color}0E`,
-                      borderColor:     active ? `${t.color}65` : `${t.color}22`,
-                      borderWidth:     active ? 1.5 : 1,
+                      backgroundColor: active ? `${t.color}32` : colors.card,
+                      borderColor: active ? t.color : `${t.color}55`,
                     }]}
                     onPress={() => toggleTag(t.label)}
+                    disabled={!active && selectedTags.length >= 3}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: active, disabled: !active && selectedTags.length >= 3 }}
                   >
-                    <Text style={[styles.tagText, { color: t.color }]}>{t.label}</Text>
+                    <Icon name={t.icon} size={15} color={t.color} />
+                    <Text style={styles.tagText}>{t.label}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -414,60 +422,49 @@ export default function CreateOutfitScreen() {
 
           {/* Vibe Animation */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Outfit Music</Text>
-            <AudiusMusicPicker value={music} mood={selectedVibe ?? undefined} onChange={setMusic} />
+            <View style={styles.fieldHeading}><Icon name="volume-2" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>Outfit Music</Text></View>
+            <Text style={styles.storyHint}>Add a song to set the mood (optional)</Text>
+            <AudiusMusicPicker value={music} mood={selectedVibe ?? undefined} onChange={setMusic} context="outfit" />
           </View>
 
           {/* Vibe Animation */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Vibe Animation</Text>
-            <Text style={[styles.vibeHint, { color: `${colors.mutedForeground}80` }]}>
-              Choose an animated effect that plays over your outfit when others view it
-            </Text>
-            <View style={styles.vibeGrid}>
+            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>Vibe Animation</Text></View>
+            <Text style={styles.storyHint}>Choose an effect to play over your outfit (optional)</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vibeGrid}>
+              <TouchableOpacity style={[styles.vibeChip, !selectedVibe && styles.vibeChipActive]} onPress={() => setSelectedVibe(null)} accessibilityRole="radio" accessibilityState={{ selected: !selectedVibe }}>
+                <View style={styles.vibePreview}><Icon name="slash" size={30} color={colors.lavender} /></View>
+                <Text style={styles.vibeLabel}>None</Text>
+              </TouchableOpacity>
               {VIBES.map(v => {
                 const active = selectedVibe === v.id;
                 return (
                   <TouchableOpacity
                     key={v.id}
                     style={[styles.vibeChip, {
-                      backgroundColor: active ? `${v.color}20` : `${v.color}0A`,
-                      borderColor:     active ? `${v.color}70` : `${v.color}20`,
-                      borderWidth:     active ? 2 : 1,
+                      borderColor: active ? v.color : colors.border,
                     }]}
                     onPress={() => {
                       Haptics.selectionAsync();
-                      setSelectedVibe(prev => prev === v.id ? null : v.id);
+                      setSelectedVibe(v.id);
                     }}
                     activeOpacity={0.75}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`${v.label}: ${v.desc}`}
+                    accessibilityState={{ selected: active }}
                   >
-                    <Text style={[styles.vibeSymbol, { color: v.color }]}>{v.symbol}</Text>
-                    <View style={styles.vibeTextWrap}>
-                      <Text style={[styles.vibeLabel, { color: active ? v.color : colors.foreground }]}>{v.label}</Text>
-                      <Text style={[styles.vibeDesc,  { color: `${colors.mutedForeground}80` }]} numberOfLines={1}>{v.desc}</Text>
-                    </View>
-                    {active && (
-                      <View style={[styles.vibeCheck, { backgroundColor: v.color }]}>
-                        <Text style={styles.vibeCheckMark}>✓</Text>
-                      </View>
-                    )}
+                    <LinearGradient colors={[`${v.color}68`, '#21163B', '#111025']} style={styles.vibePreview}><Text style={[styles.vibeSymbol, { color: v.color }]}>{v.symbol}</Text></LinearGradient>
+                    <Text style={styles.vibeLabel}>{v.label}</Text>
                   </TouchableOpacity>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
-
-          {/* Inline validation error */}
-          {error && (
-            <View style={[styles.errorBanner, { backgroundColor: '#FEE2E2', borderColor: '#FECACA' }]}>
-              <Icon name="alert-circle" size={14} color="#DC2626" />
-              <Text style={[styles.errorText, { color: '#DC2626' }]}>{error}</Text>
-            </View>
-          )}
 
           {/* Visibility */}
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{tr('common.visibility')}</Text>
+            <View style={styles.fieldHeading}><Icon name="lock" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('common.visibility')}</Text></View>
+            <Text style={styles.storyHint}>Choose who can see this outfit</Text>
             <View style={styles.privacyRow}>
               {(['Private', 'Public'] as const).map(opt => {
                 const active = opt === 'Private' ? !isPublic : isPublic;
@@ -475,19 +472,34 @@ export default function CreateOutfitScreen() {
                   <TouchableOpacity key={opt}
                     style={[styles.privBtn, {
                       backgroundColor: active ? `${colors.primary}15` : colors.muted,
-                      borderColor:     active ? `${colors.primary}40` : colors.border,
+                      borderColor:     active ? colors.primary : colors.border,
                       borderWidth:     active ? 1.5 : 1,
                     }]}
                     onPress={() => setIsPublic(opt === 'Public')}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
                   >
-                    <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={13} color={active ? colors.primary : colors.mutedForeground} />
-                    <Text style={[styles.privText, { color: active ? colors.primary : colors.mutedForeground }]}>{opt === 'Private' ? tr('common.private') : tr('common.public')}</Text>
+                    <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={20} color={active ? colors.primary : colors.mutedForeground} />
+                    <View><Text style={[styles.privText, { color: active ? colors.foreground : colors.mutedForeground }]}>{opt === 'Private' ? tr('common.private') : tr('common.public')}</Text><Text style={styles.privSub}>{opt === 'Private' ? 'Only you can see this' : 'Visible on your profile'}</Text></View>
+                    {active && <Icon name="check-circle" size={17} color={colors.primary} />}
                   </TouchableOpacity>
                 );
               })}
             </View>
           </View>
         </KeyboardAwareScrollView>
+        <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 34 : Math.max(insets.bottom, 12) }]}>
+          {error && (
+            <View style={styles.errorBanner}>
+              <Icon name="alert-circle" size={14} color={colors.destructive} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
+          <TouchableOpacity style={styles.footerButton} onPress={handleSave} disabled={saving || uploading} accessibilityRole="button" accessibilityLabel={isEditing ? 'Save outfit changes' : 'Save outfit'}>
+            {saving ? <SkyLoadingMark size={20} color="#fff" /> : <Icon name="star" size={19} color="#fff" />}
+            <Text style={styles.footerText}>{saving ? 'Saving…' : tr('outfit.saveOutfit')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ImageSourceSheet
@@ -514,55 +526,58 @@ export default function CreateOutfitScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   headerGrad: { position: 'absolute', top: 0, left: 0, right: 0 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
-  iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
-  saveBtn: { paddingHorizontal: 18, paddingVertical: 9, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  scroll: { paddingHorizontal: 18, paddingTop: 0, gap: 0 },
-  imagePicker: { width: '100%', aspectRatio: 3 / 4, borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', overflow: 'hidden', marginBottom: 20 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingBottom: 18 },
+  iconBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#201838', borderWidth: 1, borderColor: '#514073' },
+  headerCopy: { flex: 1 },
+  headerTitle: { fontSize: 25, fontFamily: 'Satoshi-Black', color: '#F5F0FF', lineHeight: 29 },
+  headerSubtitle: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: '#C6BADF', marginTop: 2 },
+  saveBtn: { paddingHorizontal: 20, height: 38, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  saveBtnText: { fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  scroll: { paddingHorizontal: 18, paddingTop: 4 },
+  photoRow: { flexDirection: 'row', gap: 8, marginBottom: 18 },
+  imagePicker: { flex: 1.05, height: 154, borderRadius: 15, borderWidth: 1.5, borderStyle: 'dashed', overflow: 'hidden', backgroundColor: '#1B1633' },
+  photoTips: { flex: 1, height: 154, borderRadius: 15, borderWidth: 1, borderColor: '#453A64', backgroundColor: '#17132D', padding: 11, justifyContent: 'space-around' },
+  tipsHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tipsTitle: { color: '#F4ECFF', fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tipText: { color: '#D2C8E6', fontSize: 11, fontFamily: 'Satoshi-Medium', flexShrink: 1 },
   outfitImage: { width: '100%', height: '100%' },
-  changeOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 16 },
-  changeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
-  changeChipText: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
-  imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  cameraCircle: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
+  changeOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'flex-end', paddingBottom: 10 },
+  changeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: '#24173F' },
+  changeChipText: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: '#fff' },
+  imagePlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 5, padding: 8 },
+  cameraCircle: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: '#37265C', marginBottom: 5 },
   uploadBarTrack: {
-    width: '60%', height: 3, borderRadius: 2,
-    backgroundColor: 'rgba(200,184,232,0.12)',
-    overflow: 'hidden', marginTop: 8,
+    width: '70%', height: 3, borderRadius: 2, backgroundColor: '#4A3A69', overflow: 'hidden', marginTop: 8,
   },
-  uploadBarFill: { height: '100%', borderRadius: 2, backgroundColor: '#8B7AB5' },
-  imagePlaceholderTitle: { fontSize: 15, fontFamily: 'Satoshi-Medium' },
-  imagePlaceholderSub: { fontSize: 12, fontFamily: 'Satoshi-Regular' },
-  field: { marginBottom: 20 },
-  fieldLabel: { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 8 },
-  nameInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: 'Satoshi-Regular' },
-  descInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22, minHeight: 90 },
-  storyHint: { fontSize: 12, fontFamily: 'Satoshi-Regular', marginBottom: 8, marginTop: -2, lineHeight: 17 },
-  storyInput: { borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 22, minHeight: 120, fontStyle: 'italic' },
-  tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  tagChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20 },
-  tagText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
-
-  vibeHint: { fontSize: 12, fontFamily: 'Satoshi-Regular', marginBottom: 12, marginTop: -4, lineHeight: 17 },
-  vibeGrid: { gap: 8 },
-  vibeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 14, paddingVertical: 12, borderRadius: 16,
-  },
-  vibeSymbol:  { fontSize: 22, width: 28, textAlign: 'center' },
-  vibeTextWrap:{ flex: 1, gap: 2 },
-  vibeLabel:   { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  vibeDesc:    { fontSize: 11, fontFamily: 'Satoshi-Regular' },
-  vibeCheck: {
-    width: 22, height: 22, borderRadius: 11,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  vibeCheckMark: { fontSize: 12, color: '#fff', fontFamily: 'Satoshi-Bold' },
-  privacyRow: { flexDirection: 'row', gap: 10 },
-  privBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12 },
-  privText: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
-  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 4 },
-  errorText: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  uploadBarFill: { height: '100%', borderRadius: 2, backgroundColor: '#9B78FF' },
+  imagePlaceholderTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#F4EEFF', textAlign: 'center' },
+  imagePlaceholderSub: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: '#C5B6E4', textAlign: 'center' },
+  field: { marginBottom: 16 },
+  fieldHeading: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 },
+  fieldLabel: { flex: 1, color: '#F4EEFF', fontSize: 14, fontFamily: 'Satoshi-Bold' },
+  optional: { color: '#BCB0D4', fontFamily: 'Satoshi-Regular', fontSize: 12 },
+  counter: { fontSize: 10, color: '#ACA0C6', fontFamily: 'Satoshi-Medium' },
+  nameInput: { borderWidth: 1, borderColor: '#493D66', backgroundColor: '#1B1934', color: '#F4EEFF', borderRadius: 11, paddingHorizontal: 13, paddingVertical: 10, fontSize: 14, fontFamily: 'Satoshi-Regular' },
+  descInput: { borderWidth: 1, borderColor: '#493D66', backgroundColor: '#1B1934', color: '#F4EEFF', borderRadius: 11, paddingHorizontal: 13, paddingVertical: 10, fontSize: 13, fontFamily: 'Satoshi-Regular', minHeight: 58 },
+  storyHint: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: '#B9ACD0', marginBottom: 7 },
+  storyInput: { borderWidth: 1, borderColor: '#493D66', backgroundColor: '#1B1934', color: '#F4EEFF', borderRadius: 11, paddingHorizontal: 13, paddingVertical: 10, fontSize: 13, fontFamily: 'Satoshi-Regular', minHeight: 62 },
+  tagsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  tagChip: { width: '48.5%', height: 34, flexDirection: 'row', gap: 7, alignItems: 'center', justifyContent: 'center', borderRadius: 18, borderWidth: 1 },
+  tagText: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#F4EEFF' },
+  vibeGrid: { gap: 8, paddingVertical: 2, paddingRight: 12 },
+  vibeChip: { width: 84, alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: '#493D66', backgroundColor: '#18142F', paddingBottom: 5, overflow: 'hidden' },
+  vibeChipActive: { borderColor: '#9B78FF', borderWidth: 2 },
+  vibePreview: { width: '100%', height: 54, alignItems: 'center', justifyContent: 'center', backgroundColor: '#30204F' },
+  vibeSymbol: { fontSize: 33, fontFamily: 'Satoshi-Black', textAlign: 'center' },
+  vibeLabel: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#F4EEFF', marginTop: 3 },
+  privacyRow: { flexDirection: 'row', gap: 8 },
+  privBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 57, borderRadius: 11, paddingHorizontal: 8 },
+  privText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  privSub: { fontSize: 9, fontFamily: 'Satoshi-Regular', color: '#B9ACD0', marginTop: 1 },
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#E05568', backgroundColor: '#341A31', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14 },
+  errorText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#FFC5CD' },
+  footer: { borderTopWidth: 1, borderTopColor: '#3C3156', backgroundColor: '#100C23', paddingTop: 10, paddingHorizontal: 22 },
+  footerButton: { height: 48, borderRadius: 25, backgroundColor: '#8D5EF1', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  footerText: { color: '#FFFFFF', fontSize: 16, fontFamily: 'Satoshi-Bold' },
 });
