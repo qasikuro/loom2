@@ -197,8 +197,8 @@ export default function CreateScreen() {
                 <Icon name={mode.icon} size={mode.featured ? 27 : 25} color={mode.color} />
               </View>
               <View style={s.tileText}>
-                <Text style={s.tileName}>{mode.name}</Text>
-                <Text style={s.tileDesc}>{mode.description}</Text>
+                <Text style={s.tileName} numberOfLines={1}>{mode.name}</Text>
+                <Text style={s.tileDesc} numberOfLines={3}>{mode.description}</Text>
               </View>
               <View style={[s.arrowBtn, { borderColor: `${mode.color}80` }]}>
                 <Icon name="chevron-right" size={20} color="#FFFFFF" />
@@ -296,7 +296,7 @@ const s = StyleSheet.create({
     flexDirection:   'row',
     alignItems:      'center',
     gap:             10,
-    height:          114,
+    minHeight:       114,
     borderRadius:    18,
     borderWidth:     1,
     borderColor:     'transparent',
@@ -306,7 +306,7 @@ const s = StyleSheet.create({
     overflow:        'hidden',
   },
   featuredTile: {
-    height: 128,
+    minHeight: 128,
   },
   tileArtwork: {
     position: 'absolute',
@@ -330,11 +330,14 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     flexShrink:     0,
   },
-  tileText:  { flex: 1, minWidth: 0 },
-  tileName:  { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.3, marginBottom: 4, flexShrink: 1 },
+  tileText:  { flex: 1, minWidth: 0, justifyContent: 'center' },
+  tileName:  {
+    fontSize: 18, lineHeight: 22, fontFamily: 'Satoshi-Bold',
+    color: '#FFFFFF', letterSpacing: -0.3, marginBottom: 4, flexShrink: 1,
+  },
   tileDesc:{
     fontSize: 12, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(225,216,246,0.72)', lineHeight: 16,
+    color: 'rgba(225,216,246,0.72)', lineHeight: 17,
   },
   arrowBtn: {
     width: 36,
