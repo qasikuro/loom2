@@ -25,3 +25,4 @@
 - [Native splash touch blocking](native-splash-touch-blocking.md) — a faded absolute splash overlay can leave the visible app inert if it keeps pointer events during a delayed animation callback
 - [Fail-open onboarding checks](onboarding-fail-open.md) — never gate an authenticated user behind a full-screen onboarding modal when profile hydration fails
 - [Invisible native Modal touch shield](invisible-native-modal-touch-shield.md) — gate full-screen Modal mounting on async content readiness; opacity-zero children still intercept native touches
+- [Static server path safety](static-server-path-safety.md) — serve only pre-indexed files under the static root; request-derived filesystem reads trigger traversal risk and scanner findings

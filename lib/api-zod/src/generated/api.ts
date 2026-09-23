@@ -170,6 +170,9 @@ export const ListStoriesResponseItem = zod.object({
         .optional(),
     })
     .nullish(),
+  contentType: zod.enum(["story", "video"]).optional(),
+  videoUri: zod.string().nullish(),
+  thumbnailUri: zod.string().nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
   stickerCount: zod.number(),
@@ -240,6 +243,53 @@ export const CreateStoryBody = zod.object({
         .optional(),
     })
     .nullish(),
+  contentType: zod.enum(["story", "video"]).optional(),
+  compositionId: zod.string().uuid().nullish(),
+});
+
+/**
+ * @summary Compose a trimmed video and optional Audius music track
+ */
+export const composeVideoBodyVideoStartSecondsMin = 0;
+
+export const composeVideoBodyVideoDurationSecondsExclusiveMin = 0;
+export const composeVideoBodyVideoDurationSecondsMax = 60;
+
+export const composeVideoBodyMusicStartSecondsMin = 0;
+
+export const composeVideoBodyOriginalVolumeMin = 0;
+export const composeVideoBodyOriginalVolumeMax = 1;
+
+export const composeVideoBodyMusicVolumeMin = 0;
+export const composeVideoBodyMusicVolumeMax = 1;
+
+const RuntimeFile = typeof File === "undefined" ? class FileFallback {} : File;
+
+export const ComposeVideoBody = zod.object({
+  file: zod.instanceof(RuntimeFile),
+  videoStartSeconds: zod.number().min(composeVideoBodyVideoStartSecondsMin),
+  videoDurationSeconds: zod
+    .number()
+    .gt(composeVideoBodyVideoDurationSecondsExclusiveMin)
+    .max(composeVideoBodyVideoDurationSecondsMax),
+  music: zod
+    .string()
+    .optional()
+    .describe("JSON-encoded ComposeMusicInput metadata"),
+  musicStartSeconds: zod
+    .number()
+    .min(composeVideoBodyMusicStartSecondsMin)
+    .optional(),
+  originalVolume: zod
+    .number()
+    .min(composeVideoBodyOriginalVolumeMin)
+    .max(composeVideoBodyOriginalVolumeMax)
+    .optional(),
+  musicVolume: zod
+    .number()
+    .min(composeVideoBodyMusicVolumeMin)
+    .max(composeVideoBodyMusicVolumeMax)
+    .optional(),
 });
 
 /**
@@ -309,6 +359,9 @@ export const GetStoryResponse = zod.object({
         .optional(),
     })
     .nullish(),
+  contentType: zod.enum(["story", "video"]).optional(),
+  videoUri: zod.string().nullish(),
+  thumbnailUri: zod.string().nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
   stickerCount: zod.number(),
@@ -389,6 +442,9 @@ export const WitnessStoryResponse = zod.object({
         .optional(),
     })
     .nullish(),
+  contentType: zod.enum(["story", "video"]).optional(),
+  videoUri: zod.string().nullish(),
+  thumbnailUri: zod.string().nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
   stickerCount: zod.number(),

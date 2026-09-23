@@ -4,7 +4,7 @@ import { lookup } from "node:dns/promises";
 import { createWriteStream } from "node:fs";
 import { mkdtemp, open, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { Readable } from "node:stream";
 import { readFile } from "node:fs/promises";
@@ -25,6 +25,19 @@ const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
 const MAX_SOURCE_BYTES = 500 * 1024 * 1024;
 const MAX_MUSIC_BYTES = 250 * 1024 * 1024;
 const AUDIO_TIMEOUT_MS = 90_000;
+
+function generatedMediaPath(workDir: string, fileName: "final.mp4" | "thumbnail.jpg"): string {
+  const workRoot = resolve(workDir);
+  const candidate = resolve(workRoot, fileName);
+  const relativePath = relative(workRoot, candidate);
+  // The composition service writes these fixed filenames inside its unique
+  // temporary directory. Keep the read boundary explicit so a future service
+  // change cannot turn an output path into an arbitrary file read.
+  if (!relativePath || relativePath.startsWith("..") || isAbsolute(relativePath)) {
+    throw new VideoCompositionError("Generated media output path is invalid.", "output");
+  }
+  return candidate;
+}
 
 const ComposeMusicSchema = z.object({
   id: z.string().min(1).max(100),
@@ -239,11 +252,13 @@ router.post(
       const token = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       const videoPath = `videos/${token}.mp4`;
       const thumbPath = `images/${token}.jpg`;
-      await objectStorageClient.bucket(BUCKET_ID).file(videoPath).save(await readFile(result.outputPath), {
+      const generatedVideoPath = generatedMediaPath(workDir, "final.mp4");
+      const generatedThumbnailPath = generatedMediaPath(workDir, "thumbnail.jpg");
+      await objectStorageClient.bucket(BUCKET_ID).file(videoPath).save(await readFile(generatedVideoPath), {
         metadata: { contentType: "video/mp4" }, resumable: false,
       });
       uploadedPaths.push(videoPath);
-      await objectStorageClient.bucket(BUCKET_ID).file(thumbPath).save(await readFile(result.thumbnailPath), {
+      await objectStorageClient.bucket(BUCKET_ID).file(thumbPath).save(await readFile(generatedThumbnailPath), {
         metadata: { contentType: "image/jpeg" }, resumable: false,
       });
       uploadedPaths.push(thumbPath);

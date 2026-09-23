@@ -95,6 +95,14 @@ export interface StoryMusic {
   musicVolume?: number;
 }
 
+export type StoryContentType =
+  (typeof StoryContentType)[keyof typeof StoryContentType];
+
+export const StoryContentType = {
+  story: "story",
+  video: "video",
+} as const;
+
 export interface Story {
   id: string;
   date: string;
@@ -104,11 +112,22 @@ export interface Story {
   location: string;
   isPublic: boolean;
   music?: StoryMusic | null;
+  contentType?: StoryContentType;
+  videoUri?: string | null;
+  thumbnailUri?: string | null;
   witnessedCount: number;
   savedCount: number;
   stickerCount: number;
   createdAt: string;
 }
+
+export type StoryInputContentType =
+  (typeof StoryInputContentType)[keyof typeof StoryInputContentType];
+
+export const StoryInputContentType = {
+  story: "story",
+  video: "video",
+} as const;
 
 export interface StoryInput {
   id?: string | null;
@@ -119,6 +138,79 @@ export interface StoryInput {
   location: string;
   isPublic: boolean;
   music?: StoryMusic | null;
+  contentType?: StoryInputContentType;
+  compositionId?: string | null;
+}
+
+export interface ComposeMusicInput {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string | null;
+  /**
+   * @minimum 1
+   * @maximum 3600
+   */
+  duration: number;
+  genre: string | null;
+  mood: string | null;
+  streamUrl?: string | null;
+  embedded?: boolean;
+  baked?: boolean;
+  /** @minimum 0 */
+  segmentStartSeconds?: number;
+  /**
+   * @maximum 60
+   * @exclusiveMinimum 0
+   */
+  segmentDurationSeconds?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  originalVolume?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  musicVolume?: number;
+}
+
+export interface ComposeVideoRequest {
+  file: Blob;
+  /** @minimum 0 */
+  videoStartSeconds: number;
+  /**
+   * @maximum 60
+   * @exclusiveMinimum 0
+   */
+  videoDurationSeconds: number;
+  /** JSON-encoded ComposeMusicInput metadata */
+  music?: string;
+  /** @minimum 0 */
+  musicStartSeconds?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  originalVolume?: number;
+  /**
+   * @minimum 0
+   * @maximum 1
+   */
+  musicVolume?: number;
+}
+
+export interface ComposeVideoResponse {
+  compositionId: string;
+  /** Canonical relative API path for the composed video */
+  path: string;
+  /** Canonical relative API path for the composed thumbnail */
+  thumbnailPath: string;
+  duration: number;
+  width: number;
+  height: number;
+  fileSize: number;
 }
 
 export type JournalEntryType =

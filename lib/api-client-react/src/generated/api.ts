@@ -19,6 +19,8 @@ import type {
 import type {
   Character,
   CharacterInput,
+  ComposeVideoRequest,
+  ComposeVideoResponse,
   ConstellationState,
   DiscoverPost,
   FriendSummary,
@@ -771,6 +773,120 @@ export const useCreateStory = <
   TContext
 > => {
   return useMutation(getCreateStoryMutationOptions(options));
+};
+
+/**
+ * @summary Compose a trimmed video and optional Audius music track
+ */
+export const getComposeVideoUrl = () => {
+  return `/api/media/compose-video`;
+};
+
+export const composeVideo = async (
+  composeVideoRequest: ComposeVideoRequest,
+  options?: RequestInit,
+): Promise<ComposeVideoResponse> => {
+  const formData = new FormData();
+  formData.append(`file`, composeVideoRequest.file);
+  formData.append(
+    `videoStartSeconds`,
+    composeVideoRequest.videoStartSeconds.toString(),
+  );
+  formData.append(
+    `videoDurationSeconds`,
+    composeVideoRequest.videoDurationSeconds.toString(),
+  );
+  if (composeVideoRequest.music !== undefined) {
+    formData.append(`music`, composeVideoRequest.music);
+  }
+  if (composeVideoRequest.musicStartSeconds !== undefined) {
+    formData.append(
+      `musicStartSeconds`,
+      composeVideoRequest.musicStartSeconds.toString(),
+    );
+  }
+  if (composeVideoRequest.originalVolume !== undefined) {
+    formData.append(
+      `originalVolume`,
+      composeVideoRequest.originalVolume.toString(),
+    );
+  }
+  if (composeVideoRequest.musicVolume !== undefined) {
+    formData.append(`musicVolume`, composeVideoRequest.musicVolume.toString());
+  }
+
+  return customFetch<ComposeVideoResponse>(getComposeVideoUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getComposeVideoMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof composeVideo>>,
+    TError,
+    { data: BodyType<ComposeVideoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof composeVideo>>,
+  TError,
+  { data: BodyType<ComposeVideoRequest> },
+  TContext
+> => {
+  const mutationKey = ["composeVideo"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof composeVideo>>,
+    { data: BodyType<ComposeVideoRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return composeVideo(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ComposeVideoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof composeVideo>>
+>;
+export type ComposeVideoMutationBody = BodyType<ComposeVideoRequest>;
+export type ComposeVideoMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Compose a trimmed video and optional Audius music track
+ */
+export const useComposeVideo = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof composeVideo>>,
+    TError,
+    { data: BodyType<ComposeVideoRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof composeVideo>>,
+  TError,
+  { data: BodyType<ComposeVideoRequest> },
+  TContext
+> => {
+  return useMutation(getComposeVideoMutationOptions(options));
 };
 
 /**

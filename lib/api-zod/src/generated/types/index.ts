@@ -8,6 +8,9 @@
 
 export * from "./character";
 export * from "./characterInput";
+export * from "./composeMusicInput";
+export * from "./composeVideoRequest";
+export * from "./composeVideoResponse";
 export * from "./constellationState";
 export * from "./constellationStateStarUnlockDates";
 export * from "./discoverPost";
@@ -34,6 +37,8 @@ export * from "./shopItemCost";
 export * from "./shopResponse";
 export * from "./shopResponseActiveCosmetics";
 export * from "./story";
+export * from "./storyContentType";
 export * from "./storyInput";
+export * from "./storyInputContentType";
 export * from "./storyMusic";
 export * from "./storyPanel";

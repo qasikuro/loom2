@@ -16,6 +16,7 @@ const path = require("path");
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
+const STATIC_FILES = new Map();
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -35,6 +36,24 @@ const MIME_TYPES = {
   ".map": "application/json",
 };
 
+function indexStaticFiles(directory, prefix = "") {
+  if (!fs.existsSync(directory)) return;
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolutePath = path.join(directory, entry.name);
+    const relativePath = path.posix.join(prefix, entry.name);
+    if (entry.isDirectory()) {
+      indexStaticFiles(absolutePath, relativePath);
+    } else if (entry.isFile()) {
+      STATIC_FILES.set(relativePath, {
+        content: fs.readFileSync(absolutePath),
+        extension: path.extname(absolutePath).toLowerCase(),
+      });
+    }
+  }
+}
+
+indexStaticFiles(STATIC_ROOT);
+
 function getAppName() {
   try {
     const appJsonPath = path.resolve(__dirname, "..", "app.json");
@@ -46,23 +65,28 @@ function getAppName() {
 }
 
 function serveManifest(platform, res) {
-  const manifestPath = path.join(STATIC_ROOT, platform, "manifest.json");
+  const safePlatform = platform === "ios" || platform === "android" ? platform : null;
+  if (!safePlatform) {
+    res.writeHead(400, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "Unsupported platform." }));
+    return;
+  }
+  const manifest = STATIC_FILES.get(`${safePlatform}/manifest.json`);
 
-  if (!fs.existsSync(manifestPath)) {
+  if (!manifest) {
     res.writeHead(404, { "content-type": "application/json" });
     res.end(
-      JSON.stringify({ error: `Manifest not found for platform: ${platform}` }),
+      JSON.stringify({ error: `Manifest not found for platform: ${safePlatform}` }),
     );
     return;
   }
 
-  const manifest = fs.readFileSync(manifestPath, "utf-8");
   res.writeHead(200, {
     "content-type": "application/json",
     "expo-protocol-version": "1",
     "expo-sfv-version": "0",
   });
-  res.end(manifest);
+  res.end(manifest.content);
 }
 
 function serveLandingPage(req, res, landingPageTemplate, appName) {
@@ -82,26 +106,32 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
 }
 
 function serveStaticFile(urlPath, res) {
-  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
-  const filePath = path.join(STATIC_ROOT, safePath);
-
-  if (!filePath.startsWith(STATIC_ROOT)) {
+  let relativePath;
+  try {
+    const decodedPath = decodeURIComponent(urlPath);
+    if (decodedPath.includes("\\")) throw new Error("Backslash is not a URL path separator.");
+    relativePath = path.posix.normalize(decodedPath).replace(/^\/+/, "");
+  } catch {
+    res.writeHead(400);
+    res.end("Bad Request");
+    return;
+  }
+  if (!relativePath || relativePath === ".." || relativePath.startsWith("../")) {
     res.writeHead(403);
     res.end("Forbidden");
     return;
   }
+  const staticFile = STATIC_FILES.get(relativePath);
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+  if (!staticFile) {
     res.writeHead(404);
     res.end("Not Found");
     return;
   }
 
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME_TYPES[ext] || "application/octet-stream";
-  const content = fs.readFileSync(filePath);
+  const contentType = MIME_TYPES[staticFile.extension] || "application/octet-stream";
   res.writeHead(200, { "content-type": contentType });
-  res.end(content);
+  res.end(staticFile.content);
 }
 
 const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");

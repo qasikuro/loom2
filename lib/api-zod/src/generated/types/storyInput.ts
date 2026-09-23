@@ -5,6 +5,7 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+import type { StoryInputContentType } from "./storyInputContentType";
 import type { StoryMusic } from "./storyMusic";
 import type { StoryPanel } from "./storyPanel";
 
@@ -17,4 +18,6 @@ export interface StoryInput {
   location: string;
   isPublic: boolean;
   music?: StoryMusic | null;
+  contentType?: StoryInputContentType;
+  compositionId?: string | null;
 }
