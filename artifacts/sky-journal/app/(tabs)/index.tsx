@@ -76,6 +76,12 @@ function logHomePress(label: string, action: () => void): void {
   action();
 }
 
+// Retain the legacy markup for now, but do not mount its native scroll and
+// refresh views behind the current dashboard. Remove it in a separate cleanup.
+function showLegacyDashboard(): boolean {
+  return false;
+}
+
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const DAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -1658,7 +1664,10 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </ScrollView>
 
-      <ScrollView
+      {/* Do not mount the legacy Home tree. A display:none native ScrollView
+          still creates its refresh-control/gesture views on some builds and can
+          sit above the visible, absolutely positioned dashboard. */}
+      {showLegacyDashboard() && <ScrollView
         style={{ display: 'none' }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: bottomPad }}
@@ -2136,7 +2145,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
         </Animated.View>
 
-      </ScrollView>
+      </ScrollView>}
 
       {/* ── Outfit picker sheet ──────────────────────────────────────────────── */}
       <Modal visible={showOutfits} transparent animationType="slide" onRequestClose={() => setShowOutfits(false)}>
