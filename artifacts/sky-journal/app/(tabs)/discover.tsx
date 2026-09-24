@@ -446,7 +446,7 @@ export default function DiscoverScreen() {
               <Text style={styles.guideBannerTitle}>Constellation Guides</Text>
             </View>
             <Text style={styles.guideBannerSub}>
-              Wanderers who light the path — find a guide who resonates with your sky journey
+              Wanderers who light the path — find people who resonate with your journey
             </Text>
           </LinearGradient>
 
