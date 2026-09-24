@@ -21,8 +21,11 @@ interface Props {
 export function ProfileAboutSection({ character, setCharacter }: Props) {
   const colors = useColors();
   const { user } = useUser();
+  const socialCount = character.links?.length ?? 0;
+  const selectedRole = ROLES.find(role => role.key === character.role);
 
   const [editingBirthday,  setEditingBirthday]  = useState(false);
+  const [aboutExpanded,    setAboutExpanded]    = useState(false);
   const [birthdayVal,      setBirthdayVal]      = useState(character.birthday ?? '');
   const [editingCountry,   setEditingCountry]   = useState(false);
   const [countryVal,       setCountryVal]       = useState(character.country ?? '');
@@ -84,13 +87,25 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
     <>
       {/* ── About Me card ─── */}
       <View style={[s.aboutCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
-        <View style={s.aboutCardHeader}>
+        <TouchableOpacity
+          style={s.aboutCardHeader}
+          onPress={() => setAboutExpanded(open => !open)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={`${aboutExpanded ? 'Close' : 'Edit'} About Me`}
+          accessibilityState={{ expanded: aboutExpanded }}
+        >
           <View style={[s.aboutCardIcon, { backgroundColor: `${colors.primary}14` }]}>
             <Icon name="user" size={14} color={colors.primary} />
           </View>
-          <Text style={[s.aboutCardTitle, { color: colors.foreground }]}>About Me</Text>
-        </View>
+          <Text style={[s.aboutCardTitle, { color: colors.foreground, flex: 1 }]}>About Me</Text>
+          <View style={[s.aboutEditButton, { borderColor: `${colors.primary}38`, backgroundColor: `${colors.primary}12` }]}>
+            <Text style={[s.aboutEditButtonText, { color: colors.primary }]}>{aboutExpanded ? 'Close' : 'Edit'}</Text>
+            <Icon name={aboutExpanded ? 'chevron-down' : 'chevron-right'} size={13} color={colors.primary} />
+          </View>
+        </TouchableOpacity>
 
+        {aboutExpanded ? (<>
         {/* Birthday */}
         <TouchableOpacity style={[s.aboutRow, { borderTopColor: colors.border }]} onPress={() => { setBirthdayVal(character.birthday ?? ''); setEditingBirthday(true); }} activeOpacity={0.75}>
           <View style={s.aboutRowLeft}>
@@ -210,6 +225,22 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               </TouchableOpacity>
             </View>
           </View>
+        )}
+        </>) : (
+          <TouchableOpacity
+            style={[s.aboutSummary, { borderTopColor: colors.border }]}
+            onPress={() => setAboutExpanded(true)}
+            activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Open About Me details"
+          >
+            <Text style={[s.aboutSummaryLine, { color: colors.foreground }]} numberOfLines={1}>
+              {character.birthday || 'Add birthday'}  ·  {character.country || 'Add country'}
+            </Text>
+            <Text style={[s.aboutSummaryMeta, { color: colors.mutedForeground }]} numberOfLines={1}>
+              {character.role ? `${selectedRole?.emoji ?? ''} ${character.role}` : 'Choose a role'}  ·  {socialCount > 0 ? `${socialCount} social ${socialCount === 1 ? 'link' : 'links'}` : 'Add socials'}
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -417,6 +448,11 @@ const s = StyleSheet.create({
   aboutCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 },
   aboutCardIcon:    { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   aboutCardTitle:   { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
+  aboutEditButton:  { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 6 },
+  aboutEditButtonText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  aboutSummary:     { borderTopWidth: 1, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 13, gap: 4 },
+  aboutSummaryLine: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  aboutSummaryMeta: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
   aboutRow:         { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
   aboutRowLeft:     { flex: 1, gap: 3 },
   aboutRowLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, textTransform: 'uppercase' },
