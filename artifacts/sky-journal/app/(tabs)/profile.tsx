@@ -19,6 +19,7 @@ import { CharacterAuraHeader } from '@/components/profile/CharacterAuraHeader';
 import { GalleryLightboxModal } from '@/components/profile/GalleryLightboxModal';
 import { MoodPickerModal } from '@/components/profile/MoodPickerModal';
 import { OutfitDetailModal } from '@/components/profile/OutfitDetailModal';
+import { ProfileAboutSection } from '@/components/profile/ProfileAboutSection';
 import { ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection';
 import { ProfileStyleSection } from '@/components/profile/ProfileStyleSection';
 import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
@@ -210,12 +211,15 @@ export default function CharacterScreen() {
         <View style={[{ paddingHorizontal: 20, paddingTop: 12 }, screenW >= 760 && { maxWidth: 800, alignSelf: 'center', width: '100%' }]}>
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
           {(!isLoading || character.name !== 'Player') && (
-            <ProfileStyleSection
-              outfits={outfits} stories={stories} openOutfit={openOutfit} deleteStory={deleteStory}
-              gallery={gallery} openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
-              galleryUploading={galleryUploading} galleryError={galleryError}
-              activeOutfitId={activeOutfitId}
-            />
+            <>
+              <ProfileAboutSection character={character} setCharacter={setCharacter} />
+              <ProfileStyleSection
+                outfits={outfits} stories={stories} openOutfit={openOutfit} deleteStory={deleteStory}
+                gallery={gallery} openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
+                galleryUploading={galleryUploading} galleryError={galleryError}
+                activeOutfitId={activeOutfitId}
+              />
+            </>
           )}
 
           {activeOutfit && (
