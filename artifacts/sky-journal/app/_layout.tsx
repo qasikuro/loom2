@@ -469,6 +469,14 @@ export default function RootLayout() {
                               options={{ presentation: 'card', animation: 'fade' }}
                             />
                             <Stack.Screen
+                              name="create-guide-session"
+                              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
+                              name="guide-session/[sessionId]"
+                              options={{ presentation: 'card', animation: 'slide_from_right' }}
+                            />
+                            <Stack.Screen
                               name="purchase-history"
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />

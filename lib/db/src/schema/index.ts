@@ -21,3 +21,4 @@ export * from "./books";
 export * from "./mangaGenerations";
 export * from "./uploadedImages";
 export * from "./mediaCompositions";
+export * from "./guideSessions";

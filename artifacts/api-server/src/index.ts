@@ -5,6 +5,7 @@ import {
   cleanupExpiredMediaCompositions,
   startMediaCompositionCleanup,
 } from "./services/mediaCompositionCleanup";
+import { startGuideSessionReminders } from "./services/guideSessionReminders";
 
 const rawPort = process.env["PORT"];
 
@@ -35,6 +36,7 @@ app.listen(port, (err) => {
     .then(async () => {
       await cleanupExpiredMediaCompositions();
       startMediaCompositionCleanup();
+      startGuideSessionReminders();
       logger.info("Startup migrations completed");
     })
     .catch((err) => logger.error({ err }, "Startup migrations failed (non-fatal)"));

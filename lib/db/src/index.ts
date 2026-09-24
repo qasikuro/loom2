@@ -36,6 +36,37 @@ export async function runStartupMigrations(): Promise<void> {
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS friend_requests_pair_idx ON friend_requests (LEAST(sender_id, recipient_id), GREATEST(sender_id, recipient_id))`);
     await client.query(`CREATE INDEX IF NOT EXISTS friend_requests_recipient_idx ON friend_requests (recipient_id)`);
 
+    // Scheduled guide sessions use an existing Campfire room as their shared chat.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS guide_sessions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        guide_id TEXT NOT NULL,
+        room_id UUID NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        topic TEXT,
+        starts_at TIMESTAMPTZ NOT NULL,
+        ends_at TIMESTAMPTZ NOT NULL,
+        capacity INTEGER NOT NULL DEFAULT 30,
+        status TEXT NOT NULL DEFAULT 'scheduled',
+        reminder_sent_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT guide_sessions_valid_window CHECK (ends_at > starts_at),
+        CONSTRAINT guide_sessions_valid_capacity CHECK (capacity BETWEEN 2 AND 100)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS guide_sessions_guide_start_idx ON guide_sessions (guide_id, starts_at)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS guide_sessions_due_idx ON guide_sessions (status, starts_at)`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS guide_session_attendees (
+        session_id UUID NOT NULL REFERENCES guide_sessions(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL,
+        joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (session_id, user_id)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS guide_session_attendees_user_idx ON guide_session_attendees (user_id)`);
+
     // Add ping_friends_at if it was not present in the deployed schema.
     await client.query(`
       ALTER TABLE character

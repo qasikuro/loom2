@@ -366,6 +366,15 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                 <Text style={[s.guidePreviewBtnText, { color: colors.primary }]}>Preview your guide profile</Text>
                 <Icon name="arrow-right" size={14} color={`${colors.primary}60`} />
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.guidePreviewBtn, { borderColor: `${colors.primary}30`, backgroundColor: colors.primary, marginTop: 8 }]}
+                onPress={() => router.push('/create-guide-session')}
+                activeOpacity={0.8}
+              >
+                <Icon name="calendar" size={14} color="#fff" />
+                <Text style={[s.guidePreviewBtnText, { color: '#fff' }]}>Create a group session</Text>
+                <Icon name="arrow-right" size={14} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
             </>
           ) : (
             <View style={s.guideInviteBody}>

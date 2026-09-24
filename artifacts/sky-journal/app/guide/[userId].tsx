@@ -48,6 +48,18 @@ interface GuideProfile {
   isAvailableNow:    boolean;
 }
 
+interface GuideSession {
+  id: string;
+  title: string;
+  description: string;
+  topic: string | null;
+  startsAt: string;
+  endsAt: string;
+  capacity: number;
+  attendeeCount: number;
+  isJoined: boolean;
+}
+
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const TOPIC_COLORS: Record<string, string> = {
@@ -99,6 +111,7 @@ export default function GuideProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [sessions, setSessions] = useState<GuideSession[]>([]);
 
   const fadeIn  = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(28)).current;
@@ -113,9 +126,13 @@ export default function GuideProfileScreen() {
       return;
     }
     setLoading(true);
-    apiFetch<GuideProfile>(`/guides/${userId}`)
-      .then(g => {
+    Promise.all([
+      apiFetch<GuideProfile>(`/guides/${userId}`),
+      apiFetch<GuideSession[]>(`/guide-sessions?guideId=${encodeURIComponent(userId)}`).catch(() => []),
+    ])
+      .then(([g, upcoming]) => {
         setGuide(g);
+        setSessions(upcoming);
         setIsFollowing(followingIds.includes(g.userId) || g.isFollowing);
         Animated.parallel([
           Animated.timing(fadeIn,  { toValue: 1, duration: 440, useNativeDriver: true }),
@@ -316,6 +333,47 @@ export default function GuideProfileScreen() {
               </Text>
             </View>
           )}
+
+          {/* ── Upcoming sessions ─────────────────────────── */}
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.cardIcon, { backgroundColor: `${colors.primary}14` }]}>
+                <Icon name="calendar" size={14} color={colors.primary} />
+              </View>
+              <Text style={[styles.cardTitle, { color: colors.foreground }]}>Upcoming sessions</Text>
+            </View>
+            {sessions.length === 0 ? (
+              <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
+                {isOwnProfile ? 'You have no sessions scheduled yet.' : 'This guide has no upcoming sessions.'}
+              </Text>
+            ) : sessions.map(session => (
+              <TouchableOpacity
+                key={session.id}
+                style={[styles.sessionCard, { borderColor: colors.border }]}
+                onPress={() => router.push(`/guide-session/${session.id}`)}
+                activeOpacity={0.82}
+              >
+                <View style={styles.sessionTop}>
+                  <Text style={[styles.sessionTitle, { color: colors.foreground }]} numberOfLines={1}>{session.title}</Text>
+                  <Icon name="arrow-right" size={15} color={colors.primary} />
+                </View>
+                <Text style={[styles.sessionDescription, { color: colors.mutedForeground }]} numberOfLines={2}>{session.description}</Text>
+                <View style={styles.sessionMeta}>
+                  <Icon name="clock" size={12} color={colors.primary} />
+                  <Text style={[styles.sessionMetaText, { color: colors.primary }]}>
+                    {new Date(session.startsAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                  </Text>
+                  <Text style={[styles.sessionMetaText, { color: colors.mutedForeground }]}>· {session.attendeeCount} joined</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {isOwnProfile && (
+              <TouchableOpacity style={[styles.scheduleBtn, { backgroundColor: colors.primary }]} onPress={() => router.push('/create-guide-session')}>
+                <Icon name="plus" size={15} color="#fff" />
+                <Text style={styles.scheduleBtnText}>Create a session</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
           {/* ── Personal bio ──────────────────────────────── */}
           {!!guide.bio && (
@@ -541,6 +599,14 @@ const styles = StyleSheet.create({
   },
   dayLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   timeText:  { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 4 },
+  sessionCard: { borderWidth: 1, borderRadius: 14, padding: 13, marginTop: 9 },
+  sessionTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  sessionTitle: { flex: 1, fontFamily: 'Satoshi-Bold', fontSize: 14 },
+  sessionDescription: { fontFamily: 'Satoshi-Regular', fontSize: 13, lineHeight: 18, marginTop: 5 },
+  sessionMeta: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 9, flexWrap: 'wrap' },
+  sessionMetaText: { fontFamily: 'Satoshi-Medium', fontSize: 11 },
+  scheduleBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 13, borderRadius: 14, marginTop: 12 },
+  scheduleBtnText: { color: '#fff', fontFamily: 'Satoshi-Bold', fontSize: 13 },
 
   // CTA
   ctaRow: {

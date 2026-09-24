@@ -95,6 +95,14 @@ interface GuideResult {
   isAvailableNow:    boolean;
 }
 
+interface GuideSessionPreview {
+  id: string;
+  guideId: string;
+  title: string;
+  description: string;
+  startsAt: string;
+}
+
 export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
@@ -108,6 +116,7 @@ export default function DiscoverScreen() {
   const [peopleLoading, setPeopleLoading] = useState(false);
   const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
+  const [guideSessions, setGuideSessions] = useState<GuideSessionPreview[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
   const [guideTopicFilter, setGuideTopicFilter] = useState<string | null>(null);
@@ -164,8 +173,12 @@ export default function DiscoverScreen() {
       let qs = '';
       if (topic)    qs += `topic=${encodeURIComponent(topic)}&`;
       if (availNow) qs += 'available_now=true&';
-      const data = await apiFetch<GuideResult[]>(`/guides?${qs}`);
+      const [data, sessions] = await Promise.all([
+        apiFetch<GuideResult[]>(`/guides?${qs}`),
+        apiFetch<GuideSessionPreview[]>('/guide-sessions').catch(() => []),
+      ]);
       setGuidesData(data ?? []);
+      setGuideSessions(sessions ?? []);
     } catch {
       setGuidesError('Could not load guides. Pull to refresh.');
     } finally {
@@ -524,6 +537,7 @@ export default function DiscoverScreen() {
             <View style={{ paddingHorizontal: 16, gap: 12, paddingTop: 8 }}>
               {guidesData.map(g => {
                 const isFollowing = followingIds.includes(g.userId) || g.isFollowing;
+                const nextSession = guideSessions.find(session => session.guideId === g.userId);
                 return (
                   <TouchableOpacity
                     key={g.userId}
@@ -561,6 +575,18 @@ export default function DiscoverScreen() {
                       {!!g.guideBio && (
                         <Text style={styles.guideCardBio} numberOfLines={2}>{g.guideBio}</Text>
                       )}
+                       {nextSession && (
+                         <View style={styles.guideSessionPreview}>
+                           <Text style={styles.guideSessionTitle} numberOfLines={1}>{nextSession.title}</Text>
+                           <Text style={styles.guideSessionDescription} numberOfLines={2}>{nextSession.description}</Text>
+                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                             <Icon name="clock" size={11} color="#BFA8FF" />
+                             <Text style={styles.guideSessionTime}>
+                               {new Date(nextSession.startsAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                             </Text>
+                           </View>
+                         </View>
+                       )}
                       {g.guideTopics.length > 0 && (
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
                           {g.guideTopics.slice(0, 3).map(topic => {
@@ -971,6 +997,18 @@ const styles = StyleSheet.create({
   guideCardName:   { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)', flexShrink: 1 },
   guideCardHandle: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(155,120,232,0.70)' },
   guideCardBio:    { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', lineHeight: 17 },
+  guideSessionPreview: {
+    marginTop: 5,
+    padding: 9,
+    borderRadius: 11,
+    backgroundColor: 'rgba(155,120,232,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(155,120,232,0.18)',
+    gap: 3,
+  },
+  guideSessionTitle: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(225,216,255,0.94)' },
+  guideSessionDescription: { fontSize: 10, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.62)' },
+  guideSessionTime: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: '#BFA8FF' },
   guideNowBadge: {
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: 8, backgroundColor: 'rgba(80,200,130,0.18)',
