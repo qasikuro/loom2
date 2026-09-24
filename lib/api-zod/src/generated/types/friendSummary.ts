@@ -15,6 +15,8 @@ export interface FriendSummary {
   mood: string;
   traits: string[];
   avatarUri?: string | null;
+  isOnline?: boolean;
+  lastSeenAt?: Date | null;
   birthday?: string | null;
   country?: string | null;
   links: FriendSummaryLinksItem[];

@@ -24,6 +24,18 @@ export * from "./schema";
 export async function runStartupMigrations(): Promise<void> {
   const client = await pool.connect();
   try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS friend_requests (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sender_id TEXT NOT NULL,
+        recipient_id TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT friend_requests_distinct_users CHECK (sender_id <> recipient_id)
+      )
+    `);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS friend_requests_pair_idx ON friend_requests (LEAST(sender_id, recipient_id), GREATEST(sender_id, recipient_id))`);
+    await client.query(`CREATE INDEX IF NOT EXISTS friend_requests_recipient_idx ON friend_requests (recipient_id)`);
+
     // Add ping_friends_at if it was not present in the deployed schema.
     await client.query(`
       ALTER TABLE character

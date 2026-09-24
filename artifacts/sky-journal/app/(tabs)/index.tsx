@@ -16,7 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import {
-  useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
+  useApp, apiFetch, resolveUri, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
 } from '@/context/AppContext';
 // import { RewardBalance } from '@/components/RewardBalance'; // kept for future use
@@ -1378,7 +1378,7 @@ export default function HomeScreen() {
   // Browser chrome reduces the reported viewport height substantially on mobile.
   // Only use the compact fallback on genuinely tiny devices.
   const isShortScreen = screenHeight < 560;
-  const dashboardFriends = circleAuthors.slice(0, screenWidth < 390 ? 4 : 5);
+  const dashboardFriends = friends.slice(0, screenWidth < 390 ? 4 : 5);
 
   return (
     <Animated.View style={[s.root, { opacity: fadeIn }]}>
@@ -1487,31 +1487,31 @@ export default function HomeScreen() {
         <View style={s.dashboardSectionHeader}>
           <View style={s.dashboardSectionTitleRow}>
             <Text style={s.dashboardSectionTitle}>Friends</Text>
-            <View style={s.dashboardCount}><Text style={s.dashboardCountText}>{circleAuthors.length}</Text></View>
+            <View style={s.dashboardCount}><Text style={s.dashboardCountText}>{friends.length}</Text></View>
           </View>
-           <TouchableOpacity onPress={() => logHomePress('friends see all', () => router.push('/(tabs)/discover'))}><Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text></TouchableOpacity>
+           <TouchableOpacity onPress={() => router.push('/friends')} accessibilityLabel="See all friends"><Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text></TouchableOpacity>
         </View>
         <View style={s.dashboardFriends}>
-           <TouchableOpacity style={s.dashboardFriend} onPress={() => logHomePress('add friend', () => router.push('/(tabs)/discover'))} activeOpacity={0.78}>
+            <TouchableOpacity style={s.dashboardFriend} onPress={() => router.push({ pathname: '/friends', params: { tab: 'suggestions' } })} activeOpacity={0.78}>
             <View style={s.dashboardAddFriend}><Icon name="plus" size={23} color="#C995FF" /></View>
             <Text style={s.dashboardFriendName}>Add</Text>
           </TouchableOpacity>
-          {dashboardFriends.map(post => {
-            const friendColor = MOOD_COLOR[post.mood] ?? '#8B6FC4';
+          {dashboardFriends.map(friend => {
+            const friendColor = MOOD_COLOR[friend.mood] ?? '#8B6FC4';
             return (
               <TouchableOpacity
-                key={post.authorUserId}
+                key={friend.userId}
                 style={s.dashboardFriend}
-                 onPress={() => logHomePress('friend', () => router.push({ pathname: '/user/[userId]', params: { userId: post.authorUserId } } as never))}
+                  onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: friend.userId } } as never)}
                 activeOpacity={0.8}
               >
                 <View style={[s.dashboardFriendAvatar, { borderColor: friendColor }]}>
-                  {post.authorAvatarUri
-                    ? <Image source={{ uri: post.authorAvatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                    : <Text style={[s.dashboardFriendInitial, { color: friendColor }]}>{post.authorName.charAt(0).toUpperCase()}</Text>}
-                  <View style={s.dashboardOnlineDot} />
+                  {friend.avatarUri
+                    ? <Image source={{ uri: resolveUri(friend.avatarUri) ?? friend.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                    : <Text style={[s.dashboardFriendInitial, { color: friendColor }]}>{friend.name.charAt(0).toUpperCase()}</Text>}
+                  {friend.isOnline && <View style={s.dashboardOnlineDot} />}
                 </View>
-                <Text style={s.dashboardFriendName} numberOfLines={1}>{post.authorHandle || post.authorName}</Text>
+                <Text style={s.dashboardFriendName} numberOfLines={1}>{friend.username || friend.name}</Text>
               </TouchableOpacity>
             );
           })}

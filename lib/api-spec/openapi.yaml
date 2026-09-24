@@ -419,6 +419,65 @@ paths:
                 items:
                   type: string
 
+  /friends/requests:
+    get:
+      operationId: listFriendRequests
+      tags: [social]
+      summary: List pending friend invitations
+      responses:
+        "200":
+          description: Pending invitations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FriendRequest"
+
+  /friends/requests/{targetUserId}:
+    post:
+      operationId: sendFriendRequest
+      tags: [social]
+      summary: Send a friend invitation
+      parameters:
+        - in: path
+          name: targetUserId
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: Invitation sent
+        "409":
+          description: Already friends or pending
+
+  /friends/requests/{id}:
+    delete:
+      operationId: removeFriendRequest
+      tags: [social]
+      summary: Decline or cancel an invitation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Invitation removed
+
+  /friends/requests/{id}/accept:
+    post:
+      operationId: acceptFriendRequest
+      tags: [social]
+      summary: Accept an incoming invitation
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Friend added
+
 components:
   schemas:
     MangaGenerationInput:
@@ -1029,6 +1088,18 @@ components:
             type: string
       required: [socialCount, memoryCount, quietStreak, helpingCount, creativeCount, seasonalCount, unlockedStars, starUnlockDates, newlyUnlocked]
 
+    FriendRequest:
+      type: object
+      required: [id, direction, userId, name, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        direction: { type: string, enum: [incoming, outgoing] }
+        userId: { type: string }
+        name: { type: string }
+        username: { type: string, nullable: true }
+        avatarUri: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+
     FriendSummary:
       type: object
       properties:
@@ -1049,6 +1120,12 @@ components:
             type: string
         avatarUri:
           type: string
+          nullable: true
+        isOnline:
+          type: boolean
+        lastSeenAt:
+          type: string
+          format: date-time
           nullable: true
         birthday:
           type: string

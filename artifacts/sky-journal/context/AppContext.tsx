@@ -342,6 +342,8 @@ export interface FriendSummary {
   traits:    string[];
   avatarUri?: string | null;
   isPublic:  boolean;
+  isOnline?: boolean;
+  lastSeenAt?: string | null;
 }
 
 // ── Raw API response shapes ────────────────────────────────────────────────────
@@ -417,6 +419,7 @@ interface AppContextValue {
   toggleSavePost: (id: string) => void;
 
   friends:       FriendSummary[];
+  refreshFriends: () => Promise<void>;
   followingIds:  string[];
   blockedIds:    string[];
   followUser:    (targetUserId: string) => void;
@@ -998,12 +1001,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  async function fetchFriends() {
+  const fetchFriends = useCallback(async () => {
     try {
       const data = await apiFetch<FriendSummary[]>('/friends');
-      setFriends(data ?? []);
+      if (data) setFriends(data);
     } catch { /* silently skip */ }
-  }
+  }, []);
 
   async function loadSocialData() {
     try {
@@ -1012,7 +1015,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // catch(() => null) so a failed fetch is distinguishable from a genuine
         // empty following list — only a non-null result advances the timestamp.
         apiFetch<string[]>('/follows/following').catch(() => null),
-        apiFetch<FriendSummary[]>('/friends').catch(() => []),
+        apiFetch<FriendSummary[]>('/friends').catch(() => null),
       ]);
 
       setDiscoverLoadError(discoverRaw === null);
@@ -1027,7 +1030,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       setDiscoverFeedRaw(feed);
       setFollowingIds(follows);
-      setFriends(friendsRaw ?? []);
+      if (friendsRaw !== null) setFriends(friendsRaw);
 
       const now = Date.now();
       const cacheWrites: Promise<void>[] = [];
@@ -2053,7 +2056,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
     discoverPosts, savedStoryIds, toggleSavePost,
-    friends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
+    friends, refreshFriends: fetchFriends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
@@ -2075,7 +2078,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
     discoverPosts, savedStoryIds, toggleSavePost,
-    friends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
+    friends, fetchFriends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,

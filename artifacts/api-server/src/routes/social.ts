@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, followsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, booksTable, chaptersTable } from "@workspace/db";
+import { db, characterTable, storiesTable, followsTable, friendRequestsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, booksTable, chaptersTable } from "@workspace/db";
 import type { BookChapterPage } from "@workspace/db";
 import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
@@ -111,12 +111,18 @@ router.get("/friends", requireAuth, async (req, res) => {
         country:   characterTable.country,
         links:     characterTable.links,
         isPublic:  characterTable.isPublic,
+        showOnlineStatus: characterTable.showOnlineStatus,
+        lastSeenAt: characterTable.lastSeenAt,
       })
       .from(characterTable)
       .where(
         and(
           inArray(characterTable.userId, followingIds),
           eq(characterTable.isBanned, false),
+          sql`${characterTable.userId} NOT IN (
+            SELECT blocked_id FROM blocks WHERE blocker_id = ${userId}
+            UNION SELECT blocker_id FROM blocks WHERE blocked_id = ${userId}
+          )`,
         ),
       );
 
@@ -133,11 +139,125 @@ router.get("/friends", requireAuth, async (req, res) => {
         country:   p.country  ?? null,
         links:     Array.isArray(p.links) ? p.links : [],
         isPublic:  p.isPublic,
+        isOnline: Boolean(p.showOnlineStatus && p.lastSeenAt && Date.now() - p.lastSeenAt.getTime() < 5 * 60_000),
+        lastSeenAt: p.showOnlineStatus ? p.lastSeenAt?.toISOString() ?? null : null,
       })),
     );
   } catch (err) {
     req.log.error({ err }, "Failed to get friends list");
     return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Pending invitations are separate from follows. Accepting creates mutual follows;
+// legacy one-way follows stay in /friends for backward compatibility.
+router.get("/friends/requests", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  try {
+    const rows = await db.select({
+      id: friendRequestsTable.id,
+      senderId: friendRequestsTable.senderId,
+      recipientId: friendRequestsTable.recipientId,
+      createdAt: friendRequestsTable.createdAt,
+    }).from(friendRequestsTable)
+      .where(or(eq(friendRequestsTable.senderId, userId), eq(friendRequestsTable.recipientId, userId)))
+      .orderBy(desc(friendRequestsTable.createdAt));
+    const ids = [...new Set(rows.map(r => r.senderId === userId ? r.recipientId : r.senderId))];
+    if (ids.length === 0) return res.json([]);
+    const profiles = await db.select({
+      userId: characterTable.userId,
+      name: characterTable.name,
+      username: characterTable.username,
+      avatarUri: characterTable.avatarUri,
+    }).from(characterTable).where(and(
+      inArray(characterTable.userId, ids),
+      eq(characterTable.isBanned, false),
+      sql`${characterTable.userId} NOT IN (
+        SELECT blocked_id FROM blocks WHERE blocker_id = ${userId}
+        UNION SELECT blocker_id FROM blocks WHERE blocked_id = ${userId}
+      )`,
+    ));
+    const byId = new Map(profiles.map(p => [p.userId, p]));
+    return res.json(rows.flatMap(r => {
+      const person = byId.get(r.senderId === userId ? r.recipientId : r.senderId);
+      return person ? [{
+        id: r.id, direction: r.recipientId === userId ? "incoming" : "outgoing",
+        userId: person.userId, name: person.name, username: person.username,
+        avatarUri: safeDiscoverUri(person.avatarUri), createdAt: r.createdAt.toISOString(),
+      }] : [];
+    }));
+  } catch (err) {
+    req.log.error({ err }, "Failed to get friend requests");
+    return res.status(500).json({ error: "Could not load friend requests" });
+  }
+});
+
+router.post("/friends/requests/:targetUserId", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  const targetId = String(req.params.targetUserId);
+  if (targetId === userId) return res.status(400).json({ error: "Cannot add yourself" });
+  try {
+    if (await isBlocked(userId, targetId)) return res.status(403).json({ error: "This user is unavailable" });
+    const [target] = await db.select({ userId: characterTable.userId })
+      .from(characterTable).where(and(eq(characterTable.userId, targetId), eq(characterTable.isBanned, false), eq(characterTable.isPublic, true))).limit(1);
+    if (!target) return res.status(404).json({ error: "User not found" });
+    const existing = await db.select({ id: followsTable.followingId }).from(followsTable)
+      .where(and(eq(followsTable.followerId, userId), eq(followsTable.followingId, targetId))).limit(1);
+    if (existing.length) return res.status(409).json({ error: "Already in your friends list" });
+    const [request] = await db.insert(friendRequestsTable)
+      .values({ senderId: userId, recipientId: targetId })
+      .onConflictDoNothing().returning({ id: friendRequestsTable.id });
+    if (!request) return res.status(409).json({ error: "A friend request already exists" });
+    return res.status(201).json({ id: request.id });
+  } catch (err) {
+    req.log.error({ err }, "Failed to send friend request");
+    return res.status(500).json({ error: "Could not send friend request" });
+  }
+});
+
+router.post("/friends/requests/:id/accept", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(req.params.id)))
+    return res.status(400).json({ error: "Invalid request ID" });
+  try {
+    const accepted = await db.transaction(async tx => {
+      const [request] = await tx.delete(friendRequestsTable)
+        .where(and(eq(friendRequestsTable.id, String(req.params.id)), eq(friendRequestsTable.recipientId, userId)))
+        .returning({ senderId: friendRequestsTable.senderId });
+      if (!request) return null;
+      // A block can happen between sending and accepting.
+      if (await isBlocked(userId, request.senderId)) throw new Error("BLOCKED");
+      await tx.insert(followsTable).values([
+        { followerId: userId, followingId: request.senderId },
+        { followerId: request.senderId, followingId: userId },
+      ]).onConflictDoNothing();
+      return request.senderId;
+    });
+    if (!accepted) return res.status(404).json({ error: "Request no longer available" });
+    cache.invalidate(`discover:${userId}`);
+    cache.invalidate(`discover:${accepted}`);
+    return res.json({ accepted: true });
+  } catch (err) {
+    if (err instanceof Error && err.message === "BLOCKED") return res.status(403).json({ error: "This user is unavailable" });
+    req.log.error({ err }, "Failed to accept friend request");
+    return res.status(500).json({ error: "Could not accept friend request" });
+  }
+});
+
+router.delete("/friends/requests/:id", requireAuth, async (req, res) => {
+  const userId = getUserId(req);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(req.params.id)))
+    return res.status(400).json({ error: "Invalid request ID" });
+  try {
+    const [removed] = await db.delete(friendRequestsTable)
+      .where(and(eq(friendRequestsTable.id, String(req.params.id)),
+        or(eq(friendRequestsTable.senderId, userId), eq(friendRequestsTable.recipientId, userId))))
+      .returning({ id: friendRequestsTable.id });
+    if (!removed) return res.status(404).json({ error: "Request no longer available" });
+    return res.json({ removed: true });
+  } catch (err) {
+    req.log.error({ err }, "Failed to remove friend request");
+    return res.status(500).json({ error: "Could not remove friend request" });
   }
 });
 

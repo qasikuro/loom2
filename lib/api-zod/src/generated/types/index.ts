@@ -15,6 +15,8 @@ export * from "./constellationState";
 export * from "./constellationStateStarUnlockDates";
 export * from "./discoverPost";
 export * from "./discoverPostPanelsItem";
+export * from "./friendRequest";
+export * from "./friendRequestDirection";
 export * from "./friendSummary";
 export * from "./friendSummaryLinksItem";
 export * from "./galleryPhoto";

@@ -379,6 +379,24 @@ export interface ConstellationState {
   newlyUnlocked: string[];
 }
 
+export type FriendRequestDirection =
+  (typeof FriendRequestDirection)[keyof typeof FriendRequestDirection];
+
+export const FriendRequestDirection = {
+  incoming: "incoming",
+  outgoing: "outgoing",
+} as const;
+
+export interface FriendRequest {
+  id: string;
+  direction: FriendRequestDirection;
+  userId: string;
+  name: string;
+  username?: string | null;
+  avatarUri?: string | null;
+  createdAt: string;
+}
+
 export type FriendSummaryLinksItem = { [key: string]: unknown };
 
 export interface FriendSummary {
@@ -389,6 +407,8 @@ export interface FriendSummary {
   mood: string;
   traits: string[];
   avatarUri?: string | null;
+  isOnline?: boolean;
+  lastSeenAt?: string | null;
   birthday?: string | null;
   country?: string | null;
   links: FriendSummaryLinksItem[];

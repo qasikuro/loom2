@@ -263,10 +263,8 @@ export const composeVideoBodyOriginalVolumeMax = 1;
 export const composeVideoBodyMusicVolumeMin = 0;
 export const composeVideoBodyMusicVolumeMax = 1;
 
-const RuntimeFile = typeof File === "undefined" ? class FileFallback {} : File;
-
 export const ComposeVideoBody = zod.object({
-  file: zod.instanceof(RuntimeFile),
+  file: zod.instanceof(File),
   videoStartSeconds: zod.number().min(composeVideoBodyVideoStartSecondsMin),
   videoDurationSeconds: zod
     .number()
@@ -717,6 +715,8 @@ export const ListFriendsResponseItem = zod.object({
   mood: zod.string(),
   traits: zod.array(zod.string()),
   avatarUri: zod.string().nullish(),
+  isOnline: zod.boolean().optional(),
+  lastSeenAt: zod.coerce.date().nullish(),
   birthday: zod.string().nullish(),
   country: zod.string().nullish(),
   links: zod.array(zod.object({}).passthrough()),
@@ -729,3 +729,40 @@ export const ListFriendsResponse = zod.array(ListFriendsResponseItem);
  */
 export const ListFollowingResponseItem = zod.string();
 export const ListFollowingResponse = zod.array(ListFollowingResponseItem);
+
+/**
+ * @summary List pending friend invitations
+ */
+export const ListFriendRequestsResponseItem = zod.object({
+  id: zod.string().uuid(),
+  direction: zod.enum(["incoming", "outgoing"]),
+  userId: zod.string(),
+  name: zod.string(),
+  username: zod.string().nullish(),
+  avatarUri: zod.string().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListFriendRequestsResponse = zod.array(
+  ListFriendRequestsResponseItem,
+);
+
+/**
+ * @summary Send a friend invitation
+ */
+export const SendFriendRequestParams = zod.object({
+  targetUserId: zod.coerce.string(),
+});
+
+/**
+ * @summary Decline or cancel an invitation
+ */
+export const RemoveFriendRequestParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+/**
+ * @summary Accept an incoming invitation
+ */
+export const AcceptFriendRequestParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
