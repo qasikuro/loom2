@@ -60,6 +60,7 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
   const [applying, setApplying] = useState(false);
   const rectRef = useRef<CropRect | null>(null);
   const gestureStart = useRef<CropRect | null>(null);
+  const gestureAction = useRef<Corner | 'move' | null>(null);
 
   const image = useMemo(() => {
     if (!naturalSize || !canvas.w || !canvas.h) return null;
@@ -101,61 +102,70 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
     if (image) updateRect(centeredRect(image.w, image.h, next));
   }
 
-  const moveResponder = useMemo(() => PanResponder.create({
+  // One touch surface owns the entire gesture. Nested responders on the box
+  // and corner handles compete on Android, so corner drags often become moves.
+  const cropResponder = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => { gestureStart.current = rectRef.current; },
+    onPanResponderGrant: event => {
+      const start = rectRef.current;
+      gestureStart.current = start ? { ...start } : null;
+      gestureAction.current = null;
+      if (!start) return;
+
+      // The touch surface covers the image exactly, so locationX/Y are image
+      // coordinates; handles are decorative and cannot steal the responder.
+      const { locationX: x, locationY: y } = event.nativeEvent;
+      const handleRadius = 28;
+      const corner = CORNERS.find(c => {
+        const cx = c.endsWith('L') ? start.x : start.x + start.w;
+        const cy = c.startsWith('T') ? start.y : start.y + start.h;
+        return Math.abs(x - cx) <= handleRadius && Math.abs(y - cy) <= handleRadius;
+      });
+      if (corner) gestureAction.current = corner;
+      else if (x >= start.x && x <= start.x + start.w && y >= start.y && y <= start.y + start.h) {
+        gestureAction.current = 'move';
+      }
+    },
     onPanResponderMove: (_, gesture) => {
       const start = gestureStart.current;
-      if (!start || !image) return;
-      updateRect({
-        ...start,
-        x: limit(start.x + gesture.dx, 0, image.w - start.w),
-        y: limit(start.y + gesture.dy, 0, image.h - start.h),
-      });
+      const action = gestureAction.current;
+      if (!start || !action || !image) return;
+      if (action === 'move') {
+        updateRect({
+          ...start,
+          x: limit(start.x + gesture.dx, 0, image.w - start.w),
+          y: limit(start.y + gesture.dy, 0, image.h - start.h),
+        });
+        return;
+      }
+
+      const fromLeft = action === 'TL' || action === 'BL';
+      const fromTop = action === 'TL' || action === 'TR';
+      const anchorX = fromLeft ? start.x + start.w : start.x;
+      const anchorY = fromTop ? start.y + start.h : start.y;
+      const maxW = fromLeft ? anchorX : image.w - anchorX;
+      const maxH = fromTop ? anchorY : image.h - anchorY;
+      const horizontal = start.w + (fromLeft ? -gesture.dx : gesture.dx);
+      const vertical = start.h + (fromTop ? -gesture.dy : gesture.dy);
+      let w: number;
+      let h: number;
+      if (ratio) {
+        const deltaX = horizontal - start.w;
+        const deltaY = (vertical - start.h) * ratio;
+        const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
+        w = limit(start.w + delta, Math.min(MIN_SIZE, maxW, maxH * ratio), Math.min(maxW, maxH * ratio));
+        h = w / ratio;
+      } else {
+        w = limit(horizontal, Math.min(MIN_SIZE, maxW), maxW);
+        h = limit(vertical, Math.min(MIN_SIZE, maxH), maxH);
+      }
+      updateRect({ x: fromLeft ? anchorX - w : anchorX, y: fromTop ? anchorY - h : anchorY, w, h });
     },
+    onPanResponderRelease: () => { gestureAction.current = null; },
+    onPanResponderTerminate: () => { gestureAction.current = null; },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [image]);
-
-  function makeResizeResponder(corner: Corner) {
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => { gestureStart.current = rectRef.current; },
-      onPanResponderMove: (_, gesture) => {
-        const start = gestureStart.current;
-        if (!start || !image) return;
-        const fromLeft = corner === 'TL' || corner === 'BL';
-        const fromTop = corner === 'TL' || corner === 'TR';
-        const anchorX = fromLeft ? start.x + start.w : start.x;
-        const anchorY = fromTop ? start.y + start.h : start.y;
-        const maxW = fromLeft ? anchorX : image.w - anchorX;
-        const maxH = fromTop ? anchorY : image.h - anchorY;
-        const horizontal = start.w + (fromLeft ? -gesture.dx : gesture.dx);
-        const vertical = start.h + (fromTop ? -gesture.dy : gesture.dy);
-        let w: number;
-        let h: number;
-        if (ratio) {
-          const deltaX = horizontal - start.w;
-          const deltaY = (vertical - start.h) * ratio;
-          const delta = Math.abs(deltaX) >= Math.abs(deltaY) ? deltaX : deltaY;
-          w = limit(start.w + delta, Math.min(MIN_SIZE, maxW, maxH * ratio), Math.min(maxW, maxH * ratio));
-          h = w / ratio;
-        } else {
-          w = limit(horizontal, Math.min(MIN_SIZE, maxW), maxW);
-          h = limit(vertical, Math.min(MIN_SIZE, maxH), maxH);
-        }
-        updateRect({ x: fromLeft ? anchorX - w : anchorX, y: fromTop ? anchorY - h : anchorY, w, h });
-      },
-    });
-  }
-
-  // A corner owns its touch rather than letting the move responder intercept it.
-  const resizeResponders = useMemo(
-    () => Object.fromEntries(CORNERS.map(corner => [corner, makeResizeResponder(corner)])) as Record<Corner, ReturnType<typeof PanResponder.create>>,
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [image, ratio],
-  );
+  }), [image, ratio]);
 
   async function applyCrop() {
     const rect = rectRef.current;
@@ -216,7 +226,10 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
           ))}
         </View>
 
-        <View style={styles.canvas} onLayout={e => setCanvas({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
+        <View style={styles.canvas} onLayout={e => {
+          const { width: w, height: h } = e.nativeEvent.layout;
+          setCanvas(previous => previous.w === w && previous.h === h ? previous : { w, h });
+        }}>
           {image && selection ? (
             <View style={{ position: 'absolute', left: image.x, top: image.y, width: image.w, height: image.h }}>
               <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="fill" cachePolicy="memory" />
@@ -225,8 +238,8 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
               <View pointerEvents="none" style={[styles.dim, { top: selection.y, left: 0, width: selection.x, height: selection.h }]} />
               <View pointerEvents="none" style={[styles.dim, { top: selection.y, left: selection.x + selection.w, right: 0, height: selection.h }]} />
               <View
+                pointerEvents="none"
                 style={[styles.selection, { left: selection.x, top: selection.y, width: selection.w, height: selection.h }]}
-                {...moveResponder.panHandlers}
               >
                 <View pointerEvents="none" style={[styles.gridLine, { left: '33.33%', top: 0, bottom: 0, width: 1 }]} />
                 <View pointerEvents="none" style={[styles.gridLine, { left: '66.66%', top: 0, bottom: 0, width: 1 }]} />
@@ -241,12 +254,12 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
                       top: corner.startsWith('T') ? -16 : undefined,
                       bottom: corner.startsWith('B') ? -16 : undefined,
                     }]}
-                    {...resizeResponders[corner].panHandlers}
                   >
                     <View style={styles.handleDot} pointerEvents="none" />
                   </View>
                 ))}
               </View>
+              <View style={StyleSheet.absoluteFill} {...cropResponder.panHandlers} />
             </View>
           ) : (
             <View style={styles.loadingCenter}><SkyLoadingMark color="#fff" size={42} /></View>
