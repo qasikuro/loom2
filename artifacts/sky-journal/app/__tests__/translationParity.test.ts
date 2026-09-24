@@ -18,6 +18,10 @@ function interpolationNames(value: string): string[] {
     .sort();
 }
 
+function normalizePluralKey(key: string): string {
+  return key.replace(/_(zero|one|two|few|many|other)$/, '_plural');
+}
+
 describe('translation resources', () => {
   const english = flatten(translations.en);
   const intentionalIdenticalStrings: Record<string, string[]> = {
@@ -69,7 +73,9 @@ describe('complete app translations', () => {
   it('has matching keys and interpolation variables in every merged locale', () => {
     for (const [language, resource] of Object.entries(mergedTranslations)) {
       const localized = flatten(resource);
-      expect(Object.keys(localized).sort(), language).toEqual(Object.keys(english).sort());
+      const localizedKeys = [...new Set(Object.keys(localized).map(normalizePluralKey))].sort();
+      const englishKeys = [...new Set(Object.keys(english).map(normalizePluralKey))].sort();
+      expect(localizedKeys, language).toEqual(englishKeys);
       for (const [key, source] of Object.entries(english)) {
         expect(interpolationNames(localized[key]), `${language}:${key}`)
           .toEqual(interpolationNames(source));
