@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import type { Character } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import React, { useState } from 'react';
@@ -36,6 +37,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
   const [guideTimeFrom,    setGuideTimeFrom]    = useState(character.guideAvailability?.timeFrom ?? '20:00');
   const [guideTimeTo,      setGuideTimeTo]      = useState(character.guideAvailability?.timeTo ?? '23:00');
   const [editingGuideTime, setEditingGuideTime] = useState(false);
+  const [guideExpanded, setGuideExpanded] = useState(false);
 
   function saveBirthday() { setCharacter({ ...character, birthday: birthdayVal.trim() || undefined }); setEditingBirthday(false); }
   function saveCountry()  { setCharacter({ ...character, country: countryVal.trim() || undefined }); setEditingCountry(false); }
@@ -211,33 +213,42 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
         )}
       </View>
 
-      {/* ── Constellation Guide Mode ─── */}
-      <View style={[s.guideCard, { borderColor: colors.border, backgroundColor: colors.card }, SHADOW.sm]}>
-        <View style={[s.guideHero, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+      {/* ── Guide ─── */}
+      <View style={[s.guideCard, SHADOW.sm]}>
+        <TouchableOpacity
+          onPress={() => setGuideExpanded(open => !open)}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={`Guide, ${character.isGuide ? 'on' : 'off'}. ${guideExpanded ? 'Close' : 'Open'} guide settings`}
+          accessibilityState={{ expanded: guideExpanded }}
+          style={[s.guideHero, guideExpanded && s.guideHeroOpen]}
+        >
+          <LinearGradient colors={['#1A152E', '#1B1431', '#22143F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+          <View pointerEvents="none" style={s.guideOrbit} />
+          <View pointerEvents="none" style={s.guidePlanet} />
+          <View pointerEvents="none" style={s.guideSparkleOne} />
+          <View pointerEvents="none" style={s.guideSparkleTwo} />
           <View style={s.guideHeroRow}>
             <View style={s.guideHeroTitleRow}>
-              <View style={[s.guideHeroIconWrap, { backgroundColor: `${colors.primary}16` }]}><Icon name="star" size={14} color={colors.primary} /></View>
-              <View>
-                <Text style={s.guideHeroTitle}>{character.isGuide ? 'Guide mode' : 'Guide'}</Text>
-                <Text style={[s.guideHeroSub, { color: character.isGuide ? '#90D8A0' : 'rgba(200,184,232,0.42)' }]}>
-                  {character.isGuide ? 'Visible in Discover' : 'Help other players with what you know.'}
+              <View style={s.guideHeroIconWrap}><Icon name="star" size={24} color="#D7BE65" /></View>
+              <View style={s.guideHeroCopy}>
+                <Text style={s.guideHeroTitle}>Guide</Text>
+                <Text style={s.guideHeroSub}>
+                  {character.isGuide ? 'Your guide profile is active.' : 'Help other players with what you know.'}
                 </Text>
               </View>
             </View>
-            <TouchableOpacity
-              style={[s.guideTogglePill, character.isGuide ? s.guideToggleOn : s.guideToggleOff]}
-              onPress={() => { Haptics.selectionAsync(); setCharacter({ ...character, isGuide: !character.isGuide }); }}
-              activeOpacity={0.82}
-            >
-              <View style={[s.guideToggleKnob, { backgroundColor: character.isGuide ? '#A080F8' : 'rgba(200,184,232,0.35)' }]} />
-              <Text style={[s.guideToggleLabel, { color: character.isGuide ? '#C0B0FF' : 'rgba(200,184,232,0.55)' }]}>
-                {character.isGuide ? 'ON' : 'OFF'}
-              </Text>
-            </TouchableOpacity>
+            <View style={s.guideHeroEnd}>
+              <View style={[s.guideStatus, character.isGuide && s.guideStatusOn]}>
+                <View style={[s.guideStatusDot, character.isGuide && s.guideStatusDotOn]} />
+                <Text style={[s.guideStatusText, character.isGuide && s.guideStatusTextOn]}>{character.isGuide ? 'ON' : 'OFF'}</Text>
+              </View>
+              <Icon name={guideExpanded ? 'chevron-down' : 'chevron-right'} size={16} color="#A49ABF" />
+            </View>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        <View style={[s.guideBody, { backgroundColor: colors.card }]}>
+        {guideExpanded && <View style={[s.guideBody, { backgroundColor: colors.card }]}>
           {character.isGuide ? (
             <>
               {(() => {
@@ -369,6 +380,17 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                 <Text style={[s.guidePreviewBtnText, { color: '#fff' }]}>Create a group session</Text>
                 <Icon name="arrow-right" size={14} color="rgba(255,255,255,0.7)" />
               </TouchableOpacity>
+              <TouchableOpacity
+                style={s.guideDisableBtn}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setCharacter({ ...character, isGuide: false });
+                  setGuideExpanded(false);
+                }}
+                accessibilityRole="button"
+              >
+                <Text style={s.guideDisableText}>Turn off Guide mode</Text>
+              </TouchableOpacity>
             </>
           ) : (
             <View style={s.guideInviteBody}>
@@ -384,7 +406,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               </TouchableOpacity>
             </View>
           )}
-        </View>
+        </View>}
       </View>
     </>
   );
@@ -417,18 +439,26 @@ const s = StyleSheet.create({
   socialBadge:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   handleInput:      { fontSize: 13, fontFamily: 'Satoshi-Regular', backgroundColor: 'rgba(155,120,255,0.10)', borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   saveLinkBtn:      { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  guideCard:        { borderRadius: 18, overflow: 'hidden', marginBottom: 20, borderWidth: 1 },
-  guideHero:        { paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1 },
-  guideHeroRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  guideHeroIconWrap:{ width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  guideHeroTitle:   { fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.2 },
-  guideHeroSub:     { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 1 },
-  guideTogglePill:  { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
-  guideToggleOn:    { backgroundColor: 'rgba(120,70,255,0.22)', borderColor: 'rgba(120,70,255,0.55)' },
-  guideToggleOff:   { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(200,184,232,0.20)' },
-  guideToggleKnob:  { width: 8, height: 8, borderRadius: 4 },
-  guideToggleLabel: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5 },
+  guideCard:        { borderRadius: 18, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(145,109,222,0.23)', backgroundColor: '#181428' },
+  guideHero:        { minHeight: 100, paddingHorizontal: 16, paddingVertical: 18, overflow: 'hidden', justifyContent: 'center' },
+  guideHeroOpen:    { borderBottomWidth: 1, borderBottomColor: 'rgba(145,109,222,0.2)' },
+  guideOrbit:       { position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 1, borderColor: 'rgba(181,140,255,0.16)', right: -34, bottom: -124 },
+  guidePlanet:      { position: 'absolute', width: 156, height: 156, borderRadius: 78, backgroundColor: 'rgba(139,88,224,0.12)', right: -22, bottom: -110 },
+  guideSparkleOne:  { position: 'absolute', width: 4, height: 4, borderRadius: 2, backgroundColor: '#D7BE65', right: 121, top: 18 },
+  guideSparkleTwo:  { position: 'absolute', width: 3, height: 3, borderRadius: 2, backgroundColor: '#BA9BEE', right: 102, top: 48 },
+  guideHeroRow:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, minWidth: 0 },
+  guideHeroIconWrap:{ width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
+  guideHeroCopy:    { flex: 1, minWidth: 0 },
+  guideHeroTitle:   { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#F5F0FF', letterSpacing: -0.3 },
+  guideHeroSub:     { fontSize: 12, lineHeight: 16, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 3 },
+  guideHeroEnd:     { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  guideStatus:      { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 9, paddingVertical: 7 },
+  guideStatusOn:    { borderColor: 'rgba(172,139,246,0.55)', backgroundColor: 'rgba(149,105,240,0.18)' },
+  guideStatusDot:   { width: 7, height: 7, borderRadius: 4, backgroundColor: '#77718E' },
+  guideStatusDotOn: { backgroundColor: '#B394FF' },
+  guideStatusText:  { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(214,204,234,0.58)', letterSpacing: 0.6 },
+  guideStatusTextOn:{ color: '#D4C3FF' },
   guideBody:        {},
   guideCompletion:  { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, gap: 6 },
   guideCompletionRow:{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -463,4 +493,6 @@ const s = StyleSheet.create({
   guideInviteBody:  { paddingHorizontal: 14, paddingVertical: 12 },
   guideEnableBtn:   { minHeight: 46, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, borderRadius: 13, alignSelf: 'stretch', justifyContent: 'center' },
   guideEnableBtnText:{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  guideDisableBtn:  { alignItems: 'center', paddingVertical: 14, marginBottom: 4 },
+  guideDisableText: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,240,0.62)' },
 });
