@@ -1,5 +1,5 @@
 /**
- * Custom dreamy SVG icons designed for Sky Journal / Skyloom.
+ * Custom dreamy SVG icons used throughout Ximo.
  * All icons use a 24×24 viewBox, stroke-based with rounded caps.
  * Built with react-native-svg (already installed).
  */

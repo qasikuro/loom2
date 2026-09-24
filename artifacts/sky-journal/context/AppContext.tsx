@@ -17,7 +17,7 @@ import {
   ApiFriendsSchema,
   ApiFollowingSchema,
 } from '@workspace/api-zod';
-import Constants from 'expo-constants';
+import { getApiBase } from '@/utils/apiBase';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
@@ -74,16 +74,9 @@ export type {
   RawDiscoverApiItem,
 } from './mappers';
 
-// ── API base URL (baked in at build time via app.config.ts) ───────────────────
+// ── API base URL ───────────────────────────────────────────────────────────────
 
-function resolveApiBase(): string {
-  const extra = Constants.expoConfig?.extra as Record<string, unknown> | undefined;
-  const envUrl = extra?.apiUrl;
-  if (envUrl) return envUrl as string;
-  return '/api';
-}
-
-const API_BASE = resolveApiBase();
+const API_BASE = getApiBase();
 
 // Bind resolveUri to the runtime API_BASE so call-sites stay zero-arg.
 export function resolveUri(uri: string | null | undefined): string | undefined {

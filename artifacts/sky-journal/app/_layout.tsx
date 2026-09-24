@@ -20,6 +20,7 @@ const KeyboardProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ chil
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppSplashScreen } from '@/components/AppSplashScreen';
+import { getApiBase } from '@/utils/apiBase';
 import { XPFlash } from '@/components/XPFlash';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
@@ -145,8 +146,7 @@ function AuthTokenBridge() {
             // Use sessionRef for push registration too — same reason as above.
             const authToken = await getToken() ?? await sessionRef.current?.getToken();
             if (!authToken) return;
-            const apiUrl = Constants.expoConfig?.extra?.apiUrl as string | null;
-            if (!apiUrl) return;
+            const apiUrl = getApiBase();
             await fetch(`${apiUrl}/push/register`, {
               method:  'POST',
               headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },

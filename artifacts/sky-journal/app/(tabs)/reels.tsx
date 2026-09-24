@@ -114,7 +114,7 @@ export default function ReelsScreen() {
     try {
       await Share.share({
         title: post.chapterTitle,
-        message: `${post.chapterTitle} by ${post.authorName}\n${mediaLink ?? appLink}${mediaLink ? `\nOpen in GameJo: ${appLink}` : ''}`,
+        message: `${post.chapterTitle} by ${post.authorName}\n${mediaLink ?? appLink}${mediaLink ? `\nOpen in Ximo: ${appLink}` : ''}`,
         ...(Platform.OS === 'ios' ? { url: mediaLink ?? appLink } : {}),
       });
     } catch {

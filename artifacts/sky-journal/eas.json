@@ -10,7 +10,7 @@
       "node": "22.0.0",
       "pnpm": "10.26.1",
       "env": {
-        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api",
+        "EXPO_PUBLIC_API_URL": "https://loom-qasiland.replit.app/api",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubG9vbS1xYXNpbGFuZC5yZXBsaXQuYXBwJA",
         "EXPO_PUBLIC_CLERK_PROXY_URL": "https://loom-qasiland.replit.app/api/__clerk"
       },
@@ -28,7 +28,7 @@
       "node": "22.0.0",
       "pnpm": "10.26.1",
       "env": {
-        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api",
+        "EXPO_PUBLIC_API_URL": "https://loom-qasiland.replit.app/api",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubG9vbS1xYXNpbGFuZC5yZXBsaXQuYXBwJA",
         "EXPO_PUBLIC_CLERK_PROXY_URL": "https://loom-qasiland.replit.app/api/__clerk"
       },
@@ -43,7 +43,7 @@
       "node": "22.0.0",
       "pnpm": "10.26.1",
       "env": {
-        "PRODUCTION_API_URL": "https://loom-qasiland.replit.app/api",
+        "EXPO_PUBLIC_API_URL": "https://loom-qasiland.replit.app/api",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsubG9vbS1xYXNpbGFuZC5yZXBsaXQuYXBwJA",
         "EXPO_PUBLIC_CLERK_PROXY_URL": "https://loom-qasiland.replit.app/api/__clerk"
       },

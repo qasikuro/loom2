@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
-import Constants from 'expo-constants';
+import { getApiBase } from '@/utils/apiBase';
 import { Platform } from 'react-native';
 import { getAuthToken } from '@/context/AppContext';
 
@@ -8,10 +8,7 @@ const MAX_DIM          = 1200;
 const UPLOAD_TIMEOUT_MS = 30_000; // H-4: 30-second hard limit on all upload paths
 
 function resolveApiBase(): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const extra  = (Constants.expoConfig as any)?.extra;
-  const envUrl = extra?.apiUrl as string | null | undefined;
-  return envUrl ?? '/api';
+  return getApiBase();
 }
 
 /**

@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "GameJo",
+    "name": "Ximo",
     "slug": "sky-journal",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/gamejo_logo.png",
+    "icon": "./assets/images/ximo_icon.png",
     "scheme": "sky-journal",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/gamejo_splash.png",
+      "image": "./assets/images/ximo_splash.jpg",
       "resizeMode": "cover",
-      "backgroundColor": "#0D0B1E"
+      "backgroundColor": "#D7D8FC"
     },
     "ios": {
       "supportsTablet": false,
@@ -21,12 +21,12 @@
     "android": {
       "package": "com.gamejo.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/gamejo_logo.png",
-        "backgroundColor": "#0D0B1E"
+        "foregroundImage": "./assets/images/ximo_adaptive_icon.png",
+        "backgroundColor": "#F0EAFE"
       }
     },
     "web": {
-      "favicon": "./assets/images/gamejo_logo.png"
+      "favicon": "./assets/images/ximo_icon.png"
     },
     "plugins": [
       [
@@ -39,7 +39,25 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow GameJo to access your photos to add images to your logs."
+          "photosPermission": "Allow Ximo to access your photos to add images to your logs."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/ximo_icon.png",
+          "color": "#7C3AED",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "packagingOptions": {
+              "exclude": ["META-INF/versions/9/OSGI-INF/MANIFEST.MF"]
+            }
+          }
         }
       ]
     ],

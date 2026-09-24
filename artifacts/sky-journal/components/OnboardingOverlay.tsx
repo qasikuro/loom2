@@ -641,7 +641,7 @@ function WelcomeStep({ emojiScale }: { emojiScale: Animated.Value }) {
       <Text style={[s.stepLabel, { color: '#C8A84B' }]}>WELCOME</Text>
       <Text style={s.title}>Your sky is waiting</Text>
       <Text style={s.desc}>
-        Sky Journal is a dreamy space for your memories, stories, and soul. In just a moment, we'll shape your sky to feel like home.
+        Ximo is a dreamy space for your memories, stories, and soul. In just a moment, we'll shape your world to feel like home.
       </Text>
       <View style={[s.hintPill, { borderColor: '#C8A84B40', backgroundColor: '#C8A84B12' }]}>
         <Text style={[s.hintText, { color: '#C8A84B' }]}>Takes about 60 seconds ✦</Text>

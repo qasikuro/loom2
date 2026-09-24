@@ -22,17 +22,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getAuthToken } from '@/context/AppContext';
-import Constants from 'expo-constants';
+import { getApiBase } from '@/utils/apiBase';
 
-function resolveApiBase(): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const extra  = (Constants.expoConfig as any)?.extra;
-  const envUrl = extra?.apiUrl;
-  if (envUrl) return envUrl as string;
-  return '/api';
-}
-
-const API_BASE = resolveApiBase();
+const API_BASE = getApiBase();
 
 type SSEPayload = { channel: string; data: unknown };
 type OnEventFn = (channel: string, data: unknown) => void;

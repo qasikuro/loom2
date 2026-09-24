@@ -182,7 +182,7 @@ export default function MangaStoryScreen() {
       const remoteUri = `${resolved}${resolved.includes('?') ? '&' : '?'}generation=${encodeURIComponent(result.generationId)}`;
       let displayUri = remoteUri;
       if (Platform.OS !== 'web') {
-        const localUri = `${FileSystem.cacheDirectory}gamejo-manga-${result.generationId}.png`;
+        const localUri = `${FileSystem.cacheDirectory}ximo-manga-${result.generationId}.png`;
         const download = await FileSystem.downloadAsync(remoteUri, localUri);
         if (download.status !== 200) {
           throw new Error(`Generated image download failed with status ${download.status}`);
@@ -235,7 +235,7 @@ export default function MangaStoryScreen() {
     try {
       if (Platform.OS === 'web') {
         await import('react-native').then(({ Share }) =>
-          Share.share({ title: 'My Gamejo manga', message: `My manga story — Made by Gamejo\n${generatedImageUri}` }),
+          Share.share({ title: 'My Ximo manga', message: `My manga story — Made by Ximo\n${generatedImageUri}` }),
         );
         return;
       }
@@ -243,13 +243,13 @@ export default function MangaStoryScreen() {
       if (!available) throw new Error('Sharing unavailable');
       let shareUri = generatedImageUri;
       if (!shareUri.startsWith('file:')) {
-        const localUri = `${FileSystem.cacheDirectory}gamejo-manga-${generationId ?? 'page'}.png`;
+        const localUri = `${FileSystem.cacheDirectory}ximo-manga-${generationId ?? 'page'}.png`;
         const download = await FileSystem.downloadAsync(shareUri, localUri);
         if (download.status !== 200) throw new Error('Download failed');
         shareUri = download.uri;
       }
       await Sharing.shareAsync(shareUri, {
-        dialogTitle: 'Share your Gamejo manga',
+        dialogTitle: 'Share your Ximo manga',
         mimeType: 'image/png',
         UTI: 'public.png',
       });
@@ -276,7 +276,7 @@ export default function MangaStoryScreen() {
       id,
       date: new Date().toISOString(),
       chapterTitle: customStory.slice(0, 80) || 'My Manga Story',
-      description: `Created in ${selectedStyle.label.replace('\n', ' ')} style with Gamejo AI.`,
+      description: `Created in ${selectedStyle.label.replace('\n', ' ')} style with Ximo AI.`,
       panels: [panel],
       mood: 'Creative',
       location: 'Isle of Dawn',
@@ -547,7 +547,7 @@ export default function MangaStoryScreen() {
                       setImageLoading(true);
                       FileSystem.downloadAsync(
                         retryUri,
-                        `${FileSystem.cacheDirectory}gamejo-manga-${generationId}-${Date.now()}.png`,
+                        `${FileSystem.cacheDirectory}ximo-manga-${generationId}-${Date.now()}.png`,
                       ).then(download => {
                         if (download.status !== 200) throw new Error('Download failed');
                         setGeneratedImageUri(download.uri);

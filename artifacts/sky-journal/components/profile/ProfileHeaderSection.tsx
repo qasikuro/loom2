@@ -138,8 +138,8 @@ export function ProfileHeaderSection({
   }
   async function shareProfile() {
     await Share.share({
-      title: `${character.name} on Sky Journal`,
-      message: `Meet ${character.name} on Sky Journal${currentTitle ? ` — ${currentTitle}` : ''}.`,
+      title: `${character.name} on Ximo`,
+      message: `Meet ${character.name} on Ximo${currentTitle ? ` — ${currentTitle}` : ''}.`,
     });
   }
 

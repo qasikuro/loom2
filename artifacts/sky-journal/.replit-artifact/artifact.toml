@@ -1,6 +1,6 @@
 kind = "mobile"
 previewPath = "/"
-title = "Sky Journal"
+title = "Ximo"
 version = "1.0.0"
 id = "artifacts/sky-journal"
 router = "expo-domain"

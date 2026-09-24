@@ -237,7 +237,7 @@ export default function SignUpScreen() {
             </View>
 
             <Text style={styles.title}>Begin your journey</Text>
-            <Text style={styles.subtitle}>Create your GameJo account</Text>
+            <Text style={styles.subtitle}>Create your Ximo account</Text>
 
             {/* ── Google button ──────────────────── */}
             <TouchableOpacity
@@ -344,8 +344,8 @@ const styles = StyleSheet.create({
   star: { position: 'absolute', color: 'rgba(200,184,232,0.18)', fontFamily: 'Satoshi-Regular' },
   container: { paddingHorizontal: 20, alignSelf: 'center', alignItems: 'stretch' },
 
-  logoWrap: { alignItems: 'center', marginBottom: 10 },
-  logo: { width: 110, height: 110 },
+  logoWrap: { alignItems: 'center', justifyContent: 'center', alignSelf: 'center', width: 190, height: 160, marginBottom: 16, borderRadius: 24, backgroundColor: '#F0EAFE' },
+  logo: { width: 165, height: 138 },
 
   title: {
     fontSize: 30, fontFamily: 'Satoshi-Bold', color: '#F0ECFF',

@@ -1115,8 +1115,8 @@ export default function UserProfileScreen() {
             const icon        = isFounder ? '👑'       : '⚗️';
             const title       = isFounder ? 'Founder'  : 'Beta Pioneer';
             const description = isFounder
-              ? 'Joined before launch. Thank you for believing in GameJo. ✨'
-              : 'Helped shape GameJo during its early days. Thank you! 💜';
+              ? 'Joined before launch. Thank you for believing in Ximo. ✨'
+              : 'Helped shape Ximo during its early days. Thank you! 💜';
             return (
               <View style={[styles.spotlightBadgeCard, {
                 backgroundColor: cardDark + '33',

@@ -322,7 +322,7 @@ export default function DiscoverScreen() {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
               <Icon name="book-open" size={15} color="#C8A84B" />
-              <Text style={styles.booksBannerTitle}>Sky Journal Library</Text>
+              <Text style={styles.booksBannerTitle}>Ximo Library</Text>
             </View>
             <Text style={styles.booksBannerSub}>
               Explore serialised stories from writers in the community
@@ -348,7 +348,7 @@ export default function DiscoverScreen() {
               </View>
               <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>No books yet</Text>
               <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
-                Be the first to publish a book series in Sky Journal
+                Be the first to publish a book series in Ximo
               </Text>
             </View>
           ) : (

@@ -1,5 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import Constants from 'expo-constants';
+import { getApiBase } from '@/utils/apiBase';
 import { Platform } from 'react-native';
 import { getAuthToken } from '@/context/AppContext';
 import type { StoryMusic } from '@/context/mappers';
@@ -34,9 +34,7 @@ export type ComposeVideoController = {
 };
 
 function resolveApiBase(): string {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const extra = (Constants.expoConfig as any)?.extra;
-  return (extra?.apiUrl as string | undefined) ?? '/api';
+  return getApiBase();
 }
 
 function normalizeResult(value: unknown): ComposeVideoResult {

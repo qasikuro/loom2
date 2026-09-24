@@ -251,7 +251,7 @@ export default function ChapterReaderScreen() {
     if (!chapter) return;
     try {
       await Share.share({
-        message: `Reading "${chapter.title}" — a chapter from Sky Journal ✦`,
+        message: `Reading "${chapter.title}" — a chapter from Ximo ✦`,
         title: chapter.title,
       });
     } catch { /* user dismissed */ }

@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, View, Text, type ViewStyle } from 'react-native';
+import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, View, Text, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColors } from '@/hooks/useColors';
 import { SkyIcon } from '@/components/SkyIcon';
 import { SkeletonCard } from '@/components/Skeleton';
+import { Images } from '@/assets/images';
 
 function useReducedMotion(): boolean {
   const [reducedMotion, setReducedMotion] = useState(true);
@@ -260,13 +261,13 @@ export function SkyLoadingOverlay({
             <View style={[styles.orbitDot, { backgroundColor: colors.gold || '#E8B830' }]} />
             <View style={[styles.orbitDot, styles.orbitDotSecondary, { backgroundColor: colors.skyBlue || '#B8D4F0' }]} />
           </Animated.View>
-          <View style={[styles.markPlate, { borderColor: colors.glowGold || 'rgba(232,184,48,0.22)' }]}>
-            <SkyLoadingMark size={54} color={colors.gold || '#E8B830'} accessible={false} />
+          <View style={[styles.markPlate, { borderColor: colors.glowGold || 'rgba(232,184,48,0.22)', backgroundColor: '#F0EAFE' }]}>
+            <Image source={Images.icon} style={{ width: 54, height: 54, borderRadius: 27 }} resizeMode="cover" accessible={false} />
           </View>
         </View>
         <View style={styles.copy}>
           <Text style={[styles.eyebrow, { color: colors.mutedForeground || 'rgba(210,196,240,0.62)' }]}>
-            SKY JOURNAL
+            XIMO
           </Text>
           {!!message && (
             <Text

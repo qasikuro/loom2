@@ -403,7 +403,7 @@ export function AudiusMusicPicker({
                 )}
                 ListFooterComponent={
                   <Text style={styles.attribution}>
-                    Music from Audius · Only tracks available for use in Sky Journal are shown.
+                    Music from Audius · Only tracks available for use in Ximo are shown.
                   </Text>
                 }
               />

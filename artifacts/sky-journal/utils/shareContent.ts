@@ -2,8 +2,7 @@ import { Platform, Share } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
-// Placeholder deep-link base — swap for real domain/store link once published
-const APP_URL = 'https://skyjournal.replit.app';
+const APP_URL = 'https://loom-qasiland.replit.app';
 
 // ─── Story share ──────────────────────────────────────────────────────────────
 export async function shareStory(opts: {
@@ -25,7 +24,7 @@ export async function shareStory(opts: {
     `✦ "${title}"`,
     moodLine,
     trimmed ? `\n"${trimmed}"` : '',
-    `\nby ${authorName} · Sky Journal`,
+    `\nby ${authorName} · Ximo`,
     `\n${storyLink}`,
   ];
 
@@ -68,7 +67,7 @@ export async function shareOutfit(opts: {
     `✦ ${name}`,
     tagLine,
     desc ? `\n"${desc}"` : '',
-    `\nLogged on Sky Journal ✨`,
+    `\nLogged on Ximo ✨`,
     `\n${APP_URL}`,
   ];
 
