@@ -404,6 +404,7 @@ export default function CampfireLobby() {
       </View>
       <ScrollView
         horizontal
+        style={L.moodScroller}
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={L.moodRow}
         keyboardShouldPersistTaps="handled"
@@ -483,13 +484,18 @@ const L = StyleSheet.create({
   },
   moodRow: {
     flexDirection: 'row',
-    paddingHorizontal: 14, paddingVertical: 6, gap: 6,
+    alignItems: 'center',
+    paddingHorizontal: 16, gap: 8,
   },
+  // A horizontal ScrollView is otherwise allowed to expand to fill the
+  // remaining screen height, stretching each filter into a tall column.
+  moodScroller: { flexGrow: 0, height: 52 },
   moodChip: {
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1,
+    minHeight: 36, justifyContent: 'center',
+    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 18, borderWidth: 1,
     backgroundColor: 'rgba(255,255,255,0.04)', borderColor: 'rgba(107,91,149,0.18)',
   },
-  moodChipText: { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.50)' },
+  moodChipText: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.72)' },
   backBtn: {
     width: 36, height: 36, borderRadius: 11,
     alignItems: 'center', justifyContent: 'center',
