@@ -107,6 +107,7 @@ router.get("/friends", requireAuth, async (req, res) => {
         mood:      characterTable.mood,
         traits:    characterTable.traits,
         avatarUri: characterTable.avatarUri,
+        activeOutfitImageUri: outfitsTable.imageUri,
         birthday:  characterTable.birthday,
         country:   characterTable.country,
         links:     characterTable.links,
@@ -115,6 +116,11 @@ router.get("/friends", requireAuth, async (req, res) => {
         lastSeenAt: characterTable.lastSeenAt,
       })
       .from(characterTable)
+      .leftJoin(outfitsTable, and(
+        eq(outfitsTable.id, characterTable.activeOutfitId),
+        eq(outfitsTable.userId, characterTable.userId),
+        eq(outfitsTable.isPublic, true),
+      ))
       .where(
         and(
           inArray(characterTable.userId, followingIds),
@@ -134,7 +140,7 @@ router.get("/friends", requireAuth, async (req, res) => {
         bio:       p.bio,
         mood:      p.mood,
         traits:    Array.isArray(p.traits) ? p.traits : [],
-        avatarUri: safeDiscoverUri(p.avatarUri),
+        avatarUri: safeDiscoverUri(p.avatarUri) ?? safeDiscoverUri(p.activeOutfitImageUri),
         birthday:  p.birthday ?? null,
         country:   p.country  ?? null,
         links:     Array.isArray(p.links) ? p.links : [],

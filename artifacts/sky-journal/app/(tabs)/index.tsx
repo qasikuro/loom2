@@ -21,6 +21,7 @@ import {
 } from '@/context/AppContext';
 // import { RewardBalance } from '@/components/RewardBalance'; // kept for future use
 import { RewardBanner } from '@/components/RewardBanner';
+import { FriendAvatar } from '@/components/FriendAvatar';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 
@@ -1505,12 +1506,8 @@ export default function HomeScreen() {
                   onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: friend.userId } } as never)}
                 activeOpacity={0.8}
               >
-                <View style={[s.dashboardFriendAvatar, { borderColor: friendColor }]}>
-                  {friend.avatarUri
-                    ? <Image source={{ uri: resolveUri(friend.avatarUri) ?? friend.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                    : <Text style={[s.dashboardFriendInitial, { color: friendColor }]}>{friend.name.charAt(0).toUpperCase()}</Text>}
-                  {friend.isOnline && <View style={s.dashboardOnlineDot} />}
-                </View>
+                <FriendAvatar name={friend.name} uri={friend.avatarUri} online={friend.isOnline}
+                  borderColor={friendColor} initialColor={friendColor} />
                 <Text style={s.dashboardFriendName} numberOfLines={1}>{friend.username || friend.name}</Text>
               </TouchableOpacity>
             );
@@ -2335,9 +2332,6 @@ const s = StyleSheet.create({
   dashboardFriends: { flexDirection: 'row', gap: 10, minHeight: 72 },
   dashboardFriend: { flex: 1, maxWidth: 58, alignItems: 'center', gap: 4 },
   dashboardAddFriend: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(194,145,255,0.28)', backgroundColor: 'rgba(113,62,184,0.08)' },
-  dashboardFriendAvatar: { width: 46, height: 46, borderRadius: 23, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', backgroundColor: '#160D31' },
-  dashboardFriendInitial: { fontSize: 18, fontFamily: 'Satoshi-Bold' },
-  dashboardOnlineDot: { position: 'absolute', right: -1, bottom: 1, width: 9, height: 9, borderRadius: 5, backgroundColor: '#43DC8D', borderWidth: 2, borderColor: '#080513' },
   dashboardFriendName: { width: 58, fontSize: 10, lineHeight: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(231,221,250,0.86)', textAlign: 'center' },
   dashboardLumi: { height: 145, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(190,142,255,0.24)' },
   dashboardLumiShort: { height: 118 },

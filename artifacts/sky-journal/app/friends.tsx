@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { FriendAvatar } from '@/components/FriendAvatar';
 import { ApiError, apiFetch, resolveUri, useApp, type FriendSummary } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Image } from 'expo-image';
@@ -36,16 +37,6 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'requests', label: 'Requests', icon: 'bell' },
   { id: 'suggestions', label: 'Find', icon: 'user-plus' },
 ];
-
-function Avatar({ uri, name, online, size = 48 }: { uri?: string | null; name: string; online?: boolean; size?: number }) {
-  return (
-    <View style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}>
-      {uri ? <Image source={{ uri: resolveUri(uri) ?? uri }} style={StyleSheet.absoluteFill} contentFit="cover" /> :
-        <Text style={[styles.avatarInitial, { fontSize: size * 0.4 }]}>{name.charAt(0).toUpperCase()}</Text>}
-      {online && <View style={styles.onlineDot} />}
-    </View>
-  );
-}
 
 function lastActive(value: string | null | undefined): string {
   if (!value) return 'Offline or status hidden';
@@ -172,7 +163,7 @@ export default function FriendsScreen() {
   const friendRow = (friend: FriendSummary) => (
     <View key={friend.userId} style={styles.row}>
       <TouchableOpacity style={styles.person} onPress={() => profile(friend.userId)} accessibilityLabel={`View ${friend.name}'s profile`}>
-        <Avatar name={friend.name} uri={friend.avatarUri} online={friend.isOnline} />
+        <FriendAvatar name={friend.name} uri={friend.avatarUri} online={friend.isOnline} size={48} largeOnlineDot />
         <View style={styles.personText}>
           <Text style={styles.name} numberOfLines={1}>{friend.name}</Text>
           <Text style={styles.detail} numberOfLines={1}>{friend.isOnline ? 'Online now' : lastActive(friend.lastSeenAt)}</Text>
@@ -198,7 +189,7 @@ export default function FriendsScreen() {
   const requestRow = (request: Invitation) => (
     <View key={request.id} style={styles.row}>
       <TouchableOpacity style={styles.person} onPress={() => profile(request.userId)}>
-        <Avatar name={request.name} uri={request.avatarUri} />
+        <FriendAvatar name={request.name} uri={request.avatarUri} size={48} />
         <View style={styles.personText}>
           <Text style={styles.name} numberOfLines={1}>{request.name}</Text>
           <Text style={styles.detail} numberOfLines={1}>
@@ -287,7 +278,7 @@ export default function FriendsScreen() {
                     : suggested.length ? <View style={styles.section}>{suggested.map(person => (
                       <View key={person.userId} style={styles.row}>
                         <TouchableOpacity style={styles.person} onPress={() => profile(person.userId)}>
-                          <Avatar name={person.name} uri={person.avatarUri} />
+                          <FriendAvatar name={person.name} uri={person.avatarUri} size={48} />
                           <View style={styles.personText}>
                             <Text style={styles.name} numberOfLines={1}>{person.name}</Text>
                             <Text style={styles.detail} numberOfLines={1}>{person.username ? `@${person.username}` : person.bio || 'View profile'}</Text>
@@ -342,9 +333,6 @@ const styles = StyleSheet.create({
   count: { color: '#C8B8E8', fontSize: 12, fontFamily: 'Satoshi-Bold', backgroundColor: '#292143', borderRadius: 10, overflow: 'hidden', paddingHorizontal: 8, paddingVertical: 2 },
   row: { minHeight: 69, backgroundColor: '#17152B', borderRadius: 17, borderWidth: 1, borderColor: 'rgba(180,160,220,0.08)', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8 },
   person: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  avatar: { borderWidth: 2, borderColor: '#8468C4', backgroundColor: '#392653', overflow: 'visible', alignItems: 'center', justifyContent: 'center' },
-  avatarInitial: { color: '#EDE8FF', fontFamily: 'Satoshi-Bold' },
-  onlineDot: { position: 'absolute', right: -2, bottom: -2, backgroundColor: '#45D79B', borderColor: '#17152B', borderWidth: 2, width: 14, height: 14, borderRadius: 7 },
   personText: { flex: 1, minWidth: 0, gap: 3 },
   name: { color: '#F4EEFF', fontSize: 14, fontFamily: 'Satoshi-Bold' },
   detail: { color: '#AFA5C8', fontSize: 11, fontFamily: 'Satoshi-Regular' },
