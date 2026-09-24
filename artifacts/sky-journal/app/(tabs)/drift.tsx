@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useApp, apiFetch } from '@/context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 // ─── Flow ────────────────────────────────────────────────────────────────────
 type FlowStep =
@@ -703,6 +704,7 @@ function LumiChat({ message, color = '#B090FF', onTapLumi, tapQuip, emotion = 'n
 // ─── Breathing game ───────────────────────────────────────────────────────────
 type BreathPhase = 'idle' | 'inhale' | 'hold' | 'exhale' | 'done';
 function BreathingGame({ color, onDone }: { color: string; onDone: () => void }) {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<BreathPhase>('idle');
   const [round, setRound] = useState(0);
   const [label, setLabel] = useState('Tap to begin');
@@ -783,7 +785,7 @@ function BreathingGame({ color, onDone }: { color: string; onDone: () => void })
           <TouchableOpacity onPress={onDone} style={{
             backgroundColor: `${color}28`, borderRadius: 20, paddingHorizontal: 24, paddingVertical: 10,
           }}>
-            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color }}>Done ✦</Text>
+            <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color }}>{t('feature.drift.done')}</Text>
           </TouchableOpacity>
         </View>
       ) : phase === 'idle' ? (
@@ -797,6 +799,7 @@ function BreathingGame({ color, onDone }: { color: string; onDone: () => void })
 
 // ─── Journal spark ────────────────────────────────────────────────────────────
 function JournalSpark({ color, mode, onDone }: { color: string; mode: string; onDone: () => void }) {
+  const { t } = useTranslation();
   const [text, setText]   = useState('');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
@@ -856,7 +859,7 @@ function JournalSpark({ color, mode, onDone }: { color: string; mode: string; on
           <TextInput
             value={text}
             onChangeText={setText}
-            placeholder="I feel…"
+            placeholder={t('feature.drift.feelingPlaceholder')}
             placeholderTextColor={`${color}55`}
             multiline
             style={{
@@ -882,7 +885,7 @@ function JournalSpark({ color, mode, onDone }: { color: string; mode: string; on
             <TouchableOpacity onPress={onDone} style={{
               paddingHorizontal: 16, paddingVertical: 11, alignItems: 'center',
             }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.35)' }}>Skip</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.35)' }}>{t('feature.drift.skip')}</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -893,6 +896,7 @@ function JournalSpark({ color, mode, onDone }: { color: string; mode: string; on
 
 // ─── Story vibe card ──────────────────────────────────────────────────────────
 function StoryVibeCard({ cfg, onDismiss }: { cfg: ModeConfig; onDismiss: () => void }) {
+  const { t } = useTranslation();
   const router   = useRouter();
   const cardFade = useRef(new Animated.Value(0)).current;
 
@@ -917,10 +921,10 @@ function StoryVibeCard({ cfg, onDismiss }: { cfg: ModeConfig; onDismiss: () => v
           onPress={() => { router.push('/(tabs)/discover' as never); onDismiss(); }}
           style={{ flex: 1, backgroundColor: `${color}28`, borderRadius: 14, paddingVertical: 11, alignItems: 'center' }}
         >
-          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color }}>Explore stories ✦</Text>
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color }}>{t('feature.drift.exploreStories')}</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={onDismiss} style={{ paddingHorizontal: 16, paddingVertical: 11, alignItems: 'center' }}>
-          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.35)' }}>Maybe later</Text>
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(235,220,255,0.35)' }}>{t('feature.drift.maybeLater')}</Text>
         </TouchableOpacity>
       </View>
     </Animated.View>
@@ -929,7 +933,7 @@ function StoryVibeCard({ cfg, onDismiss }: { cfg: ModeConfig; onDismiss: () => v
 
 // ─── Option card ──────────────────────────────────────────────────────────────
 type OptItem = { id: string; label: string; desc: string; em: string };
-function OptionCard({ opt, selected, onPress, color }: { opt: OptItem; selected: boolean; onPress: () => void; color: string }) {
+function OptionCard({ opt, label, selected, onPress, color }: { opt: OptItem; label?: string; selected: boolean; onPress: () => void; color: string }) {
   const scale = useRef(new Animated.Value(1)).current;
   function press() {
     Animated.sequence([
@@ -952,7 +956,7 @@ function OptionCard({ opt, selected, onPress, color }: { opt: OptItem; selected:
       >
         <Text style={oc.em}>{opt.em}</Text>
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={[oc.label, selected && { color }]}>{opt.label}</Text>
+          <Text style={[oc.label, selected && { color }]}>{label ?? opt.label}</Text>
           <Text style={oc.desc}>{opt.desc}</Text>
         </View>
         {selected && (
@@ -1007,6 +1011,7 @@ function TraitPill({ label, color }: { label: string; color: string }) {
 // ════════════════════════════════════════════════════════════════════════════
 
 function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
@@ -1025,24 +1030,24 @@ function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string })
         </Animated.View>
         <Animated.View style={{ opacity: enter, transform: [{ translateY: enterY }], alignItems: 'center', marginBottom: 8 }}>
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.65)', letterSpacing: 2, marginBottom: 10, textTransform: 'uppercase' }}>
-            Welcome to
+            {t('feature.drift.welcomeTo')}
           </Text>
           <Text style={{ fontSize: 52, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', letterSpacing: -2, textAlign: 'center', lineHeight: 58 }}>
             {name} ✦
           </Text>
         </Animated.View>
         <Animated.Text style={{ opacity: enter, fontSize: 16, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.68)', lineHeight: 26, textAlign: 'center', marginBottom: 28 }}>
-          A space for your memories, stories and peaceful moments.
+          {t('feature.drift.welcomeBody')}
         </Animated.Text>
         <Animated.View style={{ opacity: enter, backgroundColor: 'rgba(176,144,255,0.07)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(176,144,255,0.16)', paddingHorizontal: 20, paddingVertical: 14, marginBottom: 32, width: '100%' }}>
           <Text style={{ fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: 'rgba(190,170,255,0.72)', textAlign: 'center', lineHeight: 20 }}>
-            ✦ A quick check-in — 6 questions — personalises your session.{'\n'}Your responses stay on your device. Always.
+            {t('feature.drift.surveyIntro')}
           </Text>
         </Animated.View>
         <Animated.View style={{ opacity: enter, alignItems: 'center', gap: 12, width: '100%' }}>
-          <PrimaryBtn label="Get Started ✦" onPress={onStart} color="#7050C8" />
+          <PrimaryBtn label={t('feature.drift.getStarted')} onPress={onStart} color="#7050C8" />
           <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(176,144,255,0.45)' }}>
-            6 drift modes · Lumi companion · Session quests
+            {t('feature.drift.privacy')}
           </Text>
         </Animated.View>
       </ScrollView>
@@ -1054,6 +1059,7 @@ function SurveyScreen({ question, qIdx, total, onAnswer, answers }: {
   question: typeof QUESTIONS[0]; qIdx: number; total: number;
   onAnswer: (qId: string, optId: string) => void; answers: Record<string, string>;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const current = answers[question.id] ?? null;
@@ -1077,10 +1083,12 @@ function SurveyScreen({ question, qIdx, total, onAnswer, answers }: {
       </Text>
       <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 48, paddingTop: 16 }} showsVerticalScrollIndicator={false}>
         <Text style={{ fontSize: 28, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 28, textAlign: 'center', lineHeight: 36 }}>
-          {question.q}
+          {t(`feature.drift.q${question.id[0]?.toUpperCase()}${question.id.slice(1)}`, { defaultValue: question.q })}
         </Text>
-        {question.opts.map(opt => (
-          <OptionCard key={opt.id} opt={opt} selected={current === opt.id}
+        {question.opts.map((opt, optionIndex) => (
+          <OptionCard key={opt.id} opt={opt}
+            label={t(`feature.drift.optionLabels.${question.id}.${optionIndex}`, { defaultValue: opt.label })}
+            selected={current === opt.id}
             onPress={() => onAnswer(question.id, opt.id)} color="#B090FF" />
         ))}
       </ScrollView>
@@ -1089,6 +1097,7 @@ function SurveyScreen({ question, qIdx, total, onAnswer, answers }: {
 }
 
 function AllSetScreen({ onBegin }: { onBegin: () => void }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
@@ -1098,10 +1107,8 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const points = [
-    'Your drift mode will be personalised to your vibe',
-    'Lumi will adapt to how you\'re feeling today',
-    'Session quests match your energy level',
-    'No judgement — every mode is the right mode',
+    t('feature.drift.point1'), t('feature.drift.point2'),
+    t('feature.drift.point3'), t('feature.drift.point4'),
   ];
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad, alignItems: 'center', justifyContent: 'center' }]}>
@@ -1110,9 +1117,9 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
       <ScrollView contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 60, alignItems: 'center', paddingTop: 40 }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
           <Text style={{ fontSize: 56, marginBottom: 8 }}>✦</Text>
-          <Text style={{ fontSize: 38, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 10, letterSpacing: -1 }}>All set!</Text>
+          <Text style={{ fontSize: 38, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 10, letterSpacing: -1 }}>{t('feature.drift.allSet')}</Text>
           <Text style={{ fontSize: 16, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.70)', textAlign: 'center', lineHeight: 26, marginBottom: 36 }}>
-            We'll personalise your journey just for you.
+            {t('feature.drift.personalize')}
           </Text>
            <View style={{ width: Math.min(Math.max(width - 56, 240), 520), maxWidth: '100%', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 22, borderWidth: 1, borderColor: 'rgba(176,144,255,0.20)', padding: 22, marginBottom: 36 }}>
             {points.map((p, i) => (
@@ -1122,7 +1129,7 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
               </View>
             ))}
           </View>
-          <PrimaryBtn label="Let's Begin ✦" onPress={onBegin} color="#7050C8" />
+          <PrimaryBtn label={t('feature.drift.letsBegin')} onPress={onBegin} color="#7050C8" />
         </Animated.View>
       </ScrollView>
     </View>
@@ -1130,9 +1137,10 @@ function AllSetScreen({ onBegin }: { onBegin: () => void }) {
 }
 
 function AnalyzingScreen({ confidence }: { confidence: number }) {
+  const { t } = useTranslation();
   const spin   = useRef(new Animated.Value(0)).current;
   const [pct, setPct] = useState(0);
-  const labels = ['Reading through your answers', 'Personalising your session', 'Almost there...'];
+  const labels = [t('feature.drift.analyzing1'), t('feature.drift.analyzing2'), t('feature.drift.analyzing3')];
   const [labelIdx, setLabelIdx] = useState(0);
 
   useEffect(() => {
@@ -1170,6 +1178,9 @@ function AnalyzingScreen({ confidence }: { confidence: number }) {
 }
 
 function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; confidence: number; onContinue: () => void }) {
+  const { t } = useTranslation();
+  const modeKey = Object.keys(MODES).find(key => MODES[key].name === cfg.name) ?? 'challenge';
+  const archetype = t(`feature.drift.archetypes.${modeKey}`, { defaultValue: cfg.archetype });
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
@@ -1189,7 +1200,7 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
       <ScrollView contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 60, alignItems: 'center', paddingTop: 28 }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: enter, alignItems: 'center', marginBottom: 24 }}>
           <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.6)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 14 }}>
-            Your Vibe for Today
+            {t('feature.drift.todaysVibe')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <View style={[{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, backgroundColor: `${cfg.color}15`, borderColor: `${cfg.color}40` }]}>
@@ -1199,10 +1210,10 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
             </View>
           </View>
           <Animated.Text style={{ fontSize: 42, fontFamily: 'Satoshi-Bold', color: cfg.color, textAlign: 'center', letterSpacing: -1, transform: [{ scale: archScale }] }}>
-            {cfg.archetype.replace('The ', '')}
+            {archetype.replace(/^The /, '')}
           </Animated.Text>
           <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.65)', marginTop: 4, letterSpacing: 0.5 }}>
-            {cfg.symbol}  {cfg.archetype}
+            {cfg.symbol}  {archetype}
           </Text>
           {cfg.intention ? (
             <View style={{ marginTop: 18, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 16, backgroundColor: `${cfg.color}14`, borderWidth: 1, borderColor: `${cfg.color}30` }}>
@@ -1218,14 +1229,14 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.85)', lineHeight: 25, marginBottom: 20 }}>
             {cfg.description}
           </Text>
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 12 }}>KEY TRAITS</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 12 }}>{t('feature.drift.traits')}</Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {cfg.traits.map(t => <TraitPill key={t} label={t} color={cfg.color} />)}
           </View>
         </Animated.View>
 
         <Animated.View style={{ opacity: enter, width: '100%', gap: 10 }}>
-          <PrimaryBtn label="Continue ✦" onPress={onContinue} color={cfg.color} />
+          <PrimaryBtn label={t('feature.drift.continue')} onPress={onContinue} color={cfg.color} />
         </Animated.View>
       </ScrollView>
     </View>
@@ -1233,6 +1244,9 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
 }
 
 function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () => void }) {
+  const { t } = useTranslation();
+  const modeKey = Object.keys(MODES).find(key => MODES[key].name === cfg.name) ?? 'challenge';
+  const modeName = t(`feature.drift.modeNames.${modeKey}`, { defaultValue: cfg.name });
   const insets  = useSafeAreaInsets();
   const topPad  = Platform.OS === 'web' ? 48 : insets.top;
   const expand  = useRef(new Animated.Value(0)).current;
@@ -1250,9 +1264,9 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
   }, []);
   const circleS = expand.interpolate({ inputRange: [0, 1], outputRange: [0.01, 20] });
   const stats   = [
-    { label: 'Companion', val: 'Enabled' },
-    { label: 'Mode', val: cfg.name.split(' ')[0] },
-    { label: 'Lumi', val: 'Active' },
+    { label: t('feature.drift.companion'), val: t('feature.drift.enabled') },
+    { label: t('feature.drift.mode'), val: modeName.split(' ')[0] },
+    { label: 'Lumi', val: t('feature.drift.active') },
   ];
   return (
     <View style={[StyleSheet.absoluteFill, { paddingTop: topPad, overflow: 'hidden' }]}>
@@ -1267,10 +1281,10 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
          showsVerticalScrollIndicator={false}
        >
         <Animated.Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: `${cfg.color}AA`, letterSpacing: 4, textTransform: 'uppercase', opacity: textIn, marginBottom: 16 }}>
-          Activating
+          {t('feature.drift.activating')}
         </Animated.Text>
         <Animated.Text style={{ fontSize: 52, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', letterSpacing: -2, textAlign: 'center', opacity: textIn, lineHeight: 58, marginBottom: 6 }}>
-          {cfg.name}
+          {modeName}
         </Animated.Text>
         <Animated.Text style={{ fontSize: 48, opacity: symbolP, marginBottom: 32 }}>
           {cfg.symbol}
@@ -1287,7 +1301,7 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
           ))}
         </Animated.View>
         <Animated.View style={{ opacity: textIn, width: '100%' }}>
-          <PrimaryBtn label={`Enter ${cfg.name} ✦`} onPress={onEnter} color={cfg.color} />
+          <PrimaryBtn label={t('feature.drift.enterMode', { mode: modeName })} onPress={onEnter} color={cfg.color} />
         </Animated.View>
        </ScrollView>
     </View>
@@ -1295,6 +1309,7 @@ function ModeCinematicScreen({ cfg, onEnter }: { cfg: ModeConfig; onEnter: () =>
 }
 
 function ModePerksScreen({ cfg, onGotIt }: { cfg: ModeConfig; onGotIt: () => void }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
@@ -1315,13 +1330,13 @@ function ModePerksScreen({ cfg, onGotIt }: { cfg: ModeConfig; onGotIt: () => voi
           <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: `${cfg.color}25`, borderWidth: 1.5, borderColor: `${cfg.color}50`, alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
             <Text style={{ fontSize: 28 }}>{cfg.symbol}</Text>
            </View>
-          <Text style={{ fontSize: 28, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', marginBottom: 6 }}>Mode Activated.</Text>
+          <Text style={{ fontSize: 28, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', marginBottom: 6 }}>{t('feature.drift.modeActivated')}</Text>
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.65)', textAlign: 'center', marginBottom: 32 }}>
-            Your journey has shifted.
+            {t('feature.drift.journeyShifted')}
           </Text>
           <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}22`, padding: 22, marginBottom: 32 }}>
             <LinearGradient colors={[`${cfg.color}10`, 'transparent']} style={StyleSheet.absoluteFill} />
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 16 }}>WHAT'S DIFFERENT</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 16 }}>{t('feature.drift.different')}</Text>
             {cfg.whatChanged.map((w, i) => (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: i < cfg.whatChanged.length - 1 ? 14 : 0 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: cfg.color, marginTop: 7 }} />
@@ -1329,7 +1344,7 @@ function ModePerksScreen({ cfg, onGotIt }: { cfg: ModeConfig; onGotIt: () => voi
               </View>
             ))}
           </View>
-          <PrimaryBtn label="Got it" onPress={onGotIt} color={cfg.color} />
+          <PrimaryBtn label={t('feature.drift.gotIt')} onPress={onGotIt} color={cfg.color} />
         </Animated.View>
        </ScrollView>
     </View>
@@ -1343,6 +1358,7 @@ const DURATIONS = [
 ];
 
 function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (durationSecs: number) => void }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
@@ -1362,7 +1378,7 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (dur
        >
         <Animated.View style={{ opacity: enter, alignItems: 'center', width: '100%' }}>
           <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 20 }}>
-            Meet Lumi 🌙
+            {t('feature.drift.meetLumi')}
           </Text>
           <LumiCharacter color={cfg.color} size={100} />
           <View style={{ backgroundColor: `${cfg.color}10`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 20, marginTop: 22, marginBottom: 28, width: '100%' }}>
@@ -1372,7 +1388,7 @@ function MeetLumiScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: (dur
            </View>
 
           {/* Duration picker */}
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.50)', letterSpacing: 1.5, marginBottom: 14 }}>HOW LONG?</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.50)', letterSpacing: 1.5, marginBottom: 14 }}>{t('feature.drift.howLong')}</Text>
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 32, width: '100%' }}>
             {DURATIONS.map(d => {
               const sel = selectedMins === d.mins;
@@ -1409,6 +1425,10 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
   onEnd: (r: SessionResult) => void;
   onChat: () => void;
 }) {
+  const { t } = useTranslation();
+  const modeKey = Object.keys(MODES).find(key => MODES[key].name === cfg.name) ?? 'challenge';
+  const archetype = t(`feature.drift.archetypes.${modeKey}`, { defaultValue: cfg.archetype });
+  const modeName = t(`feature.drift.modeNames.${modeKey}`, { defaultValue: cfg.name });
   const insets    = useSafeAreaInsets();
   const topPad    = Platform.OS === 'web' ? 48 : insets.top;
   const btmPad    = Platform.OS === 'web' ? 80 : insets.bottom + 20;
@@ -1622,18 +1642,18 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         {/* Header — countdown + progress ring */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <View>
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.6)', letterSpacing: 0.5, marginBottom: 4 }}>{cfg.symbol} {cfg.name}</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.6)', letterSpacing: 0.5, marginBottom: 4 }}>{cfg.symbol} {modeName}</Text>
             <Text style={{ fontSize: 44, fontFamily: 'Satoshi-Bold', color: phase === 3 ? '#FFD86F' : '#F0E6FF', letterSpacing: -2 }}>
               {remMm}:{remSs}
             </Text>
             <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.45)', marginTop: 2 }}>
-              {phase === 0 ? 'settling in…' : phase === 1 ? 'in the flow' : phase === 2 ? 'going deeper' : 'winding down ✦'}
+              {phase === 0 ? t('feature.drift.settling') : phase === 1 ? t('feature.drift.flowing') : phase === 2 ? t('feature.drift.deeper') : t('feature.drift.winding')}
             </Text>
           </View>
           <View style={{ alignItems: 'center', gap: 6 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: `${cfg.color}40`, backgroundColor: `${cfg.color}14`, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 }}>
               <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: cfg.color }} />
-              <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Active</Text>
+              <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>{t('feature.drift.active')}</Text>
             </View>
             {/* Mini progress arc as bar */}
             <View style={{ width: 80, height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden' }}>
@@ -1645,16 +1665,16 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         {/* Time's up prompt */}
         {timeUpVis && (
           <Animated.View style={{ opacity: timeUpFade, backgroundColor: `${cfg.color}14`, borderRadius: 22, borderWidth: 1.5, borderColor: cfg.color, padding: 20, marginBottom: 16 }}>
-            <Text style={{ fontSize: 16, fontFamily: 'Satoshi-Bold', color: cfg.color, marginBottom: 6 }}>✦ Time's up, {cfg.archetype.replace('The ', '')}.</Text>
+            <Text style={{ fontSize: 16, fontFamily: 'Satoshi-Bold', color: cfg.color, marginBottom: 6 }}>{t('feature.drift.timeUp', { name: archetype.replace(/^The /, '') })}</Text>
             <Text style={{ fontSize: 13.5, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.82)', lineHeight: 22, marginBottom: 16 }}>
-              You showed up and stayed. That's the whole thing. Ready to close this session?
+              {t('feature.drift.timeUpBody')}
             </Text>
             <TouchableOpacity
               style={{ backgroundColor: cfg.color, borderRadius: 16, paddingVertical: 12, alignItems: 'center' }}
               onPress={handleEnd}
               activeOpacity={0.85}
             >
-              <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' }}>Close session</Text>
+              <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#fff' }}>{t('feature.drift.closeSession')}</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -1673,14 +1693,14 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
             style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: `${cfg.color}18`, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 7, borderWidth: 1, borderColor: `${cfg.color}30` }}
           >
             <Text style={{ fontSize: 12, color: cfg.color }}>💬</Text>
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>Talk to Lumi</Text>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>{t('feature.drift.talkToLumi')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Lumi's tip — appears at 35% */}
         {softVis && (
           <Animated.View style={{ opacity: softFade, backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,180,255,0.18)', padding: 18, marginBottom: 14, overflow: 'hidden' }}>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>LUMI'S TIP</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 10 }}>{t('feature.drift.lumiTip')}</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(220,205,255,0.82)', lineHeight: 22, fontStyle: 'italic' }}>
               "{cfg.softRescue}"
             </Text>
@@ -1689,7 +1709,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
               onPress={() => { Haptics.selectionAsync(); setSoftVis(false); }}
               activeOpacity={0.8}
             >
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.8)' }}>Got it ✓</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(176,144,255,0.8)' }}>{t('feature.drift.dismiss')}</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -1720,7 +1740,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         {/* Lumi chat nudge — appears at 60% */}
         {lumiNudgeVis && (
           <Animated.View style={{ opacity: lumiNudgeFade, backgroundColor: `${cfg.color}0C`, borderRadius: 20, borderWidth: 1, borderColor: `${cfg.color}28`, padding: 18, marginBottom: 14 }}>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 8 }}>LUMI IS HERE</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 8 }}>{t('feature.drift.yourCompanion')}</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 4 }}>Need to talk?</Text>
             <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.72)', marginBottom: 14 }}>
               Whatever's on your mind, she's present. No pressure.
@@ -1731,14 +1751,14 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setLumiNudgeVis(false); onChat(); }}
                 activeOpacity={0.85}
               >
-                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#fff' }}>Open chat</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#fff' }}>{t('feature.home.chatWithLumi')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ flex: 1, paddingVertical: 10, borderRadius: 16, borderWidth: 1, borderColor: `${cfg.color}35`, alignItems: 'center' }}
                 onPress={() => { Haptics.selectionAsync(); setLumiNudgeVis(false); }}
                 activeOpacity={0.8}
               >
-                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: `${cfg.color}CC` }}>I'm good</Text>
+                <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: `${cfg.color}CC` }}>{t('feature.drift.gotIt')}</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -1748,7 +1768,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 20, marginBottom: 14, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}12`, 'transparent']} style={StyleSheet.absoluteFill} />
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5 }}>SESSION TASKS</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5 }}>{t('feature.drift.sessionSummary')}</Text>
             <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: questDone === questTotal ? '#7CFC7C' : cfg.color }}>{questDone}/{questTotal}</Text>
           </View>
           <View style={{ height: 4, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', marginBottom: 18 }}>
@@ -1780,7 +1800,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
           })}
           {questDone === questTotal && questTotal > 0 && (
             <View style={{ marginTop: 16, padding: 12, borderRadius: 14, backgroundColor: 'rgba(124,252,124,0.08)', borderWidth: 1, borderColor: 'rgba(124,252,124,0.2)' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#7CFC7C', textAlign: 'center' }}>All done. Lumi is proud of you. ✦</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: '#7CFC7C', textAlign: 'center' }}>{t('feature.drift.amazing')}</Text>
             </View>
           )}
         </View>
@@ -1788,7 +1808,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
         {/* Mode Perks */}
         <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}18`, padding: 18, marginBottom: 20, overflow: 'hidden' }}>
           <LinearGradient colors={[`${cfg.color}10`, 'transparent']} style={StyleSheet.absoluteFill} />
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 12 }}>MODE PERKS</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 12 }}>{t('feature.drift.different')}</Text>
           {cfg.perks.map((p, i) => (
             <View key={p} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: i < cfg.perks.length - 1 ? 10 : 0 }}>
               <Text style={{ fontSize: 10, color: cfg.color }}>✦</Text>
@@ -1803,7 +1823,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
             onPress={handleEnd}
             activeOpacity={0.78}
           >
-            <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: `${cfg.color}99` }}>End early</Text>
+            <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: `${cfg.color}99` }}>{t('feature.drift.endSession')}</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -1812,6 +1832,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
 }
 
 function SummaryScreen({ cfg, result, onReflect }: { cfg: ModeConfig; result: SessionResult; onReflect: () => void }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
@@ -1834,17 +1855,17 @@ function SummaryScreen({ cfg, result, onReflect }: { cfg: ModeConfig; result: Se
       <ScrollView contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 60, paddingTop: 28, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: enter, alignItems: 'center', marginBottom: 28 }}>
           <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.55)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>
-            Session Summary
+            {t('feature.drift.sessionSummary')}
           </Text>
           <Text style={{ fontSize: 32, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', lineHeight: 40 }}>
-            You did amazing today.
+            {t('feature.drift.amazing')}
           </Text>
         </Animated.View>
 
         {/* Vibe Stability */}
         <Animated.View style={{ opacity: enter, width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 24, borderWidth: 1, borderColor: `${cfg.color}25`, padding: 24, marginBottom: 16, overflow: 'hidden', alignItems: 'center' }}>
           <LinearGradient colors={[`${cfg.color}14`, 'transparent']} style={StyleSheet.absoluteFill} />
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 16 }}>VIBE STABILITY</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 16 }}>{t('feature.drift.stability')}</Text>
           <View style={{ width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: `${cfg.color}35`, alignItems: 'center', justifyContent: 'center', backgroundColor: `${cfg.color}10`, marginBottom: 12 }}>
             <View style={{ position: 'absolute', inset: 0, borderRadius: 60, borderWidth: 3, borderColor: cfg.color, opacity: 0.85, transform: [{ rotate: `${-90 + (cfg.stability / 100) * 360}deg` }] }} />
             <Text style={{ fontSize: 34, fontFamily: 'Satoshi-Bold', color: cfg.color }}>{cfg.stability}%</Text>
@@ -1856,7 +1877,7 @@ function SummaryScreen({ cfg, result, onReflect }: { cfg: ModeConfig; result: Se
 
         {/* Achievements */}
         <Animated.View style={{ opacity: enter, width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 22, marginBottom: 24 }}>
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 16 }}>YOU ACHIEVED</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 16 }}>{t('feature.drift.achieved')}</Text>
           {achievements.map((a, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12, marginBottom: i < achievements.length - 1 ? 12 : 0 }}>
               <Text style={{ fontSize: 12, color: cfg.color, marginTop: 2 }}>✦</Text>
@@ -1866,7 +1887,7 @@ function SummaryScreen({ cfg, result, onReflect }: { cfg: ModeConfig; result: Se
         </Animated.View>
 
         <Animated.View style={{ opacity: enter, width: '100%' }}>
-          <PrimaryBtn label="View Full Reflection" onPress={onReflect} color={cfg.color} />
+          <PrimaryBtn label={t('feature.drift.fullReflection')} onPress={onReflect} color={cfg.color} />
         </Animated.View>
       </ScrollView>
     </View>
@@ -1874,6 +1895,7 @@ function SummaryScreen({ cfg, result, onReflect }: { cfg: ModeConfig; result: Se
 }
 
 function ReflectionScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: () => void }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
@@ -1891,15 +1913,15 @@ function ReflectionScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: ()
          showsVerticalScrollIndicator={false}
        >
         <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
-          <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 28 }}>REFLECTION</Text>
+          <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 28 }}>{t('feature.drift.reflection')}</Text>
           <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: `${cfg.color}AA`, letterSpacing: 1, marginBottom: 20 }}>" "</Text>
           <Text style={{ fontSize: 20, fontFamily: 'Satoshi-Regular', color: 'rgba(230,215,255,0.88)', lineHeight: 32, textAlign: 'center', fontStyle: 'italic', marginBottom: 28 }}>
             {cfg.reflection}
           </Text>
           <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: `${cfg.color}CC`, marginBottom: 48, textAlign: 'center' }}>
-            That's growth. Keep going.
+            {t('feature.drift.keepGrowing')}
           </Text>
-          <PrimaryBtn label="Continue ✦" onPress={onContinue} color={cfg.color} />
+          <PrimaryBtn label={t('feature.drift.continue')} onPress={onContinue} color={cfg.color} />
         </Animated.View>
        </ScrollView>
     </View>
@@ -1907,6 +1929,7 @@ function ReflectionScreen({ cfg, onContinue }: { cfg: ModeConfig; onContinue: ()
 }
 
 function BreakPromptScreen({ cfg, onBreak, onContinue }: { cfg: ModeConfig; onBreak: () => void; onContinue: () => void }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
@@ -1922,8 +1945,8 @@ function BreakPromptScreen({ cfg, onBreak, onContinue }: { cfg: ModeConfig; onBr
       <ScrollView contentContainerStyle={{ paddingHorizontal: 28, paddingBottom: 60, paddingTop: 32, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
         <Animated.View style={{ opacity: enter, width: '100%', alignItems: 'center' }}>
           {/* Journey Progress */}
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 20 }}>YOUR JOURNEY PROGRESS</Text>
-          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.6)', marginBottom: 16 }}>Every step shapes you.</Text>
+          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 20 }}>{t('feature.drift.journeyProgress')}</Text>
+          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.6)', marginBottom: 16 }}>{t('feature.drift.everyStep')}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 0, marginBottom: 8, width: '100%', justifyContent: 'center' }}>
             {evol.map((e, i) => (
               <View key={e} style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1932,8 +1955,8 @@ function BreakPromptScreen({ cfg, onBreak, onContinue }: { cfg: ModeConfig; onBr
                     <Text style={{ fontSize: 16 }}>{i === 0 ? cfg.symbol : '○'}</Text>
                   </View>
                   <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: i === 0 ? cfg.color : 'rgba(200,180,255,0.4)', marginTop: 6, textAlign: 'center', maxWidth: 70 }} numberOfLines={2}>{e}</Text>
-                  {i === 0 && <Text style={{ fontSize: 9, color: 'rgba(200,180,255,0.4)', marginTop: 2 }}>Current</Text>}
-                  {i === 1 && <Text style={{ fontSize: 9, color: 'rgba(200,180,255,0.4)', marginTop: 2 }}>Next</Text>}
+                  {i === 0 && <Text style={{ fontSize: 9, color: 'rgba(200,180,255,0.4)', marginTop: 2 }}>{t('feature.drift.current')}</Text>}
+                  {i === 1 && <Text style={{ fontSize: 9, color: 'rgba(200,180,255,0.4)', marginTop: 2 }}>{t('feature.drift.next')}</Text>}
                 </View>
                 {i < evol.length - 1 && (
                   <View style={{ width: 28, height: 1, backgroundColor: 'rgba(255,255,255,0.12)', marginHorizontal: 4, marginBottom: 24 }} />
@@ -1942,15 +1965,15 @@ function BreakPromptScreen({ cfg, onBreak, onContinue }: { cfg: ModeConfig; onBr
             ))}
           </View>
           <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: `${cfg.color}99`, marginBottom: 36, textAlign: 'center' }}>
-            72% to next evolution
+            {t('feature.drift.evolutionProgress', { percent: 72 })}
           </Text>
 
           {/* Break Prompt */}
           <View style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 22, marginBottom: 20 }}>
             <LinearGradient colors={[`${cfg.color}10`, 'transparent']} style={StyleSheet.absoluteFill} />
-            <Text style={{ fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 6 }}>Take a Break?</Text>
+            <Text style={{ fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 6 }}>{t('feature.drift.takeBreak')}</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.65)', lineHeight: 22, marginBottom: 24 }}>
-              Rest is part of the journey.
+              {t('feature.drift.restJourney')}
             </Text>
             <View style={{ gap: 10 }}>
               <TouchableOpacity
@@ -1958,16 +1981,16 @@ function BreakPromptScreen({ cfg, onBreak, onContinue }: { cfg: ModeConfig; onBr
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onBreak(); }}
                 activeOpacity={0.85}
               >
-                <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: cfg.color }}>I'll take a break</Text>
-                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: `${cfg.color}88`, marginTop: 3 }}>We'll be here when you return.</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: cfg.color }}>{t('feature.drift.takeBreakButton')}</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: `${cfg.color}88`, marginTop: 3 }}>{t('feature.drift.returnMessage')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={{ paddingVertical: 14, borderRadius: 18, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', alignItems: 'center' }}
                 onPress={() => { Haptics.selectionAsync(); onContinue(); }}
                 activeOpacity={0.8}
               >
-                <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.75)' }}>I'll continue later</Text>
-                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,160,255,0.45)', marginTop: 3 }}>Save my progress.</Text>
+                <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.75)' }}>{t('feature.drift.continueLater')}</Text>
+                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(180,160,255,0.45)', marginTop: 3 }}>{t('feature.drift.saveProgress')}</Text>
               </TouchableOpacity>
             </View>
           </View>

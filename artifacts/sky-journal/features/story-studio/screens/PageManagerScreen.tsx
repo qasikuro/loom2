@@ -22,6 +22,7 @@ import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { DraftStore } from '../utils/draftStore';
 import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,6 +74,7 @@ const t = StyleSheet.create({
 
 export default function PageManagerScreen() {
   const colors    = useColors();
+  const { t: tr } = useTranslation();
   const insets    = useSafeAreaInsets();
   const apiFetch  = useApiFetch();
   const { chapterId, bookId } = useLocalSearchParams<{ chapterId: string; bookId: string }>();
@@ -97,7 +99,7 @@ export default function PageManagerScreen() {
       setPages(data.pages ?? []);
       pagesRef.current = data.pages ?? [];
     } catch {
-      Alert.alert('Error', 'Could not load chapter');
+      Alert.alert(tr('studioEditor.error'), tr('studioEditor.couldNotLoadChapter'));
     } finally {
       setLoading(false);
     }
@@ -124,7 +126,7 @@ export default function PageManagerScreen() {
       setPages(updatedPages);
       pagesRef.current = updatedPages;
     } catch {
-      Alert.alert('Error', 'Could not save changes');
+      Alert.alert(tr('studioEditor.error'), tr('studioEditor.couldNotSaveChanges'));
     } finally {
       setSaving(false);
     }
@@ -164,11 +166,11 @@ export default function PageManagerScreen() {
   }
 
   function deletePage(id: string) {
-    if (pages.length <= 1) { Alert.alert('Cannot delete', 'A chapter must have at least one page.'); return; }
-    Alert.alert('Delete Page', 'Remove this page from the chapter?', [
-      { text: 'Cancel', style: 'cancel' },
+    if (pages.length <= 1) { Alert.alert(tr('studioEditor.cannotDelete'), tr('studioEditor.mustKeepPage')); return; }
+    Alert.alert(tr('studioEditor.deletePageTitle'), tr('studioEditor.deletePageBody'), [
+      { text: tr('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete', style: 'destructive', onPress: () => {
+        text: tr('common.delete'), style: 'destructive', onPress: () => {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           const next = pages.filter(p => p.id !== id);
           pagesRef.current = next;
@@ -192,15 +194,15 @@ export default function PageManagerScreen() {
   const accent = '#8B70C8';
 
   if (loading) {
-    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Loading pages…" /></View>;
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message={tr('studioEditor.loadPages')} /></View>;
   }
 
   if (!chapterId || !bookId) {
     return (
       <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>This page link is missing a chapter ID.</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>{tr('studioEditor.missingChapterLink')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-          <Text style={{ color: '#8B70C8', fontSize: 14 }}>Go back</Text>
+          <Text style={{ color: '#8B70C8', fontSize: 14 }}>{tr('studioEditor.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -214,14 +216,14 @@ export default function PageManagerScreen() {
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
-          <Text style={s.headerTitle} numberOfLines={1}>{chapter?.title ?? 'Pages'}</Text>
+          <Text style={s.headerTitle} numberOfLines={1}>{chapter?.title ?? tr('studioEditor.pages')}</Text>
           {saving && <SkyLoadingMark size={18} color={accent} />}
         </View>
         <TouchableOpacity
           onPress={() => router.push(`/publish-chapter?chapterId=${chapterId}&bookId=${bookId}` as never)}
           style={s.publishBtn}
         >
-          <Text style={s.publishBtnTxt}>Review</Text>
+          <Text style={s.publishBtnTxt}>{tr('studioEditor.review')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -235,20 +237,20 @@ export default function PageManagerScreen() {
             </TouchableOpacity>
 
             {/* Page number */}
-            <Text style={s.pageNum}>Page {idx + 1}</Text>
+            <Text style={s.pageNum}>{tr('studioEditor.page', { number: idx + 1 })}</Text>
 
             {/* Controls row */}
             <View style={s.pageControls}>
-              <TouchableOpacity onPress={() => movePage(page.id, -1)} style={[s.ctrlBtn, idx === 0 && s.ctrlDisabled]} disabled={idx === 0}>
+              <TouchableOpacity onPress={() => movePage(page.id, -1)} style={[s.ctrlBtn, idx === 0 && s.ctrlDisabled]} accessibilityRole="button" accessibilityLabel={tr('studioEditor.moveUp')} disabled={idx === 0}>
                 <Icon name="chevron-left" size={12} color={idx === 0 ? 'rgba(200,185,255,0.15)' : 'rgba(200,185,255,0.55)'} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => editPage(page)} style={s.ctrlBtn}>
+              <TouchableOpacity onPress={() => editPage(page)} style={s.ctrlBtn} accessibilityRole="button" accessibilityLabel={tr('common.edit')}>
                 <Icon name="edit-2" size={12} color="rgba(200,185,255,0.55)" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => deletePage(page.id)} style={s.ctrlBtn}>
+              <TouchableOpacity onPress={() => deletePage(page.id)} style={s.ctrlBtn} accessibilityRole="button" accessibilityLabel={tr('common.delete')}>
                 <Icon name="trash-2" size={12} color="rgba(200,185,255,0.40)" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => movePage(page.id, 1)} style={[s.ctrlBtn, idx === pages.length - 1 && s.ctrlDisabled]} disabled={idx === pages.length - 1}>
+              <TouchableOpacity onPress={() => movePage(page.id, 1)} style={[s.ctrlBtn, idx === pages.length - 1 && s.ctrlDisabled]} accessibilityRole="button" accessibilityLabel={tr('studioEditor.moveDown')} disabled={idx === pages.length - 1}>
                 <Icon name="chevron-right" size={12} color={idx === pages.length - 1 ? 'rgba(200,185,255,0.15)' : 'rgba(200,185,255,0.55)'} />
               </TouchableOpacity>
             </View>
@@ -257,9 +259,9 @@ export default function PageManagerScreen() {
 
         {/* Add page cell */}
         <View style={s.pageCell}>
-          <TouchableOpacity style={s.addCell} onPress={addPage} activeOpacity={0.7}>
+          <TouchableOpacity style={s.addCell} onPress={addPage} accessibilityRole="button" accessibilityLabel={tr('studioEditor.addPage')} activeOpacity={0.7}>
             <Icon name="plus" size={22} color={accent} />
-            <Text style={[s.addTxt, { color: accent }]}>Add Page</Text>
+            <Text style={[s.addTxt, { color: accent }]}>{tr('studioEditor.addPage')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -271,7 +273,7 @@ export default function PageManagerScreen() {
           onPress={() => router.push(`/publish-chapter?chapterId=${chapterId}&bookId=${bookId}` as never)}
         >
           <Icon name="send" size={15} color="#fff" />
-          <Text style={s.fabTxt}>Review &amp; Publish</Text>
+          <Text style={s.fabTxt}>{tr('studioEditor.reviewPublish')}</Text>
         </TouchableOpacity>
       </View>
     </View>

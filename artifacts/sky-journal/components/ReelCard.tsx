@@ -6,6 +6,7 @@ import { Video, ResizeMode } from 'expo-av';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
@@ -18,12 +19,13 @@ interface Props {
   onAuthorPress: () => void;
   onMuteToggle: () => void;
   onShare: () => void;
+  onLike: () => void;
   onSave: () => void;
   onReport: () => void;
 }
 
-function ReelAction({ name, label, active, onPress }: {
-  name: string; label: string; active?: boolean; onPress: () => void;
+function ReelAction({ name, label, active, count, onPress }: {
+  name: string; label: string; active?: boolean; count?: number; onPress: () => void;
 }) {
   return (
     <TouchableOpacity
@@ -32,21 +34,33 @@ function ReelAction({ name, label, active, onPress }: {
       activeOpacity={0.75}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ selected: !!active }}
     >
       <View style={[styles.actionIcon, active && styles.actionIconActive]}>
         <Icon name={name} size={23} color={active ? '#D9C2FF' : '#FFFFFF'} />
       </View>
-      <Text style={styles.actionText}>{label}</Text>
+      <Text style={styles.actionText}>{label}{count !== undefined ? ` · ${count}` : ''}</Text>
     </TouchableOpacity>
   );
 }
 
 export function ReelCard({
   post, height, topInset, playing, muted, onOpen, onAuthorPress,
-  onMuteToggle, onShare, onSave, onReport,
+  onMuteToggle, onShare, onLike, onSave, onReport,
 }: Props) {
+  const { t } = useTranslation();
   const isVideo = post.contentType === 'video' && !!post.videoUri;
   const imageUri = isVideo ? post.thumbnailUri : (post.panels?.[0]?.imageUri ?? post.imageUri);
+  const elapsed = Date.now() - new Date(post.date).getTime();
+  const mins = Math.floor(elapsed / 60_000);
+  const hours = Math.floor(elapsed / 3_600_000);
+  const days = Math.floor(elapsed / 86_400_000);
+  const timeLabel = !Number.isFinite(elapsed) || elapsed < 0 ? t(isVideo ? 'reels.video' : 'reels.story')
+    : mins < 1 ? t('common.justNow')
+    : mins < 60 ? t('common.minsAgo', { n: mins })
+    : hours < 24 ? t('common.hoursAgo', { n: hours })
+    : days === 1 ? t('common.yesterday')
+    : t('common.daysAgo', { n: days });
   return (
     <View style={[styles.card, { height }]}>
       {imageUri ? (
@@ -74,7 +88,7 @@ export function ReelCard({
         onPress={onOpen}
         activeOpacity={1}
         accessibilityRole="button"
-        accessibilityLabel={isVideo ? `Watch ${post.chapterTitle}` : `Read ${post.chapterTitle}`}
+        accessibilityLabel={t(isVideo ? 'reels.watchNamed' : 'reels.readNamed', { title: post.chapterTitle })}
       />
       <LinearGradient
         colors={['rgba(6,4,18,0.80)', 'rgba(6,4,18,0.12)', 'transparent']}
@@ -90,7 +104,7 @@ export function ReelCard({
       />
 
       <View style={[styles.authorRow, { top: topInset + 102 }]}>
-        <TouchableOpacity onPress={onAuthorPress} style={styles.authorTap} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel={`View ${post.authorName}'s profile`}>
+        <TouchableOpacity onPress={onAuthorPress} style={styles.authorTap} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel={t('reels.viewProfile', { name: post.authorName })}>
           <View style={styles.avatar}>
             {post.authorAvatarUri
               ? <Image source={{ uri: post.authorAvatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -98,11 +112,11 @@ export function ReelCard({
           </View>
           <View style={styles.authorText}>
             <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
-            <Text style={styles.time}>{post.timeAgo || (isVideo ? 'Video' : 'Story')}</Text>
+            <Text style={styles.time}>{timeLabel}</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.chapterPill} onPress={onOpen} accessibilityLabel={`Open chapter ${post.chapterNumber}`}>
-          <Text style={styles.chapterText}>{isVideo ? 'VIDEO' : `CH. ${post.chapterNumber}`}</Text>
+        <TouchableOpacity style={styles.chapterPill} onPress={onOpen} accessibilityLabel={t('reels.openChapter', { n: post.chapterNumber })}>
+          <Text style={styles.chapterText}>{isVideo ? t('reels.videoUpper') : t('reels.chapterShort', { n: post.chapterNumber })}</Text>
           <Icon name="chevron-right" size={13} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -112,22 +126,23 @@ export function ReelCard({
           style={styles.muteButton}
           onPress={onMuteToggle}
           accessibilityRole="button"
-          accessibilityLabel={muted ? 'Unmute video' : 'Mute video'}
+          accessibilityLabel={t(muted ? 'reels.unmute' : 'reels.mute')}
         >
           <Icon name={muted ? 'volume-x' : 'volume-2'} size={18} color="#FFFFFF" />
         </TouchableOpacity>
       )}
 
       <View style={styles.actions}>
-        <ReelAction name="share-2" label="Share" onPress={onShare} />
-        <ReelAction name="bookmark" label={post.saved ? 'Saved' : 'Save'} active={post.saved} onPress={onSave} />
-        <ReelAction name="flag" label="Report" onPress={onReport} />
+        <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={onLike} />
+        <ReelAction name="share-2" label={t('reels.share')} onPress={onShare} />
+        <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={onSave} />
+        <ReelAction name="flag" label={t('reels.report')} onPress={onReport} />
       </View>
 
       <View style={styles.details} pointerEvents="box-none">
         <View style={styles.moodPill}>
           <Icon name="star" size={12} color="#E9D7FF" />
-          <Text style={styles.moodText}>{post.vibe || post.mood || 'Story'}</Text>
+          <Text style={styles.moodText}>{post.vibe || post.mood || t('reels.story')}</Text>
         </View>
         <Text style={styles.title} numberOfLines={2}>{post.chapterTitle}</Text>
         <Text style={styles.byline} numberOfLines={1}>
@@ -136,8 +151,8 @@ export function ReelCard({
         </Text>
         {!!post.authorBadges?.length && <BadgeTray badges={post.authorBadges} />}
         {!!post.bookTitle && <Text style={styles.bookTitle} numberOfLines={1}>{post.bookTitle}</Text>}
-        <TouchableOpacity style={styles.openLink} onPress={onOpen} accessibilityRole="button" accessibilityLabel={isVideo ? 'Watch full video' : 'Read full story'}>
-          <Text style={styles.openText}>{isVideo ? 'Watch video' : 'Read story'}</Text>
+        <TouchableOpacity style={styles.openLink} onPress={onOpen} accessibilityRole="button" accessibilityLabel={t(isVideo ? 'reels.watchFull' : 'reels.readFull')}>
+          <Text style={styles.openText}>{t(isVideo ? 'reels.watchVideo' : 'reels.readStory')}</Text>
           <Icon name="arrow-right" size={15} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -162,7 +177,7 @@ const styles = StyleSheet.create({
   chapterText: { color: '#FFFFFF', fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5 },
   muteButton: { position: 'absolute', right: 20, top: '43%', backgroundColor: 'rgba(8,6,24,0.58)', padding: 11, borderRadius: 22 },
   actions: { position: 'absolute', right: 14, bottom: 106, alignItems: 'center', gap: 12 },
-  action: { alignItems: 'center', width: 58 },
+  action: { alignItems: 'center', width: 76 },
   actionIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(12,9,30,0.63)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.19)' },
   actionIconActive: { backgroundColor: 'rgba(145,100,226,0.72)', borderColor: '#D9C2FF' },
   actionText: { fontSize: 10, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', textShadowColor: '#000', textShadowRadius: 3, marginTop: 3 },

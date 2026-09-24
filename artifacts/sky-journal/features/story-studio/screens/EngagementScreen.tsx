@@ -28,6 +28,7 @@ import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { useAuth } from '@clerk/expo';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -50,17 +51,18 @@ const ACCENT = '#8B70C8';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, translate: (key: string) => string): string {
   const secs = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (secs < 60)   return 'just now';
-  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-  return `${Math.floor(secs / 86400)}d ago`;
+  if (secs < 60)   return translate('studioReader.justNow');
+  if (secs < 3600) return translate('studioReader.minutesAgo').replace('{{count}}', String(Math.floor(secs / 60)));
+  if (secs < 86400) return translate('studioReader.hoursAgo').replace('{{count}}', String(Math.floor(secs / 3600)));
+  return translate('studioReader.daysAgo').replace('{{count}}', String(Math.floor(secs / 86400)));
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function EngagementScreen() {
+  const { t } = useTranslation();
   const colors   = useColors();
   const insets   = useSafeAreaInsets();
   const apiFetch = useApiFetch();
@@ -127,7 +129,7 @@ export default function EngagementScreen() {
       setInput('');
       setReplyTo(null);
     } catch {
-      Alert.alert('Error', 'Could not post comment');
+      Alert.alert(t('studioReader.commentErrorTitle'), t('studioReader.commentPostError'));
     } finally {
       setPosting(false);
     }
@@ -187,8 +189,8 @@ export default function EngagementScreen() {
         </View>
         <View style={s.commentBody}>
           <View style={s.commentMeta}>
-            <Text style={s.commentUser}>{isOwn ? 'You' : `Reader`}</Text>
-            <Text style={s.commentTime}>{timeAgo(item.createdAt)}</Text>
+            <Text style={s.commentUser}>{isOwn ? t('studioReader.you') : t('studioReader.reader')}</Text>
+            <Text style={s.commentTime}>{timeAgo(item.createdAt, t)}</Text>
           </View>
           <Text style={s.commentContent}>{item.content}</Text>
           <View style={s.commentActions}>
@@ -199,13 +201,13 @@ export default function EngagementScreen() {
             {!isReply && (
               <TouchableOpacity onPress={() => startReply(item)} style={s.actionBtn} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                 <Icon name="corner-down-right" size={12} color="rgba(255,255,255,0.28)" />
-                <Text style={s.actionTxt}>Reply</Text>
+                <Text style={s.actionTxt}>{t('studioReader.reply')}</Text>
               </TouchableOpacity>
             )}
             {!isReply && item.replyCount > 0 && (
               <TouchableOpacity onPress={() => loadReplies(item)} style={s.actionBtn} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                 <Text style={[s.actionTxt, { color: ACCENT }]}>
-                  {expanded[item.id] ? 'Hide' : `${item.replyCount} repl${item.replyCount === 1 ? 'y' : 'ies'}`}
+                  {expanded[item.id] ? t('studioReader.hide') : t(item.replyCount === 1 ? 'studioReader.replySingular' : 'studioReader.replies', { count: item.replyCount })}
                 </Text>
               </TouchableOpacity>
             )}
@@ -241,8 +243,8 @@ export default function EngagementScreen() {
           return (
             <View style={s.empty}>
               <Icon name="message-circle" size={32} color="rgba(200,185,255,0.15)" />
-              <Text style={s.emptyTxt}>No comments yet</Text>
-              <Text style={s.emptySub}>Be the first to share your thoughts</Text>
+              <Text style={s.emptyTxt}>{t('studioReader.noComments')}</Text>
+              <Text style={s.emptySub}>{t('studioReader.firstComment')}</Text>
             </View>
           );
         }
@@ -260,8 +262,8 @@ export default function EngagementScreen() {
         return (
           <View style={s.empty}>
             <Icon name="image" size={32} color="rgba(200,185,255,0.15)" />
-            <Text style={s.emptyTxt}>Fan art coming soon</Text>
-            <Text style={s.emptySub}>Share artwork inspired by this chapter. Uploads will be available here.</Text>
+            <Text style={s.emptyTxt}>{t('studioReader.fanArtComing')}</Text>
+            <Text style={s.emptySub}>{t('studioReader.fanArtComingDescription')}</Text>
           </View>
         );
 
@@ -269,8 +271,8 @@ export default function EngagementScreen() {
         return (
           <View style={s.empty}>
             <Icon name="layers" size={32} color="rgba(200,185,255,0.15)" />
-            <Text style={s.emptyTxt}>Discussions coming soon</Text>
-            <Text style={s.emptySub}>Readers will be able to start discussion threads about this chapter.</Text>
+            <Text style={s.emptyTxt}>{t('studioReader.discussionsComing')}</Text>
+            <Text style={s.emptySub}>{t('studioReader.discussionsDescription')}</Text>
           </View>
         );
     }
@@ -287,21 +289,21 @@ export default function EngagementScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Engagement</Text>
+        <Text style={s.headerTitle}>{t('studioReader.engagement')}</Text>
         <View style={s.backBtn} />
       </View>
 
       {/* Tab strip */}
       <View style={s.tabStrip}>
-        {(['comments', 'fanart', 'discussions'] as TabId[]).map(t => (
+        {(['comments', 'fanart', 'discussions'] as TabId[]).map(tabId => (
           <TouchableOpacity
-            key={t}
-            style={[s.tabBtn, tab === t && s.tabBtnActive]}
-            onPress={() => setTab(t)}
+            key={tabId}
+            style={[s.tabBtn, tab === tabId && s.tabBtnActive]}
+            onPress={() => setTab(tabId)}
             activeOpacity={0.7}
           >
-            <Text style={[s.tabTxt, tab === t && s.tabTxtActive]}>
-              {t === 'comments' ? 'Comments' : t === 'fanart' ? 'Fan Art' : 'Discussions'}
+            <Text style={[s.tabTxt, tab === tabId && s.tabTxtActive]}>
+              {tabId === 'comments' ? t('studioReader.comments') : tabId === 'fanart' ? t('studioReader.fanArt') : t('studioReader.discussions')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -319,7 +321,7 @@ export default function EngagementScreen() {
             <View style={s.replyBanner}>
               <Icon name="corner-down-right" size={12} color={ACCENT} />
               <Text style={s.replyBannerTxt} numberOfLines={1}>
-                Replying to comment
+                {t('studioReader.replyingTo')}
               </Text>
               <TouchableOpacity onPress={() => setReplyTo(null)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
                 <Icon name="x" size={12} color="rgba(200,185,255,0.45)" />
@@ -332,7 +334,7 @@ export default function EngagementScreen() {
               style={s.input}
               value={input}
               onChangeText={setInput}
-              placeholder={replyTo ? 'Write a reply…' : 'Share your thoughts…'}
+              placeholder={replyTo ? t('studioReader.writeReply') : t('studioReader.shareThoughts')}
               placeholderTextColor="rgba(200,185,255,0.30)"
               multiline
               maxLength={2000}

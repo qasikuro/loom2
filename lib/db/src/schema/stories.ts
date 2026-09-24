@@ -50,6 +50,7 @@ export const storiesTable = pgTable("stories", {
   pages:           jsonb("pages").$type<StoryPageDB[]>(),
   witnessMilestones: jsonb("witness_milestones").$type<number[]>().notNull().default([]),
   resonatedCount:  integer("resonated_count").notNull().default(0),
+  likeCount:      integer("like_count").notNull().default(0),
   date:            timestamp("date", { withTimezone: true }).notNull(),
   createdAt:      timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   // Video post support — contentType distinguishes post kinds cleanly
@@ -86,4 +87,13 @@ export const storyWitnessesTable = pgTable("story_witnesses", {
 }, (table) => [
   primaryKey({ columns: [table.userId, table.storyId] }),
   index("story_witnesses_story_id_idx").on(table.storyId),
+]);
+
+export const storyLikesTable = pgTable("story_likes", {
+  userId: text("user_id").notNull(),
+  storyId: uuid("story_id").notNull(),
+  likedAt: timestamp("liked_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.storyId] }),
+  index("story_likes_story_id_idx").on(table.storyId),
 ]);

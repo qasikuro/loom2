@@ -11,6 +11,7 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { ConstellationProgressCard } from './ConstellationProgressCard';
 import { getCover } from './profileConstants';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   constellation: ConstellationState | null;
@@ -28,6 +29,7 @@ export function ProfileJourneySection({
   constellation, stories, journalEntries, character, animTrigger,
   setSelectedStarKey, setShowTitlePicker, availableTitles, onSetActiveTitle,
 }: Props) {
+  const { t } = useTranslation();
   const colors = useColors();
 
   return (
@@ -37,7 +39,7 @@ export function ProfileJourneySection({
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>My Constellation</Text>
+            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('feature.constellation.title')}</Text>
             {constellation?.activeTitle && (
               <TouchableOpacity
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: 'rgba(200,168,75,0.14)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.28)' }}
@@ -69,8 +71,8 @@ export function ProfileJourneySection({
             <View style={[s.emptyIcon, { backgroundColor: 'rgba(107,91,149,0.10)' }]}>
               <Text style={{ fontSize: 20 }}>✦</Text>
             </View>
-            <Text style={[s.emptyTitle, { color: colors.foreground }]}>Stars await you</Text>
-            <Text style={[s.emptySub, { color: colors.mutedForeground }]}>Journal, create stories, and connect with others to unlock your constellation</Text>
+            <Text style={[s.emptyTitle, { color: colors.foreground }]}>{t('feature.constellation.emptyTitle')}</Text>
+            <Text style={[s.emptySub, { color: colors.mutedForeground }]}>{t('feature.constellation.emptyHint')}</Text>
           </View>
         )}
       </View>
@@ -88,7 +90,7 @@ export function ProfileJourneySection({
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>My Stories</Text>
+            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.myStories')}</Text>
             {stories.length > 0 && (
               <View style={[s.countPill, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
                 <Text style={[s.countPillText, { color: colors.primary }]}>{stories.length}</Text>
@@ -103,7 +105,7 @@ export function ProfileJourneySection({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon name="book-open" size={12} color={colors.primary} />
-            <Text style={[s.addBtnText, { color: colors.primary }]}>See all</Text>
+            <Text style={[s.addBtnText, { color: colors.primary }]}>{t('feature.home.seeAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -117,8 +119,8 @@ export function ProfileJourneySection({
             <View style={[s.emptyIcon, { backgroundColor: `${colors.primary}14` }]}>
               <Icon name="book-open" size={20} color={`${colors.primary}70`} />
             </View>
-            <Text style={[s.emptyTitle, { color: colors.foreground }]}>No chapters yet</Text>
-            <Text style={[s.emptySub, { color: colors.mutedForeground }]}>Tap to write your first sky chapter</Text>
+            <Text style={[s.emptyTitle, { color: colors.foreground }]}>{t('profile.emptyStories')}</Text>
+            <Text style={[s.emptySub, { color: colors.mutedForeground }]}>{t('profile.writeFirstChapter')}</Text>
           </TouchableOpacity>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
@@ -173,7 +175,7 @@ export function ProfileJourneySection({
               activeOpacity={0.75}
             >
               <Icon name="plus" size={18} color={`${colors.primary}70`} />
-              <Text style={[s.addCardText, { color: `${colors.primary}70` }]}>New</Text>
+              <Text style={[s.addCardText, { color: `${colors.primary}70` }]}>{t('profile.add')}</Text>
             </TouchableOpacity>
           </ScrollView>
         )}

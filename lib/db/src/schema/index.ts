@@ -1,5 +1,6 @@
 export * from "./character";
 export * from "./follows";
+export * from "./profileLikes";
 export * from "./friendRequests";
 export * from "./gallery";
 export * from "./journal-entries";

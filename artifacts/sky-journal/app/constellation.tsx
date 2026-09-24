@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon';
 import { ConstellationMap } from '@/components/ConstellationMap';
 import { ConstellationProgressCard } from '@/components/profile/ConstellationProgressCard';
 import { TitlesGallerySection } from '@/components/profile/TitlesGallerySection';
+import { useTranslation } from 'react-i18next';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
 import { useApp, apiFetch } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -26,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function ConstellationScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { constellation, character, stories, journalEntries, reloadConstellation } = useApp();
 
   const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
@@ -85,7 +87,7 @@ export default function ConstellationScreen() {
           <Icon name="chevron-left" size={18} color="rgba(242,232,255,0.80)" />
         </TouchableOpacity>
         <View style={s.headerCenter}>
-          <Text style={s.headerTitle}>My Constellation</Text>
+          <Text style={s.headerTitle}>{t('feature.constellation.title')}</Text>
           {constellation?.activeTitle && (
             <Text style={s.headerSub}>{constellation.activeTitle}</Text>
           )}
@@ -145,17 +147,17 @@ export default function ConstellationScreen() {
           <View style={s.empty}>
             <Text style={s.emptyIcon}>✦</Text>
             <Text style={[s.emptyTitle, { color: colors.foreground }]}>
-              Your journey begins here
+              {t('feature.constellation.emptyTitle')}
             </Text>
             <Text style={[s.emptyHint, { color: colors.mutedForeground }]}>
-              Write journal entries, share stories, and connect with wanderers to unlock your constellation stars.
+              {t('feature.constellation.emptyHint')}
             </Text>
             <TouchableOpacity
               style={s.emptyCTA}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/create'); }}
               activeOpacity={0.80}
             >
-              <Text style={s.emptyCTATxt}>Start Writing  →</Text>
+              <Text style={s.emptyCTATxt}>{t('feature.constellation.startWriting')}</Text>
             </TouchableOpacity>
           </View>
         )}

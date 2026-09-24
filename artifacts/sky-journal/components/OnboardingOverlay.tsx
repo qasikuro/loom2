@@ -22,6 +22,7 @@ import { useSound } from '@/context/SoundContext';
 import { apiFetch, getAuthToken, useApp } from '@/context/AppContext';
 import type { JournalEntry } from '@/context/AppContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 // Keys are scoped per userId so different accounts on the same device are isolated.
 const doneKey  = (uid: string) => `onboarding_v1:${uid}`;
@@ -144,6 +145,7 @@ interface OnboardingOverlayProps {
 }
 
 export function OnboardingOverlay({ visible, onComplete, onDismiss }: OnboardingOverlayProps) {
+  const { t } = useTranslation();
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -512,7 +514,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
         {/* Skip (top-right, all steps except reveal) */}
         {step !== STEP_REVEAL && (
           <Pressable style={[s.earlySkip, { top: topPad + 12 }]} onPress={handleSkip} hitSlop={16}>
-            <Text style={s.earlySkipText}>Skip</Text>
+            <Text style={s.earlySkipText}>{t('components.onboarding.skip')}</Text>
           </Pressable>
         )}
 
@@ -553,7 +555,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
           {/* Seed error banner */}
           {seedError && (
             <View style={s.errorBanner}>
-              <Text style={s.errorText}>Couldn't reach the sky. Check your connection and try again.</Text>
+              <Text style={s.errorText}>{t('components.onboarding.connectionError')}</Text>
             </View>
           )}
 
@@ -576,7 +578,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
           <View style={s.btnRow}>
             {step > STEP_WELCOME && step !== STEP_REVEAL && (
               <TouchableOpacity style={s.backBtn} onPress={() => goToStep(step - 1)} activeOpacity={0.7}>
-                <Text style={s.backBtnText}>← Back</Text>
+                <Text style={s.backBtnText}>{t('components.onboarding.back')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -592,13 +594,13 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
               disabled={!canAdvance || saving}
             >
               <Text style={[s.nextBtnText, { color: (canAdvance && !saving) ? '#0E0B20' : 'rgba(220,210,240,0.40)' }]}>
-                {step === STEP_WELCOME      ? 'Begin your sky →'
-                : step === STEP_MOOD        ? 'Choose your mood →'
-                : step === STEP_CONSTELLATION ? 'This is me →'
-                : step === STEP_JOURNAL     ? (journalText.trim() ? 'Save my first line →' : 'Skip for now →')
-                : saving && !seedError      ? 'Setting your sky…'
-                : seedError                 ? 'Retry →'
-                : 'Enter your sky ✦'}
+                {step === STEP_WELCOME      ? t('components.onboarding.beginSky')
+                : step === STEP_MOOD        ? t('components.onboarding.chooseMood')
+                : step === STEP_CONSTELLATION ? t('components.onboarding.thisIsMe')
+                : step === STEP_JOURNAL     ? (journalText.trim() ? t('components.onboarding.saveFirstLine') : t('components.onboarding.skipForNow'))
+                : saving && !seedError      ? t('components.onboarding.settingSky')
+                : seedError                 ? t('components.onboarding.retry')
+                : t('components.onboarding.enterSky')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -609,14 +611,14 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
           {step === STEP_REVEAL && seedError && (
             <>
               <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={s.skipEscape}>
-                <Text style={s.skipEscapeText}>Skip for now</Text>
+                <Text style={s.skipEscapeText}>{t('components.onboarding.skipForNow')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => signOut()}
                 activeOpacity={0.7}
                 style={s.signOutEscape}
               >
-                <Text style={s.signOutEscapeText}>Sign out and try again</Text>
+                <Text style={s.signOutEscapeText}>{t('components.onboarding.signOutRetry')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -630,6 +632,7 @@ export function OnboardingOverlay({ visible, onComplete, onDismiss }: Onboarding
 // ── Step sub-components ────────────────────────────────────────────────────────
 
 function WelcomeStep({ emojiScale }: { emojiScale: Animated.Value }) {
+  const { t } = useTranslation();
   return (
     <>
       <View style={s.orbWrap}>
@@ -638,13 +641,13 @@ function WelcomeStep({ emojiScale }: { emojiScale: Animated.Value }) {
           <Text style={s.emoji}>✦</Text>
         </Animated.View>
       </View>
-      <Text style={[s.stepLabel, { color: '#C8A84B' }]}>WELCOME</Text>
-      <Text style={s.title}>Your sky is waiting</Text>
+      <Text style={[s.stepLabel, { color: '#C8A84B' }]}>{t('components.onboarding.welcomeLabel')}</Text>
+      <Text style={s.title}>{t('components.onboarding.welcomeTitle')}</Text>
       <Text style={s.desc}>
-        Ximo is a dreamy space for your memories, stories, and soul. In just a moment, we'll shape your world to feel like home.
+        {t('components.onboarding.welcomeDescription')}
       </Text>
       <View style={[s.hintPill, { borderColor: '#C8A84B40', backgroundColor: '#C8A84B12' }]}>
-        <Text style={[s.hintText, { color: '#C8A84B' }]}>Takes about 60 seconds ✦</Text>
+        <Text style={[s.hintText, { color: '#C8A84B' }]}>{t('components.onboarding.duration')}</Text>
       </View>
     </>
   );
@@ -657,6 +660,7 @@ function MoodStep({
   selectedMood: MoodId | null;
   onSelect: (id: MoodId) => void;
 }) {
+  const { t } = useTranslation();
   const moodDef = MOODS.find(m => m.id === selectedMood);
   const accent  = moodDef?.color ?? '#9B78E8';
   return (
@@ -667,9 +671,9 @@ function MoodStep({
           <Text style={s.emoji}>{moodDef?.emoji ?? '🌙'}</Text>
         </Animated.View>
       </View>
-      <Text style={[s.stepLabel, { color: accent }]}>YOUR VIBE</Text>
-      <Text style={s.title}>How does your sky feel today?</Text>
-      <Text style={[s.desc, { marginBottom: 16 }]}>Pick the mood that fits right now. You can change this any time.</Text>
+      <Text style={[s.stepLabel, { color: accent }]}>{t('components.onboarding.vibeLabel')}</Text>
+      <Text style={s.title}>{t('components.onboarding.moodTitle')}</Text>
+      <Text style={[s.desc, { marginBottom: 16 }]}>{t('components.onboarding.moodDescription')}</Text>
       <View style={s.moodGrid}>
         {MOODS.map(m => (
           <TouchableOpacity
@@ -679,7 +683,7 @@ function MoodStep({
             activeOpacity={0.75}
           >
             <Text style={s.moodEmoji}>{m.emoji}</Text>
-            <Text style={[s.moodLabel, { color: selectedMood === m.id ? m.color : 'rgba(220,210,240,0.65)' }]}>{m.id}</Text>
+            <Text style={[s.moodLabel, { color: selectedMood === m.id ? m.color : 'rgba(220,210,240,0.65)' }]}>{t(`components.moods.${m.id.toLowerCase()}`)}</Text>
           </TouchableOpacity>
         ))}
       </View>
@@ -694,6 +698,7 @@ function ConstellationStep({
   selectedType: ConstellationType | null;
   onSelect: (id: ConstellationType) => void;
 }) {
+  const { t } = useTranslation();
   const typeDef = CONSTELLATION_TYPES.find(t => t.id === selectedType);
   const accent  = typeDef?.accent ?? '#9B78E8';
   return (
@@ -704,8 +709,8 @@ function ConstellationStep({
           <Text style={s.emoji}>{typeDef?.emoji ?? '✨'}</Text>
         </Animated.View>
       </View>
-      <Text style={[s.stepLabel, { color: accent }]}>YOUR CONSTELLATION</Text>
-      <Text style={s.title}>What kind of sky child are you?</Text>
+      <Text style={[s.stepLabel, { color: accent }]}>{t('components.onboarding.constellationLabel')}</Text>
+      <Text style={s.title}>{t('components.onboarding.constellationTitle')}</Text>
       <View style={{ width: '100%', gap: 10, marginTop: 8, marginBottom: 12 }}>
         {CONSTELLATION_TYPES.map(ct => (
           <TouchableOpacity
@@ -716,8 +721,8 @@ function ConstellationStep({
           >
             <Text style={s.typeEmoji}>{ct.emoji}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[s.typeName, { color: selectedType === ct.id ? ct.accent : '#EDE8FF' }]}>{ct.name}</Text>
-              <Text style={s.typeDesc} numberOfLines={2}>{ct.desc}</Text>
+              <Text style={[s.typeName, { color: selectedType === ct.id ? ct.accent : '#EDE8FF' }]}>{t(`components.onboarding.types.${ct.id}.name`)}</Text>
+              <Text style={s.typeDesc} numberOfLines={2}>{t(`components.onboarding.types.${ct.id}.description`)}</Text>
             </View>
             {selectedType === ct.id && (
               <View style={[s.typeCheck, { backgroundColor: ct.accent }]}>
@@ -739,6 +744,7 @@ function JournalStep({
   onChange: (t: string) => void;
   mood: MoodId | null;
 }) {
+  const { t } = useTranslation();
   const moodDef = MOODS.find(m => m.id === mood);
   const accent  = moodDef?.color ?? '#9B78E8';
   return (
@@ -749,12 +755,12 @@ function JournalStep({
           <Text style={s.emoji}>📖</Text>
         </Animated.View>
       </View>
-      <Text style={[s.stepLabel, { color: accent }]}>YOUR FIRST LINE</Text>
-      <Text style={s.title}>Write one line about today</Text>
-      <Text style={[s.desc, { marginBottom: 18 }]}>Just one honest sentence. It'll be your first journal entry — completely private.</Text>
+      <Text style={[s.stepLabel, { color: accent }]}>{t('components.onboarding.journalLabel')}</Text>
+      <Text style={s.title}>{t('components.onboarding.journalTitle')}</Text>
+      <Text style={[s.desc, { marginBottom: 18 }]}>{t('components.onboarding.journalDescription')}</Text>
       <TextInput
         style={[s.journalInput, { borderColor: `${accent}50` }]}
-        placeholder="Today I feel…"
+        placeholder={t('components.onboarding.journalPlaceholder')}
         placeholderTextColor="rgba(200,184,232,0.35)"
         value={value}
         onChangeText={onChange}
@@ -778,6 +784,7 @@ function RevealStep({
   selectedType: ConstellationType | null;
   accent: string;
 }) {
+  const { t } = useTranslation();
   const moodDef = MOODS.find(m => m.id === selectedMood);
   const typeDef = CONSTELLATION_TYPES.find(t => t.id === selectedType);
   return (
@@ -795,14 +802,14 @@ function RevealStep({
           />
         ))}
       </View>
-      <Text style={[s.stepLabel, { color: accent }]}>YOUR SKY IS READY</Text>
-      <Text style={s.title}>Welcome, {typeDef?.name ?? 'Sky Child'}</Text>
+      <Text style={[s.stepLabel, { color: accent }]}>{t('components.onboarding.revealLabel')}</Text>
+      <Text style={s.title}>{t('components.onboarding.revealWelcome', { type: typeDef ? t(`components.onboarding.types.${typeDef.id}.name`) : t('components.onboarding.skyChild') })}</Text>
       <Text style={s.desc}>
-        Your sky is{moodDef ? ` ${moodDef.id.toLowerCase()} ` : ' '}and waiting. Your constellation lights the way. Let the journey begin.
+        {t('components.onboarding.revealDescription', { mood: moodDef ? t(`components.moods.${moodDef.id.toLowerCase()}`) : '' })}
       </Text>
       {selectedMood && (
         <View style={[s.hintPill, { borderColor: `${accent}40`, backgroundColor: `${accent}12` }]}>
-          <Text style={[s.hintText, { color: accent }]}>{moodDef?.emoji} {selectedMood} sky • {typeDef?.name}</Text>
+          <Text style={[s.hintText, { color: accent }]}>{moodDef?.emoji} {selectedMood ? t(`components.moods.${selectedMood.toLowerCase()}`) : ''} sky • {typeDef ? t(`components.onboarding.types.${typeDef.id}.name`) : ''}</Text>
         </View>
       )}
     </>

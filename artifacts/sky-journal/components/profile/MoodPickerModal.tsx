@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MOOD_COLORS } from './profileConstants';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   visible: boolean;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export function MoodPickerModal({ visible, currentMood, onSelect, onClose }: Props) {
+  const { t } = useTranslation();
   const colors = useColors();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -20,8 +22,8 @@ export function MoodPickerModal({ visible, currentMood, onSelect, onClose }: Pro
         <View style={[s.sheet, { backgroundColor: colors.card }]}>
           <View style={s.handle} />
           <View style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
-            <Text style={[s.title, { color: colors.foreground }]}>Choose your mood</Text>
-            <Text style={[s.sub, { color: colors.mutedForeground }]}>How are you feeling in the sky today?</Text>
+            <Text style={[s.title, { color: colors.foreground }]}>{t('components.moodPicker.title')}</Text>
+            <Text style={[s.sub, { color: colors.mutedForeground }]}>{t('components.moodPicker.subtitle')}</Text>
             <View style={s.grid}>
               {Object.keys(MOOD_COLORS).map(mood => {
                 const isSelected = currentMood === mood;
@@ -33,7 +35,7 @@ export function MoodPickerModal({ visible, currentMood, onSelect, onClose }: Pro
                     onPress={() => { Haptics.selectionAsync(); onSelect(mood); onClose(); }}
                   >
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: mc }} />
-                    <Text style={{ fontSize: 14, fontFamily: isSelected ? 'Satoshi-Bold' : 'Satoshi-Regular', color: mc }}>{mood}</Text>
+                    <Text style={{ fontSize: 14, fontFamily: isSelected ? 'Satoshi-Bold' : 'Satoshi-Regular', color: mc }}>{t(`components.moods.${mood.toLowerCase()}`)}</Text>
                   </TouchableOpacity>
                 );
               })}

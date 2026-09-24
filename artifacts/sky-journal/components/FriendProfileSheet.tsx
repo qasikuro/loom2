@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export interface FriendSummary {
   userId:    string;
@@ -63,6 +64,7 @@ function fmtBirthday(raw: string | null | undefined): string | null {
 }
 
 export function FriendProfileSheet({ friend, visible, onClose }: Props) {
+  const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { followingIds, followUser, unfollowUser } = useApp();
@@ -196,7 +198,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
                       <Icon name="gift" size={13} color={colors.primary} />
                     </View>
                     <View style={styles.detailContent}>
-                      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Birthday</Text>
+                      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{t('social.birthday')}</Text>
                       <Text style={[styles.detailValue, { color: colors.foreground }]}>{bdFmt}</Text>
                     </View>
                   </View>
@@ -207,7 +209,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
                       <Icon name="map-pin" size={13} color={colors.primary} />
                     </View>
                     <View style={styles.detailContent}>
-                      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>Country</Text>
+                      <Text style={[styles.detailLabel, { color: colors.mutedForeground }]}>{t('social.country')}</Text>
                       <Text style={[styles.detailValue, { color: colors.foreground }]}>{friend.country}</Text>
                     </View>
                   </View>
@@ -218,7 +220,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
             {/* Links */}
             {(friend.links ?? []).length > 0 && (
               <View style={[styles.linksCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>Links</Text>
+                <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{t('social.links')}</Text>
                 {(friend.links ?? []).map((link, i) => (
                   <TouchableOpacity
                     key={i}
@@ -249,14 +251,14 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
                 <Text style={[styles.statNum, { color: colors.foreground }]}>
                   {loadingCount ? '—' : (storyCount ?? '—')}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Stories</Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('social.stories')}</Text>
               </View>
               <View style={[styles.statCard, { backgroundColor: colors.muted, borderColor: colors.border }]}>
                 <Icon name="globe" size={16} color={colors.primary} />
                 <Text style={[styles.statNum, { color: colors.foreground }]}>
-                  {friend.isPublic ? 'Public' : 'Private'}
+                  {friend.isPublic ? t('social.public') : t('social.private')}
                 </Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Profile</Text>
+                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('social.profile')}</Text>
               </View>
             </View>
 
@@ -281,7 +283,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
                   color={isFollowing ? colors.primary : '#fff'}
                 />
                 <Text style={[styles.followBtnText, { color: isFollowing ? colors.primary : '#fff' }]}>
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? t('social.following') : t('social.follow')}
                 </Text>
               </TouchableOpacity>
 
@@ -296,7 +298,7 @@ export function FriendProfileSheet({ friend, visible, onClose }: Props) {
                   activeOpacity={0.82}
                 >
                   <Icon name="book-open" size={14} color={colors.mutedForeground} />
-                  <Text style={[styles.storiesBtnText, { color: colors.mutedForeground }]}>See stories</Text>
+                  <Text style={[styles.storiesBtnText, { color: colors.mutedForeground }]}>{t('social.seeStories')}</Text>
                 </TouchableOpacity>
               )}
             </View>

@@ -6,6 +6,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { MoodBadge } from '@/components/MoodBadge';
 import { useColors } from '@/hooks/useColors';
 import type { JournalEntry } from '@/context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 interface LogCardProps {
   entry: JournalEntry;
@@ -13,14 +14,14 @@ interface LogCardProps {
   onDelete?: () => void;
 }
 
-const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function formatDate(dateStr: string) {
+function formatDate(dateStr: string, locale: string) {
   const d = new Date(dateStr);
-  return `${MONTH_NAMES[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 function DiaryCard({ entry, onPress, onDelete }: LogCardProps) {
   const colors = useColors();
+  const { t, i18n } = useTranslation();
   return (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -36,9 +37,9 @@ function DiaryCard({ entry, onPress, onDelete }: LogCardProps) {
       <View style={styles.body}>
         <View style={styles.metaRow}>
           <Icon name="book" size={10} color={colors.mutedForeground} />
-          <Text style={[styles.metaText, { color: colors.mutedForeground }]}>Diary · {formatDate(entry.date)}</Text>
+          <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{t('discoverLog.diary')} · {formatDate(entry.date, i18n.language)}</Text>
           {onDelete && (
-            <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+            <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }} accessibilityRole="button" accessibilityLabel={t('discoverLog.delete')}>
               <Icon name="trash-2" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -56,7 +57,8 @@ function DiaryCard({ entry, onPress, onDelete }: LogCardProps) {
 
 function FriendCard({ entry, onPress, onDelete }: LogCardProps) {
   const colors = useColors();
-  const friendName = entry.friendName ?? 'Unknown';
+  const { t, i18n } = useTranslation();
+  const friendName = entry.friendName ?? t('discoverLog.unknown');
   return (
     <TouchableOpacity
       style={[styles.card, styles.friendCard, { backgroundColor: colors.card, borderColor: '#4878A820', borderLeftWidth: 3, borderLeftColor: '#4878A8' }]}
@@ -66,11 +68,11 @@ function FriendCard({ entry, onPress, onDelete }: LogCardProps) {
       <View style={styles.body}>
         <View style={styles.metaRow}>
           <Text style={{ fontSize: 14 }}>🤝</Text>
-          <Text style={[styles.friendLogLabel, { color: '#4878A8' }]}>Friend Log</Text>
+          <Text style={[styles.friendLogLabel, { color: '#4878A8' }]}>{t('discoverLog.friendLog')}</Text>
           <Icon name="calendar" size={10} color={colors.mutedForeground} style={{ marginLeft: 8 }} />
-          <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{formatDate(entry.date)}</Text>
+          <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{formatDate(entry.date, i18n.language)}</Text>
           {onDelete && (
-            <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+            <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }} accessibilityRole="button" accessibilityLabel={t('discoverLog.delete')}>
               <Icon name="trash-2" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
@@ -81,7 +83,7 @@ function FriendCard({ entry, onPress, onDelete }: LogCardProps) {
           </View>
           <View>
             <Text style={[styles.friendName, { color: colors.foreground }]}>{friendName}</Text>
-            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>encounter recorded</Text>
+            <Text style={[styles.metaText, { color: colors.mutedForeground }]}>{t('discoverLog.encounterRecorded')}</Text>
           </View>
         </View>
         {entry.text.length > 0 && (
@@ -97,6 +99,7 @@ function FriendCard({ entry, onPress, onDelete }: LogCardProps) {
 
 function MomentCard({ entry, onPress, onDelete }: LogCardProps) {
   const colors = useColors();
+  const { t, i18n } = useTranslation();
   return (
     <TouchableOpacity
       style={[styles.card, styles.momentCard, { borderColor: 'rgba(104,88,168,0.2)', borderLeftWidth: 3, borderLeftColor: '#6858A8' }]}
@@ -105,9 +108,9 @@ function MomentCard({ entry, onPress, onDelete }: LogCardProps) {
     >
       <View style={[styles.momentHeader, { backgroundColor: '#1A1630' }]}>
         <Text style={{ fontSize: 16 }}>🌙</Text>
-        <Text style={[styles.momentLabel, { color: 'rgba(200,184,232,0.7)' }]}>Moment · {formatDate(entry.date)}</Text>
+        <Text style={[styles.momentLabel, { color: 'rgba(200,184,232,0.7)' }]}>{t('discoverLog.moment')} · {formatDate(entry.date, i18n.language)}</Text>
         {onDelete && (
-          <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}>
+          <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }} accessibilityRole="button" accessibilityLabel={t('discoverLog.delete')}>
             <Icon name="trash-2" size={13} color="rgba(200,184,232,0.4)" />
           </TouchableOpacity>
         )}

@@ -245,8 +245,18 @@ export async function runStartupMigrations(): Promise<void> {
     // Add read_count to existing chapters table (idempotent)
     await client.query(`
       ALTER TABLE chapters
-        ADD COLUMN IF NOT EXISTS read_count INTEGER NOT NULL DEFAULT 0
+        ADD COLUMN IF NOT EXISTS read_count INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS like_count INTEGER NOT NULL DEFAULT 0
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS chapter_likes (
+        user_id    TEXT        NOT NULL,
+        chapter_id UUID        NOT NULL,
+        liked_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, chapter_id)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS chapter_likes_chapter_id_idx ON chapter_likes(chapter_id)`);
 
     // ── Story Studio: Book follows ────────────────────────────────────────────
     await client.query(`
@@ -293,8 +303,27 @@ export async function runStartupMigrations(): Promise<void> {
         ADD COLUMN IF NOT EXISTS content_type  TEXT NOT NULL DEFAULT 'story',
         ADD COLUMN IF NOT EXISTS video_uri     TEXT,
         ADD COLUMN IF NOT EXISTS thumbnail_uri TEXT,
-        ADD COLUMN IF NOT EXISTS music         JSONB
+        ADD COLUMN IF NOT EXISTS music         JSONB,
+        ADD COLUMN IF NOT EXISTS like_count    INTEGER NOT NULL DEFAULT 0
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profile_likes (
+        liker_id        TEXT        NOT NULL,
+        profile_user_id TEXT        NOT NULL,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (liker_id, profile_user_id)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS profile_likes_profile_user_id_idx ON profile_likes(profile_user_id)`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS story_likes (
+        user_id  TEXT        NOT NULL,
+        story_id UUID        NOT NULL,
+        liked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, story_id)
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS story_likes_story_id_idx ON story_likes(story_id)`);
 
     // ── Outfit music ─────────────────────────────────────────────────────────
     await client.query(`

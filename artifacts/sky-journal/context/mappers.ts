@@ -170,6 +170,8 @@ export interface DiscoverPost {
   imageUri?:        string;
   mood:             string;
   witnessedCount:   number;
+  likeCount:        number;
+  liked:            boolean;
   savedCount:       number;
   stickerCount:     number;
   timeAgo:          string;
@@ -308,6 +310,8 @@ export interface RawDiscoverApiItem {
   imageUri?:        string | null;
   mood?:            string;
   witnessedCount?:  number;
+  likeCount?:       number;
+  liked?:           boolean;
   savedCount?:      number;
   stickerCount?:    number;
   date?:            string;
@@ -494,6 +498,8 @@ export function toRawDiscoverPost(raw: RawDiscoverApiItem, apiBase?: string): Ra
     imageUri:         resolveUri(raw.imageUri ?? undefined, apiBase),
     mood:             raw.mood ?? 'Hopeful',
     witnessedCount:   raw.witnessedCount ?? 0,
+    likeCount:        raw.likeCount ?? 0,
+    liked:            raw.liked ?? false,
     savedCount:       raw.savedCount ?? 0,
     stickerCount:     raw.stickerCount ?? 0,
     timeAgo:          relativeTimeDiscover(raw.date ?? raw.createdAt ?? new Date().toISOString()),

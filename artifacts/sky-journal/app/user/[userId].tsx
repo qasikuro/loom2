@@ -505,11 +505,12 @@ function AnimatedAvatarRing({
 
 // ── Mood chip ─────────────────────────────────────────────────────────────────
 function MoodChip({ mood }: { mood: string }) {
+  const { t } = useTranslation();
   const aura = MOOD_AURA[mood] ?? DEFAULT_AURA;
   return (
     <View style={[styles.moodChip, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}>
       <View style={[styles.moodDot, { backgroundColor: aura.accent }]} />
-      <Text style={[styles.moodChipText, { color: aura.accent }]}>{mood}</Text>
+      <Text style={[styles.moodChipText, { color: aura.accent }]}>{t(`publicProfile.moods.${mood}`, { defaultValue: mood })}</Text>
     </View>
   );
 }
@@ -519,24 +520,17 @@ const MOOD_COLORS: Record<string, string> = {
   Nostalgic: '#A5785D', Hopeful: '#6BA57A', Dreamy: '#9B7AB5',
 };
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function fmtDate(_iso: string) {
-  const d = new Date(_iso);
-  return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-}
-
 interface ProfileLink {
   label:     string;
   url:       string;
   platform?: string;
 }
 
-function fmtBirthday(bd: string): string {
+function fmtBirthday(bd: string, locale: string): string {
   try {
     const d = new Date(bd);
     if (isNaN(d.getTime())) return bd;
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   } catch { return bd; }
 }
 
@@ -578,6 +572,8 @@ interface PublicProfile {
   activeOutfitId:   string | null;
   activeOutfit:     ActiveOutfit | null;
   isFollowing:      boolean;
+  profileLiked:     boolean;
+  profileLikeCount: number;
   activeTitle:      string | null;
   intention:        string | null;
   intentionDate:    string | null;
@@ -598,6 +594,7 @@ interface PublicStory {
   location:       string;
   panels:         { text?: string; imageUri?: string }[];
   witnessedCount: number;
+  likeCount:      number;
   savedCount:     number;
   date:           string;
 }
@@ -625,7 +622,7 @@ interface PublicBook {
 export default function UserProfileScreen() {
   const { userId }          = useLocalSearchParams<{ userId: string }>();
   const colors              = useColors();
-  const { t }               = useTranslation();
+  const { t, i18n }         = useTranslation();
   const insets              = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { userId: meId }    = useAuth();
@@ -641,6 +638,8 @@ export default function UserProfileScreen() {
   const [outfitsError, setOutfitsError] = useState(false);
   const [booksError,   setBooksError]   = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const profileLikeBusy = useRef(false);
+  const [likingProfile, setLikingProfile] = useState(false);
 
   const fadeAnim  = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(24)).current;
@@ -712,7 +711,7 @@ export default function UserProfileScreen() {
       if (profResult.status === 'rejected') {
         const err = profResult.reason;
         const isBlocked = err instanceof ApiError && err.status === 403;
-        setError(isBlocked ? 'This profile is unavailable.' : 'Could not load this profile.');
+        setError(isBlocked ? 'publicProfile.errorUnavailable' : 'publicProfile.errorLoad');
         setLoading(false);
         return;
       }
@@ -737,19 +736,54 @@ export default function UserProfileScreen() {
     else             followUser(profile.userId);
   }
 
+  async function handleLikeProfile() {
+    if (!profile || isSelf || profileLikeBusy.current) return;
+    profileLikeBusy.current = true;
+    setLikingProfile(true);
+    const previous = { liked: profile.profileLiked, count: profile.profileLikeCount };
+    const nextLiked = !previous.liked;
+    setProfile(current => current && ({
+      ...current,
+      profileLiked: nextLiked,
+      profileLikeCount: Math.max(0, current.profileLikeCount + (nextLiked ? 1 : -1)),
+    }));
+    void Haptics.selectionAsync();
+    try {
+      const result = await apiFetch<{ profileLiked: boolean; profileLikeCount: number }>(
+        `/users/${profile.userId}/like`,
+        { method: nextLiked ? 'POST' : 'DELETE' },
+      );
+      setProfile(current => current && ({
+        ...current,
+        profileLiked: result.profileLiked,
+        profileLikeCount: result.profileLikeCount,
+      }));
+    } catch {
+      setProfile(current => current && ({
+        ...current,
+        profileLiked: previous.liked,
+        profileLikeCount: previous.count,
+      }));
+      Alert.alert(t('likes.failedTitle'), t('likes.failedBody'));
+    } finally {
+      profileLikeBusy.current = false;
+      setLikingProfile(false);
+    }
+  }
+
   function handleMore() {
     if (!profile || !userId) return;
     const blockOption = isBlocked
       ? {
-          text: 'Unblock user',
+          text: t('publicProfile.unblockUser'),
           onPress: () => {
             Alert.alert(
-              'Unblock user',
-              `${profile.name} will be able to send you messages again.`,
+              t('publicProfile.unblockUser'),
+              t('publicProfile.unblockBody', { name: profile.name }),
               [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                  text: 'Unblock',
+                  text: t('publicProfile.unblock'),
                   onPress: () => unblockUser(userId),
                 },
               ],
@@ -757,16 +791,16 @@ export default function UserProfileScreen() {
           },
         }
       : {
-          text: 'Block user',
+          text: t('publicProfile.blockUser'),
           style: 'destructive' as const,
           onPress: () => {
             Alert.alert(
-              'Block user',
-              `${profile.name} will no longer be able to message you, and their posts will be hidden from your feed. Any existing follows will be removed.`,
+              t('publicProfile.blockUser'),
+              t('publicProfile.blockBody', { name: profile.name }),
               [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('common.cancel'), style: 'cancel' },
                 {
-                  text: 'Block',
+                  text: t('publicProfile.block'),
                   style: 'destructive',
                   onPress: () => {
                     blockUser(userId).catch(() => null);
@@ -781,9 +815,9 @@ export default function UserProfileScreen() {
       profile.name,
       undefined,
       [
-        { text: 'Report', onPress: () => setReportVisible(true) },
+        { text: t('publicProfile.report'), onPress: () => setReportVisible(true) },
         blockOption,
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
       ],
     );
   }
@@ -794,6 +828,7 @@ export default function UserProfileScreen() {
   const userRole       = profile ? ROLES.find(r => r.key === profile.role) : undefined;
   const weatherQuery   = profile?.country ?? null;
   const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
+  const totalLikes = (profile?.profileLikeCount ?? 0) + stories.reduce((sum, story) => sum + (story.likeCount ?? 0), 0);
   const isTopExplorer  = totalWitnessed >= 10 || stories.length >= 3;
   const isFounder      = (profile?.badges ?? []).some(b => b.slug === 'founder');
   const isBeta         = (profile?.badges ?? []).some(b => b.slug === 'beta_tester');
@@ -803,7 +838,7 @@ export default function UserProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <SkyLoadingOverlay message="Looking up this profile…" />
+        <SkyLoadingOverlay message={t('publicProfile.loading')} />
       </View>
     );
   }
@@ -813,7 +848,7 @@ export default function UserProfileScreen() {
       <View style={[styles.center, { backgroundColor: colors.background }]}>
         <Icon name="alert-circle" size={36} color={colors.mutedForeground} />
         <Text style={[styles.errorText, { color: colors.mutedForeground }]}>
-          {error ?? 'Profile not found.'}
+          {error ? t(error) : t('publicProfile.notFound')}
         </Text>
         <TouchableOpacity
           style={[styles.backBtnErr, { backgroundColor: colors.card, borderColor: colors.border }]}
@@ -865,7 +900,7 @@ export default function UserProfileScreen() {
               borderColor: 'rgba(232,184,48,0.40)',
             }]}>
               <Text style={{ fontSize: 12 }}>🏆</Text>
-              <Text style={[styles.explorerBadgeText, { color: '#E8B830' }]}>Top Explorer</Text>
+              <Text style={[styles.explorerBadgeText, { color: '#E8B830' }]}>{t('publicProfile.topExplorer')}</Text>
             </View>
           )}
 
@@ -920,10 +955,31 @@ export default function UserProfileScreen() {
                 activeOpacity={0.82}
               >
                 <Text style={[styles.followPillText, { color: isFollowing ? colors.primary : '#fff' }]}>
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? t('publicProfile.following') : t('publicProfile.follow')}
                 </Text>
               </TouchableOpacity>
             )}
+          </View>
+
+          <View style={styles.profileLikesRow}>
+            {!isSelf && (
+              <TouchableOpacity
+                style={[styles.profileLikeButton, profile.profileLiked && styles.profileLikeButtonActive]}
+                onPress={() => { void handleLikeProfile(); }}
+                disabled={likingProfile}
+                accessibilityRole="button"
+                accessibilityLabel={t(profile.profileLiked ? 'likes.unlikeProfile' : 'likes.likeProfile')}
+                accessibilityState={{ selected: profile.profileLiked, disabled: likingProfile }}
+              >
+                <Icon name="heart" size={16} color={profile.profileLiked ? '#F4B1D5' : colors.primary} />
+                <Text style={[styles.profileLikeText, { color: profile.profileLiked ? '#F4B1D5' : colors.primary }]}>
+                  {t(profile.profileLiked ? 'likes.liked' : 'likes.like')}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <Text style={[styles.profileLikeCount, { color: colors.mutedForeground }]}>
+              {t('likes.profileCount', { count: profile.profileLikeCount ?? 0 })}
+            </Text>
           </View>
 
           {/* @handle + online status */}
@@ -935,7 +991,7 @@ export default function UserProfileScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: profile.isOnline ? 'rgba(80,200,120,0.12)' : 'rgba(200,184,232,0.08)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: profile.isOnline ? 'rgba(80,200,120,0.30)' : 'rgba(200,184,232,0.15)' }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: profile.isOnline ? '#4EC87A' : 'rgba(200,184,232,0.40)' }} />
                 <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: profile.isOnline ? '#4EC87A' : 'rgba(200,184,232,0.50)' }}>
-                  {profile.isOnline ? 'Online' : 'Offline'}
+                  {profile.isOnline ? t('publicProfile.online') : t('publicProfile.offline')}
                 </Text>
               </View>
             )}
@@ -964,7 +1020,7 @@ export default function UserProfileScreen() {
               <View style={{ marginTop: 6, gap: 4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: aura.accent + '22', borderWidth: 1, borderColor: aura.accent + '44' }}>
-                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: aura.accent, letterSpacing: 0.4 }}>Lv {level}</Text>
+                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: aura.accent, letterSpacing: 0.4 }}>{t('publicProfile.levelShort')} {level}</Text>
                   </View>
                   <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)' }}>
                     {xp % XP_PER_LEVEL} / {XP_PER_LEVEL} XP
@@ -999,7 +1055,7 @@ export default function UserProfileScreen() {
               {userRole ? (
                 <View style={[styles.roleBadge, { backgroundColor: userRole.color + '20', borderColor: userRole.color + '45' }]}>
                   <Text style={{ fontSize: 13 }}>{userRole.emoji}</Text>
-                  <Text style={[styles.roleBadgeText, { color: userRole.color }]}>{userRole.key}</Text>
+                  <Text style={[styles.roleBadgeText, { color: userRole.color }]}>{t(`publicProfile.roles.${userRole.key.toLowerCase()}`)}</Text>
                 </View>
               ) : null}
               <WeatherWidget
@@ -1033,7 +1089,7 @@ export default function UserProfileScreen() {
           {/* Birthday inline */}
           {profile.birthday ? (
             <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.60)', marginTop: 1 }}>
-              🎂 {fmtBirthday(profile.birthday)}
+              🎂 {fmtBirthday(profile.birthday, i18n.language)}
             </Text>
           ) : null}
 
@@ -1083,19 +1139,19 @@ export default function UserProfileScreen() {
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>📖</Text>
               <Text style={[styles.statNum, { color: '#78A8D4' }]}>{stories.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>STORIES</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.stories')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>🧥</Text>
               <Text style={[styles.statNum, { color: '#C8A84B' }]}>{outfits.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>OUTFITS</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.outfits')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>💗</Text>
-              <Text style={[styles.statNum, { color: '#D878B0' }]}>{totalWitnessed}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>LIKES</Text>
+              <Text style={[styles.statNum, { color: '#D878B0' }]}>{totalLikes}</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.likes')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
@@ -1103,7 +1159,7 @@ export default function UserProfileScreen() {
               <Text style={[styles.statNum, { color: isFounder ? '#C8A84B' : isBeta ? '#9B78E8' : colors.foreground }]}>
                 {Math.floor((profile.stars ?? 0) / XP_PER_LEVEL) + 1}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>LEVEL</Text>
+              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.level')}</Text>
             </View>
           </View>
 
@@ -1113,10 +1169,10 @@ export default function UserProfileScreen() {
             const cardColor   = isFounder ? '#C8A84B' : '#9B78E8';
             const cardDark    = isFounder ? '#6B4A14' : '#3A1878';
             const icon        = isFounder ? '👑'       : '⚗️';
-            const title       = isFounder ? 'Founder'  : 'Beta Pioneer';
+            const title       = isFounder ? t('publicProfile.founderTitle') : t('publicProfile.betaPioneerTitle');
             const description = isFounder
-              ? 'Joined before launch. Thank you for believing in Ximo. ✨'
-              : 'Helped shape Ximo during its early days. Thank you! 💜';
+              ? t('publicProfile.founderDescription')
+              : t('publicProfile.betaPioneerDescription');
             return (
               <View style={[styles.spotlightBadgeCard, {
                 backgroundColor: cardDark + '33',
@@ -1156,7 +1212,7 @@ export default function UserProfileScreen() {
               activeOpacity={0.8}
             >
               <Icon name="message-circle" size={15} color={aura.accent} />
-              <Text style={[styles.messageBtnText, { color: aura.accent }]}>Send Message</Text>
+              <Text style={[styles.messageBtnText, { color: aura.accent }]}>{t('publicProfile.sendMessage')}</Text>
             </TouchableOpacity>
           )}
 
@@ -1165,7 +1221,7 @@ export default function UserProfileScreen() {
             <View style={[styles.notifyRow, { borderTopColor: colors.border }]}>
               <Icon name="bell" size={14} color={aura.accent} />
               <Text style={[styles.notifyRowText, { color: colors.mutedForeground }]} numberOfLines={2}>
-                You'll see new posts from {profile.name} in your Discover feed
+                {t('publicProfile.newPostsNotice', { name: profile.name })}
               </Text>
               <Switch
                 value
@@ -1219,7 +1275,7 @@ export default function UserProfileScreen() {
               }}
               activeOpacity={0.86}
             >
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Current Outfit</Text>
+              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('publicProfile.currentOutfit')}</Text>
               <View style={styles.spotlightRow}>
                 {/* Left: outfit image */}
                 <View style={[styles.spotlightImgWrap, { backgroundColor: aura.accent + '18' }]}>
@@ -1245,7 +1301,7 @@ export default function UserProfileScreen() {
                 </View>
                 {/* Right: info */}
                 <View style={styles.spotlightInfo}>
-                  <Text style={[styles.spotlightAboutLabel, { color: colors.mutedForeground + '88' }]}>About this look</Text>
+                  <Text style={[styles.spotlightAboutLabel, { color: colors.mutedForeground + '88' }]}>{t('publicProfile.aboutLook')}</Text>
                   <Text style={[styles.spotlightDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
                     {profile.activeOutfit.description || profile.activeOutfit.name}
                   </Text>
@@ -1257,7 +1313,7 @@ export default function UserProfileScreen() {
                     ))}
                     {(profile.activeOutfit.tags ?? []).length === 0 && (
                       <View style={[styles.spotlightTag, { backgroundColor: colors.gold + '14', borderColor: colors.gold + '28' }]}>
-                        <Text style={[styles.spotlightTagText, { color: colors.gold }]}>Outfit</Text>
+                        <Text style={[styles.spotlightTagText, { color: colors.gold }]}>{t('publicProfile.outfit')}</Text>
                       </View>
                     )}
                   </View>
@@ -1270,8 +1326,8 @@ export default function UserProfileScreen() {
           {outfitsError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>Outfits unavailable</Text>
-                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>Couldn't load outfits right now</Text>
+                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>{t('publicProfile.outfitsUnavailable')}</Text>
+                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>{t('publicProfile.outfitsLoadError')}</Text>
               </View>
               <TouchableOpacity
                 style={[styles.inlineRetryBtn, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}
@@ -1279,14 +1335,14 @@ export default function UserProfileScreen() {
                 activeOpacity={0.75}
               >
                 <Icon name="refresh-cw" size={12} color={aura.accent} />
-                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>Retry</Text>
+                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>{t('publicProfile.retry')}</Text>
               </TouchableOpacity>
             </View>
           )}
           {!outfitsError && outfits.length > 0 && (
             <View style={styles.hSection}>
               <View style={styles.hSectionHeader}>
-                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Other Outfits</Text>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('publicProfile.otherOutfits')}</Text>
                 <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{outfits.length}</Text>
               </View>
               <ScrollView
@@ -1362,8 +1418,8 @@ export default function UserProfileScreen() {
           {booksError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>Books unavailable</Text>
-                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>Couldn't load books right now</Text>
+                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>{t('publicProfile.booksUnavailable')}</Text>
+                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>{t('publicProfile.booksLoadError')}</Text>
               </View>
               <TouchableOpacity
                 style={[styles.inlineRetryBtn, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}
@@ -1371,14 +1427,14 @@ export default function UserProfileScreen() {
                 activeOpacity={0.75}
               >
                 <Icon name="refresh-cw" size={12} color={aura.accent} />
-                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>Retry</Text>
+                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>{t('publicProfile.retry')}</Text>
               </TouchableOpacity>
             </View>
           )}
           {!booksError && books.length > 0 && (
             <View style={styles.hSection}>
               <View style={styles.hSectionHeader}>
-                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Books</Text>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('publicProfile.books')}</Text>
                 <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{books.length}</Text>
               </View>
               <ScrollView
@@ -1415,7 +1471,7 @@ export default function UserProfileScreen() {
                       <View style={styles.hBookMeta}>
                         <Icon name="book-open" size={9} color="rgba(200,184,232,0.75)" />
                         <Text style={styles.hBookChapters}>
-                          {book.chapterCount} {book.chapterCount === 1 ? 'ch' : 'chs'}
+                          {t('publicProfile.chapterCount', { count: book.chapterCount })}
                         </Text>
                       </View>
                     </LinearGradient>
@@ -1434,8 +1490,8 @@ export default function UserProfileScreen() {
           {storiesError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>Stories unavailable</Text>
-                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>Couldn't load stories right now</Text>
+                <Text style={[styles.inlineErrorTitle, { color: colors.foreground }]}>{t('publicProfile.storiesUnavailable')}</Text>
+                <Text style={[styles.inlineErrorSub, { color: colors.mutedForeground }]}>{t('publicProfile.storiesLoadError')}</Text>
               </View>
               <TouchableOpacity
                 style={[styles.inlineRetryBtn, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}
@@ -1443,14 +1499,14 @@ export default function UserProfileScreen() {
                 activeOpacity={0.75}
               >
                 <Icon name="refresh-cw" size={12} color={aura.accent} />
-                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>Retry</Text>
+                <Text style={[styles.inlineRetryText, { color: aura.accent }]}>{t('publicProfile.retry')}</Text>
               </TouchableOpacity>
             </View>
           )}
           {!storiesError && stories.length > 0 && (
             <View style={styles.hSection}>
               <View style={styles.hSectionHeader}>
-                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Stories</Text>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('publicProfile.stories')}</Text>
                 <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{stories.length}</Text>
               </View>
               <ScrollView
@@ -1493,7 +1549,9 @@ export default function UserProfileScreen() {
                             <Text style={styles.hStoryWitnessText}>{story.witnessedCount}</Text>
                           </View>
                           <View style={[styles.hMoodPill, { backgroundColor: mc + '28' }]}>
-                            <Text style={[styles.hMoodPillText, { color: mc }]}>{story.mood}</Text>
+                            <Text style={[styles.hMoodPillText, { color: mc }]}>
+                              {t(`publicProfile.moods.${story.mood}`, { defaultValue: story.mood })}
+                            </Text>
                           </View>
                         </View>
                       </LinearGradient>
@@ -1509,7 +1567,7 @@ export default function UserProfileScreen() {
             <View style={[styles.emptyState, { borderColor: aura.accent + '18' }]}>
               <Text style={{ fontSize: 24 }}>{aura.particle}</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                {profile.name} hasn't shared anything yet
+                {t('publicProfile.emptyContent', { name: profile.name })}
               </Text>
             </View>
           )}
@@ -1621,6 +1679,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   name: { flexShrink: 1, minWidth: 0, fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  profileLikesRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 3 },
+  profileLikeButton: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16,
+    borderWidth: 1, borderColor: 'rgba(155,120,232,0.35)',
+    backgroundColor: 'rgba(155,120,232,0.10)',
+  },
+  profileLikeButtonActive: { backgroundColor: 'rgba(244,177,213,0.14)', borderColor: 'rgba(244,177,213,0.4)' },
+  profileLikeText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  profileLikeCount: { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   nameBadge: {
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: 8, borderWidth: 1,

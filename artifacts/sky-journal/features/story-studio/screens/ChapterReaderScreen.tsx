@@ -32,6 +32,7 @@ import { useApiFetch } from '../utils/apiClient';
 import type { PanelOverlay } from '@/context/AppContext';
 import { Images } from '@/assets/images/index';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -186,6 +187,7 @@ function MangaPage({ page, screenW }: { page: ChapterPage; screenW: number }) {
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function ChapterReaderScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
   const apiFetch = useApiFetch();
@@ -251,7 +253,7 @@ export default function ChapterReaderScreen() {
     if (!chapter) return;
     try {
       await Share.share({
-        message: `Reading "${chapter.title}" — a chapter from Ximo ✦`,
+        message: t('studioReader.shareChapterMessage', { title: chapter.title }),
         title: chapter.title,
       });
     } catch { /* user dismissed */ }
@@ -273,15 +275,15 @@ export default function ChapterReaderScreen() {
   // ── Loading / Error ────────────────────────────────────────────────────────
 
   if (loading) {
-    return <View style={styles.root}><SkyLoadingOverlay message="Opening chapter…" /></View>;
+    return <View style={styles.root}><SkyLoadingOverlay message={t('studioReader.openingChapter')} /></View>;
   }
 
   if (!chapterId || !bookId) {
     return (
       <View style={[styles.root, { justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-        <Text style={styles.errorTxt}>This chapter link is missing an ID.</Text>
+        <Text style={styles.errorTxt}>{t('studioReader.missingChapterId')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-          <Text style={{ color: ACCENT, fontSize: 14 }}>Go back</Text>
+          <Text style={{ color: ACCENT, fontSize: 14 }}>{t('studioReader.goBackLower')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -291,9 +293,9 @@ export default function ChapterReaderScreen() {
     return (
       <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
         <Icon name="book-open" size={40} color="rgba(200,185,255,0.2)" />
-        <Text style={styles.errorTxt}>This chapter has no pages yet.</Text>
+        <Text style={styles.errorTxt}>{t('studioReader.noChapterPages')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-          <Text style={{ color: ACCENT, fontSize: 14 }}>Go back</Text>
+          <Text style={{ color: ACCENT, fontSize: 14 }}>{t('studioReader.goBackLower')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -304,7 +306,7 @@ export default function ChapterReaderScreen() {
   const endCard = (
     <View style={[styles.endCard, { width: screenW, minHeight: screenH, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24, paddingBottom: bottomInset + 72, gap: 20 }]}>
       <Icon name="check-circle" size={44} color={ACCENT} />
-      <Text style={styles.endTitle}>End of Chapter {chapter.orderIndex + 1}</Text>
+      <Text style={styles.endTitle}>{t('studioReader.endOfChapter', { number: chapter.orderIndex + 1 })}</Text>
       <Text style={styles.endSub}>"{chapter.title}"</Text>
       <TouchableOpacity
         style={styles.endBtn}
@@ -312,7 +314,7 @@ export default function ChapterReaderScreen() {
         activeOpacity={0.85}
       >
         <Icon name="message-circle" size={15} color="#fff" />
-        <Text style={styles.endBtnTxt}>Leave a comment</Text>
+        <Text style={styles.endBtnTxt}>{t('studioReader.leaveComment')}</Text>
       </TouchableOpacity>
       <TouchableOpacity
         style={[styles.endBtn, styles.endBtnSecondary]}
@@ -320,7 +322,7 @@ export default function ChapterReaderScreen() {
         activeOpacity={0.85}
       >
         <Icon name="book" size={15} color={ACCENT} />
-        <Text style={[styles.endBtnTxt, { color: ACCENT }]}>View all chapters</Text>
+        <Text style={[styles.endBtnTxt, { color: ACCENT }]}>{t('studioReader.viewAllChapters')}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -428,12 +430,12 @@ export default function ChapterReaderScreen() {
           onPress={() => router.push(`/engagement?chapterId=${chapterId}&bookId=${bookId}&tab=comments` as never)}
         >
           <Icon name="message-circle" size={20} color="rgba(255,255,255,0.60)" />
-          <Text style={styles.barBtnTxt}>Comments</Text>
+          <Text style={styles.barBtnTxt}>{t('studioReader.comments')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.barBtn} onPress={toggleBookmark}>
           <Icon name="bookmark" size={20} color={bookmarked ? '#FFCC44' : 'rgba(255,255,255,0.60)'} />
           <Text style={[styles.barBtnTxt, bookmarked && { color: '#FFCC44' }]}>
-            {bookmarked ? 'Bookmarked' : 'Bookmark'}
+            {bookmarked ? t('studioReader.bookmarked') : t('studioReader.bookmark')}
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -441,7 +443,7 @@ export default function ChapterReaderScreen() {
           onPress={() => router.push(`/book-public?bookId=${bookId}` as never)}
         >
           <Icon name="book" size={20} color="rgba(255,255,255,0.60)" />
-          <Text style={styles.barBtnTxt}>Chapters</Text>
+          <Text style={styles.barBtnTxt}>{t('studioReader.chapters')}</Text>
         </TouchableOpacity>
       </Animated.View>
     </View>

@@ -1,27 +1,28 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import type { ConstellationState } from '@/components/ConstellationMap';
+import { useTranslation } from 'react-i18next';
 
 interface ProgressRowDef {
-  label: string;
+  key: string;
   count: number;
   threshold: number;
   color: string;
   icon: string;
-  unit: string;
 }
 
 export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
   constellation: ConstellationState;
   triggerAnim?: number;
 }) {
+  const { t } = useTranslation();
   const rows: ProgressRowDef[] = [
-    { label: 'Social',   count: constellation.socialCount,   threshold: 5,  color: '#78C8A8', icon: '⬡', unit: 'follows'  },
-    { label: 'Memory',   count: constellation.memoryCount,   threshold: 10, color: '#9878C8', icon: '◇', unit: 'entries'  },
-    { label: 'Quiet',    count: constellation.quietStreak,   threshold: 7,  color: '#7890C8', icon: '◐', unit: 'days'     },
-    { label: 'Creative', count: constellation.creativeCount, threshold: 5,  color: '#C87AA8', icon: '◈', unit: 'stories'  },
-    { label: 'Helping',  count: constellation.helpingCount,  threshold: 20, color: '#C8A84B', icon: '✦', unit: 'stickers' },
-    { label: 'Seasonal', count: constellation.seasonalCount, threshold: 6,  color: '#68B8B0', icon: '✿', unit: 'outfits' },
+    { key: 'social', count: constellation.socialCount, threshold: 5, color: '#78C8A8', icon: '⬡' },
+    { key: 'memory', count: constellation.memoryCount, threshold: 10, color: '#9878C8', icon: '◇' },
+    { key: 'quiet', count: constellation.quietStreak, threshold: 7, color: '#7890C8', icon: '◐' },
+    { key: 'creative', count: constellation.creativeCount, threshold: 5, color: '#C87AA8', icon: '◈' },
+    { key: 'helping', count: constellation.helpingCount, threshold: 20, color: '#C8A84B', icon: '✦' },
+    { key: 'seasonal', count: constellation.seasonalCount, threshold: 6, color: '#68B8B0', icon: '✿' },
   ];
 
   const totalPct = Math.round(
@@ -51,10 +52,10 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
   return (
     <View style={s.card}>
       <View style={s.header}>
-        <Text style={s.headerLabel}>STAR PROGRESS</Text>
+        <Text style={s.headerLabel}>{t('components.progress.title')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <Text style={s.totalPct}>{totalPct}%</Text>
-          <Text style={s.overallLabel}>overall</Text>
+          <Text style={s.overallLabel}>{t('components.progress.overall')}</Text>
         </View>
       </View>
       <View style={s.overallBarBg}>
@@ -65,23 +66,23 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
       </View>
       <View style={s.rows}>
         {rows.map((r, i) => {
-          const done = constellation.unlockedStars.includes(r.label.toLowerCase());
+          const done = constellation.unlockedStars.includes(r.key);
           const pctN = Math.round(Math.min(1, r.count / r.threshold) * 100);
           return (
-            <View key={r.label}>
+            <View key={r.key}>
               <View style={s.rowHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={{ fontSize: 10, color: done ? r.color : 'rgba(200,184,232,0.30)' }}>{r.icon}</Text>
-                  <Text style={[s.rowLabel, { color: done ? r.color : 'rgba(200,184,232,0.55)' }]}>{r.label}</Text>
+                  <Text style={[s.rowLabel, { color: done ? r.color : 'rgba(200,184,232,0.55)' }]}>{t(`feature.season.${r.key}`)}</Text>
                   {done && (
                     <View style={[s.doneBadge, { backgroundColor: `${r.color}22` }]}>
-                      <Text style={[s.doneBadgeText, { color: r.color }]}>✓ done</Text>
+                      <Text style={[s.doneBadgeText, { color: r.color }]}>✓ {t('components.progress.done')}</Text>
                     </View>
                   )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={[s.rowCount, { color: done ? r.color : 'rgba(200,184,232,0.50)' }]}>
-                    {r.count} / {r.threshold} {r.unit}
+                    {r.count} / {r.threshold}
                   </Text>
                   <Text style={[s.rowPct, { color: done ? `${r.color}BB` : 'rgba(200,184,232,0.35)' }]}>
                     {pctN}%

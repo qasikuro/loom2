@@ -18,6 +18,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 interface Thread {
   partnerId:     string;
@@ -29,12 +30,12 @@ interface Thread {
   unread:        boolean;
 }
 
-function fmtThreadTime(iso: string): string {
+function fmtThreadTime(iso: string, t: (key: string) => string): string {
   const d   = new Date(iso);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1)   return 'now';
+  if (diffMins < 1)   return t('social.now');
   if (diffMins < 60)  return `${diffMins}m`;
   const diffHrs = Math.floor(diffMins / 60);
   if (diffHrs < 24)   return `${diffHrs}h`;
@@ -44,6 +45,7 @@ function fmtThreadTime(iso: string): string {
 }
 
 export default function MessagesInboxScreen() {
+  const { t } = useTranslation();
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -63,11 +65,11 @@ export default function MessagesInboxScreen() {
       setThreads(sorted);
       setError(null);
     } catch {
-      setError('Could not load messages');
+      setError(t('social.loadMessagesError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useFocusEffect(
     useCallback(() => {
@@ -98,16 +100,16 @@ export default function MessagesInboxScreen() {
       undefined,
       [
         {
-          text: 'Clear conversation',
+          text: t('social.clearConversation'),
           style: 'destructive',
           onPress: () => {
             Alert.alert(
-              'Clear conversation',
-              'This will remove all messages from your view. The other person will still see them.',
+              t('social.clearConversation'),
+              t('social.clearConversationBody'),
               [
-                { text: 'Cancel', style: 'cancel' },
+                { text: t('social.cancel'), style: 'cancel' },
                 {
-                  text: 'Clear',
+                  text: t('social.clear'),
                   style: 'destructive',
                   onPress: async () => {
                     // Remove from list immediately for instant feedback
@@ -120,7 +122,7 @@ export default function MessagesInboxScreen() {
                       setThreads(prev => [...prev, thread].sort(
                         (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
                       ));
-                      Alert.alert('Error', 'Could not clear the conversation. Try again.');
+                      Alert.alert(t('social.error'), t('social.clearError'));
                     } finally {
                       setClearingId(null);
                     }
@@ -130,7 +132,7 @@ export default function MessagesInboxScreen() {
             );
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('social.cancel'), style: 'cancel' },
       ],
     );
   }
@@ -167,7 +169,7 @@ export default function MessagesInboxScreen() {
               {item.partnerName}
             </Text>
             <Text style={[styles.threadTime, { color: item.unread ? colors.primary : colors.mutedForeground }]}>
-              {fmtThreadTime(item.lastAt)}
+              {fmtThreadTime(item.lastAt, t)}
             </Text>
           </View>
           {item.partnerHandle && (
@@ -203,7 +205,7 @@ export default function MessagesInboxScreen() {
         <View style={styles.headerRow}>
           <BackButton color="rgba(210,200,255,0.8)" />
           <View style={styles.headerTitleWrap}>
-            <Text style={styles.headerTitle}>Messages</Text>
+            <Text style={styles.headerTitle}>{t('social.messages')}</Text>
             {unreadCount > 0 && (
               <View style={[styles.unreadBadge, { backgroundColor: colors.primary }]}>
                 <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
@@ -238,9 +240,9 @@ export default function MessagesInboxScreen() {
               <View style={[styles.emptyIcon, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
                 <Icon name="message-circle" size={32} color={`${colors.primary}60`} />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No messages yet</Text>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('social.noMessages')}</Text>
               <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-                Connect with a Constellation Guide to start a conversation.
+                {t('social.connectGuide')}
               </Text>
               <TouchableOpacity
                 style={[styles.emptyBtn, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}30` }]}
@@ -249,7 +251,7 @@ export default function MessagesInboxScreen() {
                 activeOpacity={0.75}
               >
                 <Icon name="compass" size={14} color={colors.primary} />
-                <Text style={[styles.emptyBtnText, { color: colors.primary }]}>Find a Guide</Text>
+                <Text style={[styles.emptyBtnText, { color: colors.primary }]}>{t('social.findGuide')}</Text>
               </TouchableOpacity>
             </View>
           }

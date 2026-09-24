@@ -1,0 +1,221 @@
+/**
+ * Public-profile screen translations. Merge each locale's `publicProfile`
+ * namespace into the app's existing translation resource when integrating.
+ */
+const en = {
+  loading: 'Looking up this profile…',
+  errorUnavailable: 'This profile is unavailable.',
+  errorLoad: 'Could not load this profile.',
+  notFound: 'Profile not found.',
+  unblockUser: 'Unblock user',
+  unblockBody: '{{name}} will be able to send you messages again.',
+  unblock: 'Unblock',
+  blockUser: 'Block user',
+  blockBody: '{{name}} will no longer be able to message you, and their posts will be hidden from your feed. Any existing follows will be removed.',
+  block: 'Block',
+  report: 'Report',
+  retry: 'Retry',
+  topExplorer: 'Top Explorer',
+  following: 'Following',
+  follow: 'Follow',
+  online: 'Online',
+  offline: 'Offline',
+  levelShort: 'Lv',
+  roles: { collector: 'Collector', trader: 'Trader', veteran: 'Veteran', uber: 'Uber', solo: 'Solo' },
+  moods: {
+    Hopeful: 'Hopeful', Peaceful: 'Peaceful', Lonely: 'Lonely', Dreamy: 'Dreamy',
+    Romantic: 'Romantic', Soft: 'Soft', Chaotic: 'Chaotic', Joyful: 'Joyful',
+    Adventurous: 'Adventurous', Grateful: 'Grateful', Nostalgic: 'Nostalgic', Melancholy: 'Melancholy',
+  },
+  stats: { stories: 'STORIES', outfits: 'OUTFITS', likes: 'LIKES', level: 'LEVEL' },
+  founderTitle: 'Founder',
+  founderDescription: 'Joined before launch. Thank you for believing in Ximo. ✨',
+  betaPioneerTitle: 'Beta Pioneer',
+  betaPioneerDescription: 'Helped shape Ximo during its early days. Thank you! 💜',
+  sendMessage: 'Send Message',
+  newPostsNotice: "You'll see new posts from {{name}} in your Discover feed",
+  currentOutfit: 'Current Outfit',
+  aboutLook: 'About this look',
+  outfit: 'Outfit',
+  outfitsUnavailable: 'Outfits unavailable',
+  outfitsLoadError: "Couldn't load outfits right now",
+  otherOutfits: 'Other Outfits',
+  booksUnavailable: 'Books unavailable',
+  booksLoadError: "Couldn't load books right now",
+  books: 'Books',
+  chapterCount_one: '{{count}} ch',
+  chapterCount_other: '{{count}} chs',
+  storiesUnavailable: 'Stories unavailable',
+  storiesLoadError: "Couldn't load stories right now",
+  stories: 'Stories',
+  emptyContent: "{{name}} hasn't shared anything yet",
+};
+
+const ja = {
+  loading: 'プロフィールを確認しています…', errorUnavailable: 'このプロフィールは利用できません。', errorLoad: 'プロフィールを読み込めませんでした。', notFound: 'プロフィールが見つかりません。',
+  unblockUser: 'ユーザーのブロックを解除', unblockBody: '{{name}}から再びメッセージを受け取れるようになります。', unblock: 'ブロック解除', blockUser: 'ユーザーをブロック',
+  blockBody: '{{name}}はあなたにメッセージを送れなくなり、投稿はフィードに表示されなくなります。既存のフォローも解除されます。', block: 'ブロック', report: '報告', retry: '再試行',
+  topExplorer: 'トップエクスプローラー', following: 'フォロー中', follow: 'フォロー', online: 'オンライン', offline: 'オフライン', levelShort: 'Lv.',
+  roles: { collector: 'コレクター', trader: 'トレーダー', veteran: 'ベテラン', uber: 'ウーバー', solo: 'ソロ' },
+  moods: { Hopeful: '希望に満ちた', Peaceful: '穏やか', Lonely: '孤独', Dreamy: '夢見心地', Romantic: 'ロマンチック', Soft: '優しい', Chaotic: '混沌', Joyful: '楽しい', Adventurous: '冒険好き', Grateful: '感謝', Nostalgic: '懐かしい', Melancholy: '憂うつ' },
+  stats: { stories: 'ストーリー', outfits: 'コーデ', likes: 'いいね', level: 'レベル' },
+  founderTitle: '創設メンバー', founderDescription: 'ローンチ前から参加。Ximoを信じてくれてありがとう。✨', betaPioneerTitle: 'ベータパイオニア', betaPioneerDescription: '初期のXimoづくりに協力してくれました。ありがとう！💜',
+  sendMessage: 'メッセージを送る', newPostsNotice: '{{name}}の新しい投稿がDiscoverフィードに表示されます', currentOutfit: '現在のコーデ', aboutLook: 'このコーデについて', outfit: 'コーデ',
+  outfitsUnavailable: 'コーデを利用できません', outfitsLoadError: '現在コーデを読み込めません', otherOutfits: 'その他のコーデ', booksUnavailable: '本を利用できません', booksLoadError: '現在本を読み込めません', books: '本',
+  chapterCount_one: '{{count}}章', chapterCount_other: '{{count}}章', storiesUnavailable: 'ストーリーを利用できません', storiesLoadError: '現在ストーリーを読み込めません', stories: 'ストーリー', emptyContent: '{{name}}はまだ何もシェアしていません',
+};
+
+const es = {
+  loading: 'Buscando este perfil…', errorUnavailable: 'Este perfil no está disponible.', errorLoad: 'No se pudo cargar este perfil.', notFound: 'No se encontró el perfil.',
+  unblockUser: 'Desbloquear usuario', unblockBody: '{{name}} podrá volver a enviarte mensajes.', unblock: 'Desbloquear', blockUser: 'Bloquear usuario',
+  blockBody: '{{name}} ya no podrá enviarte mensajes y sus publicaciones se ocultarán de tu feed. También se eliminarán los seguimientos existentes.', block: 'Bloquear', report: 'Denunciar', retry: 'Reintentar',
+  topExplorer: 'Gran explorador', following: 'Siguiendo', follow: 'Seguir', online: 'En línea', offline: 'Desconectado', levelShort: 'Niv.',
+  roles: { collector: 'Coleccionista', trader: 'Comerciante', veteran: 'Veterano', uber: 'Uber', solo: 'En solitario' },
+  moods: { Hopeful: 'Esperanzado', Peaceful: 'En paz', Lonely: 'Solitario', Dreamy: 'Soñador', Romantic: 'Romántico', Soft: 'Dulce', Chaotic: 'Caótico', Joyful: 'Alegre', Adventurous: 'Aventurero', Grateful: 'Agradecido', Nostalgic: 'Nostálgico', Melancholy: 'Melancólico' },
+  stats: { stories: 'HISTORIAS', outfits: 'ATUENDOS', likes: 'ME GUSTA', level: 'NIVEL' },
+  founderTitle: 'Fundador', founderDescription: 'Se unió antes del lanzamiento. Gracias por confiar en Ximo. ✨', betaPioneerTitle: 'Pionero beta', betaPioneerDescription: 'Ayudó a dar forma a Ximo en sus primeros días. ¡Gracias! 💜',
+  sendMessage: 'Enviar mensaje', newPostsNotice: 'Verás las nuevas publicaciones de {{name}} en tu feed de Descubrir', currentOutfit: 'Atuendo actual', aboutLook: 'Sobre este look', outfit: 'Atuendo',
+  outfitsUnavailable: 'Atuendos no disponibles', outfitsLoadError: 'No se pudieron cargar los atuendos', otherOutfits: 'Otros atuendos', booksUnavailable: 'Libros no disponibles', booksLoadError: 'No se pudieron cargar los libros', books: 'Libros',
+  chapterCount_one: '{{count}} cap.', chapterCount_other: '{{count}} caps.', storiesUnavailable: 'Historias no disponibles', storiesLoadError: 'No se pudieron cargar las historias', stories: 'Historias', emptyContent: '{{name}} aún no ha compartido nada',
+};
+
+const tr = {
+  loading: 'Bu profil aranıyor…', errorUnavailable: 'Bu profil kullanılamıyor.', errorLoad: 'Profil yüklenemedi.', notFound: 'Profil bulunamadı.',
+  unblockUser: 'Kullanıcının engelini kaldır', unblockBody: '{{name}} sana yeniden mesaj gönderebilir.', unblock: 'Engeli kaldır', blockUser: 'Kullanıcıyı engelle',
+  blockBody: '{{name}} artık sana mesaj gönderemez ve gönderileri akışında gizlenir. Mevcut takipler de kaldırılır.', block: 'Engelle', report: 'Bildir', retry: 'Yeniden dene',
+  topExplorer: 'En İyi Kâşif', following: 'Takip ediliyor', follow: 'Takip et', online: 'Çevrimiçi', offline: 'Çevrimdışı', levelShort: 'Sv.',
+  roles: { collector: 'Koleksiyoncu', trader: 'Takasçı', veteran: 'Kıdemli', uber: 'Uber', solo: 'Tek başına' },
+  moods: { Hopeful: 'Umutlu', Peaceful: 'Huzurlu', Lonely: 'Yalnız', Dreamy: 'Hayalperest', Romantic: 'Romantik', Soft: 'Yumuşak', Chaotic: 'Kaotik', Joyful: 'Neşeli', Adventurous: 'Maceracı', Grateful: 'Minnettar', Nostalgic: 'Nostaljik', Melancholy: 'Melankolik' },
+  stats: { stories: 'HİKÂYELER', outfits: 'KIYAFETLER', likes: 'BEĞENİ', level: 'SEVİYE' },
+  founderTitle: 'Kurucu', founderDescription: 'Yayına alınmadan önce katıldı. Ximo’ya inandığın için teşekkürler. ✨', betaPioneerTitle: 'Beta Öncüsü', betaPioneerDescription: 'İlk günlerinde Ximo’nun şekillenmesine yardımcı oldu. Teşekkürler! 💜',
+  sendMessage: 'Mesaj gönder', newPostsNotice: '{{name}} adlı kişinin yeni gönderilerini Keşfet akışında göreceksin', currentOutfit: 'Şu anki kıyafet', aboutLook: 'Bu görünüm hakkında', outfit: 'Kıyafet',
+  outfitsUnavailable: 'Kıyafetler kullanılamıyor', outfitsLoadError: 'Kıyafetler şu anda yüklenemedi', otherOutfits: 'Diğer kıyafetler', booksUnavailable: 'Kitaplar kullanılamıyor', booksLoadError: 'Kitaplar şu anda yüklenemedi', books: 'Kitaplar',
+  chapterCount_one: '{{count}} bölüm', chapterCount_other: '{{count}} bölüm', storiesUnavailable: 'Hikâyeler kullanılamıyor', storiesLoadError: 'Hikâyeler şu anda yüklenemedi', stories: 'Hikâyeler', emptyContent: '{{name}} henüz hiçbir şey paylaşmadı',
+};
+
+const fr = {
+  loading: 'Recherche de ce profil…', errorUnavailable: 'Ce profil est indisponible.', errorLoad: 'Impossible de charger ce profil.', notFound: 'Profil introuvable.',
+  unblockUser: "Débloquer l'utilisateur", unblockBody: '{{name}} pourra de nouveau vous envoyer des messages.', unblock: 'Débloquer', blockUser: "Bloquer l'utilisateur",
+  blockBody: '{{name}} ne pourra plus vous envoyer de messages et ses publications seront masquées de votre fil. Les abonnements existants seront également supprimés.', block: 'Bloquer', report: 'Signaler', retry: 'Réessayer',
+  topExplorer: 'Explorateur hors pair', following: 'Abonné', follow: 'Suivre', online: 'En ligne', offline: 'Hors ligne', levelShort: 'Niv.',
+  roles: { collector: 'Collectionneur', trader: 'Échangeur', veteran: 'Vétéran', uber: 'Uber', solo: 'Solo' },
+  moods: { Hopeful: 'Plein d’espoir', Peaceful: 'Serein', Lonely: 'Solitaire', Dreamy: 'Rêveur', Romantic: 'Romantique', Soft: 'Doux', Chaotic: 'Chaotique', Joyful: 'Joyeux', Adventurous: 'Aventureux', Grateful: 'Reconnaissant', Nostalgic: 'Nostalgique', Melancholy: 'Mélancolique' },
+  stats: { stories: 'HISTOIRES', outfits: 'TENUES', likes: 'J’AIME', level: 'NIVEAU' },
+  founderTitle: 'Fondateur', founderDescription: 'A rejoint le projet avant son lancement. Merci de croire en Ximo. ✨', betaPioneerTitle: 'Pionnier bêta', betaPioneerDescription: 'A contribué à façonner Ximo à ses débuts. Merci ! 💜',
+  sendMessage: 'Envoyer un message', newPostsNotice: 'Vous verrez les nouvelles publications de {{name}} dans votre fil Découvrir', currentOutfit: 'Tenue actuelle', aboutLook: 'À propos de ce look', outfit: 'Tenue',
+  outfitsUnavailable: 'Tenues indisponibles', outfitsLoadError: 'Impossible de charger les tenues pour le moment', otherOutfits: 'Autres tenues', booksUnavailable: 'Livres indisponibles', booksLoadError: 'Impossible de charger les livres pour le moment', books: 'Livres',
+  chapterCount_one: '{{count}} chap.', chapterCount_other: '{{count}} chap.', storiesUnavailable: 'Histoires indisponibles', storiesLoadError: 'Impossible de charger les histoires pour le moment', stories: 'Histoires', emptyContent: '{{name}} n’a encore rien partagé',
+};
+
+const de = {
+  loading: 'Profil wird gesucht…', errorUnavailable: 'Dieses Profil ist nicht verfügbar.', errorLoad: 'Profil konnte nicht geladen werden.', notFound: 'Profil nicht gefunden.',
+  unblockUser: 'Nutzer entsperren', unblockBody: '{{name}} kann dir wieder Nachrichten senden.', unblock: 'Entsperren', blockUser: 'Nutzer blockieren',
+  blockBody: '{{name}} kann dir keine Nachrichten mehr senden und Beiträge werden in deinem Feed ausgeblendet. Bestehende Follows werden ebenfalls entfernt.', block: 'Blockieren', report: 'Melden', retry: 'Erneut versuchen',
+  topExplorer: 'Top-Entdecker', following: 'Gefolgt', follow: 'Folgen', online: 'Online', offline: 'Offline', levelShort: 'Lvl.',
+  roles: { collector: 'Sammler', trader: 'Händler', veteran: 'Veteran', uber: 'Uber', solo: 'Allein' },
+  moods: { Hopeful: 'Hoffnungsvoll', Peaceful: 'Friedlich', Lonely: 'Einsam', Dreamy: 'Verträumt', Romantic: 'Romantisch', Soft: 'Sanft', Chaotic: 'Chaotisch', Joyful: 'Fröhlich', Adventurous: 'Abenteuerlustig', Grateful: 'Dankbar', Nostalgic: 'Nostalgisch', Melancholy: 'Melancholisch' },
+  stats: { stories: 'GESCHICHTEN', outfits: 'OUTFITS', likes: 'LIKES', level: 'LEVEL' },
+  founderTitle: 'Gründer', founderDescription: 'War schon vor dem Start dabei. Danke, dass du an Ximo glaubst. ✨', betaPioneerTitle: 'Beta-Pionier', betaPioneerDescription: 'Hat Ximo in den Anfangstagen mitgestaltet. Danke! 💜',
+  sendMessage: 'Nachricht senden', newPostsNotice: 'Neue Beiträge von {{name}} erscheinen in deinem Entdecken-Feed', currentOutfit: 'Aktuelles Outfit', aboutLook: 'Über diesen Look', outfit: 'Outfit',
+  outfitsUnavailable: 'Outfits nicht verfügbar', outfitsLoadError: 'Outfits konnten gerade nicht geladen werden', otherOutfits: 'Weitere Outfits', booksUnavailable: 'Bücher nicht verfügbar', booksLoadError: 'Bücher konnten gerade nicht geladen werden', books: 'Bücher',
+  chapterCount_one: '{{count}} Kap.', chapterCount_other: '{{count}} Kap.', storiesUnavailable: 'Geschichten nicht verfügbar', storiesLoadError: 'Geschichten konnten gerade nicht geladen werden', stories: 'Geschichten', emptyContent: '{{name}} hat noch nichts geteilt',
+};
+
+const pt = {
+  loading: 'Buscando este perfil…', errorUnavailable: 'Este perfil não está disponível.', errorLoad: 'Não foi possível carregar este perfil.', notFound: 'Perfil não encontrado.',
+  unblockUser: 'Desbloquear usuário', unblockBody: '{{name}} poderá enviar mensagens para você novamente.', unblock: 'Desbloquear', blockUser: 'Bloquear usuário',
+  blockBody: '{{name}} não poderá mais enviar mensagens, e as publicações serão ocultadas do seu feed. Os seguidores existentes também serão removidos.', block: 'Bloquear', report: 'Denunciar', retry: 'Tentar novamente',
+  topExplorer: 'Grande explorador', following: 'Seguindo', follow: 'Seguir', online: 'Online', offline: 'Offline', levelShort: 'Nv.',
+  roles: { collector: 'Colecionador', trader: 'Negociante', veteran: 'Veterano', uber: 'Uber', solo: 'Solo' },
+  moods: { Hopeful: 'Esperançoso', Peaceful: 'Em paz', Lonely: 'Solitário', Dreamy: 'Sonhador', Romantic: 'Romântico', Soft: 'Suave', Chaotic: 'Caótico', Joyful: 'Alegre', Adventurous: 'Aventureiro', Grateful: 'Grato', Nostalgic: 'Nostálgico', Melancholy: 'Melancólico' },
+  stats: { stories: 'HISTÓRIAS', outfits: 'VISUAIS', likes: 'CURTIDAS', level: 'NÍVEL' },
+  founderTitle: 'Fundador', founderDescription: 'Entrou antes do lançamento. Obrigado por acreditar no Ximo. ✨', betaPioneerTitle: 'Pioneiro beta', betaPioneerDescription: 'Ajudou a moldar o Ximo nos primeiros dias. Obrigado! 💜',
+  sendMessage: 'Enviar mensagem', newPostsNotice: 'Você verá as novas publicações de {{name}} no seu feed Descobrir', currentOutfit: 'Visual atual', aboutLook: 'Sobre este visual', outfit: 'Visual',
+  outfitsUnavailable: 'Visuais indisponíveis', outfitsLoadError: 'Não foi possível carregar os visuais agora', otherOutfits: 'Outros visuais', booksUnavailable: 'Livros indisponíveis', booksLoadError: 'Não foi possível carregar os livros agora', books: 'Livros',
+  chapterCount_one: '{{count}} cap.', chapterCount_other: '{{count}} caps.', storiesUnavailable: 'Histórias indisponíveis', storiesLoadError: 'Não foi possível carregar as histórias agora', stories: 'Histórias', emptyContent: '{{name}} ainda não compartilhou nada',
+};
+
+const ko = {
+  loading: '프로필을 찾는 중…', errorUnavailable: '이 프로필은 이용할 수 없습니다.', errorLoad: '프로필을 불러오지 못했습니다.', notFound: '프로필을 찾을 수 없습니다.',
+  unblockUser: '사용자 차단 해제', unblockBody: '{{name}}님이 다시 메시지를 보낼 수 있습니다.', unblock: '차단 해제', blockUser: '사용자 차단',
+  blockBody: '{{name}}님이 더 이상 메시지를 보낼 수 없으며 게시물이 피드에서 숨겨집니다. 기존 팔로우도 해제됩니다.', block: '차단', report: '신고', retry: '다시 시도',
+  topExplorer: '최고의 탐험가', following: '팔로잉', follow: '팔로우', online: '온라인', offline: '오프라인', levelShort: '레벨',
+  roles: { collector: '수집가', trader: '거래자', veteran: '베테랑', uber: '우버', solo: '솔로' },
+  moods: { Hopeful: '희망찬', Peaceful: '평온한', Lonely: '외로운', Dreamy: '몽환적인', Romantic: '낭만적인', Soft: '부드러운', Chaotic: '혼란스러운', Joyful: '즐거운', Adventurous: '모험적인', Grateful: '감사하는', Nostalgic: '그리운', Melancholy: '우울한' },
+  stats: { stories: '스토리', outfits: '의상', likes: '좋아요', level: '레벨' },
+  founderTitle: '창립자', founderDescription: '출시 전에 함께했습니다. Ximo를 믿어 주셔서 감사합니다. ✨', betaPioneerTitle: '베타 개척자', betaPioneerDescription: '초기 Ximo를 함께 만들어 주셨습니다. 감사합니다! 💜',
+  sendMessage: '메시지 보내기', newPostsNotice: '{{name}}님의 새 게시물이 디스커버 피드에 표시됩니다', currentOutfit: '현재 의상', aboutLook: '이 룩 소개', outfit: '의상',
+  outfitsUnavailable: '의상을 이용할 수 없습니다', outfitsLoadError: '지금 의상을 불러올 수 없습니다', otherOutfits: '다른 의상', booksUnavailable: '책을 이용할 수 없습니다', booksLoadError: '지금 책을 불러올 수 없습니다', books: '책',
+  chapterCount_one: '{{count}}장', chapterCount_other: '{{count}}장', storiesUnavailable: '스토리를 이용할 수 없습니다', storiesLoadError: '지금 스토리를 불러올 수 없습니다', stories: '스토리', emptyContent: '{{name}}님은 아직 공유한 콘텐츠가 없습니다',
+};
+
+const zh = {
+  loading: '正在查找此个人资料…', errorUnavailable: '此个人资料不可用。', errorLoad: '无法加载此个人资料。', notFound: '未找到个人资料。',
+  unblockUser: '解除屏蔽用户', unblockBody: '{{name}}将可以再次给你发送消息。', unblock: '解除屏蔽', blockUser: '屏蔽用户',
+  blockBody: '{{name}}将无法再给你发消息，其帖子也会从你的动态中隐藏。现有的关注关系也会解除。', block: '屏蔽', report: '举报', retry: '重试',
+  topExplorer: '顶级探索者', following: '已关注', follow: '关注', online: '在线', offline: '离线', levelShort: '等级',
+  roles: { collector: '收藏家', trader: '交易者', veteran: '资深玩家', uber: '优选玩家', solo: '独行者' },
+  moods: { Hopeful: '充满希望', Peaceful: '平静', Lonely: '孤独', Dreamy: '梦幻', Romantic: '浪漫', Soft: '柔和', Chaotic: '混乱', Joyful: '快乐', Adventurous: '爱冒险', Grateful: '感恩', Nostalgic: '怀旧', Melancholy: '忧郁' },
+  stats: { stories: '故事', outfits: '装扮', likes: '赞', level: '等级' },
+  founderTitle: '创始成员', founderDescription: '在上线前加入。感谢你相信 Ximo。✨', betaPioneerTitle: '测试先锋', betaPioneerDescription: '在早期帮助塑造 Ximo。谢谢！💜',
+  sendMessage: '发送消息', newPostsNotice: '你会在发现动态中看到{{name}}的新帖子', currentOutfit: '当前装扮', aboutLook: '关于此造型', outfit: '装扮',
+  outfitsUnavailable: '装扮不可用', outfitsLoadError: '暂时无法加载装扮', otherOutfits: '其他装扮', booksUnavailable: '书籍不可用', booksLoadError: '暂时无法加载书籍', books: '书籍',
+  chapterCount_one: '{{count}}章', chapterCount_other: '{{count}}章', storiesUnavailable: '故事不可用', storiesLoadError: '暂时无法加载故事', stories: '故事', emptyContent: '{{name}}还没有分享任何内容',
+};
+
+const ru = {
+  loading: 'Ищем этот профиль…', errorUnavailable: 'Этот профиль недоступен.', errorLoad: 'Не удалось загрузить профиль.', notFound: 'Профиль не найден.',
+  unblockUser: 'Разблокировать пользователя', unblockBody: '{{name}} снова сможет отправлять вам сообщения.', unblock: 'Разблокировать', blockUser: 'Заблокировать пользователя',
+  blockBody: '{{name}} больше не сможет отправлять вам сообщения, а публикации будут скрыты из вашей ленты. Существующие подписки также будут удалены.', block: 'Заблокировать', report: 'Пожаловаться', retry: 'Повторить',
+  topExplorer: 'Лучший исследователь', following: 'Вы подписаны', follow: 'Подписаться', online: 'В сети', offline: 'Не в сети', levelShort: 'Ур.',
+  roles: { collector: 'Коллекционер', trader: 'Меняла', veteran: 'Ветеран', uber: 'Убер', solo: 'Одиночка' },
+  moods: { Hopeful: 'Полный надежды', Peaceful: 'Спокойный', Lonely: 'Одинокий', Dreamy: 'Мечтательный', Romantic: 'Романтичный', Soft: 'Нежный', Chaotic: 'Хаотичный', Joyful: 'Радостный', Adventurous: 'Авантюрный', Grateful: 'Благодарный', Nostalgic: 'Ностальгический', Melancholy: 'Меланхоличный' },
+  stats: { stories: 'ИСТОРИИ', outfits: 'ОБРАЗЫ', likes: 'ЛАЙКИ', level: 'УРОВЕНЬ' },
+  founderTitle: 'Основатель', founderDescription: 'Присоединился до запуска. Спасибо, что верите в Ximo. ✨', betaPioneerTitle: 'Бета-первопроходец', betaPioneerDescription: 'Помогал создавать Ximo в первые дни. Спасибо! 💜',
+  sendMessage: 'Отправить сообщение', newPostsNotice: 'Новые публикации {{name}} появятся в вашей ленте «Интересное»', currentOutfit: 'Текущий образ', aboutLook: 'Об этом образе', outfit: 'Образ',
+  outfitsUnavailable: 'Образы недоступны', outfitsLoadError: 'Не удалось загрузить образы', otherOutfits: 'Другие образы', booksUnavailable: 'Книги недоступны', booksLoadError: 'Не удалось загрузить книги', books: 'Книги',
+  chapterCount_one: '{{count}} гл.', chapterCount_few: '{{count}} гл.', chapterCount_many: '{{count}} гл.', chapterCount_other: '{{count}} гл.', storiesUnavailable: 'Истории недоступны', storiesLoadError: 'Не удалось загрузить истории', stories: 'Истории', emptyContent: '{{name}} пока ничего не публиковал(а)',
+};
+
+const ar = {
+  loading: 'جارٍ البحث عن هذا الملف الشخصي…', errorUnavailable: 'هذا الملف الشخصي غير متاح.', errorLoad: 'تعذّر تحميل هذا الملف الشخصي.', notFound: 'لم يتم العثور على الملف الشخصي.',
+  unblockUser: 'إلغاء حظر المستخدم', unblockBody: 'سيتمكن {{name}} من مراسلتك مجددًا.', unblock: 'إلغاء الحظر', blockUser: 'حظر المستخدم',
+  blockBody: 'لن يتمكن {{name}} من مراسلتك بعد الآن، وستُخفى منشوراته من موجزك. وستُزال المتابعات الحالية أيضًا.', block: 'حظر', report: 'إبلاغ', retry: 'إعادة المحاولة',
+  topExplorer: 'أفضل مستكشف', following: 'تتابعه', follow: 'متابعة', online: 'متصل', offline: 'غير متصل', levelShort: 'مستوى',
+  roles: { collector: 'جامع', trader: 'متداول', veteran: 'مخضرم', uber: 'أوبر', solo: 'منفرد' },
+  moods: { Hopeful: 'مفعم بالأمل', Peaceful: 'هادئ', Lonely: 'وحيد', Dreamy: 'حالم', Romantic: 'رومانسي', Soft: 'لطيف', Chaotic: 'فوضوي', Joyful: 'مبتهج', Adventurous: 'مغامر', Grateful: 'ممتن', Nostalgic: 'حنين', Melancholy: 'كئيب' },
+  stats: { stories: 'القصص', outfits: 'الإطلالات', likes: 'الإعجابات', level: 'المستوى' },
+  founderTitle: 'مؤسس', founderDescription: 'انضم قبل الإطلاق. شكرًا لإيمانك بـ Ximo. ✨', betaPioneerTitle: 'رائد النسخة التجريبية', betaPioneerDescription: 'ساعد في تشكيل Ximo في أيامه الأولى. شكرًا لك! 💜',
+  sendMessage: 'إرسال رسالة', newPostsNotice: 'ستظهر منشورات {{name}} الجديدة في موجز الاستكشاف لديك', currentOutfit: 'الإطلالة الحالية', aboutLook: 'نبذة عن هذه الإطلالة', outfit: 'إطلالة',
+  outfitsUnavailable: 'الإطلالات غير متاحة', outfitsLoadError: 'تعذّر تحميل الإطلالات الآن', otherOutfits: 'إطلالات أخرى', booksUnavailable: 'الكتب غير متاحة', booksLoadError: 'تعذّر تحميل الكتب الآن', books: 'الكتب',
+  chapterCount_zero: '{{count}} فصل', chapterCount_one: '{{count}} فصل', chapterCount_two: '{{count}} فصلان', chapterCount_few: '{{count}} فصول', chapterCount_many: '{{count}} فصلًا', chapterCount_other: '{{count}} فصل', storiesUnavailable: 'القصص غير متاحة', storiesLoadError: 'تعذّر تحميل القصص الآن', stories: 'القصص', emptyContent: 'لم يشارك {{name}} أي شيء بعد',
+};
+
+const it = {
+  loading: 'Ricerca del profilo…', errorUnavailable: 'Questo profilo non è disponibile.', errorLoad: 'Impossibile caricare il profilo.', notFound: 'Profilo non trovato.',
+  unblockUser: 'Sblocca utente', unblockBody: '{{name}} potrà inviarti di nuovo messaggi.', unblock: 'Sblocca', blockUser: 'Blocca utente',
+  blockBody: '{{name}} non potrà più inviarti messaggi e i suoi post verranno nascosti dal tuo feed. Verranno rimossi anche i follow esistenti.', block: 'Blocca', report: 'Segnala', retry: 'Riprova',
+  topExplorer: 'Esploratore top', following: 'Segui già', follow: 'Segui', online: 'Online', offline: 'Offline', levelShort: 'Liv.',
+  roles: { collector: 'Collezionista', trader: 'Commerciante', veteran: 'Veterano', uber: 'Uber', solo: 'Solitario' },
+  moods: { Hopeful: 'Speranzoso', Peaceful: 'Sereno', Lonely: 'Solo', Dreamy: 'Sognante', Romantic: 'Romantico', Soft: 'Delicato', Chaotic: 'Caotico', Joyful: 'Gioioso', Adventurous: 'Avventuroso', Grateful: 'Grato', Nostalgic: 'Nostalgico', Melancholy: 'Malinconico' },
+  stats: { stories: 'STORIE', outfits: 'LOOK', likes: 'MI PIACE', level: 'LIVELLO' },
+  founderTitle: 'Fondatore', founderDescription: 'Si è unito prima del lancio. Grazie per credere in Ximo. ✨', betaPioneerTitle: 'Pioniere beta', betaPioneerDescription: 'Ha contribuito a plasmare Ximo agli inizi. Grazie! 💜',
+  sendMessage: 'Invia messaggio', newPostsNotice: 'Vedrai i nuovi post di {{name}} nel tuo feed Scopri', currentOutfit: 'Look attuale', aboutLook: 'Informazioni sul look', outfit: 'Look',
+  outfitsUnavailable: 'Look non disponibili', outfitsLoadError: 'Impossibile caricare i look al momento', otherOutfits: 'Altri look', booksUnavailable: 'Libri non disponibili', booksLoadError: 'Impossibile caricare i libri al momento', books: 'Libri',
+  chapterCount_one: '{{count}} cap.', chapterCount_other: '{{count}} capp.', storiesUnavailable: 'Storie non disponibili', storiesLoadError: 'Impossibile caricare le storie al momento', stories: 'Storie', emptyContent: '{{name}} non ha ancora condiviso nulla',
+};
+
+export const publicProfileTranslations = {
+  en: { publicProfile: en },
+  ja: { publicProfile: ja },
+  es: { publicProfile: es },
+  tr: { publicProfile: tr },
+  fr: { publicProfile: fr },
+  de: { publicProfile: de },
+  pt: { publicProfile: pt },
+  ko: { publicProfile: ko },
+  zh: { publicProfile: zh },
+  ru: { publicProfile: ru },
+  ar: { publicProfile: ar },
+  it: { publicProfile: it },
+};

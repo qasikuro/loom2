@@ -16,6 +16,7 @@ import { BadgeTray } from '@/components/profile/BadgeTray';
 import { useColors } from '@/hooks/useColors';
 import type { DiscoverPost } from '@/context/AppContext';
 import { extractPullQuote } from '@/utils/storyUtils';
+import { useTranslation } from 'react-i18next';
 
 const MOOD_GRADIENTS: Record<string, [string, string, string]> = {
   Hopeful:     ['#1C1A50', '#2A2870', '#221E5C'],
@@ -53,6 +54,7 @@ export function DiscoverCard({
   isVideoPlaying = false, videoMuted = true, onMuteToggle,
 }: DiscoverCardProps) {
   useColors();
+  const { t } = useTranslation();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
 
@@ -214,7 +216,7 @@ export function DiscoverCard({
 
           {/* Chapter badge at top-right */}
           <View style={styles.chapterBadge}>
-            <Text style={styles.chapterText}>Ch. {post.chapterNumber}</Text>
+            <Text style={styles.chapterText}>{t('discoverLog.chapterNumber', { count: post.chapterNumber })}</Text>
           </View>
         </View>
 
@@ -278,9 +280,11 @@ export function DiscoverCard({
                 ]}
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                 activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={confirmingDelete ? t('discoverLog.confirmDelete') : t('discoverLog.delete')}
               >
                 {confirmingDelete
-                  ? <Text style={styles.deleteText}>Delete?</Text>
+                  ? <Text style={styles.deleteText}>{t('discoverLog.confirmDelete')}</Text>
                   : <Icon name="trash-2" size={13} color="rgba(200,184,232,0.4)" />
                 }
               </TouchableOpacity>
@@ -295,6 +299,8 @@ export function DiscoverCard({
                 post.saved && { backgroundColor: 'rgba(107,91,149,0.2)', borderColor: 'rgba(107,91,149,0.45)' },
               ]}
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={post.saved ? t('discoverLog.removeSaved') : t('discoverLog.save')}
             >
               <Icon
                 name="bookmark"
@@ -307,12 +313,14 @@ export function DiscoverCard({
                 onPress={onReport}
                 style={styles.iconBtn}
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('discoverLog.report')}
               >
                 <Icon name="flag" size={13} color="rgba(200,184,232,0.35)" />
               </TouchableOpacity>
             )}
             <TouchableOpacity onPress={onPress} style={styles.readBtn} activeOpacity={0.82}>
-              <Text style={styles.readBtnText}>{post.contentType === 'video' ? 'Watch' : 'Read'}</Text>
+              <Text style={styles.readBtnText}>{post.contentType === 'video' ? t('discoverLog.watch') : t('discoverLog.read')}</Text>
               <Icon name="chevron-right" size={11} color="#B8A8E0" />
             </TouchableOpacity>
           </View>

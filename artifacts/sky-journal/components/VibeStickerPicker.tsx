@@ -11,6 +11,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import { useSound } from '@/context/SoundContext';
 import { registerNativeSound } from '@/utils/soundRegistry';
+import { useTranslation } from 'react-i18next';
 
 // ── Sticker catalogue ──────────────────────────────────────────────────────────
 
@@ -123,6 +124,7 @@ function StickerBtn({
   sticker: (typeof STICKERS)[number];
   onSelect: (type: StickerType) => void;
 }) {
+  const { t } = useTranslation();
   const scale  = useRef(new Animated.Value(1)).current;
   const flyY   = useRef(new Animated.Value(0)).current;
   const flyOp  = useRef(new Animated.Value(0)).current;
@@ -167,7 +169,7 @@ function StickerBtn({
         </Animated.View>
       </View>
       <Text style={[styles.stickerLabel, { color: sticker.color }]} numberOfLines={1}>
-        {sticker.type}
+        {t(`components.moods.${sticker.type.toLowerCase()}`)}
       </Text>
     </TouchableOpacity>
   );
@@ -182,6 +184,7 @@ interface VibeStickerPickerProps {
 }
 
 export function VibeStickerPicker({ visible, onSelect, onClose }: VibeStickerPickerProps) {
+  const { t } = useTranslation();
   const slideAnim    = useRef(new Animated.Value(0)).current;
   const [sent, setSent]         = useState<StickerType | null>(null);
   const { soundEnabled }        = useSound();
@@ -227,7 +230,7 @@ export function VibeStickerPicker({ visible, onSelect, onClose }: VibeStickerPic
     <Animated.View style={[styles.picker, { opacity, transform: [{ translateY }] }]}>
       {/* Header */}
       <View style={styles.pickerHeader}>
-        <Text style={styles.pickerTitle}>Send a vibe ✦</Text>
+        <Text style={styles.pickerTitle}>{t('components.vibePicker.title')}</Text>
         <TouchableOpacity onPress={onClose} style={styles.closeBtn} hitSlop={14}>
           <Text style={styles.closeBtnText}>✕</Text>
         </TouchableOpacity>
@@ -238,8 +241,8 @@ export function VibeStickerPicker({ visible, onSelect, onClose }: VibeStickerPic
         <View style={styles.sentRow}>
           <Text style={styles.sentEmoji}>{STICKERS.find(s => s.type === sent)?.emoji}</Text>
           <View>
-            <Text style={styles.sentTitle}>{sent} vibe sent!</Text>
-            <Text style={styles.sentSub}>They'll feel it ✦</Text>
+            <Text style={styles.sentTitle}>{t('components.vibePicker.sent', { mood: t(`components.moods.${sent.toLowerCase()}`) })}</Text>
+            <Text style={styles.sentSub}>{t('components.vibePicker.sentSub')}</Text>
           </View>
         </View>
       ) : (

@@ -17,6 +17,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Platform,
@@ -32,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const USERNAME_REGEX = /^[a-z0-9_]{3,20}$/;
 
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { userId } = useAuth();
@@ -81,7 +83,7 @@ export default function OnboardingScreen() {
     const value = username.trim().toLowerCase();
     setUsernameError(null);
     if (!USERNAME_REGEX.test(value)) {
-      setUsernameError('Use 3–20 lowercase letters, numbers, or _');
+      setUsernameError(t('onboarding.usernameRules'));
       return;
     }
     setSaving(true);
@@ -89,7 +91,7 @@ export default function OnboardingScreen() {
       if (value !== character.username) {
         const result = await apiFetch<{ available: boolean }>(`/users/check-username?username=${encodeURIComponent(value)}`);
         if (!result.available) {
-          setUsernameError('That username is already taken');
+          setUsernameError(t('onboarding.usernameTaken'));
           return;
         }
       }
@@ -97,7 +99,7 @@ export default function OnboardingScreen() {
       if (progress) update({ ...complete(progress, 1), currentStep: 2 });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      setUsernameError('Could not save. Try again.');
+      setUsernameError(t('onboarding.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -130,7 +132,7 @@ export default function OnboardingScreen() {
     <View style={s.root}>
       <LinearGradient colors={['#070418', '#10092A', '#06030F']} style={StyleSheet.absoluteFill} />
       <View style={[s.top, { paddingTop: Platform.OS === 'web' ? 72 : insets.top + 14 }]}>
-        <Text style={s.count}>{step} of 4</Text>
+        <Text style={s.count}>{t('onboarding.stepCount', { step })}</Text>
         <View style={s.dots}>
           {[1, 2, 3, 4].map(n => <View key={n} style={[s.dot, n <= step && s.dotOn]} />)}
         </View>
@@ -138,15 +140,15 @@ export default function OnboardingScreen() {
       <ScrollView contentContainerStyle={[s.content, { paddingBottom: Math.max(insets.bottom, 20) + 20 }]} keyboardShouldPersistTaps="handled">
         {step === 1 && (
           <>
-            <Heading title="Set up your profile" subtitle="Choose your username and profile picture." />
+            <Heading title={t('onboarding.setupTitle')} subtitle={t('onboarding.setupSubtitle')} />
             <View style={s.previewCard}>
               <TouchableOpacity style={s.avatar} onPress={pickAvatar} activeOpacity={0.8}>
                 <Image source={character.avatarUri ? { uri: character.avatarUri } : Images.character_default} style={StyleSheet.absoluteFill} contentFit="cover" />
                 <View style={s.camera}><Icon name="camera" size={14} color="#fff" /></View>
                 {avatarUploading && <View style={s.avatarBusy}><ActivityIndicator color="#fff" /></View>}
               </TouchableOpacity>
-              <Text style={s.previewName}>@{username || 'your_username'}</Text>
-              <Text style={s.previewHint}>Tap the picture to choose one</Text>
+              <Text style={s.previewName}>@{username || t('onboarding.yourUsername')}</Text>
+              <Text style={s.previewHint}>{t('onboarding.tapPicture')}</Text>
             </View>
             <View style={s.inputWrap}>
               <Text style={s.at}>@</Text>
@@ -154,7 +156,7 @@ export default function OnboardingScreen() {
                 value={username}
                 onChangeText={v => { setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
                 style={s.input}
-                placeholder="your_username"
+                placeholder={t('onboarding.yourUsername')}
                 placeholderTextColor="rgba(210,198,240,0.35)"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -162,19 +164,19 @@ export default function OnboardingScreen() {
               />
             </View>
             {!!usernameError && <Text style={s.error}>{usernameError}</Text>}
-            <MainButton label={saving ? 'Saving…' : 'Continue'} onPress={saveProfile} disabled={saving || avatarUploading} />
+            <MainButton label={saving ? t('onboarding.saving') : t('auth.continue')} onPress={saveProfile} disabled={saving || avatarUploading} />
           </>
         )}
 
         {step === 2 && (
           <>
             <Heading
-              title={justCreated ? 'Your first post is ready!' : 'Make your first post'}
-              subtitle={justCreated ? 'You can find it on your profile.' : 'Choose a picture and turn it into something creative.'}
+              title={justCreated ? t('onboarding.firstPostReady') : t('onboarding.makeFirstPost')}
+              subtitle={justCreated ? t('onboarding.findPost') : t('onboarding.postPrompt')}
             />
-            <FeatureCard icon="star" label="Quick with AI" detail="Choose a picture, create it, then post it." />
+            <FeatureCard icon="star" label={t('onboarding.quickWithAi')} detail={t('onboarding.quickWithAiDetail')} />
             <MainButton
-              label={justCreated ? 'Continue' : 'Create post'}
+              label={justCreated ? t('auth.continue') : t('onboarding.createPost')}
               onPress={() => justCreated ? update({ ...progress, currentStep: 3 }) : router.push('/quick-moment' as never)}
             />
             {!justCreated && <Skip onPress={skip} />}
@@ -184,12 +186,12 @@ export default function OnboardingScreen() {
         {step === 3 && (
           <>
             <Heading
-              title={justCreated ? 'Your first outfit is ready!' : 'Create your first outfit'}
-              subtitle={justCreated ? 'It is now part of your profile.' : 'Show people your style.'}
+              title={justCreated ? t('onboarding.firstOutfitReady') : t('onboarding.createFirstOutfit')}
+              subtitle={justCreated ? t('onboarding.outfitReadySubtitle') : t('onboarding.outfitPrompt')}
             />
-            <FeatureCard icon="camera" label="Add your look" detail="Choose a photo, give the outfit a name, and save it." />
+            <FeatureCard icon="camera" label={t('onboarding.addYourLook')} detail={t('onboarding.outfitDetail')} />
             <MainButton
-              label={justCreated ? 'Continue' : 'Create outfit'}
+              label={justCreated ? t('auth.continue') : t('onboarding.createOutfit')}
               onPress={() => justCreated ? update({ ...progress, currentStep: 4 }) : router.push('/create-outfit' as never)}
             />
             {!justCreated && <Skip onPress={skip} />}
@@ -198,16 +200,16 @@ export default function OnboardingScreen() {
 
         {step === 4 && (
           <>
-            <Heading title="You're all set!" subtitle="Your profile is ready. Take a look around and see what you can create." />
+            <Heading title={t('onboarding.allSet')} subtitle={t('onboarding.allSetSubtitle')} />
             <View style={s.summary}>
               <Image source={character.avatarUri ? { uri: character.avatarUri } : Images.character_default} style={s.summaryAvatar} contentFit="cover" />
-              <Text style={s.summaryUser}>@{character.username || username || 'your_username'}</Text>
+              <Text style={s.summaryUser}>@{character.username || username || t('onboarding.yourUsername')}</Text>
               <View style={s.summaryRow}>
-                <SummaryItem icon="image" label={stories[0]?.chapterTitle || 'First post'} done={progress.completed.includes(2)} />
-                <SummaryItem icon="star" label={outfits[0]?.name || 'First outfit'} done={progress.completed.includes(3)} />
+                <SummaryItem icon="image" label={stories[0]?.chapterTitle || t('onboarding.firstPost')} done={progress.completed.includes(2)} />
+                <SummaryItem icon="star" label={outfits[0]?.name || t('onboarding.firstOutfit')} done={progress.completed.includes(3)} />
               </View>
             </View>
-            <MainButton label="Start exploring" onPress={finish} />
+            <MainButton label={t('onboarding.explore')} onPress={finish} />
           </>
         )}
       </ScrollView>
@@ -226,13 +228,15 @@ function MainButton({ label, onPress, disabled }: { label: string; onPress: () =
   return <TouchableOpacity style={[s.mainButton, disabled && { opacity: 0.55 }]} onPress={onPress} disabled={disabled} activeOpacity={0.84}><Text style={s.mainButtonText}>{label}</Text><Icon name="arrow-right" size={18} color="#10091F" /></TouchableOpacity>;
 }
 function Skip({ onPress }: { onPress: () => void }) {
-  return <TouchableOpacity onPress={onPress} style={s.skip}><Text style={s.skipText}>Skip for now</Text></TouchableOpacity>;
+  const { t } = useTranslation();
+  return <TouchableOpacity onPress={onPress} style={s.skip}><Text style={s.skipText}>{t('onboarding.skip')}</Text></TouchableOpacity>;
 }
 function FeatureCard({ icon, label, detail }: { icon: 'star' | 'camera'; label: string; detail: string }) {
   return <View style={s.feature}><View style={s.featureIcon}><Icon name={icon} size={25} color="#CDB7FF" /></View><Text style={s.featureTitle}>{label}</Text><Text style={s.featureDetail}>{detail}</Text></View>;
 }
 function SummaryItem({ icon, label, done }: { icon: 'image' | 'star'; label: string; done: boolean }) {
-  return <View style={s.summaryItem}><Icon name={icon} size={20} color={done ? '#CDB7FF' : 'rgba(205,183,255,0.35)'} /><Text style={s.summaryLabel} numberOfLines={2}>{done ? label : 'Skipped for now'}</Text></View>;
+  const { t } = useTranslation();
+  return <View style={s.summaryItem}><Icon name={icon} size={20} color={done ? '#CDB7FF' : 'rgba(205,183,255,0.35)'} /><Text style={s.summaryLabel} numberOfLines={2}>{done ? label : t('onboarding.skipped')}</Text></View>;
 }
 
 const s = StyleSheet.create({

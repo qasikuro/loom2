@@ -1,5 +1,6 @@
 import { Icon } from '@/components/Icon';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated,
@@ -42,6 +43,7 @@ interface Props {
 }
 
 export function ConstellationStarSheet({ starKey, constellation, onClose }: Props) {
+  const { t, i18n } = useTranslation();
   const visible  = !!starKey;
   const star     = starKey ? CONSTELLATION_STARS.find(s => s.key === starKey) ?? null : null;
   const isUnlocked = starKey ? constellation.unlockedStars.includes(starKey) : false;
@@ -88,9 +90,13 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
   const rawCount    = countForStar(star.key, constellation);
   const threshold   = STAR_THRESHOLDS[star.key] ?? 1;
   const rewardColor = REWARD_COLORS[star.key] ?? '#C8A84B';
+  const starName = t(`feature.season.${star.key}`, { defaultValue: star.label });
+  const starDescription = t(`feature.season.${star.key}Hint`, { defaultValue: star.description });
+  const criterionKey = `feature.season.how${star.key[0].toUpperCase()}${star.key.slice(1)}`;
+  const criterion = t(criterionKey, { defaultValue: star.criterion });
   const unlockDate  = constellation.starUnlockDates?.[star.key];
   const formattedDate = unlockDate
-    ? new Date(unlockDate).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(unlockDate).toLocaleDateString(i18n.resolvedLanguage, { year: 'numeric', month: 'long', day: 'numeric' })
     : null;
 
   return (
@@ -108,8 +114,8 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
               <Icon name={star.icon as any} size={18} color={star.color} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={[styles.starName, { color: star.color }]}>{star.label} Star</Text>
-              <Text style={styles.description} numberOfLines={2}>{star.description}</Text>
+              <Text style={[styles.starName, { color: star.color }]}>{t('feature.starSheet.star', { name: starName })}</Text>
+              <Text style={styles.description} numberOfLines={2}>{starDescription}</Text>
             </View>
             <View style={[
               styles.statusBadge,
@@ -118,7 +124,7 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
                 : { backgroundColor: 'rgba(107,91,149,0.08)', borderColor: 'rgba(107,91,149,0.18)' },
             ]}>
               <Text style={[styles.statusText, { color: isUnlocked ? star.color : 'rgba(200,184,232,0.50)' }]}>
-                {isUnlocked ? '✦ Earned' : 'Locked'}
+                {isUnlocked ? t('feature.starSheet.earned') : t('feature.starSheet.locked')}
               </Text>
             </View>
           </View>
@@ -133,24 +139,24 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
                 <Text style={{ fontSize: 14 }}>✦</Text>
               </View>
               <View style={{ flex: 1, gap: 2 }}>
-                <Text style={[styles.unlockedLabel, { color: star.color }]}>Constellation achieved</Text>
+                <Text style={[styles.unlockedLabel, { color: star.color }]}>{t('feature.starSheet.achieved')}</Text>
                 {formattedDate ? (
-                  <Text style={styles.unlockedDate}>Unlocked on {formattedDate}</Text>
+                  <Text style={styles.unlockedDate}>{t('feature.starSheet.unlockedOn', { date: formattedDate })}</Text>
                 ) : (
-                  <Text style={styles.unlockedDate}>Your light has been recorded</Text>
+                  <Text style={styles.unlockedDate}>{t('feature.starSheet.recorded')}</Text>
                 )}
               </View>
             </View>
           ) : (
             <View style={styles.requirementRow}>
               <Icon name="lock" size={11} color="rgba(200,184,232,0.35)" />
-              <Text style={styles.criterion}>{star.criterion}</Text>
+              <Text style={styles.criterion}>{criterion}</Text>
             </View>
           )}
 
           {/* Reward chip */}
           <View style={styles.rewardRow}>
-            <Text style={styles.rewardLabel}>{isUnlocked ? 'EARNED' : 'UNLOCKS'}</Text>
+            <Text style={styles.rewardLabel}>{isUnlocked ? t('feature.starSheet.earnedLabel') : t('feature.starSheet.unlocks')}</Text>
             <View style={[styles.rewardChip, { backgroundColor: `${rewardColor}14`, borderColor: `${rewardColor}30` }]}>
               <Text style={[styles.rewardValue, { color: rewardColor }]}>
                 {STAR_REWARDS[star.key]}
@@ -161,7 +167,7 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
           {/* Progress bar */}
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
-              <Text style={styles.progressTitle}>Progress</Text>
+              <Text style={styles.progressTitle}>{t('feature.starSheet.progress')}</Text>
               <Text style={[styles.progressCount, { color: isUnlocked ? star.color : 'rgba(200,184,232,0.65)' }]}>
                 {rawCount} / {threshold} {star.unit}
               </Text>
@@ -179,7 +185,7 @@ export function ConstellationStarSheet({ starKey, constellation, onClose }: Prop
             </View>
             {!isUnlocked && rawCount < threshold && (
               <Text style={styles.progressHint}>
-                {threshold - rawCount} more {star.unit} to go
+                {t('feature.starSheet.moreToGo', { n: threshold - rawCount, unit: star.unit })}
               </Text>
             )}
           </View>

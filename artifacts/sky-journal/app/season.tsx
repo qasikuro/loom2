@@ -7,6 +7,7 @@
  */
 import { Icon } from '@/components/Icon';
 import { useApp } from '@/context/AppContext';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -48,16 +49,17 @@ function getSeasonStart(): Date {
 }
 
 const ALL_STARS = [
-  { key: 'social',   label: 'Social',    icon: '👥', color: '#78C8A8', hint: 'Follow & connect with other wanderers' },
-  { key: 'memory',   label: 'Memory',    icon: '📖', color: '#9878C8', hint: 'Write journal entries regularly' },
-  { key: 'quiet',    label: 'Quiet',     icon: '🌙', color: '#7890C8', hint: 'Maintain a daily journaling streak' },
-  { key: 'creative', label: 'Creative',  icon: '✨', color: '#C87AA8', hint: 'Create and share public stories' },
-  { key: 'helping',  label: 'Helping',   icon: '💛', color: '#C8A84B', hint: 'Save stories and give stickers' },
-  { key: 'seasonal', label: 'Seasonal',  icon: '🍃', color: '#68B8B0', hint: 'Participate in seasonal events' },
+  { key: 'social',   icon: '👥', color: '#78C8A8' },
+  { key: 'memory',   icon: '📖', color: '#9878C8' },
+  { key: 'quiet',    icon: '🌙', color: '#7890C8' },
+  { key: 'creative', icon: '✨', color: '#C87AA8' },
+  { key: 'helping',  icon: '💛', color: '#C8A84B' },
+  { key: 'seasonal', icon: '🍃', color: '#68B8B0' },
 ];
 
 export default function SeasonScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { constellation } = useApp();
 
   const month  = new Date().getMonth();
@@ -115,7 +117,7 @@ export default function SeasonScreen() {
         >
           <Icon name="chevron-left" size={18} color="rgba(242,232,255,0.80)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Season</Text>
+        <Text style={s.headerTitle}>{t('feature.season.title')}</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -128,14 +130,14 @@ export default function SeasonScreen() {
           <View style={[s.glowOrb, { backgroundColor: color }]} />
           <View style={s.eyebrowRow}>
             <Text style={s.seasonIconLg}>{icon}</Text>
-            <Text style={[s.eyebrow, { color }]}>CURRENT SEASON</Text>
+            <Text style={[s.eyebrow, { color }]}>{t('feature.season.current')}</Text>
             <View style={{ flex: 1 }} />
             <View style={[s.daysChip, { backgroundColor: `${color}22`, borderColor: `${color}44` }]}>
-              <Text style={[s.daysChipTxt, { color }]}>{daysLeft}d left</Text>
+              <Text style={[s.daysChipTxt, { color }]}>{t('feature.season.daysLeft', { n: daysLeft })}</Text>
             </View>
           </View>
           <Text style={s.seasonName}>{name}</Text>
-          <Text style={s.dayLabel}>Day {dayN} of your season</Text>
+          <Text style={s.dayLabel}>{t('feature.season.dayOfSeason', { n: dayN })}</Text>
 
           {/* Progress bar */}
           <View style={s.progRow}>
@@ -143,14 +145,14 @@ export default function SeasonScreen() {
               <View style={[s.progFill, { width: `${Math.round(pct * 100)}%` as `${number}%`, backgroundColor: color }]} />
             </View>
             <Text style={[s.progLabel, { color: `${color}BB` }]}>
-              {starsCount}/6 constellation stars collected
+              {t('feature.season.starsProgress', { n: starsCount })}
             </Text>
           </View>
         </View>
 
         {/* Stars grid */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>YOUR STARS THIS SEASON</Text>
+          <Text style={s.sectionLabel}>{t('feature.season.starsTitle')}</Text>
           <View style={s.starsGrid}>
             {ALL_STARS.map(star => {
               const unlocked = unlockedStars.includes(star.key);
@@ -165,11 +167,11 @@ export default function SeasonScreen() {
                   <View style={[s.starDot, { backgroundColor: unlocked ? star.color : 'rgba(255,255,255,0.08)' }]}>
                     {unlocked && <Text style={s.starDotIcon}>✦</Text>}
                   </View>
-                  <Text style={[s.starLabel, unlocked && { color: star.color }]}>{star.label}</Text>
-                  <Text style={s.starHint}>{star.hint}</Text>
+                  <Text style={[s.starLabel, unlocked && { color: star.color }]}>{t(`feature.season.${star.key}`)}</Text>
+                  <Text style={s.starHint}>{t(`feature.season.${star.key}Hint`)}</Text>
                   {unlocked && (
                     <View style={[s.unlockedBadge, { backgroundColor: `${star.color}22` }]}>
-                      <Text style={[s.unlockedTxt, { color: star.color }]}>✦ Unlocked</Text>
+                      <Text style={[s.unlockedTxt, { color: star.color }]}>{t('feature.season.unlocked')}</Text>
                     </View>
                   )}
                 </View>
@@ -180,19 +182,19 @@ export default function SeasonScreen() {
 
         {/* How to earn */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>HOW TO ADVANCE</Text>
+          <Text style={s.sectionLabel}>{t('feature.season.advance')}</Text>
           <View style={[s.infoCard, { borderColor: `${color}1E` }]}>
             {[
-              { icon: '📖', text: 'Write journal entries to earn the Memory Star' },
-              { icon: '🌙', text: 'Journal daily to build your Quiet Star streak' },
-              { icon: '✨', text: 'Publish stories to unlock your Creative Star' },
-              { icon: '👥', text: 'Follow wanderers to grow your Social Star' },
-              { icon: '💛', text: 'Save & sticker stories for the Helping Star' },
-              { icon: '🍃', text: 'Join seasonal events for the Seasonal Star' },
-            ].map(({ icon: ic, text }, i) => (
+              { icon: '📖', key: 'howMemory' },
+              { icon: '🌙', key: 'howQuiet' },
+              { icon: '✨', key: 'howCreative' },
+              { icon: '👥', key: 'howSocial' },
+              { icon: '💛', key: 'howHelping' },
+              { icon: '🍃', key: 'howSeasonal' },
+            ].map(({ icon: ic, key }, i) => (
               <View key={i} style={s.infoRow}>
                 <Text style={s.infoIcon}>{ic}</Text>
-                <Text style={s.infoText}>{text}</Text>
+                <Text style={s.infoText}>{t(`feature.season.${key}`)}</Text>
               </View>
             ))}
           </View>
@@ -206,7 +208,7 @@ export default function SeasonScreen() {
             activeOpacity={0.80}
           >
             <Text style={[s.ctaBtnIcon, { color }]}>✦</Text>
-            <Text style={[s.ctaBtnTxt, { color }]}>Begin Writing  →</Text>
+            <Text style={[s.ctaBtnTxt, { color }]}>{t('feature.season.beginWriting')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -1,5 +1,5 @@
-import { BackButton } from '@/components/BackButton';
 import { DiscoverCard } from '@/components/DiscoverCard';
+import { Icon } from '@/components/Icon';
 
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { apiFetch, useApp, type DiscoverPost } from '@/context/AppContext';
@@ -25,7 +25,7 @@ export default function SavedStoriesScreen() {
   const { toggleSavePost, savedStoryIds, followingIds } = useApp();
   const insets  = useSafeAreaInsets();
   const colors  = useColors();
-  useTranslation();
+  const { t } = useTranslation();
   const topPad  = Platform.OS === 'web' ? 48 : insets.top;
 
   const [posts,       setPosts]       = useState<DiscoverPost[]>([]);
@@ -75,10 +75,19 @@ export default function SavedStoriesScreen() {
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerRow}>
-          <BackButton color="#EDE8FF" />
+          <TouchableOpacity
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
+            style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+            activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={t('shell.savedStories.back')}
+            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+          >
+            <Icon name="arrow-left" size={18} color="#EDE8FF" />
+          </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Saved Stories</Text>
-            <Text style={styles.headerSub}>your collected moments ✦</Text>
+            <Text style={styles.headerTitle}>{t('shell.savedStories.title')}</Text>
+            <Text style={styles.headerSub}>{t('shell.savedStories.subtitle')}</Text>
           </View>
         </View>
       </LinearGradient>
@@ -93,16 +102,18 @@ export default function SavedStoriesScreen() {
       ) : isEmpty ? (
         <View style={styles.emptyWrap}>
           <Text style={styles.emptyIcon}>◇</Text>
-          <Text style={styles.emptyTitle}>No saved stories yet</Text>
+          <Text style={styles.emptyTitle}>{t('shell.savedStories.emptyTitle')}</Text>
           <Text style={styles.emptySub}>
-            Tap the bookmark on any story in Discover to collect it here.
+            {t('shell.savedStories.emptyBody')}
           </Text>
           <TouchableOpacity
             style={styles.emptyBtn}
             onPress={() => safeBack()}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel={t('shell.savedStories.explore')}
           >
-            <Text style={styles.emptyBtnText}>Explore stories</Text>
+            <Text style={styles.emptyBtnText}>{t('shell.savedStories.explore')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

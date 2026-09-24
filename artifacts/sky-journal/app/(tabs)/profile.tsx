@@ -15,6 +15,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiFetch } from '@/context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 import { CharacterAuraHeader } from '@/components/profile/CharacterAuraHeader';
 import { GalleryLightboxModal } from '@/components/profile/GalleryLightboxModal';
@@ -35,14 +36,15 @@ const STAR_TITLES: Record<number, string> = {
 const XP_PER_LEVEL = 300;
 
 function CorruptionBanner({ onRefresh }: { onRefresh: () => void }) {
+  const { t } = useTranslation();
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
   return (
     <View style={offlineS.row}>
       <View style={[offlineS.dot, { backgroundColor: '#9B78E8' }]} />
-      <Text style={offlineS.msg}>Some stories couldn't be loaded — pull to refresh</Text>
+      <Text style={offlineS.msg}>{t('components.profile.corruptionMessage')}</Text>
       <TouchableOpacity style={offlineS.btn} onPress={() => { onRefresh(); setDismissed(true); }} activeOpacity={0.75}>
-        <Text style={offlineS.btnText}>Refresh</Text>
+        <Text style={offlineS.btnText}>{t('components.profile.refresh')}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setDismissed(true)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }} activeOpacity={0.75}>
         <Icon name="x" size={13} color="rgba(200,184,232,0.5)" />
@@ -52,6 +54,7 @@ function CorruptionBanner({ onRefresh }: { onRefresh: () => void }) {
 }
 
 export default function CharacterScreen() {
+  const { t } = useTranslation();
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
@@ -94,6 +97,7 @@ export default function CharacterScreen() {
   const [savingTitle,     setSavingTitle]     = useState(false);
   const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
   const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
+  const [profileLikeCount, setProfileLikeCount] = useState(0);
 
   useFocusEffect(useCallback(() => {
     if (!userId) return;
@@ -101,6 +105,19 @@ export default function CharacterScreen() {
       .then(setOnboardingProgress)
       .catch(() => null);
   }, [userId, stories.length, outfits.length]));
+
+  useFocusEffect(useCallback(() => {
+    if (!userId) return;
+    let active = true;
+    apiFetch<{ profileLikeCount?: number }>(`/users/${userId}`)
+      .then(profile => {
+        if (active) setProfileLikeCount(Math.max(0, profile.profileLikeCount ?? 0));
+      })
+      .catch(() => {
+        if (active) setProfileLikeCount(0);
+      });
+    return () => { active = false; };
+  }, [userId]));
 
   const saveTitle = useCallback(async (title: string) => {
     setSavingTitle(true);
@@ -180,9 +197,9 @@ export default function CharacterScreen() {
       {(!apiOnline || storiesLoadError || outfitsLoadError) && !isLoading && (
         <View style={offlineS.row}>
           <View style={offlineS.dot} />
-          <Text style={offlineS.msg}>{(storiesLoadError || outfitsLoadError) && apiOnline ? "Couldn't load some data" : 'Offline — saved locally'}</Text>
+          <Text style={offlineS.msg}>{(storiesLoadError || outfitsLoadError) && apiOnline ? t('components.profile.loadSomeError') : t('components.profile.offlineSaved')}</Text>
           <TouchableOpacity style={offlineS.btn} onPress={reloadData} activeOpacity={0.75}>
-            <Text style={offlineS.btnText}>Retry</Text>
+            <Text style={offlineS.btnText}>{t('components.profile.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -206,9 +223,10 @@ export default function CharacterScreen() {
         {/* Stats card */}
         <View style={[s.statsCard, screenW >= 760 && { maxWidth: 760, alignSelf: 'center' }]}>
           {([
-            { icon: 'book-open', count: stories.length,  label: 'STORIES' },
-            { icon: 'user',      count: outfits.length,  label: 'OUTFITS' },
-            { icon: 'heart',     count: totalWitnessed,  label: 'LIKES'   },
+            { icon: 'book-open', count: stories.length,  label: t('components.profile.stats.stories') },
+            { icon: 'user',      count: outfits.length,  label: t('components.profile.stats.outfits') },
+            { icon: 'heart',     count: totalWitnessed,  label: t('components.profile.stats.likes')   },
+            { icon: 'heart',     count: profileLikeCount, label: t('components.profile.stats.profileLikes') },
           ] as const).map((item, i) => (
             <React.Fragment key={item.label}>
               {i > 0 && <View style={s.statDivider} />}
@@ -234,10 +252,10 @@ export default function CharacterScreen() {
             >
               <View style={s.setupIcon}><Icon name="check-circle" size={18} color="#CDB7FF" /></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.setupTitle}>Finish setting up</Text>
-                <Text style={s.setupSubtitle}>{onboardingProgress.completed.length} of 4 completed</Text>
+                <Text style={s.setupTitle}>{t('components.profile.finishSetup')}</Text>
+                <Text style={s.setupSubtitle}>{t('components.profile.setupProgress', { count: onboardingProgress.completed.length })}</Text>
               </View>
-              <View style={s.setupButton}><Text style={s.setupButtonText}>Continue</Text></View>
+              <View style={s.setupButton}><Text style={s.setupButtonText}>{t('components.profile.continue')}</Text></View>
             </TouchableOpacity>
           )}
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
@@ -266,13 +284,13 @@ export default function CharacterScreen() {
               />
               <View style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
                 <View style={s.wornBadge}>
-                  <Text style={s.wornBadgeText}>CURRENTLY WORN</Text>
+                  <Text style={s.wornBadgeText}>{t('components.profile.currentlyWorn')}</Text>
                 </View>
                 <Text style={s.wornTitleText} numberOfLines={1}>{activeOutfit.name}</Text>
               </View>
               <View style={s.wornBtn}>
                 <Icon name="user" size={13} color="rgba(235,225,255,0.88)" />
-                <Text style={s.wornBtnText}>Change outfit</Text>
+                <Text style={s.wornBtnText}>{t('components.profile.changeOutfit')}</Text>
               </View>
             </TouchableOpacity>
           )}

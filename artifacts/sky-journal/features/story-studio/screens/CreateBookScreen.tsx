@@ -20,6 +20,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { SkyLoadingMark } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ interface BookCreated {
 
 export default function CreateBookScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const fetch   = useApiFetch();
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
@@ -68,7 +70,7 @@ export default function CreateBookScreen() {
   }
 
   async function handleCreate() {
-    if (!title.trim()) { Alert.alert('Title required', 'Please enter a book title.'); return; }
+    if (!title.trim()) { Alert.alert(t('studioEditor.titleRequired'), t('studioEditor.enterBookTitle')); return; }
     setLoading(true);
     try {
       const book = await fetch<BookCreated>('/books', {
@@ -78,7 +80,7 @@ export default function CreateBookScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.replace(`/book-details?bookId=${book.id}` as never);
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not create book');
+      Alert.alert(t('studioEditor.error'), err instanceof Error ? err.message : t('studioEditor.couldNotCreateBook'));
     } finally {
       setLoading(false);
     }
@@ -89,10 +91,10 @@ export default function CreateBookScreen() {
   return (
     <View style={[s.root, { backgroundColor: colors.background }]}>
       <View style={[s.header, { paddingTop: topInset + 12, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>New Book</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{t('studioEditor.newBook')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -104,19 +106,19 @@ export default function CreateBookScreen() {
       >
         {/* Title & Subtitle */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>TITLE</Text>
+          <Text style={s.sectionLabel}>{t('studioEditor.title')}</Text>
           <TextInput
             style={s.input}
-            placeholder="Book title…"
+            placeholder={t('studioEditor.bookTitlePlaceholder')}
             placeholderTextColor="rgba(200,185,255,0.25)"
             value={title}
             onChangeText={setTitle}
             maxLength={120}
           />
-          <Text style={s.sectionLabel}>SUBTITLE</Text>
+          <Text style={s.sectionLabel}>{t('studioEditor.subtitle')}</Text>
           <TextInput
             style={s.input}
-            placeholder="Optional subtitle…"
+            placeholder={t('studioEditor.optionalSubtitlePlaceholder')}
             placeholderTextColor="rgba(200,185,255,0.25)"
             value={subtitle}
             onChangeText={setSubtitle}
@@ -126,18 +128,18 @@ export default function CreateBookScreen() {
 
         {/* Series Type */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>TYPE</Text>
+          <Text style={s.sectionLabel}>{t('studioEditor.type')}</Text>
           <View style={s.typeRow}>
-            {SERIES_TYPES.map(t => {
-              const active = seriesType === t.key;
+            {SERIES_TYPES.map(item => {
+              const active = seriesType === item.key;
               return (
                 <TouchableOpacity
-                  key={t.key}
+                  key={item.key}
                   style={[s.typeCard, active && { borderColor: `${accent}60`, backgroundColor: `${accent}14` }]}
-                  onPress={() => { setSeriesType(t.key); Haptics.selectionAsync(); }}
+                  onPress={() => { setSeriesType(item.key); Haptics.selectionAsync(); }}
                 >
-                  <Text style={[s.typeCardTitle, active && { color: accent }]}>{t.label}</Text>
-                  <Text style={s.typeCardDesc}>{t.desc}</Text>
+                  <Text style={[s.typeCardTitle, active && { color: accent }]}>{t(`studioEditor.${item.key === 'standalone' ? 'standalone' : item.key === 'series' ? 'series' : 'oneShot'}`)}</Text>
+                  <Text style={s.typeCardDesc}>{t(`studioEditor.${item.key === 'standalone' ? 'singleVolume' : item.key === 'series' ? 'multiVolume' : 'singleChapter'}`)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -146,7 +148,7 @@ export default function CreateBookScreen() {
 
         {/* Genres */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>GENRE TAGS</Text>
+          <Text style={s.sectionLabel}>{t('studioEditor.genreTags')}</Text>
           <View style={s.chipWrap}>
             {GENRES.map(g => {
               const active = genres.includes(g);
@@ -156,7 +158,7 @@ export default function CreateBookScreen() {
                   style={[s.chip, active && { borderColor: `${accent}55`, backgroundColor: `${accent}18` }]}
                   onPress={() => toggleGenre(g)}
                 >
-                  <Text style={[s.chipTxt, active && { color: accent }]}>{g}</Text>
+                  <Text style={[s.chipTxt, active && { color: accent }]}>{t(`studioEditor.bookGenres.${g}`)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -165,7 +167,7 @@ export default function CreateBookScreen() {
 
         {/* Language */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>LANGUAGE</Text>
+          <Text style={s.sectionLabel}>{t('studioEditor.language')}</Text>
           <View style={s.chipWrap}>
             {LANGUAGES.map(l => {
               const active = language === l;
@@ -175,7 +177,7 @@ export default function CreateBookScreen() {
                   style={[s.chip, active && { borderColor: `${accent}55`, backgroundColor: `${accent}18` }]}
                   onPress={() => { setLanguage(l); Haptics.selectionAsync(); }}
                 >
-                  <Text style={[s.chipTxt, active && { color: accent }]}>{l}</Text>
+                  <Text style={[s.chipTxt, active && { color: accent }]}>{t(`studioEditor.bookLanguages.${l}`)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -184,7 +186,7 @@ export default function CreateBookScreen() {
 
         {/* Age Rating + Visibility */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>AGE RATING</Text>
+          <Text style={s.sectionLabel}>{t('studioEditor.ageRating')}</Text>
           <View style={s.chipWrap}>
             {AGE_RATINGS.map(r => {
               const active = ageRating === r;
@@ -194,13 +196,13 @@ export default function CreateBookScreen() {
                   style={[s.chip, active && { borderColor: `${accent}55`, backgroundColor: `${accent}18` }]}
                   onPress={() => { setAgeRating(r); Haptics.selectionAsync(); }}
                 >
-                  <Text style={[s.chipTxt, active && { color: accent }]}>{r}</Text>
+                  <Text style={[s.chipTxt, active && { color: accent }]}>{r === 'All Ages' ? t('studioEditor.allAges') : r}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
 
-          <Text style={[s.sectionLabel, { marginTop: 18 }]}>VISIBILITY</Text>
+          <Text style={[s.sectionLabel, { marginTop: 18 }]}>{t('studioEditor.visibility')}</Text>
           <View style={{ flexDirection: 'row', gap: 10 }}>
             {(['public', 'private'] as const).map(v => {
               const active = visibility === v;
@@ -212,7 +214,7 @@ export default function CreateBookScreen() {
                   onPress={() => { setVisibility(v); Haptics.selectionAsync(); }}
                 >
                   <Icon name={v === 'public' ? 'globe' : 'lock'} size={12} color={active ? c : 'rgba(200,185,255,0.38)'} />
-                  <Text style={[s.chipTxt, active && { color: c }]}>{v === 'public' ? 'Public' : 'Private'}</Text>
+                  <Text style={[s.chipTxt, active && { color: c }]}>{t(`studioEditor.${v}`)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -227,7 +229,7 @@ export default function CreateBookScreen() {
         >
           {loading
             ? <SkyLoadingMark size={18} color="#fff" />
-            : <Text style={s.createBtnTxt}>Create Book →</Text>}
+            : <Text style={s.createBtnTxt}>{t('studioEditor.createBookAction')}</Text>}
         </TouchableOpacity>
       </KeyboardAwareScrollView>
     </View>

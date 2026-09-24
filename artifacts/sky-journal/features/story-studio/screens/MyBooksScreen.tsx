@@ -21,6 +21,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { LoadingCard } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,8 @@ function BookRow({
   accentColor: string;
   onPress: () => void;
 }) {
-  const ago = getRelativeTime(book.updatedAt);
+  const { t } = useTranslation();
+  const ago = getRelativeTime(book.updatedAt, t);
   const isPrivate = book.visibility === 'private';
 
   return (
@@ -67,7 +69,7 @@ function BookRow({
           {isPrivate && (
             <View style={s.privateBadge}>
               <Icon name="lock" size={9} color="rgba(200,185,255,0.50)" />
-              <Text style={s.privateTxt}>Private</Text>
+              <Text style={s.privateTxt}>{t('studioEditor.private')}</Text>
             </View>
           )}
         </View>
@@ -77,7 +79,7 @@ function BookRow({
         <View style={s.rowMeta}>
           <Icon name="layers" size={10} color="rgba(200,185,255,0.35)" />
           <Text style={s.rowMetaTxt}>
-            {book.chapterCount} chapter{book.chapterCount !== 1 ? 's' : ''}
+            {t(`studioEditor.${book.chapterCount === 1 ? 'chapterSingular' : 'chapterPlural'}`, { count: book.chapterCount })}
           </Text>
           {book.genre.length > 0 && (
             <>
@@ -95,20 +97,21 @@ function BookRow({
   );
 }
 
-function getRelativeTime(iso: string): string {
+function getRelativeTime(iso: string, t: (key: string, options?: Record<string, unknown>) => string): string {
   const ms   = Date.now() - new Date(iso).getTime();
   const days = Math.floor(ms / 86_400_000);
-  if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 7)  return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+  if (days === 0) return t('studioEditor.today');
+  if (days === 1) return t('studioEditor.yesterday');
+  if (days < 7)  return t('studioEditor.daysAgo', { count: days });
+  if (days < 30) return t('studioEditor.weeksAgo', { count: Math.floor(days / 7) });
+  return t('studioEditor.monthsAgo', { count: Math.floor(days / 30) });
 }
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function MyBooksScreen() {
   const colors   = useColors();
+  const { t } = useTranslation();
   const insets   = useSafeAreaInsets();
   const apiFetch = useApiFetch();
 
@@ -126,7 +129,7 @@ export default function MyBooksScreen() {
       const data = await apiFetch<BookListItem[]>('/books');
       if (data !== null) setBooks(data);
     } catch {
-      setError('Could not load books');
+      setError(t('studioEditor.couldNotLoadBooks'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -148,13 +151,13 @@ export default function MyBooksScreen() {
         >
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.78)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>My Books</Text>
+        <Text style={s.headerTitle}>{t('studioEditor.myBooksTitle')}</Text>
         <TouchableOpacity
           style={[s.newBtn, { backgroundColor: `${accentColor}18`, borderColor: `${accentColor}30` }]}
           onPress={() => router.push('/create-book')}
         >
           <Icon name="plus" size={14} color={accentColor} />
-          <Text style={[s.newBtnTxt, { color: accentColor }]}>New</Text>
+          <Text style={[s.newBtnTxt, { color: accentColor }]}>{t('studioEditor.new')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -170,7 +173,7 @@ export default function MyBooksScreen() {
           <Icon name="alert-circle" size={22} color="rgba(224,92,92,0.70)" />
           <Text style={s.errorTxt}>{error}</Text>
           <TouchableOpacity style={[s.retryBtn, { borderColor: `${accentColor}30` }]} onPress={() => loadBooks()}>
-            <Text style={[s.retryBtnTxt, { color: accentColor }]}>Retry</Text>
+            <Text style={[s.retryBtnTxt, { color: accentColor }]}>{t('studioEditor.retryAction')}</Text>
           </TouchableOpacity>
         </View>
       ) : books.length === 0 ? (
@@ -178,14 +181,14 @@ export default function MyBooksScreen() {
           <View style={[s.emptyIcon, { backgroundColor: `${accentColor}10` }]}>
             <Icon name="book-open" size={30} color={`${accentColor}50`} />
           </View>
-          <Text style={s.emptyTitle}>No books yet</Text>
-          <Text style={s.emptySub}>Create your first book to start building your story.</Text>
+          <Text style={s.emptyTitle}>{t('studioEditor.noBooksEmpty')}</Text>
+          <Text style={s.emptySub}>{t('studioEditor.myBooksEmpty')}</Text>
           <TouchableOpacity
             style={[s.createBtn, { backgroundColor: accentColor }]}
             onPress={() => router.push('/create-book')}
           >
             <Icon name="plus" size={14} color="#fff" />
-            <Text style={s.createBtnTxt}>Create a Book</Text>
+            <Text style={s.createBtnTxt}>{t('studioEditor.createFirstBook')}</Text>
           </TouchableOpacity>
         </View>
       ) : (

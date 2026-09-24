@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, followsTable, friendRequestsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, booksTable, chaptersTable } from "@workspace/db";
+import { db, characterTable, storiesTable, storyLikesTable, profileLikesTable, chapterLikesTable, followsTable, friendRequestsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, booksTable, chaptersTable } from "@workspace/db";
 import type { BookChapterPage } from "@workspace/db";
 import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
@@ -279,7 +279,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "This profile is unavailable." });
     }
 
-    const [charRows, followingRows] = await Promise.all([
+    const [charRows, followingRows, profileLikeCounts, viewerProfileLike] = await Promise.all([
       db.select({
         userId:           characterTable.userId,
         name:             characterTable.name,
@@ -288,6 +288,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         traits:           characterTable.traits,
         mood:             characterTable.mood,
         isPublic:         characterTable.isPublic,
+        isBanned:         characterTable.isBanned,
         avatarUri:        characterTable.avatarUri,
         activeOutfitId:   characterTable.activeOutfitId,
         birthday:         characterTable.birthday,
@@ -313,9 +314,18 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       db.select({ followingId: followsTable.followingId })
         .from(followsTable)
         .where(eq(followsTable.followerId, viewerId)),
+      db.select({ total: count() })
+        .from(profileLikesTable)
+        .where(eq(profileLikesTable.profileUserId, targetId)),
+      db.select({ likerId: profileLikesTable.likerId })
+        .from(profileLikesTable)
+        .where(and(
+          eq(profileLikesTable.profileUserId, targetId),
+          eq(profileLikesTable.likerId, viewerId),
+        ))
     ]);
 
-    if (!charRows.length || !charRows[0].isPublic) {
+    if (!charRows.length || !charRows[0].isPublic || charRows[0].isBanned) {
       return res.status(404).json({ error: "User not found" });
     }
 
@@ -395,6 +405,8 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       timezone:      char.timezone  ?? null,
       links:         Array.isArray(char.links) ? char.links : [],
       isFollowing:   followingSet.has(targetId),
+      profileLikeCount: Number(profileLikeCounts[0]?.total ?? 0),
+      profileLiked:     viewerProfileLike.length > 0,
       activeTitle:   char.activeTitle   ?? null,
       intention:     char.intention     ?? null,
       intentionDate:    char.intentionDate ?? null,
@@ -461,6 +473,24 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
       .orderBy(desc(storiesTable.date))
       .limit(50);
 
+    const storyIds = rows.map(r => r.id);
+    const [likeCountRows, viewerLikeRows] = storyIds.length
+      ? await Promise.all([
+          db.select({ storyId: storyLikesTable.storyId, total: count() })
+            .from(storyLikesTable)
+            .where(inArray(storyLikesTable.storyId, storyIds))
+            .groupBy(storyLikesTable.storyId),
+          db.select({ storyId: storyLikesTable.storyId })
+            .from(storyLikesTable)
+            .where(and(
+              eq(storyLikesTable.userId, viewerId),
+              inArray(storyLikesTable.storyId, storyIds),
+            )),
+        ])
+      : [[], []];
+    const storyLikeCounts = new Map(likeCountRows.map(r => [r.storyId, Number(r.total)]));
+    const viewerLikedStoryIds = new Set(viewerLikeRows.map(r => r.storyId));
+
     return res.json(rows.map(r => ({
       id:             r.id,
       chapterTitle:   r.chapterTitle,
@@ -477,6 +507,8 @@ router.get("/users/:userId/stories", requireAuth, async (req, res) => {
       pages:          r.pages ?? undefined,
       witnessedCount: r.witnessedCount,
       savedCount:     r.savedCount,
+      likeCount:      storyLikeCounts.get(r.id) ?? 0,
+      liked:          viewerLikedStoryIds.has(r.id),
       date:           r.date.toISOString(),
     })));
   } catch (err) {
@@ -553,6 +585,305 @@ router.get("/users/:userId/outfits", requireAuth, async (req, res) => {
 });
 
 // ── Follow ────────────────────────────────────────────────────────────────────
+
+router.post("/users/:userId/like", requireAuth, async (req, res) => {
+  const viewerId = getUserId(req);
+  const targetId = String(req.params.userId);
+  if (targetId === viewerId) return res.status(400).json({ error: "Cannot like your own profile" });
+
+  try {
+    if (await isBlocked(viewerId, targetId)) {
+      return res.status(403).json({ error: "This profile is unavailable." });
+    }
+    const [target] = await db.select({ userId: characterTable.userId })
+      .from(characterTable)
+      .where(and(
+        eq(characterTable.userId, targetId),
+        eq(characterTable.isPublic, true),
+        eq(characterTable.isBanned, false),
+      ))
+      .limit(1);
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    const state = await db.transaction(async tx => {
+      await tx.insert(profileLikesTable)
+        .values({ likerId: viewerId, profileUserId: targetId })
+        .onConflictDoNothing();
+      const [row] = await tx.select({ total: count() })
+        .from(profileLikesTable)
+        .where(eq(profileLikesTable.profileUserId, targetId));
+      return Number(row?.total ?? 0);
+    });
+    return res.json({ profileLiked: true, profileLikeCount: state });
+  } catch (err) {
+    req.log.error({ err }, "Failed to like profile");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/users/:userId/like", requireAuth, async (req, res) => {
+  const viewerId = getUserId(req);
+  const targetId = String(req.params.userId);
+  if (targetId === viewerId) return res.status(400).json({ error: "Cannot unlike your own profile" });
+
+  try {
+    if (await isBlocked(viewerId, targetId)) {
+      return res.status(403).json({ error: "This profile is unavailable." });
+    }
+    const [target] = await db.select({ userId: characterTable.userId })
+      .from(characterTable)
+      .where(and(
+        eq(characterTable.userId, targetId),
+        eq(characterTable.isPublic, true),
+        eq(characterTable.isBanned, false),
+      ))
+      .limit(1);
+    if (!target) return res.status(404).json({ error: "User not found" });
+
+    const state = await db.transaction(async tx => {
+      await tx.delete(profileLikesTable)
+        .where(and(
+          eq(profileLikesTable.likerId, viewerId),
+          eq(profileLikesTable.profileUserId, targetId),
+        ));
+      const [row] = await tx.select({ total: count() })
+        .from(profileLikesTable)
+        .where(eq(profileLikesTable.profileUserId, targetId));
+      return Number(row?.total ?? 0);
+    });
+    return res.json({ profileLiked: false, profileLikeCount: state });
+  } catch (err) {
+    req.log.error({ err }, "Failed to unlike profile");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/stories/:id/like", requireAuth, async (req, res) => {
+  const storyId = String(req.params.id);
+  const viewerId = getUserId(req);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storyId)) {
+    return res.status(400).json({ error: "Invalid story ID" });
+  }
+
+  try {
+    const [visibleStory] = await db.select({ id: storiesTable.id, userId: storiesTable.userId })
+      .from(storiesTable)
+      .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+      .where(and(
+        eq(storiesTable.id, storyId),
+        eq(storiesTable.isPublic, true),
+        eq(storiesTable.isHidden, false),
+        eq(characterTable.isPublic, true),
+        eq(characterTable.isBanned, false),
+      ))
+      .limit(1);
+    if (!visibleStory) return res.status(404).json({ error: "Story not found" });
+    if (await isBlocked(viewerId, visibleStory.userId)) {
+      return res.status(403).json({ error: "This story is unavailable." });
+    }
+
+    const state = await db.transaction(async tx => {
+      const [inserted] = await tx.insert(storyLikesTable)
+        .values({ userId: viewerId, storyId })
+        .onConflictDoNothing()
+        .returning({ storyId: storyLikesTable.storyId });
+      if (inserted) {
+        const [updated] = await tx.update(storiesTable)
+          .set({ likeCount: sql`${storiesTable.likeCount} + 1` })
+          .where(and(
+            eq(storiesTable.id, storyId),
+            eq(storiesTable.isPublic, true),
+            eq(storiesTable.isHidden, false),
+          ))
+          .returning({ likeCount: storiesTable.likeCount });
+        if (!updated) throw new Error("STORY_NOT_VISIBLE");
+        return updated.likeCount;
+      }
+      const [current] = await tx.select({ likeCount: storiesTable.likeCount })
+        .from(storiesTable).where(eq(storiesTable.id, storyId));
+      if (!current) throw new Error("STORY_NOT_VISIBLE");
+      return current.likeCount;
+    });
+    cache.invalidate("discover:");
+    return res.json({ liked: true, likeCount: state });
+  } catch (err) {
+    if (err instanceof Error && err.message === "STORY_NOT_VISIBLE") {
+      return res.status(404).json({ error: "Story not found" });
+    }
+    req.log.error({ err }, "Failed to like story");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/stories/:id/like", requireAuth, async (req, res) => {
+  const storyId = String(req.params.id);
+  const viewerId = getUserId(req);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(storyId)) {
+    return res.status(400).json({ error: "Invalid story ID" });
+  }
+
+  try {
+    const [visibleStory] = await db.select({ id: storiesTable.id, userId: storiesTable.userId })
+      .from(storiesTable)
+      .innerJoin(characterTable, eq(characterTable.userId, storiesTable.userId))
+      .where(and(
+        eq(storiesTable.id, storyId),
+        eq(storiesTable.isPublic, true),
+        eq(storiesTable.isHidden, false),
+        eq(characterTable.isPublic, true),
+        eq(characterTable.isBanned, false),
+      ))
+      .limit(1);
+    if (!visibleStory) return res.status(404).json({ error: "Story not found" });
+    if (await isBlocked(viewerId, visibleStory.userId)) {
+      return res.status(403).json({ error: "This story is unavailable." });
+    }
+
+    const state = await db.transaction(async tx => {
+      const [removed] = await tx.delete(storyLikesTable)
+        .where(and(
+          eq(storyLikesTable.userId, viewerId),
+          eq(storyLikesTable.storyId, storyId),
+        ))
+        .returning({ storyId: storyLikesTable.storyId });
+      if (removed) {
+        const [updated] = await tx.update(storiesTable)
+          .set({ likeCount: sql`GREATEST(${storiesTable.likeCount} - 1, 0)` })
+          .where(eq(storiesTable.id, storyId))
+          .returning({ likeCount: storiesTable.likeCount });
+        if (!updated) throw new Error("STORY_NOT_VISIBLE");
+        return updated.likeCount;
+      }
+      const [current] = await tx.select({ likeCount: storiesTable.likeCount })
+        .from(storiesTable).where(eq(storiesTable.id, storyId));
+      if (!current) throw new Error("STORY_NOT_VISIBLE");
+      return current.likeCount;
+    });
+    cache.invalidate("discover:");
+    return res.json({ liked: false, likeCount: state });
+  } catch (err) {
+    if (err instanceof Error && err.message === "STORY_NOT_VISIBLE") {
+      return res.status(404).json({ error: "Story not found" });
+    }
+    req.log.error({ err }, "Failed to unlike story");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/chapters/:id/like", requireAuth, async (req, res) => {
+  const chapterId = String(req.params.id);
+  const viewerId = getUserId(req);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chapterId)) {
+    return res.status(400).json({ error: "Invalid chapter ID" });
+  }
+
+  try {
+    const [visibleChapter] = await db.select({ id: chaptersTable.id, userId: booksTable.userId })
+      .from(chaptersTable)
+      .innerJoin(booksTable, eq(booksTable.id, chaptersTable.bookId))
+      .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
+      .where(and(
+        eq(chaptersTable.id, chapterId),
+        eq(chaptersTable.status, "published"),
+        eq(booksTable.visibility, "public"),
+        eq(characterTable.isPublic, true),
+        eq(characterTable.isBanned, false),
+      ))
+      .limit(1);
+    if (!visibleChapter) return res.status(404).json({ error: "Chapter not found" });
+    if (await isBlocked(viewerId, visibleChapter.userId)) {
+      return res.status(403).json({ error: "This chapter is unavailable." });
+    }
+
+    const likeCount = await db.transaction(async tx => {
+      const [inserted] = await tx.insert(chapterLikesTable)
+        .values({ userId: viewerId, chapterId })
+        .onConflictDoNothing()
+        .returning({ chapterId: chapterLikesTable.chapterId });
+      if (inserted) {
+        const [updated] = await tx.update(chaptersTable)
+          .set({ likeCount: sql`${chaptersTable.likeCount} + 1` })
+          .where(and(
+            eq(chaptersTable.id, chapterId),
+            eq(chaptersTable.status, "published"),
+          ))
+          .returning({ likeCount: chaptersTable.likeCount });
+        if (!updated) throw new Error("CHAPTER_NOT_VISIBLE");
+        return updated.likeCount;
+      }
+      const [current] = await tx.select({ likeCount: chaptersTable.likeCount })
+        .from(chaptersTable)
+        .where(eq(chaptersTable.id, chapterId));
+      if (!current) throw new Error("CHAPTER_NOT_VISIBLE");
+      return current.likeCount;
+    });
+    cache.invalidate("discover:");
+    return res.json({ liked: true, likeCount });
+  } catch (err) {
+    if (err instanceof Error && err.message === "CHAPTER_NOT_VISIBLE") {
+      return res.status(404).json({ error: "Chapter not found" });
+    }
+    req.log.error({ err }, "Failed to like chapter");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/chapters/:id/like", requireAuth, async (req, res) => {
+  const chapterId = String(req.params.id);
+  const viewerId = getUserId(req);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(chapterId)) {
+    return res.status(400).json({ error: "Invalid chapter ID" });
+  }
+
+  try {
+    const [visibleChapter] = await db.select({ id: chaptersTable.id, userId: booksTable.userId })
+      .from(chaptersTable)
+      .innerJoin(booksTable, eq(booksTable.id, chaptersTable.bookId))
+      .innerJoin(characterTable, eq(characterTable.userId, booksTable.userId))
+      .where(and(
+        eq(chaptersTable.id, chapterId),
+        eq(chaptersTable.status, "published"),
+        eq(booksTable.visibility, "public"),
+        eq(characterTable.isPublic, true),
+        eq(characterTable.isBanned, false),
+      ))
+      .limit(1);
+    if (!visibleChapter) return res.status(404).json({ error: "Chapter not found" });
+    if (await isBlocked(viewerId, visibleChapter.userId)) {
+      return res.status(403).json({ error: "This chapter is unavailable." });
+    }
+
+    const likeCount = await db.transaction(async tx => {
+      const [removed] = await tx.delete(chapterLikesTable)
+        .where(and(
+          eq(chapterLikesTable.userId, viewerId),
+          eq(chapterLikesTable.chapterId, chapterId),
+        ))
+        .returning({ chapterId: chapterLikesTable.chapterId });
+      if (removed) {
+        const [updated] = await tx.update(chaptersTable)
+          .set({ likeCount: sql`GREATEST(${chaptersTable.likeCount} - 1, 0)` })
+          .where(eq(chaptersTable.id, chapterId))
+          .returning({ likeCount: chaptersTable.likeCount });
+        if (!updated) throw new Error("CHAPTER_NOT_VISIBLE");
+        return updated.likeCount;
+      }
+      const [current] = await tx.select({ likeCount: chaptersTable.likeCount })
+        .from(chaptersTable)
+        .where(eq(chaptersTable.id, chapterId));
+      if (!current) throw new Error("CHAPTER_NOT_VISIBLE");
+      return current.likeCount;
+    });
+    cache.invalidate("discover:");
+    return res.json({ liked: false, likeCount });
+  } catch (err) {
+    if (err instanceof Error && err.message === "CHAPTER_NOT_VISIBLE") {
+      return res.status(404).json({ error: "Chapter not found" });
+    }
+    req.log.error({ err }, "Failed to unlike chapter");
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.post("/follows/:targetUserId", requireAuth, async (req, res) => {
   const userId       = getUserId(req);
@@ -681,6 +1012,7 @@ router.get("/discover", requireAuth, async (req, res) => {
         location:        storiesTable.location,
         witnessedCount:  storiesTable.witnessedCount,
         savedCount:      storiesTable.savedCount,
+        likeCount:       storiesTable.likeCount,
         panels:          storiesTable.panels,
         pageLayoutKey:   storiesTable.pageLayoutKey,
         pages:           storiesTable.pages,
@@ -727,6 +1059,7 @@ router.get("/discover", requireAuth, async (req, res) => {
         orderIndex:      chaptersTable.orderIndex,
         publishedAt:     chaptersTable.publishedAt,
         readCount:       chaptersTable.readCount,
+        likeCount:       chaptersTable.likeCount,
         pages:           chaptersTable.pages,
         authorName:      characterTable.name,
         authorUsername:  characterTable.username,
@@ -793,9 +1126,12 @@ router.get("/discover", requireAuth, async (req, res) => {
 
     // Fetch sticker counts (stories only) + author badges in bulk for the top 50
     const top50StoryIds = top50.filter(e => e.kind === 'story').map(e => e.id);
+    const top50ChapterIds = top50.filter(e => e.kind === 'chapter').map(e => e.id);
     const top50Authors  = [...new Set(top50.map(e => e.userId))];
 
     const stickerCountMap: Record<string, number> = {};
+    const likedStoryIds = new Set<string>();
+    const likedChapterIds = new Set<string>();
     const authorBadgesMap: Record<string, { id: string; slug: string; name: string; emoji: string; color: string; imageUrl: string | null; description: string | null }[]> = {};
 
     await Promise.all([
@@ -805,6 +1141,26 @@ router.get("/discover", requireAuth, async (req, res) => {
             .where(inArray(stickerReactionsTable.storyId, top50StoryIds))
             .groupBy(stickerReactionsTable.storyId)
             .then(rows => rows.forEach(r => { stickerCountMap[r.storyId] = Number(r.cnt); }))
+        : Promise.resolve(),
+
+      top50StoryIds.length > 0
+        ? db.select({ storyId: storyLikesTable.storyId })
+            .from(storyLikesTable)
+            .where(and(
+              inArray(storyLikesTable.storyId, top50StoryIds),
+              eq(storyLikesTable.userId, userId),
+            ))
+            .then(rows => rows.forEach(r => likedStoryIds.add(r.storyId)))
+        : Promise.resolve(),
+
+      top50ChapterIds.length > 0
+        ? db.select({ chapterId: chapterLikesTable.chapterId })
+            .from(chapterLikesTable)
+            .where(and(
+              inArray(chapterLikesTable.chapterId, top50ChapterIds),
+              eq(chapterLikesTable.userId, userId),
+            ))
+            .then(rows => rows.forEach(r => likedChapterIds.add(r.chapterId)))
         : Promise.resolve(),
 
       top50Authors.length > 0
@@ -857,6 +1213,8 @@ router.get("/discover", requireAuth, async (req, res) => {
           location:        row.location,
           witnessedCount:  row.witnessedCount,
           savedCount:      row.savedCount,
+          likeCount:       row.likeCount,
+          liked:           likedStoryIds.has(row.id),
           stickerCount:    stickerCountMap[row.id] ?? 0,
           date:            row.date.toISOString(),
           panels,
@@ -899,6 +1257,8 @@ router.get("/discover", requireAuth, async (req, res) => {
           location:        '',
           witnessedCount:  0,
           savedCount:      0,
+          likeCount:       row.likeCount,
+          liked:           likedChapterIds.has(row.id),
           stickerCount:    0,
           date:            row.publishedAt?.toISOString() ?? new Date().toISOString(),
           panels:          cardPanels,

@@ -22,6 +22,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ const AVG_SECONDS_PER_PAGE = 45; // reading time estimate
 
 export default function PublishChapterScreen() {
   const colors    = useColors();
+  const { t } = useTranslation();
   const insets    = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const apiFetch  = useApiFetch();
@@ -72,7 +74,7 @@ export default function PublishChapterScreen() {
     }
     apiFetch<ChapterDetail>(`/chapters/${chapterId}`)
       .then(data => { setChapter(data); })
-      .catch(() => Alert.alert('Error', 'Could not load chapter'))
+      .catch(() => Alert.alert(t('studioEditor.error'), t('studioEditor.couldNotLoadChapterPublish')))
       .finally(() => setLoading(false));
   }, [chapterId, bookId]));
 
@@ -87,12 +89,12 @@ export default function PublishChapterScreen() {
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        status === 'published' ? '🌟 Published!' : '📝 Saved as Draft',
-        status === 'published' ? 'Your chapter is now live.' : 'Chapter saved as draft.',
-        [{ text: 'OK', onPress: () => router.replace(`/book-details?bookId=${bookId}` as never) }],
+        status === 'published' ? t('studioEditor.published') : t('studioEditor.savedAsDraft'),
+        status === 'published' ? t('studioEditor.chapterLive') : t('studioEditor.chapterSavedDraft'),
+        [{ text: t('studioEditor.ok'), onPress: () => router.replace(`/book-details?bookId=${bookId}` as never) }],
       );
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Could not update chapter');
+      Alert.alert(t('studioEditor.publishError'), err instanceof Error ? err.message : t('studioEditor.couldNotUpdateChapter'));
     } finally {
       setPublishing(false);
       setPublishingStatus(null);
@@ -101,8 +103,8 @@ export default function PublishChapterScreen() {
 
   function readingTime(pageCount: number) {
     const secs = pageCount * AVG_SECONDS_PER_PAGE;
-    if (secs < 60) return `${secs}s`;
-    return `~${Math.round(secs / 60)} min read`;
+    if (secs < 60) return t('studioEditor.secondsRead', { count: secs });
+    return t('studioEditor.minutesRead', { count: Math.round(secs / 60) });
   }
 
   const accent = '#8B70C8';
@@ -114,15 +116,15 @@ export default function PublishChapterScreen() {
   const isPublished = chapter?.status === 'published';
 
   if (loading) {
-    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Preparing your chapter…" /></View>;
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message={t('studioEditor.prepareChapter')} /></View>;
   }
 
   if (!chapterId || !bookId) {
     return (
       <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>This publish link is missing a chapter ID.</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 15 }}>{t('studioEditor.missingPublishChapter')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-          <Text style={{ color: '#8B70C8', fontSize: 14 }}>Go back</Text>
+          <Text style={{ color: '#8B70C8', fontSize: 14 }}>{t('studioEditor.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -132,10 +134,10 @@ export default function PublishChapterScreen() {
     <View style={[s.root, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[s.header, { paddingTop: topInset + 12, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn} accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle} numberOfLines={1}>Review Chapter</Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{t('studioEditor.reviewChapter')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -143,12 +145,12 @@ export default function PublishChapterScreen() {
 
         {/* Chapter title */}
         <View style={s.titleBlock}>
-          <Text style={s.chapterLabel}>CHAPTER</Text>
+          <Text style={s.chapterLabel}>{t('studioEditor.chapter')}</Text>
           <Text style={s.chapterTitle}>{chapter?.title ?? ''}</Text>
           {isPublished && (
             <View style={s.publishedBadge}>
               <Icon name="check-circle" size={12} color="#78C8A0" />
-              <Text style={s.publishedBadgeTxt}>Already published</Text>
+              <Text style={s.publishedBadgeTxt}>{t('studioEditor.alreadyPublished')}</Text>
             </View>
           )}
         </View>
@@ -158,30 +160,30 @@ export default function PublishChapterScreen() {
           <View style={s.statCard}>
             <Icon name="file" size={18} color={accent} />
             <Text style={s.statValue}>{chapter?.pageCount ?? 0}</Text>
-            <Text style={s.statLabel}>Pages</Text>
+            <Text style={s.statLabel}>{t('studioEditor.pageCountLabel')}</Text>
           </View>
           <View style={s.statCard}>
             <Icon name="clock" size={18} color="#78C8A0" />
             <Text style={s.statValue}>{readingTime(chapter?.pageCount ?? 0)}</Text>
-            <Text style={s.statLabel}>Est. read</Text>
+            <Text style={s.statLabel}>{t('studioEditor.estimatedRead')}</Text>
           </View>
           <View style={s.statCard}>
             <Icon name={isPublished ? 'globe' : 'edit-3'} size={18} color={isPublished ? '#78C8A0' : '#9B7FE8'} />
-            <Text style={s.statValue}>{isPublished ? 'Live' : 'Draft'}</Text>
-            <Text style={s.statLabel}>Status</Text>
+            <Text style={s.statValue}>{isPublished ? t('studioEditor.live') : t('studioEditor.draft')}</Text>
+            <Text style={s.statLabel}>{t('studioEditor.status')}</Text>
           </View>
         </View>
 
         {/* First page preview */}
         {firstPage && (
           <View style={s.previewSection}>
-            <Text style={s.previewLabel}>FIRST PAGE PREVIEW</Text>
+            <Text style={s.previewLabel}>{t('studioEditor.firstPagePreview')}</Text>
             <View style={s.previewCard}>
               {firstImage
                 ? <Image source={{ uri: firstImage }} style={s.previewImg} contentFit="contain" />
                 : <View style={s.previewEmpty}>
                     <Icon name="image" size={28} color="rgba(140,120,180,0.25)" />
-                    <Text style={s.previewEmptyTxt}>No image on first page</Text>
+                    <Text style={s.previewEmptyTxt}>{t('studioEditor.noFirstPageImage')}</Text>
                   </View>}
               {firstPage.panels[0]?.text ? (
                 <View style={s.previewOverlay}>
@@ -194,7 +196,7 @@ export default function PublishChapterScreen() {
 
         {/* Visibility toggle */}
         <View style={s.visSection}>
-          <Text style={s.visLabel}>VISIBILITY</Text>
+          <Text style={s.visLabel}>{t('studioEditor.visibility')}</Text>
           <View style={s.visRow}>
             {(['public', 'private'] as const).map(v => {
               const active = visibility === v;
@@ -206,13 +208,13 @@ export default function PublishChapterScreen() {
                   onPress={() => { setVisibility(v); Haptics.selectionAsync(); }}
                 >
                   <Icon name={v === 'public' ? 'globe' : 'lock'} size={14} color={active ? c : 'rgba(200,185,255,0.35)'} />
-                  <Text style={[s.visBtnTxt, active && { color: c }]}>{v === 'public' ? 'Public' : 'Private'}</Text>
+                  <Text style={[s.visBtnTxt, active && { color: c }]}>{t(`studioEditor.${v}`)}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
           <Text style={s.visHint}>
-            {visibility === 'public' ? 'Readers will see this in their feeds' : 'Only you can read this chapter'}
+            {visibility === 'public' ? t('studioEditor.readersFeed') : t('studioEditor.onlyYouRead')}
           </Text>
         </View>
 
@@ -226,7 +228,7 @@ export default function PublishChapterScreen() {
             {publishingStatus === 'draft'
               ? <SkyLoadingMark size={18} color="rgba(200,185,255,0.70)" />
               : <Icon name="edit-3" size={14} color="rgba(200,185,255,0.70)" />}
-            <Text style={s.draftBtnTxt}>{publishingStatus === 'draft' ? 'Saving…' : 'Save as Draft'}</Text>
+            <Text style={s.draftBtnTxt}>{publishingStatus === 'draft' ? t('studioEditor.saving') : t('studioEditor.saveAsDraft')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -238,7 +240,7 @@ export default function PublishChapterScreen() {
               ? <SkyLoadingMark size={18} color="#fff" />
               : <>
                   <Icon name="send" size={15} color="#fff" />
-                  <Text style={s.publishBtnTxt}>Publish Chapter</Text>
+                  <Text style={s.publishBtnTxt}>{t('studioEditor.publishChapter')}</Text>
                 </>}
           </TouchableOpacity>
         </View>

@@ -34,6 +34,7 @@ import {
 } from '../components/FirstPublishOverlay';
 import { CompletionMoment } from '@/components/CompletionMoment';
 import CropImageModal from '@/components/CropImageModal';
+import { useTranslation } from 'react-i18next';
 
 const MOODS = [
   { id: 'Dreamy',      emoji: '🌙', color: '#9B78E8' },
@@ -53,6 +54,7 @@ const STEP_CAPTION = 1;
 const STEP_PREVIEW = 2;
 
 export default function QuickMomentScreen() {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const insets  = useSafeAreaInsets();
   const topPad  = Platform.OS === 'web' ? 67 : insets.top;
@@ -164,7 +166,7 @@ export default function QuickMomentScreen() {
       // Upload failed — clear the image so the user must pick again; a
       // local file:// URI is never valid for other devices.
       setImageUri(null);
-      setError('Image upload failed — please choose the photo again');
+       setError(t('studioReader.imageUploadFailed'));
     }
     finally { setUploading(false); }
     goToStep(STEP_CAPTION);
@@ -212,7 +214,7 @@ export default function QuickMomentScreen() {
 
     setPosting(false);
     if (!ok) {
-      setError("Couldn't publish — check your connection and try again");
+      setError(t('studioReader.publishFailed'));
       return;
     }
     await markFirstPublishDone();
@@ -238,7 +240,7 @@ export default function QuickMomentScreen() {
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Icon name="zap" size={14} color={accentColor} />
-          <Text style={[s.headerTitle, { color: accentColor }]}>Quick Moment</Text>
+          <Text style={[s.headerTitle, { color: accentColor }]}>{t('studioReader.quickMoment')}</Text>
         </View>
         {/* Visibility toggle */}
         <TouchableOpacity
@@ -246,7 +248,7 @@ export default function QuickMomentScreen() {
           onPress={() => { setIsPublic(v => !v); Haptics.selectionAsync(); }}
         >
           <Icon name={isPublic ? 'globe' : 'lock'} size={13} color={isPublic ? '#78C8A0' : '#9B7FE8'} />
-          <Text style={[s.visBtnTxt, { color: isPublic ? '#78C8A0' : '#9B7FE8' }]}>{isPublic ? 'Public' : 'Private'}</Text>
+          <Text style={[s.visBtnTxt, { color: isPublic ? '#78C8A0' : '#9B7FE8' }]}>{isPublic ? t('studioReader.public') : t('studioReader.private')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -294,8 +296,8 @@ export default function QuickMomentScreen() {
                   }}
                 />
               )}
-              <Text style={s.stepTitle}>Pick your moment</Text>
-              <Text style={s.stepSub}>Choose a photo to share — or skip for a text-only post.</Text>
+              <Text style={s.stepTitle}>{t('studioReader.pickMoment')}</Text>
+              <Text style={s.stepSub}>{t('studioReader.choosePhotoDescription')}</Text>
 
               <TouchableOpacity style={s.imagePicker} onPress={pickImage} activeOpacity={0.85}>
                 {imageUri ? (
@@ -305,8 +307,8 @@ export default function QuickMomentScreen() {
                     <View style={[s.imagePickerIcon, { backgroundColor: `${accentColor}20`, borderColor: `${accentColor}40` }]}>
                       <Icon name="camera" size={28} color={accentColor} />
                     </View>
-                    <Text style={[s.imagePickerTxt, { color: accentColor }]}>Tap to choose a photo</Text>
-                    <Text style={s.imagePickerSub}>From your camera roll</Text>
+                    <Text style={[s.imagePickerTxt, { color: accentColor }]}>{t('studioReader.choosePhoto')}</Text>
+                    <Text style={s.imagePickerSub}>{t('studioReader.cameraRoll')}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -317,11 +319,11 @@ export default function QuickMomentScreen() {
                 activeOpacity={0.85}
                 disabled={uploading}
               >
-                <Text style={s.primaryBtnTxt}>{uploading ? 'Uploading…' : imageUri ? 'Looks good →' : 'Choose photo'}</Text>
+                <Text style={s.primaryBtnTxt}>{uploading ? t('studioReader.uploading') : imageUri ? t('studioReader.looksGood') : t('studioReader.choosePhotoButton')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={s.skipBtn} onPress={() => goToStep(STEP_CAPTION)}>
-                <Text style={s.skipBtnTxt}>Skip image</Text>
+                <Text style={s.skipBtnTxt}>{t('studioReader.skipImage')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -354,13 +356,13 @@ export default function QuickMomentScreen() {
                   }}
                 />
               )}
-              <Text style={s.stepTitle}>Add a caption</Text>
-              <Text style={s.stepSub}>What's the feeling behind this moment?</Text>
+              <Text style={s.stepTitle}>{t('studioReader.addCaption')}</Text>
+              <Text style={s.stepSub}>{t('studioReader.captionQuestion')}</Text>
 
               {/* Caption input */}
               <TextInput
                 style={[s.captionInput, { borderColor: `${accentColor}30` }]}
-                placeholder="A thought, a feeling, a wish…"
+                placeholder={t('studioReader.captionPlaceholder')}
                 placeholderTextColor="rgba(200,185,255,0.22)"
                 value={caption}
                 onChangeText={t => setCaption(t.slice(0, 200))}
@@ -372,7 +374,7 @@ export default function QuickMomentScreen() {
               <Text style={s.charCount}>{caption.length}/200</Text>
 
               {/* Mood row */}
-              <Text style={s.moodLabel}>MOOD</Text>
+              <Text style={s.moodLabel}>{t('studioReader.mood')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.moodRow}>
                 {MOODS.map(m => {
                   const active = mood === m.id;
@@ -387,7 +389,7 @@ export default function QuickMomentScreen() {
                       activeOpacity={0.8}
                     >
                       <Text style={s.moodEmoji}>{m.emoji}</Text>
-                      <Text style={[s.moodChipTxt, { color: active ? m.color : 'rgba(200,185,255,0.45)' }]}>{m.id}</Text>
+                      <Text style={[s.moodChipTxt, { color: active ? m.color : 'rgba(200,185,255,0.45)' }]}>{t(`studioReader.mood${m.id}`)}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -398,7 +400,7 @@ export default function QuickMomentScreen() {
                 onPress={() => goToStep(STEP_PREVIEW)}
                 activeOpacity={0.85}
               >
-                <Text style={s.primaryBtnTxt}>Preview →</Text>
+                <Text style={s.primaryBtnTxt}>{t('studioReader.preview')}</Text>
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -410,7 +412,7 @@ export default function QuickMomentScreen() {
               contentContainerStyle={[s.stepContainer, { paddingBottom: botPad }]}
               showsVerticalScrollIndicator={false}
             >
-              <Text style={s.stepTitle}>Ready to share?</Text>
+              <Text style={s.stepTitle}>{t('studioReader.readyToShare')}</Text>
 
               {/* Preview card */}
               <View style={[s.previewCard, { borderColor: `${accentColor}22` }]}>
@@ -430,7 +432,7 @@ export default function QuickMomentScreen() {
                   {caption.trim() ? (
                     <Text style={s.previewCaption} numberOfLines={5}>{caption.trim()}</Text>
                   ) : (
-                    <Text style={s.previewCaptionEmpty}>No caption</Text>
+                    <Text style={s.previewCaptionEmpty}>{t('studioReader.noCaption')}</Text>
                   )}
                 </View>
               </View>
@@ -449,10 +451,10 @@ export default function QuickMomentScreen() {
                 activeOpacity={0.88}
               >
                 <Icon name="send" size={17} color="#fff" />
-                <Text style={s.publishBtnTxt}>{posting ? 'Publishing…' : 'Publish moment ✦'}</Text>
+                <Text style={s.publishBtnTxt}>{posting ? t('studioReader.posting') : t('studioReader.publishMoment')}</Text>
               </TouchableOpacity>
 
-              <Text style={s.publishHint}>{isPublic ? '✦ Visible in Discover' : '✦ Only visible to you'}</Text>
+              <Text style={s.publishHint}>{isPublic ? t('studioReader.visibleDiscover') : t('studioReader.visibleOnlyYou')}</Text>
             </ScrollView>
           )}
         </KeyboardAvoidingView>

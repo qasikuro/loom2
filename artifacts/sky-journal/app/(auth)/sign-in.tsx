@@ -13,6 +13,7 @@ import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -41,6 +42,7 @@ function useWarmUpBrowser() {
 }
 
 export default function SignInScreen() {
+  const { t } = useTranslation();
   useWarmUpBrowser();
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startSSOFlow } = useSSO();
@@ -90,20 +92,20 @@ export default function SignInScreen() {
         await setActive({ session: createdSessionId });
         router.replace('/(tabs)' as Href);
       } else if (ssoSignIn?.status === 'needs_first_factor' || signUp?.status === 'missing_requirements') {
-        setCatchError('Additional verification required. Please use email sign-in.');
+        setCatchError(t('auth.additionalVerification'));
       } else if (!createdSessionId) {
-        setCatchError('Sign-in was cancelled or did not complete. Please try again.');
+        setCatchError(t('auth.signInCancelled'));
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Google sign-in failed.');
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.signInFailed'));
     } finally {
       setGoogleLoading(false);
     }
   }, [startSSOFlow, router]);
 
   async function handleSignIn() {
-    if (!isLoaded || !signIn) { setCatchError('Auth not ready. Please try again.'); return; }
+    if (!isLoaded || !signIn) { setCatchError(t('auth.clerkNotReady')); return; }
     setCatchError('');
     setSubmitting(true);
     try {
@@ -115,11 +117,11 @@ export default function SignInScreen() {
         await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)' as Href);
       } else {
-        setCatchError('Sign-in failed. Please try again.');
+        setCatchError(t('auth.signInFailed'));
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Sign-in failed.');
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.signInFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -148,8 +150,8 @@ export default function SignInScreen() {
               <Image source={Images.logo} style={styles.logo} contentFit="contain" />
             </View>
 
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+            <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
+            <Text style={styles.subtitle}>{t('auth.signInSub')}</Text>
 
             {/* ── Google button ──────────────────── */}
             <TouchableOpacity
@@ -163,7 +165,7 @@ export default function SignInScreen() {
               ) : (
                 <>
                   <Text style={styles.googleLogo}>G</Text>
-                  <Text style={styles.googleBtnText}>Continue with Google</Text>
+                  <Text style={styles.googleBtnText}>{t('auth.continueWithGoogle')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -171,14 +173,14 @@ export default function SignInScreen() {
             {/* ── Divider ────────────────────────── */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
+              <Text style={styles.dividerText}>{t('auth.or')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
             {/* ── Email / password form ───────────── */}
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Email</Text>
+                <Text style={styles.fieldLabel}>{t('auth.email')}</Text>
                 <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
                   <TextInput
                     style={styles.inputText}
@@ -188,7 +190,7 @@ export default function SignInScreen() {
                     onBlur={() => setFocusedField(null)}
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    placeholder="your@email.com"
+                    placeholder={t('auth.emailPlaceholder')}
                     placeholderTextColor="rgba(200,184,232,0.35)"
                     autoComplete="email"
                     returnKeyType="next"
@@ -197,7 +199,7 @@ export default function SignInScreen() {
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Password</Text>
+                <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
                 <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
                   <TextInput
                     style={[styles.inputText, { paddingRight: 52 }]}
@@ -228,7 +230,7 @@ export default function SignInScreen() {
               >
                 {isLoading
                   ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.primaryBtnText}>Sign in</Text>
+                    : <Text style={styles.primaryBtnText}>{t('auth.signIn')}</Text>
                 }
               </TouchableOpacity>
 
@@ -237,11 +239,11 @@ export default function SignInScreen() {
 
             {/* ── Footer link ────────────────────── */}
             <View style={styles.footerRow}>
-              <Text style={styles.footerText}>New here?</Text>
+              <Text style={styles.footerText}>{t('auth.newHere')}</Text>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Link href={'/(auth)/sign-up' as any} asChild>
                 <Pressable hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.footerLink}>Create account</Text>
+                  <Text style={styles.footerLink}>{t('auth.createAccount')}</Text>
                 </Pressable>
               </Link>
             </View>

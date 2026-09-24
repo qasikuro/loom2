@@ -22,6 +22,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const BG_MAP: Record<string, any> = {
@@ -60,6 +61,7 @@ function VideoPlayerModal({
   onClose: () => void;
   onDelete: (id: string) => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width: W, height: H } = useWindowDimensions();
   const [muted, setMuted] = useState(false);
@@ -115,7 +117,7 @@ function VideoPlayerModal({
         {confirmDelete && (
           <View style={vp.confirmBanner} pointerEvents="none">
             <Icon name="alert-triangle" size={13} color="#FF6B6B" />
-            <Text style={vp.confirmText}>Tap again to delete</Text>
+            <Text style={vp.confirmText}>{t('components.profileSection.confirmDelete')}</Text>
           </View>
         )}
         <View style={[vp.bottomBar, { paddingBottom: insets.bottom + 16 }]}>
@@ -142,6 +144,7 @@ interface StoryActionSheetProps {
 }
 
 function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryActionSheetProps) {
+  const { t } = useTranslation();
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -208,17 +211,17 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
             <View style={ss.statsRow}>
               <View style={ss.statChip}>
                 <Icon name="eye"      size={11} color="rgba(255,210,100,0.9)" />
-                <Text style={ss.statChipText}>{story.witnessedCount} witnessed</Text>
+                <Text style={ss.statChipText}>{t('components.profileSection.witnessed', { count: story.witnessedCount })}</Text>
               </View>
               <View style={ss.statChip}>
                 <Icon name="bookmark" size={11} color="rgba(200,184,232,0.75)" />
-                <Text style={ss.statChipText}>{story.savedCount} saved</Text>
+                <Text style={ss.statChipText}>{t('components.profileSection.saved', { count: story.savedCount })}</Text>
               </View>
             </View>
             <View style={[ss.pubBadge, { backgroundColor: story.isPublic ? `${moodColor}20` : 'rgba(200,184,232,0.08)', borderColor: story.isPublic ? `${moodColor}40` : 'rgba(200,184,232,0.15)' }]}>
               <Icon name={story.isPublic ? 'globe' : 'lock'} size={9} color={story.isPublic ? moodColor : 'rgba(200,184,232,0.5)'} />
               <Text style={[ss.pubText, { color: story.isPublic ? moodColor : 'rgba(200,184,232,0.5)' }]}>
-                {story.isPublic ? 'Public' : 'Private'}
+                {story.isPublic ? t('common.public') : t('common.private')}
               </Text>
             </View>
           </View>
@@ -231,7 +234,7 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
             <View style={[ss.actionIcon, { backgroundColor: 'rgba(155,122,232,0.12)' }]}>
               <Icon name="eye" size={16} color="#9B7AB5" />
             </View>
-            <Text style={[ss.actionText, { color: colors.foreground }]}>View story</Text>
+            <Text style={[ss.actionText, { color: colors.foreground }]}>{t('components.profileSection.viewStory')}</Text>
             <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.35)" />
           </TouchableOpacity>
         )}
@@ -241,7 +244,7 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
             <View style={[ss.actionIcon, { backgroundColor: 'rgba(100,180,120,0.12)' }]}>
               <Icon name="edit-2" size={16} color="#64B478" />
             </View>
-            <Text style={[ss.actionText, { color: colors.foreground }]}>Edit story</Text>
+            <Text style={[ss.actionText, { color: colors.foreground }]}>{t('components.profileSection.editStory')}</Text>
             <Icon name="chevron-right" size={14} color="rgba(200,184,232,0.35)" />
           </TouchableOpacity>
         )}
@@ -259,7 +262,7 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
             <Icon name={story.isPublic ? 'lock' : 'globe'} size={16} color={story.isPublic ? '#C8A840' : '#64A0DC'} />
           </View>
           <Text style={[ss.actionText, { color: colors.foreground }]}>
-            {story.isPublic ? 'Make private' : 'Make public'}
+            {story.isPublic ? t('components.profileSection.makePrivate') : t('components.profileSection.makePublic')}
           </Text>
         </TouchableOpacity>
 
@@ -268,12 +271,12 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
             <Icon name="trash-2" size={16} color={confirmDelete ? '#E05555' : '#C06060'} />
           </View>
           <Text style={[ss.actionText, { color: confirmDelete ? '#E05555' : '#C06060' }]}>
-            {confirmDelete ? 'Tap again to confirm delete' : 'Delete story'}
+            {confirmDelete ? t('components.profileSection.confirmDelete') : t('components.profileSection.deleteStory')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={[ss.cancelBtn, { backgroundColor: 'rgba(200,184,232,0.07)', borderColor: 'rgba(200,184,232,0.12)' }]} onPress={dismiss} activeOpacity={0.75}>
-          <Text style={[ss.cancelText, { color: 'rgba(200,184,232,0.60)' }]}>Cancel</Text>
+          <Text style={[ss.cancelText, { color: 'rgba(200,184,232,0.60)' }]}>{t('common.cancel')}</Text>
         </TouchableOpacity>
       </Animated.View>
     </Modal>
@@ -367,6 +370,7 @@ export function ProfileStyleSection({
   handleAddGalleryPhoto, galleryUploading, galleryError,
   activeOutfitId,
 }: Props) {
+  const { t } = useTranslation();
   const colors = useColors();
   const { updateStory } = useApp();
   const [activeStory,  setActiveStory]  = useState<Story | null>(null);
@@ -380,7 +384,7 @@ export function ProfileStyleSection({
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>My Stories</Text>
+            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.myStories')}</Text>
             {stories.length > 0 && (
               <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
                 <Text style={[s.countPillText, { color: '#B89AE8' }]}>{stories.length}</Text>
@@ -394,7 +398,7 @@ export function ProfileStyleSection({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon name="book-open" size={12} color="#B89AE8" />
-            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>See all</Text>
+            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>{t('components.profileSection.seeAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -409,7 +413,7 @@ export function ProfileStyleSection({
             activeOpacity={0.75}
           >
             <Icon name="plus" size={18} color="rgba(255,255,255,0.8)" />
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>New story</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('components.profileSection.newStory')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -418,7 +422,7 @@ export function ProfileStyleSection({
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>My Wardrobe</Text>
+            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
             {outfits.length > 0 && (
               <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
                 <Text style={[s.countPillText, { color: '#B89AE8' }]}>{outfits.length}</Text>
@@ -432,7 +436,7 @@ export function ProfileStyleSection({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon name="plus" size={13} color="#B89AE8" />
-            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>New outfit</Text>
+            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>{t('components.profileSection.newOutfit')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -457,7 +461,7 @@ export function ProfileStyleSection({
                   <Text style={s.outfitName} numberOfLines={2}>{outfit.name}</Text>
                   {isActive && (
                     <View style={[s.activePill, { backgroundColor: colors.primary }]}>
-                      <Text style={s.activePillText}>Worn</Text>
+                      <Text style={s.activePillText}>{t('components.profileSection.worn')}</Text>
                     </View>
                   )}
                 </LinearGradient>
@@ -476,7 +480,7 @@ export function ProfileStyleSection({
       <View style={s.section}>
         <View style={s.sectionHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>Gallery</Text>
+            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.galleryUsage')}</Text>
             {gallery.length > 0 && (
               <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
                 <Text style={[s.countPillText, { color: '#B89AE8' }]}>{gallery.length}</Text>
@@ -494,7 +498,7 @@ export function ProfileStyleSection({
             ) : (
               <Icon name="plus" size={13} color="#B89AE8" />
             )}
-            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>Add photo</Text>
+            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>{t('common.addPhoto')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -510,7 +514,7 @@ export function ProfileStyleSection({
             activeOpacity={0.75}
           >
             <Icon name="plus" size={18} color="rgba(255,255,255,0.8)" />
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>Add photo</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('common.addPhoto')}</Text>
           </TouchableOpacity>
         </ScrollView>
 

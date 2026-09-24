@@ -64,11 +64,10 @@ const VIBE_LABELS: Record<string, { symbol: string; label: string; color: string
   adventurous: { symbol: '◈', label: 'Adventurous', color: '#60D888' },
 };
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-function fmtDate(iso: string) {
+function fmtDate(iso: string, locale: string) {
   try {
     const d = new Date(iso);
-    return `${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).format(d);
   } catch { return ''; }
 }
 
@@ -104,7 +103,7 @@ const KB_TARGETS = [
 
 export default function UserOutfitScreen() {
   const colors    = useColors();
-  const { t }     = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets    = useSafeAreaInsets();
   const { width: windowWidth, height: screenHeight } = useWindowDimensions();
   const { followingIds, followUser, unfollowUser } = useApp();
@@ -270,6 +269,17 @@ export default function UserOutfitScreen() {
   const isFollowing = followingIds.includes(params.authorUserId ?? '');
   const initial    = (params.authorName ?? '?').charAt(0).toUpperCase();
   const total      = allOutfits.length;
+  const localizedVibe = (label: string) => t(`outfitJournal.vibe${label}`);
+  const localizedTag = (tag: string) => {
+    const key = `outfitJournal.tag${tag.charAt(0).toUpperCase()}${tag.slice(1).toLowerCase()}`;
+    return ['Casual', 'Formal', 'Dreamy', 'Adventure', 'Cozy', 'Dark', 'Soft', 'Ethereal'].includes(tag)
+      ? t(key)
+      : tag;
+  };
+  const localizedMood = (mood: string) => [
+    'Warm', 'Peaceful', 'Grateful', 'Quiet', 'Joyful', 'Nostalgic', 'Hopeful',
+    'Lonely', 'Dreamy', 'Soft', 'Chaotic',
+  ].includes(mood) ? t(`outfitJournal.mood${mood}`) : mood;
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 24;
@@ -527,10 +537,10 @@ export default function UserOutfitScreen() {
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
                 activeOpacity={0.8}
                 accessibilityRole="button"
-                accessibilityLabel={!musicPlaying ? 'Play outfit music' : musicMuted ? 'Unmute outfit music' : 'Mute outfit music'}
+                accessibilityLabel={!musicPlaying ? t('outfitJournal.playMusic') : musicMuted ? t('outfitJournal.unmuteMusic') : t('outfitJournal.muteMusic')}
               >
                 <Icon name={!musicPlaying || musicMuted ? 'volume-x' : 'volume-2'} size={13} color="#FFF" />
-                <Text style={styles.musicText} numberOfLines={1}>{!musicPlaying ? 'Play music' : musicMuted ? 'Unmute' : outfit.music.title}</Text>
+                <Text style={styles.musicText} numberOfLines={1}>{!musicPlaying ? t('outfitJournal.playMusic') : musicMuted ? t('outfitJournal.unmuteMusic') : outfit.music.title}</Text>
               </TouchableOpacity>
             </Animated.View>
           )}
@@ -584,7 +594,7 @@ export default function UserOutfitScreen() {
             pointerEvents="none"
           >
             <Animated.View style={[styles.liveDot, { opacity: liveDot, backgroundColor: moodColor }]} />
-            <Text style={[styles.liveText, { color: moodColor }]}>Modeling Now</Text>
+            <Text style={[styles.liveText, { color: moodColor }]}>{t('outfitJournal.modelingNow')}</Text>
           </Animated.View>
 
           {/* ── Vibe badge (top-right corner, tappable to open picker) ── */}
@@ -605,7 +615,7 @@ export default function UserOutfitScreen() {
               ) : (
                 <>
                   <Icon name="sparkles" size={12} color="rgba(200,184,232,0.75)" />
-                  <Text style={[styles.vibeBadgeLabel, { color: 'rgba(200,184,232,0.75)' }]}>Add effect</Text>
+                  <Text style={[styles.vibeBadgeLabel, { color: 'rgba(200,184,232,0.75)' }]}>{t('outfitJournal.addEffect')}</Text>
                 </>
               )}
               <Icon
@@ -640,7 +650,7 @@ export default function UserOutfitScreen() {
                   activeOpacity={0.75}
                 >
                   <Text style={[styles.vibeChipSymbol, { color: 'rgba(200,184,232,0.70)' }]}>✕</Text>
-                  <Text style={[styles.vibeChipLabel, { color: 'rgba(200,184,232,0.70)' }]}>None</Text>
+                  <Text style={[styles.vibeChipLabel, { color: 'rgba(200,184,232,0.70)' }]}>{t('outfitJournal.none')}</Text>
                 </TouchableOpacity>
                 {Object.entries(VIBE_DEFS).map(([key, def]) => {
                   const isActive = activeVibe === key;
@@ -660,7 +670,7 @@ export default function UserOutfitScreen() {
                       activeOpacity={0.75}
                     >
                       <Text style={[styles.vibeChipSymbol, { color: def.color }]}>{def.symbol}</Text>
-                      <Text style={[styles.vibeChipLabel, { color: isActive ? def.color : 'rgba(220,210,248,0.78)' }]}>{def.label}</Text>
+                      <Text style={[styles.vibeChipLabel, { color: isActive ? def.color : 'rgba(220,210,248,0.78)' }]}>{localizedVibe(def.label)}</Text>
                     </TouchableOpacity>
                   );
                 })}
@@ -677,7 +687,7 @@ export default function UserOutfitScreen() {
               <Animated.View style={[styles.tagsRow, { transform: [{ translateY: entryY }] }]}>
                 {tags.map(tag => (
                   <View key={tag} style={styles.heroBadge}>
-                    <Text style={styles.heroBadgeText}>✦ {tag}</Text>
+                    <Text style={styles.heroBadgeText}>✦ {localizedTag(tag)}</Text>
                   </View>
                 ))}
               </Animated.View>
@@ -693,7 +703,7 @@ export default function UserOutfitScreen() {
             {outfit?.date ? (
               <Animated.View style={[styles.datePill, { transform: [{ translateY: entryY }] }]}>
                 <Icon name="calendar" size={10} color="rgba(240,228,200,0.78)" />
-                <Text style={styles.datePillText}>{fmtDate(outfit.date)}</Text>
+                <Text style={styles.datePillText}>{fmtDate(outfit.date, i18n.language)}</Text>
               </Animated.View>
             ) : null}
           </Animated.View>
@@ -707,7 +717,7 @@ export default function UserOutfitScreen() {
             pointerEvents="none"
           >
             <Icon name="chevron-up" size={16} color="rgba(255,255,255,0.55)" />
-            <Text style={styles.scrollHintText}>pull to reveal</Text>
+            <Text style={styles.scrollHintText}>{t('outfitJournal.pullToReveal')}</Text>
           </Animated.View>
 
           {/* ── Gallery nav (multiple outfits) ── */}
@@ -780,7 +790,7 @@ export default function UserOutfitScreen() {
               </View>
               {params.authorMood ? (
                 <View style={[styles.moodPill, { backgroundColor: `${moodColor}18`, borderColor: `${moodColor}32` }]}>
-                  <Text style={[styles.moodPillText, { color: moodColor }]}>{params.authorMood}</Text>
+                  <Text style={[styles.moodPillText, { color: moodColor }]}>{localizedMood(params.authorMood)}</Text>
                 </View>
               ) : null}
             </View>
@@ -820,7 +830,7 @@ export default function UserOutfitScreen() {
                   color={isFollowing ? colors.mutedForeground : '#fff'}
                 />
                 <Text style={[styles.followBtnText, { color: isFollowing ? colors.mutedForeground : '#fff' }]}>
-                  {isFollowing ? 'Following' : 'Follow'}
+                  {isFollowing ? t('outfitJournal.following') : t('outfitJournal.follow')}
                 </Text>
               </TouchableOpacity>
 
@@ -844,6 +854,8 @@ export default function UserOutfitScreen() {
                 onPress={() => setReportVisible(true)}
                 activeOpacity={0.82}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={t('outfitJournal.reportOutfit')}
               >
                 <Icon name="flag" size={14} color="rgba(200,100,100,0.65)" />
               </TouchableOpacity>
@@ -870,7 +882,7 @@ export default function UserOutfitScreen() {
             <View style={[styles.contentCard, { backgroundColor: colors.card, borderColor: `${moodColor}28` }, SHADOW.xs]}>
               <View style={styles.cardLabel}>
                 <View style={[styles.cardDot, { backgroundColor: moodColor }]} />
-                <Text style={[styles.cardLabelText, { color: moodColor }]}>Character Story</Text>
+                <Text style={[styles.cardLabelText, { color: moodColor }]}>{t('outfitJournal.characterStory')}</Text>
               </View>
               <Text style={[styles.storyText, { color: colors.foreground }]}>{outfit.story}</Text>
             </View>
@@ -879,7 +891,7 @@ export default function UserOutfitScreen() {
           {/* Admired badge */}
           {appreciated && (
             <View style={styles.admiredRow}>
-              <Text style={[styles.admiredText, { color: moodColor }]}>✦ you admired this look</Text>
+              <Text style={[styles.admiredText, { color: moodColor }]}>{t('outfitJournal.admiredLook')}</Text>
             </View>
           )}
 
@@ -898,7 +910,7 @@ export default function UserOutfitScreen() {
         visible={reportVisible}
         targetType="outfit"
         targetId={params.authorUserId ?? ''}
-        targetLabel={`${params.authorName ?? 'this user'}'s outfit`}
+        targetLabel={t('outfitJournal.reportOutfitBy', { name: params.authorName ?? '' })}
         onClose={() => setReportVisible(false)}
       />
     </View>

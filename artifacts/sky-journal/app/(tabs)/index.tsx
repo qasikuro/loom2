@@ -24,6 +24,7 @@ import { RewardBanner } from '@/components/RewardBanner';
 import { FriendAvatar } from '@/components/FriendAvatar';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
+import { useTranslation } from 'react-i18next';
 
 // ─── Active Event types + theme map ──────────────────────────────────────────
 interface EventInventoryItem {
@@ -230,6 +231,7 @@ function BreathRing({ accent, r = 46 }: { accent: string; r?: number }) {
 // ─── Friend bubble — story-ring style "who's around" row ─────────────────────
 // ─── Daily Invitation card ───────────────────────────────────────────────────
 function DailyInvitation({ onWrite, userMood }: { onWrite: (prompt: string, mood: string) => void; userMood?: string | null }) {
+  const { t } = useTranslation();
   const today  = new Date();
   const daily  = getDailyPrompt(userMood);
   const accent = MOOD_ACCENT[daily.mood] ?? '#C8A84B';
@@ -260,7 +262,7 @@ function DailyInvitation({ onWrite, userMood }: { onWrite: (prompt: string, mood
       <View style={ds.left}>
         <View style={ds.eyebrow}>
           <Text style={[ds.sparkGlyph, { color: `rgba(${accentRgb},0.70)` }]}>✦</Text>
-          <Text style={[ds.label, { color: `rgba(${accentRgb},0.65)` }]}>Daily Prompt</Text>
+          <Text style={[ds.label, { color: `rgba(${accentRgb},0.65)` }]}>{t('feature.home.dailyPrompt')}</Text>
           <View style={[ds.datePill, { backgroundColor: `rgba(${accentRgb},0.10)` }]}>
             <Text style={[ds.dateTxt, { color: `rgba(${accentRgb},0.50)` }]}>
               {today.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
@@ -273,7 +275,7 @@ function DailyInvitation({ onWrite, userMood }: { onWrite: (prompt: string, mood
           )}
         </View>
         <Text style={ds.prompt}>{daily.text}</Text>
-        <Text style={[ds.cta, { color: `rgba(${accentRgb},0.55)` }]}>Begin writing →</Text>
+        <Text style={[ds.cta, { color: `rgba(${accentRgb},0.55)` }]}>{t('feature.home.beginWriting')}</Text>
       </View>
       <View style={[ds.writeBtn, { backgroundColor: `rgba(${accentRgb},0.16)`, borderColor: `rgba(${accentRgb},0.28)` }]}>
         <Icon name="feather" size={13} color={accent} />
@@ -614,6 +616,7 @@ function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
   event: ActiveEvent; visible: boolean; onClose: () => void;
   onCreateStory?: (prompt: string, mood: string) => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const slideY = useRef(new Animated.Value(600)).current;
   const th     = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
@@ -656,7 +659,7 @@ function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
             <View style={ev.sheetTopRow}>
               <View style={ev.eyebrowRow}>
                 <Text style={ev.themeIcon}>{th.icon}</Text>
-                <Text style={[ev.eyebrow, { color: th.color }]}>SKY EVENT</Text>
+                <Text style={[ev.eyebrow, { color: th.color }]}>{t('feature.home.event')}</Text>
               </View>
               <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 style={[ev.sheetClose, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
@@ -691,7 +694,7 @@ function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
                   {/* ── Cosmetic showcase ── */}
                   {cosmeticItems.length > 0 && (
                     <>
-                      <Text style={ev.sheetRewardsLabel}>Exclusive cosmetics</Text>
+                      <Text style={ev.sheetRewardsLabel}>{t('feature.home.exclusiveCosmetics')}</Text>
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -764,7 +767,7 @@ function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
                                 <Text style={[ev.showCardCat, { color: `${th.color}AA` }]}>{catLabel}</Text>
                                 <Text style={[ev.showCardDesc, { color: 'rgba(200,184,232,0.45)' }]} numberOfLines={2}>{desc}</Text>
                                 <View style={[ev.showCardBadge, { backgroundColor: `${th.color}14`, borderColor: `${th.color}28` }]}>
-                                  <Text style={[ev.showCardBadgeTxt, { color: th.color }]}>✦ Limited to this event</Text>
+                                  <Text style={[ev.showCardBadgeTxt, { color: th.color }]}>{t('feature.home.limitedEvent')}</Text>
                                 </View>
                               </View>
                             </View>
@@ -778,7 +781,7 @@ function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
                   {/* ── Currency chips ── */}
                   {currencyItems.length > 0 && (
                     <>
-                      <Text style={[ev.sheetRewardsLabel, { marginTop: cosmeticItems.length > 0 ? 18 : 0 }]}>Also included</Text>
+                      <Text style={[ev.sheetRewardsLabel, { marginTop: cosmeticItems.length > 0 ? 18 : 0 }]}>{t('feature.home.alsoIncluded')}</Text>
                       <View style={ev.currRow}>
                         {currencyItems.map((item, i) => {
                           const color  = REWARD_COLOR[item.type]  ?? '#C8B8E8';
@@ -811,7 +814,7 @@ function EventDetailSheet({ event, visible, onClose, onCreateStory }: {
                 activeOpacity={0.84}
               >
                 <Icon name="book-open" size={15} color={th.color} />
-                <Text style={[ev.ctaBtnTxt, { color: th.color }]}>Create a story for this event  →</Text>
+                <Text style={[ev.ctaBtnTxt, { color: th.color }]}>{t('feature.home.createEventStory')}</Text>
               </TouchableOpacity>
             )}
 
@@ -839,6 +842,7 @@ const THEME_TO_MOOD: Record<string, string> = {
 
 // ─── Event Banner (tappable) ──────────────────────────────────────────────────
 function EventBanner({ event, onPress, onDismiss }: { event: ActiveEvent; onPress: () => void; onDismiss: () => void }) {
+  const { t } = useTranslation();
   const th = EVENT_THEME[event.theme] ?? EVENT_THEME['special']!;
   const cd = eventCountdown(event.endsAt);
 
@@ -863,7 +867,7 @@ function EventBanner({ event, onPress, onDismiss }: { event: ActiveEvent; onPres
         {/* Eyebrow */}
         <View style={ev.eyebrowRow}>
           <Text style={ev.themeIcon}>{th.icon}</Text>
-          <Text style={[ev.eyebrow, { color: th.color }]}>EVENT</Text>
+          <Text style={[ev.eyebrow, { color: th.color }]}>{t('feature.home.event')}</Text>
           {cd && (
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             <View style={[ev.pill, { backgroundColor: `${th.color}1E`, marginLeft: 'auto' as any }]}>
@@ -935,6 +939,7 @@ function SeasonCard({ activeEvent, constellation, onPress }: {
   constellation: ConstellationState | null;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const month = new Date().getMonth();
   const sd    = SEASON_BY_MONTH[month]!;
   const th    = activeEvent ? (EVENT_THEME[activeEvent.theme] ?? null) : null;
@@ -962,13 +967,13 @@ function SeasonCard({ activeEvent, constellation, onPress }: {
       <View pointerEvents="none" style={[sc.glowOrb, { backgroundColor: color }]} />
       <View style={sc.eyebrowRow}>
         <Text style={sc.seasonIcon}>{icon}</Text>
-        <Text style={[sc.eyebrow, { color }]}>CURRENT SEASON</Text>
+        <Text style={[sc.eyebrow, { color }]}>{t('feature.home.currentSeason')}</Text>
         <View style={{ flex: 1 }} />
         <View style={[sc.pill, { backgroundColor: `${color}22` }]}>
           <Text style={[sc.pillTxt, { color }]}>{daysLeft}d left</Text>
         </View>
         <View style={[sc.badge, { backgroundColor: `${color}18`, borderColor: `${color}38` }]}>
-          <Text style={[sc.badgeTxt, { color }]}>Season Pass</Text>
+          <Text style={[sc.badgeTxt, { color }]}>{t('feature.home.seasonPass')}</Text>
         </View>
       </View>
       <Text style={sc.seasonName}>{name}</Text>
@@ -980,7 +985,7 @@ function SeasonCard({ activeEvent, constellation, onPress }: {
         <Text style={[sc.progLabel, { color: `${color}BB` }]}>{stars}/6 seasonal stars collected</Text>
       </View>
       <View style={[sc.cta, { borderColor: `${color}45` }]}>
-        <Text style={[sc.ctaTxt, { color }]}>Continue Journey  →</Text>
+        <Text style={[sc.ctaTxt, { color }]}>{t('feature.home.continueJourney')}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -1016,11 +1021,12 @@ const MINI_STARS = [
 ];
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ConstellationMini({ constellation, onPress }: { constellation: ConstellationState | null; onPress: () => void }) {
+  const { t } = useTranslation();
   if (!constellation) return null;
   return (
     <TouchableOpacity style={cm.wrap} onPress={onPress} activeOpacity={0.85}>
       <View style={cm.header}>
-        <Text style={cm.headerTitle}>Your Constellation</Text>
+        <Text style={cm.headerTitle}>{t('feature.home.constellation')}</Text>
         <Text style={cm.headerCta}>{constellation.unlockedStars.length}/6 stars  →</Text>
       </View>
       <View style={cm.row}>
@@ -1063,6 +1069,7 @@ const cm = StyleSheet.create({
 });
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const insets  = useSafeAreaInsets();
   const colors  = useColors();
@@ -1326,8 +1333,8 @@ export default function HomeScreen() {
         onPress={() => router.push('/(tabs)/discover')}
         activeOpacity={0.8}
       >
-        <Text style={s.emptyStoriesText}>No stories from people you follow yet</Text>
-        <Text style={s.emptyStoriesSub}>Find people in Discover →</Text>
+        <Text style={s.emptyStoriesText}>{t('feature.home.noFollowedStories')}</Text>
+        <Text style={s.emptyStoriesSub}>{t('feature.home.findDiscover')}</Text>
       </TouchableOpacity>
     );
     const rows: React.ReactNode[] = [];
@@ -1474,7 +1481,7 @@ export default function HomeScreen() {
             >
               {action.comingSoon && (
                 <View style={s.dashboardSoonBadge}>
-                  <Text style={s.dashboardSoonText}>SOON</Text>
+                  <Text style={s.dashboardSoonText}>{t('feature.home.soon')}</Text>
                 </View>
               )}
               <View style={[s.dashboardActionIcon, { backgroundColor: `${action.color}14`, borderColor: `${action.color}35` }]}>
@@ -1487,15 +1494,15 @@ export default function HomeScreen() {
 
         <View style={s.dashboardSectionHeader}>
           <View style={s.dashboardSectionTitleRow}>
-            <Text style={s.dashboardSectionTitle}>Friends</Text>
+            <Text style={s.dashboardSectionTitle}>{t('feature.home.friends')}</Text>
             <View style={s.dashboardCount}><Text style={s.dashboardCountText}>{friends.length}</Text></View>
           </View>
-           <TouchableOpacity onPress={() => router.push('/friends')} accessibilityLabel="See all friends"><Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text></TouchableOpacity>
+           <TouchableOpacity onPress={() => router.push('/friends')} accessibilityLabel={t('feature.home.seeAll')}><Text style={[s.dashboardSeeAll, { color: accent }]}>{t('feature.home.seeAll')}</Text></TouchableOpacity>
         </View>
         <View style={s.dashboardFriends}>
             <TouchableOpacity style={s.dashboardFriend} onPress={() => router.push({ pathname: '/friends', params: { tab: 'suggestions' } })} activeOpacity={0.78}>
             <View style={s.dashboardAddFriend}><Icon name="plus" size={23} color="#C995FF" /></View>
-            <Text style={s.dashboardFriendName}>Add</Text>
+            <Text style={s.dashboardFriendName}>{t('feature.home.add')}</Text>
           </TouchableOpacity>
           {dashboardFriends.map(friend => {
             const friendColor = MOOD_COLOR[friend.mood] ?? '#8B6FC4';
@@ -1534,10 +1541,10 @@ export default function HomeScreen() {
           />
           <View style={s.dashboardLumiCopy}>
             <Text style={[s.dashboardLumiEyebrow, { color: accent }]}>✦ LUMI</Text>
-            <Text style={s.dashboardLumiTitle}>Talk to Lumi</Text>
-            <Text style={s.dashboardLumiText} numberOfLines={2}>Your AI companion who listens, supports and understands.</Text>
+            <Text style={s.dashboardLumiTitle}>{t('feature.home.talkToLumi')}</Text>
+            <Text style={s.dashboardLumiText} numberOfLines={2}>{t('feature.home.lumiDesc')}</Text>
             <View style={[s.dashboardLumiButton, { backgroundColor: accent }]}>
-              <Text style={s.dashboardLumiButtonText}>Chat with Lumi</Text>
+              <Text style={s.dashboardLumiButtonText}>{t('feature.home.chatWithLumi')}</Text>
               <Icon name="arrow-right" size={13} color="#FFFFFF" />
             </View>
           </View>
@@ -1548,9 +1555,9 @@ export default function HomeScreen() {
             <View style={s.dashboardSectionHeader}>
               <View style={s.dashboardSectionTitleRow}>
                 <Icon name="gamepad-2" size={14} color="#F4CB55" />
-                <Text style={s.dashboardSectionTitle}>Discover games</Text>
+                <Text style={s.dashboardSectionTitle}>{t('feature.home.discoverGames')}</Text>
               </View>
-              <Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text>
+              <Text style={[s.dashboardSeeAll, { color: accent }]}>{t('feature.home.seeAll')}</Text>
             </View>
             <View style={s.dashboardDiscoverRow}>
               {[
@@ -1583,10 +1590,10 @@ export default function HomeScreen() {
         <View style={s.dashboardSectionHeader}>
           <View style={s.dashboardSectionTitleRow}>
             <Icon name="message-circle" size={14} color="#D774FF" />
-            <Text style={s.dashboardSectionTitle}>Live chats</Text>
+            <Text style={s.dashboardSectionTitle}>{t('feature.home.liveChats')}</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/campfire' as never)}>
-            <Text style={[s.dashboardSeeAll, { color: accent }]}>See all  ›</Text>
+            <Text style={[s.dashboardSeeAll, { color: accent }]}>{t('feature.home.seeAll')}</Text>
           </TouchableOpacity>
         </View>
         <View style={s.dashboardLiveRow}>
@@ -1619,8 +1626,8 @@ export default function HomeScreen() {
           <TouchableOpacity style={s.dashboardLiveCard} onPress={() => router.push('/campfire' as never)} activeOpacity={0.8}>
             <View style={s.dashboardBrowseIcon}><Icon name="compass" size={17} color="#B98BFF" /></View>
             <View style={{ flex: 1 }}>
-              <Text style={s.dashboardLiveName}>Browse</Text>
-              <Text style={s.dashboardLiveStatus}>Discover more</Text>
+              <Text style={s.dashboardLiveName}>{t('feature.home.browse')}</Text>
+              <Text style={s.dashboardLiveStatus}>{t('feature.home.discoverMore')}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -1809,7 +1816,7 @@ export default function HomeScreen() {
               {lumiAwareness(character.name, witnessedNotifs, savedNotifs, circleStories.length, liveCampfireCount, journalEntries, stories, hour, constellation, rewardBalance)}
             </Text>
             <TouchableOpacity style={s.lumiCTABtn} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(tabs)/create'); }} activeOpacity={0.84}>
-              <Text style={s.lumiCTATxt}>Begin something  →</Text>
+              <Text style={s.lumiCTATxt}>{t('feature.home.beginSomething')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -1871,17 +1878,17 @@ export default function HomeScreen() {
         ══════════════════════════════════════════════════ */}
         <Animated.View style={{ opacity: s2, transform: [{ translateY: s2.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
         <View style={s.section}>
-          <SectionHeader label="Your Circle" accent={accent} count={circleStories.length} onPress={() => router.push('/(tabs)/discover')} action={circleStories.length > 0 ? 'See all' : undefined} />
+          <SectionHeader label={t('feature.home.circle')} accent={accent} count={circleStories.length} onPress={() => router.push('/(tabs)/discover')} action={circleStories.length > 0 ? t('feature.home.seeAll') : undefined} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[fr.row, { paddingHorizontal: 16, marginBottom: 14 }]}>
             <TouchableOpacity style={fr.addWrap} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/discover'); }} activeOpacity={0.80}>
               <View style={fr.addCircle}><Icon name="plus" size={20} color="rgba(180,160,255,0.70)" /></View>
-              <Text style={fr.addLabel}>Add</Text>
+              <Text style={fr.addLabel}>{t('feature.home.add')}</Text>
             </TouchableOpacity>
             {circleAuthors.map(post => <FriendBubble key={post.authorUserId} post={post} />)}
           </ScrollView>
           {circleStories.length > 0 ? (
             <>
-              <Text style={s.circleRecentLabel}>Recent from friends</Text>
+              <Text style={s.circleRecentLabel}>{t('feature.home.recentFriends')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10, paddingBottom: 8 }}>
                 {circleStories.slice(0, 5).map(post => {
                   const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
@@ -1902,8 +1909,8 @@ export default function HomeScreen() {
                         }
                       </View>
                       <View style={{ flex: 1, minWidth: 0 }}>
-                        <Text style={s.circleRecentAuthor} numberOfLines={1}>{post.authorHandle ? `@${post.authorHandle}` : post.authorName} shared</Text>
-                        <Text style={s.circleRecentTitle} numberOfLines={1}>{post.chapterTitle || 'Untitled'}</Text>
+                        <Text style={s.circleRecentAuthor} numberOfLines={1}>{post.authorHandle ? `@${post.authorHandle}` : post.authorName} {t('feature.home.shared')}</Text>
+                        <Text style={s.circleRecentTitle} numberOfLines={1}>{post.chapterTitle || t('feature.home.untitled')}</Text>
                         <Text style={s.circleRecentTime}>{timeAgo}</Text>
                       </View>
                       {post.imageUri
@@ -1917,8 +1924,8 @@ export default function HomeScreen() {
             </>
           ) : (
             <TouchableOpacity style={s.emptyStories} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.8}>
-              <Text style={s.emptyStoriesText}>No stories from people you follow yet</Text>
-              <Text style={s.emptyStoriesSub}>Find people in Discover →</Text>
+              <Text style={s.emptyStoriesText}>{t('feature.home.noFollowedStories')}</Text>
+              <Text style={s.emptyStoriesSub}>{t('feature.home.findDiscover')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -1935,13 +1942,13 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}>
               <Text style={{ fontSize: 14, lineHeight: 18 }}>🔥</Text>
-              <Text style={s.campfireBannerEyebrow}>Live Now</Text>
+              <Text style={s.campfireBannerEyebrow}>{t('feature.home.liveNow')}</Text>
             </View>
-            <Text style={s.campfireBannerTitle}>Live Campfire</Text>
+            <Text style={s.campfireBannerTitle}>{t('feature.home.liveCampfire')}</Text>
             <Text style={s.campfireBannerSub}>{liveCampfireCount > 0 ? `${liveCampfireCount} active now · Come join` : 'Join the conversation'}</Text>
           </View>
           <View style={s.campfireJoinBtn}>
-            <Text style={s.campfireJoinTxt}>Join Now</Text>
+            <Text style={s.campfireJoinTxt}>{t('feature.home.joinNow')}</Text>
           </View>
         </TouchableOpacity>
         </Animated.View>
@@ -2003,10 +2010,10 @@ export default function HomeScreen() {
             <View style={s.driftContent}>
               <View style={s.driftEyebrowRow}>
                 <Icon name="moon" size={12} color="rgba(200,168,255,0.65)" />
-                <Text style={s.driftEyebrow}>Drift · with Lumi</Text>
+                <Text style={s.driftEyebrow}>{t('feature.home.driftEyebrow')}</Text>
               </View>
 
-              <Text style={s.driftTitle}>A space to just be</Text>
+              <Text style={s.driftTitle}>{t('feature.home.driftTitle')}</Text>
 
               <Text style={s.driftDesc}>
                 Lumi is waiting inside. No stories, no pressure — just breathing,
@@ -2030,7 +2037,7 @@ export default function HomeScreen() {
 
               {/* CTA line */}
               <View style={s.driftCTA}>
-                <Text style={s.driftCTATxt}>Enter when you're ready</Text>
+                <Text style={s.driftCTATxt}>{t('feature.home.driftReady')}</Text>
                 <Icon name="arrow-right" size={13} color="rgba(200,168,255,0.50)" />
               </View>
             </View>
@@ -2045,7 +2052,7 @@ export default function HomeScreen() {
         {campfires.length > 0 && (
           <View style={s.section}>
             <SectionHeader
-              label="Live Chats"
+              label={t('feature.home.liveChats')}
               accent="#E8A450"
               count={liveCampfireCount > 0 ? liveCampfireCount : undefined}
               action={liveCampfireCount > 0 ? `${liveCampfireCount} live` : undefined}
@@ -2058,8 +2065,8 @@ export default function HomeScreen() {
                 <View style={s.moreCircle}>
                   <Icon name="compass" size={18} color="rgba(160,140,200,0.55)" />
                 </View>
-                <Text style={fb.name}>Browse</Text>
-                <Text style={fb.sub}>Discover</Text>
+                <Text style={fb.name}>{t('feature.home.browse')}</Text>
+                <Text style={fb.sub}>{t('feature.home.discover')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -2067,10 +2074,10 @@ export default function HomeScreen() {
 
         {campfires.length === 0 && (
           <View style={s.section}>
-            <SectionHeader label="Campfires" accent="#E8A450" />
+            <SectionHeader label={t('feature.home.liveCampfire')} accent="#E8A450" />
             <TouchableOpacity style={s.fireEmptyRow} onPress={() => router.push('/(tabs)/discover')} activeOpacity={0.78}>
               <Text style={{ fontSize: 18 }}>🔥</Text>
-              <Text style={s.fireEmptyTxt}>Find guides to light up your campfire sessions</Text>
+              <Text style={s.fireEmptyTxt}>{t('feature.home.fireGuides')}</Text>
               <Icon name="chevron-right" size={14} color="rgba(160,140,200,0.35)" />
             </TouchableOpacity>
           </View>
@@ -2083,7 +2090,7 @@ export default function HomeScreen() {
         {discoverPreview.length > 0 && (
           <Animated.View style={{ opacity: s5, transform: [{ translateY: s5.interpolate({ inputRange: [0,1], outputRange: [18,0] }) }] }}>
           <View style={s.section}>
-            <SectionHeader label="Explore" accent="#60C8F8" onPress={() => router.push('/(tabs)/discover')} action="See all" />
+            <SectionHeader label={t('feature.home.discoverGames')} accent="#60C8F8" onPress={() => router.push('/(tabs)/discover')} action={t('feature.home.seeAll')} />
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10, paddingBottom: 4 }}>
               {discoverPreview.map(post => {
                 const mc = MOOD_COLOR[post.mood] ?? '#7B6BAA';
@@ -2100,7 +2107,7 @@ export default function HomeScreen() {
                         <View style={[s.exploreCardMoodDot, { backgroundColor: mc }]} />
                         <Text style={[s.exploreCardMood, { color: mc }]}>{post.mood}</Text>
                       </View>
-                      <Text style={s.exploreCardTitle} numberOfLines={2}>{post.chapterTitle || 'Untitled'}</Text>
+                      <Text style={s.exploreCardTitle} numberOfLines={2}>{post.chapterTitle || t('feature.home.untitled')}</Text>
                       <Text style={s.exploreCardAuthor} numberOfLines={1}>{post.witnessedCount > 0 ? `${post.witnessedCount} witnessed` : post.authorName}</Text>
                     </View>
                   </TouchableOpacity>
@@ -2124,11 +2131,11 @@ export default function HomeScreen() {
             <Icon name="user-plus" size={15} color="#60C8A8" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.findFriendsTitle}>Add to your Circle</Text>
-            <Text style={s.findFriendsSub}>Find and follow people in the sky</Text>
+            <Text style={s.findFriendsTitle}>{t('feature.home.addCircle')}</Text>
+            <Text style={s.findFriendsSub}>{t('feature.home.findSkyFriends')}</Text>
           </View>
           <View style={s.findFriendsBadge}>
-            <Text style={s.findFriendsBadgeText}>Find Friends</Text>
+            <Text style={s.findFriendsBadgeText}>{t('feature.home.findFriends')}</Text>
           </View>
         </TouchableOpacity>
         </Animated.View>
@@ -2140,12 +2147,12 @@ export default function HomeScreen() {
         <Pressable style={m.overlay} onPress={() => setShowOutfits(false)}>
           <Pressable style={[m.sheet, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24, backgroundColor: colors.card, borderColor: colors.border }]} onPress={e => e.stopPropagation()}>
             <View style={[m.handle, { backgroundColor: `${accent}28` }]} />
-            <Text style={[m.title, { color: colors.foreground }]}>Choose Outfit</Text>
-            <Text style={[m.sub, { color: colors.mutedForeground }]}>Long-press your avatar anytime</Text>
+            <Text style={[m.title, { color: colors.foreground }]}>{t('feature.home.outfit')}</Text>
+            <Text style={[m.sub, { color: colors.mutedForeground }]}>{t('feature.home.outfitHint')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={m.row}>
               <TouchableOpacity style={[m.oCard, !activeOutfitId && { borderColor: accent }]} onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(null); setShowOutfits(false); }}>
                 <View style={[m.oImg, { backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}><Icon name="slash" size={20} color={colors.mutedForeground} /></View>
-                <Text style={[m.oName, { color: colors.mutedForeground }]}>Default</Text>
+                <Text style={[m.oName, { color: colors.mutedForeground }]}>{t('feature.home.defaultOutfit')}</Text>
                 {!activeOutfitId && <View style={[m.check, { backgroundColor: accent }]}><Icon name="check" size={9} color="#fff" /></View>}
               </TouchableOpacity>
               {outfits.map(o => (
@@ -2169,7 +2176,7 @@ export default function HomeScreen() {
           <Pressable style={[m.sheet, m.sheetTall, { paddingBottom: (Platform.OS === 'web' ? 28 : insets.bottom) + 24, backgroundColor: colors.card, borderColor: colors.border }]} onPress={e => e.stopPropagation()}>
             <View style={[m.handle, { backgroundColor: `${accent}28` }]} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-              <Text style={[m.title, { marginBottom: 0, flex: 1 }]}>Notifications</Text>
+              <Text style={[m.title, { marginBottom: 0, flex: 1 }]}>{t('feature.home.notifications')}</Text>
               {hasNotifs && <View style={[m.badge, { backgroundColor: accent }]}><Text style={m.badgeN}>{rewards.length + unread}</Text></View>}
               <TouchableOpacity onPress={() => setShowNotifs(false)} style={[m.closeX, { backgroundColor: colors.muted }]} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Icon name="x" size={15} color={colors.mutedForeground} />
@@ -2178,7 +2185,7 @@ export default function HomeScreen() {
             {rewards.length === 0 && serverNotifications.length === 0 && unreadCampfireRooms.length === 0 && unreadDmThreads.length === 0 ? (
               <View style={m.empty}>
                 <Icon name="bell-off" size={28} color={`${colors.mutedForeground}60`} />
-                <Text style={[m.emptyTxt, { color: colors.mutedForeground }]}>All caught up ✦</Text>
+                <Text style={[m.emptyTxt, { color: colors.mutedForeground }]}>{t('feature.home.allCaughtUp')}</Text>
               </View>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
@@ -2199,10 +2206,10 @@ export default function HomeScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={1}>
-                        Message from {thread.partnerName}
+                        {t('feature.home.messageFrom', { name: thread.partnerName })}
                       </Text>
                       <Text style={[m.notifSub, { color: colors.mutedForeground }]}>
-                        {thread.partnerHandle ? `@${thread.partnerHandle}` : 'Tap to read'}
+                        {thread.partnerHandle ? `@${thread.partnerHandle}` : t('feature.home.tapRead')}
                       </Text>
                     </View>
                     <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#9B78E8' }} />
@@ -2221,8 +2228,8 @@ export default function HomeScreen() {
                       <Icon name="message-circle" size={13} color="#78D8A0" />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={1}>New whisper in {room.name}</Text>
-                      <Text style={[m.notifSub, { color: colors.mutedForeground }]}>Tap to join the fire</Text>
+                      <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={1}>{t('feature.home.newWhisper', { name: room.name })}</Text>
+                      <Text style={[m.notifSub, { color: colors.mutedForeground }]}>{t('feature.home.joinFire')}</Text>
                     </View>
                     <Icon name="chevron-right" size={13} color="rgba(120,216,160,0.55)" />
                   </TouchableOpacity>

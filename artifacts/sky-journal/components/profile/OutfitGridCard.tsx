@@ -7,6 +7,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 export function OutfitGridCard({
   outfit, isActive, cardW, onPress,
@@ -17,6 +18,7 @@ export function OutfitGridCard({
   onPress:  () => void;
 }) {
   const colors = useColors();
+  const { t } = useTranslation();
   const scale  = useRef(new Animated.Value(1)).current;
   const cardH  = Math.round(cardW * 1.25);
 
@@ -26,6 +28,8 @@ export function OutfitGridCard({
       onPressIn={() => Animated.spring(scale, { toValue: 0.94, useNativeDriver: true, tension: 200, friction: 8 }).start()}
       onPressOut={() => Animated.spring(scale, { toValue: 1,    useNativeDriver: true, tension: 200, friction: 8 }).start()}
       activeOpacity={1}
+      accessibilityRole="button"
+      accessibilityLabel={`${outfit.name}, ${isActive ? t('outfitJournal.wornOnHome') : t('outfitJournal.outfits')}`}
     >
       <Animated.View
         style={[
@@ -41,7 +45,7 @@ export function OutfitGridCard({
         ) : (
           <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 4 }]}>
             <Icon name="camera" size={20} color={`${colors.primary}55`} />
-            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: `${colors.primary}55` }}>Add photo</Text>
+            <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: `${colors.primary}55` }}>{t('outfitJournal.addPhotoRequired')}</Text>
           </View>
         )}
         <LinearGradient colors={['transparent', 'rgba(0,0,0,0.72)']} style={s.grad} />

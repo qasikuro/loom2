@@ -30,6 +30,7 @@ import {
   markFirstPublishDone,
 } from '../components/FirstPublishOverlay';
 import { CompletionMoment } from '@/components/CompletionMoment';
+import { useTranslation } from 'react-i18next';
 
 const MOODS = [
   { id: 'Dreamy',      emoji: '🌙', color: '#9B78E8', desc: 'soft and otherworldly' },
@@ -48,6 +49,7 @@ const STEP_MOOD = 0;
 const STEP_TEXT = 1;
 
 export default function VibePostScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -138,7 +140,7 @@ export default function VibePostScreen() {
   }
 
   async function handlePublish() {
-    if (!text.trim()) { setError('Write something first'); return; }
+    if (!text.trim()) { setError(t('studioReader.writeSomethingFirst')); return; }
     const alreadyHasStories = stories.length > 0;
     if (alreadyHasStories) void markFirstPublishDone();
     const isFirstPublish = !alreadyHasStories && !(await hasCompletedFirstPublish());
@@ -177,7 +179,7 @@ export default function VibePostScreen() {
 
     setPosting(false);
     if (!ok) {
-      setError("Couldn't publish — check your connection and try again");
+      setError(t('studioReader.publishFailed'));
       return;
     }
     await markFirstPublishDone();
@@ -203,14 +205,14 @@ export default function VibePostScreen() {
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Icon name="feather" size={14} color={accentColor} />
-          <Text style={[s.headerTitle, { color: accentColor }]} numberOfLines={1}>Vibe Post</Text>
+          <Text style={[s.headerTitle, { color: accentColor }]} numberOfLines={1}>{t('studioReader.vibePost')}</Text>
         </View>
         <TouchableOpacity
           style={[s.visBtn, { borderColor: isPublic ? '#78C8A055' : '#9B7FE855', backgroundColor: isPublic ? '#78C8A012' : '#9B7FE812' }]}
           onPress={() => { setIsPublic(v => !v); Haptics.selectionAsync(); }}
         >
           <Icon name={isPublic ? 'globe' : 'lock'} size={13} color={isPublic ? '#78C8A0' : '#9B7FE8'} />
-          <Text style={[s.visBtnTxt, { color: isPublic ? '#78C8A0' : '#9B7FE8' }]}>{isPublic ? 'Public' : 'Private'}</Text>
+          <Text style={[s.visBtnTxt, { color: isPublic ? '#78C8A0' : '#9B7FE8' }]}>{isPublic ? t('studioReader.public') : t('studioReader.private')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -256,8 +258,8 @@ export default function VibePostScreen() {
                 }}
               />
             )}
-            <Text style={s.stepTitle}>What's the vibe?</Text>
-            <Text style={s.stepSub}>Choose the feeling that fits this moment.</Text>
+            <Text style={s.stepTitle}>{t('studioReader.whatsTheVibe')}</Text>
+            <Text style={s.stepSub}>{t('studioReader.chooseFeeling')}</Text>
 
             <View style={s.moodGrid}>
               {MOODS.map(m => {
@@ -273,8 +275,8 @@ export default function VibePostScreen() {
                     activeOpacity={0.8}
                   >
                     <Text style={s.moodCardEmoji}>{m.emoji}</Text>
-                    <Text style={[s.moodCardName, { color: active ? m.color : 'rgba(200,185,255,0.72)' }]}>{m.id}</Text>
-                    <Text style={s.moodCardDesc} numberOfLines={1}>{m.desc}</Text>
+                    <Text style={[s.moodCardName, { color: active ? m.color : 'rgba(200,185,255,0.72)' }]}>{t(`studioReader.mood${m.id}`)}</Text>
+                    <Text style={s.moodCardDesc} numberOfLines={1}>{t(`studioReader.${m.id.toLowerCase()}Desc`)}</Text>
                     {active && (
                       <View style={[s.moodCheckDot, { backgroundColor: m.color }]} />
                     )}
@@ -289,7 +291,7 @@ export default function VibePostScreen() {
               disabled={!mood}
               activeOpacity={0.85}
             >
-              <Text style={s.primaryBtnTxt}>Write your vibe →</Text>
+              <Text style={s.primaryBtnTxt}>{t('studioReader.writeVibe')}</Text>
             </TouchableOpacity>
           </ScrollView>
         )}
@@ -332,17 +334,17 @@ export default function VibePostScreen() {
                     <Text style={[s.moodBadgeTxt, { color: selectedMood.color }]}>{mood}</Text>
                   </View>
                   <TouchableOpacity onPress={() => setStep(STEP_MOOD)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Text style={s.changeMoodTxt}>Change</Text>
+                    <Text style={s.changeMoodTxt}>{t('studioReader.change')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
 
-              <Text style={s.stepTitle}>Write your vibe</Text>
-              <Text style={s.stepSub}>No image needed — just words.</Text>
+              <Text style={s.stepTitle}>{t('studioReader.writeVibeTitle')}</Text>
+              <Text style={s.stepSub}>{t('studioReader.noImageNeeded')}</Text>
 
               <TextInput
                 style={[s.textArea, { borderColor: `${accentColor}30` }]}
-                placeholder={`Something ${selectedMood?.desc ?? 'on your mind'}…`}
+                placeholder={t('studioReader.somethingOnMind', { mood: selectedMood ? t(`studioReader.${selectedMood.id.toLowerCase()}Desc`) : t('studioReader.onYourMind') })}
                 placeholderTextColor="rgba(200,185,255,0.22)"
                 value={text}
                 onChangeText={t => { setText(t.slice(0, 500)); setError(null); }}
@@ -367,10 +369,10 @@ export default function VibePostScreen() {
                 activeOpacity={0.88}
               >
                 <Icon name="send" size={17} color="#fff" />
-                <Text style={s.publishBtnTxt}>{posting ? 'Publishing…' : 'Send to the sky ✦'}</Text>
+                <Text style={s.publishBtnTxt}>{posting ? t('studioReader.posting') : t('studioReader.sendToSky')}</Text>
               </TouchableOpacity>
 
-              <Text style={s.publishHint}>{isPublic ? '✦ Visible in Discover' : '✦ Only visible to you'}</Text>
+              <Text style={s.publishHint}>{isPublic ? t('studioReader.visibleDiscover') : t('studioReader.visibleOnlyYou')}</Text>
             </ScrollView>
           </KeyboardAvoidingView>
         )}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View, Image, Text, StyleSheet,
   TouchableOpacity, Modal, Pressable,
@@ -23,6 +24,7 @@ interface Props {
  * Tapping a badge shows a small tooltip sheet with the badge name and description.
  */
 export function BadgeTray({ badges }: Props) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<BadgeItem | null>(null);
 
   if (!badges || badges.length === 0) return null;
@@ -94,7 +96,7 @@ export function BadgeTray({ badges }: Props) {
                 onPress={() => setSelected(null)}
                 activeOpacity={0.75}
               >
-                <Text style={[s.dismissText, { color: selected.color }]}>Got it</Text>
+                <Text style={[s.dismissText, { color: selected.color }]}>{t('common.done')}</Text>
               </TouchableOpacity>
             </Pressable>
           )}

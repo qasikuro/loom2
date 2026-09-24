@@ -26,6 +26,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,12 +61,12 @@ interface PublicBook {
 // ── Tab IDs ───────────────────────────────────────────────────────────────────
 
 type TabId = 'chapters' | 'info' | 'world' | 'characters' | 'gallery';
-const TABS: { id: TabId; label: string }[] = [
-  { id: 'chapters',   label: 'Chapters'   },
-  { id: 'info',       label: 'Info'       },
-  { id: 'world',      label: 'World'      },
-  { id: 'characters', label: 'Characters' },
-  { id: 'gallery',    label: 'Gallery'    },
+const TABS: { id: TabId }[] = [
+  { id: 'chapters' },
+  { id: 'info' },
+  { id: 'world' },
+  { id: 'characters' },
+  { id: 'gallery' },
 ];
 
 const ACCENT = '#8B70C8';
@@ -78,14 +79,10 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function readTime(pageCount: number): string {
-  const mins = Math.max(1, Math.round(pageCount * 1.5));
-  return `${mins} min`;
-}
-
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function BookPublicScreen() {
+  const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -155,12 +152,12 @@ export default function BookPublicScreen() {
         <View style={s.chapterBody}>
           <Text style={s.chapterTitle} numberOfLines={1}>{item.title}</Text>
           <View style={s.chapterMeta}>
-            <Text style={s.metaTxt}>{item.pageCount} pages</Text>
+            <Text style={s.metaTxt}>{t('studioReader.pages', { count: item.pageCount })}</Text>
             <Text style={s.metaDot}>·</Text>
-            <Text style={s.metaTxt}>{readTime(item.pageCount)} read</Text>
+            <Text style={s.metaTxt}>{t('studioReader.minute', { count: Math.max(1, Math.round(item.pageCount * 1.5)) })} {t('studioReader.read')}</Text>
             {item.readCount > 0 && <>
               <Text style={s.metaDot}>·</Text>
-              <Text style={s.metaTxt}>{item.readCount.toLocaleString()} reads</Text>
+              <Text style={s.metaTxt}>{item.readCount.toLocaleString()} {t('studioReader.reads')}</Text>
             </>}
             {item.publishedAt && <>
               <Text style={s.metaDot}>·</Text>
@@ -182,7 +179,7 @@ export default function BookPublicScreen() {
             {book.chapters.length === 0 ? (
               <View style={s.empty}>
                 <Icon name="book-open" size={28} color="rgba(200,185,255,0.15)" />
-                <Text style={s.emptyTxt}>No published chapters yet</Text>
+                <Text style={s.emptyTxt}>{t('studioReader.noChapters')}</Text>
               </View>
             ) : (
               <>
@@ -226,30 +223,30 @@ export default function BookPublicScreen() {
             {/* Description */}
             {!!book.description && (
               <>
-                <Text style={s.infoLabel}>ABOUT</Text>
+                <Text style={s.infoLabel}>{t('studioReader.about')}</Text>
                 <Text style={s.descriptionTxt}>{book.description}</Text>
               </>
             )}
 
             {/* Details */}
-            <Text style={s.infoLabel}>DETAILS</Text>
+            <Text style={s.infoLabel}>{t('studioReader.details')}</Text>
             <View style={s.detailGrid}>
               <View style={s.detailItem}>
-                <Text style={s.detailLbl}>Genre</Text>
+                <Text style={s.detailLbl}>{t('studioReader.genre')}</Text>
                 <Text style={s.detailVal}>{book.genre.join(', ') || '—'}</Text>
               </View>
               <View style={s.detailItem}>
-                <Text style={s.detailLbl}>Language</Text>
+                <Text style={s.detailLbl}>{t('studioReader.language')}</Text>
                 <Text style={s.detailVal}>{book.language}</Text>
               </View>
               <View style={s.detailItem}>
-                <Text style={s.detailLbl}>Age Rating</Text>
+                <Text style={s.detailLbl}>{t('studioReader.ageRating')}</Text>
                 <Text style={s.detailVal}>{book.ageRating}</Text>
               </View>
               <View style={s.detailItem}>
-                <Text style={s.detailLbl}>Format</Text>
+                <Text style={s.detailLbl}>{t('studioReader.format')}</Text>
                 <Text style={s.detailVal}>
-                  {book.seriesType === 'oneshot' ? 'One-shot' : book.seriesType === 'series' ? 'Series' : 'Standalone'}
+                  {book.seriesType === 'oneshot' ? t('studioReader.oneShot') : book.seriesType === 'series' ? t('studioReader.series') : t('studioReader.standalone')}
                 </Text>
               </View>
             </View>
@@ -259,24 +256,24 @@ export default function BookPublicScreen() {
         return (
           <View style={s.placeholder}>
             <Icon name="globe" size={28} color="rgba(200,185,255,0.15)" />
-            <Text style={s.placeholderTxt}>World lore coming soon</Text>
-            <Text style={s.placeholderSub}>Authors will be able to add setting details, maps, and lore entries.</Text>
+            <Text style={s.placeholderTxt}>{t('studioReader.worldLoreSoon')}</Text>
+            <Text style={s.placeholderSub}>{t('studioReader.worldLoreDescription')}</Text>
           </View>
         );
       case 'characters':
         return (
           <View style={s.placeholder}>
             <Icon name="users" size={28} color="rgba(200,185,255,0.15)" />
-            <Text style={s.placeholderTxt}>Character roster coming soon</Text>
-            <Text style={s.placeholderSub}>Authors will be able to introduce recurring characters here.</Text>
+            <Text style={s.placeholderTxt}>{t('studioReader.charactersSoon')}</Text>
+            <Text style={s.placeholderSub}>{t('studioReader.charactersDescription')}</Text>
           </View>
         );
       case 'gallery':
         return (
           <View style={s.placeholder}>
             <Icon name="image" size={28} color="rgba(200,185,255,0.15)" />
-            <Text style={s.placeholderTxt}>Fan art gallery coming soon</Text>
-            <Text style={s.placeholderSub}>Readers will be able to share artwork inspired by this story.</Text>
+            <Text style={s.placeholderTxt}>{t('studioReader.fanArtSoon')}</Text>
+            <Text style={s.placeholderSub}>{t('studioReader.fanArtDescription')}</Text>
           </View>
         );
     }
@@ -285,15 +282,15 @@ export default function BookPublicScreen() {
   // ── Loading ────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Loading story details…" /></View>;
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message={t('studioReader.loadingStory')} /></View>;
   }
 
   if (!bookId) {
     return (
       <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-        <Text style={s.emptyTxt}>This story link is missing a book ID.</Text>
+        <Text style={s.emptyTxt}>{t('studioReader.missingBookId')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={s.backInline}>
-          <Text style={{ color: ACCENT, fontSize: 14 }}>Go back</Text>
+          <Text style={{ color: ACCENT, fontSize: 14 }}>{t('studioReader.goBackLower')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -303,9 +300,9 @@ export default function BookPublicScreen() {
     return (
       <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
         <Icon name="book" size={40} color="rgba(200,185,255,0.2)" />
-        <Text style={s.emptyTxt}>Book not found</Text>
+        <Text style={s.emptyTxt}>{t('studioReader.bookNotFound')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={s.backInline}>
-          <Text style={{ color: ACCENT, fontSize: 14 }}>Go back</Text>
+          <Text style={{ color: ACCENT, fontSize: 14 }}>{t('studioReader.goBackLower')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -374,17 +371,17 @@ export default function BookPublicScreen() {
             <View style={s.statsRow}>
               <View style={s.statItem}>
                 <Text style={s.statVal}>{book.followCount.toLocaleString()}</Text>
-                <Text style={s.statLbl}>Followers</Text>
+                <Text style={s.statLbl}>{t('studioReader.followers')}</Text>
               </View>
               <View style={s.statDivider} />
               <View style={s.statItem}>
                 <Text style={s.statVal}>{book.chapters.length}</Text>
-                <Text style={s.statLbl}>Chapters</Text>
+                <Text style={s.statLbl}>{t('studioReader.chapters')}</Text>
               </View>
               <View style={s.statDivider} />
               <View style={s.statItem}>
-                <Text style={s.statVal}>{book.seriesType === 'oneshot' ? 'One-shot' : book.seriesType === 'series' ? 'Series' : 'Standalone'}</Text>
-                <Text style={s.statLbl}>Type</Text>
+                <Text style={s.statVal}>{book.seriesType === 'oneshot' ? t('studioReader.oneShot') : book.seriesType === 'series' ? t('studioReader.series') : t('studioReader.standalone')}</Text>
+                <Text style={s.statLbl}>{t('studioReader.type')}</Text>
               </View>
             </View>
 
@@ -400,7 +397,7 @@ export default function BookPublicScreen() {
                 : <>
                     <Icon name={following ? 'check' : 'plus'} size={13} color={following ? ACCENT : '#fff'} />
                     <Text style={[s.followTxt, following && { color: ACCENT }]}>
-                      {following ? 'Following' : 'Follow'}
+                      {following ? t('studioReader.following') : t('studioReader.follow')}
                     </Text>
                   </>}
             </TouchableOpacity>
@@ -414,14 +411,14 @@ export default function BookPublicScreen() {
           style={s.tabStrip}
           contentContainerStyle={s.tabStripContent}
         >
-          {TABS.map(t => (
+          {TABS.map(tabItem => (
             <TouchableOpacity
-              key={t.id}
-              style={[s.tabBtn, tab === t.id && s.tabBtnActive]}
-              onPress={() => setTab(t.id)}
+              key={tabItem.id}
+              style={[s.tabBtn, tab === tabItem.id && s.tabBtnActive]}
+              onPress={() => setTab(tabItem.id)}
               activeOpacity={0.7}
             >
-              <Text style={[s.tabTxt, tab === t.id && s.tabTxtActive]}>{t.label}</Text>
+              <Text style={[s.tabTxt, tab === tabItem.id && s.tabTxtActive]}>{tabItem.id === 'chapters' ? t('studioReader.chapters') : tabItem.id === 'info' ? t('studioReader.info') : tabItem.id === 'world' ? t('studioReader.world') : tabItem.id === 'characters' ? t('studioReader.characters') : t('studioReader.gallery')}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -441,7 +438,7 @@ export default function BookPublicScreen() {
             activeOpacity={0.85}
           >
             <Icon name="book-open" size={15} color="#fff" />
-            <Text style={s.readCtaTxt}>Start Reading</Text>
+            <Text style={s.readCtaTxt}>{t('studioReader.startReading')}</Text>
           </TouchableOpacity>
         </View>
       )}

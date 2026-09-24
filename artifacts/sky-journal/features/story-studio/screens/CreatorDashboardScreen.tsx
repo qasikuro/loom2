@@ -14,6 +14,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,9 +37,10 @@ type Dashboard = {
 // ── Stat card ─────────────────────────────────────────────────────────────────
 
 function StatCard({
-  icon, label, value, delta, accentColor,
+  icon, label, value, delta, accentColor, translate,
 }: {
   icon: string; label: string; value: number; delta?: number; accentColor: string;
+  translate: (key: string, options?: any) => string;
 }) {
   const hasDelta = delta !== undefined && delta > 0;
   return (
@@ -51,7 +53,7 @@ function StatCard({
       {hasDelta && (
         <View style={[s.deltaBadge, { backgroundColor: `${accentColor}18`, borderColor: `${accentColor}30` }]}>
           <Icon name="trending-up" size={9} color={accentColor} />
-          <Text style={[s.deltaText, { color: accentColor }]}>+{delta} this week</Text>
+          <Text style={[s.deltaText, { color: accentColor }]}>{translate('studioEditor.thisWeek', { count: delta })}</Text>
         </View>
       )}
     </View>
@@ -100,7 +102,8 @@ function BarChart({
 // ── Book card ─────────────────────────────────────────────────────────────────
 
 function BookCard({ book, accentColor }: { book: DashboardBook; accentColor: string }) {
-  const ago = getRelativeTime(book.updatedAt);
+  const { t } = useTranslation();
+  const ago = getRelativeTime(book.updatedAt, t);
   return (
     <TouchableOpacity
       style={s.bookCard}
@@ -117,10 +120,10 @@ function BookCard({ book, accentColor }: { book: DashboardBook; accentColor: str
         <Text style={s.bookTitle} numberOfLines={1}>{book.title}</Text>
         <View style={s.bookMeta}>
           <Icon name="layers" size={10} color="rgba(200,185,255,0.38)" />
-          <Text style={s.bookMetaTxt}>{book.chapterCount} chapter{book.chapterCount !== 1 ? 's' : ''}</Text>
+          <Text style={s.bookMetaTxt}>{t(`studioEditor.${book.chapterCount === 1 ? 'chapterSingular' : 'chapterPlural'}`, { count: book.chapterCount })}</Text>
           <View style={s.bookMetaDot} />
           <Icon name="eye" size={10} color="rgba(200,185,255,0.38)" />
-          <Text style={s.bookMetaTxt}>{book.totalReads.toLocaleString()} reads</Text>
+          <Text style={s.bookMetaTxt}>{t('studioEditor.reads', { count: book.totalReads.toLocaleString() })}</Text>
           <View style={s.bookMetaDot} />
           <Text style={s.bookMetaTxt}>{ago}</Text>
         </View>
@@ -130,20 +133,21 @@ function BookCard({ book, accentColor }: { book: DashboardBook; accentColor: str
   );
 }
 
-function getRelativeTime(iso: string): string {
+function getRelativeTime(iso: string, t: (key: string, options?: any) => string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const days = Math.floor(ms / 86_400_000);
-  if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
-  if (days < 7)  return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+  if (days === 0) return t('studioEditor.today');
+  if (days === 1) return t('studioEditor.yesterday');
+  if (days < 7)  return t('studioEditor.daysAgo', { count: days });
+  if (days < 30) return t('studioEditor.weeksAgo', { count: Math.floor(days / 7) });
+  return t('studioEditor.monthsAgo', { count: Math.floor(days / 30) });
 }
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function CreatorDashboardScreen() {
   const colors    = useColors();
+  const { t } = useTranslation();
   const insets    = useSafeAreaInsets();
   const apiFetch  = useApiFetch();
 
@@ -161,7 +165,7 @@ export default function CreatorDashboardScreen() {
       const data = await apiFetch<Dashboard>('/creator/dashboard');
       if (data !== null) setDashboard(data);
     } catch {
-      setError('Could not load dashboard');
+      setError(t('studioEditor.dashboardLoadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -178,7 +182,7 @@ export default function CreatorDashboardScreen() {
   const topPad = insets.top + 10;
 
   if (loading && !dashboard) {
-    return <View style={s.root}><SkyLoadingOverlay message="Gathering your studio insights…" /></View>;
+    return <View style={s.root}><SkyLoadingOverlay message={t('studioEditor.gatherInsights')} /></View>;
   }
 
   return (
@@ -188,13 +192,13 @@ export default function CreatorDashboardScreen() {
         <TouchableOpacity style={s.backBtn} onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.78)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Creator Dashboard</Text>
+        <Text style={s.headerTitle}>{t('studioEditor.creatorDashboard')}</Text>
         <TouchableOpacity
           style={[s.newBookBtn, { backgroundColor: `${accentColor}18`, borderColor: `${accentColor}30` }]}
           onPress={() => router.push('/create-book')}
         >
           <Icon name="plus" size={13} color={accentColor} />
-          <Text style={[s.newBookTxt, { color: accentColor }]}>New Book</Text>
+          <Text style={[s.newBookTxt, { color: accentColor }]}>{t('studioEditor.newBook')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -210,7 +214,7 @@ export default function CreatorDashboardScreen() {
             <Icon name="alert-circle" size={13} color="#E05C5C" />
             <Text style={s.errorTxt}>{error}</Text>
             <TouchableOpacity onPress={() => loadDashboard()}>
-              <Text style={s.retryTxt}>Retry</Text>
+              <Text style={s.retryTxt}>{t('studioEditor.retry')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -218,27 +222,30 @@ export default function CreatorDashboardScreen() {
         {/* ── Stats row ─────────────────────────────────────────────── */}
         {dashboard && (
           <>
-            <Text style={s.sectionLabel}>ALL TIME</Text>
+            <Text style={s.sectionLabel}>{t('studioEditor.allTime')}</Text>
             <View style={s.statsRow}>
               <StatCard
                 icon="eye"
-                label="Reads"
+                label={t('studioEditor.readsLabel')}
                 value={dashboard.totals.reads}
                 accentColor="#78C8FF"
+                translate={t}
               />
               <StatCard
                 icon="users"
-                label="Followers"
+                label={t('studioEditor.followersLabel')}
                 value={dashboard.totals.followers}
                 delta={dashboard.weekly.newFollowers}
                 accentColor="#C870A0"
+                translate={t}
               />
               <StatCard
                 icon="message-circle"
-                label="Comments"
+                label={t('studioEditor.commentsLabel')}
                 value={dashboard.totals.comments}
                 delta={dashboard.weekly.newComments}
                 accentColor="#9B7FE8"
+                translate={t}
               />
             </View>
 
@@ -246,31 +253,31 @@ export default function CreatorDashboardScreen() {
             <View style={s.chartCard}>
               <View style={s.chartHeader}>
                 <Icon name="bar-chart-2" size={13} color={accentColor} />
-                <Text style={s.chartTitle}>Weekly Engagement</Text>
-                <Text style={s.chartSub}>Comments per day</Text>
+                <Text style={s.chartTitle}>{t('studioEditor.weeklyEngagement')}</Text>
+                <Text style={s.chartSub}>{t('studioEditor.commentsPerDay')}</Text>
               </View>
               <BarChart data={dashboard.engagementTrend} accentColor={accentColor} />
             </View>
 
             {/* ── My Books ──────────────────────────────────────────── */}
             <View style={s.sectionRow}>
-              <Text style={s.sectionLabel}>MY BOOKS</Text>
+              <Text style={s.sectionLabel}>{t('studioEditor.myBooks')}</Text>
               <TouchableOpacity onPress={() => router.push('/my-books' as any)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-                <Text style={[s.seeAllTxt, { color: accentColor }]}>See all</Text>
+                <Text style={[s.seeAllTxt, { color: accentColor }]}>{t('studioEditor.seeAll')}</Text>
               </TouchableOpacity>
             </View>
 
             {dashboard.topBooks.length === 0 ? (
               <View style={s.emptyBooks}>
                 <Icon name="book-open" size={28} color="rgba(200,185,255,0.20)" />
-                <Text style={s.emptyBooksTitle}>No books yet</Text>
-                <Text style={s.emptyBooksSub}>Create your first book to start tracking reads and followers.</Text>
+                <Text style={s.emptyBooksTitle}>{t('studioEditor.noBooks')}</Text>
+                <Text style={s.emptyBooksSub}>{t('studioEditor.dashboardEmpty')}</Text>
                 <TouchableOpacity
                   style={[s.createFirstBookBtn, { backgroundColor: `${accentColor}18`, borderColor: `${accentColor}30` }]}
                   onPress={() => router.push('/create-book')}
                 >
                   <Icon name="plus" size={13} color={accentColor} />
-                  <Text style={[s.createFirstBookTxt, { color: accentColor }]}>Create a Book</Text>
+                  <Text style={[s.createFirstBookTxt, { color: accentColor }]}>{t('studioEditor.createBook')}</Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -282,7 +289,7 @@ export default function CreatorDashboardScreen() {
             )}
 
             {/* ── Quick actions ─────────────────────────────────────── */}
-            <Text style={[s.sectionLabel, { marginTop: 24 }]}>QUICK ACTIONS</Text>
+            <Text style={[s.sectionLabel, { marginTop: 24 }]}>{t('studioEditor.quickActions')}</Text>
             <View style={s.quickActions}>
               <TouchableOpacity
                 style={[s.quickBtn, { borderColor: `${accentColor}25`, backgroundColor: `${accentColor}0A` }]}
@@ -292,8 +299,8 @@ export default function CreatorDashboardScreen() {
                 <View style={[s.quickIconWrap, { backgroundColor: `${accentColor}18` }]}>
                   <Icon name="book" size={18} color={accentColor} />
                 </View>
-                <Text style={s.quickBtnTitle}>New Book</Text>
-                <Text style={s.quickBtnSub}>Start a new series or standalone</Text>
+                <Text style={s.quickBtnTitle}>{t('studioEditor.newBook')}</Text>
+                <Text style={s.quickBtnSub}>{t('studioEditor.standaloneOrSeries')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -304,8 +311,8 @@ export default function CreatorDashboardScreen() {
                 <View style={[s.quickIconWrap, { backgroundColor: 'rgba(120,200,160,0.15)' }]}>
                   <Icon name="layers" size={18} color="#78C8A0" />
                 </View>
-                <Text style={s.quickBtnTitle}>My Books</Text>
-                <Text style={s.quickBtnSub}>Manage chapters and drafts</Text>
+                <Text style={s.quickBtnTitle}>{t('studioEditor.myBooksTitle')}</Text>
+                <Text style={s.quickBtnSub}>{t('studioEditor.manageChapters')}</Text>
               </TouchableOpacity>
             </View>
           </>

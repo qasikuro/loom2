@@ -47,9 +47,9 @@ interface Layout {
 }
 
 const LAYOUTS: Layout[] = [
-  { key: '1',  label: 'Full',  count: 1, rows: [[1]] },
-  { key: '2v', label: 'Stack', count: 2, rows: [[1], [1]] },
-  { key: '2h', label: 'Side',  count: 2, rows: [[1, 1]] },
+  { key: '1',  label: 'layoutFull',  count: 1, rows: [[1]] },
+  { key: '2v', label: 'layoutStack', count: 2, rows: [[1], [1]] },
+  { key: '2h', label: 'layoutSide',  count: 2, rows: [[1, 1]] },
   { key: '3a', label: '1+2',   count: 3, rows: [[1], [1, 1]] },
   { key: '3b', label: '2+1',   count: 3, rows: [[1, 1], [1]] },
   { key: '4',  label: '2×2',   count: 4, rows: [[1, 1], [1, 1]] },
@@ -108,15 +108,15 @@ function LayoutIcon({ layout, size = 38 }: { layout: Layout; size?: number }) {
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const FONTS = [
-  { key: 'Satoshi-Regular', label: 'Regular' },
-  { key: 'Satoshi-Medium',  label: 'Medium'  },
-  { key: 'Satoshi-Bold',    label: 'Bold'    },
+  { key: 'Satoshi-Regular', label: 'fontRegular' },
+  { key: 'Satoshi-Medium',  label: 'fontMedium'  },
+  { key: 'Satoshi-Bold',    label: 'fontBold'    },
 ] as const;
 
 const BUBBLE_STYLES: { key: BubbleStyle; label: string; radius: number; hasTail: boolean }[] = [
-  { key: 'rounded', label: 'Rounded', radius: 12, hasTail: true  },
-  { key: 'sharp',   label: 'Sharp',   radius: 2,  hasTail: true  },
-  { key: 'oval',    label: 'Oval',    radius: 50, hasTail: false },
+  { key: 'rounded', label: 'rounded', radius: 12, hasTail: true  },
+  { key: 'sharp',   label: 'sharp',   radius: 2,  hasTail: true  },
+  { key: 'oval',    label: 'oval',    radius: 50, hasTail: false },
 ];
 
 const STICKERS = ['✨','🌟','💫','🌙','☁️','🕊️','🌸','🍃','⭐','🌊','🦋','🌈','🔮','🌺','❄️','🌿'];
@@ -418,7 +418,7 @@ export default function PanelEditorScreen() {
         });
         setFailedPanels(prev => { const m = new Map(prev); m.delete(panelIdx); return m; });
       } catch (err: unknown) {
-        const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — tap the panel to retry.';
+        const msg = err instanceof ImageUploadError ? err.userMessage : t('studioEditor.uploadFailedTapPanel');
         setUploadError(msg);
         // store srcUri so retryPanel() can re-run the upload later
         setFailedPanels(prev => { const m = new Map(prev); m.set(panelIdx, srcUri); return m; });
@@ -439,7 +439,7 @@ export default function PanelEditorScreen() {
       updatePanel(idx, { imageUri: uri, bgPreset: undefined, imageAspectRatio: aspectRatio, contentFit: fit });
       setFailedPanels(prev => { const m = new Map(prev); m.delete(idx); return m; });
     } catch (err: unknown) {
-      const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — tap the panel to retry.';
+      const msg = err instanceof ImageUploadError ? err.userMessage : t('studioEditor.uploadFailedTapPanel');
       setUploadError(msg);
       setFailedPanels(prev => { const m = new Map(prev); m.set(idx, croppedUri); return m; });
     } finally {
@@ -463,7 +463,7 @@ export default function PanelEditorScreen() {
         return next;
       });
     } catch (err: unknown) {
-      const msg = err instanceof ImageUploadError ? err.userMessage : 'Upload failed again — tap to retry.';
+      const msg = err instanceof ImageUploadError ? err.userMessage : t('studioEditor.uploadFailedAgain');
       setUploadError(msg);
       setFailedPanels(prev => { const m = new Map(prev); m.set(panelIdx, srcUri); return m; });
     } finally {
@@ -714,7 +714,7 @@ export default function PanelEditorScreen() {
                           {uploadingSet.has(pIdx) && (
                             <Animated.View style={[styles.uploadOverlay, { opacity: uploadPulse }]}>
                               <SkyLoadingMark size={38} color="rgba(200,184,232,0.9)" />
-                              <Text style={styles.uploadOverlayText}>Saving…</Text>
+                              <Text style={styles.uploadOverlayText}>{t('studioEditor.panelSaving')}</Text>
                             </Animated.View>
                           )}
 
@@ -726,7 +726,7 @@ export default function PanelEditorScreen() {
                               activeOpacity={0.8}
                             >
                               <Icon name="refresh-cw" size={22} color="rgba(255,220,220,0.92)" />
-                              <Text style={styles.uploadOverlayText}>Tap to retry</Text>
+                              <Text style={styles.uploadOverlayText}>{t('studioEditor.retryUpload')}</Text>
                             </TouchableOpacity>
                           )}
 
@@ -790,9 +790,9 @@ export default function PanelEditorScreen() {
         {/* ── Toolbar ───────────────────────────────────────── */}
         <View style={[styles.toolbar, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {([
-            { mode: 'bubble'  as const, icon: 'message-circle' as const, label: 'Speech Bubble' },
-            { mode: 'text'    as const, icon: 'type'           as const, label: 'Text' },
-            { mode: 'sticker' as const, icon: 'star'           as const, label: 'Sticker' },
+            { mode: 'bubble'  as const, icon: 'message-circle' as const, label: 'speechBubble' },
+            { mode: 'text'    as const, icon: 'type'           as const, label: 'text' },
+            { mode: 'sticker' as const, icon: 'star'           as const, label: 'sticker' },
           ]).map(({ mode, icon, label }) => (
             <TouchableOpacity
               key={mode}
@@ -805,6 +805,8 @@ export default function PanelEditorScreen() {
                   borderWidth: 1,
                 },
               ]}
+              accessibilityRole="button"
+              accessibilityLabel={t(`studioEditor.${label}`)}
               onPress={() => {
                 Haptics.selectionAsync();
                 setToolMode(prev => prev === mode ? null : mode);
@@ -813,7 +815,7 @@ export default function PanelEditorScreen() {
             >
               <Icon name={icon} size={18} color={toolMode === mode ? colors.primary : colors.mutedForeground} />
               <Text style={[styles.toolLabel, { color: toolMode === mode ? colors.primary : colors.mutedForeground }]}>
-                {label}
+                {t(`studioEditor.${label}`)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -823,11 +825,13 @@ export default function PanelEditorScreen() {
         {(toolMode === 'bubble' || toolMode === 'text') && !selId && (
           <TouchableOpacity
             style={[styles.addCTA, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}
+            accessibilityRole="button"
+            accessibilityLabel={toolMode === 'bubble' ? t('studioEditor.addSpeechBubble') : t('studioEditor.addTextToPanel')}
             onPress={() => addOverlay(toolMode)}
           >
             <Icon name="plus-circle" size={16} color={colors.primary} />
             <Text style={[styles.addCTAText, { color: colors.primary }]}>
-              {toolMode === 'bubble' ? 'Add Speech Bubble to Panel' : 'Add Text to Panel'}
+              {toolMode === 'bubble' ? t('studioEditor.addSpeechBubble') : t('studioEditor.addTextToPanel')}
             </Text>
           </TouchableOpacity>
         )}
@@ -860,10 +864,10 @@ export default function PanelEditorScreen() {
                 size={14} color={colors.primary}
               />
               <Text style={[styles.editorHeaderTitle, { color: colors.primary }]}>
-                {selOverlay.type === 'bubble' ? 'Speech Bubble' : selOverlay.type === 'text' ? 'Text Overlay' : 'Sticker'}
-                <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Regular' }}>  · drag to move</Text>
+                {selOverlay.type === 'bubble' ? t('studioEditor.speechBubble') : selOverlay.type === 'text' ? t('studioEditor.textOverlay') : t('studioEditor.sticker')}
+                <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Regular' }}>  {t('studioEditor.dragMove')}</Text>
               </Text>
-              <TouchableOpacity onPress={() => deleteOverlay(selOverlay.id)} style={styles.editorDeleteBtn}>
+              <TouchableOpacity onPress={() => deleteOverlay(selOverlay.id)} style={styles.editorDeleteBtn} accessibilityRole="button" accessibilityLabel={t('common.delete')}>
                 <Icon name="trash-2" size={14} color="#E05C5C" />
               </TouchableOpacity>
             </View>
@@ -885,7 +889,7 @@ export default function PanelEditorScreen() {
                         Aa
                       </Text>
                       <Text style={[styles.fontBarLabel, { color: active ? colors.primary : colors.mutedForeground }]}>
-                        {f.label}
+                        {t(`studioEditor.${f.label}`)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -926,7 +930,7 @@ export default function PanelEditorScreen() {
                 style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border, fontFamily: (selOverlay.fontFamily ?? 'Satoshi-Medium') as any }]}
                 value={selOverlay.content}
                 onChangeText={t => updateOverlay(selOverlay.id, { content: t })}
-                placeholder={selOverlay.type === 'bubble' ? 'The wind guides us…' : 'Enter text…'}
+                placeholder={selOverlay.type === 'bubble' ? t('studioEditor.bubblePlaceholder') : t('studioEditor.panelPlaceholder')}
                 placeholderTextColor={colors.mutedForeground}
                 multiline
                 textAlignVertical="top"
@@ -950,7 +954,7 @@ export default function PanelEditorScreen() {
                         onPress={() => { Haptics.selectionAsync(); updateOverlay(selOverlay.id, { bubbleStyle: bs.key }); }}
                       >
                         <View style={[styles.stylePreview, { borderRadius: bs.radius }]} />
-                        <Text style={[styles.styleChipLabel, { color: active ? colors.primary : colors.mutedForeground }]}>{bs.label}</Text>
+                        <Text style={[styles.styleChipLabel, { color: active ? colors.primary : colors.mutedForeground }]}>{t(`studioEditor.${bs.label}`)}</Text>
                       </TouchableOpacity>
                     );
                   })}
@@ -1007,7 +1011,7 @@ export default function PanelEditorScreen() {
                   >
                     <LayoutIcon layout={layout} size={38} />
                     <Text style={[styles.frameLabel, { color: isActive ? colors.primary : colors.mutedForeground }]}>
-                      {layout.label}
+                      {t(`studioEditor.${layout.label}`)}
                     </Text>
                   </TouchableOpacity>
                 );

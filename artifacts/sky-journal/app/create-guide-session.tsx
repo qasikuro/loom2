@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 function defaultDate(): string {
   const value = new Date(Date.now() + 24 * 60 * 60_000);
@@ -13,6 +14,7 @@ function defaultDate(): string {
 }
 
 export default function CreateGuideSessionScreen() {
+  const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
@@ -27,7 +29,7 @@ export default function CreateGuideSessionScreen() {
 
   async function createSession() {
     if (!title.trim() || description.trim().length < 10 || Number.isNaN(startsAt.getTime())) {
-      Alert.alert('Check session details', 'Add a title, a description of at least 10 characters, and a valid date and time.');
+      Alert.alert(t('social.checkSession'), t('social.checkSessionBody'));
       return;
     }
     setSaving(true);
@@ -43,11 +45,11 @@ export default function CreateGuideSessionScreen() {
           capacity: Number(capacity),
         }),
       });
-      Alert.alert('Session scheduled', 'People can now discover and join it from your guide profile.', [
-        { text: 'View session', onPress: () => router.replace(`/guide-session/${session.id}`) },
+      Alert.alert(t('social.sessionScheduled'), t('social.sessionScheduledBody'), [
+        { text: t('social.viewSession'), onPress: () => router.replace(`/guide-session/${session.id}`) },
       ]);
     } catch (error) {
-      Alert.alert('Could not schedule session', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert(t('social.scheduleError'), error instanceof Error ? error.message : t('social.tryAgain'));
     } finally {
       setSaving(false);
     }
@@ -59,25 +61,25 @@ export default function CreateGuideSessionScreen() {
       <View style={s.header}>
         <BackButton />
         <View>
-          <Text style={[s.title, { color: colors.foreground }]}>Create a guide session</Text>
-          <Text style={[s.subtitle, { color: colors.mutedForeground }]}>Everyone joins one shared chat at the start time.</Text>
+          <Text style={[s.title, { color: colors.foreground }]}>{t('social.createGuideSession')}</Text>
+          <Text style={[s.subtitle, { color: colors.mutedForeground }]}>{t('social.sessionJoinInfo')}</Text>
         </View>
       </View>
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled">
-        <Field label="Session title" value={title} onChangeText={setTitle} placeholder="Finding calm together" colors={colors} />
-        <Field label="What the session is about" value={description} onChangeText={setDescription} placeholder="Explain what you will discuss and what people can expect…" colors={colors} multiline />
-        <Field label="Topic (optional)" value={topic} onChangeText={setTopic} placeholder="Anxiety & Stress" colors={colors} />
+        <Field label={t('social.sessionTitle')} value={title} onChangeText={setTitle} placeholder={t('social.titleExample')} colors={colors} />
+        <Field label={t('social.sessionAbout')} value={description} onChangeText={setDescription} placeholder={t('social.descriptionExample')} colors={colors} multiline />
+        <Field label={t('social.topicOptional')} value={topic} onChangeText={setTopic} placeholder={t('social.topicExample')} colors={colors} />
         <View style={s.row}>
-          <View style={{ flex: 1 }}><Field label="Date" value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" colors={colors} /></View>
-          <View style={{ width: 110 }}><Field label="Time" value={time} onChangeText={setTime} placeholder="19:00" colors={colors} /></View>
+          <View style={{ flex: 1 }}><Field label={t('social.date')} value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" colors={colors} /></View>
+          <View style={{ width: 110 }}><Field label={t('social.time')} value={time} onChangeText={setTime} placeholder="19:00" colors={colors} /></View>
         </View>
         <View style={s.row}>
-          <View style={{ flex: 1 }}><Field label="Minutes" value={duration} onChangeText={setDuration} placeholder="60" colors={colors} numeric /></View>
-          <View style={{ flex: 1 }}><Field label="Maximum people" value={capacity} onChangeText={setCapacity} placeholder="30" colors={colors} numeric /></View>
+          <View style={{ flex: 1 }}><Field label={t('social.minutes')} value={duration} onChangeText={setDuration} placeholder="60" colors={colors} numeric /></View>
+          <View style={{ flex: 1 }}><Field label={t('social.maximumPeople')} value={capacity} onChangeText={setCapacity} placeholder="30" colors={colors} numeric /></View>
         </View>
         <TouchableOpacity style={[s.create, { backgroundColor: colors.primary, opacity: saving ? 0.6 : 1 }]} disabled={saving} onPress={createSession}>
           <Icon name="calendar" size={17} color="#fff" />
-          <Text style={s.createText}>{saving ? 'Scheduling…' : 'Schedule session'}</Text>
+          <Text style={s.createText}>{saving ? t('social.scheduling') : t('social.scheduleSession')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

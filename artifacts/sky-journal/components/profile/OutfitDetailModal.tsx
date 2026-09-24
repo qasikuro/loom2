@@ -11,7 +11,6 @@ import {
   Modal, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { fmtDate } from './profileConstants';
 import { shareOutfit } from '@/utils/shareContent';
 
 interface Props {
@@ -31,9 +30,18 @@ export function OutfitDetailModal({
   onClose, onSetDisplay, onDelete,
 }: Props) {
   const colors          = useColors();
-  const { t }           = useTranslation();
+  const { t, i18n }     = useTranslation();
   const { user }        = useUser();
   const [imageFit, setImageFit] = useState<'contain' | 'cover'>('contain');
+  const displayTag = (tag: string) => {
+    if (tag.startsWith('vibe:')) {
+      const label = tag.slice(5).replace(/(^\w|-\w)/g, value => value.replace('-', '').toUpperCase());
+      return t(`outfitJournal.vibe${label}`);
+    }
+    return ['Casual', 'Formal', 'Dreamy', 'Adventure', 'Cozy', 'Dark', 'Soft', 'Ethereal'].includes(tag)
+      ? t(`outfitJournal.tag${tag}`)
+      : tag;
+  };
 
   return (
     <Modal
@@ -61,8 +69,8 @@ export function OutfitDetailModal({
                     <View style={[s.image, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 10 }]}>
                       <Icon name="camera" size={36} color={`${colors.primary}50`} />
                       <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: `${colors.primary}70`, textAlign: 'center', lineHeight: 20 }}>
-                        No photo yet{'\n'}
-                        <Text style={{ fontFamily: 'Satoshi-Regular', fontSize: 12, opacity: 0.7 }}>Tap "Edit outfit" below to add one</Text>
+                        {t('outfitJournal.noPhoto')}{'\n'}
+                        <Text style={{ fontFamily: 'Satoshi-Regular', fontSize: 12, opacity: 0.7 }}>{t('outfitJournal.editToAddPhoto')}</Text>
                       </Text>
                     </View>
                   )}
@@ -73,6 +81,8 @@ export function OutfitDetailModal({
                       style={[s.fitToggle, { backgroundColor: 'rgba(14,10,32,0.72)', borderColor: `${colors.primary}40` }]}
                       onPress={() => setImageFit(f => f === 'contain' ? 'cover' : 'contain')}
                       activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityLabel={imageFit === 'contain' ? t('outfitJournal.fullPicture') : t('outfitJournal.cardView')}
                     >
                       <Icon
                         name={imageFit === 'contain' ? 'maximize-2' : 'minimize-2'}
@@ -80,7 +90,7 @@ export function OutfitDetailModal({
                         color="rgba(240,234,255,0.90)"
                       />
                       <Text style={s.fitToggleText}>
-                        {imageFit === 'contain' ? 'Full pic' : 'Card view'}
+                        {imageFit === 'contain' ? t('outfitJournal.fullPicture') : t('outfitJournal.cardView')}
                       </Text>
                     </TouchableOpacity>
                   ) : null}
@@ -98,7 +108,7 @@ export function OutfitDetailModal({
                       {outfit.name}
                     </Text>
                     <Text style={[s.outfitDate, { color: colors.mutedForeground }]}>
-                      {fmtDate(outfit.date)}
+                      {new Intl.DateTimeFormat(i18n.language, { month: 'short', day: 'numeric' }).format(new Date(outfit.date))}
                     </Text>
                   </View>
 
@@ -106,7 +116,7 @@ export function OutfitDetailModal({
                     <View style={s.tags}>
                       {outfit.tags.map(tag => (
                         <View key={tag} style={[s.tag, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]}>
-                          <Text style={[s.tagText, { color: colors.primary }]}>{tag}</Text>
+                          <Text style={[s.tagText, { color: colors.primary }]}>{displayTag(tag)}</Text>
                         </View>
                       ))}
                     </View>
@@ -123,7 +133,7 @@ export function OutfitDetailModal({
                     <View style={[s.storyCard, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}22` }]}>
                       <View style={s.storyHeader}>
                         <Icon name="book-open" size={13} color={colors.primary} />
-                        <Text style={[s.storyLabel, { color: colors.primary }]}>Character Story</Text>
+                         <Text style={[s.storyLabel, { color: colors.primary }]}>{t('outfitJournal.characterStory')}</Text>
                       </View>
                       <Text style={[s.storyText, { color: colors.foreground }]}>
                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
@@ -175,9 +185,11 @@ export function OutfitDetailModal({
                       } as any);
                     }}
                     activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('outfitJournal.seeOthersView')}
                   >
                     <Icon name="eye" size={14} color={colors.primary} />
-                    <Text style={[s.actionBtnText, { color: colors.primary }]}>See how others view it</Text>
+                    <Text style={[s.actionBtnText, { color: colors.primary }]}>{t('outfitJournal.seeOthersView')}</Text>
                   </TouchableOpacity>
 
                   {/* ── Your character ── */}
@@ -236,9 +248,11 @@ export function OutfitDetailModal({
                         imageUri:    outfit.imageUri,
                       }).catch(() => null);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('outfitJournal.shareOutfit')}
                   >
                     <Icon name="share-2" size={14} color={colors.primary} />
-                    <Text style={[s.actionBtnText, { color: colors.primary }]}>Share outfit</Text>
+                    <Text style={[s.actionBtnText, { color: colors.primary }]}>{t('outfitJournal.shareOutfit')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -265,9 +279,11 @@ export function OutfitDetailModal({
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       } as any);
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('outfitJournal.editOutfit')}
                   >
                     <Icon name="edit-2" size={14} color={colors.primary} />
-                    <Text style={[s.actionBtnText, { color: colors.primary }]}>Edit outfit</Text>
+                    <Text style={[s.actionBtnText, { color: colors.primary }]}>{t('outfitJournal.editOutfit')}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -276,10 +292,12 @@ export function OutfitDetailModal({
                       borderColor: colors.destructive,
                     }]}
                     onPress={onDelete}
+                    accessibilityRole="button"
+                    accessibilityLabel={deletingConfirm ? t('outfitJournal.deleteAgain') : t('outfitJournal.deleteOutfit')}
                   >
                     <Icon name="trash-2" size={14} color={deletingConfirm ? '#fff' : colors.destructive} />
                     <Text style={[s.actionBtnText, { color: deletingConfirm ? '#fff' : colors.destructive }]}>
-                      {deletingConfirm ? 'Tap again to delete' : 'Delete outfit'}
+                      {deletingConfirm ? t('outfitJournal.deleteAgain') : t('outfitJournal.deleteOutfit')}
                     </Text>
                   </TouchableOpacity>
 

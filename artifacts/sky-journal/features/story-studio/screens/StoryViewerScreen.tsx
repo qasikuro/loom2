@@ -508,7 +508,7 @@ export default function StoryScreen() {
                          (post  != null && !post.chapterTitle);
 
   if (isLoading && storyNotFound) {
-    return <SkyLoadingOverlay message="Opening story…" />;
+    return <SkyLoadingOverlay message={t('studioReader.openingStory')} />;
   }
 
   if (storyNotFound || storyCorrupted) {
@@ -523,15 +523,15 @@ export default function StoryScreen() {
         </TouchableOpacity>
         <View style={errState.content}>
           <Text style={errState.icon}>✦</Text>
-          <Text style={errState.title}>This story couldn't be opened</Text>
+          <Text style={errState.title}>{t('studioReader.storyOpenError')}</Text>
           <Text style={errState.sub}>
             {storyCorrupted
-              ? 'The story data appears to be incomplete.'
-              : 'This story may have been removed or is no longer available.'}
+              ? t('studioReader.storyIncomplete')
+              : t('studioReader.storyUnavailable')}
           </Text>
           <TouchableOpacity style={errState.btn} onPress={() => safeBack()} activeOpacity={0.82}>
             <Icon name="chevron-left" size={15} color="rgba(200,184,232,0.9)" />
-            <Text style={errState.btnText}>Go Back</Text>
+            <Text style={errState.btnText}>{t('studioReader.goBack')}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -562,9 +562,9 @@ export default function StoryScreen() {
       <View style={[errStyles.wrap, { backgroundColor: colors.background, paddingTop: topPad + 12 }]}>
         <BackButton style={[errStyles.back, { top: topPad + 8 }]} />
         <Text style={errStyles.glyph}>✦</Text>
-        <Text style={[errStyles.title, { color: colors.text }]}>This story couldn't be opened</Text>
+        <Text style={[errStyles.title, { color: colors.text }]}>{t('studioReader.storyOpenError')}</Text>
         <Text style={[errStyles.sub, { color: colors.secondary }]}>
-          It may have been removed or contains invalid data.
+          {t('studioReader.invalidStory')}
         </Text>
       </View>
     );
@@ -768,7 +768,7 @@ export default function StoryScreen() {
               <View style={styles.musicBar}>
                 <AudiusTrackPlayer track={(story?.music ?? post?.music)!} compact autoPlay />
                 <View style={styles.musicBarCopy}>
-                  <Text style={styles.musicBarLabel}>NOW PLAYING · AUDIUS</Text>
+                  <Text style={styles.musicBarLabel}>{t('studioReader.nowPlaying')}</Text>
                   <Text style={styles.musicBarTitle} numberOfLines={1}>{(story?.music ?? post?.music)!.title}</Text>
                   <Text style={styles.musicBarArtist} numberOfLines={1}>{(story?.music ?? post?.music)!.artist}</Text>
                 </View>
@@ -830,7 +830,7 @@ export default function StoryScreen() {
               activeOpacity={0.82}
             >
               <Icon name="user" size={13} color="rgba(200,184,232,0.85)" />
-              <Text style={styles.endViewProfileText}>View {authorName}'s profile</Text>
+              <Text style={styles.endViewProfileText}>{t('studioReader.viewProfile', { name: authorName })}</Text>
               <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.45)" />
             </TouchableOpacity>
           )}
@@ -859,7 +859,7 @@ export default function StoryScreen() {
             style={[styles.shareIconBtn]}
             onPress={handleShare}
             activeOpacity={0.72}
-            accessibilityLabel="Share story"
+            accessibilityLabel={t('studioReader.shareStory')}
           >
             <Icon name="share-2" size={16} color="rgba(200,184,232,0.75)" />
           </TouchableOpacity>
@@ -926,7 +926,7 @@ export default function StoryScreen() {
               <Icon name="x" size={13} color="rgba(200,184,232,0.6)" />
             </TouchableOpacity>
 
-            <Text style={styles.continueLabel}>Continue Reading</Text>
+            <Text style={styles.continueLabel}>{t('studioReader.continueReading')}</Text>
 
             <TouchableOpacity
               style={styles.continueInner}

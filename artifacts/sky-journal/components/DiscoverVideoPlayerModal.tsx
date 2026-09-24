@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerNativeSound, unregisterNativeSound } from '@/utils/soundRegistry';
+import { useTranslation } from 'react-i18next';
 
 type NativeSound = {
   setIsMutedAsync: (muted: boolean) => Promise<void>;
@@ -28,6 +29,7 @@ interface Props {
 
 export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
   const insets              = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { width: W, height: H } = useWindowDimensions();
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -223,6 +225,8 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
             onPress={handleClose}
             activeOpacity={0.8}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('discoverLog.close')}
           >
             <Icon name="x" size={18} color="#fff" />
           </TouchableOpacity>
@@ -236,8 +240,8 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={
                   soundtrackStarted
-                    ? (soundtrackMuted ? 'Unmute soundtrack' : 'Mute soundtrack')
-                    : 'Play soundtrack'
+                    ? (soundtrackMuted ? t('discoverLog.unmuteSoundtrack') : t('discoverLog.muteSoundtrack'))
+                    : t('discoverLog.playSoundtrack')
                 }
               >
                 <Icon
@@ -245,7 +249,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
                   size={16}
                   color="#fff"
                 />
-                <Text style={vp.audioLabel}>{soundtrackStarted ? 'Music' : 'Play'}</Text>
+                <Text style={vp.audioLabel}>{soundtrackStarted ? t('discoverLog.music') : t('discoverLog.play')}</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
@@ -253,10 +257,10 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
               onPress={() => setVideoMuted(m => !m)}
               activeOpacity={0.8}
               accessibilityRole="button"
-              accessibilityLabel={videoMuted ? 'Enable original video audio' : 'Mute original video audio'}
+              accessibilityLabel={videoMuted ? t('discoverLog.enableVideoAudio') : t('discoverLog.muteVideoAudio')}
             >
               <Icon name={videoMuted ? 'volume-x' : 'volume-2'} size={16} color="#fff" />
-              <Text style={vp.audioLabel}>Video</Text>
+              <Text style={vp.audioLabel}>{t('discoverLog.video')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -283,7 +287,7 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
 
           {/* Mood pill */}
           <View style={vp.moodPill}>
-            <Text style={vp.moodText}>{post.mood}</Text>
+            <Text style={vp.moodText}>{t(`moods.${post.mood}`, { defaultValue: post.mood })}</Text>
           </View>
         </View>
       </View>

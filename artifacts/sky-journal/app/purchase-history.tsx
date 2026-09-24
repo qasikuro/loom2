@@ -4,6 +4,7 @@ import { apiFetch } from '@/context/AppContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Platform,
   ScrollView,
@@ -37,20 +38,20 @@ const ITEM_EMOJI: Record<string, string> = {
   effect_leaves:       '🍃',
 };
 
-function categoryMeta(itemId: string): { label: string; color: string } {
-  if (itemId.startsWith('frame_'))  return { label: 'Frame',  color: '#C8A84B' };
-  if (itemId.startsWith('accent_')) return { label: 'Accent', color: '#9B8BCC' };
-  if (itemId.startsWith('theme_'))  return { label: 'Theme',  color: '#78B8E8' };
-  if (itemId.startsWith('effect_')) return { label: 'Effect', color: '#70C8A0' };
-  return { label: 'Item', color: '#C8B8E8' };
+function categoryMeta(itemId: string): { key: string; color: string } {
+  if (itemId.startsWith('frame_'))  return { key: 'frame',  color: '#C8A84B' };
+  if (itemId.startsWith('accent_')) return { key: 'accent', color: '#9B8BCC' };
+  if (itemId.startsWith('theme_'))  return { key: 'theme',  color: '#78B8E8' };
+  if (itemId.startsWith('effect_')) return { key: 'effect', color: '#70C8A0' };
+  return { key: 'item', color: '#C8B8E8' };
 }
 
-function costStr(p: Purchase): string {
+function costStr(p: Purchase, freeLabel: string): string {
   const parts: string[] = [];
   if (p.starsSpent)  parts.push(`✦ ${p.starsSpent}`);
   if (p.auraSpent)   parts.push(`◈ ${p.auraSpent}`);
   if (p.shardsSpent) parts.push(`◇ ${p.shardsSpent}`);
-  return parts.join(' · ') || 'Free';
+  return parts.join(' · ') || freeLabel;
 }
 
 function formatDate(iso: string): string {
@@ -64,6 +65,7 @@ function formatDate(iso: string): string {
 }
 
 export default function PurchaseHistoryScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
 
@@ -93,11 +95,13 @@ export default function PurchaseHistoryScreen() {
           onPress={() => safeBack()}
           style={s.backBtn}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={t('shell.purchaseHistory.back')}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Icon name="chevron-left" size={20} color="rgba(200,184,232,0.85)" />
         </TouchableOpacity>
-        <Text style={s.title}>Purchase History</Text>
+        <Text style={s.title}>{t('shell.purchaseHistory.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -112,16 +116,16 @@ export default function PurchaseHistoryScreen() {
       ) : hasError ? (
         <View style={s.center}>
           <Text style={{ fontSize: 32, marginBottom: 8 }}>✦</Text>
-          <Text style={s.emptyHead}>Couldn't load history</Text>
-          <Text style={s.emptySub}>Check your connection and try again.</Text>
+          <Text style={s.emptyHead}>{t('shell.purchaseHistory.loadErrorTitle')}</Text>
+          <Text style={s.emptySub}>{t('shell.purchaseHistory.loadErrorBody')}</Text>
         </View>
       ) : purchases.length === 0 ? (
         <View style={s.center}>
           <View style={s.emptyIconWrap}>
             <Icon name="shopping-bag" size={26} color="rgba(200,168,75,0.55)" />
           </View>
-          <Text style={s.emptyHead}>No purchases yet</Text>
-          <Text style={s.emptySub}>Items you buy in the Shop will appear here.</Text>
+          <Text style={s.emptyHead}>{t('shell.purchaseHistory.emptyTitle')}</Text>
+          <Text style={s.emptySub}>{t('shell.purchaseHistory.emptyBody')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -146,14 +150,14 @@ export default function PurchaseHistoryScreen() {
                   <Text style={s.itemName} numberOfLines={1}>{p.itemName}</Text>
                   <View style={s.metaRow}>
                     <View style={[s.catPill, { backgroundColor: `${cat.color}15`, borderColor: `${cat.color}28` }]}>
-                      <Text style={[s.catPillText, { color: cat.color }]}>{cat.label}</Text>
+                      <Text style={[s.catPillText, { color: cat.color }]}>{t(`shell.purchaseHistory.category.${cat.key}`)}</Text>
                     </View>
                     <Text style={s.dateText}>{formatDate(p.purchasedAt)}</Text>
                   </View>
                 </View>
 
                 {/* Cost */}
-                <Text style={s.costText}>{costStr(p)}</Text>
+                <Text style={s.costText}>{costStr(p, t('shell.purchaseHistory.free'))}</Text>
               </View>
             );
           })}

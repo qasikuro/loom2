@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export type AudiusTrack = {
   id: string;
@@ -28,6 +29,16 @@ export type AudiusTrack = {
 };
 
 const MAX_MUSIC_DURATION_SECONDS = 3600;
+const MUSIC_SUGGESTIONS = [
+  { query: 'For You', key: 'forYou' },
+  { query: 'Cozy', key: 'cozy' },
+  { query: 'Dreamy', key: 'dreamy' },
+  { query: 'Epic', key: 'epic' },
+  { query: 'Nostalgic', key: 'nostalgic' },
+  { query: 'Chill', key: 'chill' },
+  { query: 'Adventure', key: 'adventure' },
+  { query: 'Emotional', key: 'emotional' },
+] as const;
 
 type PlayerSound = {
   stopAsync: () => Promise<void>;
@@ -169,6 +180,7 @@ export function AudiusTrackPlayer({
   preview?: PreviewController;
   autoPlay?: boolean;
 }) {
+  const { t } = useTranslation();
   const localPreview = useAudiusPreview();
   const { playingId, toggle } = preview ?? localPreview;
   const isPlaying = playingId === track.id;
@@ -187,7 +199,7 @@ export function AudiusTrackPlayer({
       onPress={() => { void toggle(track); }}
       style={[styles.playButton, compact && styles.playButtonCompact, isPlaying && styles.playButtonActive]}
       accessibilityRole="button"
-      accessibilityLabel={isPlaying ? `Pause ${track.title}` : `Preview ${track.title}`}
+      accessibilityLabel={isPlaying ? t('studioReader.pauseTrackA11y', { title: track.title }) : t('studioReader.previewTrackA11y', { title: track.title })}
       activeOpacity={0.78}
       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
@@ -217,6 +229,7 @@ export function AudiusMusicPicker({
   onChange: (track: AudiusTrack | null) => void;
   context?: 'story' | 'outfit';
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
@@ -241,11 +254,11 @@ export function AudiusMusicPicker({
         resultsRef.current?.scrollToOffset({ offset: 0, animated: false });
       });
     } catch {
-      setError('Music search is unavailable right now. Try again in a moment.');
+      setError(t('studioReader.musicSearchUnavailable'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (visible && tracks.length === 0) {
@@ -272,35 +285,35 @@ export function AudiusMusicPicker({
         <View style={styles.selectedCard}>
           <TrackArtwork track={value} size={58} />
           <View style={styles.selectedInfo}>
-            <Text style={styles.eyebrow}>{context === 'outfit' ? 'OUTFIT MUSIC' : 'STORY MUSIC'} · AUDIUS</Text>
+            <Text style={styles.eyebrow}>{context === 'outfit' ? t('studioReader.outfitMusic') : t('studioReader.storyMusic')} · AUDIUS</Text>
             <Text style={styles.selectedTitle} numberOfLines={1}>{value.title}</Text>
             <Text style={styles.selectedArtist} numberOfLines={1}>{value.artist} · {formatDuration(value.duration)}</Text>
-            <Text style={styles.selectedHint}>{context === 'outfit' ? 'This music will play with your outfit' : 'This music will play across the story'}</Text>
+            <Text style={styles.selectedHint}>{context === 'outfit' ? t('studioReader.musicWithOutfit') : t('studioReader.musicAcrossStory')}</Text>
           </View>
           <View style={styles.selectedActions}>
             <AudiusTrackPlayer track={value} compact preview={{ playingId, toggle }} />
             <TouchableOpacity onPress={() => setVisible(true)} style={styles.actionPill} activeOpacity={0.78} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Icon name="refresh-cw" size={12} color="#EAC55E" />
-              <Text style={styles.actionText}>Change</Text>
+              <Text style={styles.actionText}>{t('studioReader.changeMusic')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => { void stop(); onChange(null); }} style={[styles.actionPill, styles.removePill]} activeOpacity={0.78} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <Icon name="trash-2" size={12} color="#D88B9A" />
-              <Text style={[styles.actionText, { color: '#D88B9A' }]}>Remove</Text>
+              <Text style={[styles.actionText, { color: '#D88B9A' }]}>{t('studioReader.removeMusic')}</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : (
-        <TouchableOpacity style={styles.addCard} onPress={() => setVisible(true)} activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={`Add ${context} music`}>
+        <TouchableOpacity style={styles.addCard} onPress={() => setVisible(true)} activeOpacity={0.82} accessibilityRole="button" accessibilityLabel={t('studioReader.addMusicA11y', { context: context === 'outfit' ? t('studioReader.outfitMusic') : t('studioReader.storyMusic') })}>
           <View style={styles.musicIcon}>
             <Icon name="volume-2" size={24} color="#C89BFF" />
           </View>
           <View style={styles.addCopy}>
-            <Text style={styles.addTitle}>{context === 'outfit' ? 'Add music' : 'Story Music'}</Text>
-            <Text style={styles.addSubtitle}>{context === 'outfit' ? 'Choose a song to set the mood' : 'Give this story a soundtrack'}</Text>
-            <Text style={styles.addHint}>{context === 'outfit' ? 'Plays with your outfit' : 'Music will play across all pages'}</Text>
+            <Text style={styles.addTitle}>{context === 'outfit' ? t('studioReader.addMusicTitle') : t('studioReader.storyMusicTitle')}</Text>
+            <Text style={styles.addSubtitle}>{context === 'outfit' ? t('studioReader.chooseSong') : t('studioReader.soundtrackStory')}</Text>
+            <Text style={styles.addHint}>{context === 'outfit' ? t('studioReader.playsWithOutfit') : t('studioReader.musicAllPages')}</Text>
           </View>
           <View style={styles.addButton}>
-            <Text style={styles.addButtonText}>Add music</Text>
+            <Text style={styles.addButtonText}>{t('studioReader.addMusicButton')}</Text>
             <Icon name="chevron-right" size={15} color="#F5D368" />
           </View>
         </TouchableOpacity>
@@ -310,12 +323,12 @@ export function AudiusMusicPicker({
         <View style={styles.modalBackdrop}>
           <View style={[styles.modal, { paddingTop: Math.max(insets.top, 18) }]}>
             <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={close} style={styles.backButton} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel="Close music picker" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <TouchableOpacity onPress={close} style={styles.backButton} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel={t('studioReader.closeMusicPicker')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Icon name="arrow-left" size={18} color="#E8E0FF" />
               </TouchableOpacity>
               <View style={styles.modalTitleWrap}>
-                <Text style={styles.modalTitle}>Choose your soundtrack</Text>
-                <Text style={styles.modalSubtitle}>Music sets the mood · Tracks up to 60:00</Text>
+                <Text style={styles.modalTitle}>{t('studioReader.chooseSoundtrack')}</Text>
+                <Text style={styles.modalSubtitle}>{t('studioReader.musicTrackLimit')}</Text>
               </View>
               <Icon name="volume-2" size={22} color="#F0C95D" />
             </View>
@@ -326,11 +339,11 @@ export function AudiusMusicPicker({
                 value={query}
                 onChangeText={setQuery}
                 onSubmitEditing={() => void searchTracks(query)}
-                placeholder="Search songs, artists, or moods…"
+                placeholder={t('studioReader.searchSongs')}
                 placeholderTextColor="rgba(215,201,255,0.42)"
                 style={styles.searchInput}
                 returnKeyType="search"
-                accessibilityLabel="Search music"
+                accessibilityLabel={t('studioReader.searchMusic')}
               />
             </View>
 
@@ -339,7 +352,7 @@ export function AudiusMusicPicker({
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.chips}
               >
-              {['For You', 'Cozy', 'Dreamy', 'Epic', 'Nostalgic', 'Chill', 'Adventure', 'Emotional'].map(chip => (
+              {MUSIC_SUGGESTIONS.map(({ query: chip, key }) => (
                 <TouchableOpacity
                   key={chip}
                   onPress={() => { setQuery(chip); void searchTracks(chip); }}
@@ -349,24 +362,24 @@ export function AudiusMusicPicker({
                   accessibilityState={{ selected: query.toLowerCase() === chip.toLowerCase() }}
                   hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                 >
-                  <Text style={[styles.chipText, query.toLowerCase() === chip.toLowerCase() && styles.chipTextActive]}>{chip}</Text>
+                  <Text style={[styles.chipText, query.toLowerCase() === chip.toLowerCase() && styles.chipTextActive]}>{t(`studioReader.${key}`)}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
             {loading ? (
-              <View style={styles.loadingState}><ActivityIndicator color="#F0C95D" /><Text style={styles.loadingText}>Finding music on Audius…</Text></View>
+              <View style={styles.loadingState}><ActivityIndicator color="#F0C95D" /><Text style={styles.loadingText}>{t('studioReader.findingMusic')}</Text></View>
             ) : error ? (
               <View style={styles.emptyState}>
                 <Icon name="alert-circle" size={22} color="#D88B9A" />
                 <Text style={styles.emptyTitle}>{error}</Text>
-                <TouchableOpacity onPress={() => void searchTracks(query)} style={styles.retryButton} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={styles.retryText}>Try again</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => void searchTracks(query)} style={styles.retryButton} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}><Text style={styles.retryText}>{t('studioReader.tryAgain')}</Text></TouchableOpacity>
               </View>
             ) : tracks.length === 0 ? (
               <View style={styles.emptyState}>
                 <Icon name="search" size={22} color="rgba(215,201,255,0.5)" />
-                <Text style={styles.emptyTitle}>No tracks found</Text>
-                <Text style={styles.emptyText}>Try another mood, artist, or song title.</Text>
+                <Text style={styles.emptyTitle}>{t('studioReader.noTracks')}</Text>
+                <Text style={styles.emptyText}>{t('studioReader.noTracksDescription')}</Text>
               </View>
             ) : (
               <FlatList
@@ -394,8 +407,8 @@ export function AudiusMusicPicker({
                     </View>
                     <View style={styles.trackRight}>
                       <Text style={styles.duration}>{formatDuration(track.duration)}</Text>
-                      <TouchableOpacity onPress={() => choose(track)} style={styles.useButton} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Use track ${track.title}`} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Text style={styles.useButtonText}>Use this track</Text>
+                    <TouchableOpacity onPress={() => choose(track)} style={styles.useButton} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={t('studioReader.useTrackA11y', { title: track.title })} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <Text style={styles.useButtonText}>{t('studioReader.useTrack')}</Text>
                       </TouchableOpacity>
                     </View>
                     {playingId === track.id && <View style={styles.playingDot} />}
@@ -403,7 +416,7 @@ export function AudiusMusicPicker({
                 )}
                 ListFooterComponent={
                   <Text style={styles.attribution}>
-                    Music from Audius · Only tracks available for use in Ximo are shown.
+                    {t('studioReader.audiusAttribution')}
                   </Text>
                 }
               />

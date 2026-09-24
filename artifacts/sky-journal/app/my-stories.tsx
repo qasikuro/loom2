@@ -1,4 +1,3 @@
-import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
@@ -51,12 +50,19 @@ function getMoodColor(mood: string) {
 
 // ── Story card ────────────────────────────────────────────────────────────────
 function StoryCard({ story, colors: _colors, cardWidth }: { story: Story; colors: ReturnType<typeof useColors>; cardWidth: number }) {
+  const { t } = useTranslation();
   const cover = getCover(story);
   const moodColor = getMoodColor(story.mood);
 
   return (
     <TouchableOpacity
       style={[styles.card, { width: cardWidth, height: cardWidth * 1.28 }]}
+      accessibilityRole="button"
+      accessibilityLabel={t('shell.myStories.openStory', { title: story.chapterTitle })}
+      accessibilityHint={t('shell.myStories.storyStats', {
+        witnessed: story.witnessedCount,
+        saved: story.savedCount,
+      })}
       onPress={() => {
         Haptics.selectionAsync();
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -131,12 +137,12 @@ function EmptyState({ tab, colors }: { tab: string; colors: ReturnType<typeof us
         <Icon name={tab === 'mine' ? 'book-open' : 'users'} size={32} color={`${colors.primary}70`} />
       </LinearGradient>
       <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-        {tab === 'mine' ? 'No stories yet' : 'Nothing shared yet'}
+        {tab === 'mine' ? tr('shell.myStories.noStoriesTitle') : tr('shell.myStories.nothingSharedTitle')}
       </Text>
       <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
         {tab === 'mine'
-          ? 'Start writing your first chapter\nand let others witness your journey.'
-          : 'Stories shared with you will\nappear here.'}
+          ? tr('shell.myStories.noStoriesBody')
+          : tr('shell.myStories.nothingSharedBody')}
       </Text>
       {tab === 'mine' && (
         <TouchableOpacity
@@ -184,10 +190,21 @@ export default function MyStoriesScreen() {
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 12 }]}>
-        <BackButton style={styles.backBtn} color="rgba(235,228,255,0.9)" size={20} />
-        <Text style={styles.headerTitle}>{tr('profile.myStoriesTitle')}</Text>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.back(); }}
+          activeOpacity={0.6}
+          accessibilityRole="button"
+          accessibilityLabel={tr('shell.myStories.back')}
+          hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+        >
+          <Icon name="arrow-left" size={20} color="rgba(235,228,255,0.9)" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{tr('shell.myStories.title')}</Text>
         <TouchableOpacity
           style={styles.addBtn}
+          accessibilityRole="button"
+          accessibilityLabel={tr('shell.myStories.add')}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onPress={() => { Haptics.selectionAsync(); router.push('/(tabs)/create' as any); }}
         >

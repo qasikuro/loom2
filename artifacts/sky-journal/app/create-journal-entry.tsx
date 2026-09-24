@@ -68,12 +68,12 @@ function isSameDay(a: Date, b: Date) {
          a.getDate()     === b.getDate();
 }
 
-function formatFull(d: Date) {
-  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+function formatFull(d: Date, locale?: string) {
+  return d.toLocaleDateString(locale, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
-function formatShort(d: Date) {
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+function formatShort(d: Date, locale?: string) {
+  return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
 }
 
 const QUICK_OFFSETS = [
@@ -91,7 +91,7 @@ export default function CreateJournalEntryScreen() {
   const { playSound } = useSound();
   const insets  = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const { t: tr } = useTranslation();
+  const { t: tr, i18n } = useTranslation();
   const { addJournalEntry, character } = useApp();
   const { type: typeParam, initialPrompt, initialMood } = useLocalSearchParams<{ type?: string; initialPrompt?: string; initialMood?: string }>();
 
@@ -244,7 +244,11 @@ export default function CreateJournalEntryScreen() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dayPrompt = tr(`journal.prompts_${today.getDate() % 6}` as any);
   const moodPrompts  = character.mood ? (MOOD_PROMPTS[character.mood] ?? []) : [];
-  const moodPrompt   = moodPrompts.length > 0 ? moodPrompts[today.getDate() % moodPrompts.length] : null;
+  const moodPrompt   = moodPrompts.length > 0
+    ? i18n.resolvedLanguage?.split('-')[0] === 'en'
+      ? moodPrompts[today.getDate() % moodPrompts.length]
+      : tr(`journal.prompts_${today.getDate() % 6}` as any)
+    : null;
   const activePrompt = entryType === 'diary' && moodPrompt ? moodPrompt : dayPrompt;
   const isMoodPrompt = entryType === 'diary' && !!moodPrompt;
 
@@ -295,10 +299,10 @@ export default function CreateJournalEntryScreen() {
   const isToday     = isSameDay(entryDate, today);
   const isYesterday = isSameDay(entryDate, addDays(today, -1));
   const dateLabel   = isToday
-    ? formatFull(entryDate)
+    ? formatFull(entryDate, i18n.resolvedLanguage)
     : isYesterday
-      ? `Yesterday · ${formatShort(entryDate)}`
-      : formatFull(entryDate);
+      ? `${tr('common.yesterday')} · ${formatShort(entryDate, i18n.resolvedLanguage)}`
+      : formatFull(entryDate, i18n.resolvedLanguage);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -401,10 +405,10 @@ export default function CreateJournalEntryScreen() {
         {showDatePicker && (
           <View style={[styles.quickPicker, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.quickPickerLabel, { color: `${colors.mutedForeground}80` }]}>
-              PICK A DAY
+              {tr('feature.journal.pickDay')}
             </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickChips}>
-              {QUICK_OFFSETS.map(({ label, offset }) => {
+              {QUICK_OFFSETS.map(({ offset }) => {
                 const d   = addDays(today, offset);
                 const sel = isSameDay(entryDate, d);
                 return (
@@ -421,10 +425,10 @@ export default function CreateJournalEntryScreen() {
                     onPress={() => pickQuickDate(offset)}
                   >
                     <Text style={[styles.quickChipTop, { color: sel ? cfg.accent : colors.foreground }]}>
-                      {label}
+                      {offset === 0 ? tr('common.today') : offset === -1 ? tr('common.yesterday') : tr('feature.journal.daysAgo', { n: Math.abs(offset) })}
                     </Text>
                     <Text style={[styles.quickChipSub, { color: colors.mutedForeground }]}>
-                      {formatShort(d)}
+                      {formatShort(d, i18n.resolvedLanguage)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -506,7 +510,7 @@ export default function CreateJournalEntryScreen() {
                 <Text style={[styles.sizeALarge, { color: fontSize >= MAX_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground }]}>+A</Text>
               </Pressable>
             </View>
-            <Text style={[styles.charCount, { color: `${colors.mutedForeground}80` }]}>{text.length} chars</Text>
+            <Text style={[styles.charCount, { color: `${colors.mutedForeground}80` }]}>{tr('feature.journal.chars', { n: text.length })}</Text>
           </View>
         </View>
 
@@ -530,14 +534,14 @@ export default function CreateJournalEntryScreen() {
               <Icon name="image" size={21} color={colors.primary} />
             </View>
             <Text style={[styles.addImageText, { color: colors.mutedForeground }]}>
-              Add a photo (optional)
+              {tr('journal.addPhoto')}
             </Text>
-            <Text style={[styles.addImageHint, { color: `${colors.mutedForeground}9A` }]}>A moment, screenshot, or anything that feels right</Text>
+            <Text style={[styles.addImageHint, { color: `${colors.mutedForeground}9A` }]}>{tr('feature.journal.addImageHint')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Mood */}
-        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>How are you feeling?</Text>
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{tr('feature.journal.howFeeling')}</Text>
         <View style={styles.moodGrid}>
           {MOODS.map(m => (
             <TouchableOpacity
@@ -550,7 +554,7 @@ export default function CreateJournalEntryScreen() {
               onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
             >
               <Icon name={m.icon} size={14} color={m.color} />
-              <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
+              <Text style={[styles.moodChipText, { color: m.color }]}>{tr(`moods.${m.label}`)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -572,7 +576,7 @@ export default function CreateJournalEntryScreen() {
           <LinearGradient colors={[colors.primary, '#B66EF4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
           {(saving || uploadingImage) ? <SkyLoadingMark size={17} color="#fff" /> : <Icon name="lock" size={15} color="#fff" />}
           <Text style={styles.saveBtnText}>
-            {uploadingImage ? 'Uploading…' : saving ? 'Saving…' : 'Save Journal'}
+            {uploadingImage ? tr('common.uploading') : saving ? tr('common.loading') : tr('journal.save')}
           </Text>
         </TouchableOpacity>
       </KeyboardAwareScrollView>

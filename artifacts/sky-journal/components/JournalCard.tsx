@@ -7,6 +7,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import type { JournalEntry } from '@/context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 interface JournalCardProps {
   entry:         JournalEntry;
@@ -15,17 +16,14 @@ interface JournalCardProps {
   stickerCount?: number;
 }
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
-function formatDate(iso: string) {
+function formatDate(iso: string, locale: string) {
   const d = new Date(iso);
-  return `${DAYS[d.getDay()]}, ${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  return d.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-function formatTime(iso: string) {
+function formatTime(iso: string, locale: string) {
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
 
 // ── Theme palettes ──────────────────────────────────────────────────────────
@@ -45,6 +43,7 @@ const THEME_STYLES: Record<string, { bg: string; border: string; accentLeft: str
 // ── Diary card ─────────────────────────────────────────────────────────────
 function DiaryCard({ entry, onDelete, theme, stickerCount }: JournalCardProps) {
   const colors = useColors();
+  const { t, i18n } = useTranslation();
   const ts = theme ? THEME_STYLES[theme] : null;
   return (
     <View style={[
@@ -60,8 +59,8 @@ function DiaryCard({ entry, onDelete, theme, stickerCount }: JournalCardProps) {
             <Icon name="book-open" size={12} color={colors.primary} />
           </View>
           <View>
-            <Text style={[styles.dateText, { color: colors.foreground }]}>{formatDate(entry.date)}</Text>
-            <Text style={[styles.timeText, { color: colors.mutedForeground }]}>{formatTime(entry.date)}</Text>
+            <Text style={[styles.dateText, { color: colors.foreground }]}>{formatDate(entry.date, i18n.language)}</Text>
+            <Text style={[styles.timeText, { color: colors.mutedForeground }]}>{formatTime(entry.date, i18n.language)}</Text>
           </View>
         </View>
         {onDelete && (
@@ -69,6 +68,8 @@ function DiaryCard({ entry, onDelete, theme, stickerCount }: JournalCardProps) {
             style={[styles.deleteBtn, { backgroundColor: colors.muted }]}
             onPress={onDelete}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('discoverLog.delete')}
           >
             <Icon name="trash-2" size={12} color={colors.mutedForeground} />
           </TouchableOpacity>
@@ -100,7 +101,8 @@ function DiaryCard({ entry, onDelete, theme, stickerCount }: JournalCardProps) {
 // ── Friend card ────────────────────────────────────────────────────────────
 function FriendCard({ entry, onDelete, stickerCount }: JournalCardProps) {
   const colors = useColors();
-  const name = entry.friendName ?? 'Unknown';
+  const { t, i18n } = useTranslation();
+  const name = entry.friendName ?? t('discoverLog.unknown');
   const friendColor = '#3A78B8';
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: 'rgba(58,120,184,0.18)' }, SHADOW.sm, styles.friendAccent]}>
@@ -110,8 +112,8 @@ function FriendCard({ entry, onDelete, stickerCount }: JournalCardProps) {
             <Icon name="users" size={12} color={friendColor} />
           </View>
           <View>
-            <Text style={[styles.dateText, { color: colors.foreground }]}>{formatDate(entry.date)}</Text>
-            <Text style={[styles.timeText, { color: colors.mutedForeground }]}>{formatTime(entry.date)}</Text>
+            <Text style={[styles.dateText, { color: colors.foreground }]}>{formatDate(entry.date, i18n.language)}</Text>
+            <Text style={[styles.timeText, { color: colors.mutedForeground }]}>{formatTime(entry.date, i18n.language)}</Text>
           </View>
         </View>
         {onDelete && (
@@ -119,6 +121,8 @@ function FriendCard({ entry, onDelete, stickerCount }: JournalCardProps) {
             style={[styles.deleteBtn, { backgroundColor: colors.muted }]}
             onPress={onDelete}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('discoverLog.delete')}
           >
             <Icon name="trash-2" size={12} color={colors.mutedForeground} />
           </TouchableOpacity>
@@ -133,7 +137,7 @@ function FriendCard({ entry, onDelete, stickerCount }: JournalCardProps) {
         </View>
         <View style={styles.friendInfo}>
           <Text style={[styles.friendName, { color: colors.foreground }]}>{name}</Text>
-          <Text style={[styles.friendLabel, { color: friendColor }]}>Encounter logged</Text>
+          <Text style={[styles.friendLabel, { color: friendColor }]}>{t('discoverLog.encounterLogged')}</Text>
         </View>
       </View>
 
@@ -157,6 +161,7 @@ function FriendCard({ entry, onDelete, stickerCount }: JournalCardProps) {
 
 // ── Moment card ────────────────────────────────────────────────────────────
 function MomentCard({ entry, onDelete, stickerCount }: JournalCardProps) {
+  const { t, i18n } = useTranslation();
   return (
     <View style={[styles.momentCard, SHADOW.md]}>
       <View style={styles.topRow}>
@@ -165,8 +170,8 @@ function MomentCard({ entry, onDelete, stickerCount }: JournalCardProps) {
             <Icon name="moon" size={12} color="rgba(200,184,232,0.75)" />
           </View>
           <View>
-            <Text style={styles.momentDate}>{formatDate(entry.date)}</Text>
-            <Text style={styles.momentTime}>{formatTime(entry.date)}</Text>
+            <Text style={styles.momentDate}>{formatDate(entry.date, i18n.language)}</Text>
+            <Text style={styles.momentTime}>{formatTime(entry.date, i18n.language)}</Text>
           </View>
         </View>
         {onDelete && (
@@ -174,6 +179,8 @@ function MomentCard({ entry, onDelete, stickerCount }: JournalCardProps) {
             style={[styles.deleteBtn, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
             onPress={onDelete}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 6 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('discoverLog.delete')}
           >
             <Icon name="trash-2" size={12} color="rgba(200,184,232,0.4)" />
           </TouchableOpacity>

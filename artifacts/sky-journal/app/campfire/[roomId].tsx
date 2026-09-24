@@ -29,6 +29,7 @@ import { KeyboardAvoidingViewCompat as KeyboardAvoidingView } from '../../compon
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal, type ToastLevel } from '@/components/Toast';
 import { useSSE } from '@/hooks/useSSE';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -282,6 +283,7 @@ function MessageRow({ msg, palette, opacity, onReport }: {
   opacity:  number;
   onReport: (msg: CampfireMsg) => void;
 }) {
+  const { t } = useTranslation();
   const fadeIn  = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(12)).current;
 
@@ -301,22 +303,22 @@ function MessageRow({ msg, palette, opacity, onReport }: {
         <View style={mb.exprAuthorRow}>
           <Text style={[mb.exprAuthor, { color: `${palette.ember}88` }]}>
             <Text style={{ color: msg.isMine ? palette.ember : `${palette.ember}80` }}>
-              {msg.isMine ? 'You' : msg.authorName}
+              {msg.isMine ? t('social.you') : msg.authorName}
             </Text>
-            {' '}{expr.verb}
+            {' '}{t(`social.expressionVerb${expr.id}`)}
           </Text>
           {!msg.isMine && msg.isFounder && (
             <Image
               source={require('@/assets/images/badge_founder.png')}
               style={mb.badge}
-              accessibilityLabel="Founder"
+              accessibilityLabel={t('social.founder')}
             />
           )}
           {!msg.isMine && msg.isBetaTester && (
             <Image
               source={require('@/assets/images/badge_beta.png')}
               style={mb.badge}
-              accessibilityLabel="Beta Tester"
+              accessibilityLabel={t('social.betaTester')}
             />
           )}
         </View>
@@ -338,14 +340,14 @@ function MessageRow({ msg, palette, opacity, onReport }: {
             <Image
               source={require('@/assets/images/badge_founder.png')}
               style={mb.badge}
-              accessibilityLabel="Founder"
+              accessibilityLabel={t('social.founder')}
             />
           )}
           {msg.isBetaTester && (
             <Image
               source={require('@/assets/images/badge_beta.png')}
               style={mb.badge}
-              accessibilityLabel="Beta Tester"
+              accessibilityLabel={t('social.betaTester')}
             />
           )}
         </View>
@@ -390,6 +392,7 @@ const mb = StyleSheet.create({
 // ── Expression bar ────────────────────────────────────────────────────────────
 
 function ExprBar({ ember, onExpr }: { ember: string; onExpr: (id: string) => void }) {
+  const { t } = useTranslation();
   const [active, setActive] = useState<string | null>(null);
 
   function press(id: string) {
@@ -409,7 +412,7 @@ function ExprBar({ ember, onExpr }: { ember: string; onExpr: (id: string) => voi
           activeOpacity={0.72}
         >
           <Text style={eb.symbol}>{e.symbol}</Text>
-          <Text style={[eb.label, { color: `${ember}90` }]}>{e.label}</Text>
+          <Text style={[eb.label, { color: `${ember}90` }]}>{t(`social.expression${e.id}`)}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -569,6 +572,7 @@ export function buildNewMessageUpdater(
 const POLL_MS = 30_000;
 
 export default function CampfireRoom() {
+  const { t } = useTranslation();
   const insets        = useSafeAreaInsets();
   const { character, markCampfireRoomRead, blockedIds } = useApp();
   const { roomId }    = useLocalSearchParams<{ roomId: string }>();
@@ -706,16 +710,16 @@ export default function CampfireRoom() {
   const handleReport = useCallback((msg: CampfireMsg) => {
     if (msg.isMine) return;
     Alert.alert(
-      'Report message',
-      'Why are you reporting this message?',
+      t('social.reportMessage'),
+      t('social.reportMessageQuestion'),
       [
-        { text: 'Inappropriate content', onPress: () => submitReport(msg.id, 'inappropriate') },
-        { text: 'Harassment',            onPress: () => submitReport(msg.id, 'harassment')    },
-        { text: 'Spam',                  onPress: () => submitReport(msg.id, 'spam')          },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('social.inappropriate'), onPress: () => submitReport(msg.id, 'inappropriate') },
+        { text: t('social.harassment'),            onPress: () => submitReport(msg.id, 'harassment')    },
+        { text: t('social.spam'),                  onPress: () => submitReport(msg.id, 'spam')          },
+        { text: t('social.cancel'), style: 'cancel' },
       ],
     );
-  }, [roomId]);
+  }, [roomId, t]);
 
   async function submitReport(messageId: string, reason: string) {
     if (!roomId) return;
@@ -724,7 +728,7 @@ export default function CampfireRoom() {
         method: 'POST',
         body: JSON.stringify({ reason }),
       });
-      Alert.alert('Reported', 'Thank you — our team will review this message.');
+      Alert.alert(t('social.reported'), t('social.reportThanks'));
     } catch { /* silent */ }
   }
 
@@ -749,13 +753,17 @@ export default function CampfireRoom() {
       text,
       sending,
       roomId,
-      characterName: character.name || 'Wanderer',
+      characterName: character.name || t('social.wanderer'),
       apiFetch,
       appendOwnMessage,
       setSending,
       setText,
       setShowInput,
-      showToast: showToastGlobal,
+      showToast: (message, level) => {
+        const isRateLimited = message.startsWith('Slow down');
+        const suffix = isRateLimited ? message.slice('Slow down a little ✦'.length) : '';
+        showToastGlobal(`${isRateLimited ? t('social.slowDown') + suffix : t('social.messageSendError')}`, level);
+      },
     });
   }
 
@@ -764,7 +772,7 @@ export default function CampfireRoom() {
     try {
       const sent = await apiFetch<CampfireMsg>(`/campfire/${roomId}/messages`, {
         method: 'POST',
-        body: JSON.stringify({ expression: id, authorName: character.name || 'Wanderer' }),
+        body: JSON.stringify({ expression: id, authorName: character.name || t('social.wanderer') }),
       });
       if (sent) appendOwnMessage(sent);
     } catch { /* silent */ }
@@ -849,26 +857,26 @@ export default function CampfireRoom() {
                 )}
                 <Text style={[R.soulPill, { color: `${palette.ember}AA` }]}>
                   {data.soulCount > 0
-                    ? `${data.soulCount} soul${data.soulCount !== 1 ? 's' : ''} gathered`
-                    : 'You are the first soul tonight'}
+                    ? t('social.soulsGathered', { count: data.soulCount })
+                    : t('social.firstSoul')}
                 </Text>
                 </TouchableOpacity>
               </>
             ) : (
-              <Text style={R.roomName}>Campfire</Text>
+              <Text style={R.roomName}>{t('social.campfire')}</Text>
             )}
           </View>
 
           {/* 6h expiry note */}
           <View style={R.expiryPill}>
             <Icon name="clock" size={9} color={`${palette.ember}70`} />
-            <Text style={[R.expiryText, { color: `${palette.ember}80` }]}>6 h</Text>
+            <Text style={[R.expiryText, { color: `${palette.ember}80` }]}>{t('social.expiresInHours', { count: 6 })}</Text>
           </View>
         </View>
 
         {/* Messages scroll */}
         {loading ? (
-          <SkyLoadingOverlay message="Tending the fire…" />
+          <SkyLoadingOverlay message={t('social.tendingFire')} />
         ) : (
            <ScrollView
             ref={scrollRef}
@@ -911,7 +919,7 @@ export default function CampfireRoom() {
               <View style={R.inputRow}>
                 <TextInput
                   style={[R.input, { color: palette.text, borderColor: `${palette.ember}28` }]}
-                  placeholder="Whisper to the fire…"
+                  placeholder={t('social.whisperToFire')}
                   placeholderTextColor={`${palette.ember}40`}
                   value={text}
                   onChangeText={setText}
@@ -943,7 +951,7 @@ export default function CampfireRoom() {
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowInput(true); }}
                 activeOpacity={0.78}
               >
-                <Text style={[R.whisperPlaceholder, { color: `${palette.ember}55` }]}>Whisper to the fire…</Text>
+                <Text style={[R.whisperPlaceholder, { color: `${palette.ember}55` }]}>{t('social.whisperToFire')}</Text>
                 <View style={[R.whisperIcon, { backgroundColor: `${palette.ember}18` }]}>
                   <Icon name="edit-2" size={12} color={`${palette.ember}90`} />
                 </View>
@@ -963,11 +971,11 @@ export default function CampfireRoom() {
         <Pressable style={PR.overlay} onPress={() => setPresenceVisible(false)} />
         <View style={PR.sheet}>
           <View style={PR.handle} />
-          <Text style={PR.title}>Souls around the fire</Text>
+          <Text style={PR.title}>{t('social.soulsAroundFire')}</Text>
           {presenceLoading ? (
             <SkyLoadingMark size={28} color={palette.ember} />
           ) : presenceData.length === 0 ? (
-            <Text style={PR.empty}>No one active in the last 5 minutes</Text>
+            <Text style={PR.empty}>{t('social.noActiveSouls')}</Text>
           ) : (
             <FlatList
               data={presenceData}

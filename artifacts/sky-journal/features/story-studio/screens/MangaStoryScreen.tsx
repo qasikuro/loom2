@@ -29,6 +29,7 @@ import type { StoryMusic } from '@/context/mappers';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
 import { ReportSheet } from '@/components/ReportSheet';
 import { SkyLoadingMark } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 type MangaStyle = 'manga' | 'color' | 'chibi' | 'cinematic' | 'webtoon';
 type PendingAttempt = {
@@ -57,6 +58,7 @@ const STYLES: Array<{
 ];
 
 export default function MangaStoryScreen() {
+  const { t } = useTranslation();
   const { addStory, reloadData } = useApp();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -145,7 +147,7 @@ export default function MangaStoryScreen() {
   async function generateStory() {
     if (generating) return;
     if (!images.length) {
-      setError('Add at least one photo to create your manga story.');
+      setError(t('studioReader.addPhotoError'));
       return;
     }
     const finalPrompt =
@@ -206,21 +208,21 @@ export default function MangaStoryScreen() {
       if (err instanceof ImageUploadError) {
         setError(err.userMessage);
       } else if (err instanceof ApiError && err.status === 429) {
-        setError('You have reached today’s manga limit. Please come back tomorrow.');
+        setError(t('studioReader.mangaLimit'));
         setPendingAttempt(null);
         await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
       } else if (err instanceof ApiError && err.status === 409) {
-        setError('Your previous manga request is still being checked. Wait a moment, then tap Generate again.');
+        setError(t('studioReader.mangaPending'));
       } else if (err instanceof ApiError && err.status === 503) {
-        setError('The AI image service is temporarily unavailable. Your request was not charged. Please try again later.');
+        setError(t('studioReader.imageServiceUnavailable'));
         setPendingAttempt(null);
         await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
       } else if (err instanceof ApiError && [400, 401, 403, 502].includes(err.status)) {
-        setError('Something went wrong creating your manga. Please try again.');
+        setError(t('studioReader.mangaCreateError'));
         setPendingAttempt(null);
         await AsyncStorage.removeItem(PENDING_ATTEMPT_KEY);
       } else {
-        setError('The result could not be confirmed. Tap Generate again to safely check the same request.');
+        setError(t('studioReader.mangaUnconfirmed'));
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
@@ -254,7 +256,7 @@ export default function MangaStoryScreen() {
         UTI: 'public.png',
       });
     } catch {
-      setError('Could not open sharing. Please try again.');
+      setError(t('studioReader.couldNotShare'));
     } finally {
       setSharing(false);
     }
@@ -303,7 +305,7 @@ export default function MangaStoryScreen() {
         setSavedStoryId(id);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
-        setError('Could not save your manga. Check your connection and try again.');
+        setError(t('studioReader.couldNotSaveManga'));
       }
     } finally {
       setLifecycleBusy(null);
@@ -325,7 +327,7 @@ export default function MangaStoryScreen() {
         setPosted(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
-        setError('Could not post your manga. Check your connection and try again.');
+        setError(t('studioReader.couldNotPostManga'));
       } finally {
         setPosting(false);
         setLifecycleBusy(null);
@@ -342,19 +344,19 @@ export default function MangaStoryScreen() {
       setPosted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
-      setError('Could not post your manga. Check your connection and try again.');
+      setError(t('studioReader.couldNotPostManga'));
     }
   }
 
   function deleteManga() {
     if (!generationId || deleting || lifecycleBusy) return;
     Alert.alert(
-      'Delete manga?',
-      'This will permanently remove the generated manga and its saved story.',
+      t('studioReader.deleteMangaTitle'),
+      t('studioReader.deleteMangaBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('studioReader.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('studioReader.delete'),
           style: 'destructive',
           onPress: async () => {
             if (lifecycleBusy) return;
@@ -371,7 +373,7 @@ export default function MangaStoryScreen() {
               createNextManga();
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch {
-              setError('Could not delete your manga. Please try again.');
+              setError(t('studioReader.couldNotDeleteManga'));
             } finally {
               setDeleting(false);
               setLifecycleBusy(null);
@@ -420,27 +422,27 @@ export default function MangaStoryScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={s.howBtn}>
               <Icon name="circle" size={14} color="#E8E0FF" />
-              <Text style={s.howText}>How it works?</Text>
+              <Text style={s.howText}>{t('studioReader.howItWorks')}</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={s.title}>Create <Text style={s.titleAccent}>Manga Story</Text></Text>
-          <Text style={s.subtitle}>Turn your screenshots and moments into{'\n'}beautiful manga pages with AI ✦</Text>
+          <Text style={s.title}>{t('studioReader.create')} <Text style={s.titleAccent}>{t('studioReader.mangaStory')}</Text></Text>
+          <Text style={s.subtitle}>{t('studioReader.mangaSubtitle')}</Text>
 
           <View style={s.steps}>
-            <MiniStep icon="image" title="Upload" caption="up to 10 images" />
-            <MiniStep icon="star" title="Add a prompt" caption="and style" />
-            <MiniStep icon="book-open" title="Get a manga" caption="story page" />
+            <MiniStep icon="image" title={t('studioReader.upload')} caption={t('studioReader.upToTenImages')} />
+            <MiniStep icon="star" title={t('studioReader.addPrompt')} caption={t('studioReader.andStyle')} />
+            <MiniStep icon="book-open" title={t('studioReader.getManga')} caption={t('studioReader.storyPage')} />
           </View>
         </View>
 
         <View style={[s.content, { width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}>
-          <SectionCard icon="image" title="1. Upload Images (Max 10)" rightText={`${images.length}/10`}>
+          <SectionCard icon="image" title={t('studioReader.uploadImages')} rightText={`${images.length}/10`}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.photoRow}>
               {images.length < 10 && (
                 <TouchableOpacity style={s.addPhoto} onPress={addPhotos} activeOpacity={0.8}>
                   <Icon name="plus" size={28} color="#B891FF" />
-                  <Text style={s.addPhotoText}>Add Photos</Text>
+                  <Text style={s.addPhotoText}>{t('studioReader.addPhotos')}</Text>
                 </TouchableOpacity>
               )}
               {images.map(uri => (
@@ -454,7 +456,7 @@ export default function MangaStoryScreen() {
             </ScrollView>
           </SectionCard>
 
-          <SectionCard icon="star" title="2. Tell AI Your Story">
+          <SectionCard icon="star" title={t('studioReader.tellAIStory')}>
             <View style={s.promptWrap}>
               <TextInput
                 value={prompt}
@@ -463,7 +465,7 @@ export default function MangaStoryScreen() {
                   setGenerated(false);
                 }}
                 style={s.prompt}
-                placeholder="Describe the story you want, or leave this empty and let AI tell the story from your pictures."
+                placeholder={t('studioReader.promptPlaceholder')}
                 placeholderTextColor="rgba(215,202,244,0.42)"
                 multiline
                 maxLength={500}
@@ -473,7 +475,7 @@ export default function MangaStoryScreen() {
             </View>
           </SectionCard>
 
-          <SectionCard icon="smile" title="3. Choose Style" optional="(Optional)">
+          <SectionCard icon="smile" title={t('studioReader.chooseStyle')} optional={t('studioReader.optional')}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.styleRow}>
               {STYLES.map(item => {
                 const active = item.id === style;
@@ -489,31 +491,31 @@ export default function MangaStoryScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={[s.styleLabel, active && s.styleLabelActive]}>{item.label}</Text>
+                    <Text style={[s.styleLabel, active && s.styleLabelActive]}>{item.id === 'manga' ? t('studioReader.styleManga') : item.id === 'color' ? t('studioReader.styleColorManga') : item.id === 'chibi' ? t('studioReader.styleGameFaithful') : item.id === 'cinematic' ? t('studioReader.styleCinematic') : t('studioReader.styleWebtoon')}</Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
           </SectionCard>
 
-          <SectionCard icon="volume-2" title="4. Add Music" optional="(Optional)">
+          <SectionCard icon="volume-2" title={t('studioReader.addMusic')} optional={t('studioReader.optional')}>
             <AudiusMusicPicker value={music} mood="Creative" onChange={setMusic} />
           </SectionCard>
 
-          <SectionCard icon="image" title="5. Your Manga Page">
+          <SectionCard icon="image" title={t('studioReader.yourMangaPage')}>
             <View style={[s.result, generated && s.resultReady]}>
               {generating ? (
                 <View style={s.resultEmpty}>
                   <SkyLoadingMark size={44} color="#B55CFF" />
-                  <Text style={s.resultTitle}>Creating your manga page…</Text>
-                  <Text style={s.resultText}>Applying the {selectedStyle.label.replace('\n', ' ')} style</Text>
+                  <Text style={s.resultTitle}>{t('studioReader.creatingManga')}</Text>
+                  <Text style={s.resultText}>{t('studioReader.applyingStyle', { style: t(selectedStyle.id === 'manga' ? 'studioReader.styleManga' : selectedStyle.id === 'color' ? 'studioReader.styleColorManga' : selectedStyle.id === 'chibi' ? 'studioReader.styleGameFaithful' : selectedStyle.id === 'cinematic' ? 'studioReader.styleCinematic' : 'studioReader.styleWebtoon') })}</Text>
                 </View>
               ) : generated ? (
                 <TouchableOpacity
                   style={s.generatedGrid}
-                  accessibilityLabel={`Generated manga page. ${generatedPrompt}`}
+                  accessibilityLabel={t('studioReader.generatedPageA11y', { prompt: generatedPrompt })}
                   accessibilityRole="button"
-                  accessibilityHint="Opens the manga with share, save, report, and delete actions"
+                  accessibilityHint={t('studioReader.generatedPageHint')}
                   onPress={() => setPreviewVisible(true)}
                   activeOpacity={0.9}
                 >
@@ -554,21 +556,21 @@ export default function MangaStoryScreen() {
                       }).catch(() => setImageLoadFailed(true)).finally(() => setImageLoading(false));
                     }}>
                       <Icon name="refresh-cw" size={24} color="#FFFFFF" />
-                      <Text style={s.resultTitle}>Image did not load. Tap to retry.</Text>
+                      <Text style={s.resultTitle}>{t('studioReader.imageRetry')}</Text>
                     </TouchableOpacity>
                   )}
                   {!imageLoading && !imageLoadFailed && (
                     <View style={s.openHint}>
                       <Icon name="maximize-2" size={13} color="#FFFFFF" />
-                      <Text style={s.openHintText}>Tap to open</Text>
+                      <Text style={s.openHintText}>{t('studioReader.tapToOpen')}</Text>
                     </View>
                   )}
                 </TouchableOpacity>
               ) : (
                 <View style={s.resultEmpty}>
                   <Icon name="image" size={44} color="rgba(190,155,255,0.48)" />
-                  <Text style={s.resultTitle}>Your manga story will appear here</Text>
-                  <Text style={s.resultText}>Upload images, add a prompt and click generate{'\n'}to create your manga page.</Text>
+                  <Text style={s.resultTitle}>{t('studioReader.mangaAppears')}</Text>
+                  <Text style={s.resultText}>{t('studioReader.generateHelp')}</Text>
                 </View>
               )}
             </View>
@@ -581,7 +583,7 @@ export default function MangaStoryScreen() {
             </View>
           )}
           {remainingToday !== null && generated && (
-            <Text style={s.remainingText}>{remainingToday} AI manga pages remaining today</Text>
+            <Text style={s.remainingText}>{t('studioReader.pagesRemaining', { count: remainingToday })}</Text>
           )}
         </View>
       </ScrollView>
@@ -589,10 +591,10 @@ export default function MangaStoryScreen() {
       <View style={[s.generateBar, { paddingBottom: bottomPad }]}>
         {generated ? (
           <View style={s.resultActions}>
-            <ActionButton icon="share-2" label={sharing ? 'Sharing…' : 'Share'} onPress={shareManga} disabled={!!lifecycleBusy || sharing} loading={sharing} />
-            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} loading={lifecycleBusy === 'saving'} />
-            <ActionButton icon={posted ? 'check' : 'send'} label={posted ? 'Posted' : posting ? 'Posting…' : 'Post'} onPress={postManga} disabled={!!lifecycleBusy || posted} loading={posting} primary />
-            <ActionButton icon="maximize-2" label="Open" onPress={() => setPreviewVisible(true)} disabled={!!lifecycleBusy} />
+            <ActionButton icon="share-2" label={sharing ? t('studioReader.sharing') : t('studioReader.share')} onPress={shareManga} disabled={!!lifecycleBusy || sharing} loading={sharing} />
+            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? t('studioReader.saving') : savedStoryId ? t('studioReader.saved') : t('studioReader.save')} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} loading={lifecycleBusy === 'saving'} />
+            <ActionButton icon={posted ? 'check' : 'send'} label={posted ? t('studioReader.posted') : posting ? t('studioReader.posting') : t('studioReader.post')} onPress={postManga} disabled={!!lifecycleBusy || posted} loading={posting} primary />
+            <ActionButton icon="maximize-2" label={t('studioReader.open')} onPress={() => setPreviewVisible(true)} disabled={!!lifecycleBusy} />
           </View>
         ) : (
         <TouchableOpacity style={s.generateBtn} onPress={generateStory} disabled={generating} activeOpacity={0.86}>
@@ -603,7 +605,7 @@ export default function MangaStoryScreen() {
             style={StyleSheet.absoluteFill}
           />
           {generating ? <SkyLoadingMark size={22} color="#FFFFFF" /> : <Icon name="star" size={20} color="#FFFFFF" />}
-          <Text style={s.generateText}>{generating ? 'Generating…' : generated ? 'Generate Again' : 'Generate Manga Story'}</Text>
+          <Text style={s.generateText}>{generating ? t('studioReader.generating') : generated ? t('studioReader.generateAgain') : t('studioReader.generateManga')}</Text>
           {!generating && (
             <View style={s.generateArrow}>
               <Icon name="arrow-right" size={18} color="#FFFFFF" />
@@ -630,7 +632,7 @@ export default function MangaStoryScreen() {
             <TouchableOpacity style={s.previewClose} onPress={() => setPreviewVisible(false)}>
               <Icon name="x" size={21} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={s.previewTitle}>Your Manga</Text>
+            <Text style={s.previewTitle}>{t('studioReader.yourManga')}</Text>
             <View style={s.previewHeaderSpacer} />
           </View>
           <View style={s.previewImageWrap}>
@@ -639,13 +641,13 @@ export default function MangaStoryScreen() {
             )}
           </View>
           <View style={[s.previewActions, { paddingBottom: bottomPad }]}>
-            <ActionButton icon="share-2" label={sharing ? 'Sharing…' : 'Share'} onPress={shareManga} disabled={!!lifecycleBusy || sharing} loading={sharing} />
-            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? 'Saving…' : savedStoryId ? 'Saved' : 'Save'} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} loading={lifecycleBusy === 'saving'} primary />
-            <ActionButton icon="flag" label="Report" disabled={!!lifecycleBusy} onPress={() => {
+            <ActionButton icon="share-2" label={sharing ? t('studioReader.sharing') : t('studioReader.share')} onPress={shareManga} disabled={!!lifecycleBusy || sharing} loading={sharing} />
+            <ActionButton icon={savedStoryId ? 'check' : 'bookmark'} label={lifecycleBusy === 'saving' ? t('studioReader.saving') : savedStoryId ? t('studioReader.saved') : t('studioReader.save')} onPress={saveManga} disabled={!!savedStoryId || !!lifecycleBusy} loading={lifecycleBusy === 'saving'} primary />
+            <ActionButton icon="flag" label={t('studioReader.report')} disabled={!!lifecycleBusy} onPress={() => {
               setPreviewVisible(false);
               setTimeout(() => setReportVisible(true), 250);
             }} />
-            <ActionButton icon="trash-2" label={deleting ? 'Deleting…' : 'Delete'} onPress={deleteManga} disabled={!!lifecycleBusy} loading={deleting} />
+            <ActionButton icon="trash-2" label={deleting ? t('studioReader.deleting') : t('studioReader.delete')} onPress={deleteManga} disabled={!!lifecycleBusy} loading={deleting} />
           </View>
         </View>
       </Modal>

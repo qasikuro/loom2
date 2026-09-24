@@ -77,6 +77,7 @@ function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
   colors:      ReturnType<typeof useColors>;
   cardWidth:   number;
 }) {
+  const { t } = useTranslation();
   const grad = getGradient(outfit.id);
   const emoji = moodEmoji(outfit.tags);
 
@@ -137,7 +138,11 @@ function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
                   key={tag}
                   style={[styles.tagChip, { backgroundColor: `${c1}18`, borderColor: `${c1}35` }]}
                 >
-                  <Text style={[styles.tagText, { color: c1 }]}>{tag.toLowerCase()}</Text>
+                  <Text style={[styles.tagText, { color: c1 }]}>
+                    {['Casual', 'Formal', 'Dreamy', 'Adventure', 'Cozy', 'Dark', 'Soft', 'Ethereal'].includes(tag)
+                      ? t(`outfitJournal.tag${tag}`)
+                      : tag.toLowerCase()}
+                  </Text>
                 </View>
               );
             })}
@@ -151,6 +156,8 @@ function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
           }]}
           onPress={() => { Haptics.selectionAsync(); onSetActive(outfit.id); }}
           activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={isActive ? t('outfitJournal.wornOnHome') : t('outfitJournal.wearThis')}
         >
           <Icon
             name={isActive ? 'check-circle' : 'home'}
@@ -158,7 +165,7 @@ function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
             color={isActive ? colors.primary : colors.mutedForeground}
           />
           <Text style={[styles.useBtnText, { color: isActive ? colors.primary : colors.mutedForeground }]}>
-            {isActive ? 'Worn on home' : 'Wear this'}
+            {isActive ? t('outfitJournal.wornOnHome') : t('outfitJournal.wearThis')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -179,12 +186,14 @@ function EmptyState({ colors }: { colors: ReturnType<typeof useColors> }) {
       </LinearGradient>
       <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('profile.noOutfitsYet')}</Text>
       <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-        Record your daily looks and{'\n'}build your wardrobe over time.
+        {t('outfitJournal.wardrobeDescription')}
       </Text>
       <TouchableOpacity
         style={[styles.emptyBtn, { backgroundColor: colors.primary }]}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         onPress={() => { Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
+        accessibilityRole="button"
+        accessibilityLabel={t('outfit.logTitle')}
       >
         <Icon name="plus" size={14} color="#fff" />
         <Text style={styles.emptyBtnText}>{t('profile.logFirstOutfitBtn')}</Text>
@@ -245,6 +254,8 @@ export default function WardrobeScreen() {
           style={[styles.headerBtn, styles.headerBtnAccent]}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onPress={() => { Haptics.selectionAsync(); router.push('/create-outfit' as any); }}
+          accessibilityRole="button"
+          accessibilityLabel={t('outfit.logTitle')}
         >
           <Icon name="plus" size={20} color="rgba(235,228,255,0.9)" />
         </TouchableOpacity>
@@ -252,19 +263,22 @@ export default function WardrobeScreen() {
 
       {/* Tab bar */}
       <View style={[styles.tabBar, { backgroundColor: `${colors.card}CC`, borderColor: colors.border }]}>
-        {(['outfits', 'accessories'] as const).map(t => (
+        {(['outfits', 'accessories'] as const).map(tabKey => (
           <TouchableOpacity
-            key={t}
-            style={[styles.tabBtn, tab === t && { backgroundColor: colors.primary }]}
-            onPress={() => { Haptics.selectionAsync(); setTab(t); }}
+            key={tabKey}
+            style={[styles.tabBtn, tab === tabKey && { backgroundColor: colors.primary }]}
+            onPress={() => { Haptics.selectionAsync(); setTab(tabKey); }}
             activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === tabKey }}
+            accessibilityLabel={tabKey === 'outfits' ? t('outfitJournal.outfits') : t('outfitJournal.accessories')}
           >
             <Text style={[
               styles.tabBtnText,
-              { color: tab === t ? '#fff' : colors.mutedForeground },
-              tab === t && { fontFamily: 'Satoshi-Bold' },
+              { color: tab === tabKey ? '#fff' : colors.mutedForeground },
+              tab === tabKey && { fontFamily: 'Satoshi-Bold' },
             ]}>
-              {t === 'outfits' ? 'Outfits' : 'Accessories'}
+              {tabKey === 'outfits' ? t('outfitJournal.outfits') : t('outfitJournal.accessories')}
             </Text>
           </TouchableOpacity>
         ))}
@@ -281,7 +295,7 @@ export default function WardrobeScreen() {
           </LinearGradient>
           <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('common.comingSoon')}</Text>
           <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-            Accessories logging will be{'\n'}available in a future update.
+            {t('outfitJournal.accessoriesSoon')}
           </Text>
         </View>
       ) : sorted.length === 0 ? (

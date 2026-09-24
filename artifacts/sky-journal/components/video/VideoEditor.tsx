@@ -14,6 +14,7 @@ import {
 import { Icon } from '@/components/Icon';
 import { AudiusMusicPicker, AudiusTrackPlayer, type AudiusTrack } from '@/features/story-studio/components/AudiusMusicPicker';
 import type { StoryMusic } from '@/context/mappers';
+import { useTranslation } from 'react-i18next';
 import {
   calculateMusicSegment,
   formatVideoRange,
@@ -53,17 +54,17 @@ type Props = {
   error?: string | null;
 };
 
-function bytesLabel(bytes?: number | null): string {
-  if (!bytes) return 'Unavailable';
+function bytesLabel(bytes: number | null | undefined, t: (key: string) => string): string {
+  if (!bytes) return t('components.video.unavailable');
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
   if (bytes >= 1024 ** 2) return `${Math.round(bytes / 1024 ** 2)} MB`;
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-function aspectLabel(width?: number | null, height?: number | null): string {
-  if (!width || !height) return 'Unavailable';
-  if (Math.abs(width - height) < 8) return 'Square';
-  return width > height ? 'Landscape' : 'Portrait';
+function aspectLabel(width: number | null | undefined, height: number | null | undefined, t: (key: string) => string): string {
+  if (!width || !height) return t('components.video.unavailable');
+  if (Math.abs(width - height) < 8) return t('components.video.square');
+  return width > height ? t('components.video.landscape') : t('components.video.portrait');
 }
 
 function useAudioPreview(
@@ -149,6 +150,7 @@ function useAudioPreview(
 }
 
 export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, onMetadata, publishing = false, progress, error }: Props) {
+  const { t } = useTranslation();
   const videoRef = useRef<any>(null);
   const [playing, setPlaying] = useState(false);
   const [currentSeconds, setCurrentSeconds] = useState(0);
@@ -309,7 +311,7 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
   }), [setMusicStart]);
 
   const width = metadata.width && metadata.height ? metadata.width / metadata.height : 16 / 9;
-  const videoLabel = `${metadata.width && metadata.height ? `${metadata.width} × ${metadata.height}` : 'Resolution unavailable'} · ${aspectLabel(metadata.width, metadata.height)} · ${bytesLabel(metadata.fileSize)}`;
+  const videoLabel = `${metadata.width && metadata.height ? `${metadata.width} × ${metadata.height}` : t('components.video.resolutionUnavailable')} · ${aspectLabel(metadata.width, metadata.height, t)} · ${bytesLabel(metadata.fileSize, t)}`;
 
   return (
     <View style={styles.root}>
@@ -344,7 +346,7 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
           onPress={() => void togglePreview()}
           activeOpacity={0.82}
           accessibilityRole="button"
-          accessibilityLabel={playing ? 'Pause preview' : 'Play preview'}
+          accessibilityLabel={playing ? t('components.video.pausePreview') : t('components.video.playPreview')}
         >
           <Icon name={playing ? 'pause' : 'play'} size={22} color="#FFF" />
         </TouchableOpacity>
@@ -355,14 +357,14 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
 
       <View style={styles.metadataRow}>
         <Icon name="info" size={14} color="#C5A5FF" />
-        <Text style={styles.metadataText}>{formatVideoTime(metadata.durationSeconds)} source · {videoLabel}</Text>
+        <Text style={styles.metadataText}>{t('components.video.sourceMetadata', { duration: formatVideoTime(metadata.durationSeconds), details: videoLabel })}</Text>
       </View>
 
-      <Text style={styles.eyebrow}>1 · TRIM YOUR MOMENT</Text>
+      <Text style={styles.eyebrow}>{t('components.video.trimHeading')}</Text>
       {metadata.durationSeconds <= 0 && (
         <View style={styles.metadataError}>
           <Icon name="alert-circle" size={15} color="#ED8996" />
-          <Text style={styles.metadataErrorText}>We’re still reading this video. Press play once to load its duration before publishing.</Text>
+          <Text style={styles.metadataErrorText}>{t('components.video.metadataPending')}</Text>
         </View>
       )}
       <Text style={styles.rangeText}>{formatVideoRange(safeTrim)} <Text style={styles.rangeSub}>({formatVideoTime(duration)})</Text></Text>
@@ -382,9 +384,9 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
         <View {...startResponder.panHandlers} style={[styles.handle, { left: `${(safeTrim.startSeconds / Math.max(1, metadata.durationSeconds)) * 100}%` }]} hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }} />
         <View {...endResponder.panHandlers} style={[styles.handle, { left: `${(safeTrim.endSeconds / Math.max(1, metadata.durationSeconds)) * 100}%` }]} hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }} />
       </View>
-      <Text style={styles.helper}>Drag either edge · maximum 1:00</Text>
+      <Text style={styles.helper}>{t('components.video.trimHelper')}</Text>
 
-      <Text style={styles.eyebrow}>2 · ADD MUSIC <Text style={styles.optional}>OPTIONAL</Text></Text>
+      <Text style={styles.eyebrow}>{t('components.video.musicHeading')} <Text style={styles.optional}>{t('components.video.optional')}</Text></Text>
       <AudiusMusicPicker
         value={value.music as AudiusTrack | null}
         mood="Creative"
@@ -410,16 +412,16 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
           </View>
           <Text style={styles.helper}>
             {musicSegment.durationSeconds < duration
-              ? 'The remaining video uses its original audio or stays silent.'
-              : 'Drag the music timeline to choose any section.'}
+              ? t('components.video.remainingAudio')
+              : t('components.video.musicTimelineHelper')}
           </Text>
         </View>
       )}
 
       <View style={styles.volumeRow}>
         {([
-          ['Original audio', 'originalVolume'],
-          ['Music volume', 'musicVolume'],
+          [t('components.video.originalAudio'), 'originalVolume'],
+          [t('components.video.musicVolume'), 'musicVolume'],
         ] as const).map(([label, key]) => (
           <View key={key} style={styles.volumeControl}>
             <Text style={styles.volumeLabel}>{label}</Text>
@@ -428,7 +430,7 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
                 onPress={() => onChange({ ...value, [key]: Math.max(0, value[key] - 0.1) })}
                 style={styles.volumeButton}
                 accessibilityRole="button"
-                accessibilityLabel={`Decrease ${label}`}
+                accessibilityLabel={t('components.video.decreaseVolume', { label })}
                 hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               >
                 <Text style={styles.volumeButtonText}>−</Text>
@@ -440,7 +442,7 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
                 onPress={() => onChange({ ...value, [key]: Math.min(1, value[key] + 0.1) })}
                 style={styles.volumeButton}
                 accessibilityRole="button"
-                accessibilityLabel={`Increase ${label}`}
+                accessibilityLabel={t('components.video.increaseVolume', { label })}
                 hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
               >
                 <Text style={styles.volumeButtonText}>+</Text>
@@ -453,9 +455,9 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
       {error && <Text style={styles.error}>{error}</Text>}
       {publishing ? (
         <View style={styles.publishRow}>
-          <Text style={styles.publishText}>{progress ?? 'Preparing your video…'}</Text>
+          <Text style={styles.publishText}>{progress ?? t('components.video.preparing')}</Text>
           <TouchableOpacity onPress={onCancel} accessibilityRole="button" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={styles.cancelText}>Cancel</Text>
+            <Text style={styles.cancelText}>{t('components.video.cancel')}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -468,7 +470,7 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
           accessibilityState={{ disabled: metadata.durationSeconds <= 0 }}
         >
           <Icon name="send" size={16} color="#0B0719" />
-          <Text style={styles.publishButtonText}>Preview & publish</Text>
+          <Text style={styles.publishButtonText}>{t('components.video.previewPublish')}</Text>
         </TouchableOpacity>
       )}
       <TouchableOpacity

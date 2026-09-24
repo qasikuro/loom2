@@ -18,13 +18,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
+import { useTranslation } from 'react-i18next';
 
 const MODES = [
   {
     id:          'quick',
     icon:        'star'        as const,
-    name:        'Quick with AI',
-    description: 'One image, one thought.\nLet AI turn it into something amazing.',
+    nameKey:     'feature.create.quick',
+    descriptionKey: 'feature.create.quickDesc',
     color:       '#FFD05B',
     border:      '#F8C84A',
     image:       Images.story_bg3,
@@ -34,8 +35,8 @@ const MODES = [
   {
     id:          'journal',
     icon:        'feather'     as const,
-    name:        'Journal',
-    description: 'Open your private journal,\nread entries or write a new one.',
+    nameKey:     'feature.create.journal',
+    descriptionKey: 'feature.create.journalDesc',
     color:       '#B58CFF',
     border:      '#8054D8',
     image:       Images.create_quick,
@@ -45,8 +46,8 @@ const MODES = [
   {
     id:          'chapter',
     icon:        'book-open'   as const,
-    name:        'Chapter',
-    description: 'Create a full multi-panel\nmanga story, any length.',
+    nameKey:     'feature.create.chapter',
+    descriptionKey: 'feature.create.chapterDesc',
     color:       '#A968FF',
     border:      '#7D3DDE',
     image:       Images.create_chapter,
@@ -56,8 +57,8 @@ const MODES = [
   {
     id:          'video',
     icon:        'video'       as const,
-    name:        'Post Video',
-    description: 'Share a 10-second moment\ndirectly to Discover.',
+    nameKey:     'feature.create.video',
+    descriptionKey: 'feature.create.videoDesc',
     color:       '#FF68A8',
     border:      '#D63388',
     image:       Images.create_video,
@@ -67,8 +68,8 @@ const MODES = [
   {
     id:          'dashboard',
     icon:        'trending-up' as const,
-    name:        'Creator Dashboard',
-    description: 'Track reads, followers &\nmanage your books.',
+    nameKey:     'feature.create.dashboard',
+    descriptionKey: 'feature.create.dashboardDesc',
     color:       '#42E0D0',
     border:      '#18AFA9',
     image:       Images.create_dashboard,
@@ -78,6 +79,7 @@ const MODES = [
 ] as const;
 
 export default function CreateScreen() {
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.92, 820);
@@ -148,18 +150,18 @@ export default function CreateScreen() {
 
         {/* Header row */}
         <View style={s.headerRow}>
-          <Text style={s.sheetTitle}>Create</Text>
+          <Text style={s.sheetTitle}>{t('feature.create.title')}</Text>
           <TouchableOpacity style={s.closeBtn} onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Icon name="x" size={16} color="rgba(200,185,255,0.50)" />
           </TouchableOpacity>
         </View>
         {hasEventContext ? (
           <View style={s.eventCtx}>
-            <Text style={s.eventCtxLabel}>✦  Event prompt</Text>
+            <Text style={s.eventCtxLabel}>✦  {t('feature.create.eventPrompt')}</Text>
             <Text style={s.eventCtxText} numberOfLines={3}>{eventPrompt}</Text>
           </View>
         ) : (
-          <Text style={s.sheetSub}>What kind of story today?</Text>
+          <Text style={s.sheetSub}>{t('feature.create.subtitle')}</Text>
         )}
 
         {/* Mode tiles — scroll independently on short phones/landscape */}
@@ -197,8 +199,8 @@ export default function CreateScreen() {
                 <Icon name={mode.icon} size={mode.featured ? 27 : 25} color={mode.color} />
               </View>
               <View style={s.tileText}>
-                <Text style={s.tileName} numberOfLines={1}>{mode.name}</Text>
-                <Text style={s.tileDesc} numberOfLines={3}>{mode.description}</Text>
+              <Text style={s.tileName} numberOfLines={1}>{t(mode.nameKey)}</Text>
+              <Text style={s.tileDesc} numberOfLines={3}>{t(mode.descriptionKey)}</Text>
               </View>
               <View style={[s.arrowBtn, { borderColor: `${mode.color}80` }]}>
                 <Icon name="chevron-right" size={20} color="#FFFFFF" />

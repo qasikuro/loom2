@@ -18,6 +18,7 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useApiFetch } from '../utils/apiClient';
 import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ interface Chapter {
 
 export default function ChaptersListScreen() {
   const colors  = useColors();
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const fetch   = useApiFetch();
   const { bookId } = useLocalSearchParams<{ bookId: string }>();
@@ -51,7 +53,7 @@ export default function ChaptersListScreen() {
       const data = await fetch<Chapter[]>(`/books/${bookId}/chapters`);
       setChapters(data.sort((a, b) => a.orderIndex - b.orderIndex));
     } catch {
-      Alert.alert('Error', 'Could not load chapters');
+      Alert.alert(t('studioEditor.error'), t('studioEditor.couldNotLoadChapters'));
     } finally {
       setLoading(false);
     }
@@ -80,7 +82,7 @@ export default function ChaptersListScreen() {
         ),
       );
     } catch {
-      Alert.alert('Error', 'Could not save order');
+      Alert.alert(t('studioEditor.error'), t('studioEditor.couldNotSaveOrder'));
       void loadChapters(); // revert
     } finally {
       setSaving(false);
@@ -89,10 +91,10 @@ export default function ChaptersListScreen() {
 
   function timeAgo(iso: string) {
     const d = (Date.now() - new Date(iso).getTime()) / 86400000;
-    if (d < 1) return 'today';
-    if (d < 2) return 'yesterday';
-    if (d < 7) return `${Math.floor(d)}d ago`;
-    return `${Math.floor(d / 7)}w ago`;
+    if (d < 1) return t('studioEditor.today');
+    if (d < 2) return t('studioEditor.yesterday');
+    if (d < 7) return t('studioEditor.daysAgo', { count: Math.floor(d) });
+    return t('studioEditor.weeksAgo', { count: Math.floor(d / 7) });
   }
 
   function renderChapter({ item, index }: { item: Chapter; index: number }) {
@@ -105,6 +107,8 @@ export default function ChaptersListScreen() {
           <TouchableOpacity
             onPress={() => moveChapter(item.id, -1)}
             style={[s.arrowBtn, index === 0 && s.arrowDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel={t('studioEditor.moveUp')}
             disabled={index === 0}
           >
             <Icon name="chevron-up" size={14} color={index === 0 ? 'rgba(200,185,255,0.15)' : 'rgba(200,185,255,0.55)'} />
@@ -113,6 +117,8 @@ export default function ChaptersListScreen() {
           <TouchableOpacity
             onPress={() => moveChapter(item.id, 1)}
             style={[s.arrowBtn, index === chapters.length - 1 && s.arrowDisabled]}
+            accessibilityRole="button"
+            accessibilityLabel={t('studioEditor.moveDown')}
             disabled={index === chapters.length - 1}
           >
             <Icon name="chevron-down" size={14} color={index === chapters.length - 1 ? 'rgba(200,185,255,0.15)' : 'rgba(200,185,255,0.55)'} />
@@ -128,9 +134,9 @@ export default function ChaptersListScreen() {
           <Text style={s.chapterTitle} numberOfLines={1}>{item.title}</Text>
           <View style={s.chapterMeta}>
             <View style={[s.statusBadge, { borderColor: `${statusColor}40`, backgroundColor: `${statusColor}14` }]}>
-              <Text style={[s.statusTxt, { color: statusColor }]}>{isPublished ? 'Published' : 'Draft'}</Text>
+              <Text style={[s.statusTxt, { color: statusColor }]}>{isPublished ? t('studioEditor.publishedStatus') : t('studioEditor.draft')}</Text>
             </View>
-            <Text style={s.metaTxt}>{item.pageCount} pages · {timeAgo(item.updatedAt)}</Text>
+            <Text style={s.metaTxt}>{t('studioEditor.pagesWithTime', { count: item.pageCount, time: timeAgo(item.updatedAt) })}</Text>
           </View>
         </TouchableOpacity>
 
@@ -140,15 +146,15 @@ export default function ChaptersListScreen() {
   }
 
   if (loading) {
-    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message="Loading chapters…" /></View>;
+    return <View style={[s.root, { backgroundColor: colors.background }]}><SkyLoadingOverlay message={t('studioEditor.loadChapters')} /></View>;
   }
 
   if (!bookId) {
     return (
       <View style={[s.root, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }]}>
-        <Text style={s.emptyTxt}>This chapter link is missing a book ID.</Text>
+        <Text style={s.emptyTxt}>{t('studioEditor.missingBookLink')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
-          <Text style={{ color: '#8B70C8', fontSize: 14 }}>Go back</Text>
+          <Text style={{ color: '#8B70C8', fontSize: 14 }}>{t('studioEditor.goBack')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -160,7 +166,7 @@ export default function ChaptersListScreen() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Icon name="arrow-left" size={18} color="rgba(255,255,255,0.75)" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>All Chapters</Text>
+        <Text style={s.headerTitle}>{t('studioEditor.allChapters')}</Text>
         {saving
           ? <SkyLoadingMark size={18} color="#8B70C8" />
           : <View style={{ width: 36 }} />}
@@ -173,7 +179,7 @@ export default function ChaptersListScreen() {
         contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 32 }]}
         ListEmptyComponent={
           <View style={s.empty}>
-            <Text style={s.emptyTxt}>No chapters yet</Text>
+            <Text style={s.emptyTxt}>{t('studioEditor.noChapters')}</Text>
           </View>
         }
       />

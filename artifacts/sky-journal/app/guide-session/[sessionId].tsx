@@ -7,6 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 interface GuideSession {
   id: string; guideId: string; roomId: string; title: string; description: string; topic: string | null;
@@ -15,6 +16,7 @@ interface GuideSession {
 
 export default function GuideSessionScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
+  const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [session, setSession] = useState<GuideSession | null>(null);
@@ -23,9 +25,9 @@ export default function GuideSessionScreen() {
     if (!sessionId) return;
     setLoading(true);
     apiFetch<GuideSession>(`/guide-sessions/${sessionId}`).then(setSession)
-      .catch(() => Alert.alert('Session unavailable', 'This session may have ended or been cancelled.'))
+      .catch(() => Alert.alert(t('social.sessionUnavailable'), t('social.sessionUnavailableBody')))
       .finally(() => setLoading(false));
-  }, [sessionId]);
+  }, [sessionId, t]);
   useEffect(load, [load]);
 
   async function join() {
@@ -33,17 +35,17 @@ export default function GuideSessionScreen() {
     try {
       const updated = await apiFetch<GuideSession>(`/guide-sessions/${session.id}/join`, { method: 'POST' });
       setSession(updated);
-      Alert.alert('You joined', 'We will notify you when the session starts.');
+      Alert.alert(t('social.sessionJoined'), t('social.sessionJoinedBody'));
     } catch (error) {
-      Alert.alert('Could not join', error instanceof Error ? error.message : 'Please try again.');
+      Alert.alert(t('social.joinError'), error instanceof Error ? error.message : t('social.tryAgain'));
     }
   }
   const top = Platform.OS === 'web' ? 67 : insets.top;
-  if (loading || !session) return <View style={[s.root, { backgroundColor: colors.background, paddingTop: top }]}><BackButton /><SkyLoadingOverlay message="Loading session…" /></View>;
+  if (loading || !session) return <View style={[s.root, { backgroundColor: colors.background, paddingTop: top }]}><BackButton /><SkyLoadingOverlay message={t('social.loadingSession')} /></View>;
   const start = new Date(session.startsAt);
   const started = Date.now() >= start.getTime();
   return <View style={[s.root, { backgroundColor: colors.background, paddingTop: top }]}>
-    <View style={s.header}><BackButton /><Text style={[s.heading, { color: colors.foreground }]}>Guide session</Text></View>
+    <View style={s.header}><BackButton /><Text style={[s.heading, { color: colors.foreground }]}>{t('social.guideSession')}</Text></View>
     <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}>
       {session.topic && <Text style={[s.topic, { color: colors.primary }]}>{session.topic}</Text>}
       <Text style={[s.title, { color: colors.foreground }]}>{session.title}</Text>
@@ -52,16 +54,16 @@ export default function GuideSessionScreen() {
         <View><Text style={[s.time, { color: colors.foreground }]}>{start.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</Text>
           <Text style={[s.meta, { color: colors.mutedForeground }]}>{session.attendeeCount} of {session.capacity} joined</Text></View>
       </View>
-      <Text style={[s.section, { color: colors.foreground }]}>What this session is about</Text>
+      <Text style={[s.section, { color: colors.foreground }]}>{t('social.sessionAbout')}</Text>
       <Text style={[s.body, { color: colors.mutedForeground }]}>{session.description}</Text>
       <TouchableOpacity style={[s.primary, { backgroundColor: colors.primary }]} onPress={session.isJoined && started ? () => router.push(`/campfire/${session.roomId}`) : join}>
         <Icon name={session.isJoined && started ? 'message-circle' : 'user-plus'} size={17} color="#fff" />
-        <Text style={s.primaryText}>{session.isJoined ? (started ? 'Enter shared chat' : 'Joined — remind me') : 'Join session'}</Text>
+        <Text style={s.primaryText}>{session.isJoined ? (started ? t('social.enterSharedChat') : t('social.joinedRemind')) : t('social.joinSession')}</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[s.secondary, { borderColor: colors.border }]} onPress={() => router.push(`/messages/${session.guideId}`)}>
-        <Icon name="message-circle" size={17} color={colors.primary} /><Text style={[s.secondaryText, { color: colors.primary }]}>Message guide</Text>
+        <Icon name="message-circle" size={17} color={colors.primary} /><Text style={[s.secondaryText, { color: colors.primary }]}>{t('social.messageGuide')}</Text>
       </TouchableOpacity>
-      {session.isJoined && !started && <Text style={[s.note, { color: colors.mutedForeground }]}>You’ll receive a notification when it is time to enter the shared chat.</Text>}
+      {session.isJoined && !started && <Text style={[s.note, { color: colors.mutedForeground }]}>{t('social.sessionReminder')}</Text>}
     </ScrollView>
   </View>;
 }

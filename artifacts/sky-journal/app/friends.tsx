@@ -12,6 +12,8 @@ import {
   Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 type Tab = 'all' | 'online' | 'requests' | 'suggestions';
 type Invitation = {
@@ -31,22 +33,23 @@ type SearchResult = {
   bio: string;
 };
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'all', label: 'All', icon: 'users' },
-  { id: 'online', label: 'Online', icon: 'activity' },
-  { id: 'requests', label: 'Requests', icon: 'bell' },
-  { id: 'suggestions', label: 'Find', icon: 'user-plus' },
+const TABS: { id: Tab; key: string; icon: string }[] = [
+  { id: 'all', key: 'all', icon: 'users' },
+  { id: 'online', key: 'online', icon: 'activity' },
+  { id: 'requests', key: 'requests', icon: 'bell' },
+  { id: 'suggestions', key: 'find', icon: 'user-plus' },
 ];
 
-function lastActive(value: string | null | undefined): string {
-  if (!value) return 'Offline or status hidden';
+function lastActive(value: string | null | undefined, t: TFunction): string {
+  if (!value) return t('social.offlineHidden');
   const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60_000));
-  if (minutes < 60) return `Last active ${Math.max(1, minutes)}m ago`;
-  if (minutes < 1440) return `Last active ${Math.floor(minutes / 60)}h ago`;
-  return `Last active ${Math.floor(minutes / 1440)}d ago`;
+  if (minutes < 60) return t('social.lastActiveMinutes', { count: Math.max(1, minutes) });
+  if (minutes < 1440) return t('social.lastActiveHours', { count: Math.floor(minutes / 60) });
+  return t('social.lastActiveDays', { count: Math.floor(minutes / 1440) });
 }
 
 export default function FriendsScreen() {
+  const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -79,11 +82,11 @@ export default function FriendsScreen() {
       void refreshFriends();
       setError(null);
     } catch {
-      if (active.current) setError('Could not load friends. Pull down to retry.');
+      if (active.current) setError(t('social.loadFriendsError'));
     } finally {
       if (active.current) { setLoading(false); setRefreshing(false); }
     }
-  }, [refreshFriends]);
+  }, [refreshFriends, t]);
 
   useFocusEffect(useCallback(() => {
     active.current = true;
@@ -107,13 +110,13 @@ export default function FriendsScreen() {
         const people = await apiFetch<SearchResult[]>(`/users/search?q=${encodeURIComponent(q)}`);
         if (searchSeq.current === seq) { setResults(people); setSearchError(null); }
       } catch {
-        if (searchSeq.current === seq) { setResults([]); setSearchError('Search failed. Try again.'); }
+        if (searchSeq.current === seq) { setResults([]); setSearchError(t('social.searchFailed')); }
       } finally {
         if (searchSeq.current === seq) setSearching(false);
       }
     }, 350);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, t]);
 
   const visibleFriends = useMemo(() => friends.filter(f => !blockedIds.includes(f.userId) &&
     `${f.name} ${f.username ?? ''}`.toLowerCase().includes(query.trim().toLowerCase())), [friends, blockedIds, query]);
@@ -132,7 +135,7 @@ export default function FriendsScreen() {
         { method: method === 'accept' ? 'POST' : 'DELETE' });
       await load();
     } catch {
-      setError(`Could not ${method === 'accept' ? 'accept' : 'remove'} the request. Please try again.`);
+      setError(t(method === 'accept' ? 'social.acceptRequestError' : 'social.removeRequestError'));
     } finally { setBusy(null); }
   }
 
@@ -144,8 +147,8 @@ export default function FriendsScreen() {
       await load();
     } catch (e) {
       setError(e instanceof ApiError && e.status === 409
-        ? 'This person is already a friend or has a pending request.'
-        : 'Could not send your request. Please try again.');
+        ? t('social.pendingOrFriends')
+        : t('social.sendRequestError'));
       await load();
     } finally { setBusy(null); }
   }
@@ -162,14 +165,14 @@ export default function FriendsScreen() {
 
   const friendRow = (friend: FriendSummary) => (
     <View key={friend.userId} style={styles.row}>
-      <TouchableOpacity style={styles.person} onPress={() => profile(friend.userId)} accessibilityLabel={`View ${friend.name}'s profile`}>
+      <TouchableOpacity style={styles.person} onPress={() => profile(friend.userId)} accessibilityLabel={t('social.viewProfileFor', { name: friend.name })}>
         <FriendAvatar name={friend.name} uri={friend.avatarUri} online={friend.isOnline} size={48} largeOnlineDot />
         <View style={styles.personText}>
           <Text style={styles.name} numberOfLines={1}>{friend.name}</Text>
-          <Text style={styles.detail} numberOfLines={1}>{friend.isOnline ? 'Online now' : lastActive(friend.lastSeenAt)}</Text>
+          <Text style={styles.detail} numberOfLines={1}>{friend.isOnline ? t('social.onlineNow') : lastActive(friend.lastSeenAt, t)}</Text>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.circleButton} onPress={() => chat(friend)} accessibilityLabel={`Chat with ${friend.name}`} testID={`chat-${friend.userId}`}>
+      <TouchableOpacity style={styles.circleButton} onPress={() => chat(friend)} accessibilityLabel={t('social.chatWith', { name: friend.name })} testID={`chat-${friend.userId}`}>
         <Icon name="message-circle" size={20} color="#EDE8FF" />
       </TouchableOpacity>
     </View>
@@ -193,18 +196,18 @@ export default function FriendsScreen() {
         <View style={styles.personText}>
           <Text style={styles.name} numberOfLines={1}>{request.name}</Text>
           <Text style={styles.detail} numberOfLines={1}>
-            {request.direction === 'incoming' ? 'Wants to be your friend' : 'Request sent'}
+            {request.direction === 'incoming' ? t('social.wantsFriend') : t('social.requestSent')}
           </Text>
         </View>
       </TouchableOpacity>
       {request.direction === 'incoming' && (
         <TouchableOpacity style={styles.accept} disabled={!!busy} onPress={() => void changeRequest(request.id, 'accept')}
-          accessibilityLabel={`Accept ${request.name}'s friend request`} testID={`accept-${request.id}`}>
+          accessibilityLabel={t('social.acceptFriendRequest', { name: request.name })} testID={`accept-${request.id}`}>
           {busy === request.id ? <ActivityIndicator color="#fff" size="small" /> : <Icon name="check" size={19} color="#fff" />}
         </TouchableOpacity>
       )}
       <TouchableOpacity style={styles.circleButton} disabled={!!busy} onPress={() => void changeRequest(request.id, 'remove')}
-        accessibilityLabel={`${request.direction === 'incoming' ? 'Decline' : 'Cancel'} ${request.name}'s request`}>
+        accessibilityLabel={t(request.direction === 'incoming' ? 'social.declineRequest' : 'social.cancelRequest', { name: request.name })}>
         <Icon name="x" size={18} color="#AFA5C8" />
       </TouchableOpacity>
     </View>
@@ -224,11 +227,11 @@ export default function FriendsScreen() {
               <BackButton color="#EDE8FF" />
               <View style={styles.titleLine}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.title}>Friends <Text style={styles.titleCount}>{friends.length}</Text></Text>
-                  <Text style={styles.subtitle}>Connect, talk and share your world</Text>
+                  <Text style={styles.title}>{t('social.friends')} <Text style={styles.titleCount}>{friends.length}</Text></Text>
+                  <Text style={styles.subtitle}>{t('social.connectShare')}</Text>
                 </View>
                 <TouchableOpacity style={styles.addButton} onPress={() => { setTab('suggestions'); setQuery(''); }} testID="find-friends">
-                  <Icon name="user-plus" size={16} color="#fff" /><Text style={styles.addLabel}>Add Friends</Text>
+                  <Icon name="user-plus" size={16} color="#fff" /><Text style={styles.addLabel}>{t('social.addFriends')}</Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
@@ -237,12 +240,12 @@ export default function FriendsScreen() {
                 <Icon name="search" size={19} color="#AFA5C8" />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder={tab === 'suggestions' ? 'Search people by name or @username' : 'Search friends by name or @username'}
+                  placeholder={t(tab === 'suggestions' ? 'social.searchPeople' : 'social.searchFriends')}
                   placeholderTextColor="#AFA5C8"
                   value={query} onChangeText={setQuery} autoCapitalize="none"
-                  returnKeyType="search" accessibilityLabel="Search friends"
+                  returnKeyType="search" accessibilityLabel={t('social.searchFriendsLabel')}
                 />
-                {!!query && <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel="Clear search"><Icon name="x" size={17} color="#AFA5C8" /></TouchableOpacity>}
+                {!!query && <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('social.clearSearch')}><Icon name="x" size={17} color="#AFA5C8" /></TouchableOpacity>}
               </View>
               <View style={styles.tabs}>
                 {TABS.map(item => {
@@ -250,29 +253,29 @@ export default function FriendsScreen() {
                   return <TouchableOpacity key={item.id} style={[styles.tab, selected && { backgroundColor: colors.primary }]}
                     onPress={() => { setTab(item.id); setQuery(''); }} testID={`friends-tab-${item.id}`}>
                     <Icon name={item.icon as never} size={14} color={selected ? '#fff' : '#AFA5C8'} />
-                    <Text style={[styles.tabLabel, { color: selected ? '#fff' : '#AFA5C8' }]}>{item.label}</Text>
+                    <Text style={[styles.tabLabel, { color: selected ? '#fff' : '#AFA5C8' }]}>{t(`social.${item.key}`)}</Text>
                     {item.id === 'requests' && incoming.length > 0 && <Text style={styles.badge}>{incoming.length}</Text>}
                   </TouchableOpacity>;
                 })}
               </View>
 
               {!!error && <TouchableOpacity style={styles.error} onPress={() => void load()}>
-                <Text style={styles.errorText}>{error} Tap to retry.</Text>
+                <Text style={styles.errorText}>{error} {t('social.tapToRetry')}</Text>
               </TouchableOpacity>}
               {loading ? <ActivityIndicator style={styles.loader} color={colors.primary} /> : (
                 <>
                   {tab === 'all' && (visibleFriends.length
-                    ? <>{section('Online friends', online, '#45D79B')}{section('Offline friends', offline, '#8982B0')}</>
-                    : <Empty text={query ? 'No friends match your search.' : 'No friends yet. Find people to connect with.'} />)}
+                    ? <>{section(t('social.onlineFriends'), online, '#45D79B')}{section(t('social.offlineFriends'), offline, '#8982B0')}</>
+                    : <Empty text={query ? t('social.noFriendsMatch') : t('social.noFriends')} />)}
                   {tab === 'online' && (online.length
-                    ? section('Online friends', online, '#45D79B')
-                    : <Empty text="No friends online right now." />)}
+                     ? section(t('social.onlineFriends'), online, '#45D79B')
+                     : <Empty text={t('social.noOnline')} />)}
                   {tab === 'requests' && (requests.length
                     ? <>{incoming.length > 0 && <View style={styles.section}><Text style={styles.sectionTitle}>Received · {incoming.length}</Text>{incoming.map(requestRow)}</View>}
                         {outgoing.length > 0 && <View style={styles.section}><Text style={styles.sectionTitle}>Sent · {outgoing.length}</Text>{outgoing.map(requestRow)}</View>}</>
-                    : <Empty text="No pending friend requests." />)}
+                     : <Empty text={t('social.noRequests')} />)}
                   {tab === 'suggestions' && (query.trim().length < 2
-                    ? <Empty text="Search for someone by name or username to send a friend request." />
+                     ? <Empty text={t('social.searchToRequest')} />
                     : searching ? <ActivityIndicator style={styles.loader} color={colors.primary} />
                     : searchError ? <Empty text={searchError} />
                     : suggested.length ? <View style={styles.section}>{suggested.map(person => (
@@ -281,20 +284,20 @@ export default function FriendsScreen() {
                           <FriendAvatar name={person.name} uri={person.avatarUri} size={48} />
                           <View style={styles.personText}>
                             <Text style={styles.name} numberOfLines={1}>{person.name}</Text>
-                            <Text style={styles.detail} numberOfLines={1}>{person.username ? `@${person.username}` : person.bio || 'View profile'}</Text>
+                            <Text style={styles.detail} numberOfLines={1}>{person.username ? `@${person.username}` : person.bio || t('social.viewProfile')}</Text>
                           </View>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.accept} disabled={!!busy} onPress={() => void sendRequest(person.userId)}
-                          accessibilityLabel={`Send ${person.name} a friend request`} testID={`add-${person.userId}`}>
+                          accessibilityLabel={t('social.sendFriendRequest', { name: person.name })} testID={`add-${person.userId}`}>
                           {busy === person.userId ? <ActivityIndicator color="#fff" size="small" /> : <Icon name="user-plus" size={17} color="#fff" />}
                         </TouchableOpacity>
                       </View>
-                    ))}</View> : <Empty text="No new people found. Try a different name." />)}
+                    ))}</View> : <Empty text={t('social.noNewPeople')} />)}
                 </>
               )}
               <TouchableOpacity style={styles.inboxLink} onPress={() => router.push('/messages')}>
                 <Icon name="message-circle" size={18} color={colors.primary} />
-                <Text style={[styles.inboxText, { color: colors.primary }]}>View all conversations</Text>
+                <Text style={[styles.inboxText, { color: colors.primary }]}>{t('social.viewConversations')}</Text>
                 <Icon name="chevron-right" size={16} color={colors.primary} />
               </TouchableOpacity>
             </View>

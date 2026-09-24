@@ -51,9 +51,6 @@ function relativeTime(dateStr: string, t: TFunc): string {
   return t('common.weeksAgo', { n: weeks });
 }
 
-const MONTH_FULL  = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const WEEK_DAYS   = ['S','M','T','W','T','F','S'];
-
 function toDateKey(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
@@ -77,16 +74,16 @@ function computeStreak(entries: JournalEntry[]): number {
   return streak;
 }
 
-function formatHeader(dk: string, t: TFunc): string {
+function formatHeader(dk: string, t: TFunc, locale: string): string {
   const today = toDateKey(new Date());
   const yest  = (() => { const d = new Date(); d.setDate(d.getDate()-1); return toDateKey(d); })();
   if (dk === today) return t('common.today');
   if (dk === yest)  return t('common.yesterday');
   const [y, m, d] = dk.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  return new Date(y, m - 1, d).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function groupByDate(entries: JournalEntry[], t: TFunc) {
+function groupByDate(entries: JournalEntry[], t: TFunc, locale: string) {
   const map: Record<string, JournalEntry[]> = {};
   for (const e of entries) {
     const k = toDateKey(new Date(e.date));
@@ -94,7 +91,7 @@ function groupByDate(entries: JournalEntry[], t: TFunc) {
   }
   return Object.entries(map)
     .sort(([a],[b]) => b.localeCompare(a))
-    .map(([date, data]) => ({ date, label: formatHeader(date, t), data }));
+    .map(([date, data]) => ({ date, label: formatHeader(date, t, locale), data }));
 }
 
 // ── Avatar config per entry type ───────────────────────────────────────────────
@@ -160,7 +157,7 @@ function TimelineCard({ entry, onDelete, index = 0, theme }: { entry: JournalEnt
   }
 
   const displayName =
-    entry.type === 'friend' ? (entry.friendName ?? 'Someone') : t(cfg.labelKey);
+    entry.type === 'friend' ? (entry.friendName ?? t('discoverLog.someone')) : t(cfg.labelKey);
 
   const initial =
     entry.type === 'friend'
@@ -283,6 +280,7 @@ function MiniCalendar({
   onSelectDate: (k: string) => void;
 }) {
   const colors = useColors();
+  const { i18n } = useTranslation();
   const today  = new Date();
   const [year,  setYear]  = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -311,7 +309,7 @@ function MiniCalendar({
           <Icon name="chevron-left" size={15} color={colors.primary} />
         </TouchableOpacity>
         <Text style={[cal.monthText, { color: colors.foreground }]}>
-          {MONTH_FULL[month]} {year}
+          {new Date(year, month, 1).toLocaleDateString(i18n.language, { month: 'long', year: 'numeric' })}
         </Text>
         <TouchableOpacity style={[cal.navBtn, { backgroundColor: colors.muted }]} onPress={nextMonth}>
           <Icon name="chevron-right" size={15} color={colors.primary} />
@@ -319,7 +317,7 @@ function MiniCalendar({
       </View>
 
       <View style={cal.weekRow}>
-        {WEEK_DAYS.map((d,i) => (
+        {Array.from({ length: 7 }, (_, i) => new Date(Date.UTC(2024, 0, 7 + i)).toLocaleDateString(i18n.language, { weekday: 'narrow' })).map((d,i) => (
           <Text key={i} style={[cal.weekDay, { color: colors.mutedForeground }]}>{d}</Text>
         ))}
       </View>
@@ -525,7 +523,7 @@ const fab = StyleSheet.create({
 export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
-  const { t }   = useTranslation();
+  const { t, i18n } = useTranslation();
   const { journalEntries, deleteJournalEntry, isLoading, apiOnline, journalLoadError, hasCorruptedJournals, reloadData, constellation, activeCosmetics, isRefreshing } = useApp();
   const activeTheme = activeCosmetics['theme'] as string | undefined;
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
@@ -556,7 +554,7 @@ export default function JournalScreen() {
     );
   }), [journalEntries, activeFilter, searchQuery]);
 
-  const sections = useMemo(() => groupByDate(filtered, t), [filtered, t]);
+  const sections = useMemo(() => groupByDate(filtered, t, i18n.language), [filtered, t, i18n.language]);
 
   const counts = {
     all:    journalEntries.length,
@@ -597,7 +595,7 @@ export default function JournalScreen() {
               {isRefreshing && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.10)', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 7 }}>
                   <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(200,184,232,0.45)' }} />
-                  <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)' }}>Updating</Text>
+                  <Text style={{ fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)' }}>{t('discoverLog.updating')}</Text>
                 </View>
               )}
             </View>
@@ -631,11 +629,11 @@ export default function JournalScreen() {
         {journalStreak > 0 && (
           <View style={styles.streakRow}>
             <Text style={styles.streakFlame}>🔥</Text>
-            <Text style={styles.streakText}>{journalStreak}-day streak</Text>
+            <Text style={styles.streakText}>{t('discoverLog.dayStreak', { count: journalStreak })}</Text>
             {quietStarDone ? (
-              <Text style={[styles.streakSub, { color: '#7890C8' }]}>· Quiet Star ✦ unlocked</Text>
+              <Text style={[styles.streakSub, { color: '#7890C8' }]}>{t('discoverLog.quietStarUnlocked')}</Text>
             ) : (
-              <Text style={styles.streakSub}>· {Math.max(0, 7 - journalStreak)} more day{7 - journalStreak !== 1 ? 's' : ''} for Quiet Star</Text>
+              <Text style={styles.streakSub}>{t('discoverLog.daysUntilQuietStar', { count: Math.max(0, 7 - journalStreak) })}</Text>
             )}
           </View>
         )}
@@ -681,13 +679,13 @@ export default function JournalScreen() {
           <View style={offlineBanner.dot} />
           <Text style={offlineBanner.msg}>
             {hasCorruptedJournals && !journalLoadError
-              ? "Some entries couldn't be loaded — pull to refresh"
+              ? t('discoverLog.corruptEntries')
               : journalLoadError && apiOnline
-                ? "Couldn't load entries"
-                : "Offline — showing cached data"}
+                ? t('discoverLog.loadEntriesError')
+                : t('discoverLog.offlineCached')}
           </Text>
           <TouchableOpacity style={offlineBanner.btn} onPress={reloadData} activeOpacity={0.75}>
-            <Text style={offlineBanner.btnText}>Retry</Text>
+            <Text style={offlineBanner.btnText}>{t('discoverLog.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -696,9 +694,9 @@ export default function JournalScreen() {
       {hasCorruptedJournals && !corruptionBannerDismissed && !isLoading && (
         <View style={offlineBanner.row}>
           <View style={[offlineBanner.dot, { backgroundColor: '#9B78E8' }]} />
-          <Text style={offlineBanner.msg}>Some entries couldn't be loaded — pull to refresh</Text>
+          <Text style={offlineBanner.msg}>{t('discoverLog.corruptEntries')}</Text>
           <TouchableOpacity style={offlineBanner.btn} onPress={() => { reloadData(); setCorruptionBannerDismissed(true); }} activeOpacity={0.75}>
-            <Text style={offlineBanner.btnText}>Refresh</Text>
+            <Text style={offlineBanner.btnText}>{t('discoverLog.refresh')}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setCorruptionBannerDismissed(true)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }} activeOpacity={0.75}>
             <Icon name="x" size={13} color="rgba(200,184,232,0.5)" />
@@ -712,7 +710,7 @@ export default function JournalScreen() {
           <Icon name="search" size={15} color={colors.mutedForeground} />
           <TextInput
             style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder="Search entries, friends, moods..."
+            placeholder={t('discoverLog.searchEntries')}
             placeholderTextColor={colors.mutedForeground}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -742,8 +740,8 @@ export default function JournalScreen() {
       {!!searchQuery.trim() && (
         <Text style={[styles.searchHint, { color: colors.mutedForeground }]}>
           {filtered.length === 0
-            ? 'No results'
-            : `${filtered.length} result${filtered.length !== 1 ? 's' : ''} for "${searchQuery}"`}
+            ? t('discoverLog.noResults')
+            : t('discoverLog.resultCount', { count: filtered.length, query: searchQuery })}
         </Text>
       )}
 
@@ -777,12 +775,12 @@ export default function JournalScreen() {
               </View>
             </View>
             <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-              {searchQuery.trim() ? `No results for "${searchQuery}"` : 'Your sky is quiet...'}
+              {searchQuery.trim() ? t('discoverLog.noResultsFor', { query: searchQuery }) : t('discoverLog.quietSky')}
             </Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
               {searchQuery.trim()
-                ? 'Try a different word or mood.'
-                : 'This is your private space.\nEach entry becomes a star in your sky.'}
+                ? t('discoverLog.tryDifferentEntry')
+                : t('discoverLog.privateSky')}
             </Text>
             {!searchQuery.trim() && (
               <TouchableOpacity
@@ -791,7 +789,7 @@ export default function JournalScreen() {
                 activeOpacity={0.85}
               >
                 <Icon name="feather" size={15} color="#fff" />
-                <Text style={styles.emptyBtnText}>Write First Entry</Text>
+                <Text style={styles.emptyBtnText}>{t('discoverLog.writeFirstEntry')}</Text>
               </TouchableOpacity>
             )}
           </View>

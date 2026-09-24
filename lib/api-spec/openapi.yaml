@@ -350,6 +350,156 @@ paths:
                 items:
                   $ref: "#/components/schemas/DiscoverPost"
 
+  /users/{userId}:
+    get:
+      operationId: getPublicUserProfile
+      tags: [social]
+      summary: Get a public user profile and viewer profile-like state
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Public profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicUserProfile"
+        "403":
+          description: Profile unavailable due to a block
+        "404":
+          description: Profile not found or private
+
+  /users/{userId}/like:
+    post:
+      operationId: likeUserProfile
+      tags: [social]
+      summary: Like another user's public profile
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Current profile like state and count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileLikeState"
+        "400":
+          description: Cannot like your own profile
+        "403":
+          description: Profile unavailable due to a block
+        "404":
+          description: Profile not found or private
+    delete:
+      operationId: unlikeUserProfile
+      tags: [social]
+      summary: Remove a profile like
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Current profile like state and count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfileLikeState"
+        "403":
+          description: Profile unavailable due to a block
+        "404":
+          description: Profile not found or private
+
+  /stories/{id}/like:
+    post:
+      operationId: likeStory
+      tags: [stories]
+      summary: Like a visible public story or video post
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current like state and count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryLikeState"
+        "403":
+          description: Story unavailable due to a block
+        "404":
+          description: Story not found or not visible
+    delete:
+      operationId: unlikeStory
+      tags: [stories]
+      summary: Remove a story or video post like
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current like state and count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryLikeState"
+        "403":
+          description: Story unavailable due to a block
+        "404":
+          description: Story not found or not visible
+
+  /chapters/{id}/like:
+    post:
+      operationId: likeBookChapter
+      tags: [stories]
+      summary: Like a published chapter in a public book
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current like state and count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryLikeState"
+        "403":
+          description: Chapter unavailable due to a block
+        "404":
+          description: Chapter not found or not visible
+    delete:
+      operationId: unlikeBookChapter
+      tags: [stories]
+      summary: Remove a chapter like
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Current like state and count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StoryLikeState"
+        "403":
+          description: Chapter unavailable due to a block
+        "404":
+          description: Chapter not found or not visible
+
   /rewards:
     get:
       operationId: getRewardBalance
@@ -648,6 +798,11 @@ components:
           type: integer
         savedCount:
           type: integer
+        likeCount:
+          type: integer
+          minimum: 0
+        liked:
+          type: boolean
         stickerCount:
           type: integer
         createdAt:
@@ -972,6 +1127,11 @@ components:
           type: integer
         savedCount:
           type: integer
+        likeCount:
+          type: integer
+          minimum: 0
+        liked:
+          type: boolean
         stickerCount:
           type: integer
         date:
@@ -983,7 +1143,39 @@ components:
             type: object
         isFollowing:
           type: boolean
-      required: [id, authorUserId, authorName, chapterTitle, description, storySnippet, mood, location, witnessedCount, savedCount, stickerCount, date, panels, isFollowing]
+      required: [id, authorUserId, authorName, chapterTitle, description, storySnippet, mood, location, witnessedCount, savedCount, likeCount, liked, stickerCount, date, panels, isFollowing]
+
+    ProfileLikeState:
+      type: object
+      properties:
+        profileLiked:
+          type: boolean
+        profileLikeCount:
+          type: integer
+          minimum: 0
+      required: [profileLiked, profileLikeCount]
+
+    StoryLikeState:
+      type: object
+      properties:
+        liked:
+          type: boolean
+        likeCount:
+          type: integer
+          minimum: 0
+      required: [liked, likeCount]
+
+    PublicUserProfile:
+      type: object
+      properties:
+        userId:
+          type: string
+        profileLiked:
+          type: boolean
+        profileLikeCount:
+          type: integer
+          minimum: 0
+      required: [userId, profileLiked, profileLikeCount]
 
     RewardBalance:
       type: object

@@ -33,15 +33,6 @@ const MOODS = [
   { label: 'Joyful',   icon: 'smile'   as const, color: '#60A878' },
 ];
 
-const PROMPTS = [
-  'What are you feeling right now?',
-  'Something you noticed today that stayed with you...',
-  'A thought too small to share, but too real to forget.',
-  'If the sky could speak today, what would it say?',
-  'What made your heart heavy — or light?',
-  'One small, honest thing.',
-];
-
 export default function CreateMomentLogScreen() {
   useColors();
   const { t } = useTranslation();
@@ -61,10 +52,10 @@ export default function CreateMomentLogScreen() {
   const isDirty = text.trim().length > 0 || mood !== 'Peaceful';
   const markSaved = useNavigationGuard(isDirty);
 
-  const prompt = PROMPTS[new Date().getDate() % PROMPTS.length];
+  const prompt = t(`outfitJournal.momentPrompt${new Date().getDate() % 6 + 1}`);
 
   function handleSave() {
-    if (!text.trim()) { setError('Write something — even a single line.'); return; }
+    if (!text.trim()) { setError(t('outfitJournal.writeSomething')); return; }
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -108,10 +99,12 @@ export default function CreateMomentLogScreen() {
         <TouchableOpacity
           style={[styles.saveBtn, { backgroundColor: saving ? 'rgba(255,255,255,0.08)' : 'rgba(200,184,232,0.22)', borderColor: 'rgba(200,184,232,0.4)', borderWidth: 1 }]}
           onPress={handleSave} disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel={saving ? t('outfitJournal.saving') : t('outfitJournal.save')}
         >
           {saving && <SkyLoadingMark size={16} color="rgba(200,184,232,0.4)" />}
           <Text style={[styles.saveBtnText, { color: saving ? 'rgba(200,184,232,0.4)' : 'rgba(200,184,232,0.9)' }]}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('outfitJournal.saving') : t('outfitJournal.save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -125,6 +118,8 @@ export default function CreateMomentLogScreen() {
         <TouchableOpacity
           style={[styles.promptCard, { borderColor: 'rgba(200,184,232,0.18)', backgroundColor: 'rgba(200,184,232,0.06)' }]}
           onPress={() => inputRef.current?.focus()}
+          accessibilityRole="button"
+          accessibilityLabel={prompt}
         >
           <Icon name="feather" size={13} color="rgba(200,184,232,0.5)" />
           <Text style={styles.promptText}>{prompt}</Text>
@@ -134,7 +129,7 @@ export default function CreateMomentLogScreen() {
         <TextInput
           ref={inputRef}
           style={styles.textArea}
-          placeholder="Let it out..."
+          placeholder={t('outfitJournal.momentPlaceholder')}
           placeholderTextColor="rgba(200,184,232,0.28)"
           value={text}
           onChangeText={t => { setText(t); if (error) setError(null); }}
@@ -142,7 +137,7 @@ export default function CreateMomentLogScreen() {
           textAlignVertical="top"
           autoFocus
         />
-        <Text style={styles.charCount}>{text.length} characters</Text>
+        <Text style={styles.charCount}>{t('outfitJournal.characterCount', { count: text.length })}</Text>
 
         {/* Mood */}
         <Text style={styles.moodLabel}>{t('journal.moodPlaceholder')}</Text>
@@ -155,9 +150,12 @@ export default function CreateMomentLogScreen() {
                 borderWidth: mood === m.label ? 1.5 : 1,
               }]}
               onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: mood === m.label }}
+              accessibilityLabel={t(`outfitJournal.mood${m.label}`)}
             >
               <Icon name={m.icon} size={14} color={m.color} />
-              <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
+              <Text style={[styles.moodChipText, { color: m.color }]}>{t(`outfitJournal.mood${m.label}`)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -173,7 +171,7 @@ export default function CreateMomentLogScreen() {
         <View style={styles.privateNote}>
           <Icon name="lock" size={12} color="rgba(200,184,232,0.4)" />
           <Text style={styles.privateNoteText}>
-            Moments are always private — only visible to you.
+            {t('outfitJournal.momentPrivate')}
           </Text>
         </View>
       </KeyboardAwareScrollView>

@@ -6,6 +6,7 @@ import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 
 interface Props {
@@ -23,6 +24,7 @@ export function TitlesGallerySection({
   constellation,
   onSetActiveTitle,
 }: Props) {
+  const { t } = useTranslation();
   const colors = useColors();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -58,7 +60,7 @@ export function TitlesGallerySection({
         activeOpacity={0.75}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={[s.sectionTitle, { color: colors.foreground }]}>Titles</Text>
+          <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('components.titleGallery.title')}</Text>
           <View style={[s.countPill, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}28` }]}>
             <Text style={[s.countPillText, { color: colors.primary }]}>{earned.length}/{TITLE_CATALOGUE.length}</Text>
           </View>
@@ -72,7 +74,7 @@ export function TitlesGallerySection({
           {activeTitle && (
             <View style={[s.activeBanner, { backgroundColor: 'rgba(200,168,75,0.10)', borderColor: 'rgba(200,168,75,0.25)' }]}>
               <Text style={s.activeBannerText}>✦ {activeTitle}</Text>
-              <Text style={[s.activeBannerSub, { color: colors.mutedForeground }]}>Displayed on your profile</Text>
+              <Text style={[s.activeBannerSub, { color: colors.mutedForeground }]}>{t('components.titleGallery.displayed')}</Text>
             </View>
           )}
 
@@ -81,10 +83,10 @@ export function TitlesGallerySection({
             <>
               <Text style={[s.groupLabel, { color: colors.mutedForeground }]}>
                 {milestoneEarned.length > 0 && activityEarned.length > 0
-                  ? 'EARNED'
+                  ? t('components.titleGallery.earned')
                   : milestoneEarned.length > 0
-                    ? 'MILESTONE'
-                    : 'ACTIVITY'}
+                    ? t('components.titleGallery.milestone')
+                    : t('components.titleGallery.activity')}
               </Text>
               <View style={s.grid}>
                 {earned.map(title => {
@@ -119,11 +121,11 @@ export function TitlesGallerySection({
                       {isActive ? (
                         <View style={[s.activeTag, { backgroundColor: title.color + '22', borderColor: title.color + '55' }]}>
                           <Icon name="check" size={9} color={title.color} />
-                          <Text style={[s.activeTagText, { color: title.color }]}>Active</Text>
+                          <Text style={[s.activeTagText, { color: title.color }]}>{t('components.titleGallery.active')}</Text>
                         </View>
                       ) : (
                         <View style={[s.setTag, { borderColor: title.color + '40' }]}>
-                          <Text style={[s.setTagText, { color: title.color + 'CC' }]}>Set active</Text>
+                          <Text style={[s.setTagText, { color: title.color + 'CC' }]}>{t('components.titleGallery.setActive')}</Text>
                         </View>
                       )}
                     </TouchableOpacity>
@@ -137,7 +139,7 @@ export function TitlesGallerySection({
           {locked.length > 0 && (
             <>
               <Text style={[s.groupLabel, { color: colors.mutedForeground, marginTop: earned.length > 0 ? 14 : 0 }]}>
-                LOCKED
+                {t('components.titleGallery.locked')}
               </Text>
               <View style={s.grid}>
                 {locked.map(title => (
@@ -163,7 +165,7 @@ export function TitlesGallerySection({
             <View style={[s.emptyHint, { borderColor: 'rgba(200,184,232,0.10)', backgroundColor: 'rgba(200,184,232,0.04)' }]}>
               <Text style={{ fontSize: 22, marginBottom: 4 }}>✦</Text>
               <Text style={[s.emptyHintText, { color: colors.mutedForeground }]}>
-                Write stories and collect witnesses to earn your first title
+                {t('components.titleGallery.emptyHint')}
               </Text>
             </View>
           )}

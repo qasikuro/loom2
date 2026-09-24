@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 export type CompletionVariant = 'journal' | 'story' | 'witness';
 
@@ -18,10 +19,10 @@ interface Props {
   onFinish: () => void;
 }
 
-const COPY: Record<CompletionVariant, { headline: string; sub: string; icon: string; gradA: string; gradB: string }> = {
-  journal:  { headline: 'Written to the Stars', sub: 'Your thoughts drift gently into the night sky',    icon: '✦', gradA: '#1A1240', gradB: '#2A1A52' },
-  story:    { headline: 'Chapter Released',      sub: 'Your story floats out to find its readers',        icon: '◈', gradA: '#180A30', gradB: '#2A1450' },
-  witness:  { headline: 'Your Light Reached Them', sub: 'A quiet warmth passes between kindred souls',   icon: '◉', gradA: '#1A1000', gradB: '#28180A' },
+const COPY: Record<CompletionVariant, { headlineKey: string; subKey: string; icon: string; gradA: string; gradB: string }> = {
+  journal:  { headlineKey: 'discoverLog.completionJournalTitle', subKey: 'discoverLog.completionJournalBody', icon: '✦', gradA: '#1A1240', gradB: '#2A1A52' },
+  story:    { headlineKey: 'discoverLog.completionStoryTitle', subKey: 'discoverLog.completionStoryBody', icon: '◈', gradA: '#180A30', gradB: '#2A1450' },
+  witness:  { headlineKey: 'discoverLog.completionWitnessTitle', subKey: 'discoverLog.completionWitnessBody', icon: '◉', gradA: '#1A1000', gradB: '#28180A' },
 };
 
 const STAR_COUNT = 7;
@@ -29,6 +30,7 @@ const DISPLAY_MS = 2000;
 
 export function CompletionMoment({ visible, variant, onFinish }: Props) {
   const insets  = useSafeAreaInsets();
+  const { t } = useTranslation();
   const opacity = useRef(new Animated.Value(0)).current;
   const scale   = useRef(new Animated.Value(0.88)).current;
   const starAnims = useRef(
@@ -79,7 +81,7 @@ export function CompletionMoment({ visible, variant, onFinish }: Props) {
 
   if (!visible) return null;
 
-  const { headline, sub, icon, gradA, gradB } = COPY[variant];
+  const { headlineKey, subKey, icon, gradA, gradB } = COPY[variant];
 
   return (
     <Animated.View
@@ -115,8 +117,8 @@ export function CompletionMoment({ visible, variant, onFinish }: Props) {
 
       <Animated.View style={[styles.card, { transform: [{ scale }], paddingBottom: insets.bottom + 20 }]}>
         <Text style={styles.iconGlyph}>{icon}</Text>
-        <Text style={styles.headline}>{headline}</Text>
-        <Text style={styles.sub}>{sub}</Text>
+        <Text style={styles.headline}>{t(headlineKey)}</Text>
+        <Text style={styles.sub}>{t(subKey)}</Text>
 
         {/* Shimmer bar */}
         <View style={styles.shimmerWrap}>

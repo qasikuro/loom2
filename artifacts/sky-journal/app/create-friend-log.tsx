@@ -65,7 +65,7 @@ export default function CreateFriendLogScreen() {
     : pastFriends.slice(0, 4);
 
   function handleSave() {
-    if (!friendName.trim()) { setError("Enter a friend's name to continue."); return; }
+    if (!friendName.trim()) { setError(t('outfitJournal.friendNameError')); return; }
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -73,7 +73,7 @@ export default function CreateFriendLogScreen() {
       id: crypto.randomUUID(),
       date: new Date().toISOString(),
       type: 'friend',
-      text: note.trim() || `An encounter with ${friendName.trim()}.`,
+      text: note.trim() || t('outfitJournal.friendDefaultText', { name: friendName.trim() }),
       mood,
       friendName: friendName.trim(),
     });
@@ -101,10 +101,12 @@ export default function CreateFriendLogScreen() {
         <TouchableOpacity
           style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : '#3A78B8' }]}
           onPress={handleSave} disabled={saving}
+          accessibilityRole="button"
+          accessibilityLabel={saving ? t('outfitJournal.saving') : t('outfitJournal.save')}
         >
           {saving && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
           <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : '#fff' }]}>
-            {saving ? 'Saving…' : 'Save'}
+            {saving ? t('outfitJournal.saving') : t('outfitJournal.save')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -124,7 +126,7 @@ export default function CreateFriendLogScreen() {
           </View>
           <TextInput
             style={[styles.nameInput, { color: colors.foreground }]}
-            placeholder="Friend's name or ID..."
+            placeholder={t('outfitJournal.friendPlaceholder')}
             placeholderTextColor={colors.mutedForeground}
             value={friendName}
             onChangeText={t => { setFriendName(t); setShowSuggestions(true); if (error) setError(null); }}
@@ -151,9 +153,7 @@ export default function CreateFriendLogScreen() {
                     <Text style={[styles.suggAvatarText, { color: '#3A78B8' }]}>{name.charAt(0)}</Text>
                   </View>
                   <Text style={[styles.suggName, { color: colors.foreground }]}>{name}</Text>
-                  {count > 0 && (
-                    <Text style={[styles.suggCount, { color: colors.mutedForeground }]}>met {count}×</Text>
-                  )}
+                  {count > 0 && <Text style={[styles.suggCount, { color: colors.mutedForeground }]}>{t('outfitJournal.metCount', { count })}</Text>}
                 </TouchableOpacity>
               );
             })}
@@ -165,7 +165,7 @@ export default function CreateFriendLogScreen() {
           <View style={[styles.metBadge, { backgroundColor: 'rgba(58,120,184,0.1)', borderColor: 'rgba(58,120,184,0.25)' }]}>
             <Text style={{ fontSize: 14 }}>✨</Text>
             <Text style={[styles.metBadgeText, { color: '#3A78B8' }]}>
-              You've logged {timesMet} encounter{timesMet !== 1 ? 's' : ''} with {friendName.trim()} before
+              {t('outfitJournal.encountersWith', { count: timesMet, name: friendName.trim() })}
             </Text>
           </View>
         )}
@@ -174,7 +174,7 @@ export default function CreateFriendLogScreen() {
         <Text style={[styles.label, { color: colors.mutedForeground, marginTop: 16 }]}>{t('journal.whatHappened')}</Text>
         <TextInput
           style={[styles.noteInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.card }]}
-          placeholder="We flew above the clouds together... or just a brief glance and a wave."
+          placeholder={t('outfitJournal.friendNotePlaceholder')}
           placeholderTextColor={`${colors.mutedForeground}70`}
           value={note}
           onChangeText={setNote}
@@ -193,9 +193,12 @@ export default function CreateFriendLogScreen() {
                 borderWidth: mood === m.label ? 1.5 : 1,
               }]}
               onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: mood === m.label }}
+              accessibilityLabel={t(`outfitJournal.mood${m.label}`)}
             >
               <Icon name={m.icon} size={14} color={m.color} />
-              <Text style={[styles.moodChipText, { color: m.color }]}>{m.label}</Text>
+              <Text style={[styles.moodChipText, { color: m.color }]}>{t(`outfitJournal.mood${m.label}`)}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -211,7 +214,7 @@ export default function CreateFriendLogScreen() {
         <View style={[styles.privateNote, { backgroundColor: 'rgba(58,120,184,0.07)', borderColor: 'rgba(58,120,184,0.15)' }]}>
           <Icon name="lock" size={12} color="rgba(58,120,184,0.6)" />
           <Text style={[styles.privateNoteText, { color: colors.mutedForeground }]}>
-            Friend encounters are always private — only you can see them.
+            {t('outfitJournal.friendPrivate')}
           </Text>
         </View>
       </KeyboardAwareScrollView>

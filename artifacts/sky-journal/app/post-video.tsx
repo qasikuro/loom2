@@ -21,6 +21,7 @@ import type { StoryMusic } from '@/context/mappers';
 import { composeVideo, type ComposeVideoController } from '@/utils/composeVideo';
 import { calculateMusicSegment, normalizeVideoTrim } from '@/utils/videoEditing';
 import { VideoEditor, type VideoEditorMetadata, type VideoEditorValue } from '@/components/video/VideoEditor';
+import { useTranslation } from 'react-i18next';
 
 const TEMP_SOURCE_CAP_BYTES = 500 * 1024 * 1024;
 const MOODS = [
@@ -45,6 +46,7 @@ function inferMime(uri: string, mimeType?: string | null): string {
 
 export default function PostVideoScreen() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [step, setStep] = useState<Step>('picking');
   const [metadata, setMetadata] = useState<VideoEditorMetadata | null>(null);
   const [editorValue, setEditorValue] = useState<VideoEditorValue | null>(null);
@@ -83,8 +85,8 @@ export default function PostVideoScreen() {
     setError(null);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.status !== 'granted') {
-      Alert.alert('Permission required', 'Allow access to your photo library to choose a video.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('feature.video.permissionTitle'), t('feature.video.permissionBody'), [
+        { text: t('feature.video.ok'), onPress: () => router.back() },
       ]);
       return;
     }
@@ -99,9 +101,9 @@ export default function PostVideoScreen() {
     }
     const asset = result.assets[0];
     if (asset.fileSize && asset.fileSize > TEMP_SOURCE_CAP_BYTES) {
-      Alert.alert('Video too large', 'Choose a video smaller than 500 MB so it can be processed safely.', [
-        { text: 'Try again', onPress: () => void pickVideo() },
-        { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+      Alert.alert(t('feature.video.tooLargeTitle'), t('feature.video.tooLargeBody'), [
+        { text: t('feature.video.tryAgain'), onPress: () => void pickVideo() },
+        { text: t('feature.video.cancel'), style: 'cancel', onPress: () => router.back() },
       ]);
       return;
     }
@@ -124,7 +126,7 @@ export default function PostVideoScreen() {
       musicVolume: 1,
     });
     setStep('editing');
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void pickVideo();
@@ -133,12 +135,12 @@ export default function PostVideoScreen() {
   const handlePublish = async () => {
     if (!metadata || !editorValue) return;
     if (!title.trim()) {
-      setError('Add a caption before publishing.');
+      setError(t('feature.video.captionRequired'));
       return;
     }
     const finalDuration = editorValue.trim.endSeconds - editorValue.trim.startSeconds;
     if (finalDuration <= 0 || finalDuration > 60) {
-      setError('Choose a video segment between 1 second and 1 minute.');
+      setError(t('feature.video.segmentRequired'));
       return;
     }
     setError(null);
@@ -159,15 +161,15 @@ export default function PostVideoScreen() {
       musicVolume: editorValue.musicVolume,
       onProgress: value => setProgress(
         value >= 1
-          ? 'Processing and compressing…'
-          : `Uploading video… ${Math.round(value * 100)}%`,
+          ? t('feature.video.processing')
+          : t('feature.video.uploading', { percent: Math.round(value * 100) }),
       ),
     });
     composeRef.current = controller;
     try {
-      setProgress('Uploading and preparing your video…');
+      setProgress(t('feature.video.preparing'));
       const output = await controller.promise;
-      setProgress('Publishing…');
+      setProgress(t('feature.video.publishing'));
       const embeddedMusic: StoryMusic | null = editorValue.music && segment
         ? {
             ...editorValue.music,
@@ -195,7 +197,7 @@ export default function PostVideoScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setTimeout(() => router.replace('/(tabs)/discover' as never), 800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not publish this video. Please try again.');
+      setError(err instanceof Error ? err.message : t('feature.video.publishFailed'));
       setStep('editing');
     } finally {
       composeRef.current = null;
@@ -213,7 +215,7 @@ export default function PostVideoScreen() {
     return (
       <View style={[styles.root, styles.center]}>
         <SkyLoadingMark size={44} color="#9B78E8" />
-        <Text style={styles.loadingText}>Opening your videos…</Text>
+        <Text style={styles.loadingText}>{t('feature.video.opening')}</Text>
       </View>
     );
   }
@@ -221,8 +223,8 @@ export default function PostVideoScreen() {
     return (
       <View style={[styles.root, styles.center]}>
         <View style={styles.doneRing}><Icon name="check" size={32} color="#9B78E8" /></View>
-        <Text style={styles.doneTitle}>Posted!</Text>
-        <Text style={styles.doneSub}>Your finished video is live in Discover.</Text>
+        <Text style={styles.doneTitle}>{t('feature.video.posted')}</Text>
+        <Text style={styles.doneSub}>{t('feature.video.postedBody')}</Text>
       </View>
     );
   }
@@ -235,13 +237,13 @@ export default function PostVideoScreen() {
           style={styles.backBtn}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
-          accessibilityLabel={step === 'publishing' ? 'Cancel publishing' : 'Go back'}
+          accessibilityLabel={step === 'publishing' ? t('feature.video.cancelPublishing') : t('feature.video.goBack')}
         >
           <Icon name="chevron-left" size={20} color="rgba(220,205,255,0.84)" />
         </TouchableOpacity>
         <View style={styles.headerCopy}>
-          <Text style={styles.headerTitle}>Make a video moment</Text>
-          <Text style={styles.headerSub}>Trim → soundtrack → preview → publish</Text>
+          <Text style={styles.headerTitle}>{t('feature.video.title')}</Text>
+          <Text style={styles.headerSub}>{t('feature.video.subtitle')}</Text>
         </View>
         <View style={{ width: 36 }} />
       </View>
@@ -251,19 +253,19 @@ export default function PostVideoScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.fieldWrap}>
-          <Text style={styles.fieldLabel}>Caption</Text>
+          <Text style={styles.fieldLabel}>{t('feature.video.caption')}</Text>
           <TextInput
             value={title}
             onChangeText={setTitle}
             style={styles.input}
-            placeholder="What should this moment feel like?"
+            placeholder={t('feature.video.captionPlaceholder')}
             placeholderTextColor="rgba(200,185,255,0.30)"
             maxLength={150}
             accessibilityLabel="Video caption"
           />
         </View>
         <View style={styles.fieldWrap}>
-          <Text style={styles.fieldLabel}>Mood</Text>
+          <Text style={styles.fieldLabel}>{t('feature.video.mood')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.moodRow}>
             {MOODS.map(item => (
               <TouchableOpacity
@@ -272,10 +274,10 @@ export default function PostVideoScreen() {
                 style={[styles.moodPill, mood === item.label && { borderColor: `${item.color}90`, backgroundColor: `${item.color}22` }]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: mood === item.label }}
-                accessibilityLabel={`Mood: ${item.label}`}
+                accessibilityLabel={`${t('feature.video.mood')}: ${item.label}`}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Text style={[styles.moodText, { color: mood === item.label ? item.color : 'rgba(200,185,255,0.48)' }]}>{item.label}</Text>
+                <Text style={[styles.moodText, { color: mood === item.label ? item.color : 'rgba(200,185,255,0.48)' }]}>{t(`moods.${item.label}`)}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>

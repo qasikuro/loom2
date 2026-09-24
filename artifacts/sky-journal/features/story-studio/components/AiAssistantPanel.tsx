@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { useApiFetch } from '../utils/apiClient';
 import { SkyLoadingMark } from '@/components/SkyLoading';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,13 +41,13 @@ const TOOLS: Array<{
   color: string;
   hint: string;
 }> = [
-  { key: 'continue',    label: 'Continue',       icon: 'play',        color: '#78C8A0', hint: 'Write what happens next' },
-  { key: 'dialogue',    label: 'Dialogue',        icon: 'message-square', color: '#78C8FF', hint: 'Polish the conversation' },
-  { key: 'scene',       label: 'Scene',           icon: 'image',       color: '#C870A0', hint: 'Paint the setting' },
-  { key: 'grammar',     label: 'Fix Grammar',     icon: 'check-circle',color: '#F0C040', hint: 'Clean up errors' },
-  { key: 'emotion',     label: 'Add Emotion',     icon: 'heart',       color: '#E05568', hint: 'Deepen the feeling' },
-  { key: 'cliffhanger', label: 'Cliffhanger',     icon: 'zap',         color: '#D0784A', hint: 'End with suspense' },
-  { key: 'translate',   label: 'Translate',       icon: 'globe',       color: '#9B7FE8', hint: 'EN ↔ ES' },
+  { key: 'continue',    label: 'toolContinue',    icon: 'play',        color: '#78C8A0', hint: 'hintContinue' },
+  { key: 'dialogue',    label: 'toolDialogue',    icon: 'message-square', color: '#78C8FF', hint: 'hintDialogue' },
+  { key: 'scene',       label: 'toolScene',       icon: 'image',       color: '#C870A0', hint: 'hintScene' },
+  { key: 'grammar',     label: 'toolGrammar',     icon: 'check-circle',color: '#F0C040', hint: 'hintGrammar' },
+  { key: 'emotion',     label: 'toolEmotion',     icon: 'heart',       color: '#E05568', hint: 'hintEmotion' },
+  { key: 'cliffhanger', label: 'toolCliffhanger',  icon: 'zap',         color: '#D0784A', hint: 'hintCliffhanger' },
+  { key: 'translate',   label: 'toolTranslate',   icon: 'globe',       color: '#9B7FE8', hint: 'hintTranslate' },
 ];
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ export interface AiAssistantPanelProps {
 
 export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssistantPanelProps) {
   const insets   = useSafeAreaInsets();
+  const { t } = useTranslation();
   const apiFetch = useApiFetch();
 
   const slideAnim = useRef(new Animated.Value(0)).current;
@@ -114,10 +116,10 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
       if (resp && typeof resp.text === 'string' && resp.text.length > 0) {
         setResult(resp.text);
       } else {
-        setErrorMsg('No result returned. Please try again.');
+        setErrorMsg(t('studioEditor.noResult'));
       }
     } catch {
-      if (!abortRef.current) setErrorMsg('Request failed. Check your connection and try again.');
+      if (!abortRef.current) setErrorMsg(t('studioEditor.requestFailed'));
     } finally {
       if (!abortRef.current) setLoading(false);
     }
@@ -167,12 +169,12 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
             <Icon name="zap" size={14} color="#9B7FE8" />
           </View>
           <View style={s.sheetHeaderText}>
-            <Text style={s.sheetTitle}>AI Writing Assistant</Text>
+            <Text style={s.sheetTitle}>{t('studioEditor.aiTitle')}</Text>
             <Text style={s.sheetSub}>
-              {context.trim() ? 'Using your panel text as context' : 'No text selected — tools will create from scratch'}
+              {context.trim() ? t('studioEditor.aiUsingContext') : t('studioEditor.aiNoContext')}
             </Text>
           </View>
-          <TouchableOpacity onPress={onClose} style={s.closeBtn} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+          <TouchableOpacity onPress={onClose} style={s.closeBtn} accessibilityLabel={t('common.close')} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <Icon name="x" size={16} color="rgba(200,185,255,0.50)" />
           </TouchableOpacity>
         </View>
@@ -187,6 +189,8 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
               <TouchableOpacity
                 key={tool.key}
                 style={[s.toolBtn, { borderColor: `${tool.color}22`, backgroundColor: `${tool.color}0A` }]}
+                accessibilityRole="button"
+                accessibilityLabel={`${t(`studioEditor.${tool.label}`)}. ${t(`studioEditor.${tool.hint}`)}`}
                 activeOpacity={0.75}
                 onPress={() => runTool(tool.key)}
               >
@@ -194,8 +198,8 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
                   <Icon name={tool.icon as never} size={17} color={tool.color} />
                 </View>
                 <View style={s.toolTextCol}>
-                  <Text style={s.toolLabel}>{tool.label}</Text>
-                  <Text style={s.toolHint}>{tool.hint}</Text>
+                <Text style={s.toolLabel}>{t(`studioEditor.${tool.label}`)}</Text>
+                <Text style={s.toolHint}>{t(`studioEditor.${tool.hint}`)}</Text>
                 </View>
               </TouchableOpacity>
             ))}
@@ -208,12 +212,12 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
             <View style={s.loadingCard}>
               <SkyLoadingMark color="#9B7FE8" size={42} />
               <Text style={s.loadingTitle}>
-                {TOOLS.find(t => t.key === activeTool)?.label ?? 'Writing'} …
+                {activeTool ? t(`studioEditor.${TOOLS.find(tool => tool.key === activeTool)?.label ?? 'writing'}`) : t('studioEditor.writing')} …
               </Text>
-              <Text style={s.loadingHint}>Claude is thinking</Text>
+              <Text style={s.loadingHint}>{t('studioEditor.thinking')}</Text>
             </View>
             <TouchableOpacity style={s.cancelBtn} onPress={handleCancel}>
-              <Text style={s.cancelBtnTxt}>Cancel</Text>
+              <Text style={s.cancelBtnTxt}>{t('studioEditor.cancel')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -228,10 +232,10 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
               }]}>
                 <Icon name={TOOLS.find(t => t.key === activeTool)?.icon as never ?? 'zap'} size={10} color={TOOLS.find(t => t.key === activeTool)?.color ?? '#9B7FE8'} />
                 <Text style={[s.resultToolTxt, { color: TOOLS.find(t => t.key === activeTool)?.color ?? '#9B7FE8' }]}>
-                  {TOOLS.find(t => t.key === activeTool)?.label}
+                  {activeTool && t(`studioEditor.${TOOLS.find(tool => tool.key === activeTool)?.label ?? 'writing'}`)}
                 </Text>
               </View>
-              <Text style={s.resultHeaderTxt}>Result</Text>
+              <Text style={s.resultHeaderTxt}>{t('studioEditor.result')}</Text>
             </View>
             <ScrollView style={s.resultScroll} showsVerticalScrollIndicator={false}>
               <Text style={s.resultText}>{result}</Text>
@@ -239,15 +243,15 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
             <View style={s.resultActions}>
               <TouchableOpacity style={s.retryBtn} onPress={() => activeTool && runTool(activeTool)}>
                 <Icon name="refresh-cw" size={13} color="rgba(200,185,255,0.55)" />
-                <Text style={s.retryBtnTxt}>Regenerate</Text>
+                <Text style={s.retryBtnTxt}>{t('studioEditor.regenerate')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.backToToolsBtn} onPress={handleCancel}>
                 <Icon name="arrow-left" size={13} color="rgba(200,185,255,0.55)" />
-                <Text style={s.retryBtnTxt}>Tools</Text>
+                <Text style={s.retryBtnTxt}>{t('studioEditor.tools')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.insertBtn} onPress={handleInsert}>
                 <Icon name="check" size={14} color="#fff" />
-                <Text style={s.insertBtnTxt}>Insert</Text>
+                <Text style={s.insertBtnTxt}>{t('studioEditor.insert')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -257,13 +261,13 @@ export function AiAssistantPanel({ visible, context, onInsert, onClose }: AiAssi
         {!loading && errorMsg && (
           <View style={s.errorArea}>
             <Icon name="alert-circle" size={22} color="#E05C5C" />
-            <Text style={s.errorTitle}>Something went wrong</Text>
+            <Text style={s.errorTitle}>{t('studioEditor.somethingWrong')}</Text>
             <Text style={s.errorBody}>{errorMsg}</Text>
             <TouchableOpacity style={s.retryErrBtn} onPress={() => activeTool && runTool(activeTool)}>
-              <Text style={s.retryErrTxt}>Try Again</Text>
+              <Text style={s.retryErrTxt}>{t('studioEditor.tryAgain')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleCancel}>
-              <Text style={s.backToToolsTxt}>← Back to tools</Text>
+              <Text style={s.backToToolsTxt}>{t('studioEditor.backToTools')}</Text>
             </TouchableOpacity>
           </View>
         )}

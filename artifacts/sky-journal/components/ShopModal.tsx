@@ -18,6 +18,7 @@ import * as Haptics from 'expo-haptics';
 import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
+import { useTranslation } from 'react-i18next';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
 const SHOP_CATALOG_CACHE_KEY = 'shop_catalog_v2';
@@ -67,13 +68,6 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'effect_fireflies', name: 'Firefly Glow',         description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',         icon: '✨', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
 ];
-
-const CATEGORY_LABELS: Record<string, string> = {
-  frame:  'Profile Frame',
-  accent: 'Bio Accent',
-  theme:  'Journal Theme',
-  effect: 'Profile Effect',
-};
 
 const CATEGORY_COLORS: Record<string, string> = {
   frame:  '#C8A84B',
@@ -251,6 +245,7 @@ interface ItemCardProps {
 }
 
 function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchasing }: ItemCardProps) {
+  const { t } = useTranslation();
   const colors   = useColors();
   const scale    = useRef(new Animated.Value(1)).current;
   const catColor = CATEGORY_COLORS[item.category] ?? '#9878D8';
@@ -304,7 +299,7 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
             <View style={styles.cardTitleRow}>
               <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
               <View style={[styles.catBadge, { backgroundColor: `${catColor}18` }]}>
-                <Text style={[styles.catBadgeText, { color: catColor }]}>{CATEGORY_LABELS[item.category]}</Text>
+                <Text style={[styles.catBadgeText, { color: catColor }]}>{t(`components.shop.categories.${item.category}`)}</Text>
               </View>
               {item.seasonal && item.seasonalLabel && (
                 <SeasonalBadge label={item.seasonalLabel} />
@@ -328,13 +323,13 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
                   ]}
                 >
                   <Text style={[styles.ownedBadgeText, { color: isActive ? '#fff' : catColor }]}>
-                    {isActive ? '✦ Active' : 'Set Active'}
+                    {isActive ? t('components.shop.active') : t('components.shop.setActive')}
                   </Text>
                 </TouchableOpacity>
               ) : !availableNow ? (
                 <View style={[styles.returnsBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}>
                   <Text style={[styles.returnsBadgeText, { color: colors.mutedForeground }]}>
-                    Returns in season
+                    {t('components.shop.returns')}
                   </Text>
                 </View>
               ) : (
@@ -349,7 +344,7 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
                   ]}
                 >
                   <Text style={[styles.buyBtnText, { color: canAfford ? '#fff' : colors.mutedForeground }]}>
-                    {purchasing ? '…' : canAfford ? 'Get' : 'Need more'}
+                    {purchasing ? '…' : canAfford ? t('components.shop.get') : t('components.shop.needMore')}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -370,6 +365,7 @@ interface CollectionRowProps {
 }
 
 function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
+  const { t } = useTranslation();
   const colors   = useColors();
   const category = COSMETIC_CATEGORY_MAP[entry.itemId] ?? 'frame';
   const catColor = CATEGORY_COLORS[category] ?? '#9878D8';
@@ -397,7 +393,7 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
         <View style={styles.collTitleRow}>
           <Text style={[styles.collName, { color: colors.foreground }]} numberOfLines={1}>{entry.itemName}</Text>
           <View style={[styles.catBadge, { backgroundColor: `${catColor}18` }]}>
-            <Text style={[styles.catBadgeText, { color: catColor }]}>{CATEGORY_LABELS[category]}</Text>
+            <Text style={[styles.catBadgeText, { color: catColor }]}>{t(`components.shop.categories.${category}`)}</Text>
           </View>
         </View>
         <View style={styles.collMeta}>
@@ -421,7 +417,7 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
         ]}
       >
         <Text style={[styles.ownedBadgeText, { color: isActive ? '#fff' : catColor }]}>
-          {isActive ? '✦ Active' : 'Set Active'}
+          {isActive ? t('components.shop.active') : t('components.shop.setActive')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -436,6 +432,7 @@ interface CollectionTabProps {
 }
 
 function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
+  const { t } = useTranslation();
   const colors  = useColors();
   const { activeCosmetics, setActiveCosmetic } = useApp();
   const [purchases,      setPurchases]      = useState<PurchaseEntry[]>([]);
@@ -518,7 +515,7 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
     return (
       <View style={styles.collCenter}>
         <ActivityIndicator size="small" color="#9878D8" />
-        <Text style={[styles.collHint, { color: colors.mutedForeground }]}>Gathering your collection…</Text>
+        <Text style={[styles.collHint, { color: colors.mutedForeground }]}>{t('components.shop.loadingCollection')}</Text>
       </View>
     );
   }
@@ -527,8 +524,8 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
     return (
       <View style={styles.collCenter}>
         <Text style={styles.collEmptyIcon}>✕</Text>
-        <Text style={[styles.collEmptyText, { color: colors.foreground }]}>Couldn't load your collection</Text>
-        <Text style={[styles.collHint, { color: colors.mutedForeground }]}>Check your connection and try again.</Text>
+        <Text style={[styles.collEmptyText, { color: colors.foreground }]}>{t('components.shop.collectionLoadError')}</Text>
+        <Text style={[styles.collHint, { color: colors.mutedForeground }]}>{t('components.shop.connectionRetry')}</Text>
       </View>
     );
   }
@@ -537,9 +534,9 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
     return (
       <View style={styles.collCenter}>
         <Text style={styles.collEmptyIcon}>✦</Text>
-        <Text style={[styles.collEmptyText, { color: colors.foreground }]}>Your collection is empty</Text>
+        <Text style={[styles.collEmptyText, { color: colors.foreground }]}>{t('components.shop.emptyCollection')}</Text>
         <Text style={[styles.collHint, { color: colors.mutedForeground }]}>
-          Purchase cosmetics from the Shop tab, or receive items through seasonal sky events.
+          {t('components.shop.collectionEmpty')}
         </Text>
       </View>
     );
@@ -573,6 +570,7 @@ type ActiveTab = 'shop' | 'collection';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function TabSwitcher({ active, onChange, colors }: { active: ActiveTab; onChange: (t: ActiveTab) => void; colors: any }) {
+  const { t } = useTranslation();
   return (
     <View style={[styles.tabSwitcher, { backgroundColor: colors.muted, borderColor: colors.border }]}>
       {(['shop', 'collection'] as ActiveTab[]).map(tab => {
@@ -585,7 +583,7 @@ function TabSwitcher({ active, onChange, colors }: { active: ActiveTab; onChange
             activeOpacity={0.8}
           >
             <Text style={[styles.tabBtnText, { color: isActive ? '#6B5B95' : colors.mutedForeground }]}>
-              {tab === 'shop' ? '✦ Shop' : '◇ Collection'}
+              {tab === 'shop' ? `✦ ${t('components.shop.shopTab')}` : `◇ ${t('components.shop.collectionTab')}`}
             </Text>
           </TouchableOpacity>
         );
@@ -602,6 +600,7 @@ interface ShopModalProps {
 }
 
 export function ShopModal({ visible, onClose }: ShopModalProps) {
+  const { t } = useTranslation();
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
@@ -693,7 +692,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
       if (res.success) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         markPurchased(item.id);
-        showToast(`${item.icon} ${item.name} is yours!`, 'success');
+        showToast(t('components.shop.purchaseSuccess', { icon: item.icon, name: item.name }), 'success');
         reloadRewards();
         setPurchaseVersion(v => v + 1);
       }
@@ -701,21 +700,21 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
     } catch (err: any) {
       const msg = err?.message ?? '';
       if (msg.includes('already_owned')) {
-        showToast('You already own this item.', 'info');
+        showToast(t('components.shop.owned'), 'info');
         markPurchased(item.id);
       } else if (msg.includes('seasonal_unavailable') || msg.includes('403')) {
-        showToast('This item is out of season.', 'info');
+        showToast(t('components.shop.outOfSeason'), 'info');
       } else if (msg.includes('insufficient_funds') || msg.includes('402')) {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        showToast('Not enough currency for this item.', 'error');
+        showToast(t('components.shop.notEnoughCurrency'), 'error');
       } else {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        showToast('Something went wrong. Try again.', 'error');
+        showToast(t('components.shop.purchaseError'), 'error');
       }
     } finally {
       setPurchasing(null);
     }
-  }, [reloadRewards, markPurchased]);
+  }, [reloadRewards, markPurchased, t]);
 
   function canAfford(item: ShopItem): boolean {
     if (!rewardBalance) return false;
@@ -753,7 +752,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={[styles.title, { color: colors.foreground }]}>Shop</Text>
+            <Text style={[styles.title, { color: colors.foreground }]}>{t('components.shop.title')}</Text>
             <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
               Spend your stars on cosmetic treasures
             </Text>
@@ -773,24 +772,24 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
             {/* Balance */}
             <View style={[styles.balanceRow, { backgroundColor: colors.background, borderColor: colors.border }]}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.balLabel, { color: colors.mutedForeground }]}>Your balance</Text>
-                <Text style={[styles.balHint, { color: colors.mutedForeground }]}>Journal & create to earn more</Text>
+                <Text style={[styles.balLabel, { color: colors.mutedForeground }]}>{t('components.shop.balanceTitle')}</Text>
+                <Text style={[styles.balHint, { color: colors.mutedForeground }]}>{t('components.shop.balanceHint')}</Text>
               </View>
               <View style={styles.balChips}>
-                <BalanceChip icon="✦" value={stars}  color="#C8A84B" bg="rgba(200,168,75,0.14)"   label="Stars" />
-                <BalanceChip icon="◈" value={aura}   color="#9878D8" bg="rgba(152,120,216,0.14)"  label="Aura" />
-                <BalanceChip icon="◇" value={shards} color="#78B4DC" bg="rgba(120,180,220,0.14)"  label="Shards" />
+                <BalanceChip icon="✦" value={stars}  color="#C8A84B" bg="rgba(200,168,75,0.14)"   label={t('components.shop.stars')} />
+                <BalanceChip icon="◈" value={aura}   color="#9878D8" bg="rgba(152,120,216,0.14)"  label={t('components.shop.aura')} />
+                <BalanceChip icon="◇" value={shards} color="#78B4DC" bg="rgba(120,180,220,0.14)"  label={t('components.shop.shards')} />
               </View>
             </View>
 
             {/* Earn guide */}
             <View style={[styles.earnGuide, { borderColor: colors.border }]}>
-              <Text style={[styles.earnGuideTitle, { color: colors.mutedForeground }]}>HOW TO EARN</Text>
+              <Text style={[styles.earnGuideTitle, { color: colors.mutedForeground }]}>{t('components.shop.howToEarn')}</Text>
               <View style={styles.earnGuideGrid}>
                 {[
-                  { icon: '✦', color: '#C8A84B', name: 'Stars',  tips: 'Write in your journal (+2)  ·  Create stories (+3)' },
-                  { icon: '◈', color: '#9878D8', name: 'Aura',   tips: 'Open the app daily (+3)  ·  Follow wanderers (+1)' },
-                  { icon: '◇', color: '#78B4DC', name: 'Shards', tips: 'Save a story (+2)  ·  Give stickers (+1)' },
+                  { icon: '✦', color: '#C8A84B', name: t('components.shop.stars'),  tips: t('components.shop.earnStars') },
+                  { icon: '◈', color: '#9878D8', name: t('components.shop.aura'),   tips: t('components.shop.earnAura') },
+                  { icon: '◇', color: '#78B4DC', name: t('components.shop.shards'), tips: t('components.shop.earnShards') },
                 ].map(({ icon, color, name, tips }) => (
                   <View key={name} style={styles.earnGuideRow}>
                     <Text style={[styles.earnGuideIcon, { color }]}>{icon}</Text>
@@ -806,11 +805,11 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
             {/* Category filter pills */}
             {(() => {
               const cats: { id: string | null; label: string; icon: string; color: string }[] = [
-                { id: null,     label: 'All',    icon: '✦', color: '#9878D8' },
-                { id: 'effect', label: 'Effect', icon: '✨', color: '#70C8A0' },
-                { id: 'frame',  label: 'Frame',  icon: '◑', color: '#C8A84B' },
-                { id: 'accent', label: 'Accent', icon: '◈', color: '#9878D8' },
-                { id: 'theme',  label: 'Theme',  icon: '⋆', color: '#78B4DC' },
+                { id: null,     label: t('components.shop.all'),     icon: '✦', color: '#9878D8' },
+                { id: 'effect', label: t('components.shop.categories.effect'), icon: '✨', color: '#70C8A0' },
+                { id: 'frame',  label: t('components.shop.categories.frame'),  icon: '◑', color: '#C8A84B' },
+                { id: 'accent', label: t('components.shop.categories.accent'), icon: '◈', color: '#9878D8' },
+                { id: 'theme',  label: t('components.shop.categories.theme'),  icon: '⋆', color: '#78B4DC' },
               ];
               return (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
@@ -876,10 +875,10 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                         <Text style={[styles.seasonHeaderIcon]}>{seasonIcon}</Text>
                         <View style={{ flex: 1 }}>
                           <Text style={[styles.seasonHeaderTitle, { color: seasonColor }]}>
-                            {seasonLabel} Collection
+                            {t('components.shop.seasonCollection', { season: seasonLabel })}
                           </Text>
                           <Text style={[styles.seasonHeaderSub, { color: colors.mutedForeground }]}>
-                            Available this season only
+                            {t('components.shop.seasonOnly')}
                           </Text>
                         </View>
                         <SeasonalBadge label={seasonLabel!} />
@@ -888,7 +887,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
                       <View style={styles.sectionDivider}>
                         <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                        <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>Always Available</Text>
+                        <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t('components.shop.alwaysAvailable')}</Text>
                         <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
                       </View>
                     </>
@@ -902,7 +901,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                     <>
                       <View style={styles.sectionDivider}>
                         <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-                        <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>Coming in a future season</Text>
+                        <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>{t('components.shop.futureSeason')}</Text>
                         <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
                       </View>
                       {previewItems.map(item => renderItem(item, { availableNow: false }))}
@@ -910,7 +909,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                   )}
 
                   <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-                    More items drift in with each season ✦
+                    {t('components.shop.moreItems')}
                   </Text>
                 </ScrollView>
               );

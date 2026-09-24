@@ -21,6 +21,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 interface GuideAvailability {
   days:     number[];
@@ -60,7 +61,6 @@ interface GuideSession {
   isJoined: boolean;
 }
 
-const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const TOPIC_COLORS: Record<string, string> = {
   'Anxiety & Stress': '#E87898',
@@ -99,6 +99,7 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 export default function GuideProfileScreen() {
+  const { t } = useTranslation();
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const colors     = useColors();
   const insets     = useSafeAreaInsets();
@@ -121,7 +122,7 @@ export default function GuideProfileScreen() {
 
   useEffect(() => {
     if (!userId) {
-      setError('This guide link is missing a user.');
+      setError(t('social.guideLinkMissing'));
       setLoading(false);
       return;
     }
@@ -139,7 +140,7 @@ export default function GuideProfileScreen() {
           Animated.timing(slideUp, { toValue: 0, duration: 440, useNativeDriver: true }),
         ]).start();
       })
-      .catch(() => setError('Could not load guide'))
+      .catch(() => setError(t('social.couldNotLoadGuide')))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
@@ -231,7 +232,7 @@ export default function GuideProfileScreen() {
           <View style={styles.heroMetaStrip}>
             <View style={[styles.availDotSmall, { backgroundColor: guide.isAvailableNow ? '#60D890' : '#909098' }]} />
             <Text style={styles.heroMetaStripText}>
-              {guide.isAvailableNow ? 'Available' : 'Offline'}
+              {guide.isAvailableNow ? t('social.available') : t('social.offline')}
               {guide.mood   ? `  ·  ${guide.mood}`    : ''}
               {guide.role    ? `  ·  ${guide.role}`    : ''}
               {guide.country ? `  ·  ${guide.country}` : ''}
@@ -244,9 +245,9 @@ export default function GuideProfileScreen() {
       {/* ── Stats row ────────────────────────────────────────── */}
       <Animated.View style={[styles.statsRow, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
         {[
-          { value: guide.followerCount,        label: 'Followers' },
-          { value: guide.guideTopics.length,   label: 'Topics'    },
-          { value: avail ? avail.days.length : 0, label: 'Days/wk' },
+          { value: guide.followerCount,        label: t('social.followers') },
+          { value: guide.guideTopics.length,   label: t('social.topics')    },
+          { value: avail ? avail.days.length : 0, label: t('social.daysPerWeek') },
         ].map((s, i) => (
           <View key={i} style={styles.statItem}>
             <Text style={[styles.statValue, { color: colors.foreground }]}>{s.value}</Text>
@@ -273,7 +274,7 @@ export default function GuideProfileScreen() {
                 <View style={[styles.cardIcon, { backgroundColor: 'rgba(120,70,255,0.14)' }]}>
                   <Icon name="message-circle" size={14} color="#9878D8" />
                 </View>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>About this Guide</Text>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t('social.aboutGuide')}</Text>
               </View>
               <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>{guide.guideBio}</Text>
             </View>
@@ -286,7 +287,7 @@ export default function GuideProfileScreen() {
                 <View style={[styles.cardIcon, { backgroundColor: 'rgba(200,168,75,0.14)' }]}>
                   <Icon name="tag" size={14} color="#C8A84B" />
                 </View>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Topics</Text>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t('social.topics')}</Text>
               </View>
               <View style={styles.topicWrap}>
                 {guide.guideTopics.map(topic => {
@@ -308,12 +309,12 @@ export default function GuideProfileScreen() {
                 <View style={[styles.cardIcon, { backgroundColor: 'rgba(80,200,130,0.14)' }]}>
                   <Icon name="clock" size={14} color="#60D890" />
                 </View>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Weekly Availability</Text>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t('social.weeklyAvailability')}</Text>
               </View>
               <View style={styles.dayRow}>
-                {DAY_LABELS.map((d, i) => (
+                {Array.from({ length: 7 }, (_, i) => (
                   <View
-                    key={d}
+                    key={i}
                     style={[
                       styles.dayPill,
                       avail.days.includes(i)
@@ -324,7 +325,7 @@ export default function GuideProfileScreen() {
                     <Text style={[
                       styles.dayLabel,
                       { color: avail.days.includes(i) ? '#70E8A0' : colors.mutedForeground },
-                    ]}>{d}</Text>
+                    ]}>{t(`social.day${i}`)}</Text>
                   </View>
                 ))}
               </View>
@@ -340,7 +341,7 @@ export default function GuideProfileScreen() {
               <View style={[styles.cardIcon, { backgroundColor: `${colors.primary}14` }]}>
                 <Icon name="calendar" size={14} color={colors.primary} />
               </View>
-              <Text style={[styles.cardTitle, { color: colors.foreground }]}>Upcoming sessions</Text>
+              <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t('social.upcomingSessions')}</Text>
             </View>
             {sessions.length === 0 ? (
               <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
@@ -370,7 +371,7 @@ export default function GuideProfileScreen() {
             {isOwnProfile && (
               <TouchableOpacity style={[styles.scheduleBtn, { backgroundColor: colors.primary }]} onPress={() => router.push('/create-guide-session')}>
                 <Icon name="plus" size={15} color="#fff" />
-                <Text style={styles.scheduleBtnText}>Create a session</Text>
+                <Text style={styles.scheduleBtnText}>{t('social.createSession')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -382,7 +383,7 @@ export default function GuideProfileScreen() {
                 <View style={[styles.cardIcon, { backgroundColor: `${colors.primary}14` }]}>
                   <Icon name="user" size={14} color={colors.primary} />
                 </View>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>About</Text>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t('social.about')}</Text>
               </View>
               <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>{guide.bio}</Text>
             </View>
@@ -395,7 +396,7 @@ export default function GuideProfileScreen() {
                 <View style={[styles.cardIcon, { backgroundColor: 'rgba(200,168,75,0.14)' }]}>
                   <Icon name="heart" size={14} color="#C8A84B" />
                 </View>
-                <Text style={[styles.cardTitle, { color: colors.foreground }]}>Traits</Text>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t('social.traits')}</Text>
               </View>
               <View style={styles.topicWrap}>
                 {guide.traits.map(trait => (
@@ -417,7 +418,7 @@ export default function GuideProfileScreen() {
                   activeOpacity={0.85}
                 >
                   <Icon name="user" size={15} color="#fff" />
-                  <Text style={styles.followBtnText}>My Profile</Text>
+                  <Text style={styles.followBtnText}>{t('social.myProfile')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.messageBtn, SHADOW.sm]}
@@ -425,7 +426,7 @@ export default function GuideProfileScreen() {
                   activeOpacity={0.85}
                 >
                   <Icon name="edit-2" size={15} color="#9878D8" />
-                  <Text style={[styles.messageBtnText, { color: '#9878D8' }]}>Edit Guide</Text>
+                  <Text style={[styles.messageBtnText, { color: '#9878D8' }]}>{t('social.editGuide')}</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -452,7 +453,7 @@ export default function GuideProfileScreen() {
                   activeOpacity={0.85}
                 >
                   <Icon name="message-circle" size={15} color="#9878D8" />
-                  <Text style={[styles.messageBtnText, { color: '#9878D8' }]}>Message</Text>
+                  <Text style={[styles.messageBtnText, { color: '#9878D8' }]}>{t('social.message')}</Text>
                 </TouchableOpacity>
               </>
             )}

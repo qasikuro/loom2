@@ -6,7 +6,7 @@ import { ImageSourceSheet } from '@/components/ImageSourceSheet';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
+import { persistImageUri } from '@/utils/persistImage';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
@@ -225,7 +225,7 @@ export default function CreateOutfitScreen() {
       setError(null);
     } catch (err: unknown) {
       uploadProgress.setValue(0);
-      const msg = err instanceof ImageUploadError ? err.userMessage : 'Photo upload failed — try again.';
+      const msg = tr('outfitJournal.uploadFailed');
       setError(msg);
     } finally {
       setUploading(false);
@@ -240,7 +240,7 @@ export default function CreateOutfitScreen() {
   function handleSave() {
     if (uploading) return; // guard against the save button tap racing the upload
     if (!name.trim()) { setError(tr('outfit.needName')); return; }
-    if (!imageUri)    { setError('Add a photo — every outfit deserves to be seen ✦'); return; }
+    if (!imageUri)    { setError(tr('outfitJournal.photoRequiredError')); return; }
     setError(null);
     setSaving(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -285,16 +285,16 @@ export default function CreateOutfitScreen() {
           <BackButton style={styles.iconBtn} iconName="arrow-left" size={21} color={colors.foreground} onPress={() => navigation.goBack()} />
           <View style={styles.headerCopy}>
             <Text style={styles.headerTitle}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')} <Text style={{ color: colors.primary }}>✦</Text></Text>
-            <Text style={styles.headerSubtitle}>Capture your look, story and vibe</Text>
+            <Text style={styles.headerSubtitle}>{tr('outfitJournal.createSubtitle')}</Text>
           </View>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
             onPress={handleSave} disabled={saving || uploading}
             accessibilityRole="button"
-            accessibilityLabel={isEditing ? 'Save outfit changes' : 'Save outfit'}
+            accessibilityLabel={isEditing ? tr('outfitJournal.saveChanges') : tr('outfitJournal.saveOutfit')}
           >
             {saving && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
-            <Text style={styles.saveBtnText}>{saving ? 'Saving…' : 'Save'}</Text>
+            <Text style={styles.saveBtnText}>{saving ? tr('outfitJournal.saving') : tr('outfitJournal.save')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -309,12 +309,12 @@ export default function CreateOutfitScreen() {
               activeOpacity={0.8}
               disabled={uploading}
               accessibilityRole="button"
-              accessibilityLabel={imageUri ? 'Change outfit photo' : 'Add outfit photo, required'}
+              accessibilityLabel={imageUri ? tr('outfitJournal.changePhoto') : tr('outfitJournal.addPhotoRequired')}
             >
               {uploading ? (
                 <View style={styles.imagePlaceholder}>
                   <SkyLoadingMark color={colors.lavender} size={32} />
-                  <Text style={styles.imagePlaceholderTitle}>Uploading…</Text>
+                  <Text style={styles.imagePlaceholderTitle}>{tr('outfitJournal.uploading')}</Text>
                   <View style={styles.uploadBarTrack}>
                     <Animated.View
                       style={[styles.uploadBarFill, {
@@ -337,15 +337,15 @@ export default function CreateOutfitScreen() {
                 <View style={styles.imagePlaceholder}>
                   <View style={styles.cameraCircle}><Icon name="camera" size={24} color={colors.lavender} /></View>
                   <Text style={styles.imagePlaceholderTitle}>{tr('outfit.addPhoto')}</Text>
-                  <Text style={styles.imagePlaceholderSub}>Tap to upload · Required</Text>
+                  <Text style={styles.imagePlaceholderSub}>{tr('outfitJournal.tapUploadRequired')}</Text>
                 </View>
               )}
             </TouchableOpacity>
             <View style={styles.photoTips}>
-              <View style={styles.tipsHeader}><Icon name="sun" size={16} color={colors.gold} /><Text style={styles.tipsTitle}>Photo Tips</Text></View>
-              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>Show the full outfit</Text></View>
-              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>Use good lighting</Text></View>
-              <View style={styles.tipRow}><Icon name="alert-circle" size={14} color={colors.destructive} /><Text style={styles.tipText}>Avoid blurry shots</Text></View>
+              <View style={styles.tipsHeader}><Icon name="sun" size={16} color={colors.gold} /><Text style={styles.tipsTitle}>{tr('outfitJournal.photoTips')}</Text></View>
+              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>{tr('outfitJournal.fullOutfit')}</Text></View>
+              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>{tr('outfitJournal.goodLighting')}</Text></View>
+              <View style={styles.tipRow}><Icon name="alert-circle" size={14} color={colors.destructive} /><Text style={styles.tipText}>{tr('outfitJournal.avoidBlurry')}</Text></View>
             </View>
           </View>
 
@@ -365,7 +365,7 @@ export default function CreateOutfitScreen() {
 
           {/* Description / notes */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="file-text" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfit.notes')} <Text style={styles.optional}>(Optional)</Text></Text><Text style={styles.counter}>{description.length}/200</Text></View>
+            <View style={styles.fieldHeading}><Icon name="file-text" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfit.notes')} <Text style={styles.optional}>({tr('outfitJournal.optional')})</Text></Text><Text style={styles.counter}>{description.length}/200</Text></View>
             <TextInput
               style={styles.descInput}
               placeholder={tr('outfit.notesPlaceholder')}
@@ -380,11 +380,11 @@ export default function CreateOutfitScreen() {
 
           {/* Character story — visible to other users */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>Character Story</Text><Text style={styles.counter}>{story.length}/300</Text></View>
-            <Text style={styles.storyHint}>A moment or memory linked to this outfit · {isPublic ? 'visible on your profile' : 'private'}</Text>
+            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfitJournal.characterStory')}</Text><Text style={styles.counter}>{story.length}/300</Text></View>
+            <Text style={styles.storyHint}>{tr(isPublic ? 'outfitJournal.storyHintPublic' : 'outfitJournal.storyHintPrivate')}</Text>
             <TextInput
               style={styles.storyInput}
-              placeholder="Write the story behind this outfit…"
+              placeholder={tr('outfitJournal.storyPlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               value={story}
               onChangeText={setStory}
@@ -396,8 +396,8 @@ export default function CreateOutfitScreen() {
 
           {/* Style Tags */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="heart" size={17} color={colors.blush} /><Text style={styles.fieldLabel}>{tr('outfit.vibeTags')}</Text><Text style={styles.counter}>{selectedTags.length}/3 selected</Text></View>
-            <Text style={styles.storyHint}>Choose up to 3 tags</Text>
+            <View style={styles.fieldHeading}><Icon name="heart" size={17} color={colors.blush} /><Text style={styles.fieldLabel}>{tr('outfit.vibeTags')}</Text><Text style={styles.counter}>{tr('outfitJournal.selectedCount', { count: selectedTags.length })}</Text></View>
+            <Text style={styles.storyHint}>{tr('outfitJournal.chooseThree')}</Text>
             <View style={styles.tagsGrid}>
               {VIBE_TAGS.map(t => {
                 const active = selectedTags.includes(t.label);
@@ -413,7 +413,7 @@ export default function CreateOutfitScreen() {
                     accessibilityState={{ checked: active, disabled: !active && selectedTags.length >= 3 }}
                   >
                     <Icon name={t.icon} size={15} color={t.color} />
-                    <Text style={styles.tagText}>{t.label}</Text>
+                    <Text style={styles.tagText}>{tr(`outfitJournal.tag${t.label}`)}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -422,19 +422,19 @@ export default function CreateOutfitScreen() {
 
           {/* Vibe Animation */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="volume-2" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>Outfit Music</Text></View>
-            <Text style={styles.storyHint}>Add a song to set the mood (optional)</Text>
+            <View style={styles.fieldHeading}><Icon name="volume-2" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfitJournal.outfitMusic')}</Text></View>
+            <Text style={styles.storyHint}>{tr('outfitJournal.musicOptional')}</Text>
             <AudiusMusicPicker value={music} mood={selectedVibe ?? undefined} onChange={setMusic} context="outfit" />
           </View>
 
           {/* Vibe Animation */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>Vibe Animation</Text></View>
-            <Text style={styles.storyHint}>Choose an effect to play over your outfit (optional)</Text>
+            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfitJournal.vibeAnimation')}</Text></View>
+            <Text style={styles.storyHint}>{tr('outfitJournal.animationOptional')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vibeGrid}>
               <TouchableOpacity style={[styles.vibeChip, !selectedVibe && styles.vibeChipActive]} onPress={() => setSelectedVibe(null)} accessibilityRole="radio" accessibilityState={{ selected: !selectedVibe }}>
                 <View style={styles.vibePreview}><Icon name="slash" size={30} color={colors.lavender} /></View>
-                <Text style={styles.vibeLabel}>None</Text>
+                <Text style={styles.vibeLabel}>{tr('outfitJournal.none')}</Text>
               </TouchableOpacity>
               {VIBES.map(v => {
                 const active = selectedVibe === v.id;
@@ -450,11 +450,11 @@ export default function CreateOutfitScreen() {
                     }}
                     activeOpacity={0.75}
                     accessibilityRole="radio"
-                    accessibilityLabel={`${v.label}: ${v.desc}`}
+                    accessibilityLabel={`${tr(`outfitJournal.vibe${v.label}`)}: ${tr(`outfitJournal.vibeDesc${v.label}`)}`}
                     accessibilityState={{ selected: active }}
                   >
                     <LinearGradient colors={[`${v.color}68`, '#21163B', '#111025']} style={styles.vibePreview}><Text style={[styles.vibeSymbol, { color: v.color }]}>{v.symbol}</Text></LinearGradient>
-                    <Text style={styles.vibeLabel}>{v.label}</Text>
+                    <Text style={styles.vibeLabel}>{tr(`outfitJournal.vibe${v.label}`)}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -464,7 +464,7 @@ export default function CreateOutfitScreen() {
           {/* Visibility */}
           <View style={styles.field}>
             <View style={styles.fieldHeading}><Icon name="lock" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('common.visibility')}</Text></View>
-            <Text style={styles.storyHint}>Choose who can see this outfit</Text>
+            <Text style={styles.storyHint}>{tr('outfitJournal.visibilityHint')}</Text>
             <View style={styles.privacyRow}>
               {(['Private', 'Public'] as const).map(opt => {
                 const active = opt === 'Private' ? !isPublic : isPublic;
@@ -480,7 +480,7 @@ export default function CreateOutfitScreen() {
                     accessibilityState={{ selected: active }}
                   >
                     <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={20} color={active ? colors.primary : colors.mutedForeground} />
-                    <View><Text style={[styles.privText, { color: active ? colors.foreground : colors.mutedForeground }]}>{opt === 'Private' ? tr('common.private') : tr('common.public')}</Text><Text style={styles.privSub}>{opt === 'Private' ? 'Only you can see this' : 'Visible on your profile'}</Text></View>
+                    <View><Text style={[styles.privText, { color: active ? colors.foreground : colors.mutedForeground }]}>{opt === 'Private' ? tr('common.private') : tr('common.public')}</Text><Text style={styles.privSub}>{opt === 'Private' ? tr('outfitJournal.onlyYou') : tr('outfitJournal.visibleProfile')}</Text></View>
                     {active && <Icon name="check-circle" size={17} color={colors.primary} />}
                   </TouchableOpacity>
                 );
@@ -495,9 +495,9 @@ export default function CreateOutfitScreen() {
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.footerButton} onPress={handleSave} disabled={saving || uploading} accessibilityRole="button" accessibilityLabel={isEditing ? 'Save outfit changes' : 'Save outfit'}>
+          <TouchableOpacity style={styles.footerButton} onPress={handleSave} disabled={saving || uploading} accessibilityRole="button" accessibilityLabel={isEditing ? tr('outfitJournal.saveChanges') : tr('outfitJournal.saveOutfit')}>
             {saving ? <SkyLoadingMark size={20} color="#fff" /> : <Icon name="star" size={19} color="#fff" />}
-            <Text style={styles.footerText}>{saving ? 'Saving…' : tr('outfit.saveOutfit')}</Text>
+            <Text style={styles.footerText}>{saving ? tr('outfitJournal.saving') : tr('outfit.saveOutfit')}</Text>
           </TouchableOpacity>
         </View>
       </View>

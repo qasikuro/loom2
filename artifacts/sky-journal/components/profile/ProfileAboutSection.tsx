@@ -8,6 +8,7 @@ import { useUser } from '@clerk/expo';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SHADOW } from '@/constants/colors';
+import { useTranslation } from 'react-i18next';
 import {
   DAY_LABELS_G, GUIDE_TOPIC_COLORS, GUIDE_TOPICS, ROLES,
   SOCIAL_PLATFORMS, extractHandle, getPlatform, type SocialPlatform,
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export function ProfileAboutSection({ character, setCharacter }: Props) {
+  const { t } = useTranslation();
   const colors = useColors();
   const { user } = useUser();
   const socialCount = character.links?.length ?? 0;
@@ -74,7 +76,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
     const handle = linkHandle.trim().replace(/^@/, '');
     if (!handle) { cancelLink(); return; }
     const url   = linkPlatform.key === 'other' ? handle : `${linkPlatform.prefix}${handle}`;
-    const label = linkPlatform.key === 'other' ? (linkOtherLabel.trim() || 'Link') : linkPlatform.label;
+    const label = linkPlatform.key === 'other' ? (linkOtherLabel.trim() || t('components.about.link')) : linkPlatform.label;
     const links = [...(character.links ?? [])];
     const newLink = { label, url, platform: linkPlatform.key };
     if (linkEditIdx !== null) links[linkEditIdx] = newLink; else links.push(newLink);
@@ -92,15 +94,15 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           onPress={() => setAboutExpanded(open => !open)}
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel={`${aboutExpanded ? 'Close' : 'Edit'} About Me`}
+          accessibilityLabel={t('components.about.toggleDetails', { action: aboutExpanded ? t('common.close') : t('common.edit') })}
           accessibilityState={{ expanded: aboutExpanded }}
         >
           <View style={[s.aboutCardIcon, { backgroundColor: `${colors.primary}14` }]}>
             <Icon name="user" size={14} color={colors.primary} />
           </View>
-          <Text style={[s.aboutCardTitle, { color: colors.foreground, flex: 1 }]}>About Me</Text>
+          <Text style={[s.aboutCardTitle, { color: colors.foreground, flex: 1 }]}>{t('profile.defineCharacter')}</Text>
           <View style={[s.aboutEditButton, { borderColor: `${colors.primary}38`, backgroundColor: `${colors.primary}12` }]}>
-            <Text style={[s.aboutEditButtonText, { color: colors.primary }]}>{aboutExpanded ? 'Close' : 'Edit'}</Text>
+            <Text style={[s.aboutEditButtonText, { color: colors.primary }]}>{aboutExpanded ? t('common.close') : t('common.edit')}</Text>
             <Icon name={aboutExpanded ? 'chevron-down' : 'chevron-right'} size={13} color={colors.primary} />
           </View>
         </TouchableOpacity>
@@ -109,11 +111,11 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
         {/* Birthday */}
         <TouchableOpacity style={[s.aboutRow, { borderTopColor: colors.border }]} onPress={() => { setBirthdayVal(character.birthday ?? ''); setEditingBirthday(true); }} activeOpacity={0.75}>
           <View style={s.aboutRowLeft}>
-            <Text style={[s.aboutRowLabel, { color: colors.mutedForeground }]}>BIRTHDAY</Text>
+            <Text style={[s.aboutRowLabel, { color: colors.mutedForeground }]}>{t('components.about.birthday')}</Text>
             {editingBirthday ? (
-              <TextInput style={[s.aboutRowInput, { color: colors.foreground, borderColor: colors.primary }]} value={birthdayVal} onChangeText={setBirthdayVal} autoFocus returnKeyType="done" onSubmitEditing={saveBirthday} onBlur={saveBirthday} placeholder="e.g. 17 April" placeholderTextColor={`${colors.mutedForeground}70`} />
+              <TextInput style={[s.aboutRowInput, { color: colors.foreground, borderColor: colors.primary }]} value={birthdayVal} onChangeText={setBirthdayVal} autoFocus returnKeyType="done" onSubmitEditing={saveBirthday} onBlur={saveBirthday} placeholder={t('components.about.birthdayExample')} placeholderTextColor={`${colors.mutedForeground}70`} />
             ) : (
-              <Text style={[s.aboutRowVal, { color: character.birthday ? colors.foreground : colors.mutedForeground }]}>{character.birthday || 'Add birthday'}</Text>
+              <Text style={[s.aboutRowVal, { color: character.birthday ? colors.foreground : colors.mutedForeground }]}>{character.birthday || t('components.about.addBirthday')}</Text>
             )}
           </View>
           {!editingBirthday && <Icon name="edit-2" size={12} color={`${colors.primary}55`} />}
@@ -122,11 +124,11 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
         {/* Country */}
         <TouchableOpacity style={[s.aboutRow, { borderTopColor: colors.border }]} onPress={() => { setCountryVal(character.country ?? ''); setEditingCountry(true); }} activeOpacity={0.75}>
           <View style={s.aboutRowLeft}>
-            <Text style={[s.aboutRowLabel, { color: colors.mutedForeground }]}>COUNTRY</Text>
+            <Text style={[s.aboutRowLabel, { color: colors.mutedForeground }]}>{t('components.about.country')}</Text>
             {editingCountry ? (
-              <TextInput style={[s.aboutRowInput, { color: colors.foreground, borderColor: colors.primary }]} value={countryVal} onChangeText={setCountryVal} autoFocus returnKeyType="done" onSubmitEditing={saveCountry} onBlur={saveCountry} placeholder="Where are you from?" placeholderTextColor={`${colors.mutedForeground}70`} />
+              <TextInput style={[s.aboutRowInput, { color: colors.foreground, borderColor: colors.primary }]} value={countryVal} onChangeText={setCountryVal} autoFocus returnKeyType="done" onSubmitEditing={saveCountry} onBlur={saveCountry} placeholder={t('components.about.countryExample')} placeholderTextColor={`${colors.mutedForeground}70`} />
             ) : (
-              <Text style={[s.aboutRowVal, { color: character.country ? colors.foreground : colors.mutedForeground }]}>{character.country || 'Add location'}</Text>
+              <Text style={[s.aboutRowVal, { color: character.country ? colors.foreground : colors.mutedForeground }]}>{character.country || t('components.about.addLocation')}</Text>
             )}
           </View>
           {!editingCountry && <Icon name="edit-2" size={12} color={`${colors.primary}55`} />}
@@ -135,8 +137,8 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
         {/* Role */}
         <View style={[s.aboutRow, { borderTopColor: colors.border, flexDirection: 'column', alignItems: 'flex-start', gap: 10, paddingVertical: 14 }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-            <Text style={[s.aboutRowLabel, { color: colors.mutedForeground }]}>ROLE</Text>
-            {character.role && <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: `${colors.mutedForeground}80` }}>shown on your profile</Text>}
+            <Text style={[s.aboutRowLabel, { color: colors.mutedForeground }]}>{t('components.about.role')}</Text>
+            {character.role && <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: `${colors.mutedForeground}80` }}>{t('components.about.roleShown')}</Text>}
           </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {ROLES.map(r => {
@@ -158,15 +160,15 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               );
             })}
           </View>
-          {!character.role && <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: `${colors.mutedForeground}60` }}>Optional — tap a role to display it on your profile</Text>}
+          {!character.role && <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: `${colors.mutedForeground}60` }}>{t('components.about.roleOptional')}</Text>}
         </View>
 
         {/* Socials header */}
         <View style={[s.aboutRow, { borderTopColor: colors.border }]}>
-          <Text style={[s.aboutRowLabel, { color: colors.mutedForeground, flex: 1 }]}>SOCIALS</Text>
+          <Text style={[s.aboutRowLabel, { color: colors.mutedForeground, flex: 1 }]}>{t('components.about.socials')}</Text>
           <TouchableOpacity style={[s.aboutAddBtn, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}28` }]} onPress={openAddLink} activeOpacity={0.75}>
             <Icon name="plus" size={11} color={colors.primary} />
-            <Text style={[s.aboutAddBtnText, { color: colors.primary }]}>Add</Text>
+            <Text style={[s.aboutAddBtnText, { color: colors.primary }]}>{t('profile.add')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -209,13 +211,13 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               <View style={[s.socialBadge, { backgroundColor: linkPlatform.color + '22' }]}>
                 <Text style={s.socialIcon}>{linkPlatform.icon}</Text>
               </View>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>{linkPlatform.label}</Text>
+              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>{linkPlatform.key === 'other' ? t('components.about.otherPlatform') : linkPlatform.label}</Text>
               <TouchableOpacity onPress={cancelLink} style={{ marginLeft: 'auto' }} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
                 <Icon name="x" size={14} color={`${colors.mutedForeground}80`} />
               </TouchableOpacity>
             </View>
             {linkPlatform.key === 'other' && (
-              <TextInput style={[s.handleInput, { marginBottom: 4, color: colors.foreground, borderColor: `${colors.primary}50`, backgroundColor: `${colors.primary}08` }]} value={linkOtherLabel} onChangeText={setLinkOtherLabel} placeholder="Label (e.g. My Blog)" placeholderTextColor={`${colors.mutedForeground}70`} returnKeyType="next" />
+              <TextInput style={[s.handleInput, { marginBottom: 4, color: colors.foreground, borderColor: `${colors.primary}50`, backgroundColor: `${colors.primary}08` }]} value={linkOtherLabel} onChangeText={setLinkOtherLabel} placeholder={t('components.about.otherLinkPlaceholder')} placeholderTextColor={`${colors.mutedForeground}70`} returnKeyType="next" />
             )}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               {linkPlatform.key !== 'other' && <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Medium', color: colors.mutedForeground }}>@</Text>}
@@ -232,13 +234,13 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
             onPress={() => setAboutExpanded(true)}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Open About Me details"
+            accessibilityLabel={t('components.about.openDetails')}
           >
             <Text style={[s.aboutSummaryLine, { color: colors.foreground }]} numberOfLines={1}>
-              {character.birthday || 'Add birthday'}  ·  {character.country || 'Add country'}
+              {character.birthday || t('components.about.addBirthday')}  ·  {character.country || t('components.about.addCountry')}
             </Text>
             <Text style={[s.aboutSummaryMeta, { color: colors.mutedForeground }]} numberOfLines={1}>
-              {character.role ? `${selectedRole?.emoji ?? ''} ${character.role}` : 'Choose a role'}  ·  {socialCount > 0 ? `${socialCount} social ${socialCount === 1 ? 'link' : 'links'}` : 'Add socials'}
+              {character.role ? `${selectedRole?.emoji ?? ''} ${character.role}` : t('components.about.chooseRole')}  ·  {socialCount > 0 ? t('components.about.socialLinks', { count: socialCount }) : t('components.about.addSocials')}
             </Text>
           </TouchableOpacity>
         )}
@@ -250,7 +252,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           onPress={() => setGuideExpanded(open => !open)}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel={`Guide, ${character.isGuide ? 'on' : 'off'}. ${guideExpanded ? 'Close' : 'Open'} guide settings`}
+          accessibilityLabel={t('components.about.guideAccess', { status: t(character.isGuide ? 'components.about.statusOn' : 'components.about.statusOff'), action: guideExpanded ? t('common.close') : t('components.about.openGuideSettings') })}
           accessibilityState={{ expanded: guideExpanded }}
           style={[s.guideHero, guideExpanded && s.guideHeroOpen]}
         >
@@ -263,16 +265,16 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
             <View style={s.guideHeroTitleRow}>
               <View style={s.guideHeroIconWrap}><Icon name="star" size={24} color="#D7BE65" /></View>
               <View style={s.guideHeroCopy}>
-                <Text style={s.guideHeroTitle}>Guide</Text>
+                <Text style={s.guideHeroTitle}>{t('social.guide')}</Text>
                 <Text style={s.guideHeroSub}>
-                  {character.isGuide ? 'Your guide profile is active.' : 'Help other players with what you know.'}
+                  {character.isGuide ? t('components.about.guideActive') : t('components.about.guideHelp')}
                 </Text>
               </View>
             </View>
             <View style={s.guideHeroEnd}>
               <View style={[s.guideStatus, character.isGuide && s.guideStatusOn]}>
                 <View style={[s.guideStatusDot, character.isGuide && s.guideStatusDotOn]} />
-                <Text style={[s.guideStatusText, character.isGuide && s.guideStatusTextOn]}>{character.isGuide ? 'ON' : 'OFF'}</Text>
+                <Text style={[s.guideStatusText, character.isGuide && s.guideStatusTextOn]}>{character.isGuide ? t('components.about.statusOn') : t('components.about.statusOff')}</Text>
               </View>
               <Icon name={guideExpanded ? 'chevron-down' : 'chevron-right'} size={16} color="#A49ABF" />
             </View>
@@ -285,18 +287,18 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               {(() => {
                 const items = [!!character.guideBio, (character.guideTopics ?? []).length > 0, !!character.guideAvailability, character.isPublic];
                 const pct   = items.filter(Boolean).length * 25;
-                const missing = ['Introduction', 'Topics', 'Availability', 'Public profile'].filter((_, i) => !items[i]);
+                const missing = [t('components.about.introduction'), t('social.topics'), t('components.about.availability'), t('profile.publicProfile')].filter((_, i) => !items[i]);
                 return (
                   <View style={s.guideCompletion}>
                     <View style={s.guideCompletionRow}>
-                      <Text style={[s.guideCompletionLabel, { color: colors.mutedForeground }]}>Profile strength</Text>
+                      <Text style={[s.guideCompletionLabel, { color: colors.mutedForeground }]}>{t('components.about.profileStrength')}</Text>
                       <Text style={[s.guideCompletionPct, { color: pct === 100 ? '#60D890' : colors.primary }]}>{pct}%</Text>
                     </View>
                     <View style={[s.guideProgressBg, { backgroundColor: `${colors.border}90` }]}>
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       <View style={[s.guideProgressFill, { width: `${pct}%` as any, backgroundColor: pct === 100 ? '#60D890' : colors.primary }]} />
                     </View>
-                    {pct < 100 && <Text style={[s.guideCompletionHint, { color: colors.mutedForeground }]}>Add: {missing.join(' · ')}</Text>}
+                    {pct < 100 && <Text style={[s.guideCompletionHint, { color: colors.mutedForeground }]}>{t('components.about.addMissing', { items: missing.join(' · ') })}</Text>}
                   </View>
                 );
               })()}
@@ -304,16 +306,16 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
 
               {/* Guide bio */}
               <View style={s.guideSection}>
-                <Text style={[s.guideSectionLabel, { color: colors.mutedForeground }]}>✦ Guide introduction</Text>
+                <Text style={[s.guideSectionLabel, { color: colors.mutedForeground }]}>✦ {t('components.about.introduction')}</Text>
                 {editingGuideBio ? (
                   <View style={{ gap: 10 }}>
-                    <TextInput style={[s.guideTextArea, { color: colors.foreground, backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}28` }]} value={guideBioVal} onChangeText={setGuideBioVal} multiline placeholder="Tell wanderers how you can guide them…" placeholderTextColor={colors.mutedForeground} autoFocus maxLength={400} />
+                    <TextInput style={[s.guideTextArea, { color: colors.foreground, backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}28` }]} value={guideBioVal} onChangeText={setGuideBioVal} multiline placeholder={t('components.about.guideBioPrompt')} placeholderTextColor={colors.mutedForeground} autoFocus maxLength={400} />
                     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }}>
                       <TouchableOpacity onPress={() => { setGuideBioVal(character.guideBio ?? ''); setEditingGuideBio(false); }} style={[s.guideActionBtn, { borderColor: colors.border, backgroundColor: 'transparent' }]}>
-                        <Text style={[s.guideActionBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+                        <Text style={[s.guideActionBtnText, { color: colors.mutedForeground }]}>{t('common.cancel')}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={saveGuideBio} style={[s.guideActionBtn, { borderColor: colors.primary, backgroundColor: colors.primary }]}>
-                        <Text style={[s.guideActionBtnText, { color: '#fff' }]}>Save</Text>
+                        <Text style={[s.guideActionBtnText, { color: '#fff' }]}>{t('common.save')}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -324,7 +326,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                     ) : (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Icon name="edit-3" size={13} color={colors.mutedForeground} />
-                        <Text style={[s.guideBioPlaceholder, { color: colors.mutedForeground }]}>Tap to add your guide introduction…</Text>
+                        <Text style={[s.guideBioPlaceholder, { color: colors.mutedForeground }]}>{t('components.about.guideBioAdd')}</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -334,7 +336,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
 
               {/* Topics */}
               <View style={s.guideSection}>
-                <Text style={[s.guideSectionLabel, { color: colors.mutedForeground }]}>◎ Topics I support</Text>
+                <Text style={[s.guideSectionLabel, { color: colors.mutedForeground }]}>◎ {t('components.about.topicsSupport')}</Text>
                 <View style={s.guideTopicsWrap}>
                   {GUIDE_TOPICS.map(topic => {
                     const selected = (character.guideTopics ?? []).includes(topic);
@@ -361,7 +363,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
 
               {/* Availability */}
               <View style={s.guideSection}>
-                <Text style={[s.guideSectionLabel, { color: colors.mutedForeground }]}>◷ Availability</Text>
+                <Text style={[s.guideSectionLabel, { color: colors.mutedForeground }]}>◷ {t('components.about.availability')}</Text>
                 <View style={s.guideDayRow}>
                   {DAY_LABELS_G.map((label, idx) => {
                     const active = guideAvailDays.includes(idx);
@@ -386,7 +388,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                   <TouchableOpacity style={[s.guideTimeBadge, { borderColor: `${colors.border}80`, backgroundColor: `${colors.primary}08` }]} onPress={() => setEditingGuideTime(true)} activeOpacity={0.75}>
                     <Icon name="clock" size={12} color={colors.primary} />
                     <Text style={[s.guideTimeBadgeText, { color: colors.foreground }]}>
-                      {character.guideAvailability ? `${character.guideAvailability.timeFrom} – ${character.guideAvailability.timeTo}` : 'Set your hours'}
+                      {character.guideAvailability ? `${character.guideAvailability.timeFrom} – ${character.guideAvailability.timeTo}` : t('components.about.setHours')}
                     </Text>
                     <Icon name="edit-2" size={11} color={colors.mutedForeground} />
                   </TouchableOpacity>
@@ -399,7 +401,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                 activeOpacity={0.8}
               >
                 <Icon name="eye" size={14} color={colors.primary} />
-                <Text style={[s.guidePreviewBtnText, { color: colors.primary }]}>Preview your guide profile</Text>
+                <Text style={[s.guidePreviewBtnText, { color: colors.primary }]}>{t('components.about.previewGuide')}</Text>
                 <Icon name="arrow-right" size={14} color={`${colors.primary}60`} />
               </TouchableOpacity>
               <TouchableOpacity
@@ -408,7 +410,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                 activeOpacity={0.8}
               >
                 <Icon name="calendar" size={14} color="#fff" />
-                <Text style={[s.guidePreviewBtnText, { color: '#fff' }]}>Create a group session</Text>
+                <Text style={[s.guidePreviewBtnText, { color: '#fff' }]}>{t('components.about.createGroupSession')}</Text>
                 <Icon name="arrow-right" size={14} color="rgba(255,255,255,0.7)" />
               </TouchableOpacity>
               <TouchableOpacity
@@ -420,7 +422,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                 }}
                 accessibilityRole="button"
               >
-                <Text style={s.guideDisableText}>Turn off Guide mode</Text>
+                <Text style={s.guideDisableText}>{t('components.about.turnOffGuide')}</Text>
               </TouchableOpacity>
             </>
           ) : (
@@ -430,9 +432,9 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setCharacter({ ...character, isGuide: true }); }}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel="Become a Guide"
+                accessibilityLabel={t('components.about.becomeGuide')}
               >
-                <Text style={s.guideEnableBtnText}>Become a Guide</Text>
+                <Text style={s.guideEnableBtnText}>{t('components.about.becomeGuide')}</Text>
                 <Icon name="arrow-right" size={16} color="#fff" />
               </TouchableOpacity>
             </View>

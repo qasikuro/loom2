@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Alert,
@@ -27,11 +28,13 @@ type ReelFilter = 'All' | 'Stories' | 'Videos';
 const FILTERS: ReelFilter[] = ['All', 'Stories', 'Videos'];
 
 export default function ReelsScreen() {
+  const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const {
     discoverPosts,
     toggleSavePost,
+    toggleLikePost,
     refreshFeed,
     isLoading,
     apiOnline,
@@ -114,11 +117,11 @@ export default function ReelsScreen() {
     try {
       await Share.share({
         title: post.chapterTitle,
-        message: `${post.chapterTitle} by ${post.authorName}\n${mediaLink ?? appLink}${mediaLink ? `\nOpen in Ximo: ${appLink}` : ''}`,
+        message: `${t('reels.byAuthor', { title: post.chapterTitle, name: post.authorName })}\n${mediaLink ?? appLink}${mediaLink ? `\n${t('reels.openInApp')}: ${appLink}` : ''}`,
         ...(Platform.OS === 'ios' ? { url: mediaLink ?? appLink } : {}),
       });
     } catch {
-      Alert.alert('Unable to share', 'Please try sharing this reel again.');
+      Alert.alert(t('reels.shareFailed'), t('reels.shareRetry'));
     }
   }
 
@@ -148,6 +151,7 @@ export default function ReelsScreen() {
             muted={videosMuted}
             onMuteToggle={() => setVideosMuted(muted => !muted)}
             onShare={() => { void sharePost(item); }}
+            onLike={() => { void toggleLikePost(item.id); }}
             onSave={() => toggleSavePost(item.id)}
             onReport={() => setReportTargetId(item.id)}
           />
@@ -169,10 +173,10 @@ export default function ReelsScreen() {
                 />
               </View>
               <Text style={styles.emptyTitle}>
-                {filter === 'All' ? 'No reels yet' : `No ${filter.toLowerCase()} yet`}
+                {t(filter === 'All' ? 'reels.emptyAll' : filter === 'Videos' ? 'reels.emptyVideos' : 'reels.emptyStories')}
               </Text>
               <Text style={styles.emptyBody}>
-                Share a story or video and it will appear here.
+                {t('reels.emptyBody')}
               </Text>
               <TouchableOpacity
                 style={[styles.emptyButton, { backgroundColor: colors.primary }]}
@@ -180,7 +184,7 @@ export default function ReelsScreen() {
                 activeOpacity={0.82}
               >
                 <Icon name="plus" size={15} color="#fff" />
-                <Text style={styles.emptyButtonText}>Create</Text>
+                <Text style={styles.emptyButtonText}>{t('reels.create')}</Text>
               </TouchableOpacity>
             </View>
           )
@@ -218,14 +222,14 @@ export default function ReelsScreen() {
       >
         <View style={styles.headerInner}>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>Reels <Text style={styles.titleStar}>✦</Text></Text>
+            <Text style={styles.title}>{t('reels.title')} <Text style={styles.titleStar}>✦</Text></Text>
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 router.push('/(tabs)/create');
               }}
-              accessibilityLabel="Create a story or video"
+              accessibilityLabel={t('reels.createAccessible')}
               activeOpacity={0.78}
             >
               <Icon name="plus" size={19} color="#F4EEFF" />
@@ -251,7 +255,7 @@ export default function ReelsScreen() {
                     size={12}
                     color={active ? '#D9C7FF' : 'rgba(205,192,235,0.48)'}
                   />
-                  <Text style={[styles.filterText, active && styles.filterTextActive]}>{item}</Text>
+                   <Text style={[styles.filterText, active && styles.filterTextActive]}>{t(`reels.filter${item}`)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -264,15 +268,15 @@ export default function ReelsScreen() {
           <View style={styles.statusDot} />
           <Text style={styles.statusText}>
             {discoverLoadError && apiOnline
-              ? "Couldn't load reels — pull to retry"
-              : 'Offline — showing saved reels'}
+               ? t('reels.loadFailed')
+               : t('reels.offline')}
           </Text>
         </View>
       )}
       {hasCorruptedDiscover && apiOnline && !discoverLoadError && (
         <View style={[styles.corruptBanner, { top: topPad + 111 }]}>
           <Icon name="alert-triangle" size={13} color="#C8A84B" />
-          <Text style={styles.corruptText}>Some reels could not be loaded.</Text>
+           <Text style={styles.corruptText}>{t('reels.corrupt')}</Text>
         </View>
       )}
 

@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 // ── Page shape (matches StoryPageDB from stories.ts) ─────────────────────────
 
@@ -49,6 +49,7 @@ export const chaptersTable = pgTable("chapters", {
   publishedAt: timestamp("published_at", { withTimezone: true }),
   pageCount:   integer("page_count").notNull().default(0),
   readCount:   integer("read_count").notNull().default(0),
+  likeCount:   integer("like_count").notNull().default(0),
   pages:       jsonb("pages").$type<BookChapterPage[]>().notNull().default([]),
   createdAt:   timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt:   timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -59,6 +60,18 @@ export const chaptersTable = pgTable("chapters", {
 
 export type Chapter      = typeof chaptersTable.$inferSelect;
 export type ChapterInput = typeof chaptersTable.$inferInsert;
+
+export const chapterLikesTable = pgTable("chapter_likes", {
+  userId: text("user_id").notNull(),
+  chapterId: uuid("chapter_id").notNull(),
+  likedAt: timestamp("liked_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.chapterId] }),
+  index("chapter_likes_chapter_id_idx").on(table.chapterId),
+]);
+
+export type ChapterLike = typeof chapterLikesTable.$inferSelect;
+export type ChapterLikeInput = typeof chapterLikesTable.$inferInsert;
 
 // ── Book follows ──────────────────────────────────────────────────────────────
 

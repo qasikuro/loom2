@@ -3,6 +3,7 @@ import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import React from 'react';
 import { ActivityIndicator, Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 
 type PingState = 'idle' | 'sending' | 'sent' | 'cooldown';
 
@@ -16,6 +17,7 @@ interface Props {
 
 export function PingFriendsCard({ pingState, cooldownText, bellAnim, moodAccent, onPing }: Props) {
   const colors = useColors();
+  const { t } = useTranslation();
   return (
     <View style={[s.card, { backgroundColor: colors.card, borderColor: `${moodAccent}30` }, SHADOW.xs]}>
       <View style={s.left}>
@@ -26,10 +28,10 @@ export function PingFriendsCard({ pingState, cooldownText, bellAnim, moodAccent,
         </View>
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[s.title, { color: colors.foreground }]}>
-            {pingState === 'sent' ? 'Friends summoned ✦' : 'Ping your sky friends'}
+            {pingState === 'sent' ? t('social.friendsSummoned') : t('social.pingFriends')}
           </Text>
           <Text style={[s.sub, { color: colors.mutedForeground }]}>
-            {pingState === 'cooldown' ? `Next signal in ${cooldownText}` : pingState === 'sent' ? 'Your constellation has been called' : 'Gently call your friends online'}
+            {pingState === 'cooldown' ? t('social.nextSignal', { time: cooldownText }) : pingState === 'sent' ? t('social.constellationCalled') : t('social.callFriends')}
           </Text>
         </View>
       </View>
@@ -41,7 +43,7 @@ export function PingFriendsCard({ pingState, cooldownText, bellAnim, moodAccent,
       >
         {pingState === 'sending'
           ? <ActivityIndicator size={14} color={moodAccent} />
-          : <Text style={[s.btnText, { color: moodAccent }]}>{pingState === 'sent' ? '✦ Sent' : pingState === 'cooldown' ? '⏳ Wait' : '✦ Signal'}</Text>
+          : <Text style={[s.btnText, { color: moodAccent }]}>{pingState === 'sent' ? `✦ ${t('social.sent')}` : pingState === 'cooldown' ? `⏳ ${t('social.wait')}` : `✦ ${t('social.signal')}`}</Text>
         }
       </TouchableOpacity>
     </View>

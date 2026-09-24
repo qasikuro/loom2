@@ -19,13 +19,14 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const REASONS = [
-  { key: 'Inappropriate content',    icon: 'alert-triangle' as const },
-  { key: 'Spam or misleading',       icon: 'slash'          as const },
-  { key: 'Harassment or hate speech',icon: 'user-x'         as const },
-  { key: 'Copyright infringement',   icon: 'shield-off'     as const },
-  { key: 'Other',                    icon: 'more-horizontal' as const },
+  { key: 'inappropriate', icon: 'alert-triangle' as const },
+  { key: 'spam',          icon: 'slash'          as const },
+  { key: 'harassment',    icon: 'user-x'         as const },
+  { key: 'copyright',     icon: 'shield-off'     as const },
+  { key: 'other',         icon: 'more-horizontal' as const },
 ] as const;
 
 type Reason = typeof REASONS[number]['key'];
@@ -39,6 +40,7 @@ export interface ReportSheetProps {
 }
 
 export function ReportSheet({ visible, onClose, targetType, targetId, targetLabel }: ReportSheetProps) {
+  const { t } = useTranslation();
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -90,10 +92,10 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
   }
 
   const typeLabel =
-    targetType === 'story'  ? 'this story' :
-    targetType === 'outfit' ? 'this outfit' :
-    targetType === 'manga_generation' ? 'this generated manga' :
-    targetLabel ?? 'this user';
+    targetType === 'story'  ? t('social.thisStory') :
+    targetType === 'outfit' ? t('social.thisOutfit') :
+    targetType === 'manga_generation' ? t('social.thisManga') :
+    targetLabel ?? t('social.thisUser');
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -133,9 +135,9 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
               <Icon name="flag" size={18} color="#E04455" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.sheetTitle, { color: colors.foreground }]}>Report</Text>
+              <Text style={[styles.sheetTitle, { color: colors.foreground }]}>{t('social.report')}</Text>
               <Text style={[styles.sheetSub, { color: colors.mutedForeground }]}>
-                You're reporting {typeLabel}
+                {t('social.reportingTarget', { target: typeLabel })}
               </Text>
             </View>
             <TouchableOpacity
@@ -154,23 +156,23 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
                 <Icon name="check-circle" size={32} color="#6BA57A" />
               </View>
               <Text style={[styles.successTitle, { color: colors.foreground }]}>
-                Report received
+                {t('social.reportReceived')}
               </Text>
               <Text style={[styles.successBody, { color: colors.mutedForeground }]}>
-                Thank you for keeping the sky safe. We'll review this shortly.
+                {t('social.reportSuccess')}
               </Text>
               <TouchableOpacity
                 style={[styles.submitBtn, { backgroundColor: colors.primary, marginTop: 8 }]}
                 onPress={onClose}
               >
-                <Text style={styles.submitBtnText}>Done</Text>
+                <Text style={styles.submitBtnText}>{t('social.done')}</Text>
               </TouchableOpacity>
             </View>
           ) : (
             /* ── Report form ───────────────────────────────── */
             <>
               <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-                Why are you reporting this?
+                {t('social.reportQuestion')}
               </Text>
 
               <View style={styles.reasons}>
@@ -198,7 +200,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
                         { color: active ? colors.foreground : colors.mutedForeground },
                         active && { fontFamily: 'Satoshi-Bold' },
                       ]}>
-                        {r.key}
+                        {t(`components.report.reasons.${r.key}`)}
                       </Text>
                       {active && (
                         <View style={[styles.reasonCheck, { backgroundColor: colors.primary }]}>
@@ -218,7 +220,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
                 ]}
                 value={details}
                 onChangeText={setDetails}
-                placeholder="Additional details (optional)"
+                placeholder={t('social.reportDetails')}
                 placeholderTextColor={colors.mutedForeground}
                 multiline
                 numberOfLines={3}
@@ -229,7 +231,7 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
               {/* Submit */}
               {submitError && (
                 <Text style={{ color: '#E89A9A', fontSize: 12, marginBottom: 12 }}>
-                  Couldn't send your report. Check your connection and try again.
+                  {t('social.reportError')}
                 </Text>
               )}
               <TouchableOpacity
@@ -247,12 +249,12 @@ export function ReportSheet({ visible, onClose, targetType, targetId, targetLabe
               >
                 <Icon name={loading ? 'loader' : 'flag'} size={15} color={selected ? '#fff' : colors.mutedForeground} />
                 <Text style={[styles.submitBtnText, { color: selected ? '#fff' : colors.mutedForeground }]}>
-                  {loading ? 'Submitting…' : 'Submit Report'}
+                  {loading ? t('social.submitting') : t('social.submitReport')}
                 </Text>
               </TouchableOpacity>
 
               <Text style={[styles.disclaimer, { color: colors.mutedForeground }]}>
-                Reports are anonymous and reviewed by our team.
+                {t('social.reportDisclaimer')}
               </Text>
             </>
           )}

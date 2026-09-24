@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { enqueueMutation, drainMutationQueue, clearMutation } from '@/utils/mutationQueue';
 import { registerCustomEffects, type EffectDef } from '@/components/ProfileEffect';
 import { showToastGlobal } from '@/components/Toast';
+import i18n from '@/i18n';
 import {
   ApiCharacterSchema,
   ApiJournalEntriesSchema,
@@ -410,6 +411,7 @@ interface AppContextValue {
   discoverPosts:  DiscoverPost[];
   savedStoryIds:  ReadonlySet<string>;
   toggleSavePost: (id: string) => void;
+  toggleLikePost: (id: string) => Promise<void>;
 
   friends:       FriendSummary[];
   refreshFriends: () => Promise<void>;
@@ -560,6 +562,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [discoverMoodFilter, setDiscoverMoodFilter] = useState<string | null>(null);
 
   const [discoverFeedRaw, setDiscoverFeedRaw]         = useState<RawDiscoverItem[]>([]);
+  const likeRequestsInFlight = useRef(new Set<string>());
   const [followingIds, setFollowingIds]               = useState<string[]>([]);
   const [blockedIds, setBlockedIds]                   = useState<string[]>([]);
   const [friends, setFriends]                         = useState<FriendSummary[]>([]);
@@ -1922,6 +1925,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const toggleLikePost = useCallback(async (id: string) => {
+    if (likeRequestsInFlight.current.has(id)) return;
+    const current = discoverFeedRaw.find(post => post.id === id);
+    if (!current) return;
+    likeRequestsInFlight.current.add(id);
+    const nextLiked = !current.liked;
+    setDiscoverFeedRaw(prev => prev.map(post => post.id === id
+      ? { ...post, liked: nextLiked, likeCount: Math.max(0, post.likeCount + (nextLiked ? 1 : -1)) }
+      : post));
+    try {
+      const result = await apiFetch<{ liked: boolean; likeCount: number }>(
+        `/${current.bookId ? 'chapters' : 'stories'}/${id}/like`, {
+        method: nextLiked ? 'POST' : 'DELETE',
+      });
+      setDiscoverFeedRaw(prev => prev.map(post => post.id === id
+        ? { ...post, liked: result.liked, likeCount: result.likeCount }
+        : post));
+    } catch {
+      setDiscoverFeedRaw(prev => prev.map(post => post.id === id
+        ? { ...post, liked: current.liked, likeCount: current.likeCount }
+        : post));
+      showToastGlobal(i18n.t('likes.updateFailed'), 'warning');
+    } finally {
+      likeRequestsInFlight.current.delete(id);
+    }
+  }, [discoverFeedRaw]);
+
   // ── Social: follow / unfollow ──────────────────────────────────────────────
 
   const followUser = useCallback((targetUserId: string) => {
@@ -2048,7 +2078,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     journalEntries, addJournalEntry, deleteJournalEntry,
     outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
-    discoverPosts, savedStoryIds, toggleSavePost,
+    discoverPosts, savedStoryIds, toggleSavePost, toggleLikePost,
     friends, refreshFriends: fetchFriends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,
@@ -2070,7 +2100,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     journalEntries, addJournalEntry, deleteJournalEntry,
     outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
-    discoverPosts, savedStoryIds, toggleSavePost,
+    discoverPosts, savedStoryIds, toggleSavePost, toggleLikePost,
     friends, fetchFriends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,

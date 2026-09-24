@@ -19,13 +19,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
-function formatFullDate(iso: string) {
+function formatFullDate(iso: string, locale: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  return d.toLocaleDateString(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
-function formatTime(iso: string) {
+function formatTime(iso: string, locale: string) {
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
 
 const TYPE_CFG = {
@@ -57,7 +57,7 @@ const READER_THEME: Record<string, {
 
 export default function JournalEntryScreen() {
   const colors  = useColors();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { id }  = useLocalSearchParams<{ id: string }>();
   const { journalEntries, activeCosmetics } = useApp();
@@ -107,8 +107,8 @@ export default function JournalEntryScreen() {
           </View>
 
           {/* Date */}
-          <Text style={s.dateText}>{formatFullDate(entry.date)}</Text>
-          <Text style={s.timeText}>{formatTime(entry.date)}</Text>
+          <Text style={s.dateText}>{formatFullDate(entry.date, i18n.language)}</Text>
+          <Text style={s.timeText}>{formatTime(entry.date, i18n.language)}</Text>
         </View>
       </LinearGradient>
 
@@ -175,7 +175,7 @@ export default function JournalEntryScreen() {
           {entry.type === 'moment' && (
             <View style={[s.footerPill, { backgroundColor: 'rgba(88,72,168,0.12)', borderColor: 'rgba(88,72,168,0.28)' }]}>
               <Icon name="moon" size={11} color="#9A88E0" />
-              <Text style={[s.footerPillText, { color: '#9A88E0' }]}>Captured moment</Text>
+              <Text style={[s.footerPillText, { color: '#9A88E0' }]}>{t('outfitJournal.capturedMoment')}</Text>
             </View>
           )}
         </View>

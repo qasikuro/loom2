@@ -25,6 +25,7 @@ import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch } from '@/context/AppContext';
 import { useApp } from '@/context/AppContext';
+import { useTranslation } from 'react-i18next';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,7 @@ const STARS = Array.from({ length: 38 }, (_, i) => ({
 // ── Pulsing fire orb component ────────────────────────────────────────────────
 
 function FireOrb({ room, onPress }: { room: CampfireRoom; onPress: () => void }) {
+  const { t } = useTranslation();
   const moodCfg = MOOD_FIRE[room.mood] ?? MOOD_FIRE.default;
   const pulseAnim = useRef(new Animated.Value(0.88)).current;
   const glowAnim  = useRef(new Animated.Value(0.5)).current;
@@ -132,13 +134,13 @@ function FireOrb({ room, onPress }: { room: CampfireRoom; onPress: () => void })
       <Text style={fo.name} numberOfLines={2}>{room.name}</Text>
 
       {/* Mood label */}
-      <Text style={[fo.mood, { color: `${moodCfg.ember}80` }]}>{moodCfg.label}</Text>
+        <Text style={[fo.mood, { color: `${moodCfg.ember}80` }]}>{t(`social.mood${moodCfg.label}`)}</Text>
 
       {/* Last whisper */}
       {lastPreview ? (
         <Text style={fo.preview} numberOfLines={1}>{lastPreview}</Text>
       ) : (
-        <Text style={fo.previewEmpty}>No whispers yet…</Text>
+        <Text style={fo.previewEmpty}>{t('social.noWhispers')}</Text>
       )}
     </TouchableOpacity>
   );
@@ -182,6 +184,7 @@ function KindleSheet({
   onClose: () => void;
   onCreate: (name: string, mood: string) => void;
 }) {
+  const { t } = useTranslation();
   const insets    = useSafeAreaInsets();
   const slideAnim = useRef(new Animated.Value(400)).current;
   const [name, setName]   = useState('');
@@ -223,12 +226,12 @@ function KindleSheet({
         <Pressable style={ks.overlay} onPress={onClose} />
         <Animated.View style={[ks.sheet, { paddingBottom: (Platform.OS === 'web' ? 34 : insets.bottom) + 20, transform: [{ translateY: slideAnim }] }]}>
         <View style={ks.handle} />
-        <Text style={ks.title}>Kindle a Fire</Text>
-        <Text style={ks.sub}>Name your campfire and choose its vibe</Text>
+        <Text style={ks.title}>{t('social.kindleFire')}</Text>
+        <Text style={ks.sub}>{t('social.nameCampfire')}</Text>
 
         <TextInput
           style={ks.input}
-          placeholder="e.g. Lost in the Stars…"
+          placeholder={t('social.nameCampfirePlaceholder')}
           placeholderTextColor="rgba(200,184,232,0.30)"
           value={name}
           onChangeText={setName}
@@ -236,7 +239,7 @@ function KindleSheet({
           returnKeyType="done"
         />
 
-        <Text style={ks.sectionLabel}>VIBE</Text>
+        <Text style={ks.sectionLabel}>{t('social.vibe')}</Text>
         <View style={ks.moodRow}>
           {MOODS.map(m => {
             const cfg = MOOD_FIRE[m] ?? MOOD_FIRE.default;
@@ -248,7 +251,7 @@ function KindleSheet({
                 onPress={() => { Haptics.selectionAsync(); setMood(m); }}
                 activeOpacity={0.75}
               >
-                <Text style={[ks.moodPillText, active && { color: cfg.ember }]}>{cfg.icon} {m}</Text>
+                <Text style={[ks.moodPillText, active && { color: cfg.ember }]}>{cfg.icon} {t(`social.mood${m}`)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -263,7 +266,7 @@ function KindleSheet({
           {busy ? (
             <SkyLoadingMark size={20} color="#fff" />
           ) : (
-            <Text style={ks.confirmText}>Kindle</Text>
+            <Text style={ks.confirmText}>{t('social.kindle')}</Text>
           )}
         </TouchableOpacity>
         </Animated.View>
@@ -307,6 +310,7 @@ const ks = StyleSheet.create({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function CampfireLobby() {
+  const { t } = useTranslation();
   const insets  = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
@@ -382,11 +386,11 @@ export default function CampfireLobby() {
           <Icon name="arrow-left" size={16} color="rgba(200,184,232,0.75)" />
         </TouchableOpacity>
         <View style={L.headerCenter}>
-          <Text style={L.headerTitle}>Live Campfires</Text>
-          <Text style={L.headerSub}>Join a live chat room</Text>
+          <Text style={L.headerTitle}>{t('social.liveCampfires')}</Text>
+          <Text style={L.headerSub}>{t('social.joinLiveChat')}</Text>
         </View>
         <TouchableOpacity onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setKindle(true); }} style={L.kindleBtn} activeOpacity={0.8}>
-          <Text style={L.kindleBtnText}>✦ Kindle</Text>
+          <Text style={L.kindleBtnText}>✦ {t('social.kindle')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -394,7 +398,7 @@ export default function CampfireLobby() {
       <View style={L.filterBar}>
         <TextInput
           style={L.searchInput}
-          placeholder="Search rooms…"
+          placeholder={t('social.searchRooms')}
           placeholderTextColor="rgba(200,184,232,0.28)"
           value={search}
           onChangeText={v => { setSearch(v); loadRooms(v, moodFilter); }}
@@ -419,7 +423,7 @@ export default function CampfireLobby() {
               onPress={() => { Haptics.selectionAsync(); const next = m; setMoodFilter(next); loadRooms(search, next); }}
               activeOpacity={0.75}
             >
-              <Text style={[L.moodChipText, active && { color: cfg.ember }]}>{m || 'All'}</Text>
+              <Text style={[L.moodChipText, active && { color: cfg.ember }]}>{m ? t(`social.mood${m}`) : t('social.allMoods')}</Text>
             </TouchableOpacity>
           );
         })}
@@ -429,7 +433,7 @@ export default function CampfireLobby() {
       {loading ? (
         <View style={L.centre}>
           <SkyLoadingMark size={42} color="rgba(155,120,232,0.85)" />
-          <Text style={[L.loadingText, { marginTop: 14 }]}>Gathering the live fires…</Text>
+          <Text style={[L.loadingText, { marginTop: 14 }]}>{t('social.gatheringFires')}</Text>
         </View>
       ) : (
         <Animated.View style={[{ flex: 1 }, { opacity: fadeAnim }]}>
@@ -448,7 +452,7 @@ export default function CampfireLobby() {
                 <Text style={L.introText}>
                   {rooms.filter(r => r.soulCount > 0).length > 0
                     ? `${rooms.reduce((n, r) => n + r.soulCount, 0)} souls gathered around the fires`
-                    : 'The fires await — be the first soul tonight'}
+                    : t('social.firstSoul')}
                 </Text>
               </View>
             )}

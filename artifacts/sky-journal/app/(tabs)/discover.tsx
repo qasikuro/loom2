@@ -36,7 +36,7 @@ const GUIDE_TOPICS = [
   'Anxiety & Stress', 'Motivation', 'Self Growth', 'Relationships',
   'Loneliness', 'Creativity', 'Spirituality', 'Mental Health',
   'Dreams & Goals', 'Grief', 'Social Skills', 'Mindfulness',
-];
+] as const;
 
 const TOPIC_COLORS: Record<string, string> = {
   'Anxiety & Stress': '#E87898',
@@ -107,7 +107,7 @@ export default function DiscoverScreen() {
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { width: viewportWidth } = useWindowDimensions();
-  const { t }     = useTranslation();
+  const { t, i18n } = useTranslation();
   const { followingIds, followUser, unfollowUser, isRefreshing } = useApp();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Guides');
@@ -149,7 +149,7 @@ export default function DiscoverScreen() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         setPeopleResults([]);
-        setPeopleError(err?.message ?? 'Search failed. Please try again.');
+        setPeopleError(err?.message ?? t('discoverLog.searchFailed'));
       } finally {
         setPeopleLoading(false);
       }
@@ -180,7 +180,7 @@ export default function DiscoverScreen() {
       setGuidesData(data ?? []);
       setGuideSessions(sessions ?? []);
     } catch {
-      setGuidesError('Could not load guides. Pull to refresh.');
+      setGuidesError(t('discoverLog.loadGuidesError'));
     } finally {
       setGuidesLoading(false);
     }
@@ -202,7 +202,7 @@ export default function DiscoverScreen() {
       const data = await apiFetch<DiscoverBook[]>('/public-books');
       setBooksData(data ?? []);
     } catch {
-      setBooksError('Could not load books. Pull to refresh.');
+      setBooksError(t('discoverLog.loadBooksError'));
     } finally {
       setBooksLoading(false);
     }
@@ -249,7 +249,7 @@ export default function DiscoverScreen() {
               {isRefreshing && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.12)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
                   <SkyLoadingMark size={14} color="rgba(200,184,232,0.7)" />
-                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' }}>Updating</Text>
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' }}>{t('discoverLog.updating')}</Text>
                 </View>
               )}
             </View>
@@ -303,7 +303,7 @@ export default function DiscoverScreen() {
                   styles.tabText,
                   { color: active ? '#C8B0FF' : 'rgba(200,184,232,0.55)' },
                 ]}>
-                  {tab}
+                  {t(`discoverLog.tab${tab}`)}
                 </Text>
               </TouchableOpacity>
             );
@@ -335,10 +335,10 @@ export default function DiscoverScreen() {
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 3 }}>
               <Icon name="book-open" size={15} color="#C8A84B" />
-              <Text style={styles.booksBannerTitle}>Ximo Library</Text>
+              <Text style={styles.booksBannerTitle}>{t('discoverLog.libraryTitle')}</Text>
             </View>
             <Text style={styles.booksBannerSub}>
-              Explore serialised stories from writers in the community
+              {t('discoverLog.librarySubtitle')}
             </Text>
           </LinearGradient>
 
@@ -359,9 +359,9 @@ export default function DiscoverScreen() {
               <View style={[styles.emptyIconBox, { backgroundColor: 'rgba(155,120,232,0.12)' }]}>
                 <Icon name="book-open" size={30} color="rgba(155,120,232,0.6)" />
               </View>
-              <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>No books yet</Text>
+              <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>{t('discoverLog.noBooks')}</Text>
               <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
-                Be the first to publish a book series in Ximo
+                {t('discoverLog.firstBook')}
               </Text>
             </View>
           ) : (
@@ -395,7 +395,7 @@ export default function DiscoverScreen() {
                     {/* Chapter badge */}
                     <View style={styles.bookChapterBadge}>
                       <Text style={styles.bookChapterBadgeText}>
-                        {book.chapterCount} {book.chapterCount === 1 ? 'ch' : 'chs'}
+                        {t('discoverLog.chapterCount', { count: book.chapterCount })}
                       </Text>
                     </View>
                   </View>
@@ -409,7 +409,7 @@ export default function DiscoverScreen() {
                         onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: book.authorUserId } } as any)}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.bookCardAuthor}>By {book.authorName}</Text>
+                        <Text style={styles.bookCardAuthor}>{t('discoverLog.byAuthor', { name: book.authorName })}</Text>
                       </TouchableOpacity>
                     ) : null}
                     {/* Genre + age rating tags */}
@@ -456,10 +456,10 @@ export default function DiscoverScreen() {
             <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(100,60,220,0.18)', top: -40, right: -20, pointerEvents: 'none' }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Icon name="star" size={16} color="#C8A84B" />
-              <Text style={styles.guideBannerTitle}>Constellation Guides</Text>
+              <Text style={styles.guideBannerTitle}>{t('discoverLog.guidesTitle')}</Text>
             </View>
             <Text style={styles.guideBannerSub}>
-              Wanderers who light the path — find people who resonate with your journey
+              {t('discoverLog.guidesSubtitle')}
             </Text>
           </LinearGradient>
 
@@ -470,19 +470,19 @@ export default function DiscoverScreen() {
               onPress={() => { setGuideTopicFilter(null); loadGuides(null, guideAvailNow); Haptics.selectionAsync(); }}
               activeOpacity={0.8}
             >
-              <Text style={[styles.guideTopicText, { color: guideTopicFilter ? 'rgba(200,184,232,0.55)' : '#C8B8E8' }]}>All Topics</Text>
+              <Text style={[styles.guideTopicText, { color: guideTopicFilter ? 'rgba(200,184,232,0.55)' : '#C8B8E8' }]}>{t('discoverLog.allTopics')}</Text>
             </TouchableOpacity>
-            {GUIDE_TOPICS.map(t => {
-              const active = guideTopicFilter === t;
-              const col    = TOPIC_COLORS[t] ?? '#9878D8';
+            {GUIDE_TOPICS.map(topic => {
+              const active = guideTopicFilter === topic;
+              const col    = TOPIC_COLORS[topic] ?? '#9878D8';
               return (
                 <TouchableOpacity
-                  key={t}
+                  key={topic}
                   style={[styles.guideTopicChip, active ? { backgroundColor: `${col}22`, borderColor: `${col}55` } : { borderColor: 'rgba(200,184,232,0.14)' }]}
-                  onPress={() => { const next = active ? null : t; setGuideTopicFilter(next); loadGuides(next, guideAvailNow); Haptics.selectionAsync(); }}
+                  onPress={() => { const next = active ? null : topic; setGuideTopicFilter(next); loadGuides(next, guideAvailNow); Haptics.selectionAsync(); }}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.guideTopicText, { color: active ? col : 'rgba(200,184,232,0.55)' }]}>{t}</Text>
+                  <Text style={[styles.guideTopicText, { color: active ? col : 'rgba(200,184,232,0.55)' }]}>{t(`discoverLog.topic${GUIDE_TOPICS.indexOf(topic)}`)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -496,7 +496,7 @@ export default function DiscoverScreen() {
           >
             <View style={[styles.availDot, { backgroundColor: guideAvailNow ? '#60D890' : '#808090' }]} />
             <Text style={[styles.guideAvailText, { color: guideAvailNow ? '#70E8A0' : 'rgba(200,184,232,0.55)' }]}>
-              {guideAvailNow ? 'Available Now' : 'All Guides'}
+              {guideAvailNow ? t('discoverLog.availableNow') : t('discoverLog.allGuides')}
             </Text>
           </TouchableOpacity>
 
@@ -519,16 +519,16 @@ export default function DiscoverScreen() {
               </View>
               {guideTopicFilter ? (
                 <>
-                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>No guides here</Text>
+                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>{t('discoverLog.noGuidesForTopic')}</Text>
                   <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
-                    {`No guides for "${guideTopicFilter}" yet — try another topic`}
+                    {t('discoverLog.noGuidesTopic', { topic: t(`discoverLog.topic${GUIDE_TOPICS.indexOf(guideTopicFilter as typeof GUIDE_TOPICS[number])}`) })}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>Some guides are unavailable</Text>
+                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>{t('discoverLog.guidesUnavailable')}</Text>
                   <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
-                    Some guides are resting for now — check back soon
+                    {t('discoverLog.guidesUnavailableBody')}
                   </Text>
                 </>
               )}
@@ -565,7 +565,7 @@ export default function DiscoverScreen() {
                         <Text style={styles.guideCardName} numberOfLines={1}>{g.name}</Text>
                         {g.isAvailableNow && (
                           <View style={styles.guideNowBadge}>
-                            <Text style={styles.guideNowText}>Now</Text>
+                            <Text style={styles.guideNowText}>{t('discoverLog.now')}</Text>
                           </View>
                         )}
                       </View>
@@ -582,7 +582,7 @@ export default function DiscoverScreen() {
                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                              <Icon name="clock" size={11} color="#BFA8FF" />
                              <Text style={styles.guideSessionTime}>
-                               {new Date(nextSession.startsAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                                {new Date(nextSession.startsAt).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
                              </Text>
                            </View>
                          </View>
@@ -617,7 +617,7 @@ export default function DiscoverScreen() {
                     >
                       <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={13} color={isFollowing ? '#C8B0FF' : '#fff'} />
                       <Text style={[styles.followBtnText, { color: isFollowing ? '#C8B0FF' : '#fff' }]}>
-                        {isFollowing ? 'Following' : 'Follow'}
+                        {isFollowing ? t('discoverLog.following') : t('discoverLog.follow')}
                       </Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -638,7 +638,7 @@ export default function DiscoverScreen() {
               style={[styles.searchInput, { color: colors.foreground }]}
               value={peopleQuery}
               onChangeText={handlePeopleSearch}
-              placeholder={t('discover.searchPlaceholder')}
+              placeholder={t('discoverLog.searchPeoplePlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               autoCorrect={false}
               autoCapitalize="none"
@@ -731,7 +731,7 @@ export default function DiscoverScreen() {
                         color={isFollowing ? colors.primary : '#fff'}
                       />
                       <Text style={[styles.followBtnText, { color: isFollowing ? colors.primary : '#fff' }]}>
-                        {isFollowing ? t('discover.following') : t('discover.follow')}
+                        {isFollowing ? t('discoverLog.following') : t('discoverLog.follow')}
                       </Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -749,6 +749,7 @@ export default function DiscoverScreen() {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function PeopleEmptyStart({ colors }: { colors: any }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.emptyWrap}>
       <View style={[styles.emptyStarRing, { borderColor: `${colors.primary}28` }]}>
@@ -756,14 +757,14 @@ function PeopleEmptyStart({ colors }: { colors: any }) {
           <Icon name="users" size={30} color={`${colors.primary}70`} />
         </View>
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>Find Friends</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discoverLog.findFriends')}</Text>
       <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        Search by name or @handle to find players and follow their stories.
+        {t('discoverLog.findFriendsBody')}
       </Text>
       <View style={[styles.searchHint, { borderColor: `${colors.primary}22`, backgroundColor: `${colors.primary}08` }]}>
         <Icon name="search" size={12} color={`${colors.primary}70`} />
         <Text style={[styles.searchHintText, { color: `${colors.primary}90` }]}>
-          Try searching by name or any @username
+          {t('discoverLog.searchHint')}
         </Text>
       </View>
     </View>
@@ -778,9 +779,9 @@ function PeopleNoResults({ colors }: { colors: any }) {
       <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
         <Icon name="search" size={30} color={`${colors.primary}70`} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discover.noResults')}</Text>
+      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discoverLog.noPeopleResults')}</Text>
       <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        {t('discover.tryDifferent')}
+        {t('discoverLog.tryDifferentPeople')}
       </Text>
     </View>
   );

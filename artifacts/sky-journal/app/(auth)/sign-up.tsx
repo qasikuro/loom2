@@ -11,6 +11,7 @@ import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'expo-image';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Animated,
@@ -40,6 +41,7 @@ function useWarmUpBrowser() {
 }
 
 export default function SignUpScreen() {
+  const { t } = useTranslation();
   useWarmUpBrowser();
   const { signUp, setActive, isLoaded } = useSignUp();
   const { startSSOFlow } = useSSO();
@@ -96,11 +98,11 @@ export default function SignUpScreen() {
         await setActive({ session: createdSessionId });
         router.replace('/(tabs)' as Href);
       } else if (!createdSessionId) {
-        setCatchError('Google sign-up was cancelled or did not complete. Please try again.');
+        setCatchError(t('auth.signUpCancelled'));
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Google sign-in failed.');
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.signInFailed'));
     } finally {
       setGoogleLoading(false);
     }
@@ -118,7 +120,7 @@ export default function SignUpScreen() {
       await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Could not create account.');
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.createAccountFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -134,11 +136,11 @@ export default function SignUpScreen() {
         await setActive({ session: result.createdSessionId });
         router.replace('/(tabs)' as Href);
       } else {
-        setCatchError('Verification failed. Please try again.');
+        setCatchError(t('auth.verifyFailed'));
       }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || 'Verification failed.');
+      setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.verifyFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -162,10 +164,9 @@ export default function SignUpScreen() {
               <Text style={styles.verifyIconEmoji}>✉️</Text>
             </View>
 
-            <Text style={styles.title}>Check your email</Text>
+            <Text style={styles.title}>{t('auth.checkEmail')}</Text>
             <Text style={styles.subtitle}>
-              We sent a 6-digit code to{'\n'}
-              <Text style={{ color: 'rgba(200,184,232,0.85)', fontFamily: 'Satoshi-Bold' }}>{email}</Text>
+              {t('auth.codeSentTo', { email })}
             </Text>
 
             {/* OTP input row */}
@@ -192,18 +193,18 @@ export default function SignUpScreen() {
               onPress={handleVerify}
               disabled={!code.trim() || isLoading}
             >
-              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>Verify & enter</Text>}
+              {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryBtnText}>{t('auth.verifyEnter')}</Text>}
             </TouchableOpacity>
 
-            <Text style={styles.verifyNote}>This is a one-time step — you'll stay signed in after this.</Text>
+            <Text style={styles.verifyNote}>{t('auth.verifyNote')}</Text>
 
             <View style={styles.verifyFooter}>
               <TouchableOpacity onPress={() => signUp!.prepareEmailAddressVerification({ strategy: 'email_code' })}>
-                <Text style={styles.footerLink}>Resend code</Text>
+                <Text style={styles.footerLink}>{t('auth.resendCode')}</Text>
               </TouchableOpacity>
               <Text style={styles.footerText}> · </Text>
               <TouchableOpacity onPress={() => { setCode(''); setCatchError(''); router.replace('/(auth)/sign-up' as Href); }}>
-                <Text style={styles.footerLink}>Start over</Text>
+                <Text style={styles.footerLink}>{t('auth.startOver')}</Text>
               </TouchableOpacity>
             </View>
 
@@ -236,8 +237,8 @@ export default function SignUpScreen() {
               <Image source={Images.logo} style={styles.logo} contentFit="contain" />
             </View>
 
-            <Text style={styles.title}>Begin your journey</Text>
-            <Text style={styles.subtitle}>Create your Ximo account</Text>
+            <Text style={styles.title}>{t('auth.beginJourney')}</Text>
+            <Text style={styles.subtitle}>{t('auth.signUpSub')}</Text>
 
             {/* ── Google button ──────────────────── */}
             <TouchableOpacity
@@ -251,7 +252,7 @@ export default function SignUpScreen() {
               ) : (
                 <>
                   <Text style={styles.googleLogo}>G</Text>
-                  <Text style={styles.googleBtnText}>Continue with Google</Text>
+                  <Text style={styles.googleBtnText}>{t('auth.continueWithGoogle')}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -259,14 +260,14 @@ export default function SignUpScreen() {
             {/* ── Divider ────────────────────────── */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or sign up with email</Text>
+              <Text style={styles.dividerText}>{t('auth.orSignUpWithEmail')}</Text>
               <View style={styles.dividerLine} />
             </View>
 
             {/* ── Form ───────────────────────────── */}
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Email</Text>
+                <Text style={styles.fieldLabel}>{t('auth.email')}</Text>
                 <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
                   <TextInput
                     style={styles.inputText}
@@ -276,7 +277,7 @@ export default function SignUpScreen() {
                     onBlur={() => setFocusedField(null)}
                     autoCapitalize="none"
                     keyboardType="email-address"
-                    placeholder="your@email.com"
+                    placeholder={t('auth.emailPlaceholder')}
                     placeholderTextColor="rgba(200,184,232,0.35)"
                     autoComplete="email"
                     returnKeyType="next"
@@ -285,7 +286,7 @@ export default function SignUpScreen() {
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Password</Text>
+                <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
                 <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
                   <TextInput
                     style={[styles.inputText, { paddingRight: 52 }]}
@@ -294,7 +295,7 @@ export default function SignUpScreen() {
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     secureTextEntry={!showPassword}
-                    placeholder="At least 8 characters"
+                    placeholder={t('auth.passwordCreatePlaceholder')}
                     placeholderTextColor="rgba(200,184,232,0.35)"
                     autoComplete="new-password"
                     returnKeyType="done"
@@ -316,7 +317,7 @@ export default function SignUpScreen() {
               >
                 {isLoading
                   ? <ActivityIndicator color="#fff" />
-                  : <Text style={styles.primaryBtnText}>Create account</Text>
+                    : <Text style={styles.primaryBtnText}>{t('auth.createAccountBtn')}</Text>
                 }
               </TouchableOpacity>
 
@@ -324,11 +325,11 @@ export default function SignUpScreen() {
             </View>
 
             <View style={styles.footerRow}>
-              <Text style={styles.footerText}>Already have an account?</Text>
+              <Text style={styles.footerText}>{t('auth.alreadyHave')}</Text>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Link href={'/(auth)/sign-in' as any} asChild>
                 <Pressable hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.footerLink}>Sign in</Text>
+                  <Text style={styles.footerLink}>{t('auth.signIn')}</Text>
                 </Pressable>
               </Link>
             </View>

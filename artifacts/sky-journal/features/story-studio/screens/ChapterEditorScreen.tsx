@@ -36,9 +36,9 @@ import { AudiusMusicPicker } from '../components/AudiusMusicPicker';
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
 const MINI_LAYOUTS = [
-  { key: '1',  label: 'Full',  count: 1, rows: [[1]] },
-  { key: '2v', label: 'Stack', count: 2, rows: [[1], [1]] },
-  { key: '2h', label: 'Side',  count: 2, rows: [[1, 1]] },
+  { key: '1',  label: 'layoutFull',  count: 1, rows: [[1]] },
+  { key: '2v', label: 'layoutStack', count: 2, rows: [[1], [1]] },
+  { key: '2h', label: 'layoutSide',  count: 2, rows: [[1, 1]] },
   { key: '3a', label: '1+2',   count: 3, rows: [[1], [1, 1]] },
   { key: '3b', label: '2+1',   count: 3, rows: [[1, 1], [1]] },
   { key: '4',  label: '2×2',   count: 4, rows: [[1, 1], [1, 1]] },
@@ -429,7 +429,7 @@ export default function ChapterEditorScreen() {
     });
     setPosting(false);
     if (!ok) {
-      setError(tr('create.saveFailed') || "Story couldn't be saved — check your connection and try again");
+      setError(tr('studioEditor.storySaveFailed'));
       return;
     }
     await markFirstPublishDone();
@@ -488,11 +488,11 @@ export default function ChapterEditorScreen() {
         <View style={[c.offlineBar, { top: topPad + 4 }]}>
           <Text style={c.offlineBarText} numberOfLines={1}>
             {storiesLoadError && apiOnline
-              ? "Couldn't load stories"
-              : "Offline — showing cached"}
+              ? tr('studioEditor.couldNotLoadStories')
+              : tr('studioEditor.offlineCached')}
           </Text>
           <TouchableOpacity onPress={reloadData} activeOpacity={0.7} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <Text style={c.offlineBarBtn}>Retry</Text>
+            <Text style={c.offlineBarBtn}>{tr('studioEditor.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -509,7 +509,7 @@ export default function ChapterEditorScreen() {
 
         <View style={c.headerCenter}>
           <View style={[c.headerMoodDot, { backgroundColor: moodColor, shadowColor: moodColor }]} />
-          <Text style={c.headerTitle}>{editId ? 'Edit Chapter' : 'New Chapter'}</Text>
+          <Text style={c.headerTitle}>{editId ? tr('studioEditor.editChapter') : tr('studioEditor.newChapter')}</Text>
           <Text style={c.headerPageCount}>{pages.length}/{MAX_PAGES}</Text>
         </View>
 
@@ -546,8 +546,8 @@ export default function ChapterEditorScreen() {
                 <Icon name="edit-3" size={13} color="#8B70C8" />
               </View>
               <View>
-                <Text style={c.draftTitle}>Unfinished story</Text>
-                <Text style={c.draftSub}>You have a draft saved</Text>
+                <Text style={c.draftTitle}>{tr('studioEditor.unfinished')}</Text>
+                <Text style={c.draftSub}>{tr('studioEditor.draftSaved')}</Text>
               </View>
             </View>
             <View style={c.draftActions}>
@@ -555,13 +555,13 @@ export default function ChapterEditorScreen() {
                 onPress={loadDraft}
                 style={[c.draftBtn, { backgroundColor: 'rgba(107,91,149,0.22)', borderColor: 'rgba(107,91,149,0.50)' }]}
               >
-                <Text style={[c.draftBtnTxt, { color: '#C8B8E8' }]}>Resume</Text>
+                <Text style={[c.draftBtnTxt, { color: '#C8B8E8' }]}>{tr('studioEditor.resume')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={discardDraft}
                 style={[c.draftBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.10)' }]}
               >
-                <Text style={[c.draftBtnTxt, { color: 'rgba(255,255,255,0.38)' }]}>Discard</Text>
+                <Text style={[c.draftBtnTxt, { color: 'rgba(255,255,255,0.38)' }]}>{tr('studioEditor.discard')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -603,7 +603,7 @@ export default function ChapterEditorScreen() {
             {/* Chapter title — large borderless input */}
             <TextInput
               style={c.titleInput}
-              placeholder="Chapter title…"
+              placeholder={tr('studioEditor.chapterTitlePlaceholder')}
               placeholderTextColor="rgba(200,185,255,0.18)"
               value={title}
               onChangeText={t => { setTitle(t); if (error) setError(null); }}
@@ -618,7 +618,7 @@ export default function ChapterEditorScreen() {
             {/* Description — soft italic */}
             <TextInput
               style={c.descInput}
-              placeholder="A brief scene-setter…"
+              placeholder={tr('studioEditor.scenePlaceholder')}
               placeholderTextColor="rgba(200,185,255,0.15)"
               value={desc}
               onChangeText={setDesc}
@@ -655,14 +655,14 @@ export default function ChapterEditorScreen() {
             );
           })}
           <Text style={c.visHint}>
-            {isPublic ? 'Visible in Discover' : 'Only you can see this'}
+            {isPublic ? tr('studioEditor.visibleInDiscover') : tr('studioEditor.onlyYouSee')}
           </Text>
         </View>
 
         {/* ── Location (expandable) ──────────────────────────── */}
         {showMeta && (
           <View style={c.locationSection}>
-            <Text style={c.locationLabel}>LOCATION</Text>
+            <Text style={c.locationLabel}>{tr('studioEditor.location')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={c.locationRow}>
               {LOCATIONS.map(loc => {
                 const active = location === loc;
@@ -691,7 +691,7 @@ export default function ChapterEditorScreen() {
 
         <View style={c.pagesSection}>
           <View style={c.pagesSectionHeader}>
-            <Text style={c.pagesSectionTitle}>Pages</Text>
+            <Text style={c.pagesSectionTitle}>{tr('studioEditor.pages')}</Text>
             <View style={[c.pagesCountBadge, { backgroundColor: `${moodColor}14`, borderColor: `${moodColor}28` }]}>
               <Text style={[c.pagesCountTxt, { color: moodColor }]}>{pages.length} / {MAX_PAGES}</Text>
             </View>
@@ -706,7 +706,7 @@ export default function ChapterEditorScreen() {
               disabled={pages.length >= MAX_PAGES}
             >
               <Icon name="plus" size={13} color={moodColor} />
-              <Text style={[c.addPageInlineTxt, { color: moodColor }]}>Add page</Text>
+              <Text style={[c.addPageInlineTxt, { color: moodColor }]}>{tr('studioEditor.addPage')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -726,16 +726,16 @@ export default function ChapterEditorScreen() {
                 {/* Info */}
                 <View style={c.pageCardInfo}>
                   <View style={c.pageCardTopRow}>
-                    <Text style={c.pageCardNum}>Page {i + 1}</Text>
+                    <Text style={c.pageCardNum}>{tr('studioEditor.page', { number: i + 1 })}</Text>
                     <View style={[c.pageLayoutTag, { backgroundColor: `${moodColor}10`, borderColor: `${moodColor}20` }]}>
-                      <Text style={[c.pageLayoutTagTxt, { color: `${moodColor}CC` }]}>{layoutDef.label}</Text>
+                      <Text style={[c.pageLayoutTagTxt, { color: `${moodColor}CC` }]}>{layoutDef.label.startsWith('layout') ? tr(`studioEditor.${layoutDef.label}`) : layoutDef.label}</Text>
                     </View>
                   </View>
                   <Text
                     style={[c.pageCardPreview, !preview && c.pageCardPreviewEmpty]}
                     numberOfLines={2}
                   >
-                    {preview || 'Tap Edit to add content'}
+                    {preview || tr('studioEditor.tapEditAddContent')}
                   </Text>
                   {/* Filled-panel dot track */}
                   <View style={c.pageCardDotRow}>
@@ -757,6 +757,8 @@ export default function ChapterEditorScreen() {
                 <View style={c.pageCardActions}>
                   <TouchableOpacity
                     style={[c.pageActionBtn, { backgroundColor: `${moodColor}18`, borderColor: `${moodColor}30` }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={tr('common.edit')}
                     onPress={() => editPage(page.id, page.panels)}
                   >
                     <Icon name="edit-2" size={14} color={moodColor} />
@@ -764,6 +766,8 @@ export default function ChapterEditorScreen() {
                   {pages.length > 1 && (
                     <TouchableOpacity
                       style={[c.pageActionBtn, { backgroundColor: 'rgba(224,85,104,0.10)', borderColor: 'rgba(224,85,104,0.22)' }]}
+                      accessibilityRole="button"
+                      accessibilityLabel={tr('common.delete')}
                       onPress={() => deletePage(page.id)}
                     >
                       <Icon name="trash-2" size={13} color="#E05568" />
@@ -798,15 +802,15 @@ export default function ChapterEditorScreen() {
             <Icon name={editId ? 'check' : 'send'} size={17} color="#fff" />
             <Text style={c.publishTxt}>
               {posting
-                ? (editId ? 'Saving…' : 'Publishing…')
-                : (editId ? 'Save Changes' : 'Publish Story')}
+                ? (editId ? tr('studioEditor.saving') : tr('studioEditor.publishing'))
+                : (editId ? tr('studioEditor.saveChanges') : tr('studioEditor.publishStory'))}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
 
         {/* Soft bottom note */}
         <Text style={c.bottomNote}>
-          {isPublic ? '✦ Your story will appear in Discover' : '✦ Only visible to you'}
+          {isPublic ? `✦ ${tr('studioEditor.visibleInDiscover')}` : `✦ ${tr('studioEditor.onlyYouSee')}`}
         </Text>
 
       </KeyboardAwareScrollView>

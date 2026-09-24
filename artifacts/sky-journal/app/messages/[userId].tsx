@@ -29,6 +29,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NIGHT   = '#080618';
@@ -112,12 +113,12 @@ function fmtTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-function fmtDate(iso: string) {
+function fmtDate(iso: string, t: (key: string) => string) {
   const d   = new Date(iso);
   const now = new Date();
   const dt  = now.getTime() - d.getTime();
-  if (dt < 86400000 && d.getDay() === now.getDay()) return 'Today';
-  if (dt < 172800000) return 'Yesterday';
+  if (dt < 86400000 && d.getDay() === now.getDay()) return t('social.today');
+  if (dt < 172800000) return t('social.yesterday');
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
@@ -135,6 +136,7 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPre
   msg: Message; partnerInitial: string; avatarUri?: string; primaryColor: string;
   onLongPress?: () => void;
 }) {
+  const { t } = useTranslation();
   const def    = getSticker(msg.expression!);
   const scaleA = useRef(new Animated.Value(0.3)).current;
   const opA    = useRef(new Animated.Value(0)).current;
@@ -147,13 +149,13 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPre
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const label = msg.isOwn ? def.ownLabel : def.otherLabel;
+  const label = t(`social.sticker_${def.id}_${msg.isOwn ? 'own' : 'other'}`);
 
   const cardInner = (
     <View style={[styles.stickerCard, { borderColor: `${def.color}40`, backgroundColor: `${def.color}18` }]}>
       <Text style={styles.stickerCardEmoji}>{def.emoji}</Text>
       <View style={styles.stickerCardBody}>
-        <Text style={[styles.stickerCardLabel, { color: `${def.color}E0` }]}>{def.label}</Text>
+        <Text style={[styles.stickerCardLabel, { color: `${def.color}E0` }]}>{t(`social.sticker_${def.id}_label`)}</Text>
         <Text style={styles.stickerCardSubtitle}>{label}</Text>
         <Text style={styles.stickerCardTime}>{fmtTime(msg.createdAt)}</Text>
       </View>
@@ -193,6 +195,7 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPre
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function MessagesScreen() {
+  const { t } = useTranslation();
   const { userId, name, handle, avatarUri, isGuide } = useLocalSearchParams<{
     userId:     string;
     name?:      string;
@@ -228,7 +231,7 @@ export default function MessagesScreen() {
   const contentWidth = Math.min(windowWidth, 680);
 
   const partnerSubtitle = isGuide === 'true'
-    ? 'Constellation Guide'
+    ? t('social.guide')
     : handle ? `@${handle}` : null;
 
   const isBlocked = blockedIds.includes(userId ?? '');
@@ -236,33 +239,33 @@ export default function MessagesScreen() {
   const handleClearConversation = useCallback(() => {
     if (!userId) return;
     Alert.alert(
-      'Clear conversation',
-      'This will remove all messages from your view. The other person will still see them.',
+      t('social.clearConversation'),
+      t('social.clearConversationBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('social.cancel'), style: 'cancel' },
         {
-          text: 'Clear',
+          text: t('social.clear'),
           style: 'destructive',
           onPress: async () => {
             try {
               await apiFetch(`/messages/conversation/${userId}`, { method: 'DELETE' });
               setMessages([]);
             } catch {
-              Alert.alert('Error', 'Could not clear the conversation. Try again.');
+              Alert.alert(t('social.error'), t('social.clearError'));
             }
           },
         },
       ],
     );
-  }, [userId]);
+  }, [t, userId]);
 
   function handleMoreMenu() {
     if (!userId) return;
-    const partnerName = name ?? 'this user';
+    const partnerName = name ?? t('social.thisUser');
     const blockOption = isBlocked
-      ? { text: 'Unblock user', onPress: () => unblockUser(userId) }
+      ? { text: t('social.unblockUser'), onPress: () => unblockUser(userId) }
       : {
-          text: 'Block user',
+          text: t('social.blockUser'),
           style: 'destructive' as const,
           onPress: () => { blockUser(userId).catch(() => null); safeBack(); },
         };
@@ -270,9 +273,9 @@ export default function MessagesScreen() {
       partnerName,
       undefined,
       [
-        { text: 'Clear conversation', onPress: handleClearConversation },
+        { text: t('social.clearConversation'), onPress: handleClearConversation },
         blockOption,
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('social.cancel'), style: 'cancel' },
       ],
     );
   }
@@ -310,7 +313,7 @@ export default function MessagesScreen() {
 
   const load = useCallback(async () => {
     if (!userId) {
-      setError('This conversation link is missing a user.');
+      setError(t('social.conversationMissing'));
       setLoading(false);
       return;
     }
@@ -345,7 +348,7 @@ export default function MessagesScreen() {
       setMessages(msgs);
       markDmThreadRead(userId);
     } catch {
-      setError('Could not load messages');
+      setError(t('social.loadMessagesError'));
     } finally {
       setLoading(false);
     }
@@ -447,7 +450,7 @@ export default function MessagesScreen() {
         const suffix = (err.retryAfter != null && err.retryAfter >= 5)
           ? ` Try again in ${err.retryAfter}s.`
           : '';
-        showToastGlobal(`Slow down a little ✦${suffix}`, 'warning');
+        showToastGlobal(`${t('social.slowDown')}${suffix}`, 'warning');
       }
     } finally {
       setSending(false);
@@ -457,25 +460,25 @@ export default function MessagesScreen() {
   const handleDeleteMsg = useCallback(async (msg: Message) => {
     if (!msg.isOwn) return;
     Alert.alert(
-      'Delete message',
-      'Choose how to delete this message',
+      t('social.deleteMessage'),
+      t('social.deleteMessagePrompt'),
       [
         {
-          text: 'Delete for me',
+          text: t('social.deleteForMe'),
           onPress: async () => {
             setMessages(prev => prev.filter(m => m.id !== msg.id));
             apiFetch(`/messages/${msg.id}?forEveryone=false`, { method: 'DELETE' }).catch(() => null);
           },
         },
         {
-          text: 'Delete for everyone',
+          text: t('social.deleteForEveryone'),
           style: 'destructive',
           onPress: async () => {
             setMessages(prev => prev.filter(m => m.id !== msg.id));
             apiFetch(`/messages/${msg.id}?forEveryone=true`, { method: 'DELETE' }).catch(() => null);
           },
         },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('social.cancel'), style: 'cancel' },
       ],
     );
   }, []);
@@ -502,7 +505,7 @@ export default function MessagesScreen() {
         const suffix = (err.retryAfter != null && err.retryAfter >= 5)
           ? ` Try again in ${err.retryAfter}s.`
           : '';
-        showToastGlobal(`Slow down a little ✦${suffix}`, 'warning');
+        showToastGlobal(`${t('social.slowDown')}${suffix}`, 'warning');
       }
     } finally {
       setSending(false);
@@ -513,7 +516,7 @@ export default function MessagesScreen() {
   const listData: ListItem[] = [];
   let lastDate = '';
   for (const msg of messages) {
-    const d = fmtDate(msg.createdAt);
+    const d = fmtDate(msg.createdAt, t);
     if (d !== lastDate) {
       listData.push({ type: 'date', date: d, key: `date-${d}-${msg.id}` });
       lastDate = d;
@@ -565,7 +568,7 @@ export default function MessagesScreen() {
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.partnerName} numberOfLines={1}>{name ?? 'Guide'}</Text>
+              <Text style={styles.partnerName} numberOfLines={1}>{name ?? t('social.guide')}</Text>
               {partnerSubtitle && (
                 <Text style={styles.partnerSubtitle} numberOfLines={1}>{partnerSubtitle}</Text>
               )}
@@ -587,7 +590,7 @@ export default function MessagesScreen() {
 
       {/* ── Messages ─────────────────────────────────────────── */}
       {loading ? (
-        <SkyLoadingOverlay message="Opening your conversation…" />
+        <SkyLoadingOverlay message={t('social.openingConversation')} />
       ) : error ? (
         <View style={styles.centerWrap}>
           <Text style={{ color: MUTED, fontFamily: 'Satoshi-Regular' }}>{error}</Text>
@@ -628,11 +631,11 @@ export default function MessagesScreen() {
                 >
                   <Text style={{ fontSize: 32 }}>✦</Text>
                 </LinearGradient>
-                <Text style={styles.emptyTitle}>Begin your story</Text>
+                <Text style={styles.emptyTitle}>{t('social.beginStory')}</Text>
                 <Text style={styles.emptyBody}>
                   {isGuide === 'true'
-                    ? "Your guide awaits. They'll help you navigate the sky."
-                    : 'Send a whisper, or tap ✦ to throw something fun.'}
+                    ? t('social.guideAwaits')
+                    : t('social.funWhisper')}
                 </Text>
               </View>
             }
@@ -703,7 +706,7 @@ export default function MessagesScreen() {
             <View style={styles.pickerSheet}>
               {/* Handle */}
               <View style={styles.pickerHandle} />
-              <Text style={styles.pickerTitle}>✦  expressions</Text>
+              <Text style={styles.pickerTitle}>{t('social.expressions')}</Text>
               <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
                 <View style={styles.pickerGrid}>
                   {STICKERS.map(def => (
@@ -714,7 +717,7 @@ export default function MessagesScreen() {
                       activeOpacity={0.70}
                     >
                       <Text style={styles.pickerEmoji}>{def.emoji}</Text>
-                      <Text style={[styles.pickerLabel, { color: `${def.color}CC` }]}>{def.label}</Text>
+                      <Text style={[styles.pickerLabel, { color: `${def.color}CC` }]}>{t(`social.sticker_${def.id}_label`)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -750,7 +753,7 @@ export default function MessagesScreen() {
                     }, 600);
                   }
                 }}
-                placeholder="Send a whisper…"
+                placeholder={t('social.sendWhisper')}
                 placeholderTextColor="rgba(200,184,232,0.30)"
                 multiline
                 maxLength={2000}

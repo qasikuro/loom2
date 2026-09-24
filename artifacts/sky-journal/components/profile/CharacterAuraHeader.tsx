@@ -1,5 +1,6 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef } from 'react';
 import {
   Animated, Easing, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
@@ -83,6 +84,7 @@ export function MoodOrbPicker({ currentMood, onSelect }: {
   currentMood: string;
   onSelect: (m: string) => void;
 }) {
+  const { t } = useTranslation();
   const scales = useRef(MOOD_ORBS.map(() => new Animated.Value(1))).current;
   function select(key: string, idx: number) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -94,7 +96,7 @@ export function MoodOrbPicker({ currentMood, onSelect }: {
   }
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 12, marginBottom: 2, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(200,184,232,0.09)' }}>
-      <Text style={{ fontSize: 9, color: 'rgba(200,184,232,0.40)', fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, marginRight: 3 }}>VIBE</Text>
+      <Text style={{ fontSize: 9, color: 'rgba(200,184,232,0.40)', fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, marginRight: 3 }}>{t('profile.mood')}</Text>
       {MOOD_ORBS.map(({ key, accent }, idx) => {
         const sel = currentMood === key;
         return (

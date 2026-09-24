@@ -15,6 +15,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 interface BlockedUser {
   blockedId:  string;
@@ -24,6 +25,7 @@ interface BlockedUser {
 }
 
 export default function BlockedUsersScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
 
@@ -54,12 +56,12 @@ export default function BlockedUsersScreen() {
 
   const handleUnblock = useCallback((user: BlockedUser) => {
     Alert.alert(
-      'Unblock user',
-      `Unblock ${user.name ?? user.username ?? 'this user'}? They'll be able to see your profile and content again.`,
+      t('social.unblockUser'),
+      t('social.unblockConfirmBody', { name: user.name ?? user.username ?? t('social.thisUser') }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('social.cancel'), style: 'cancel' },
         {
-          text: 'Unblock',
+          text: t('social.unblock'),
           style: 'destructive',
           onPress: async () => {
             setPending(prev => new Set(prev).add(user.blockedId));
@@ -69,7 +71,7 @@ export default function BlockedUsersScreen() {
         },
       ],
     );
-  }, [unblockUser]);
+  }, [t, unblockUser]);
 
   return (
     <View style={s.root}>
@@ -90,7 +92,7 @@ export default function BlockedUsersScreen() {
         >
           <Icon name="chevron-left" size={20} color="rgba(200,184,232,0.85)" />
         </TouchableOpacity>
-        <Text style={s.title}>Blocked Users</Text>
+        <Text style={s.title}>{t('social.blockedUsers')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -107,10 +109,10 @@ export default function BlockedUsersScreen() {
           <View style={s.emptyIconWrap}>
             <Icon name="wifi-off" size={26} color="rgba(200,184,232,0.4)" />
           </View>
-          <Text style={s.emptyHead}>Couldn't load blocked users</Text>
-          <Text style={s.emptySub}>Check your connection and try again.</Text>
+          <Text style={s.emptyHead}>{t('social.loadBlockedError')}</Text>
+          <Text style={s.emptySub}>{t('social.connectionRetry')}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={fetchBlocked} activeOpacity={0.75}>
-            <Text style={s.retryText}>Retry</Text>
+            <Text style={s.retryText}>{t('social.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : visibleUsers.length === 0 ? (
@@ -118,8 +120,8 @@ export default function BlockedUsersScreen() {
           <View style={s.emptyIconWrap}>
             <Icon name="user-check" size={26} color="rgba(200,184,232,0.4)" />
           </View>
-          <Text style={s.emptyHead}>No blocked users</Text>
-          <Text style={s.emptySub}>Anyone you block will appear here so you can manage them.</Text>
+          <Text style={s.emptyHead}>{t('social.noBlockedUsers')}</Text>
+          <Text style={s.emptySub}>{t('social.blockedEmpty')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -127,11 +129,11 @@ export default function BlockedUsersScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={s.listNote}>
-            Blocked users can't see your profile or content, and won't appear in your feed.
+            {t('social.blockedNotice')}
           </Text>
           {visibleUsers.map(user => {
             const isPending = pending.has(user.blockedId);
-            const displayName = user.name ?? user.username ?? 'Unknown';
+            const displayName = user.name ?? user.username ?? t('social.unknown');
             const resolvedAvatar = resolveUri(user.avatarUri);
             const avatarSource = resolvedAvatar
               ? { uri: resolvedAvatar }
@@ -162,7 +164,7 @@ export default function BlockedUsersScreen() {
                   {isPending ? (
                     <SkyLoadingMark size={20} color="rgba(200,184,232,0.7)" />
                   ) : (
-                    <Text style={s.unblockText}>Unblock</Text>
+                    <Text style={s.unblockText}>{t('social.unblock')}</Text>
                   )}
                 </TouchableOpacity>
               </View>

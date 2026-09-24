@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSound } from '@/context/SoundContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 const DONE_KEY = 'first_publish_done';
 
@@ -57,6 +58,7 @@ interface FirstPublishOverlayProps {
 }
 
 export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPublishOverlayProps) {
+  const { t } = useTranslation();
   const { playSound } = useSound();
   const { width: W, height: H } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -149,8 +151,8 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
               <Animated.Text style={[s.emoji, { transform: [{ scale: emojiAnim }] }]}>
                 ✦
               </Animated.Text>
-              <Text style={s.title}>Your first story</Text>
-              <Text style={s.sub}>What's the feeling behind this moment?</Text>
+              <Text style={s.title}>{t('studioReader.yourFirstStory')}</Text>
+              <Text style={s.sub}>{t('studioReader.firstStoryQuestion')}</Text>
 
               <View style={s.moodGrid}>
                 {MOODS.map(m => {
@@ -167,7 +169,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
                     >
                       <Text style={s.moodEmoji}>{m.emoji}</Text>
                       <Text style={[s.moodLabel, { color: active ? m.color : 'rgba(200,185,255,0.50)' }]}>
-                        {m.id}
+                        {t(`studioReader.mood${m.id}`)}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -180,7 +182,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
                 disabled={!mood}
                 activeOpacity={0.85}
               >
-                <Text style={s.nextBtnTxt}>Next →</Text>
+                <Text style={s.nextBtnTxt}>{t('studioReader.next')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -191,12 +193,12 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
               <Animated.Text style={[s.emoji, { transform: [{ scale: emojiAnim }] }]}>
                 {selectedMood.emoji}
               </Animated.Text>
-              <Text style={s.title}>Write one line</Text>
-              <Text style={s.sub}>A wish, a memory, or a feeling. Just one sentence.</Text>
+              <Text style={s.title}>{t('studioReader.writeOneLine')}</Text>
+              <Text style={s.sub}>{t('studioReader.oneLineDescription')}</Text>
 
               <TextInput
                 style={s.lineInput}
-                placeholder="The sky was full of quiet wonder…"
+                placeholder={t('studioReader.openingLinePlaceholder')}
                 placeholderTextColor="rgba(200,185,255,0.25)"
                 value={line}
                 onChangeText={t => setLine(t.slice(0, 120))}
@@ -214,7 +216,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
                 disabled={!line.trim()}
                 activeOpacity={0.85}
               >
-                <Text style={s.nextBtnTxt}>Next →</Text>
+                <Text style={s.nextBtnTxt}>{t('studioReader.next')}</Text>
               </TouchableOpacity>
             </>
           )}
@@ -225,12 +227,12 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
               <Animated.Text style={[s.emoji, { transform: [{ scale: emojiAnim }] }]}>
                 {selectedMood.emoji}
               </Animated.Text>
-              <Text style={s.title}>Ready to share?</Text>
-              <Text style={s.sub}>Your story will appear in Discover for others to witness.</Text>
+              <Text style={s.title}>{t('studioReader.firstStoryReady')}</Text>
+              <Text style={s.sub}>{t('studioReader.firstStoryDiscover')}</Text>
 
               {line.trim() ? (
                 <View style={[s.preview, { borderColor: `${accentColor}30`, backgroundColor: `${accentColor}0A` }]}>
-                  <Text style={[s.previewMood, { color: accentColor }]}>{selectedMood.emoji} {mood}</Text>
+                  <Text style={[s.previewMood, { color: accentColor }]}>{selectedMood.emoji} {t(`studioReader.mood${mood}`)}</Text>
                   <Text style={s.previewLine} numberOfLines={4}>{line.trim()}</Text>
                 </View>
               ) : null}
@@ -240,7 +242,7 @@ export function FirstPublishOverlay({ visible, initialMood, onPublish }: FirstPu
                 onPress={handleConfirm}
                 activeOpacity={0.88}
               >
-                <Text style={s.publishBtnTxt}>Publish to the sky ✦</Text>
+                <Text style={s.publishBtnTxt}>{t('studioReader.publishToSky')}</Text>
               </TouchableOpacity>
             </>
           )}

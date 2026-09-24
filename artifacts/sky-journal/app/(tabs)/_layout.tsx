@@ -149,6 +149,7 @@ function CreateIcon() {
 function OfflinePill() {
   const { apiOnline, isLoading } = useApp();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   if (isLoading || apiOnline) return null;
 
@@ -158,7 +159,7 @@ function OfflinePill() {
     <View style={[offlinePill.wrap, { top: topOffset }]} pointerEvents="none">
       <View style={offlinePill.pill}>
         <View style={offlinePill.dot} />
-        <Text style={offlinePill.label}>Offline</Text>
+        <Text style={offlinePill.label}>{t('shell.tabs.offline')}</Text>
       </View>
     </View>
   );
@@ -242,7 +243,7 @@ function ClassicTabLayout() {
           },
         }}
         options={{
-          title: 'Reels',
+          title: t('shell.tabs.reels'),
           tabBarIcon: ({ color, focused }) => (
             <TabIcon name="sky-reels" color={color} focused={focused} primaryColor={colors.primary} />
           ),
@@ -256,7 +257,8 @@ function ClassicTabLayout() {
           },
         }}
         options={{
-          title: '',
+          title: t('shell.tabs.create'),
+          tabBarAccessibilityLabel: t('shell.tabs.create'),
           tabBarLabel: () => null,
           tabBarIcon: () => <CreateIcon />,
           tabBarItemStyle: { flex: 1 },

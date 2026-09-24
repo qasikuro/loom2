@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Animated, Easing, LayoutChangeEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface ConstellationState {
@@ -96,6 +97,7 @@ interface StarNodeProps {
 }
 
 function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDelay, animKey = 0 }: StarNodeProps) {
+  const { t } = useTranslation();
   const cx = (star.xPct / 100) * cW;
   const cy = (star.yPct / 100) * cH;
   const progress = Math.min(1, count / threshold);
@@ -153,7 +155,7 @@ function StarNode({ star, unlocked, count, threshold, onPress, cW, cH, enterDela
       <Text style={[
         styles.starLabel,
         { color: unlocked ? star.color : 'rgba(200,184,232,0.30)' },
-      ]}>{star.label}</Text>
+      ]}>{t(`feature.season.${star.key}`)}</Text>
     </Animated.View>
   );
 }

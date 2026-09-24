@@ -3,6 +3,7 @@ import type { ConstellationState } from '@/components/ConstellationMap';
 import React from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   visible: boolean;
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export function TitlePickerModal({ visible, constellation, availableTitles, saving, onSelect, onClose }: Props) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   return (
@@ -31,7 +33,7 @@ export function TitlePickerModal({ visible, constellation, availableTitles, savi
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.content}
           >
-          <Text style={styles.heading}>Choose Title</Text>
+          <Text style={styles.heading}>{t('components.titlePicker.heading')}</Text>
           {availableTitles.map(title => {
             const active = constellation?.activeTitle === title;
             return (
