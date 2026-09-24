@@ -29,3 +29,4 @@
 - [Static server path safety](static-server-path-safety.md) — serve only pre-indexed files under the static root; request-derived filesystem reads trigger traversal risk and scanner findings
 - [Concurrent validation pressure](concurrent-validation-pressure.md) — simultaneous whole-workspace checks can starve Expo and targeted checks on this small workspace
 - [OpenAPI generator version](openapi-generator-version.md) — installed Orval may be newer than the Zod 3-compatible generator used for checked-in output
+- [Runtime join type mismatches](runtime-join-types.md) — typed joins can fail against actual DB column types; a failed Friends fetch may look like an empty list

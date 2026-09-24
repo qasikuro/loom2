@@ -117,7 +117,7 @@ router.get("/friends", requireAuth, async (req, res) => {
       })
       .from(characterTable)
       .leftJoin(outfitsTable, and(
-        eq(outfitsTable.id, characterTable.activeOutfitId),
+        sql`${outfitsTable.id}::text = ${characterTable.activeOutfitId}`,
         eq(outfitsTable.userId, characterTable.userId),
         eq(outfitsTable.isPublic, true),
       ))
