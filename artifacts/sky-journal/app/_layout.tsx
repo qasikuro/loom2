@@ -6,7 +6,7 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import Constants from 'expo-constants';
 import * as Font from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
+import { Redirect, Stack, router, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
@@ -28,7 +28,7 @@ import { AppProvider, setAuthTokenGetter, useApp, apiFetch, getAuthToken } from 
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
-import { OnboardingOverlay, hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
+import { hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
 
 // expo-notifications throws at import time in Expo Go SDK 53+ because Android push
 // notifications were removed. Lazy-require it so the error can't crash _layout.tsx
@@ -174,7 +174,6 @@ function AuthTokenBridge() {
 function AppOverlays() {
   const { isSignedIn, isLoaded, userId } = useAuth();
   const { isLoading: appLoading, character, journalEntries, stories, outfits } = useApp();
-  const [showOnboarding, setShowOnboarding] = useState(false);
   // Keyed by userId so a new account signing into the same device always runs the check.
   const checkedRef = useRef<string | null>(null);
 
@@ -190,8 +189,6 @@ function AppOverlays() {
     stories.length > 0 ||
     outfits.length > 0
   );
-  const onboardingVisible = showOnboarding && !hasHydratedProfile;
-
   useEffect(() => {
     if (!isLoaded || !isSignedIn || !userId || checkedRef.current === userId) return;
     checkedRef.current = userId;
@@ -242,27 +239,14 @@ function AppOverlays() {
         return;
       }
 
-      setShowOnboarding(true);
+      // Reaching this point means the server successfully confirmed a fresh
+      // account. Local placeholder data (for example the default display name)
+      // must not suppress onboarding.
+      router.replace('/onboarding' as never);
     })();
-  }, [isLoaded, isSignedIn, userId]);
+  }, [isLoaded, isSignedIn, userId, hasHydratedProfile]);
 
-  function handleComplete() {
-    setShowOnboarding(false);
-    if (userId) markOnboardingDone(userId);
-  }
-
-  function handleDismiss() {
-    // User skipped — just hide for this session; draft preserved for next open
-    setShowOnboarding(false);
-  }
-
-  return (
-    <OnboardingOverlay
-      visible={onboardingVisible}
-      onComplete={handleComplete}
-      onDismiss={handleDismiss}
-    />
-  );
+  return null;
 }
 
 /**
@@ -408,6 +392,7 @@ export default function RootLayout() {
                           <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="(auth)" />
                             <Stack.Screen name="(tabs)" />
+                            <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
                             <Stack.Screen
                               name="story/[id]"
                               options={{ presentation: 'card', animation: 'slide_from_bottom' }}

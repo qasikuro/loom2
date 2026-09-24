@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ import { ProfileStyleSection } from '@/components/profile/ProfileStyleSection';
 import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
 import { useGalleryState } from '@/hooks/useGalleryState';
+import { loadOnboardingProgress, saveOnboardingProgress, type OnboardingProgress, type OnboardingStep } from '@/utils/onboardingProgress';
 
 const STAR_TITLES: Record<number, string> = {
   1: 'Star Wanderer', 2: 'Memory Keeper',   3: 'Rising Star',
@@ -53,7 +55,7 @@ export default function CharacterScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { width: screenW } = useWindowDimensions();
-  const { signOut } = useAuth();
+  const { signOut, userId } = useAuth();
   const { user }    = useUser();
 
   const {
@@ -91,6 +93,14 @@ export default function CharacterScreen() {
   const [showTitlePicker, setShowTitlePicker] = useState(false);
   const [savingTitle,     setSavingTitle]     = useState(false);
   const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
+  const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
+
+  useFocusEffect(useCallback(() => {
+    if (!userId) return;
+    loadOnboardingProgress(userId, stories.length, outfits.length)
+      .then(setOnboardingProgress)
+      .catch(() => null);
+  }, [userId, stories.length, outfits.length]));
 
   const saveTitle = useCallback(async (title: string) => {
     setSavingTitle(true);
@@ -132,6 +142,13 @@ export default function CharacterScreen() {
   function toggleOnlineStatus() {
     Haptics.selectionAsync();
     setCharacter({ ...character, showOnlineStatus: !(character.showOnlineStatus ?? true) });
+  }
+  async function continueOnboarding() {
+    if (!onboardingProgress || !userId) return;
+    const firstIncomplete = ([1, 2, 3] as OnboardingStep[]).find(step => !onboardingProgress.completed.includes(step)) ?? 4;
+    const next = { ...onboardingProgress, currentStep: firstIncomplete as OnboardingStep };
+    await saveOnboardingProgress(userId, next);
+    router.push('/onboarding' as never);
   }
 
   const [selectedOutfitId,      setSelectedOutfitId]      = useState<string | null>(null);
@@ -209,6 +226,20 @@ export default function CharacterScreen() {
 
         {/* Section content - completely un-tabbed */}
         <View style={[{ paddingHorizontal: 20, paddingTop: 12 }, screenW >= 760 && { maxWidth: 800, alignSelf: 'center', width: '100%' }]}>
+          {onboardingProgress && onboardingProgress.completed.length < 4 && (
+            <TouchableOpacity
+              style={s.setupCard}
+              onPress={continueOnboarding}
+              activeOpacity={0.82}
+            >
+              <View style={s.setupIcon}><Icon name="check-circle" size={18} color="#CDB7FF" /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.setupTitle}>Finish setting up</Text>
+                <Text style={s.setupSubtitle}>{onboardingProgress.completed.length} of 4 completed</Text>
+              </View>
+              <View style={s.setupButton}><Text style={s.setupButtonText}>Continue</Text></View>
+            </TouchableOpacity>
+          )}
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
           {(!isLoading || character.name !== 'Player') && (
             <>
@@ -279,6 +310,12 @@ const s = StyleSheet.create({
   statMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)', letterSpacing: 1.0 },
   statDivider:  { width: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 10 },
+  setupCard: { minHeight: 76, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(181,140,255,0.24)', backgroundColor: 'rgba(139,92,224,0.10)', padding: 13, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  setupIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(181,140,255,0.14)' },
+  setupTitle: { color: '#F2EAFF', fontFamily: 'Satoshi-Bold', fontSize: 14 },
+  setupSubtitle: { color: 'rgba(210,195,240,0.52)', fontFamily: 'Satoshi-Regular', fontSize: 11, marginTop: 3 },
+  setupButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 11, backgroundColor: '#8C68D8' },
+  setupButtonText: { color: '#fff', fontFamily: 'Satoshi-Bold', fontSize: 11 },
   wornBanner:   { minHeight: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(193,151,255,0.18)', backgroundColor: '#130F24' },
   wornBadge:    { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, marginBottom: 5, backgroundColor: 'rgba(232,120,156,0.13)', borderWidth: 1, borderColor: 'rgba(232,120,156,0.25)' },
   wornBadgeText:{ fontSize: 7, fontFamily: 'Satoshi-Bold', color: '#E88EAE', letterSpacing: 1.0 },
