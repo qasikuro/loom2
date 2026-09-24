@@ -303,8 +303,8 @@ export default function CreateJournalEntryScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={['#EDE0F8', '#F8F4EE']}
-        style={[styles.headerGrad, { height: topPad + 70 }]}
+        colors={[colors.background, colors.background]}
+        style={[styles.headerGrad, { height: topPad + 76 }]}
       />
 
       {/* Header */}
@@ -323,22 +323,13 @@ export default function CreateJournalEntryScreen() {
               {entryType === 'diary' ? tr('journal.journalTitle') : entryType === 'friend' ? tr('journal.friendTitle') : tr('journal.momentTitle')}
             </Text>
           </View>
-          <View style={[styles.privatePill, { backgroundColor: `${colors.primary}12` }]}>
+          <View style={[styles.privatePill, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}24` }]}>
             <Icon name="lock" size={10} color={colors.primary} />
             <Text style={[styles.privatePillText, { color: colors.primary }]}>{tr('journal.private')}</Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: (saving || uploadingImage) ? colors.muted : cfg.accent }]}
-          onPress={handleSave}
-          disabled={saving || uploadingImage}
-        >
-          {(saving || uploadingImage) && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
-          <Text style={[styles.saveBtnText, { color: (saving || uploadingImage) ? colors.mutedForeground : '#fff' }]}>
-            {uploadingImage ? 'Uploading…' : saving ? 'Saving…' : tr('journal.save')}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerBalance} />
       </View>
 
       <KeyboardAwareScrollView
@@ -369,7 +360,7 @@ export default function CreateJournalEntryScreen() {
         )}
 
         {/* ── Date picker row ─────────────────────────────────── */}
-        <View style={styles.dateRow}>
+        <View style={[styles.dateRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
           {/* Prev day */}
           <TouchableOpacity
             style={[styles.dateArrow, { opacity: 1 }]}
@@ -460,12 +451,14 @@ export default function CreateJournalEntryScreen() {
 
         {/* Prompt */}
         <TouchableOpacity
-          style={[styles.promptCard, { backgroundColor: `${cfg.accent}08`, borderColor: `${cfg.accent}18` }]}
+          style={[styles.promptCard, { backgroundColor: `${colors.primary}0D`, borderColor: `${colors.primary}20` }]}
           onPress={() => inputRef.current?.focus()}
         >
-          <Icon name="feather" size={13} color={`${cfg.accent}80`} />
+          <View style={[styles.promptIcon, { backgroundColor: `${colors.primary}18` }]}>
+            <Icon name="feather" size={15} color={colors.primary} />
+          </View>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.promptText, { color: colors.mutedForeground }]}>
+            <Text style={[styles.promptText, { color: colors.foreground }]}>
               {entryType === 'friend'  ? tr('journal.friendPrompt') :
                entryType === 'moment'  ? tr('journal.momentPrompt') :
                activePrompt}
@@ -478,51 +471,44 @@ export default function CreateJournalEntryScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* Text area */}
-        <TextInput
-          ref={inputRef}
-          style={[styles.textArea, {
-            color: colors.foreground,
-            borderColor: colors.border,
-            backgroundColor: colors.card,
-            fontSize,
-            lineHeight: Math.round(fontSize * 1.625),
-          }]}
-          placeholder={entryType === 'diary' ? tr('journal.placeholder') : entryType === 'friend' ? tr('journal.friendPlaceholder') : tr('journal.momentPlaceholder')}
-          placeholderTextColor={`${colors.mutedForeground}70`}
-          value={text}
-          onChangeText={t => { setText(t); if (error) setError(null); }}
-          multiline
-          textAlignVertical="top"
-          autoFocus={entryType !== 'friend'}
-        />
-
-        {/* Font size control */}
-        <View style={[styles.sizeBar, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Pressable
-            style={({ pressed }) => [styles.sizeSideBtn, pressed && { backgroundColor: `${cfg.accent}14` }]}
-            onPressIn={holdDecrease}
-            onPressOut={stopSize}
-            hitSlop={{ top: 8, bottom: 8, left: 12, right: 6 }}
-          >
-            <Text style={[styles.sizeASmall, { color: fontSize <= MIN_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground }]}>A</Text>
-            <Icon name="minus" size={10} color={fontSize <= MIN_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground} />
-          </Pressable>
-          <Text style={[styles.sizeCurrent, { color: colors.foreground }]}>{fontSize}</Text>
-          <Pressable
-            style={({ pressed }) => [styles.sizeSideBtn, pressed && { backgroundColor: `${cfg.accent}14` }]}
-            onPressIn={holdIncrease}
-            onPressOut={stopSize}
-            hitSlop={{ top: 8, bottom: 8, left: 6, right: 12 }}
-          >
-            <Icon name="plus" size={10} color={fontSize >= MAX_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground} />
-            <Text style={[styles.sizeALarge, { color: fontSize >= MAX_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground }]}>A</Text>
-          </Pressable>
+        {/* Writing area */}
+        <View style={[styles.editorCard, { backgroundColor: colors.card, borderColor: text.length > 0 ? `${colors.primary}90` : colors.border }]}>
+          <TextInput
+            ref={inputRef}
+            style={[styles.textArea, {
+              color: colors.foreground,
+              fontSize,
+              lineHeight: Math.round(fontSize * 1.625),
+            }]}
+            placeholder={entryType === 'diary' ? tr('journal.placeholder') : entryType === 'friend' ? tr('journal.friendPlaceholder') : tr('journal.momentPlaceholder')}
+            placeholderTextColor={`${colors.mutedForeground}70`}
+            value={text}
+            onChangeText={t => { setText(t); if (error) setError(null); }}
+            multiline
+            textAlignVertical="top"
+            autoFocus={entryType !== 'friend'}
+          />
+          <View style={styles.editorTools}>
+            <View style={[styles.sizeBar, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <Pressable
+                style={({ pressed }) => [styles.sizeSideBtn, pressed && { backgroundColor: `${cfg.accent}14` }]}
+                onPressIn={holdDecrease}
+                onPressOut={stopSize}
+              >
+                <Text style={[styles.sizeASmall, { color: fontSize <= MIN_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground }]}>A−</Text>
+              </Pressable>
+              <Text style={[styles.sizeCurrent, { color: colors.foreground }]}>{fontSize}</Text>
+              <Pressable
+                style={({ pressed }) => [styles.sizeSideBtn, pressed && { backgroundColor: `${cfg.accent}14` }]}
+                onPressIn={holdIncrease}
+                onPressOut={stopSize}
+              >
+                <Text style={[styles.sizeALarge, { color: fontSize >= MAX_FONT ? `${colors.mutedForeground}40` : colors.mutedForeground }]}>+A</Text>
+              </Pressable>
+            </View>
+            <Text style={[styles.charCount, { color: `${colors.mutedForeground}80` }]}>{text.length} chars</Text>
+          </View>
         </View>
-
-        <Text style={[styles.charCount, { color: `${colors.mutedForeground}60` }]}>
-          {text.length} chars
-        </Text>
 
         {/* Optional image */}
         {imageUri ? (
@@ -537,13 +523,16 @@ export default function CreateJournalEntryScreen() {
           </View>
         ) : (
           <TouchableOpacity
-            style={[styles.addImageBtn, { borderColor: colors.border, backgroundColor: colors.muted }]}
+            style={[styles.addImageBtn, { borderColor: `${colors.primary}38`, backgroundColor: `${colors.primary}08` }]}
             onPress={pickImage}
           >
-            <Icon name="image" size={16} color={colors.mutedForeground} />
+            <View style={[styles.addImageIcon, { backgroundColor: `${colors.primary}14` }]}>
+              <Icon name="image" size={21} color={colors.primary} />
+            </View>
             <Text style={[styles.addImageText, { color: colors.mutedForeground }]}>
               Add a photo (optional)
             </Text>
+            <Text style={[styles.addImageHint, { color: `${colors.mutedForeground}9A` }]}>A moment, screenshot, or anything that feels right</Text>
           </TouchableOpacity>
         )}
 
@@ -574,13 +563,18 @@ export default function CreateJournalEntryScreen() {
           </View>
         )}
 
-        {/* Private note */}
-        <View style={[styles.privateNote, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}15` }]}>
-          <Icon name="lock" size={12} color={`${colors.primary}70`} />
-          <Text style={[styles.privateNoteText, { color: colors.mutedForeground }]}>
-            Journal entries are always private — only visible to you.
+        <TouchableOpacity
+          style={[styles.saveBtn, { opacity: (saving || uploadingImage) ? 0.6 : 1 }]}
+          onPress={handleSave}
+          disabled={saving || uploadingImage}
+          activeOpacity={0.86}
+        >
+          <LinearGradient colors={[colors.primary, '#B66EF4']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={StyleSheet.absoluteFill} />
+          {(saving || uploadingImage) ? <SkyLoadingMark size={17} color="#fff" /> : <Icon name="lock" size={15} color="#fff" />}
+          <Text style={styles.saveBtnText}>
+            {uploadingImage ? 'Uploading…' : saving ? 'Saving…' : 'Save Journal'}
           </Text>
-        </View>
+        </TouchableOpacity>
       </KeyboardAwareScrollView>
       <CompletionMoment visible={showCompletion} variant="journal" onFinish={() => { markSaved(); safeBack(); }} />
     </View>
@@ -593,18 +587,19 @@ const styles = StyleSheet.create({
   header:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 14 },
   iconBtn:         { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   headerCenter:    { alignItems: 'center', gap: 4, minWidth: 0, flexShrink: 1 },
+  headerBalance:   { width: 38, height: 38 },
   headerTitleRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
   headerTitle:     { fontSize: 17, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
-  privatePill:     { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
+  privatePill:     { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
   privatePillText: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
-  saveBtn:         { paddingHorizontal: 22, height: 44, borderRadius: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  saveBtnText:     { fontSize: 15, fontFamily: 'Satoshi-Bold' },
-  scroll:          { paddingHorizontal: 18, paddingTop: 4, gap: 0 },
+  saveBtn:         { height: 58, borderRadius: 18, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, marginTop: 4 },
+  saveBtnText:     { fontSize: 16, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  scroll:          { paddingHorizontal: 18, paddingTop: 8, gap: 0 },
 
-  dateRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 10, gap: 4 },
-  dateArrow:       { padding: 6 },
+  dateRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 4, borderWidth: 1, borderRadius: 16, paddingVertical: 5 },
+  dateArrow:       { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   dateLabelBtn:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  dateLabel:       { fontSize: 13, fontFamily: 'Satoshi-Medium', fontStyle: 'italic' },
+  dateLabel:       { fontSize: 13, fontFamily: 'Satoshi-Medium' },
 
   quickPicker:     { borderWidth: 1, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 14, marginBottom: 14 },
   quickPickerLabel:{ fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, marginBottom: 10 },
@@ -615,24 +610,29 @@ const styles = StyleSheet.create({
 
   friendRow:       { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12 },
   friendInput:     { flex: 1, fontSize: 15, fontFamily: 'Satoshi-Regular' },
-  promptCard:      { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12, marginBottom: 12 },
-  promptText:      { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 19 },
-  promptMoodLabel: { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 4, fontStyle: 'italic' },
-  textArea:        { borderWidth: 1, borderRadius: 14, padding: 16, fontFamily: 'Satoshi-Regular', minHeight: 180, marginBottom: 0 },
-  sizeBar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 22, paddingVertical: 2, paddingHorizontal: 4, marginTop: 10, marginBottom: 6, alignSelf: 'center' },
-  sizeSideBtn:     { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 18 },
+  promptCard:      { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 16, padding: 14, marginBottom: 12 },
+  promptIcon:      { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  promptText:      { fontSize: 14, fontFamily: 'Satoshi-Medium', lineHeight: 20 },
+  promptMoodLabel: { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 3 },
+  editorCard:      { borderWidth: 1.5, borderRadius: 18, overflow: 'hidden', marginBottom: 14 },
+  textArea:        { paddingHorizontal: 17, paddingTop: 17, paddingBottom: 8, fontFamily: 'Satoshi-Regular', minHeight: 180 },
+  editorTools:     { minHeight: 48, paddingHorizontal: 12, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  sizeBar:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderRadius: 20, paddingVertical: 2, paddingHorizontal: 3 },
+  sizeSideBtn:     { alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 },
   sizeASmall:      { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  sizeALarge:      { fontSize: 18, fontFamily: 'Satoshi-Bold' },
+  sizeALarge:      { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   sizeCurrent:     { fontSize: 13, fontFamily: 'Satoshi-Bold', minWidth: 28, textAlign: 'center' },
-  charCount:       { fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'right', marginBottom: 14 },
+  charCount:       { fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'right' },
   imagePreviewWrap:{ width: '100%', borderRadius: 14, overflow: 'hidden', marginBottom: 14, position: 'relative' },
   imagePreview:    { width: '100%', height: 200 },
   removeImg:       { position: 'absolute', top: 10, right: 10, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  addImageBtn:     { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, padding: 14, marginBottom: 18 },
-  addImageText:    { fontSize: 14, fontFamily: 'Satoshi-Regular' },
-  sectionLabel:    { fontSize: 11, fontFamily: 'Satoshi-Medium', letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 10 },
+  addImageBtn:     { alignItems: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 17, marginBottom: 20 },
+  addImageIcon:    { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  addImageText:    { fontSize: 14, fontFamily: 'Satoshi-Medium' },
+  addImageHint:    { fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 4, textAlign: 'center' },
+  sectionLabel:    { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 10 },
   moodGrid:        { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 18 },
-  moodChip:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+  moodChip:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 20, minWidth: 96, flexGrow: 1 },
   moodChipText:    { fontSize: 12, fontFamily: 'Satoshi-Medium' },
   privateNote:     { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 12 },
   privateNoteText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Regular', lineHeight: 18, fontStyle: 'italic' },
