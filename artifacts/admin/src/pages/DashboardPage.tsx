@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -80,19 +80,26 @@ export default function DashboardPage() {
     return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   }, []);
 
-  useEffect(() => {
-    api.getStats().then((value) => {
+  const refreshStats = useCallback(async () => {
+    try {
+      const value = await api.getStats();
       setStats(value);
       setLastUpdated(new Date());
-    }).catch((e) => setError(e.message));
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    }
   }, []);
+
+  useEffect(() => {
+    void refreshStats();
+    const interval = window.setInterval(() => void refreshStats(), 30_000);
+    return () => window.clearInterval(interval);
+  }, [refreshStats]);
 
   const retry = () => {
     setError("");
-    api.getStats().then((value) => {
-      setStats(value);
-      setLastUpdated(new Date());
-    }).catch((e) => setError(e.message));
+    void refreshStats();
   };
 
   return (
@@ -117,7 +124,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {error ? (
+        {error && !stats ? (
           <div className="admin-panel flex items-center justify-between gap-4 rounded-md p-4 text-sm text-red-200">
             <div className="flex items-center gap-3"><AlertCircle size={18} className="text-red-400" /><span>Could not load live statistics. {error}</span></div>
             <button onClick={retry} className="inline-flex items-center gap-2 rounded border border-red-400/30 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-400/10"><RefreshCw size={13} /> Retry</button>
@@ -128,6 +135,12 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
+            {error && (
+              <div role="alert" className="admin-panel mb-3 flex items-center justify-between gap-4 rounded-md p-3 text-xs text-amber-200">
+                <div className="flex items-center gap-3"><AlertCircle size={15} className="text-amber-300" /><span>Could not refresh live statistics. Showing the last successful update. {error}</span></div>
+                <button onClick={retry} className="inline-flex shrink-0 items-center gap-2 rounded border border-amber-300/30 px-3 py-1.5 text-[11px] font-semibold text-amber-200 hover:bg-amber-300/10"><RefreshCw size={12} /> Retry</button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
               {metricCards(stats).map((metric) => {
                 const Icon = metric.icon;

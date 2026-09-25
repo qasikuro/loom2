@@ -17,7 +17,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { and, count, desc, eq, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 import { clerkClient } from "@clerk/express";
-import { connectedClientCount, emitSSEEvent } from "../lib/sseEmitter";
+import { emitSSEEvent } from "../lib/sseEmitter";
 import { sendPushNotification } from "../services/pushService";
 
 const router: IRouter = Router();
@@ -78,6 +78,7 @@ router.get("/admin/me", requireAdmin, async (req: Request, res: Response) => {
 router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => {
   try {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const onlineSince = new Date(Date.now() - 5 * 60 * 1000);
 
     const [
       [{ totalUsers }],
@@ -89,6 +90,7 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
       [{ recentSignups }],
       [{ totalJournals }],
       [{ totalStickers }],
+      [{ onlineUsers }],
     ] = await Promise.all([
       db.select({ totalUsers: count() }).from(characterTable),
       db.select({ bannedUsers: count() }).from(characterTable).where(eq(characterTable.isBanned, true)),
@@ -99,6 +101,13 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
       db.select({ recentSignups: count() }).from(characterTable).where(gte(characterTable.updatedAt, thirtyDaysAgo)),
       db.select({ totalJournals: count() }).from(journalEntriesTable),
       db.select({ totalStickers: count() }).from(stickerReactionsTable),
+      db.select({ onlineUsers: count() })
+        .from(characterTable)
+        .where(and(
+          eq(characterTable.showOnlineStatus, true),
+          eq(characterTable.isBanned, false),
+          gte(characterTable.lastSeenAt, onlineSince),
+        )),
     ]);
 
     return res.json({
@@ -111,7 +120,7 @@ router.get("/admin/stats", requireAdmin, async (req: Request, res: Response) => 
       recentSignups,
       totalJournals,
       totalStickers,
-      onlineUsers: connectedClientCount(),
+      onlineUsers,
     });
   } catch (err) {
     req.log.error({ err }, "Admin stats failed");
