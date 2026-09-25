@@ -42,9 +42,9 @@ function CorruptionBanner({ onRefresh }: { onRefresh: () => void }) {
   return (
     <View style={offlineS.row}>
       <View style={[offlineS.dot, { backgroundColor: '#9B78E8' }]} />
-      <Text style={offlineS.msg}>{t('components.profile.corruptionMessage')}</Text>
+      <Text style={offlineS.msg}>{t('components.profileSection.corruptionMessage')}</Text>
       <TouchableOpacity style={offlineS.btn} onPress={() => { onRefresh(); setDismissed(true); }} activeOpacity={0.75}>
-        <Text style={offlineS.btnText}>{t('components.profile.refresh')}</Text>
+        <Text style={offlineS.btnText}>{t('components.profileSection.refresh')}</Text>
       </TouchableOpacity>
       <TouchableOpacity onPress={() => setDismissed(true)} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }} activeOpacity={0.75}>
         <Icon name="x" size={13} color="rgba(200,184,232,0.5)" />
@@ -197,9 +197,9 @@ export default function CharacterScreen() {
       {(!apiOnline || storiesLoadError || outfitsLoadError) && !isLoading && (
         <View style={offlineS.row}>
           <View style={offlineS.dot} />
-          <Text style={offlineS.msg}>{(storiesLoadError || outfitsLoadError) && apiOnline ? t('components.profile.loadSomeError') : t('components.profile.offlineSaved')}</Text>
+          <Text style={offlineS.msg}>{(storiesLoadError || outfitsLoadError) && apiOnline ? t('components.profileSection.loadSomeError') : t('components.profileSection.offlineSaved')}</Text>
           <TouchableOpacity style={offlineS.btn} onPress={reloadData} activeOpacity={0.75}>
-            <Text style={offlineS.btnText}>{t('components.profile.retry')}</Text>
+            <Text style={offlineS.btnText}>{t('components.profileSection.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -251,11 +251,11 @@ export default function CharacterScreen() {
               activeOpacity={0.82}
             >
               <View style={s.setupIcon}><Icon name="check-circle" size={18} color="#CDB7FF" /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.setupTitle}>{t('components.profile.finishSetup')}</Text>
-                <Text style={s.setupSubtitle}>{t('components.profile.setupProgress', { count: onboardingProgress.completed.length })}</Text>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={s.setupTitle}>{t('components.profileSection.finishSetup')}</Text>
+                <Text style={s.setupSubtitle}>{t('components.profileSection.setupProgress', { count: onboardingProgress.completed.length })}</Text>
               </View>
-              <View style={s.setupButton}><Text style={s.setupButtonText}>{t('components.profile.continue')}</Text></View>
+              <View style={s.setupButton}><Text style={s.setupButtonText}>{t('components.profileSection.continue')}</Text></View>
             </TouchableOpacity>
           )}
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
@@ -284,13 +284,13 @@ export default function CharacterScreen() {
               />
               <View style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
                 <View style={s.wornBadge}>
-                  <Text style={s.wornBadgeText}>{t('components.profile.currentlyWorn')}</Text>
+                  <Text style={s.wornBadgeText}>{t('components.profileSection.currentlyWorn')}</Text>
                 </View>
                 <Text style={s.wornTitleText} numberOfLines={1}>{activeOutfit.name}</Text>
               </View>
               <View style={s.wornBtn}>
                 <Icon name="user" size={13} color="rgba(235,225,255,0.88)" />
-                <Text style={s.wornBtnText}>{t('components.profile.changeOutfit')}</Text>
+                <Text style={s.wornBtnText}>{t('components.profileSection.changeOutfit')}</Text>
               </View>
             </TouchableOpacity>
           )}
