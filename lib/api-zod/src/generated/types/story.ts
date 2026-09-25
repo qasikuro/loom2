@@ -23,6 +23,9 @@ export interface Story {
   thumbnailUri?: string | null;
   witnessedCount: number;
   savedCount: number;
+  /** @minimum 0 */
+  likeCount?: number;
+  liked?: boolean;
   stickerCount: number;
   createdAt: Date;
 }

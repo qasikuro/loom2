@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: config
+    description: Public application settings
   - name: character
     description: Character profile
   - name: journal
@@ -63,6 +65,19 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /config:
+    get:
+      operationId: getAppConfig
+      tags: [config]
+      summary: Get public app settings and feature flags
+      responses:
+        "200":
+          description: Public app configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppConfig"
 
   /character:
     get:
@@ -1332,3 +1347,24 @@ components:
         isPublic:
           type: boolean
       required: [userId, name, bio, mood, traits, links, isPublic]
+
+    FeatureFlags:
+      type: object
+      properties:
+        stories: { type: boolean }
+        music: { type: boolean }
+        shop: { type: boolean }
+        season: { type: boolean }
+        campfire: { type: boolean }
+        guides: { type: boolean }
+        notifications: { type: boolean }
+      required: [stories, music, shop, season, campfire, guides, notifications]
+
+    AppConfig:
+      type: object
+      properties:
+        maintenance_mode: { type: boolean }
+        min_app_version: { type: string }
+        features:
+          $ref: "#/components/schemas/FeatureFlags"
+      required: [maintenance_mode, min_app_version, features]

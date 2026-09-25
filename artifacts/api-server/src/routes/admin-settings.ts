@@ -7,6 +7,27 @@ import { z } from "zod";
 const router: IRouter = Router();
 
 const KNOWN_KEYS = ["maintenance_mode", "min_app_version", "features"] as const;
+const DEFAULT_FEATURES: Record<string, boolean> = {
+  stories: true,
+  music: true,
+  shop: true,
+  season: true,
+  campfire: true,
+  guides: true,
+  notifications: true,
+};
+
+function normalizeFeatures(value: unknown): Record<string, boolean> {
+  const saved = typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return Object.fromEntries(
+    Object.entries(DEFAULT_FEATURES).map(([key, fallback]) => [
+      key,
+      typeof saved[key] === "boolean" ? saved[key] : fallback,
+    ]),
+  );
+}
 
 // ── GET /admin/settings ───────────────────────────────────────────────────────
 
@@ -20,9 +41,7 @@ router.get("/admin/settings", requireAdmin, async (req: Request, res: Response) 
     // Ensure all known keys exist with defaults
     if (!("maintenance_mode" in settings)) settings.maintenance_mode = false;
     if (!("min_app_version"  in settings)) settings.min_app_version  = "1.0.0";
-    if (!("features"         in settings)) settings.features = {
-      stories: true, music: true, shop: true, campfire: true, guides: true, notifications: true,
-    };
+    settings.features = normalizeFeatures(settings.features);
     return res.json({ settings });
   } catch (err) {
     req.log.error({ err }, "admin/settings GET failed");

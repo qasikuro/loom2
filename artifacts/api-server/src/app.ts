@@ -12,6 +12,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
+import { GetAppConfigResponse } from "@workspace/api-zod";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import {
@@ -287,6 +288,28 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // ── Public app config (feature flags, maintenance mode, min version) ──────────
 // The mobile app calls this on startup to receive server-controlled settings.
+const DEFAULT_APP_FEATURES: Record<string, boolean> = {
+  stories: true,
+  music: true,
+  shop: true,
+  season: true,
+  campfire: true,
+  guides: true,
+  notifications: true,
+};
+
+function normalizeAppFeatures(value: unknown): Record<string, boolean> {
+  const saved = typeof value === "object" && value !== null && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+  return Object.fromEntries(
+    Object.entries(DEFAULT_APP_FEATURES).map(([key, fallback]) => [
+      key,
+      typeof saved[key] === "boolean" ? saved[key] : fallback,
+    ]),
+  );
+}
+
 app.get("/api/config", async (_req: Request, res: Response) => {
   try {
     const { db, appSettingsTable } = await import("@workspace/db");
@@ -296,14 +319,16 @@ app.get("/api/config", async (_req: Request, res: Response) => {
     // safe defaults if table is empty / row missing
     if (!("maintenance_mode" in cfg)) cfg.maintenance_mode = false;
     if (!("min_app_version"  in cfg)) cfg.min_app_version  = "1.0.0";
-    if (!("features"         in cfg)) cfg.features = {
-      stories: true, music: true, shop: true, campfire: true, guides: true, notifications: true,
-    };
+    cfg.features = normalizeAppFeatures(cfg.features);
     res.setHeader("Cache-Control", "no-store");
-    return res.json(cfg);
+    return res.json(GetAppConfigResponse.parse(cfg));
   } catch (err) {
     logger.error({ err }, "GET /api/config failed");
-    return res.json({ maintenance_mode: false, min_app_version: "1.0.0", features: {} });
+    return res.json(GetAppConfigResponse.parse({
+      maintenance_mode: false,
+      min_app_version: "1.0.0",
+      features: { ...DEFAULT_APP_FEATURES },
+    }));
   }
 });
 

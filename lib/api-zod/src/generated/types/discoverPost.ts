@@ -21,6 +21,9 @@ export interface DiscoverPost {
   location: string;
   witnessedCount: number;
   savedCount: number;
+  /** @minimum 0 */
+  likeCount: number;
+  liked: boolean;
   stickerCount: number;
   date: Date;
   panels: DiscoverPostPanelsItem[];

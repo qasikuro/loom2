@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AppConfig,
   Character,
   CharacterInput,
   ComposeVideoRequest,
@@ -35,10 +36,13 @@ import type {
   Notification,
   Outfit,
   OutfitInput,
+  ProfileLikeState,
+  PublicUserProfile,
   RewardBalance,
   ShopResponse,
   Story,
   StoryInput,
+  StoryLikeState,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -203,6 +207,81 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get public app settings and feature flags
+ */
+export const getGetAppConfigUrl = () => {
+  return `/api/config`;
+};
+
+export const getAppConfig = async (
+  options?: RequestInit,
+): Promise<AppConfig> => {
+  return customFetch<AppConfig>(getGetAppConfigUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAppConfigQueryKey = () => {
+  return [`/api/config`] as const;
+};
+
+export const getGetAppConfigQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAppConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAppConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAppConfigQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getAppConfig>>> = ({
+    signal,
+  }) => getAppConfig({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAppConfig>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAppConfigQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAppConfig>>
+>;
+export type GetAppConfigQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get public app settings and feature flags
+ */
+
+export function useGetAppConfig<
+  TData = Awaited<ReturnType<typeof getAppConfig>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAppConfig>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAppConfigQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -1685,6 +1764,599 @@ export function useListDiscoverFeed<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get a public user profile and viewer profile-like state
+ */
+export const getGetPublicUserProfileUrl = (userId: string) => {
+  return `/api/users/${userId}`;
+};
+
+export const getPublicUserProfile = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<PublicUserProfile> => {
+  return customFetch<PublicUserProfile>(getGetPublicUserProfileUrl(userId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPublicUserProfileQueryKey = (userId: string) => {
+  return [`/api/users/${userId}`] as const;
+};
+
+export const getGetPublicUserProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPublicUserProfile>>,
+  TError = ErrorType<void>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicUserProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetPublicUserProfileQueryKey(userId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getPublicUserProfile>>
+  > = ({ signal }) =>
+    getPublicUserProfile(userId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!userId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getPublicUserProfile>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetPublicUserProfileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getPublicUserProfile>>
+>;
+export type GetPublicUserProfileQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a public user profile and viewer profile-like state
+ */
+
+export function useGetPublicUserProfile<
+  TData = Awaited<ReturnType<typeof getPublicUserProfile>>,
+  TError = ErrorType<void>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getPublicUserProfile>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetPublicUserProfileQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Like another user's public profile
+ */
+export const getLikeUserProfileUrl = (userId: string) => {
+  return `/api/users/${userId}/like`;
+};
+
+export const likeUserProfile = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<ProfileLikeState> => {
+  return customFetch<ProfileLikeState>(getLikeUserProfileUrl(userId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getLikeUserProfileMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof likeUserProfile>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof likeUserProfile>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ["likeUserProfile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof likeUserProfile>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return likeUserProfile(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LikeUserProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof likeUserProfile>>
+>;
+
+export type LikeUserProfileMutationError = ErrorType<void>;
+
+/**
+ * @summary Like another user's public profile
+ */
+export const useLikeUserProfile = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof likeUserProfile>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof likeUserProfile>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  return useMutation(getLikeUserProfileMutationOptions(options));
+};
+
+/**
+ * @summary Remove a profile like
+ */
+export const getUnlikeUserProfileUrl = (userId: string) => {
+  return `/api/users/${userId}/like`;
+};
+
+export const unlikeUserProfile = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<ProfileLikeState> => {
+  return customFetch<ProfileLikeState>(getUnlikeUserProfileUrl(userId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUnlikeUserProfileMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlikeUserProfile>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unlikeUserProfile>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ["unlikeUserProfile"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unlikeUserProfile>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return unlikeUserProfile(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnlikeUserProfileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unlikeUserProfile>>
+>;
+
+export type UnlikeUserProfileMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove a profile like
+ */
+export const useUnlikeUserProfile = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlikeUserProfile>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unlikeUserProfile>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  return useMutation(getUnlikeUserProfileMutationOptions(options));
+};
+
+/**
+ * @summary Like a visible public story or video post
+ */
+export const getLikeStoryUrl = (id: string) => {
+  return `/api/stories/${id}/like`;
+};
+
+export const likeStory = async (
+  id: string,
+  options?: RequestInit,
+): Promise<StoryLikeState> => {
+  return customFetch<StoryLikeState>(getLikeStoryUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getLikeStoryMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof likeStory>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof likeStory>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["likeStory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof likeStory>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return likeStory(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LikeStoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof likeStory>>
+>;
+
+export type LikeStoryMutationError = ErrorType<void>;
+
+/**
+ * @summary Like a visible public story or video post
+ */
+export const useLikeStory = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof likeStory>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof likeStory>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getLikeStoryMutationOptions(options));
+};
+
+/**
+ * @summary Remove a story or video post like
+ */
+export const getUnlikeStoryUrl = (id: string) => {
+  return `/api/stories/${id}/like`;
+};
+
+export const unlikeStory = async (
+  id: string,
+  options?: RequestInit,
+): Promise<StoryLikeState> => {
+  return customFetch<StoryLikeState>(getUnlikeStoryUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUnlikeStoryMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlikeStory>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unlikeStory>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["unlikeStory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unlikeStory>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return unlikeStory(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnlikeStoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unlikeStory>>
+>;
+
+export type UnlikeStoryMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove a story or video post like
+ */
+export const useUnlikeStory = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlikeStory>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unlikeStory>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getUnlikeStoryMutationOptions(options));
+};
+
+/**
+ * @summary Like a published chapter in a public book
+ */
+export const getLikeBookChapterUrl = (id: string) => {
+  return `/api/chapters/${id}/like`;
+};
+
+export const likeBookChapter = async (
+  id: string,
+  options?: RequestInit,
+): Promise<StoryLikeState> => {
+  return customFetch<StoryLikeState>(getLikeBookChapterUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getLikeBookChapterMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof likeBookChapter>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof likeBookChapter>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["likeBookChapter"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof likeBookChapter>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return likeBookChapter(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LikeBookChapterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof likeBookChapter>>
+>;
+
+export type LikeBookChapterMutationError = ErrorType<void>;
+
+/**
+ * @summary Like a published chapter in a public book
+ */
+export const useLikeBookChapter = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof likeBookChapter>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof likeBookChapter>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getLikeBookChapterMutationOptions(options));
+};
+
+/**
+ * @summary Remove a chapter like
+ */
+export const getUnlikeBookChapterUrl = (id: string) => {
+  return `/api/chapters/${id}/like`;
+};
+
+export const unlikeBookChapter = async (
+  id: string,
+  options?: RequestInit,
+): Promise<StoryLikeState> => {
+  return customFetch<StoryLikeState>(getUnlikeBookChapterUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUnlikeBookChapterMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlikeBookChapter>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unlikeBookChapter>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["unlikeBookChapter"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unlikeBookChapter>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return unlikeBookChapter(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnlikeBookChapterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unlikeBookChapter>>
+>;
+
+export type UnlikeBookChapterMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove a chapter like
+ */
+export const useUnlikeBookChapter = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unlikeBookChapter>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unlikeBookChapter>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getUnlikeBookChapterMutationOptions(options));
+};
 
 /**
  * @summary Get current reward currency balances

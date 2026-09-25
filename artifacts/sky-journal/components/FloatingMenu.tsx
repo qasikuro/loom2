@@ -13,11 +13,13 @@
  */
 
 import { Icon } from '@/components/Icon';
+import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import React, { useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export interface FloatingMenuItem {
+  id: string;
   label: string;
   icon:  string;
   onPress: () => void;
@@ -31,6 +33,7 @@ const FAB_SIZE = 46;
 
 export function FloatingMenu({ items }: Props) {
   const [open, setOpen] = useState(false);
+  const colors = useColors();
 
   // Per-item animation values (index 0 = bottom-most / closest to FAB)
   const anims       = useRef(items.map(() => new Animated.Value(0))).current;
@@ -81,7 +84,7 @@ export function FloatingMenu({ items }: Props) {
         const anim    = anims[origIdx];
         return (
           <Animated.View
-            key={item.label}
+            key={item.id}
             style={[
               s.pillWrap,
               {
@@ -99,12 +102,15 @@ export function FloatingMenu({ items }: Props) {
             pointerEvents={open ? 'auto' : 'none'}
           >
             <TouchableOpacity
-              style={s.pill}
+              testID={`floating-menu-item-${item.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={item.label}
+              style={[s.pill, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => handleItemPress(item)}
               activeOpacity={0.78}
             >
-              <Text style={s.pillLabel}>{item.label}</Text>
-              <Text style={s.pillIcon}>{item.icon}</Text>
+              <Text style={[s.pillLabel, { color: colors.foreground }]}>{item.label}</Text>
+              <Icon name={item.icon as never} size={16} color={colors.primary} />
             </TouchableOpacity>
           </Animated.View>
         );
@@ -112,12 +118,15 @@ export function FloatingMenu({ items }: Props) {
 
       {/* FAB trigger */}
       <TouchableOpacity
-        style={s.fab}
+        testID="floating-menu-trigger"
+        accessibilityRole="button"
+        accessibilityLabel={open ? 'Close shortcuts' : 'Open shortcuts'}
+        style={[s.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
         onPress={() => (open ? closeMenu() : openMenu())}
         activeOpacity={0.82}
       >
         <Animated.View style={{ transform: [{ rotate: chevronRotate }] }}>
-          <Icon name="chevron-right" size={20} color="#fff" />
+          <Icon name="chevron-right" size={20} color={colors.primaryForeground} />
         </Animated.View>
       </TouchableOpacity>
     </View>

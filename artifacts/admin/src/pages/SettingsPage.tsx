@@ -11,6 +11,7 @@ interface Features {
   stories:       boolean;
   music:         boolean;
   shop:          boolean;
+  season:        boolean;
   campfire:      boolean;
   guides:        boolean;
   notifications: boolean;
@@ -26,6 +27,7 @@ const DEFAULT_FEATURES: Features = {
   stories:       true,
   music:         true,
   shop:          true,
+  season:        true,
   campfire:      true,
   guides:        true,
   notifications: true,
@@ -35,6 +37,7 @@ const FEATURE_LABELS: Record<keyof Features, string> = {
   stories:       "Stories",
   music:         "Music",
   shop:          "Shop",
+  season:        "Season",
   campfire:      "Campfire",
   guides:        "Guides",
   notifications: "Notifications",
@@ -126,7 +129,7 @@ export default function SettingsPage() {
     <div className="p-8 text-destructive">{error}</div>
   );
 
-  const features = settings?.features ?? DEFAULT_FEATURES;
+  const features = { ...DEFAULT_FEATURES, ...(settings?.features ?? {}) };
 
   return (
     <div className="p-8 max-w-2xl space-y-8">

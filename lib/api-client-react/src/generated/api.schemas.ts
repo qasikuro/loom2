@@ -117,6 +117,9 @@ export interface Story {
   thumbnailUri?: string | null;
   witnessedCount: number;
   savedCount: number;
+  /** @minimum 0 */
+  likeCount?: number;
+  liked?: boolean;
   stickerCount: number;
   createdAt: string;
 }
@@ -314,10 +317,32 @@ export interface DiscoverPost {
   location: string;
   witnessedCount: number;
   savedCount: number;
+  /** @minimum 0 */
+  likeCount: number;
+  liked: boolean;
   stickerCount: number;
   date: string;
   panels: DiscoverPostPanelsItem[];
   isFollowing: boolean;
+}
+
+export interface ProfileLikeState {
+  profileLiked: boolean;
+  /** @minimum 0 */
+  profileLikeCount: number;
+}
+
+export interface StoryLikeState {
+  liked: boolean;
+  /** @minimum 0 */
+  likeCount: number;
+}
+
+export interface PublicUserProfile {
+  userId: string;
+  profileLiked: boolean;
+  /** @minimum 0 */
+  profileLikeCount: number;
 }
 
 export interface RewardBalance {
@@ -413,4 +438,20 @@ export interface FriendSummary {
   country?: string | null;
   links: FriendSummaryLinksItem[];
   isPublic: boolean;
+}
+
+export interface FeatureFlags {
+  stories: boolean;
+  music: boolean;
+  shop: boolean;
+  season: boolean;
+  campfire: boolean;
+  guides: boolean;
+  notifications: boolean;
+}
+
+export interface AppConfig {
+  maintenance_mode: boolean;
+  min_app_version: string;
+  features: FeatureFlags;
 }

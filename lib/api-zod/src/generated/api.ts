@@ -37,6 +37,23 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
+ * @summary Get public app settings and feature flags
+ */
+export const GetAppConfigResponse = zod.object({
+  maintenance_mode: zod.boolean(),
+  min_app_version: zod.string(),
+  features: zod.object({
+    stories: zod.boolean(),
+    music: zod.boolean(),
+    shop: zod.boolean(),
+    season: zod.boolean(),
+    campfire: zod.boolean(),
+    guides: zod.boolean(),
+    notifications: zod.boolean(),
+  }),
+});
+
+/**
  * @summary Get the user character profile
  */
 export const GetCharacterResponse = zod.object({
@@ -123,6 +140,8 @@ export const listStoriesResponseMusicOriginalVolumeMax = 1;
 export const listStoriesResponseMusicMusicVolumeMin = 0;
 export const listStoriesResponseMusicMusicVolumeMax = 1;
 
+export const listStoriesResponseLikeCountMin = 0;
+
 export const ListStoriesResponseItem = zod.object({
   id: zod.string(),
   date: zod.coerce.date(),
@@ -175,6 +194,8 @@ export const ListStoriesResponseItem = zod.object({
   thumbnailUri: zod.string().nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
+  likeCount: zod.number().min(listStoriesResponseLikeCountMin).optional(),
+  liked: zod.boolean().optional(),
   stickerCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
@@ -310,6 +331,8 @@ export const getStoryResponseMusicOriginalVolumeMax = 1;
 export const getStoryResponseMusicMusicVolumeMin = 0;
 export const getStoryResponseMusicMusicVolumeMax = 1;
 
+export const getStoryResponseLikeCountMin = 0;
+
 export const GetStoryResponse = zod.object({
   id: zod.string(),
   date: zod.coerce.date(),
@@ -362,6 +385,8 @@ export const GetStoryResponse = zod.object({
   thumbnailUri: zod.string().nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
+  likeCount: zod.number().min(getStoryResponseLikeCountMin).optional(),
+  liked: zod.boolean().optional(),
   stickerCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
@@ -392,6 +417,8 @@ export const witnessStoryResponseMusicOriginalVolumeMax = 1;
 
 export const witnessStoryResponseMusicMusicVolumeMin = 0;
 export const witnessStoryResponseMusicMusicVolumeMax = 1;
+
+export const witnessStoryResponseLikeCountMin = 0;
 
 export const WitnessStoryResponse = zod.object({
   id: zod.string(),
@@ -445,6 +472,8 @@ export const WitnessStoryResponse = zod.object({
   thumbnailUri: zod.string().nullish(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
+  likeCount: zod.number().min(witnessStoryResponseLikeCountMin).optional(),
+  liked: zod.boolean().optional(),
   stickerCount: zod.number(),
   createdAt: zod.coerce.date(),
 });
@@ -615,6 +644,8 @@ export const ListNotificationsResponse = zod.array(
 /**
  * @summary Ranked discovery feed of public stories
  */
+export const listDiscoverFeedResponseLikeCountMin = 0;
+
 export const ListDiscoverFeedResponseItem = zod.object({
   id: zod.string(),
   authorUserId: zod.string(),
@@ -629,12 +660,119 @@ export const ListDiscoverFeedResponseItem = zod.object({
   location: zod.string(),
   witnessedCount: zod.number(),
   savedCount: zod.number(),
+  likeCount: zod.number().min(listDiscoverFeedResponseLikeCountMin),
+  liked: zod.boolean(),
   stickerCount: zod.number(),
   date: zod.coerce.date(),
   panels: zod.array(zod.object({}).passthrough()),
   isFollowing: zod.boolean(),
 });
 export const ListDiscoverFeedResponse = zod.array(ListDiscoverFeedResponseItem);
+
+/**
+ * @summary Get a public user profile and viewer profile-like state
+ */
+export const GetPublicUserProfileParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const getPublicUserProfileResponseProfileLikeCountMin = 0;
+
+export const GetPublicUserProfileResponse = zod.object({
+  userId: zod.string(),
+  profileLiked: zod.boolean(),
+  profileLikeCount: zod
+    .number()
+    .min(getPublicUserProfileResponseProfileLikeCountMin),
+});
+
+/**
+ * @summary Like another user's public profile
+ */
+export const LikeUserProfileParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const likeUserProfileResponseProfileLikeCountMin = 0;
+
+export const LikeUserProfileResponse = zod.object({
+  profileLiked: zod.boolean(),
+  profileLikeCount: zod
+    .number()
+    .min(likeUserProfileResponseProfileLikeCountMin),
+});
+
+/**
+ * @summary Remove a profile like
+ */
+export const UnlikeUserProfileParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const unlikeUserProfileResponseProfileLikeCountMin = 0;
+
+export const UnlikeUserProfileResponse = zod.object({
+  profileLiked: zod.boolean(),
+  profileLikeCount: zod
+    .number()
+    .min(unlikeUserProfileResponseProfileLikeCountMin),
+});
+
+/**
+ * @summary Like a visible public story or video post
+ */
+export const LikeStoryParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const likeStoryResponseLikeCountMin = 0;
+
+export const LikeStoryResponse = zod.object({
+  liked: zod.boolean(),
+  likeCount: zod.number().min(likeStoryResponseLikeCountMin),
+});
+
+/**
+ * @summary Remove a story or video post like
+ */
+export const UnlikeStoryParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const unlikeStoryResponseLikeCountMin = 0;
+
+export const UnlikeStoryResponse = zod.object({
+  liked: zod.boolean(),
+  likeCount: zod.number().min(unlikeStoryResponseLikeCountMin),
+});
+
+/**
+ * @summary Like a published chapter in a public book
+ */
+export const LikeBookChapterParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const likeBookChapterResponseLikeCountMin = 0;
+
+export const LikeBookChapterResponse = zod.object({
+  liked: zod.boolean(),
+  likeCount: zod.number().min(likeBookChapterResponseLikeCountMin),
+});
+
+/**
+ * @summary Remove a chapter like
+ */
+export const UnlikeBookChapterParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const unlikeBookChapterResponseLikeCountMin = 0;
+
+export const UnlikeBookChapterResponse = zod.object({
+  liked: zod.boolean(),
+  likeCount: zod.number().min(unlikeBookChapterResponseLikeCountMin),
+});
 
 /**
  * @summary Get current reward currency balances

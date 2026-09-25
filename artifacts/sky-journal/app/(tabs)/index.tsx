@@ -1,7 +1,9 @@
 import { StarField } from '@/components/StarField';
 import { Icon } from '@/components/Icon';
+import { FloatingMenu, type FloatingMenuItem } from '@/components/FloatingMenu';
 import { Images } from '@/assets/images';
 import { getDailyPrompt } from '@/constants/prompts';
+import { getGetAppConfigQueryKey, useGetAppConfig } from '@workspace/api-client-react';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -1083,6 +1085,36 @@ export default function HomeScreen() {
     unreadCampfireRooms, campfireBadgeSeenAt,
     dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
   } = useApp();
+  const { data: publicConfig } = useGetAppConfig({
+    query: {
+      queryKey: getGetAppConfigQueryKey(),
+      refetchInterval: 30_000,
+      refetchOnWindowFocus: true,
+      refetchOnReconnect: true,
+    },
+  });
+  const shopEnabled = publicConfig?.features.shop ?? true;
+  const seasonEnabled = publicConfig?.features.season ?? true;
+  const floatingMenuItems = useMemo<FloatingMenuItem[]>(() => {
+    const items: FloatingMenuItem[] = [];
+    if (shopEnabled) {
+      items.push({
+        id: 'shop',
+        label: t('components.shop.title'),
+        icon: 'shopping-bag',
+        onPress: () => router.push('/shop' as never),
+      });
+    }
+    if (seasonEnabled) {
+      items.push({
+        id: 'season',
+        label: t('feature.home.currentSeason'),
+        icon: 'calendar',
+        onPress: () => router.push('/season' as never),
+      });
+    }
+    return items;
+  }, [shopEnabled, seasonEnabled, t]);
   const { userId: clerkUserId } = useAuth();
   const { playSound } = useSound();
 
@@ -2142,6 +2174,18 @@ export default function HomeScreen() {
 
       </ScrollView>}
 
+      {floatingMenuItems.length > 0 && (
+        <View
+          pointerEvents="box-none"
+          style={[s.floatingMenuDock, { bottom: bottomPad + 8 }]}
+        >
+          <FloatingMenu
+            key={`${shopEnabled ? 'shop' : ''}-${seasonEnabled ? 'season' : ''}`}
+            items={floatingMenuItems}
+          />
+        </View>
+      )}
+
       {/* ── Outfit picker sheet ──────────────────────────────────────────────── */}
       <Modal visible={showOutfits} transparent animationType="slide" onRequestClose={() => setShowOutfits(false)}>
         <Pressable style={m.overlay} onPress={() => setShowOutfits(false)}>
@@ -2302,6 +2346,12 @@ const s = StyleSheet.create({
   // its first measured content block. Absolute fill keeps the viewport tied
   // to the Home scene, so content after the Lumi card remains scrollable.
   dashboardScroll: { ...StyleSheet.absoluteFillObject },
+  floatingMenuDock: {
+    position: 'absolute',
+    right: 0,
+    zIndex: 60,
+    elevation: 12,
+  },
   dashboard: { flexGrow: 1, width: '100%', maxWidth: 760, alignSelf: 'center', paddingHorizontal: 18, gap: 5 },
   dashboardNarrow: { paddingHorizontal: 12, gap: 6 },
   dashboardHeader: {
