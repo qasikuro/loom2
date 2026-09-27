@@ -6,7 +6,7 @@ import { tokenCache } from '@clerk/expo/token-cache';
 import Constants from 'expo-constants';
 import * as Font from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Redirect, Stack, router, useRouter, useSegments } from 'expo-router';
+import { Redirect, Stack, router, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
@@ -316,11 +316,23 @@ function NotificationDeepLinkHandler() {
 function AuthNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
+  const pathname = usePathname();
+  const hasCheckedStartupRoute = useRef(false);
 
   const inAuthGroup = segments[0] === '(auth)';
   const inTabsGroup = segments[0] === '(tabs)';
 
-  if (!isLoaded) return null;
+  if (!isLoaded || segments.length === 0) return null;
+
+  // The app's "/" path resolves to the Home tab's index route. That explicit
+  // path takes precedence over Tabs.initialRouteName, so redirect it once at
+  // startup while leaving later Home tab presses untouched.
+  if (!hasCheckedStartupRoute.current) {
+    hasCheckedStartupRoute.current = true;
+    if (isSignedIn && inTabsGroup && pathname === '/') {
+      return <Redirect href="/(tabs)/reels" />;
+    }
+  }
 
   if (isSignedIn && inAuthGroup) return <Redirect href="/(tabs)/reels" />;
   if (!isSignedIn && !inAuthGroup && inTabsGroup) return <Redirect href="/(auth)/sign-in" />;
