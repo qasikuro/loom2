@@ -96,7 +96,7 @@ export default function SignUpScreen() {
         // because Clerk may call it with a session that has currentTask set,
         // which would prevent navigation from ever firing.
         await setActive({ session: createdSessionId });
-        router.replace('/(tabs)' as Href);
+        router.replace('/(tabs)/reels' as Href);
       } else if (!createdSessionId) {
         setCatchError(t('auth.signUpCancelled'));
       }
@@ -134,7 +134,7 @@ export default function SignUpScreen() {
       const result = await signUp.attemptEmailAddressVerification({ code: code.trim() });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)' as Href);
+        router.replace('/(tabs)/reels' as Href);
       } else {
         setCatchError(t('auth.verifyFailed'));
       }

@@ -322,7 +322,7 @@ function AuthNavigator() {
 
   if (!isLoaded) return null;
 
-  if (isSignedIn && inAuthGroup) return <Redirect href="/(tabs)" />;
+  if (isSignedIn && inAuthGroup) return <Redirect href="/(tabs)/reels" />;
   if (!isSignedIn && !inAuthGroup && inTabsGroup) return <Redirect href="/(auth)/sign-in" />;
 
   return null;

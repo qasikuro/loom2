@@ -178,6 +178,7 @@ function ClassicTabLayout() {
   return (
     <View style={{ flex: 1 }}>
     <Tabs
+      initialRouteName="reels"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor:   '#D0B4FF',

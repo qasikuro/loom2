@@ -121,7 +121,7 @@ export default function OnboardingScreen() {
       await saveOnboardingProgress(userId, complete(progress, 4));
     }
     await markOnboardingDone(userId);
-    router.replace('/(tabs)' as never);
+    router.replace('/(tabs)/reels' as never);
   }
 
   if (!progress) return <View style={s.loading}><ActivityIndicator color={colors.primary} /></View>;

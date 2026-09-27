@@ -90,7 +90,7 @@ export default function SignInScreen() {
         // because Clerk may call it with a session that has currentTask set,
         // which would prevent navigation from ever firing.
         await setActive({ session: createdSessionId });
-        router.replace('/(tabs)' as Href);
+        router.replace('/(tabs)/reels' as Href);
       } else if (ssoSignIn?.status === 'needs_first_factor' || signUp?.status === 'missing_requirements') {
         setCatchError(t('auth.additionalVerification'));
       } else if (!createdSessionId) {
@@ -115,7 +115,7 @@ export default function SignInScreen() {
       const result = await signIn.create({ identifier: email.trim(), password });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)' as Href);
+        router.replace('/(tabs)/reels' as Href);
       } else {
         setCatchError(t('auth.signInFailed'));
       }
