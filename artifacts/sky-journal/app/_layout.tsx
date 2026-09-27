@@ -322,7 +322,7 @@ function AuthNavigator() {
   const inAuthGroup = segments[0] === '(auth)';
   const inTabsGroup = segments[0] === '(tabs)';
 
-  if (!isLoaded || segments.length === 0) return null;
+  if (!isLoaded) return null;
 
   // The app's "/" path resolves to the Home tab's index route. That explicit
   // path takes precedence over Tabs.initialRouteName, so redirect it once at
