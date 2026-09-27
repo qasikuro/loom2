@@ -281,3 +281,17 @@ mtime_ms = 1790497576250
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a1cef6ff-3139-40c9-912c-4c93501f36f4/84e9b8fd-5b05-4d9e-93f4-c2ccf10f4ab6/dc289ebf-e87a-4e61-a1ab-766e84bd50a8"
 storage_version_token = "1790497594829106"
 content_type = "application/pdf"
+
+[[outputs]]
+id = "18z34l-kNyJcVE0iqOxB2"
+uri = "file://exports/ximo-technology-stack-overview.pdf"
+type = "pdf"
+title = "Ximo Technology Stack Overview"
+description = "Four-page technology stack reference covering mobile, API, database, admin, integrations, build tooling, and key architecture characteristics."
+logical_id = "a59d3d17-175e-4835-8437-c7445abb1cc3"
+content_hash = "sha256:99823153a8fd257cdb944a54a437ebb435b984bdd3126808e929290124e63211"
+size = 126351
+mtime_ms = 1790531289105
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a1cef6ff-3139-40c9-912c-4c93501f36f4/a59d3d17-175e-4835-8437-c7445abb1cc3/5474b604-313f-4e8c-a6da-2a6b51567349"
+storage_version_token = "1790531309359949"
+content_type = "application/pdf"
