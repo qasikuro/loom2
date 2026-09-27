@@ -223,7 +223,7 @@ logical_id = "4fb5a48e-f1a1-4332-95f1-735406e0d38c"
 [[outputs]]
 id = "7xMpCxkpZc2M6759tgePN"
 uri = "file://gamejo-admin-gap-analysis.html"
-type = "text"
+type = "html"
 title = "GameJo Admin Panel — Gap Analysis"
 description = "What's built, what's missing, hours, cost per section, and 3-phase build plan."
 logical_id = "b3e7cdc5-58f9-449b-8e99-9e4622be3ec6"
@@ -232,7 +232,7 @@ content_type = "text/html"
 [[outputs]]
 id = "aqy3GbAmQiphAhg2RKsb-"
 uri = "file://attached_assets/sky-journal-icons.html"
-type = "text"
+type = "html"
 title = "Sky Journal — Icon Reference"
 description = "All 44 registered icons (lucide-react-native) + 15 icon names found in source but not registered in Icon.tsx. Open in any browser."
 logical_id = "8efbcda1-af51-4e64-804a-2f7057ea4c70"
@@ -267,3 +267,17 @@ mtime_ms = 1789382279754
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a1cef6ff-3139-40c9-912c-4c93501f36f4/970a11fd-6a81-4488-85bc-6558e2c4e434/7129784b-55c9-47ff-94fc-8d3e6c21a415"
 storage_version_token = "1789382291230401"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "BdlvSQHQ84hdBne0to8b_"
+uri = "file://exports/ximo-investor-technology-review.pdf"
+type = "pdf"
+title = "Ximo Investor Technology Review"
+description = "Nine-page, source-based technical due diligence covering architecture, capabilities, security, reliability, scale readiness, and investor diligence questions."
+logical_id = "84e9b8fd-5b05-4d9e-93f4-c2ccf10f4ab6"
+content_hash = "sha256:0e5a4cca29e887e340efa923c2c491f23e3d07a9b51f325b6b4789a0659b3ac1"
+size = 222621
+mtime_ms = 1790497576250
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a1cef6ff-3139-40c9-912c-4c93501f36f4/84e9b8fd-5b05-4d9e-93f4-c2ccf10f4ab6/dc289ebf-e87a-4e61-a1ab-766e84bd50a8"
+storage_version_token = "1790497594829106"
+content_type = "application/pdf"
