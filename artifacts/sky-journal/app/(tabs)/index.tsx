@@ -1295,10 +1295,6 @@ export default function HomeScreen() {
   }, [journalEntries]);
 
   const circleStories = discoverPosts.filter(p => p.isFollowing).slice(0, 10);
-  const latestStory = useMemo(
-    () => [...stories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null,
-    [stories],
-  );
 
   // Unique friends with recent stories (for the story-ring row)
   const circleAuthors = (() => {
@@ -1505,7 +1501,7 @@ export default function HomeScreen() {
         <View style={s.dashboardActions}>
           {[
              { label: 'Add your post', icon: 'edit-2', color: '#D45CFF', comingSoon: false, onPress: () => logHomePress('add post', () => router.push('/(tabs)/create')) },
-             { label: 'Chats', icon: 'message-circle', color: '#55B8FF', comingSoon: false, onPress: () => logHomePress('chats', () => router.push('/messages' as never)) },
+             { label: 'Chats', icon: 'message-circle', color: '#55B8FF', comingSoon: false, onPress: () => logHomePress('chats', () => router.push('/friends' as never)) },
             { label: 'Discover games', icon: 'gamepad-2', color: '#FF914D', comingSoon: true, onPress: undefined },
              { label: 'Lumi AI Chat', icon: 'star', color: '#B878FF', comingSoon: false, onPress: () => logHomePress('Lumi AI Chat', () => router.push('/(tabs)/drift')) },
              { label: 'Daily prompt', icon: 'lightbulb', color: '#F4CB55', comingSoon: false, onPress: () => logHomePress('daily prompt', () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never)) },
@@ -1705,7 +1701,6 @@ export default function HomeScreen() {
             accent={accent}
             hasNotifications={hasNotifs}
             onOpenNotifications={openNotificationsPanel}
-            latestStory={latestStory}
             friendStories={circleStories.slice(0, 5)}
             friendCount={friends.length}
           />
@@ -1754,7 +1749,7 @@ export default function HomeScreen() {
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <TouchableOpacity
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onPress={() => { router.push('/messages' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onPress={() => { router.push('/friends' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon name="message-circle" size={16} color={dmUnread > 0 ? '#9B78E8' : 'rgba(220,210,255,0.75)'} />

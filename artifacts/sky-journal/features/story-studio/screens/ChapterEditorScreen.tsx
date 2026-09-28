@@ -24,6 +24,7 @@ import { useApp, type StoryMusic, type StoryPanel, type StoryPage } from '@/cont
 import { useColors } from '@/hooks/useColors';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { DraftStore } from '../utils/draftStore';
+import { STORY_EDITOR_DRAFT_KEY } from '@/utils/entryDraftStore';
 import { useTranslation } from 'react-i18next';
 import {
   FirstPublishOverlay,
@@ -47,6 +48,17 @@ const MINI_LAYOUTS = [
 ];
 
 const MAX_PAGES = 12;
+
+type StoredStoryDraft = {
+  title?: string;
+  desc?: string;
+  mood?: string;
+  location?: string;
+  isPublic?: boolean;
+  pages?: StoryPage[];
+  music?: StoryMusic | null;
+  savedAt?: number;
+};
 
 const MOODS = [
   { label: 'Hopeful',     icon: 'sun'     as const, color: '#F0C040' },
@@ -155,8 +167,14 @@ export default function ChapterEditorScreen() {
 
   const currentMood = MOODS.find(m => m.label === mood);
 
-  const { editId, eventPrompt, eventMood } = useLocalSearchParams<{ editId?: string; eventPrompt?: string; eventMood?: string }>();
+  const { editId, eventPrompt, eventMood, resumeDraft } = useLocalSearchParams<{
+    editId?: string;
+    eventPrompt?: string;
+    eventMood?: string;
+    resumeDraft?: string;
+  }>();
   const prevEditIdRef = useRef<string | null>(null);
+  const autoResumeHandledRef = useRef(false);
 
   // Snapshot of field values captured when an existing story loads.
   // Stored in state (not a ref) so that setting it triggers a re-render and
@@ -249,7 +267,6 @@ export default function ChapterEditorScreen() {
   }, []);
 
   // ── Draft persistence ─────────────────────────────────────────────────────
-  const DRAFT_KEY = 'story_draft_v2';
 
   function stripPageImages(ps: StoryPage[]): StoryPage[] {
     return ps.map(p => ({
@@ -258,20 +275,50 @@ export default function ChapterEditorScreen() {
     }));
   }
 
+  const applyDraft = useCallback((draft: StoredStoryDraft) => {
+    setTitle(draft.title ?? '');
+    setDesc(draft.desc ?? '');
+    setMood(draft.mood ?? 'Hopeful');
+    setLocation(draft.location ?? 'Daylight Prairie');
+    setIsPublic(draft.isPublic ?? true);
+    setPages(draft.pages?.length ? draft.pages : [makePage()]);
+    setMusic(draft.music ?? null);
+    setHasDraft(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, []);
+
+  const loadDraft = useCallback(async () => {
+    const raw = await AsyncStorage.getItem(STORY_EDITOR_DRAFT_KEY).catch(() => null);
+    if (!raw) { setHasDraft(false); return; }
+    try {
+      applyDraft(JSON.parse(raw) as StoredStoryDraft);
+    } catch {
+      setHasDraft(false);
+    }
+  }, [applyDraft]);
+
   useFocusEffect(useCallback(() => {
     if (editId) return;
-    AsyncStorage.getItem(DRAFT_KEY).then(raw => {
+    if (resumeDraft !== '1') autoResumeHandledRef.current = false;
+    const shouldAutoResume = resumeDraft === '1' && !autoResumeHandledRef.current;
+    if (resumeDraft === '1') autoResumeHandledRef.current = true;
+    AsyncStorage.getItem(STORY_EDITOR_DRAFT_KEY).then(raw => {
       if (!raw) return;
       try {
-        const d = JSON.parse(raw);
+        const d = JSON.parse(raw) as StoredStoryDraft;
         const hasContent = d.title?.trim() ||
           (d.pages ?? []).some((p: StoryPage) =>
             p.panels?.some((panel: StoryPanel) => panel.text?.trim() || panel.bubbleText?.trim())
           );
-        if (hasContent) setHasDraft(true);
+        if (!hasContent) return;
+        if (resumeDraft === '1') {
+          if (shouldAutoResume) applyDraft(d);
+        } else {
+          setHasDraft(true);
+        }
       } catch { /* ignore */ }
     }).catch(() => null);
-  }, [editId]));
+  }, [editId, resumeDraft, applyDraft]));
 
   useEffect(() => {
     if (editId) return;
@@ -282,35 +329,19 @@ export default function ChapterEditorScreen() {
       if (hasContent) {
         // User has started editing — dismiss any stale draft banner from a previous session
         setHasDraft(false);
-        AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({
+        AsyncStorage.setItem(STORY_EDITOR_DRAFT_KEY, JSON.stringify({
           title, desc, mood, location, isPublic,
           pages: stripPageImages(pages),
           music,
+          savedAt: Date.now(),
         })).catch(() => null);
       }
     }, 800);
     return () => { if (saveTimer.current) clearTimeout(saveTimer.current); };
   }, [title, desc, mood, location, isPublic, pages, music, editId]);
 
-  async function loadDraft() {
-    const raw = await AsyncStorage.getItem(DRAFT_KEY).catch(() => null);
-    if (!raw) { setHasDraft(false); return; }
-    try {
-      const d = JSON.parse(raw);
-      setTitle(d.title ?? '');
-      setDesc(d.desc ?? '');
-      setMood(d.mood ?? 'Hopeful');
-      setLocation(d.location ?? 'Daylight Prairie');
-      setIsPublic(d.isPublic ?? true);
-      setPages(d.pages?.length ? d.pages : [makePage()]);
-      setMusic(d.music ?? null);
-      setHasDraft(false);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    } catch { setHasDraft(false); }
-  }
-
   async function discardDraft() {
-    await AsyncStorage.removeItem(DRAFT_KEY).catch(() => null);
+    await AsyncStorage.removeItem(STORY_EDITOR_DRAFT_KEY).catch(() => null);
     setHasDraft(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   }
@@ -433,7 +464,7 @@ export default function ChapterEditorScreen() {
       return;
     }
     await markFirstPublishDone();
-    await AsyncStorage.removeItem(DRAFT_KEY).catch(() => null);
+    await AsyncStorage.removeItem(STORY_EDITOR_DRAFT_KEY).catch(() => null);
     setTitle('');
     setDesc('');
     setPages([makePage()]);

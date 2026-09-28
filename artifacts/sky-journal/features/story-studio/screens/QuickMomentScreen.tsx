@@ -61,7 +61,11 @@ export default function QuickMomentScreen() {
   const botPad  = Platform.OS === 'web' ? 34 : insets.bottom + 16;
 
   const { addStory, stories } = useApp();
-  const { eventPrompt, eventMood } = useLocalSearchParams<{ eventPrompt?: string; eventMood?: string }>();
+  const { eventPrompt, eventMood, resumeDraft } = useLocalSearchParams<{
+    eventPrompt?: string;
+    eventMood?: string;
+    resumeDraft?: string;
+  }>();
 
   const [step,          setStep]          = useState(STEP_IMAGE);
   const [imageUri,      setImageUri]      = useState<string | null>(null);
@@ -90,12 +94,21 @@ export default function QuickMomentScreen() {
   useEffect(() => {
     if (eventPrompt || eventMood) return; // event-prefilled screens don't restore drafts
     quickMomentDraft.load().then(d => {
-      if (d && (d.caption.trim() || d.imageUri)) {
+      if (!d || (!d.caption.trim() && !d.imageUri)) return;
+      if (resumeDraft === '1') {
+        setCaption(d.caption);
+        const savedMood = MOODS.find(x => x.id === d.mood);
+        if (savedMood) setMood(savedMood.id);
+        setIsPublic(d.isPublic);
+        setImageUri(d.imageUri ?? null);
+        setImageFit(d.imageFit ?? 'cover');
+        setImageRatio(d.imageRatio);
+        setStep(d.step === STEP_CAPTION || d.step === STEP_PREVIEW ? d.step : STEP_IMAGE);
+      } else {
         setPendingDraft(d);
       }
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [eventPrompt, eventMood, resumeDraft]);
 
   // Debounced auto-save on content changes
   useEffect(() => {

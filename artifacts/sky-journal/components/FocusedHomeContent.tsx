@@ -2,12 +2,13 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import { resolveUri } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import type { DiscoverPost, Story } from '@/context/mappers';
+import { getResumableStoryDraft, type ResumableStoryDraft } from '@/utils/entryDraftStore';
+import type { DiscoverPost } from '@/context/mappers';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
   ImageSourcePropType,
   ScrollView,
@@ -26,14 +27,13 @@ type FocusedHomeContentProps = {
   accent: string;
   hasNotifications: boolean;
   onOpenNotifications: () => void;
-  latestStory: Story | null;
   friendStories: DiscoverPost[];
   friendCount: number;
 };
 
 const SHORTCUTS = [
   { label: 'Lumi', icon: 'star', route: '/(tabs)/drift' },
-  { label: 'Chats', icon: 'message-circle', route: '/messages' },
+  { label: 'Chats', icon: 'message-circle', route: '/friends' },
   { label: 'Guide', icon: 'users', route: '/create-guide-session' },
   { label: 'Journal', icon: 'book-open', route: '/(tabs)/log' },
 ] as const;
@@ -45,18 +45,36 @@ export function FocusedHomeContent({
   accent,
   hasNotifications,
   onOpenNotifications,
-  latestStory,
   friendStories,
   friendCount,
 }: FocusedHomeContentProps) {
   const colors = useColors();
   const { t } = useTranslation();
   const { width: screenWidth } = useWindowDimensions();
-  const storyImageUri = latestStory?.thumbnailUri || latestStory?.panels[0]?.imageUri;
-  const storyImage = storyImageUri
-    ? { uri: resolveUri(storyImageUri) ?? storyImageUri }
-    : Images.create_chapter;
+  const [resumeDraft, setResumeDraft] = useState<ResumableStoryDraft | null>(null);
+  const [draftCheckComplete, setDraftCheckComplete] = useState(false);
   const friendCardWidth = Math.max(88, Math.min(116, (screenWidth - 58) / 3.5));
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    setDraftCheckComplete(false);
+    getResumableStoryDraft()
+      .then(draft => {
+        if (!active) return;
+        setResumeDraft(draft);
+        setDraftCheckComplete(true);
+      })
+      .catch(() => {
+        if (!active) return;
+        setResumeDraft(null);
+        setDraftCheckComplete(true);
+      });
+    return () => { active = false; };
+  }, []));
+
+  const storyImage = resumeDraft?.imageUri
+    ? { uri: resolveUri(resumeDraft.imageUri) ?? resumeDraft.imageUri }
+    : Images.create_chapter;
 
   function openRoute(path: string) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -118,80 +136,53 @@ export function FocusedHomeContent({
       </View>
 
       <View style={[s.createCard, { borderColor: `${accent}65` }]}>
-        <Image source={latestStory ? storyImage : Images.create_chapter} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={storyImage} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient
-          colors={latestStory
+          colors={resumeDraft
             ? [`${colors.background}38`, `${colors.background}9A`, `${colors.background}F2`]
             : [`${colors.background}E8`, `${accent}35`, `${colors.background}F2`]}
-          locations={latestStory ? [0, 0.48, 1] : [0, 0.55, 1]}
+          locations={resumeDraft ? [0, 0.48, 1] : [0, 0.55, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        {!latestStory && <View style={[s.createGlow, { backgroundColor: `${accent}28` }]} />}
+        {!resumeDraft && <View style={[s.createGlow, { backgroundColor: `${accent}28` }]} />}
         <Text style={[s.eyebrow, { color: accent }]}>
-          {latestStory ? 'YOUR STORY' : 'MAKE SOMETHING YOURS'}
+          {resumeDraft ? 'PICK UP WHERE YOU LEFT OFF' : 'MAKE SOMETHING YOURS'}
         </Text>
         <Text style={[s.createTitle, { color: colors.foreground }]}>
-          {latestStory ? 'Continue your story' : 'Create a story'}
+          {resumeDraft ? 'Continue your story' : 'New story'}
         </Text>
-        <Text style={[s.createDescription, { color: colors.mutedForeground }]}>
-          {latestStory
-            ? `${latestStory.chapterTitle || t('feature.home.untitled')} · ${latestStory.panels.length} ${latestStory.panels.length === 1 ? 'panel' : 'panels'}`
-            : 'Start with manga or write every word yourself.'}
+        <Text style={[s.createDescription, { color: colors.mutedForeground }]} numberOfLines={2}>
+          {resumeDraft ? resumeDraft.title : 'Choose how you would like to start.'}
         </Text>
-        {latestStory && (
-          <TouchableOpacity
-            testID="home-continue-story"
-            accessibilityRole="button"
-            accessibilityLabel={`Continue your story, ${latestStory.chapterTitle || 'Untitled story'}`}
-            style={[s.modeButton, s.continueStoryButton, { backgroundColor: colors.primary }]}
-            onPress={() => openRoute(`/story/${latestStory.id}`)}
-            activeOpacity={0.84}
-          >
-            <Icon name="book-open" size={17} color="#FFFFFF" />
-            <Text style={s.modeButtonText}>Continue</Text>
-            <Icon name="arrow-right" size={15} color="#FFFFFF" />
-          </TouchableOpacity>
-        )}
-        {latestStory && (
-          <Text style={[s.createSecondaryLabel, { color: colors.mutedForeground }]}>
-            OR CREATE A NEW STORY
-          </Text>
-        )}
-        <View style={s.modeRow}>
-          <TouchableOpacity
-            testID="home-create-manga"
-            accessibilityRole="button"
-            accessibilityLabel={latestStory ? 'Create another story with Manga' : 'Create a story with Manga'}
-            style={[
-              s.modeButton,
-              latestStory
-                ? [s.manualButton, { borderColor: `${accent}55` }]
-                : { backgroundColor: colors.primary },
-            ]}
-            onPress={() => openRoute('/quick-moment')}
-            activeOpacity={0.84}
-          >
-            <Icon name="image" size={17} color={latestStory ? accent : '#FFFFFF'} />
-            <Text style={[s.modeButtonText, latestStory && { color: colors.foreground }]}>
-              {latestStory ? 'New Manga' : 'Create with Manga'}
-            </Text>
-            <Icon name="arrow-right" size={15} color={latestStory ? accent : '#FFFFFF'} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID="home-write-manually"
-            accessibilityRole="button"
-            accessibilityLabel="Write a story manually"
-            style={[s.modeButton, s.manualButton, { borderColor: `${accent}55` }]}
-            onPress={() => openRoute('/chapter-editor')}
-            activeOpacity={0.84}
-          >
-            <Icon name="edit-2" size={17} color={accent} />
-            <Text style={[s.modeButtonText, { color: colors.foreground }]}>Write manually</Text>
-            <Icon name="arrow-right" size={15} color={accent} />
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          testID={resumeDraft ? 'home-continue-story' : 'home-new-story'}
+          accessibilityRole="button"
+          accessibilityLabel={resumeDraft ? `Continue your story, ${resumeDraft.title}` : 'Start a new story'}
+          disabled={!draftCheckComplete}
+          style={[
+            s.storyActionButton,
+            { backgroundColor: colors.primary, opacity: draftCheckComplete ? 1 : 0.65 },
+          ]}
+          onPress={() => {
+            if (!draftCheckComplete) return;
+            if (!resumeDraft) {
+              openRoute('/(tabs)/create');
+              return;
+            }
+            openRoute(
+              resumeDraft.kind === 'manga'
+                ? '/quick-moment?resumeDraft=1'
+                : '/chapter-editor?resumeDraft=1',
+            );
+          }}
+          activeOpacity={0.84}
+        >
+          <Icon name={resumeDraft ? 'book-open' : 'edit-2'} size={17} color="#FFFFFF" />
+          <Text style={s.storyActionText}>{resumeDraft ? 'Continue' : 'New story'}</Text>
+          <Icon name="arrow-right" size={15} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity
@@ -366,18 +357,11 @@ const s = StyleSheet.create({
   eyebrow: { fontSize: 9, lineHeight: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, marginBottom: 4 },
   createTitle: { fontSize: 24, lineHeight: 29, fontFamily: 'Satoshi-Black', letterSpacing: -0.4 },
   createDescription: { fontSize: 12, lineHeight: 17, fontFamily: 'Satoshi-Regular', marginTop: 2, marginBottom: 13 },
-  modeRow: { flexDirection: 'row', gap: 8 },
-  modeButton: {
-    flex: 1, minHeight: 50, borderRadius: 15, paddingHorizontal: 8,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  storyActionButton: {
+    minHeight: 50, borderRadius: 15, paddingHorizontal: 14,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  continueStoryButton: { flex: 0, alignSelf: 'stretch', marginBottom: 10 },
-  createSecondaryLabel: {
-    fontSize: 8, lineHeight: 11, fontFamily: 'Satoshi-Bold',
-    letterSpacing: 1.2, marginTop: 2, marginBottom: 7,
-  },
-  manualButton: { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1 },
-  modeButtonText: { flex: 1, fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
+  storyActionText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
   characterCard: {
     minHeight: 158, borderRadius: 22, borderWidth: 1, overflow: 'hidden',
     backgroundColor: 'rgba(23,14,47,0.95)',
