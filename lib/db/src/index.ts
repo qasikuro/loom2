@@ -87,7 +87,7 @@ export async function runStartupMigrations(): Promise<void> {
       INSERT INTO app_settings (key, value) VALUES
         ('maintenance_mode',  'false'::jsonb),
         ('min_app_version',   '"1.0.0"'::jsonb),
-        ('features',          '{"stories":true,"music":true,"shop":true,"campfire":true,"guides":true,"notifications":true}'::jsonb)
+        ('features',          '{"ai":true,"stories":true,"music":true,"shop":true,"campfire":true,"guides":true,"notifications":true}'::jsonb)
       ON CONFLICT (key) DO NOTHING
     `);
 

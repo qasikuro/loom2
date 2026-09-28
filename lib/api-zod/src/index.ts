@@ -65,3 +65,5 @@ export type ApiStoryItem = zod.infer<typeof ListStoriesResponseItem>;
 export type ApiOutfitItem = zod.infer<typeof ListOutfitsResponseItem>;
 export * from "./generated/api";
 export * from "./generated/types";
+export * from "./generated/api";
+export * from "./generated/types";

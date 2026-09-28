@@ -441,6 +441,7 @@ export interface FriendSummary {
 }
 
 export interface FeatureFlags {
+  ai: boolean;
   stories: boolean;
   music: boolean;
   shop: boolean;

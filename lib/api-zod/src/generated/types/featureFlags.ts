@@ -7,6 +7,7 @@
  */
 
 export interface FeatureFlags {
+  ai: boolean;
   stories: boolean;
   music: boolean;
   shop: boolean;

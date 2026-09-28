@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth } from "../middleware/auth";
+import { requireAiAccess } from "../middleware/ai-access";
 import { z } from "zod";
 
 const router = Router();
@@ -93,7 +94,7 @@ Rules for quality:
 — All text must feel hand-written for this exact person, not templated`;
 }
 
-router.post("/drift/analyze", requireAuth, async (req, res) => {
+router.post("/drift/analyze", requireAuth, requireAiAccess, async (req, res) => {
   const parsed = BodySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid request", details: parsed.error.issues });
@@ -170,7 +171,7 @@ Rules:
 - Never use bullet points, headers, or lists. Just speak.
 - Don't say "I understand" or "Of course" — just respond to the actual thing they said.`;
 
-router.post("/drift/chat", requireAuth, async (req, res) => {
+router.post("/drift/chat", requireAuth, requireAiAccess, async (req, res) => {
   const parsed = ChatSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid request", details: parsed.error.issues });

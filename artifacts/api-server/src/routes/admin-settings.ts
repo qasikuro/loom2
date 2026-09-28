@@ -1,6 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, appSettingsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
 import { requireAdmin } from "../middleware/auth";
 import { z } from "zod";
 
@@ -8,6 +7,7 @@ const router: IRouter = Router();
 
 const KNOWN_KEYS = ["maintenance_mode", "min_app_version", "features"] as const;
 const DEFAULT_FEATURES: Record<string, boolean> = {
+  ai: true,
   stories: true,
   music: true,
   shop: true,

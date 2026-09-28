@@ -289,6 +289,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 // ── Public app config (feature flags, maintenance mode, min version) ──────────
 // The mobile app calls this on startup to receive server-controlled settings.
 const DEFAULT_APP_FEATURES: Record<string, boolean> = {
+  ai: true,
   stories: true,
   music: true,
   shop: true,

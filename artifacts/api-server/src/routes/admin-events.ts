@@ -6,6 +6,7 @@ import { requireAdmin, getUserId } from "../middleware/auth";
 import { sendPushToTokens } from "../services/pushService";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import { requireAiAccess } from "../middleware/ai-access";
 
 const router: IRouter = Router();
 
@@ -145,7 +146,7 @@ Each item must be one of:
 Cosmetic items should have thematic itemIds like "frame_blossom", "accent_aurora", "theme_moonveil".
 Return 4–7 items total. Make the inventory feel generous but balanced. Match the event's mood and season.`;
 
-router.post("/admin/events/generate-inventory", requireAdmin, async (req: Request, res: Response) => {
+router.post("/admin/events/generate-inventory", requireAdmin, requireAiAccess, async (req: Request, res: Response) => {
   const parsed = GenerateBodySchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid body", details: parsed.error.issues });
 

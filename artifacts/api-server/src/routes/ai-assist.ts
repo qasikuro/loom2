@@ -1,6 +1,7 @@
 import { Router } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { requireAiAccess } from "../middleware/ai-access";
 import { z } from "zod";
 
 // ── Per-user rate limit ────────────────────────────────────────────────────────
@@ -95,7 +96,7 @@ function buildPrompt(tool: AiTool, context: string): string {
  * Body: { tool: AiTool, context: string }
  * Returns: { text: string }
  */
-router.post("/ai/story-assist", requireAuth, async (req, res) => {
+router.post("/ai/story-assist", requireAuth, requireAiAccess, async (req, res) => {
   const userId = getUserId(req);
 
   const rl = checkAiRateLimit(userId);

@@ -8,6 +8,7 @@ import { AlertTriangle } from "lucide-react";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Features {
+  ai:           boolean;
   stories:       boolean;
   music:         boolean;
   shop:          boolean;
@@ -24,6 +25,7 @@ interface Settings {
 }
 
 const DEFAULT_FEATURES: Features = {
+  ai:           true,
   stories:       true,
   music:         true,
   shop:          true,
@@ -34,6 +36,7 @@ const DEFAULT_FEATURES: Features = {
 };
 
 const FEATURE_LABELS: Record<keyof Features, string> = {
+  ai:           "AI Access",
   stories:       "Stories",
   music:         "Music",
   shop:          "Shop",
@@ -222,7 +225,11 @@ export default function SettingsPage() {
             <div>
               <p className="text-sm font-medium">{FEATURE_LABELS[key]}</p>
               <p className="text-xs text-muted-foreground">
-                {features[key] ? "Visible to all users" : "Hidden from all users"}
+                {key === "ai"
+                  ? features.ai
+                    ? "AI writing, Drift, and Manga tools are available to all users."
+                    : "All AI requests are blocked for users and admin generation tools."
+                  : features[key] ? "Visible to all users" : "Hidden from all users"}
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">

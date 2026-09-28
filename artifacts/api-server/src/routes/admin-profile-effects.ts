@@ -6,6 +6,7 @@ import { requireAdmin, requireAuth, getUserId } from "../middleware/auth";
 import { z } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import { randomUUID } from "crypto";
+import { requireAiAccess } from "../middleware/ai-access";
 
 const router: IRouter = Router();
 
@@ -210,7 +211,7 @@ Rules:
 - overlayTint should be barely perceptible (max 0.09 opacity), used only for warm/cool washes
 - Return ONLY a valid JSON object matching the schema above — no explanation, no markdown, no code fences`;
 
-router.post("/admin/profile-effects/generate-config", requireAdmin, async (req: Request, res: Response) => {
+router.post("/admin/profile-effects/generate-config", requireAdmin, requireAiAccess, async (req: Request, res: Response) => {
   const parsed = GenerateConfigSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
 

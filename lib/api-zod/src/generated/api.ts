@@ -43,6 +43,7 @@ export const GetAppConfigResponse = zod.object({
   maintenance_mode: zod.boolean(),
   min_app_version: zod.string(),
   features: zod.object({
+    ai: zod.boolean(),
     stories: zod.boolean(),
     music: zod.boolean(),
     shop: zod.boolean(),

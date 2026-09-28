@@ -1351,6 +1351,7 @@ components:
     FeatureFlags:
       type: object
       properties:
+        ai: { type: boolean }
         stories: { type: boolean }
         music: { type: boolean }
         shop: { type: boolean }
@@ -1358,7 +1359,7 @@ components:
         campfire: { type: boolean }
         guides: { type: boolean }
         notifications: { type: boolean }
-      required: [stories, music, shop, season, campfire, guides, notifications]
+      required: [ai, stories, music, shop, season, campfire, guides, notifications]
 
     AppConfig:
       type: object

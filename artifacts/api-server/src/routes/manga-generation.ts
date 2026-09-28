@@ -4,6 +4,7 @@ import sharp from "sharp";
 import { editImageBuffers } from "@workspace/integrations-openai-ai-server/image";
 import { pool } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { requireAiAccess } from "../middleware/ai-access";
 import { objectStorageClient } from "../lib/objectStorage";
 
 const CONFIG = {
@@ -88,7 +89,7 @@ router.delete("/manga/:generationId", requireAuth, async (req: Request, res: Res
   }
 });
 
-router.post("/manga/generate", requireAuth, async (req: Request, res: Response) => {
+router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request, res: Response) => {
   const parsed = BodySchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid manga generation request" });
