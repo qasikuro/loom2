@@ -118,31 +118,58 @@ export function FocusedHomeContent({
       </View>
 
       <View style={[s.createCard, { borderColor: `${accent}65` }]}>
-        <Image source={Images.create_chapter} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <Image source={latestStory ? storyImage : Images.create_chapter} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient
-          colors={[`${colors.background}E8`, `${accent}35`, `${colors.background}F2`]}
-          locations={[0, 0.55, 1]}
+          colors={latestStory
+            ? [`${colors.background}38`, `${colors.background}9A`, `${colors.background}F2`]
+            : [`${colors.background}E8`, `${accent}35`, `${colors.background}F2`]}
+          locations={latestStory ? [0, 0.48, 1] : [0, 0.55, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={[s.createGlow, { backgroundColor: `${accent}28` }]} />
-        <Text style={[s.eyebrow, { color: accent }]}>MAKE SOMETHING YOURS</Text>
-        <Text style={[s.createTitle, { color: colors.foreground }]}>Create a story</Text>
-        <Text style={[s.createDescription, { color: colors.mutedForeground }]}>
-          Start with manga or write every word yourself.
+        {!latestStory && <View style={[s.createGlow, { backgroundColor: `${accent}28` }]} />}
+        <Text style={[s.eyebrow, { color: accent }]}>
+          {latestStory ? 'YOUR STORY' : 'MAKE SOMETHING YOURS'}
         </Text>
+        <Text style={[s.createTitle, { color: colors.foreground }]}>
+          {latestStory ? 'Continue your story' : 'Create a story'}
+        </Text>
+        <Text style={[s.createDescription, { color: colors.mutedForeground }]}>
+          {latestStory
+            ? `${latestStory.chapterTitle || t('feature.home.untitled')} · ${latestStory.panels.length} ${latestStory.panels.length === 1 ? 'panel' : 'panels'}`
+            : 'Start with manga or write every word yourself.'}
+        </Text>
+        {latestStory && (
+          <TouchableOpacity
+            testID="home-continue-story"
+            accessibilityRole="button"
+            accessibilityLabel={`Continue your story, ${latestStory.chapterTitle || 'Untitled story'}`}
+            style={[s.modeButton, s.continueStoryButton, { backgroundColor: colors.primary }]}
+            onPress={() => openRoute(`/story/${latestStory.id}`)}
+            activeOpacity={0.84}
+          >
+            <Icon name="book-open" size={17} color="#FFFFFF" />
+            <Text style={s.modeButtonText}>Continue</Text>
+            <Icon name="arrow-right" size={15} color="#FFFFFF" />
+          </TouchableOpacity>
+        )}
+        {latestStory && (
+          <Text style={[s.createSecondaryLabel, { color: colors.mutedForeground }]}>
+            OR CREATE A NEW STORY
+          </Text>
+        )}
         <View style={s.modeRow}>
           <TouchableOpacity
             testID="home-create-manga"
             accessibilityRole="button"
-            accessibilityLabel="Create a story with Manga"
+            accessibilityLabel={latestStory ? 'Create another story with Manga' : 'Create a story with Manga'}
             style={[s.modeButton, { backgroundColor: colors.primary }]}
             onPress={() => openRoute('/quick-moment')}
             activeOpacity={0.84}
           >
             <Icon name="image" size={17} color="#FFFFFF" />
-            <Text style={s.modeButtonText}>Create with Manga</Text>
+            <Text style={s.modeButtonText}>{latestStory ? 'New Manga' : 'Create with Manga'}</Text>
             <Icon name="arrow-right" size={15} color="#FFFFFF" />
           </TouchableOpacity>
           <TouchableOpacity
@@ -159,43 +186,6 @@ export function FocusedHomeContent({
           </TouchableOpacity>
         </View>
       </View>
-
-      {latestStory && (
-        <TouchableOpacity
-          testID="home-continue-story"
-          accessibilityRole="button"
-          accessibilityLabel={`Continue your story, ${latestStory.chapterTitle || 'Untitled story'}`}
-          style={s.storyCard}
-          onPress={() => openRoute(`/story/${latestStory.id}`)}
-          activeOpacity={0.86}
-        >
-          <Image source={storyImage} style={StyleSheet.absoluteFill} contentFit="cover" />
-          <LinearGradient
-            colors={['rgba(7,5,20,0.04)', 'rgba(7,5,20,0.45)', 'rgba(7,5,20,0.94)']}
-            locations={[0, 0.38, 1]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <View style={s.storyCopy}>
-            <Text style={s.storyEyebrow}>CONTINUE YOUR STORY</Text>
-            <Text style={s.storyTitle} numberOfLines={2}>
-              {latestStory.chapterTitle || t('feature.home.untitled')}
-            </Text>
-            <Text style={s.storyMeta}>
-              {latestStory.panels.length} {latestStory.panels.length === 1 ? 'panel' : 'panels'}
-              {latestStory.contentType === 'video' ? ' · Video' : ' · Manga'}
-            </Text>
-            <View style={[s.continueButton, { backgroundColor: colors.primary }]}>
-              <Text style={s.continueButtonText}>Continue</Text>
-              <Icon name="arrow-right" size={15} color="#FFFFFF" />
-            </View>
-          </View>
-          <View style={s.moreIndicator}>
-            <Icon name="arrow-up-right" size={17} color="#FFFFFF" />
-          </View>
-        </TouchableOpacity>
-      )}
 
       <TouchableOpacity
         testID="home-character-profile"
