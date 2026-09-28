@@ -164,13 +164,20 @@ export function FocusedHomeContent({
             testID="home-create-manga"
             accessibilityRole="button"
             accessibilityLabel={latestStory ? 'Create another story with Manga' : 'Create a story with Manga'}
-            style={[s.modeButton, { backgroundColor: colors.primary }]}
+            style={[
+              s.modeButton,
+              latestStory
+                ? [s.manualButton, { borderColor: `${accent}55` }]
+                : { backgroundColor: colors.primary },
+            ]}
             onPress={() => openRoute('/quick-moment')}
             activeOpacity={0.84}
           >
-            <Icon name="image" size={17} color="#FFFFFF" />
-            <Text style={s.modeButtonText}>{latestStory ? 'New Manga' : 'Create with Manga'}</Text>
-            <Icon name="arrow-right" size={15} color="#FFFFFF" />
+            <Icon name="image" size={17} color={latestStory ? accent : '#FFFFFF'} />
+            <Text style={[s.modeButtonText, latestStory && { color: colors.foreground }]}>
+              {latestStory ? 'New Manga' : 'Create with Manga'}
+            </Text>
+            <Icon name="arrow-right" size={15} color={latestStory ? accent : '#FFFFFF'} />
           </TouchableOpacity>
           <TouchableOpacity
             testID="home-write-manually"
@@ -364,25 +371,13 @@ const s = StyleSheet.create({
     flex: 1, minHeight: 50, borderRadius: 15, paddingHorizontal: 8,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
   },
+  continueStoryButton: { flex: 0, alignSelf: 'stretch', marginBottom: 10 },
+  createSecondaryLabel: {
+    fontSize: 8, lineHeight: 11, fontFamily: 'Satoshi-Bold',
+    letterSpacing: 1.2, marginTop: 2, marginBottom: 7,
+  },
   manualButton: { backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1 },
   modeButtonText: { flex: 1, fontSize: 11.5, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
-  storyCard: {
-    minHeight: 154, borderRadius: 22, borderWidth: 1, borderColor: 'rgba(205,185,255,0.28)',
-    overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: 'rgba(21,14,44,0.95)',
-  },
-  storyCopy: { paddingHorizontal: 15, paddingBottom: 14, paddingTop: 62, alignItems: 'flex-start' },
-  storyEyebrow: { color: 'rgba(255,255,255,0.76)', fontSize: 9, lineHeight: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 1.1, marginBottom: 3 },
-  storyTitle: { maxWidth: '82%', color: '#FFFFFF', fontSize: 20, lineHeight: 24, fontFamily: 'Satoshi-Black' },
-  storyMeta: { marginTop: 2, marginBottom: 10, color: 'rgba(255,255,255,0.78)', fontSize: 11, lineHeight: 15, fontFamily: 'Satoshi-Medium' },
-  continueButton: {
-    minHeight: 37, paddingHorizontal: 15, borderRadius: 13,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-  },
-  continueButtonText: { color: '#FFFFFF', fontSize: 12, fontFamily: 'Satoshi-Bold' },
-  moreIndicator: {
-    position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: 17,
-    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(8,6,24,0.52)',
-  },
   characterCard: {
     minHeight: 158, borderRadius: 22, borderWidth: 1, overflow: 'hidden',
     backgroundColor: 'rgba(23,14,47,0.95)',
