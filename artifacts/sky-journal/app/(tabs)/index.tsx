@@ -18,12 +18,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import {
-  useApp, apiFetch, resolveUri, type GuideAvailability, type GuideProfile, type DiscoverPost,
+  useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
 } from '@/context/AppContext';
 // import { RewardBalance } from '@/components/RewardBalance'; // kept for future use
 import { RewardBanner } from '@/components/RewardBanner';
 import { FriendAvatar } from '@/components/FriendAvatar';
+import { FocusedHomeContent } from '@/components/FocusedHomeContent';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
@@ -82,6 +83,10 @@ function logHomePress(label: string, action: () => void): void {
 // Retain the legacy markup for now, but do not mount its native scroll and
 // refresh views behind the current dashboard. Remove it in a separate cleanup.
 function showLegacyDashboard(): boolean {
+  return false;
+}
+
+function showExpandedDashboard(): boolean {
   return false;
 }
 
@@ -1289,11 +1294,11 @@ export default function HomeScreen() {
     return (sorted[0]?.[1] ?? 0) >= 2 ? sorted[0]![0] : null;
   }, [journalEntries]);
 
-  // Public story count (for Creative Star nudge)
-  const publicStoryCount = useMemo(() => stories.filter(s => s.isPublic).length, [stories]);
-
-
   const circleStories = discoverPosts.filter(p => p.isFollowing).slice(0, 10);
+  const latestStory = useMemo(
+    () => [...stories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0] ?? null,
+    [stories],
+  );
 
   // Unique friends with recent stories (for the story-ring row)
   const circleAuthors = (() => {
@@ -1467,6 +1472,8 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
+        {showExpandedDashboard() ? (
+          <>
         <View style={s.dashboardHeader}>
            <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={s.dashboardGreeting}>{greetingWord},</Text>
@@ -1689,6 +1696,20 @@ export default function HomeScreen() {
             <Icon name="arrow-right" size={13} color="#F4CB55" />
           </View>
         </TouchableOpacity>
+          </>
+        ) : (
+          <FocusedHomeContent
+            greeting={greetingWord}
+            characterName={character.name || 'Player'}
+            characterImage={imgSrc}
+            accent={accent}
+            hasNotifications={hasNotifs}
+            onOpenNotifications={openNotificationsPanel}
+            latestStory={latestStory}
+            friendStories={circleStories.slice(0, 5)}
+            friendCount={friends.length}
+          />
+        )}
       </ScrollView>
 
       {/* Do not mount the legacy Home tree. A display:none native ScrollView

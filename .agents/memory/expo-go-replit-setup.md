@@ -38,3 +38,10 @@ http://localhost:20450/index.bundle?platform=android&dev=true&hot=false&transfor
 
 ## APK builds unaffected
 The `--go` flag only changes the local dev server mode. EAS Build (`eas build`) is independent and uses the project config + slug/owner to identify the project — not the dev server mode. APK builds continue to work normally.
+
+## Authenticated preview screenshots
+The Replit screenshot browser may not carry a Clerk session. Protected Expo routes can remain on the Ximo splash screen even when Metro has bundled the app successfully.
+
+**Why:** The screenshot browser is separate from the user's signed-in app session and reports Clerk's `dev-browser-missing` state.
+
+**How to apply:** Check Metro and typecheck results before treating a splash-only screenshot as a code failure. Verify protected screens in a signed-in session.
