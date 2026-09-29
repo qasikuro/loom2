@@ -40,6 +40,8 @@ import type {
   PublicUserProfile,
   RewardBalance,
   ShopResponse,
+  StorigamInterestInput,
+  StorigamInterestResponse,
   Story,
   StoryInput,
   StoryLikeState,
@@ -3058,4 +3060,91 @@ export const useAcceptFriendRequest = <
   TContext
 > => {
   return useMutation(getAcceptFriendRequestMutationOptions(options));
+};
+
+/**
+ * @summary Register interest in the Storigam beta or creator program
+ */
+export const getSubmitStorigamInterestUrl = () => {
+  return `/api/storigam-interest`;
+};
+
+export const submitStorigamInterest = async (
+  storigamInterestInput: StorigamInterestInput,
+  options?: RequestInit,
+): Promise<StorigamInterestResponse> => {
+  return customFetch<StorigamInterestResponse>(getSubmitStorigamInterestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(storigamInterestInput),
+  });
+};
+
+export const getSubmitStorigamInterestMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitStorigamInterest>>,
+    TError,
+    { data: BodyType<StorigamInterestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitStorigamInterest>>,
+  TError,
+  { data: BodyType<StorigamInterestInput> },
+  TContext
+> => {
+  const mutationKey = ["submitStorigamInterest"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitStorigamInterest>>,
+    { data: BodyType<StorigamInterestInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitStorigamInterest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitStorigamInterestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitStorigamInterest>>
+>;
+export type SubmitStorigamInterestMutationBody =
+  BodyType<StorigamInterestInput>;
+export type SubmitStorigamInterestMutationError = ErrorType<void>;
+
+/**
+ * @summary Register interest in the Storigam beta or creator program
+ */
+export const useSubmitStorigamInterest = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitStorigamInterest>>,
+    TError,
+    { data: BodyType<StorigamInterestInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitStorigamInterest>>,
+  TError,
+  { data: BodyType<StorigamInterestInput> },
+  TContext
+> => {
+  return useMutation(getSubmitStorigamInterestMutationOptions(options));
 };

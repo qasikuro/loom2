@@ -37,6 +37,34 @@ export interface HealthStatus {
   status: string;
 }
 
+export type StorigamInterestInputInterestsItem =
+  (typeof StorigamInterestInputInterestsItem)[keyof typeof StorigamInterestInputInterestsItem];
+
+export const StorigamInterestInputInterestsItem = {
+  beta_tester: "beta_tester",
+  content_creator: "content_creator",
+} as const;
+
+export interface StorigamInterestInput {
+  /** @maxLength 254 */
+  email: string;
+  /**
+   * @minItems 1
+   * @maxItems 2
+   */
+  interests: StorigamInterestInputInterestsItem[];
+  consent: boolean;
+  /**
+   * Hidden anti-spam field; must be left empty.
+   * @maxLength 100
+   */
+  website?: string;
+}
+
+export interface StorigamInterestResponse {
+  ok: boolean;
+}
+
 export interface Character {
   id: number;
   name: string;

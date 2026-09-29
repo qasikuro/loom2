@@ -227,12 +227,30 @@ button { font: inherit; }
 .community-row p { margin: 4px 0 0; color: hsl(var(--muted-foreground)); font-size: .85rem; }
 .community-outro { margin: 23px 0 0; color: hsl(var(--muted-foreground)); line-height: 1.55; font-weight: 600; }
 
-.final-cta { background: hsl(var(--accent)); min-height: 650px; display: grid; place-items: center; text-align: center; position: relative; }
+.final-cta { background: hsl(var(--accent)); min-height: 650px; padding: 96px 0; display: grid; place-items: center; text-align: center; position: relative; }
 .final-cta::before, .final-cta::after { content: ''; position: absolute; border: 2px solid hsl(var(--primary)); border-radius: 50%; opacity: .35; }
 .final-cta::before { width: 500px; height: 500px; left: -150px; top: -220px; }
 .final-cta::after { width: 340px; height: 340px; right: -90px; bottom: -140px; }
+.final-cta .container-wide { position: relative; z-index: 1; }
 .final-cta h2 { font-size: clamp(3.8rem, 8vw, 8rem); line-height: .86; max-width: 1000px; margin: 19px auto 28px; }
-.final-lines { margin: 0 auto 30px; font-size: 1.1rem; line-height: 1.6; }
+.final-lines { max-width: 620px; margin: 0 auto 28px; font-size: 1.1rem; line-height: 1.6; }
+.interest-form { width: min(100%, 560px); margin: 0 auto; padding: 24px; text-align: left; background: hsl(var(--card)); border: 2px solid hsl(var(--primary)); box-shadow: 9px 10px 0 hsl(var(--primary)); }
+.interest-field { display: grid; gap: 8px; color: hsl(var(--foreground)); font-weight: 700; }
+.interest-field input { width: 100%; min-height: 50px; padding: 0 14px; border: 1px solid hsl(var(--primary)); border-radius: 10px; background: #fffaf0; color: hsl(var(--foreground)); font: inherit; }
+.interest-field input:focus-visible { outline: 3px solid hsl(var(--secondary)); outline-offset: 2px; }
+.interest-options { display: grid; gap: 11px; margin: 22px 0 0; padding: 0; border: 0; }
+.interest-options legend { margin-bottom: 12px; color: hsl(var(--foreground)); font-weight: 700; }
+.interest-option { display: flex; gap: 10px; align-items: center; color: hsl(var(--foreground)); font-size: .94rem; font-weight: 600; }
+.interest-option input, .interest-consent input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: hsl(var(--secondary)); }
+.interest-hint { color: hsl(var(--muted-foreground)); font-size: .82rem; }
+.interest-validation { color: #a22226; font-size: .88rem; font-weight: 600; }
+.interest-consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 20px; color: hsl(var(--foreground)); font-size: .85rem; line-height: 1.45; }
+.interest-consent input { margin-top: 2px; }
+.interest-submit { width: 100%; justify-content: center; margin-top: 18px; cursor: pointer; }
+.interest-submit:disabled { cursor: not-allowed; opacity: .62; transform: none; }
+.interest-privacy { margin: 14px 0 0; color: hsl(var(--muted-foreground)); font-size: .78rem; line-height: 1.5; }
+.interest-status { min-height: 1.35em; margin: 10px 0 0; color: hsl(var(--foreground)); font-size: .87rem; font-weight: 600; }
+.interest-honeypot { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .footer { padding: 28px 0; background: hsl(var(--primary)); color: hsl(var(--background)); }
 .footer-inner { display: flex; justify-content: space-between; gap: 20px; align-items: center; }
 .footer .brand img { filter: brightness(0) invert(1); }
@@ -282,7 +300,9 @@ button { font: inherit; }
   .character-layout { gap: 48px; }
   .community-row { grid-template-columns: 46px 1fr; }
   .final-cta { min-height: 560px; padding: 72px 0; }
-  .final-cta h2 { font-size: clamp(3rem, 12.5vw, 4.5rem); }
+  .final-cta h2 { font-size: clamp(2.8rem, 11vw, 4.25rem); }
+  .interest-form { padding: 20px; box-shadow: 5px 6px 0 hsl(var(--primary)); }
+  .final-lines { font-size: 1rem; }
   .footer-inner { display: block; }
   .footer-links { margin-top: 18px; }
 }

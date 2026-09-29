@@ -643,6 +643,29 @@ paths:
         "200":
           description: Friend added
 
+  /storigam-interest:
+    post:
+      operationId: submitStorigamInterest
+      tags: [config]
+      summary: Register interest in the Storigam beta or creator program
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorigamInterestInput"
+      responses:
+        "200":
+          description: Interest recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorigamInterestResponse"
+        "400":
+          description: Invalid input or required consent is missing
+        "429":
+          description: Too many submissions
+
 components:
   schemas:
     MangaGenerationInput:
@@ -679,6 +702,35 @@ components:
         status:
           type: string
       required: [status]
+
+    StorigamInterestInput:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        interests:
+          type: array
+          minItems: 1
+          maxItems: 2
+          items:
+            type: string
+            enum: [beta_tester, content_creator]
+        consent:
+          type: boolean
+        website:
+          type: string
+          maxLength: 100
+          description: Hidden anti-spam field; must be left empty.
+      required: [email, interests, consent]
+
+    StorigamInterestResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
 
     Character:
       type: object

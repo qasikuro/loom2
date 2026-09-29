@@ -1,9 +1,10 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
+import InterestSignupForm from '@/components/interest-signup-form';
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -36,6 +37,20 @@ const gamerTypes = [
 
 function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const targetId = window.location.hash.slice(1);
+    if (!targetId) return;
+
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = 'auto';
+    target.scrollIntoView({ block: 'start' });
+    root.style.scrollBehavior = previousScrollBehavior;
+  }, []);
   const closeMenu = () => setMenuOpen(false);
 
   return (
@@ -254,8 +269,8 @@ function Home() {
         <div className="container-wide">
           <p className="eyebrow">Storigam · Stories made by gamers.</p>
           <h2 className="display">Your gaming<br />moments deserve<br />a story.</h2>
-          <p className="final-lines">Bring the screenshot.<br />Make the story.<br />Share the moment.</p>
-          <a className="button button-primary" href="#from-screenshot" data-testid="link-start-making">Start making <ArrowUpRight size={17} /></a>
+          <p className="final-lines">Help shape what comes next. Show your interest in beta testing, content creation, or both.</p>
+          <InterestSignupForm />
         </div>
       </section>
 

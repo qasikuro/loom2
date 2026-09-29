@@ -905,3 +905,30 @@ export const RemoveFriendRequestParams = zod.object({
 export const AcceptFriendRequestParams = zod.object({
   id: zod.coerce.string().uuid(),
 });
+
+/**
+ * @summary Register interest in the Storigam beta or creator program
+ */
+export const submitStorigamInterestBodyEmailMax = 254;
+
+export const submitStorigamInterestBodyInterestsMax = 2;
+
+export const submitStorigamInterestBodyWebsiteMax = 100;
+
+export const SubmitStorigamInterestBody = zod.object({
+  email: zod.string().email().max(submitStorigamInterestBodyEmailMax),
+  interests: zod
+    .array(zod.enum(["beta_tester", "content_creator"]))
+    .min(1)
+    .max(submitStorigamInterestBodyInterestsMax),
+  consent: zod.boolean(),
+  website: zod
+    .string()
+    .max(submitStorigamInterestBodyWebsiteMax)
+    .optional()
+    .describe("Hidden anti-spam field; must be left empty."),
+});
+
+export const SubmitStorigamInterestResponse = zod.object({
+  ok: zod.boolean(),
+});

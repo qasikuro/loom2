@@ -33,6 +33,7 @@ import aiAssistRouter from "./ai-assist";
 import mangaGenerationRouter from "./manga-generation";
 import musicRouter from "./music";
 import mediaRouter from "./media";
+import storigamInterestRouter from "./storigam-interest";
 
 const router: IRouter = Router();
 
@@ -70,5 +71,6 @@ router.use(aiAssistRouter);
 router.use(mangaGenerationRouter);
 router.use(musicRouter);
 router.use(mediaRouter);
+router.use(storigamInterestRouter);
 
 export default router;
