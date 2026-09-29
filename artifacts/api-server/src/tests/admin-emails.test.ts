@@ -82,6 +82,15 @@ describe("POST /admin/emails", () => {
     });
   });
 
+  it("leaves reply-to unset until the receiving inbox is ready", async () => {
+    vi.stubEnv("RESEND_REPLY_TO_EMAIL", "");
+    proxy.mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: "re_test_456" }) });
+    const result = await request(app).post("/admin/emails").set("x-test-user-id", ADMIN_ID).send(email);
+    expect(result.status).toBe(200);
+    const body = JSON.parse(proxy.mock.calls[0][2].body as string);
+    expect(body).not.toHaveProperty("reply_to");
+  });
+
   it("refuses to send with an invalid configured reply-to address", async () => {
     vi.stubEnv("RESEND_REPLY_TO_EMAIL", "invalid-address");
     const result = await request(app).post("/admin/emails").set("x-test-user-id", ADMIN_ID).send(email);
