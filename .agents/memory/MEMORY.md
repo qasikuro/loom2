@@ -33,3 +33,4 @@
 - [Runtime join type mismatches](runtime-join-types.md) — typed joins can fail against actual DB column types; a failed Friends fetch may look like an empty list
 - [Ximo branding and existing installs](ximo-rebrand-identity.md) — visible branding is Ximo; preserve native identifiers unless a separate-install migration is requested
 - [Guide sessions use Campfire rooms](guide-session-campfire.md) — scheduling and attendance are separate, but every session enters one existing Campfire chat
+- [Landing page language bridge](landing-language-bridge.md) — native app language storage is invisible to the browser; pass locale in landing links and retain a web-side choice

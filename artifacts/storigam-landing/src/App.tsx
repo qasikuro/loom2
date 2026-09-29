@@ -11,6 +11,7 @@ import {
   ImagePlus,
   MessageCircleMore,
   Sparkles,
+  Globe2,
   Menu,
   X,
 } from 'lucide-react';
@@ -27,25 +28,25 @@ import dragonBattle from './assets/dragon-battle.jpg';
 import friendsNight from './assets/friends-night.jpg';
 import chaosParty from './assets/chaos-party.jpg';
 import outfitStory from './assets/outfit-story.jpg';
+import { languageNames, type LandingLanguage, useLandingLanguage } from './i18n';
 
 const queryClient = new QueryClient();
 
-const memorableMoments = [
-  { id: 'boss-fight', label: 'That ridiculous boss fight.', image: dragonBattle, alt: 'A small traveler faces an enormous turquoise dragon in a moonlit forest' },
-  { id: 'favorite-outfit', label: 'The outfit you spent hours making.', image: outfitStory, alt: 'An adventurer shows off a detailed outfit at sunset' },
-  { id: 'new-friend', label: 'The friend you met by accident.', image: friendsNight, alt: 'Two adventurers sit together watching lanterns and stars' },
-  { id: 'unexpected-chaos', label: 'The time everything went completely wrong.', image: chaosParty, alt: 'A party of adventurers tumbles down a hill after a creature steals their basket' },
-];
-
-const gamerTypes = [
-  { id: 'character-creators', title: 'Character creators', description: 'Some make beautiful characters.' },
-  { id: 'collectors', title: 'Collectors', description: 'Some collect everything.' },
-  { id: 'lore-lovers', title: 'Lore lovers', description: 'Some love the lore.' },
-  { id: 'chaos-makers', title: 'Chaos makers', description: 'Some just cause chaos.' },
-];
-
 function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { language, copy, chooseLanguage } = useLandingLanguage();
+  const memorableMoments = [
+    { id: 'boss-fight', label: copy.galleryBoss, image: dragonBattle, alt: copy.galleryBossAlt },
+    { id: 'favorite-outfit', label: copy.galleryOutfit, image: outfitStory, alt: copy.galleryOutfitAlt },
+    { id: 'new-friend', label: copy.galleryFriend, image: friendsNight, alt: copy.galleryFriendAlt },
+    { id: 'unexpected-chaos', label: copy.galleryChaos, image: chaosParty, alt: copy.galleryChaosAlt },
+  ];
+  const gamerTypes = [
+    { id: 'character-creators', title: copy.communityCreators, description: copy.communityCreatorsCopy },
+    { id: 'collectors', title: copy.communityCollectors, description: copy.communityCollectorsCopy },
+    { id: 'lore-lovers', title: copy.communityLore, description: copy.communityLoreCopy },
+    { id: 'chaos-makers', title: copy.communityChaos, description: copy.communityChaosCopy },
+  ];
 
   useEffect(() => {
     const targetId = window.location.hash.slice(1);
@@ -63,46 +64,62 @@ function Home() {
   const closeMenu = () => setMenuOpen(false);
 
   return (
-    <main className="storigam-page">
+    <main className="storigam-page" dir={language === 'ar' ? 'rtl' : 'ltr'}>
       <header className="nav-shell">
         <div className="container-wide nav">
           <a className="brand" href="#top" onClick={closeMenu} data-testid="link-brand">
             <img src={logoPath} alt="Storigam" />
           </a>
-          <button
-            className="menu-button"
-            type="button"
-            aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
-            data-testid="button-menu"
-          >
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-          <nav className={`nav-links ${menuOpen ? 'open' : ''}`} aria-label="Main navigation">
-            <a href="#how-it-works" onClick={closeMenu} data-testid="link-how-it-works">How it works</a>
-            <a href="#character-story" onClick={closeMenu} data-testid="link-character-stories">Character stories</a>
-            <a href="#community" onClick={closeMenu} data-testid="link-community">Community</a>
-            <a className="nav-cta" href="#start" onClick={closeMenu} data-testid="link-start">Start making <ArrowUpRight size={15} /></a>
-          </nav>
+          <div className="nav-right">
+            <nav className={`nav-links ${menuOpen ? 'open' : ''}`} aria-label={copy.navAria}>
+              <a href="#how-it-works" onClick={closeMenu} data-testid="link-how-it-works">{copy.navHow}</a>
+              <a href="#character-story" onClick={closeMenu} data-testid="link-character-stories">{copy.navCharacters}</a>
+              <a href="#community" onClick={closeMenu} data-testid="link-community">{copy.navCommunity}</a>
+              <a className="nav-cta" href="#start" onClick={closeMenu} data-testid="link-start">{copy.navStart} <ArrowUpRight size={15} /></a>
+            </nav>
+            <label className="language-control">
+              <Globe2 size={17} aria-hidden="true" />
+              <span className="sr-only">{copy.languageLabel}</span>
+              <select
+                aria-label={copy.languageLabel}
+                data-testid="select-language"
+                value={language}
+                onChange={(event) => chooseLanguage(event.target.value as LandingLanguage)}
+              >
+                {Object.entries(languageNames).map(([code, name]) => (
+                  <option key={code} value={code}>{name}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="menu-button"
+              type="button"
+              aria-label={menuOpen ? copy.navClose : copy.navOpen}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+              data-testid="button-menu"
+            >
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
       </header>
 
       <section className="hero" id="top">
         <div className="container-wide hero-grid">
           <div className="reveal">
-            <p className="eyebrow">The little moments make the best stories</p>
-            <h1 className="display">Your game.<br />Your moment.<br /><em>Your story.</em></h1>
+            <p className="eyebrow">{copy.heroEyebrow}</p>
+            <h1 className="display">{copy.heroGame}<br />{copy.heroMoment}<br /><em>{copy.heroStory}</em></h1>
             <p className="hero-intro">
-              The screenshot you saved. The friend you met by accident. The boss fight nobody thought you’d win.
-              <strong>Bring those moments together and make a story worth keeping.</strong>
+              {copy.heroIntro}
+              <strong>{copy.heroStrong}</strong>
             </p>
             <div className="hero-actions">
-              <a className="button button-primary" href="#from-screenshot" data-testid="link-create-story">Make a story <ArrowDownRight size={17} /></a>
-              <a className="button button-quiet" href="#how-it-works" data-testid="link-how-it-works-hero">How it works</a>
+              <a className="button button-primary" href="#from-screenshot" data-testid="link-create-story">{copy.heroMake} <ArrowDownRight size={17} /></a>
+              <a className="button button-quiet" href="#how-it-works" data-testid="link-how-it-works-hero">{copy.navHow}</a>
             </div>
           </div>
-          <div className="hero-stage reveal delay-2" role="img" aria-label="An example gaming moment turned into a story">
+          <div className="hero-stage reveal delay-2" role="img" aria-label={copy.heroVisualAlt}>
             <div className="stage-backdrop" />
             <div className="story-card">
               <div className="story-card-art">
@@ -110,46 +127,48 @@ function Home() {
               </div>
               <div className="story-card-footer">
                 <div>
-                  <small>Adventure log / 01</small>
-                  <strong>The day we found the sky castle</strong>
+                  <small>{copy.heroCardOverline}</small>
+                  <strong>{copy.heroCardTitle}</strong>
                 </div>
                 <ArrowUpRight size={22} />
               </div>
             </div>
-            <div className="speech">“Wait… you see it too?”</div>
-            <div className="sticker">A moment worth keeping</div>
+            <div className="speech">{copy.heroSpeech}</div>
+            <div className="sticker">{copy.heroSticker}</div>
           </div>
         </div>
-        <div className="container-wide scroll-note"><span /> Your game. Your moment. Your story.</div>
+        <div className="container-wide scroll-note"><span /> {copy.heroGame} {copy.heroMoment} {copy.heroStory}</div>
       </section>
 
-      <div className="marquee" aria-label="Your game, your moment, your story">
+      <div className="marquee" aria-label={`${copy.heroGame} ${copy.heroMoment} ${copy.heroStory}`}>
         <div className="marquee-track">
-          <span className="marquee-item">your game</span><span className="marquee-dot">•</span>
-          <span className="marquee-item">your moment</span><span className="marquee-dot">•</span>
-          <span className="marquee-item">your story</span><span className="marquee-dot">•</span>
-          <span className="marquee-item">make it a story</span><span className="marquee-dot">•</span>
-          <span className="marquee-item">your game</span><span className="marquee-dot">•</span>
-          <span className="marquee-item">your moment</span><span className="marquee-dot">•</span>
-          <span className="marquee-item">your story</span><span className="marquee-dot">•</span>
-          <span className="marquee-item">make it a story</span><span className="marquee-dot">•</span>
+          {[...Array(2)].flatMap((_, index) => [
+            <span className="marquee-item" key={`${index}-game`}>{copy.marqueeGame}</span>,
+            <span className="marquee-dot" key={`${index}-game-dot`}>•</span>,
+            <span className="marquee-item" key={`${index}-moment`}>{copy.marqueeMoment}</span>,
+            <span className="marquee-dot" key={`${index}-moment-dot`}>•</span>,
+            <span className="marquee-item" key={`${index}-story`}>{copy.marqueeStory}</span>,
+            <span className="marquee-dot" key={`${index}-story-dot`}>•</span>,
+            <span className="marquee-item" key={`${index}-make`}>{copy.marqueeMake}</span>,
+            <span className="marquee-dot" key={`${index}-make-dot`}>•</span>,
+          ])}
         </div>
       </div>
 
       <section className="manifesto section-pad">
         <div className="container-wide manifesto-layout">
           <div className="manifesto-moments">
-            <p className="eyebrow">Gaming is full of little moments</p>
-            <ul className="moment-list" aria-label="Gaming moments worth remembering">
-              <li>A crazy win.</li>
-              <li>A funny fail.</li>
-              <li>A beautiful character.</li>
-              <li>A random adventure with friends.</li>
+            <p className="eyebrow">{copy.manifestoEyebrow}</p>
+            <ul className="moment-list" aria-label={copy.manifestoEyebrow}>
+              <li>{copy.manifestoWin}</li>
+              <li>{copy.manifestoFail}</li>
+              <li>{copy.manifestoCharacter}</li>
+              <li>{copy.manifestoAdventure}</li>
             </ul>
           </div>
           <div>
-            <h2 className="display">Your game.<br />Your moment.<br /><span>Your story.</span></h2>
-            <p className="manifesto-copy">Gaming is full of little moments worth remembering. Storigam gives those moments a place to live.</p>
+            <h2 className="display">{copy.heroGame}<br />{copy.heroMoment}<br /><span>{copy.heroStory}</span></h2>
+            <p className="manifesto-copy">{copy.manifestoCopy}</p>
           </div>
         </div>
       </section>
@@ -158,23 +177,23 @@ function Home() {
         <div className="container-wide">
           <div className="how-head">
             <div>
-              <p className="eyebrow">How it works</p>
-              <h2 className="section-title display">It starts with a screenshot.</h2>
+              <p className="eyebrow">{copy.howEyebrow}</p>
+              <h2 className="section-title display">{copy.howTitle}</h2>
             </div>
-            <p className="section-copy">Choose a screenshot from your game, make it yours, and share it with friends.</p>
+            <p className="section-copy">{copy.howCopy}</p>
           </div>
           <div className="steps">
             <article className="step reveal" data-testid="step-pick-a-moment">
-              <img className="step-image" src={heroAdventure} alt="Three adventurers discover a castle in the clouds" loading="lazy" />
-              <div className="step-info"><div className="step-number">01</div><div><h3>Pick a moment</h3><p>Choose the screenshot you keep coming back to.</p></div></div>
+              <img className="step-image" src={heroAdventure} alt={copy.stepOneAlt} loading="lazy" />
+              <div className="step-info"><div className="step-number">01</div><div><h3>{copy.stepOneTitle}</h3><p>{copy.stepOneCopy}</p></div></div>
             </article>
             <article className="step reveal delay-1" data-testid="step-make-it-yours">
-              <img className="step-image" src={characterPortrait} alt="A traveler at sunset, ready for her own story" loading="lazy" />
-              <div className="step-info"><div className="step-number">02</div><div><h3>Make it yours</h3><p>Add the words, characters, and details only you know.</p></div></div>
+              <img className="step-image" src={characterPortrait} alt={copy.stepTwoAlt} loading="lazy" />
+              <div className="step-info"><div className="step-number">02</div><div><h3>{copy.stepTwoTitle}</h3><p>{copy.stepTwoCopy}</p></div></div>
             </article>
             <article className="step reveal delay-2" data-testid="step-share-your-story">
-              <img className="step-image" src={friendsNight} alt="Two friends share a quiet view beneath a starry sky" loading="lazy" />
-              <div className="step-info"><div className="step-number">03</div><div><h3>Share your story</h3><p>Send it to the friends who were there. Or the ones who wish they were.</p></div></div>
+              <img className="step-image" src={friendsNight} alt={copy.stepThreeAlt} loading="lazy" />
+              <div className="step-info"><div className="step-number">03</div><div><h3>{copy.stepThreeTitle}</h3><p>{copy.stepThreeCopy}</p></div></div>
             </article>
           </div>
         </div>
@@ -182,46 +201,46 @@ function Home() {
 
       <section className="character section-pad" id="character-story">
         <div className="container-wide character-layout">
-          <div className="character-art reveal" role="img" aria-label="A colorful character illustration with story labels">
+          <div className="character-art reveal" role="img" aria-label={copy.characterVisualAlt}>
             <img className="character-main-image" src={characterPortrait} alt="" loading="lazy" />
             <img className="character-inset" src={friendsNight} alt="" loading="lazy" />
-            <span className="character-tag character-tag-top">your character</span>
-            <span className="character-tag character-tag-bottom">their little story</span>
+            <span className="character-tag character-tag-top">{copy.characterTagTop}</span>
+            <span className="character-tag character-tag-bottom">{copy.characterTagBottom}</span>
           </div>
           <div>
-            <p className="eyebrow">Make your character yours.</p>
-            <h2 className="feature-title display">Love your character?<br />Show them off.</h2>
-            <p className="section-copy">Share your character, describe their personality, give them a little story — and let other gamers meet the character behind the screen.</p>
-            <a className="button button-primary" href="#from-screenshot" style={{ marginTop: '28px' }} data-testid="link-create-character-story">Create your character story <ArrowUpRight size={16} /></a>
+            <p className="eyebrow">{copy.characterEyebrow}</p>
+            <h2 className="feature-title display">{copy.characterTitleOne}<br />{copy.characterTitleTwo}</h2>
+            <p className="section-copy">{copy.characterCopy}</p>
+            <a className="button button-primary" href="#from-screenshot" style={{ marginTop: '28px' }} data-testid="link-create-character-story">{copy.characterCta} <ArrowUpRight size={16} /></a>
           </div>
         </div>
       </section>
 
       <section className="features section-pad" id="from-screenshot">
         <div className="container-wide feature-layout">
-          <div className="feature-visual reveal" role="group" aria-label="From screenshot to story preview">
-            <div className="editor-top"><span>from screenshot</span><span>to story</span></div>
+          <div className="feature-visual reveal" role="group" aria-label={copy.editorAria}>
+            <div className="editor-top"><span>{copy.editorFrom}</span><span>{copy.editorTo}</span></div>
             <div className="editor-screen">
               <div className="editor-panels">
-                <div className="panel large"><img src={heroAdventure} alt="Adventurers spot the sky castle" loading="lazy" /><span className="caption">your moment</span></div>
-                <div className="panel scene-1"><img src={friendsNight} alt="Friends beneath the stars" loading="lazy" /><span className="caption">add your words</span></div>
-                <div className="panel scene-2"><img src={outfitStory} alt="A character at sunset" loading="lazy" /><span className="caption">your story</span></div>
+                <div className="panel large"><img src={heroAdventure} alt={copy.editorMomentAlt} loading="lazy" /><span className="caption">{copy.editorCaptionMoment}</span></div>
+                <div className="panel scene-1"><img src={friendsNight} alt={copy.editorWordsAlt} loading="lazy" /><span className="caption">{copy.editorCaptionWords}</span></div>
+                <div className="panel scene-2"><img src={outfitStory} alt={copy.editorStoryAlt} loading="lazy" /><span className="caption">{copy.editorCaptionStory}</span></div>
               </div>
               <div className="editor-tools">
-                <div className="tool active"><ImagePlus aria-hidden="true" /> Add a screenshot</div>
-                <div className="tool"><MessageCircleMore aria-hidden="true" /> Add your words</div>
-                <div className="tool"><Sparkles aria-hidden="true" /> Make your story</div>
+                <div className="tool active"><ImagePlus aria-hidden="true" /> {copy.editorAddScreenshot}</div>
+                <div className="tool"><MessageCircleMore aria-hidden="true" /> {copy.editorAddWords}</div>
+                <div className="tool"><Sparkles aria-hidden="true" /> {copy.editorMakeStory}</div>
               </div>
             </div>
           </div>
           <div>
-            <p className="eyebrow">From screenshot to story</p>
-            <h2 className="feature-title display">You don’t need to be an artist.</h2>
-            <p className="section-copy">Just bring your moment. Put a few screenshots together, tell us what happened, and give the memory a home.</p>
-            <ol className="creation-flow" aria-label="How to make your story">
-              <li data-testid="flow-add-screenshot">Add a screenshot</li>
-              <li data-testid="flow-add-words">Add your words</li>
-              <li data-testid="flow-make-story">Make your story</li>
+            <p className="eyebrow">{copy.editorEyebrow}</p>
+            <h2 className="feature-title display">{copy.editorTitle}</h2>
+            <p className="section-copy">{copy.editorCopy}</p>
+            <ol className="creation-flow" aria-label={copy.editorMakeStory}>
+              <li data-testid="flow-add-screenshot">{copy.editorAddScreenshot}</li>
+              <li data-testid="flow-add-words">{copy.editorAddWords}</li>
+              <li data-testid="flow-make-story">{copy.editorMakeStory}</li>
             </ol>
           </div>
         </div>
@@ -231,12 +250,12 @@ function Home() {
         <div className="container-wide">
           <div className="gallery-head">
             <div>
-              <p className="eyebrow">Some moments are too good to forget.</p>
-              <h2 className="section-title display">These are your<br />gaming stories.</h2>
-              <p className="gallery-lede">Big wins, small surprises, and the moments that still make your friends laugh.</p>
+              <p className="eyebrow">{copy.galleryEyebrow}</p>
+              <h2 className="section-title display">{copy.galleryTitleOne}<br />{copy.galleryTitleTwo}</h2>
+              <p className="gallery-lede">{copy.galleryLede}</p>
             </div>
           </div>
-          <div className="gallery-grid" aria-label="Community story examples">
+          <div className="gallery-grid" aria-label={copy.galleryAria}>
             {memorableMoments.map((moment, index) => (
               <article className="gallery-tile" key={moment.id} data-testid={`card-gaming-moment-${index + 1}`}>
                 <img src={moment.image} alt={moment.alt} loading="lazy" />
@@ -250,12 +269,12 @@ function Home() {
       <section className="community section-pad" id="community">
         <div className="container-wide community-layout">
           <div>
-            <p className="eyebrow">Meet gamers who get it.</p>
-            <h2 className="display">Every gamer<br />has their own way<br /><span style={{ color: 'hsl(var(--secondary))' }}>of playing.</span></h2>
-            <img className="community-image" src={chaosParty} alt="Adventuring friends laugh through an unexpected mishap" loading="lazy" />
+            <p className="eyebrow">{copy.communityEyebrow}</p>
+            <h2 className="display">{copy.communityTitleOne}<br />{copy.communityTitleTwo}<br /><span style={{ color: 'hsl(var(--secondary))' }}>{copy.communityTitleThree}</span></h2>
+            <img className="community-image" src={chaosParty} alt={copy.communityImageAlt} loading="lazy" />
           </div>
           <div className="community-content">
-            <ul className="community-list" aria-label="Different kinds of gamers">
+            <ul className="community-list" aria-label={copy.communityAria}>
               {gamerTypes.map((type, index) => (
                 <li className="community-row" key={type.id} data-testid={`community-style-${type.id}`}>
                   <span className="community-index">{String(index + 1).padStart(2, '0')}</span>
@@ -263,25 +282,25 @@ function Home() {
                 </li>
               ))}
             </ul>
-            <p className="community-outro">Find stories from people who play like you.</p>
+            <p className="community-outro">{copy.communityOutro}</p>
           </div>
         </div>
       </section>
 
       <section className="final-cta" id="start">
         <div className="container-wide">
-          <p className="eyebrow">Storigam · Stories made by gamers.</p>
-          <h2 className="display">Your gaming<br />moments deserve<br />a story.</h2>
-          <p className="final-lines">Help shape what comes next. Show your interest in beta testing, content creation, or both.</p>
-          <InterestSignupForm />
+          <p className="eyebrow">{copy.finalEyebrow}</p>
+          <h2 className="display">{copy.finalOne}<br />{copy.finalTwo}<br />{copy.finalThree}</h2>
+          <p className="final-lines">{copy.finalCopy}</p>
+          <InterestSignupForm copy={copy} />
         </div>
       </section>
 
       <footer className="footer">
         <div className="container-wide footer-inner">
           <a className="brand" href="#top" data-testid="link-footer-brand"><img src={logoPath} alt="Storigam" /></a>
-          <small>Stories made by gamers.</small>
-          <div className="footer-links"><a href="#how-it-works" data-testid="link-footer-how">How it works</a><a href="#community" data-testid="link-footer-community">Meet gamers</a></div>
+          <small>{copy.footerTagline}</small>
+          <div className="footer-links"><a href="#how-it-works" data-testid="link-footer-how">{copy.navHow}</a><a href="#community" data-testid="link-footer-community">{copy.footerMeet}</a></div>
         </div>
       </footer>
     </main>

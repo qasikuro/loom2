@@ -3,16 +3,11 @@ import {
   type StorigamInterestInputInterestsItem,
 } from "@workspace/api-client-react";
 import { useState } from "react";
+import type { LandingCopy } from "@/i18n/en";
 
-const interestOptions: {
-  value: StorigamInterestInputInterestsItem;
-  label: string;
-}[] = [
-  { value: "beta_tester", label: "Become a beta tester" },
-  { value: "content_creator", label: "Become a content creator" },
-];
+const interestOptions: StorigamInterestInputInterestsItem[] = ["beta_tester", "content_creator"];
 
-export default function InterestSignupForm() {
+export default function InterestSignupForm({ copy }: { copy: LandingCopy }) {
   const submission = useSubmitStorigamInterest();
   const [email, setEmail] = useState("");
   const [interests, setInterests] = useState<StorigamInterestInputInterestsItem[]>([]);
@@ -33,7 +28,7 @@ export default function InterestSignupForm() {
   return (
     <form
       className="interest-form"
-      aria-label="Storigam beta tester and content creator interest"
+      aria-label={copy.formAria}
       aria-busy={submission.isPending}
       onSubmit={(event) => {
         event.preventDefault();
@@ -48,11 +43,12 @@ export default function InterestSignupForm() {
       }}
     >
       <label className="interest-field" htmlFor="storigam-interest-email">
-        <span>Email address</span>
+        <span>{copy.formEmail}</span>
         <input
           id="storigam-interest-email"
           name="email"
           type="email"
+          dir="ltr"
           autoComplete="email"
           maxLength={254}
           required
@@ -61,26 +57,28 @@ export default function InterestSignupForm() {
             submission.reset();
             setEmail(event.target.value);
           }}
-          placeholder="you@example.com"
+          placeholder={copy.formEmailPlaceholder}
+          data-testid="input-interest-email"
         />
       </label>
 
       <fieldset className="interest-options">
-        <legend>How would you like to be part of it?</legend>
+        <legend>{copy.formLegend}</legend>
         {interestOptions.map((option) => (
-          <label className="interest-option" key={option.value}>
+          <label className="interest-option" key={option}>
             <input
               type="checkbox"
-              checked={interests.includes(option.value)}
-              onChange={() => toggleInterest(option.value)}
+              checked={interests.includes(option)}
+              onChange={() => toggleInterest(option)}
+              data-testid={`checkbox-${option}`}
             />
-            <span>{option.label}</span>
+            <span>{option === "beta_tester" ? copy.formBeta : copy.formCreator}</span>
           </label>
         ))}
-        <span className="interest-hint">Choose one or both.</span>
+        <span className="interest-hint">{copy.formHint}</span>
         {interestError && (
           <span className="interest-validation" role="alert">
-            Choose at least one option.
+            {copy.formValidation}
           </span>
         )}
       </fieldset>
@@ -90,16 +88,17 @@ export default function InterestSignupForm() {
           type="checkbox"
           required
           checked={consent}
+          data-testid="checkbox-interest-consent"
           onChange={(event) => {
             submission.reset();
             setConsent(event.target.checked);
           }}
         />
-        <span>I agree to be contacted about the programs I select.</span>
+        <span>{copy.formConsent}</span>
       </label>
 
       <div className="interest-honeypot" aria-hidden="true">
-        <label htmlFor="storigam-interest-website">Leave this field empty</label>
+        <label htmlFor="storigam-interest-website">{copy.formHoneypot}</label>
         <input
           id="storigam-interest-website"
           name="website"
@@ -115,22 +114,23 @@ export default function InterestSignupForm() {
         className="button button-primary interest-submit"
         type="submit"
         disabled={submission.isPending || submission.isSuccess}
+        data-testid="button-submit-interest"
       >
         {submission.isPending
-          ? "Saving your interest…"
+          ? copy.formPending
           : submission.isSuccess
-            ? "Interest saved"
-            : "Show my interest"}
+            ? copy.formSaved
+            : copy.formSubmit}
       </button>
 
       <p className="interest-privacy">
-        We’ll use your email only to contact you about the options you select.
+        {copy.formPrivacy}
       </p>
-      <p className="interest-status" role="status" aria-live="polite">
+      <p className="interest-status" role="status" aria-live="polite" data-testid="status-interest">
         {submission.isSuccess
-          ? "Thanks — your interest is saved. We’ll be in touch."
+          ? copy.formSuccess
           : submission.isError
-            ? "We couldn’t save your interest. Please try again."
+            ? copy.formError
             : ""}
       </p>
     </form>
