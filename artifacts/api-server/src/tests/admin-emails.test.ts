@@ -41,7 +41,10 @@ describe("POST /admin/emails", () => {
     ]);
   });
 
-  afterEach(() => proxy.mockReset());
+  afterEach(() => {
+    proxy.mockReset();
+    vi.unstubAllEnvs();
+  });
 
   afterAll(async () => {
     await db.delete(characterTable).where(inArray(characterTable.userId, fixtureIds));
@@ -63,6 +66,7 @@ describe("POST /admin/emails", () => {
   });
 
   it("sends plain text through the server-side Resend connection", async () => {
+    vi.stubEnv("RESEND_REPLY_TO_EMAIL", "info@contact.storigam.com");
     proxy.mockResolvedValue({ ok: true, status: 200, json: async () => ({ id: "re_test_123" }) });
     const result = await request(app).post("/admin/emails").set("x-test-user-id", ADMIN_ID).send(email);
     expect(result.status).toBe(200);
@@ -74,7 +78,15 @@ describe("POST /admin/emails", () => {
       to: ["member@example.com"],
       subject: "Hello there",
       text: "Your message goes here.",
+      reply_to: "info@contact.storigam.com",
     });
+  });
+
+  it("refuses to send with an invalid configured reply-to address", async () => {
+    vi.stubEnv("RESEND_REPLY_TO_EMAIL", "invalid-address");
+    const result = await request(app).post("/admin/emails").set("x-test-user-id", ADMIN_ID).send(email);
+    expect(result.status).toBe(503);
+    expect(proxy).not.toHaveBeenCalled();
   });
 
   it("does not claim success if Resend rejects the request", async () => {

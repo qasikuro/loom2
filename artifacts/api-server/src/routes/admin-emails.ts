@@ -33,6 +33,12 @@ router.post("/admin/emails", requireAdmin, emailRateLimit, async (req, res): Pro
   // This verified domain is configured in Resend. Override the address through
   // RESEND_FROM_EMAIL if a different verified sender is configured later.
   const from = process.env.RESEND_FROM_EMAIL?.trim() || "Storigam <no-reply@contact.storigam.com>";
+  const replyTo = process.env.RESEND_REPLY_TO_EMAIL?.trim();
+  if (replyTo && !SendAdminEmailBody.shape.to.safeParse(replyTo).success) {
+    req.log.error("Admin email reply-to address is invalid");
+    res.status(503).json({ error: "The reply-to address is not configured correctly. Contact an administrator." });
+    return;
+  }
 
   try {
     const response = await new ReplitConnectors().proxy("resend", "/emails", {
@@ -43,6 +49,7 @@ router.post("/admin/emails", requireAdmin, emailRateLimit, async (req, res): Pro
         to: [parsed.data.to],
         subject: parsed.data.subject,
         text: parsed.data.message,
+        ...(replyTo ? { reply_to: replyTo } : {}),
       }),
     });
 

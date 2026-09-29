@@ -119,7 +119,7 @@ export default function EmailPage() {
             Email is sent from the verified Storigam domain. The provider connection and sender settings stay on the API server, never in this browser.
           </p>
           <p className="mt-4 border-t pt-4 text-xs leading-5 text-muted-foreground">
-            The default sender is a no-reply address. Recipients’ replies are not collected here.
+            The default sender is a no-reply address. When a reply-to inbox is configured, recipients can reply there; replies do not appear in this admin panel.
           </p>
         </aside>
       </div>
