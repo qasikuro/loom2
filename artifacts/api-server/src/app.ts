@@ -453,7 +453,13 @@ const LANDING_HTML = `<!DOCTYPE html>
 app.get("/", (req: Request, res: Response) => {
   // Custom domains attach to the whole published project, not a single artifact.
   // Keep the existing Admin app and its Clerk session on this project's domain.
-  if (req.get("host")?.split(":")[0]?.toLowerCase() === "myadmin.storigam.com") {
+  const host = req.get("host")?.split(":")[0]?.toLowerCase();
+  if (host === "storigam.com") {
+    res.setHeader("Cache-Control", "no-store");
+    res.redirect(301, "/storigam/");
+    return;
+  }
+  if (host === "myadmin.storigam.com") {
     res.setHeader("Cache-Control", "no-store");
     res.redirect(302, "/admin/");
     return;
