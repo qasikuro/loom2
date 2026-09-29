@@ -152,6 +152,13 @@ const server = http.createServer((req, res) => {
     }
 
     if (pathname === "/") {
+      // Replit custom domains route to the project as a whole. Send the admin
+      // subdomain to the existing /admin/ artifact without changing Ximo's root.
+      if (req.headers.host?.split(":")[0]?.toLowerCase() === "myadmin.storigam.com") {
+        res.writeHead(302, { Location: "/admin/", "Cache-Control": "no-store" });
+        res.end();
+        return;
+      }
       return serveLandingPage(req, res, landingPageTemplate, appName);
     }
   }

@@ -450,7 +450,14 @@ const LANDING_HTML = `<!DOCTYPE html>
 </body>
 </html>`;
 
-app.get("/", (_req: Request, res: Response) => {
+app.get("/", (req: Request, res: Response) => {
+  // Custom domains attach to the whole published project, not a single artifact.
+  // Keep the existing Admin app and its Clerk session on this project's domain.
+  if (req.get("host")?.split(":")[0]?.toLowerCase() === "myadmin.storigam.com") {
+    res.setHeader("Cache-Control", "no-store");
+    res.redirect(302, "/admin/");
+    return;
+  }
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "public, max-age=300");
   res.send(LANDING_HTML);
