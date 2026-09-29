@@ -8,6 +8,9 @@ import InterestSignupForm from '@/components/interest-signup-form';
 import {
   ArrowDownRight,
   ArrowUpRight,
+  ImagePlus,
+  MessageCircleMore,
+  Sparkles,
   Menu,
   X,
 } from 'lucide-react';
@@ -18,14 +21,20 @@ import {
   Router as WouterRouter,
 } from 'wouter';
 import logoPath from '@assets/storigam-logo-transparent.png';
+import heroAdventure from './assets/hero-adventure.jpg';
+import characterPortrait from './assets/character-portrait.jpg';
+import dragonBattle from './assets/dragon-battle.jpg';
+import friendsNight from './assets/friends-night.jpg';
+import chaosParty from './assets/chaos-party.jpg';
+import outfitStory from './assets/outfit-story.jpg';
 
 const queryClient = new QueryClient();
 
 const memorableMoments = [
-  { id: 'boss-fight', label: 'That ridiculous boss fight.' },
-  { id: 'favorite-outfit', label: 'The outfit you spent hours making.' },
-  { id: 'new-friend', label: 'The friend you met by accident.' },
-  { id: 'unexpected-chaos', label: 'The time everything went completely wrong.' },
+  { id: 'boss-fight', label: 'That ridiculous boss fight.', image: dragonBattle, alt: 'A small traveler faces an enormous turquoise dragon in a moonlit forest' },
+  { id: 'favorite-outfit', label: 'The outfit you spent hours making.', image: outfitStory, alt: 'An adventurer shows off a detailed outfit at sunset' },
+  { id: 'new-friend', label: 'The friend you met by accident.', image: friendsNight, alt: 'Two adventurers sit together watching lanterns and stars' },
+  { id: 'unexpected-chaos', label: 'The time everything went completely wrong.', image: chaosParty, alt: 'A party of adventurers tumbles down a hill after a creature steals their basket' },
 ];
 
 const gamerTypes = [
@@ -82,13 +91,11 @@ function Home() {
       <section className="hero" id="top">
         <div className="container-wide hero-grid">
           <div className="reveal">
-            <p className="eyebrow">Stories made by gamers.</p>
-            <h1 className="display">Turn your<br />gaming<br /><em>moments</em><br />into stories.</h1>
+            <p className="eyebrow">The little moments make the best stories</p>
+            <h1 className="display">Your game.<br />Your moment.<br /><em>Your story.</em></h1>
             <p className="hero-intro">
-              That screenshot you saved for a reason?<br />
-              The funny moment your friends still talk about?<br />
-              The character you spent way too much time creating?
-              <strong>Make it a story. Keep it forever.</strong>
+              The screenshot you saved. The friend you met by accident. The boss fight nobody thought you’d win.
+              <strong>Bring those moments together and make a story worth keeping.</strong>
             </p>
             <div className="hero-actions">
               <a className="button button-primary" href="#from-screenshot" data-testid="link-create-story">Make a story <ArrowDownRight size={17} /></a>
@@ -99,18 +106,18 @@ function Home() {
             <div className="stage-backdrop" />
             <div className="story-card">
               <div className="story-card-art">
-                <div className="pixel-sun" />
+                <img src={heroAdventure} alt="" />
               </div>
               <div className="story-card-footer">
                 <div>
-                  <small>your game · your moment</small>
-                  <strong>A story to keep</strong>
+                  <small>Adventure log / 01</small>
+                  <strong>The day we found the sky castle</strong>
                 </div>
                 <ArrowUpRight size={22} />
               </div>
             </div>
-            <div className="speech">“we still talk about it.”</div>
-            <div className="sticker">story saved</div>
+            <div className="speech">“Wait… you see it too?”</div>
+            <div className="sticker">A moment worth keeping</div>
           </div>
         </div>
         <div className="container-wide scroll-note"><span /> Your game. Your moment. Your story.</div>
@@ -152,56 +159,23 @@ function Home() {
           <div className="how-head">
             <div>
               <p className="eyebrow">How it works</p>
-              <h2 className="section-title display">Make your moment a story.</h2>
+              <h2 className="section-title display">It starts with a screenshot.</h2>
             </div>
             <p className="section-copy">Choose a screenshot from your game, make it yours, and share it with friends.</p>
           </div>
           <div className="steps">
             <article className="step reveal" data-testid="step-pick-a-moment">
-              <div className="step-number">01</div>
-              <h3>Pick a moment</h3>
-              <p>Choose a screenshot from your game.</p>
+              <img className="step-image" src={heroAdventure} alt="Three adventurers discover a castle in the clouds" loading="lazy" />
+              <div className="step-info"><div className="step-number">01</div><div><h3>Pick a moment</h3><p>Choose the screenshot you keep coming back to.</p></div></div>
             </article>
             <article className="step reveal delay-1" data-testid="step-make-it-yours">
-              <div className="step-number">02</div>
-              <h3>Make it yours</h3>
-              <p>Add captions, dialogue, characters, and your own little details.</p>
+              <img className="step-image" src={characterPortrait} alt="A traveler at sunset, ready for her own story" loading="lazy" />
+              <div className="step-info"><div className="step-number">02</div><div><h3>Make it yours</h3><p>Add the words, characters, and details only you know.</p></div></div>
             </article>
             <article className="step reveal delay-2" data-testid="step-share-your-story">
-              <div className="step-number">03</div>
-              <h3>Share your story</h3>
-              <p>Turn your gaming moment into something you can share with friends.</p>
+              <img className="step-image" src={friendsNight} alt="Two friends share a quiet view beneath a starry sky" loading="lazy" />
+              <div className="step-info"><div className="step-number">03</div><div><h3>Share your story</h3><p>Send it to the friends who were there. Or the ones who wish they were.</p></div></div>
             </article>
-          </div>
-        </div>
-      </section>
-
-      <section className="features section-pad" id="from-screenshot">
-        <div className="container-wide feature-layout">
-          <div className="feature-visual reveal" role="group" aria-label="From screenshot to story preview">
-            <div className="editor-top"><span>from screenshot</span><span>to story</span></div>
-            <div className="editor-screen">
-              <div className="editor-panels">
-                <div className="panel large"><span className="caption">your moment</span></div>
-                <div className="panel scene-1"><span className="caption">add your words</span></div>
-                <div className="panel scene-2"><span className="caption">your story</span></div>
-              </div>
-              <div className="editor-tools">
-                <div className="tool active">Add a screenshot</div>
-                <div className="tool">Add your words</div>
-                <div className="tool">Make your story</div>
-              </div>
-            </div>
-          </div>
-          <div>
-            <p className="eyebrow">From screenshot to story</p>
-            <h2 className="feature-title display">You don't need to be an artist.</h2>
-            <p className="section-copy">Just bring your moment.</p>
-            <ol className="creation-flow" aria-label="How to make your story">
-              <li data-testid="flow-add-screenshot">Add a screenshot</li>
-              <li data-testid="flow-add-words">Add your words</li>
-              <li data-testid="flow-make-story">Make your story</li>
-            </ol>
           </div>
         </div>
       </section>
@@ -209,12 +183,8 @@ function Home() {
       <section className="character section-pad" id="character-story">
         <div className="container-wide character-layout">
           <div className="character-art reveal" role="img" aria-label="A colorful character illustration with story labels">
-            <div className="character-orbit" />
-            <div className="character-person">
-              <span className="character-head" />
-              <span className="character-body" />
-              <span className="character-cape" />
-            </div>
+            <img className="character-main-image" src={characterPortrait} alt="" loading="lazy" />
+            <img className="character-inset" src={friendsNight} alt="" loading="lazy" />
             <span className="character-tag character-tag-top">your character</span>
             <span className="character-tag character-tag-bottom">their little story</span>
           </div>
@@ -227,17 +197,49 @@ function Home() {
         </div>
       </section>
 
+      <section className="features section-pad" id="from-screenshot">
+        <div className="container-wide feature-layout">
+          <div className="feature-visual reveal" role="group" aria-label="From screenshot to story preview">
+            <div className="editor-top"><span>from screenshot</span><span>to story</span></div>
+            <div className="editor-screen">
+              <div className="editor-panels">
+                <div className="panel large"><img src={heroAdventure} alt="Adventurers spot the sky castle" loading="lazy" /><span className="caption">your moment</span></div>
+                <div className="panel scene-1"><img src={friendsNight} alt="Friends beneath the stars" loading="lazy" /><span className="caption">add your words</span></div>
+                <div className="panel scene-2"><img src={outfitStory} alt="A character at sunset" loading="lazy" /><span className="caption">your story</span></div>
+              </div>
+              <div className="editor-tools">
+                <div className="tool active"><ImagePlus aria-hidden="true" /> Add a screenshot</div>
+                <div className="tool"><MessageCircleMore aria-hidden="true" /> Add your words</div>
+                <div className="tool"><Sparkles aria-hidden="true" /> Make your story</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <p className="eyebrow">From screenshot to story</p>
+            <h2 className="feature-title display">You don’t need to be an artist.</h2>
+            <p className="section-copy">Just bring your moment. Put a few screenshots together, tell us what happened, and give the memory a home.</p>
+            <ol className="creation-flow" aria-label="How to make your story">
+              <li data-testid="flow-add-screenshot">Add a screenshot</li>
+              <li data-testid="flow-add-words">Add your words</li>
+              <li data-testid="flow-make-story">Make your story</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
       <section className="gallery section-pad" id="stories">
         <div className="container-wide">
           <div className="gallery-head">
             <div>
               <p className="eyebrow">Some moments are too good to forget.</p>
               <h2 className="section-title display">These are your<br />gaming stories.</h2>
+              <p className="gallery-lede">Big wins, small surprises, and the moments that still make your friends laugh.</p>
             </div>
           </div>
           <div className="gallery-grid" aria-label="Community story examples">
             {memorableMoments.map((moment, index) => (
               <article className="gallery-tile" key={moment.id} data-testid={`card-gaming-moment-${index + 1}`}>
+                <img src={moment.image} alt={moment.alt} loading="lazy" />
                 <span className="tile-tag">{moment.label}</span>
               </article>
             ))}
@@ -250,6 +252,7 @@ function Home() {
           <div>
             <p className="eyebrow">Meet gamers who get it.</p>
             <h2 className="display">Every gamer<br />has their own way<br /><span style={{ color: 'hsl(var(--secondary))' }}>of playing.</span></h2>
+            <img className="community-image" src={chaosParty} alt="Adventuring friends laugh through an unexpected mishap" loading="lazy" />
           </div>
           <div className="community-content">
             <ul className="community-list" aria-label="Different kinds of gamers">
