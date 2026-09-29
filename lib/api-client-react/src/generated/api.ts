@@ -17,6 +17,8 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminEmailInput,
+  AdminEmailResponse,
   AppConfig,
   Character,
   CharacterInput,
@@ -3147,4 +3149,91 @@ export const useSubmitStorigamInterest = <
   TContext
 > => {
   return useMutation(getSubmitStorigamInterestMutationOptions(options));
+};
+
+/**
+ * Requires an authenticated administrator. The sender and provider credentials are kept on the server.
+ * @summary Send one plain-text email from the admin console
+ */
+export const getSendAdminEmailUrl = () => {
+  return `/api/admin/emails`;
+};
+
+export const sendAdminEmail = async (
+  adminEmailInput: AdminEmailInput,
+  options?: RequestInit,
+): Promise<AdminEmailResponse> => {
+  return customFetch<AdminEmailResponse>(getSendAdminEmailUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(adminEmailInput),
+  });
+};
+
+export const getSendAdminEmailMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendAdminEmail>>,
+    TError,
+    { data: BodyType<AdminEmailInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendAdminEmail>>,
+  TError,
+  { data: BodyType<AdminEmailInput> },
+  TContext
+> => {
+  const mutationKey = ["sendAdminEmail"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendAdminEmail>>,
+    { data: BodyType<AdminEmailInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return sendAdminEmail(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendAdminEmailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendAdminEmail>>
+>;
+export type SendAdminEmailMutationBody = BodyType<AdminEmailInput>;
+export type SendAdminEmailMutationError = ErrorType<void>;
+
+/**
+ * @summary Send one plain-text email from the admin console
+ */
+export const useSendAdminEmail = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendAdminEmail>>,
+    TError,
+    { data: BodyType<AdminEmailInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendAdminEmail>>,
+  TError,
+  { data: BodyType<AdminEmailInput> },
+  TContext
+> => {
+  return useMutation(getSendAdminEmailMutationOptions(options));
 };

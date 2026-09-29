@@ -1,3 +1,5 @@
+import type { AdminEmailInput, AdminEmailResponse } from "@workspace/api-client-react";
+
 export const API_BASE = "/api";
 
 let _getToken: (() => Promise<string | null>) | null = null;
@@ -32,6 +34,7 @@ export const api = {
   getMe:         () => apiFetch<{ userId: string; name: string; isAdmin: boolean }>("/admin/me"),
   getStats:      () => apiFetch<Stats>("/admin/stats"),
   getUsers:      (q = "", offset = 0) => apiFetch<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
+  sendEmail:     (input: AdminEmailInput) => apiFetch<AdminEmailResponse>("/admin/emails", { method: "POST", body: JSON.stringify(input) }),
   banUser:       (id: string) => apiFetch(`/admin/users/${id}/ban`, { method: "PUT" }),
   unbanUser:     (id: string) => apiFetch(`/admin/users/${id}/unban`, { method: "PUT" }),
   deleteUser:    (id: string) => apiFetch(`/admin/users/${id}`, { method: "DELETE" }),

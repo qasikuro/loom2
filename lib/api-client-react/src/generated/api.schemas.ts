@@ -65,6 +65,26 @@ export interface StorigamInterestResponse {
   ok: boolean;
 }
 
+export interface AdminEmailInput {
+  /** @maxLength 254 */
+  to: string;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  subject: string;
+  /**
+   * @minLength 1
+   * @maxLength 10000
+   */
+  message: string;
+}
+
+export interface AdminEmailResponse {
+  ok: boolean;
+  id: string;
+}
+
 export interface Character {
   id: number;
   name: string;

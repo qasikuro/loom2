@@ -34,3 +34,4 @@
 - [Ximo branding and existing installs](ximo-rebrand-identity.md) — visible branding is Ximo; preserve native identifiers unless a separate-install migration is requested
 - [Guide sessions use Campfire rooms](guide-session-campfire.md) — scheduling and attendance are separate, but every session enters one existing Campfire chat
 - [Landing page language bridge](landing-language-bridge.md) — native app language storage is invisible to the browser; pass locale in landing links and retain a web-side choice
+- [Admin email credential boundary](admin-email-credential-boundary.md) — Resend authentication lives in its Replit connector, not a browser or duplicate API-key secret

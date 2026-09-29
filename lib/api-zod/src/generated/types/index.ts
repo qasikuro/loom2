@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.2.0
  */
 
+export * from "./adminEmailInput";
+export * from "./adminEmailResponse";
 export * from "./appConfig";
 export * from "./character";
 export * from "./characterInput";

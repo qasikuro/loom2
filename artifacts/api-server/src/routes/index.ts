@@ -34,6 +34,7 @@ import mangaGenerationRouter from "./manga-generation";
 import musicRouter from "./music";
 import mediaRouter from "./media";
 import storigamInterestRouter from "./storigam-interest";
+import adminEmailsRouter from "./admin-emails";
 
 const router: IRouter = Router();
 
@@ -72,5 +73,6 @@ router.use(mangaGenerationRouter);
 router.use(musicRouter);
 router.use(mediaRouter);
 router.use(storigamInterestRouter);
+router.use(adminEmailsRouter);
 
 export default router;

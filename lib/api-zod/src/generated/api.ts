@@ -932,3 +932,24 @@ export const SubmitStorigamInterestBody = zod.object({
 export const SubmitStorigamInterestResponse = zod.object({
   ok: zod.boolean(),
 });
+
+/**
+ * Requires an authenticated administrator. The sender and provider credentials are kept on the server.
+ * @summary Send one plain-text email from the admin console
+ */
+export const sendAdminEmailBodyToMax = 254;
+
+export const sendAdminEmailBodySubjectMax = 200;
+
+export const sendAdminEmailBodyMessageMax = 10000;
+
+export const SendAdminEmailBody = zod.object({
+  to: zod.string().email().max(sendAdminEmailBodyToMax),
+  subject: zod.string().min(1).max(sendAdminEmailBodySubjectMax),
+  message: zod.string().min(1).max(sendAdminEmailBodyMessageMax),
+});
+
+export const SendAdminEmailResponse = zod.object({
+  ok: zod.boolean(),
+  id: zod.string(),
+});

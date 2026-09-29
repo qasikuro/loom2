@@ -666,6 +666,34 @@ paths:
         "429":
           description: Too many submissions
 
+  /admin/emails:
+    post:
+      operationId: sendAdminEmail
+      tags: [admin]
+      summary: Send one plain-text email from the admin console
+      description: Requires an authenticated administrator. The sender and provider credentials are kept on the server.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminEmailInput"
+      responses:
+        "200":
+          description: Email accepted by Resend
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminEmailResponse"
+        "400":
+          description: Invalid recipient, subject, or message
+        "403":
+          description: Administrator access required
+        "429":
+          description: Too many emails sent
+        "502":
+          description: Email provider rejected the request
+
 components:
   schemas:
     MangaGenerationInput:
@@ -731,6 +759,33 @@ components:
         ok:
           type: boolean
       required: [ok]
+
+    AdminEmailInput:
+      type: object
+      additionalProperties: false
+      properties:
+        to:
+          type: string
+          format: email
+          maxLength: 254
+        subject:
+          type: string
+          minLength: 1
+          maxLength: 200
+        message:
+          type: string
+          minLength: 1
+          maxLength: 10000
+      required: [to, subject, message]
+
+    AdminEmailResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+        id:
+          type: string
+      required: [ok, id]
 
     Character:
       type: object

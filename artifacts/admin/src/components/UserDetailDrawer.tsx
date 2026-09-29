@@ -214,7 +214,7 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                       {copied ? "✓ Copied" : "Copy"}
                     </button>
                     <a
-                      href={`mailto:${user.email}?subject=Sky Journal Support`}
+                      href={`#/email?to=${encodeURIComponent(user.email)}`}
                       className="px-2 py-1 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex-shrink-0 font-medium"
                     >Send ↗</a>
                   </div>
@@ -384,7 +384,7 @@ export default function UserDetailDrawer({ userId, onClose, onActionDone }: Prop
                       onClick={() => setConfirm("admin")}
                     />
                     <a
-                      href={user.email ? `mailto:${user.email}?subject=Sky Journal Support` : undefined}
+                      href={user.email ? `#/email?to=${encodeURIComponent(user.email)}` : undefined}
                       className={`flex items-center justify-center gap-2 px-3 py-2.5 text-sm rounded-xl font-medium transition-colors border ${user.email ? "bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100" : "opacity-40 cursor-not-allowed bg-muted text-muted-foreground border-border"}`}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

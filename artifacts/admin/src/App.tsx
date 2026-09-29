@@ -63,6 +63,7 @@ import EventsPage from "./pages/EventsPage";
 import EffectsPage from "./pages/EffectsPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import EmailPage from "./pages/EmailPage";
 import BadgesPage from "./pages/BadgesPage";
 import PlaceholderPage from "./pages/PlaceholderPage";
 
@@ -337,6 +338,7 @@ function renderPage(route: string): ReactNode {
   if (route === "badges") return <BadgesPage />;
   if (route === "effects") return <EffectsPage />;
   if (route === "notifications") return <NotificationsPage />;
+  if (route === "email") return <EmailPage />;
   if (route === "settings") return <SettingsPage />;
   const item = ALL_ITEMS.find((entry) => entry.id === route);
   return <PlaceholderPage section={item?.group ?? "Workspace"} label={item?.label ?? "Workspace"} description={PLACEHOLDER_COPY[route]} />;

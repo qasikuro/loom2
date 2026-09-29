@@ -155,9 +155,9 @@ export default function UsersPage() {
                     <td className="px-4 py-3">
                       {u.email ? (
                         <a
-                          href={`mailto:${u.email}?subject=Sky Journal Support`}
+                          href={`#/email?to=${encodeURIComponent(u.email)}`}
                           className="text-blue-600 hover:underline text-xs break-all"
-                          title="Send email"
+                          title="Compose email in admin"
                         >{u.email}</a>
                       ) : (
                         <span className="text-xs text-muted-foreground/60 italic">—</span>
