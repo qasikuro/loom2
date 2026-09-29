@@ -8,7 +8,7 @@ vi.mock("@clerk/express", () => ({
 
 import app from "../app";
 
-describe("admin custom subdomain", () => {
+describe("custom domain root routing", () => {
   it("opens the existing Admin app from the short subdomain address", async () => {
     const response = await request(app).get("/").set("Host", "myadmin.storigam.com");
     expect(response.status).toBe(302);
@@ -16,8 +16,17 @@ describe("admin custom subdomain", () => {
     expect(response.headers["cache-control"]).toBe("no-store");
   });
 
-  it("leaves the normal website and lookalike hosts unchanged", async () => {
-    for (const host of ["storigam.com", "notmyadmin.storigam.com"]) {
+  it("routes both website domains to the landing page", async () => {
+    for (const host of ["storigam.com", "www.storigam.com"]) {
+      const response = await request(app).get("/").set("Host", host);
+      expect(response.status).toBe(301);
+      expect(response.headers.location).toBe("/storigam/");
+      expect(response.headers["cache-control"]).toBe("no-store");
+    }
+  });
+
+  it("leaves lookalike hosts unchanged", async () => {
+    for (const host of ["notmyadmin.storigam.com", "www2.storigam.com"]) {
       const response = await request(app).get("/").set("Host", host);
       expect(response.status).toBe(200);
       expect(response.text).toContain("GameJo");
