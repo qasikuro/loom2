@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/admin/"
-title = "Gamejo Admin"
+title = "Storigam Admin"
 version = "1.0.0"
 id = "artifacts/admin"
 router = "path"
