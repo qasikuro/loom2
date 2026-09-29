@@ -114,7 +114,7 @@ export default function DashboardPage() {
               {lastUpdated && <span className="font-mono text-[10px] text-muted-foreground">synced {lastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>}
             </div>
             <h1 className="text-[25px] font-extrabold tracking-[-0.04em] text-foreground sm:text-[30px]">{greeting}, Operator.</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Here’s what’s happening across the Gamejo community right now.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Here’s what’s happening across the Storigam community right now.</p>
           </div>
           <div className="flex items-center gap-2 self-start rounded-md border border-border bg-card/70 px-3 py-2 xl:self-auto">
             <Clock3 size={14} className="text-primary" />

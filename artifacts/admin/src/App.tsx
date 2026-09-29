@@ -237,7 +237,7 @@ function Sidebar({
         <div className={`flex h-[64px] shrink-0 items-center border-b border-sidebar-border ${collapsed ? "justify-center px-3" : "justify-between px-4"}`}>
           <button data-testid="button-gamejo-home" onClick={() => onNavigate("dashboard")} className="flex items-center gap-3 text-left">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/10"><Command size={17} strokeWidth={2.2} /></span>
-            {!collapsed && <span><span className="block text-[14px] font-extrabold tracking-[-0.04em] text-white">GAMEJO</span><span className="block font-mono text-[8px] uppercase tracking-[0.16em] text-sidebar-foreground/50">Admin console</span></span>}
+            {!collapsed && <span><span className="block text-[14px] font-extrabold tracking-[-0.04em] text-white">STORIGAM</span><span className="block font-mono text-[8px] uppercase tracking-[0.16em] text-sidebar-foreground/50">Admin console</span></span>}
           </button>
           <button data-testid="button-collapse-sidebar" aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} onClick={() => setCollapsed(!collapsed)} className="hidden rounded-lg p-2 text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-white lg:block">
             {collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
@@ -302,7 +302,7 @@ function Layout({ children, route, onNavigate }: { children: ReactNode; route: s
           <div className="flex min-w-0 items-center gap-3">
             <button data-testid="button-open-navigation" aria-label="Open navigation" onClick={() => setMobileOpen(true)} className="rounded-md border border-border bg-card p-2 text-muted-foreground hover:text-foreground lg:hidden"><Menu size={17} /></button>
             <div className="hidden min-w-[190px] md:block">
-              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Gamejo / {active?.group ?? "Dashboard"}</p>
+              <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">Storigam / {active?.group ?? "Dashboard"}</p>
               <h1 className="mt-0.5 truncate text-xs font-bold tracking-tight text-foreground">{active?.label ?? (route === "dashboard" ? "Dashboard" : "Workspace")}</h1>
             </div>
             <div className="flex h-8 min-w-0 items-center gap-2 rounded-md border border-border bg-card/80 px-3 text-[11px] text-muted-foreground sm:w-[280px] lg:w-[350px]">
@@ -373,8 +373,8 @@ function AdminApp() {
     window.location.hash = `/${next}`;
   };
 
-  if (!isLoaded) return <LoadingScreen label="Loading Gamejo" />;
-  if (!isSignedIn) return <div className="flex min-h-[100dvh] items-center justify-center bg-background p-5"><div className="w-full max-w-md space-y-6"><div className="text-center"><div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Command size={23} /></div><h1 className="text-2xl font-extrabold tracking-tight">Gamejo Admin</h1><p className="mt-1 text-sm text-muted-foreground">Sign in to access the operator command center</p></div><SignIn routing="hash" /></div></div>;
+  if (!isLoaded) return <LoadingScreen label="Loading Storigam" />;
+  if (!isSignedIn) return <div className="flex min-h-[100dvh] items-center justify-center bg-background p-5"><div className="w-full max-w-md space-y-6"><div className="text-center"><div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground"><Command size={23} /></div><h1 className="text-2xl font-extrabold tracking-tight">Storigam Admin</h1><p className="mt-1 text-sm text-muted-foreground">Sign in to access the operator command center</p></div><SignIn routing="hash" /></div></div>;
   if (!adminChecked) return <LoadingScreen label="Verifying operator access" />;
   if (!isAdmin) return <AccessDenied email={user?.primaryEmailAddress?.emailAddress} onRetry={() => api.getMe().then((me) => { setIsAdmin(me.isAdmin); setAdminChecked(true); }).catch(() => {})} />;
   return <Layout route={route} onNavigate={navigate}>{renderPage(route)}</Layout>;
@@ -391,6 +391,6 @@ export default function App() {
     fetch("/api/admin/config").then((response) => response.json()).then((data) => setPublishableKey(data.publishableKey || null)).catch(() => setKeyError(true));
   }, []);
   if (keyError) return <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6 text-sm text-destructive"><div className="flex items-center gap-2"><CircleHelp size={16} />Failed to connect to API server.</div></div>;
-  if (!publishableKey) return <LoadingScreen label="Connecting to Gamejo" />;
-  return <ClerkProvider publishableKey={publishableKey} routerPush={() => {}} routerReplace={() => {}}><AdminApp /></ClerkProvider>;
+  if (!publishableKey) return <LoadingScreen label="Connecting to Storigam" />;
+  return <ClerkProvider publishableKey={publishableKey} routerPush={() => {}} routerReplace={() => {}} localization={{ signIn: { start: { title: "Sign in to Storigam Admin", titleCombined: "Sign in to Storigam Admin" } } }}><AdminApp /></ClerkProvider>;
 }

@@ -24,7 +24,7 @@ export default function PlaceholderPage({ section, label, description }: Placeho
             <p className="mb-3 font-mono text-xs uppercase tracking-[0.2em] text-primary">Not connected yet</p>
             <h1 className="text-3xl font-bold tracking-[-0.04em] text-foreground sm:text-4xl">{label}</h1>
             <p className="mt-4 max-w-xl text-sm leading-7 text-muted-foreground">
-              {description ?? `The ${label.toLowerCase()} workspace is mapped into the Gamejo command center, but its data connection has not been added yet.`}
+              {description ?? `The ${label.toLowerCase()} workspace is mapped into the Storigam command center, but its data connection has not been added yet.`}
             </p>
             <div className="mt-9 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border bg-muted/40 p-4">
