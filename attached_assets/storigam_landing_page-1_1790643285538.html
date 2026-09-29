@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Storigam — Stories made by gamers</title>
+<style>
+:root{--bg:#070611;--ink:#fff;--muted:#aaa8b9;--purple:#7136ff;--pink:#e32bb2;--coral:#ff8b4d}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:inherit;text-decoration:none}.wrap{max-width:1180px;margin:auto;padding:0 28px}
+nav{height:78px;display:flex;align-items:center;justify-content:space-between}
+.brand{font-size:24px;font-weight:800;letter-spacing:-1.5px}.brand span{background:linear-gradient(90deg,var(--purple),var(--pink),var(--coral));-webkit-background-clip:text;color:transparent}
+.navlinks{display:flex;gap:28px;color:#c9c6d4;font-size:14px}.navlinks a:hover{color:#fff}
+.hero{min-height:760px;display:grid;place-items:center;text-align:center;position:relative;overflow:hidden}
+.hero:before{content:"";position:absolute;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle,rgba(113,54,255,.28),transparent 68%);top:30px;left:50%;transform:translateX(-50%)}
+.logo{position:relative;margin:45px auto 35px;width:104px;height:104px}
+.logo:before,.logo:after{content:"";position:absolute;left:7px;width:90px;height:32px;border-radius:22px;background:#fff;transform:rotate(-11deg)}
+.logo:before{top:15px}.logo:after{top:57px}
+.play{position:absolute;z-index:2;left:39px;top:29px;width:0;height:0;border-top:25px solid transparent;border-bottom:25px solid transparent;border-left:39px solid var(--bg)}
+h1{font-size:clamp(52px,8vw,92px);line-height:.95;letter-spacing:-5px;max-width:900px;margin:0 auto}
+.gradient{background:linear-gradient(90deg,var(--purple),var(--pink),var(--coral));-webkit-background-clip:text;color:transparent}
+.hero p{max-width:650px;margin:28px auto 34px;font-size:19px;line-height:1.6;color:var(--muted)}
+.btns{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}.btn{padding:14px 23px;border-radius:999px;font-weight:700;font-size:15px}.primary{background:#fff;color:#080711}.secondary{border:1px solid #363343;color:#fff}
+.tag{margin-top:18px;color:#8e8a9d;letter-spacing:5px;font-size:11px;text-transform:lowercase}
+section{padding:100px 0}.center{text-align:center}.eyebrow{color:#9d92ff;font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase}
+h2{font-size:clamp(38px,5vw,62px);letter-spacing:-3px;margin:15px 0 18px}.lead{color:var(--muted);max-width:650px;margin:auto;font-size:18px;line-height:1.65}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:55px}.card{border:1px solid #252231;background:#0d0b16;border-radius:28px;padding:34px;min-height:230px}.num{font-size:13px;color:#777183}.card h3{font-size:27px;margin:38px 0 10px}.card p{color:var(--muted);line-height:1.6;margin:0}
+.create{background:linear-gradient(135deg,#111024,#0a0812);border:1px solid #29233a;border-radius:38px;padding:70px 35px;text-align:center}
+.mini{display:inline-flex;gap:8px;align-items:center;padding:8px 13px;border-radius:99px;background:#171327;color:#cfc8e5;font-size:12px;margin-bottom:20px}
+footer{border-top:1px solid #211e2b;padding:35px 0;color:#777183;font-size:13px;display:flex;justify-content:space-between}
+@media(max-width:720px){.navlinks{display:none}.grid{grid-template-columns:1fr}.hero{min-height:680px}section{padding:70px 0}h1{letter-spacing:-3px}.card{min-height:190px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <div class="brand">stori<span>gam</span></div>
+  <div class="navlinks"><a href="#create">Create</a><a href="#how">How it works</a><a href="#community">Community</a></div>
+</nav>
+
+<main>
+<section class="hero">
+<div>
+  <div class="logo" aria-label="Storigam logo"><div class="play"></div></div>
+  <div class="tag">stories made by gamers</div>
+  <h1>Your gaming moments<br>deserve a <span class="gradient">story.</span></h1>
+  <p>Turn your screenshots, pictures and favorite gaming moments into stories and manga — then share them with other gamers.</p>
+  <div class="btns"><a class="btn primary" href="#create">Start creating</a><a class="btn secondary" href="#how">See how it works</a></div>
+</div>
+</section>
+
+<section id="how">
+  <div class="center"><div class="eyebrow">Simple by design</div><h2>From a moment<br>to a story.</h2><p class="lead">Storigam keeps the experience focused. Create something, share it, and connect with people who enjoy the same worlds.</p></div>
+  <div class="grid">
+    <div class="card"><div class="num">01</div><h3>Create</h3><p>Choose your gaming pictures and turn them into a visual story or manga — or make one yourself.</p></div>
+    <div class="card"><div class="num">02</div><h3>Share</h3><p>Publish your creation and let other gamers see the moments behind your story.</p></div>
+    <div class="card"><div class="num">03</div><h3>Connect</h3><p>Find conversations, reactions and people who enjoy the games and stories you love.</p></div>
+  </div>
+</section>
+
+<section id="create">
+  <div class="create">
+    <div class="mini">✦ Made by gamers</div>
+    <h2>You already have<br>the story.</h2>
+    <p class="lead">A funny screenshot. An unforgettable character. A night with friends. A world you didn't want to leave. Make it something worth keeping.</p>
+    <div class="btns" style="margin-top:30px"><a class="btn primary" href="#">Create your first story</a></div>
+  </div>
+</section>
+
+<section id="community">
+  <div class="center"><div class="eyebrow">The Storigam world</div><h2>Gaming doesn't end<br>when the game ends.</h2><p class="lead">Your moments can become stories, your stories can inspire others, and every gamer can have something worth sharing.</p></div>
+</section>
+</main>
+
+<footer><span>© Storigam</span><span>stories made by gamers</span></footer>
+</div>
+</body>
+</html>

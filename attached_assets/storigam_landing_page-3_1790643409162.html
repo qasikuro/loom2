@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Storigam — Stories made by gamers</title>
+<meta name="description" content="Turn your gaming screenshots and favorite moments into stories and manga, then share them with other gamers.">
+<meta property="og:title" content="Storigam — Stories made by gamers">
+<meta property="og:description" content="Turn your gaming screenshots and favorite moments into stories and manga.">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="theme-color" content="#070611">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%237136ff'/%3E%3Cpath d='M25 18l22 14-22 14z' fill='white'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#070611;--ink:#fff;--muted:#aaa8b9;--dim:#9a95aa;--purple:#7136ff;--pink:#e32bb2;--coral:#ff8b4d}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid #9d92ff;outline-offset:3px;border-radius:6px}
+.wrap{max-width:1180px;margin:auto;padding:0 28px}
+header{position:relative;z-index:10}
+nav{height:78px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{font-size:24px;font-weight:800;letter-spacing:-1.5px}
+.brand span,.gradient{background:linear-gradient(90deg,var(--purple),var(--pink),var(--coral));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.navlinks{display:flex;align-items:center;gap:28px;color:#c9c6d4;font-size:14px}
+.navlinks a:hover{color:#fff}
+.navcta{padding:9px 16px;border-radius:999px;background:#fff;color:#080711!important;font-weight:700}
+.menu{display:none;position:relative}
+.menu summary{list-style:none;cursor:pointer;padding:9px 16px;border:1px solid #363343;border-radius:999px;font-size:14px}
+.menu summary::-webkit-details-marker{display:none}
+.menu div{position:absolute;right:0;top:48px;min-width:190px;background:#0d0b16;border:1px solid #252231;border-radius:18px;padding:10px;display:grid;gap:2px}
+.menu div a{padding:11px 14px;border-radius:10px;color:#c9c6d4;font-size:15px}
+.menu div a:hover{background:#171327;color:#fff}
+.hero{min-height:760px;display:grid;place-items:center;text-align:center;position:relative;overflow:hidden;isolation:isolate;padding:60px 0}
+.hero:before{content:"";position:absolute;z-index:-1;pointer-events:none;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle,rgba(113,54,255,.28),transparent 68%);top:30px;left:50%;transform:translateX(-50%)}
+.logo{position:relative;margin:0 auto 30px;width:104px;height:104px}
+.logo:before,.logo:after{content:"";position:absolute;left:7px;width:90px;height:32px;border-radius:22px;background:#fff;transform:rotate(-11deg)}
+.logo:before{top:15px}.logo:after{top:57px}
+.play{position:absolute;z-index:2;left:39px;top:29px;width:0;height:0;border-top:25px solid transparent;border-bottom:25px solid transparent;border-left:39px solid var(--bg)}
+h1{font-size:clamp(52px,8vw,92px);line-height:.95;letter-spacing:-5px;max-width:900px;margin:0 auto}
+.hero p{max-width:650px;margin:28px auto 34px;font-size:19px;line-height:1.6;color:var(--muted)}
+.btns{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.btn{padding:14px 23px;border-radius:999px;font-weight:700;font-size:15px;display:inline-block}
+.primary{background:#fff;color:#080711}.secondary{border:1px solid #363343;color:#fff}
+.tag{margin-top:18px;color:var(--dim);letter-spacing:4px;font-size:12px}
+.demo{display:grid;grid-template-columns:1.2fr 1fr;grid-template-rows:120px 120px;gap:8px;width:min(440px,100%);margin:44px auto 0;transform:rotate(-2deg)}
+.panel{border-radius:14px;border:2px solid #fff;position:relative;overflow:hidden;text-align:left}
+.p1{grid-row:span 2;background:linear-gradient(160deg,#2a1a6e,var(--purple) 60%,var(--pink))}
+.p2{background:linear-gradient(135deg,var(--pink),var(--coral))}
+.p3{background:linear-gradient(135deg,#171327,#3a2a8f)}
+.bubble{position:absolute;left:12px;bottom:12px;right:12px;background:#fff;color:#080711;border-radius:12px;padding:8px 11px;font-size:12px;font-weight:700;line-height:1.3}
+.p2 .bubble,.p3 .bubble{font-size:11px;padding:6px 9px;left:8px;right:8px;bottom:8px}
+section{padding:100px 0}
+.center{text-align:center}
+.eyebrow{color:#9d92ff;font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase}
+h2{font-size:clamp(38px,5vw,62px);letter-spacing:-3px;margin:15px 0 18px;line-height:1.02}
+.lead{color:var(--muted);max-width:650px;margin:auto;font-size:18px;line-height:1.65}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:55px}
+.card{border:1px solid #252231;background:#0d0b16;border-radius:28px;padding:34px;min-height:230px}
+.num{font-size:13px;color:var(--dim)}
+.card h3{font-size:27px;margin:38px 0 10px}.card p{color:var(--muted);line-height:1.6;margin:0}
+.create{background:linear-gradient(135deg,#111024,#0a0812);border:1px solid #29233a;border-radius:38px;padding:70px 35px;text-align:center}
+.mini{display:inline-flex;gap:8px;align-items:center;padding:8px 13px;border-radius:99px;background:#171327;color:#cfc8e5;font-size:12px;margin-bottom:20px}
+.signup{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:32px}
+.signup input{flex:1 1 240px;max-width:320px;padding:14px 20px;border-radius:999px;border:1px solid #363343;background:#0d0b16;color:#fff;font:inherit;font-size:15px}
+.signup input::placeholder{color:#8e8a9d}
+.signup button{border:0;cursor:pointer;font:inherit;font-weight:700;font-size:15px}
+.note{margin:14px 0 0;color:var(--dim);font-size:13px}
+footer{border-top:1px solid #211e2b;padding:35px 0;color:var(--dim);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+footer nav{height:auto;display:flex;gap:22px}
+footer a:hover{color:#fff}
+@media(max-width:720px){
+.navlinks{display:none}.menu{display:block}
+.grid{grid-template-columns:1fr}
+.hero{min-height:680px}
+section{padding:70px 0}
+h1{letter-spacing:-3px}
+h2{letter-spacing:-1.5px}
+.card{min-height:190px}
+.create{padding:50px 22px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+<nav aria-label="Main">
+  <a class="brand" href="#top" aria-label="Storigam home">stori<span>gam</span></a>
+  <div class="navlinks"><a href="#how">How it works</a><a href="#community">Community</a><a class="navcta" href="#waitlist">Join the waitlist</a></div>
+  <details class="menu"><summary>Menu</summary><div><a href="#how">How it works</a><a href="#community">Community</a><a href="#waitlist">Join the waitlist</a></div></details>
+</nav>
+</header>
+
+<main id="top">
+<section class="hero">
+<div>
+  <div class="logo" role="img" aria-label="Storigam logo"><div class="play"></div></div>
+  <div class="tag">stories made by gamers</div>
+  <h1>Your gaming moments<br>deserve a <span class="gradient">story.</span></h1>
+  <p>Pick your favorite screenshots, arrange them into panels, add your words, and share the result with other gamers.</p>
+  <div class="btns"><a class="btn primary" href="#waitlist">Join the waitlist</a><a class="btn secondary" href="#how">See how it works</a></div>
+  <div class="demo" role="img" aria-label="Example of a screenshot story laid out as manga panels">
+    <div class="panel p1"><div class="bubble">We were one hit from losing… and then this happened.</div></div>
+    <div class="panel p2"><div class="bubble">No way.</div></div>
+    <div class="panel p3"><div class="bubble">Best night ever.</div></div>
+  </div>
+</div>
+</section>
+
+<section id="how">
+  <div class="center"><div class="eyebrow">Simple by design</div><h2>From a moment<br>to a story.</h2><p class="lead">Storigam keeps the experience focused. Create something, share it, and connect with people who enjoy the same worlds.</p></div>
+  <div class="grid">
+    <div class="card"><div class="num">01</div><h3>Create</h3><p>Choose your gaming pictures and arrange them into a visual story or manga, with your own captions and speech bubbles.</p></div>
+    <div class="card"><div class="num">02</div><h3>Share</h3><p>Publish your creation and let other gamers see the moments behind your story.</p></div>
+    <div class="card"><div class="num">03</div><h3>Connect</h3><p>Find conversations, reactions and people who enjoy the games and stories you love.</p></div>
+  </div>
+</section>
+
+<section id="waitlist">
+  <div class="create">
+    <div class="mini">✦ Early access</div>
+    <h2>You already have<br>the story.</h2>
+    <p class="lead">A funny screenshot. An unforgettable character. A night with friends. A world you didn't want to leave. Make it something worth keeping.</p>
+    <!-- TODO: replace the action URL with your form endpoint (Formspree, Buttondown, Mailchimp, etc.) -->
+    <form class="signup" action="https://formspree.io/f/YOUR_FORM_ID" method="post">
+      <label for="email" style="position:absolute;left:-9999px">Email address</label>
+      <input id="email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+      <button class="btn primary" type="submit">Join the waitlist</button>
+    </form>
+    <p class="note">We'll email you once, when Storigam opens.</p>
+  </div>
+</section>
+
+<section id="community">
+  <div class="center"><div class="eyebrow">The Storigam world</div><h2>Gaming doesn't end<br>when the game ends.</h2><p class="lead">Your moments can become stories, your stories can inspire others, and every gamer can have something worth sharing.</p>
+  <div class="btns" style="margin-top:30px"><a class="btn secondary" href="#waitlist">Get early access</a></div></div>
+</section>
+</main>
+
+<footer>
+  <span>© Storigam</span>
+  <nav aria-label="Footer"><a href="mailto:hello@storigam.com">Contact</a><a href="#">Privacy</a><a href="#">Terms</a></nav>
+</footer>
+</div>
+</body>
+</html>

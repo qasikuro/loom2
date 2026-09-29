@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/storigam/"
+title = "Storigam"
+description = "A public landing page for Storigam, where gamers turn favorite moments into visual stories and share them with a community of fellow players."
+version = "1.0.0"
+id = "artifacts/storigam-landing"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/storigam/" ]
+localPort = 24248
+
+[services.development]
+run = "pnpm --filter @workspace/storigam-landing run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/storigam-landing", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/storigam-landing/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24248"
+BASE_PATH = "/storigam/"
