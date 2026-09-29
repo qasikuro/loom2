@@ -666,6 +666,38 @@ paths:
         "429":
           description: Too many submissions
 
+  /storigam-interest/unsubscribe:
+    get:
+      operationId: viewStorigamUnsubscribe
+      tags: [config]
+      summary: Show unsubscribe confirmation
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Confirmation page
+          content:
+            text/html:
+              schema: { type: string }
+    post:
+      operationId: confirmStorigamUnsubscribe
+      tags: [config]
+      summary: Stop future Storigam interest emails
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Unsubscribed
+          content:
+            text/html:
+              schema: { type: string }
+
   /admin/emails:
     post:
       operationId: sendAdminEmail
@@ -693,6 +725,69 @@ paths:
           description: Too many emails sent
         "502":
           description: Email provider rejected the request
+
+  /admin/interest/subscribers:
+    get:
+      operationId: listInterestSubscribers
+      tags: [admin]
+      summary: List landing page signups and consent status
+      responses:
+        "200":
+          description: Subscribers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterestSubscribersResponse"
+
+  /admin/interest/campaigns:
+    get:
+      operationId: listInterestCampaigns
+      tags: [admin]
+      summary: List landing page email campaigns
+      responses:
+        "200":
+          description: Campaigns with send progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterestCampaignsResponse"
+    post:
+      operationId: createInterestCampaign
+      tags: [admin]
+      summary: Prepare a campaign for consented landing page subscribers
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterestCampaignInput"
+      responses:
+        "200":
+          description: Campaign prepared; no emails sent yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterestCampaign"
+        "400":
+          description: Invalid message or no eligible subscribers
+
+  /admin/interest/campaigns/{id}/dispatch:
+    post:
+      operationId: dispatchInterestCampaign
+      tags: [admin]
+      summary: Send the next batch of a prepared campaign
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Updated campaign progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterestCampaign"
 
 components:
   schemas:
@@ -759,6 +854,72 @@ components:
         ok:
           type: boolean
       required: [ok]
+
+    InterestSubscriber:
+      type: object
+      properties:
+        email: { type: string, format: email }
+        interests:
+          type: array
+          items: { type: string }
+        consentedAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        unsubscribedAt: { type: ["string", "null"], format: date-time }
+      required: [email, interests, consentedAt, createdAt, unsubscribedAt]
+
+    InterestSubscribersResponse:
+      type: object
+      properties:
+        subscribers:
+          type: array
+          items: { $ref: "#/components/schemas/InterestSubscriber" }
+        total: { type: integer }
+        activeTotal: { type: integer }
+        audienceCounts:
+          type: object
+          properties:
+            all: { type: integer }
+            beta_tester: { type: integer }
+            content_creator: { type: integer }
+          required: [all, beta_tester, content_creator]
+      required: [subscribers, total, activeTotal, audienceCounts]
+
+    InterestCampaignInput:
+      type: object
+      additionalProperties: false
+      properties:
+        audience:
+          type: string
+          enum: [all, beta_tester, content_creator]
+        subject: { type: string, minLength: 1, maxLength: 200 }
+        message: { type: string, minLength: 1, maxLength: 10000 }
+      required: [audience, subject, message]
+
+    InterestCampaign:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        audience:
+          type: string
+          enum: [all, beta_tester, content_creator]
+        subject: { type: string }
+        message: { type: string }
+        createdAt: { type: string, format: date-time }
+        total: { type: integer }
+        accepted: { type: integer }
+        failed: { type: integer }
+        pending: { type: integer }
+        uncertain: { type: integer }
+        skipped: { type: integer }
+      required: [id, audience, subject, message, createdAt, total, accepted, failed, pending, uncertain, skipped]
+
+    InterestCampaignsResponse:
+      type: object
+      properties:
+        campaigns:
+          type: array
+          items: { $ref: "#/components/schemas/InterestCampaign" }
+      required: [campaigns]
 
     AdminEmailInput:
       type: object

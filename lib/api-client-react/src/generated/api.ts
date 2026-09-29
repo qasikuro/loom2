@@ -24,6 +24,7 @@ import type {
   CharacterInput,
   ComposeVideoRequest,
   ComposeVideoResponse,
+  ConfirmStorigamUnsubscribeParams,
   ConstellationState,
   DiscoverPost,
   FriendRequest,
@@ -31,6 +32,10 @@ import type {
   GalleryPhoto,
   GalleryUsage,
   HealthStatus,
+  InterestCampaign,
+  InterestCampaignInput,
+  InterestCampaignsResponse,
+  InterestSubscribersResponse,
   JournalEntry,
   JournalEntryInput,
   MangaGenerationInput,
@@ -47,6 +52,7 @@ import type {
   Story,
   StoryInput,
   StoryLikeState,
+  ViewStorigamUnsubscribeParams,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -3152,6 +3158,207 @@ export const useSubmitStorigamInterest = <
 };
 
 /**
+ * @summary Show unsubscribe confirmation
+ */
+export const getViewStorigamUnsubscribeUrl = (
+  params: ViewStorigamUnsubscribeParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/storigam-interest/unsubscribe?${stringifiedParams}`
+    : `/api/storigam-interest/unsubscribe`;
+};
+
+export const viewStorigamUnsubscribe = async (
+  params: ViewStorigamUnsubscribeParams,
+  options?: RequestInit,
+): Promise<string> => {
+  return customFetch<string>(getViewStorigamUnsubscribeUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getViewStorigamUnsubscribeQueryKey = (
+  params?: ViewStorigamUnsubscribeParams,
+) => {
+  return [
+    `/api/storigam-interest/unsubscribe`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getViewStorigamUnsubscribeQueryOptions = <
+  TData = Awaited<ReturnType<typeof viewStorigamUnsubscribe>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ViewStorigamUnsubscribeParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof viewStorigamUnsubscribe>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getViewStorigamUnsubscribeQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof viewStorigamUnsubscribe>>
+  > = ({ signal }) =>
+    viewStorigamUnsubscribe(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof viewStorigamUnsubscribe>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ViewStorigamUnsubscribeQueryResult = NonNullable<
+  Awaited<ReturnType<typeof viewStorigamUnsubscribe>>
+>;
+export type ViewStorigamUnsubscribeQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Show unsubscribe confirmation
+ */
+
+export function useViewStorigamUnsubscribe<
+  TData = Awaited<ReturnType<typeof viewStorigamUnsubscribe>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ViewStorigamUnsubscribeParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof viewStorigamUnsubscribe>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getViewStorigamUnsubscribeQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Stop future Storigam interest emails
+ */
+export const getConfirmStorigamUnsubscribeUrl = (
+  params: ConfirmStorigamUnsubscribeParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/storigam-interest/unsubscribe?${stringifiedParams}`
+    : `/api/storigam-interest/unsubscribe`;
+};
+
+export const confirmStorigamUnsubscribe = async (
+  params: ConfirmStorigamUnsubscribeParams,
+  options?: RequestInit,
+): Promise<string> => {
+  return customFetch<string>(getConfirmStorigamUnsubscribeUrl(params), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConfirmStorigamUnsubscribeMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmStorigamUnsubscribe>>,
+    TError,
+    { params: ConfirmStorigamUnsubscribeParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmStorigamUnsubscribe>>,
+  TError,
+  { params: ConfirmStorigamUnsubscribeParams },
+  TContext
+> => {
+  const mutationKey = ["confirmStorigamUnsubscribe"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmStorigamUnsubscribe>>,
+    { params: ConfirmStorigamUnsubscribeParams }
+  > = (props) => {
+    const { params } = props ?? {};
+
+    return confirmStorigamUnsubscribe(params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmStorigamUnsubscribeMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmStorigamUnsubscribe>>
+>;
+
+export type ConfirmStorigamUnsubscribeMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Stop future Storigam interest emails
+ */
+export const useConfirmStorigamUnsubscribe = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmStorigamUnsubscribe>>,
+    TError,
+    { params: ConfirmStorigamUnsubscribeParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof confirmStorigamUnsubscribe>>,
+  TError,
+  { params: ConfirmStorigamUnsubscribeParams },
+  TContext
+> => {
+  return useMutation(getConfirmStorigamUnsubscribeMutationOptions(options));
+};
+
+/**
  * Requires an authenticated administrator. The sender and provider credentials are kept on the server.
  * @summary Send one plain-text email from the admin console
  */
@@ -3236,4 +3443,329 @@ export const useSendAdminEmail = <
   TContext
 > => {
   return useMutation(getSendAdminEmailMutationOptions(options));
+};
+
+/**
+ * @summary List landing page signups and consent status
+ */
+export const getListInterestSubscribersUrl = () => {
+  return `/api/admin/interest/subscribers`;
+};
+
+export const listInterestSubscribers = async (
+  options?: RequestInit,
+): Promise<InterestSubscribersResponse> => {
+  return customFetch<InterestSubscribersResponse>(
+    getListInterestSubscribersUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListInterestSubscribersQueryKey = () => {
+  return [`/api/admin/interest/subscribers`] as const;
+};
+
+export const getListInterestSubscribersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInterestSubscribers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listInterestSubscribers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListInterestSubscribersQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listInterestSubscribers>>
+  > = ({ signal }) => listInterestSubscribers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInterestSubscribers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListInterestSubscribersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listInterestSubscribers>>
+>;
+export type ListInterestSubscribersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List landing page signups and consent status
+ */
+
+export function useListInterestSubscribers<
+  TData = Awaited<ReturnType<typeof listInterestSubscribers>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listInterestSubscribers>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListInterestSubscribersQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List landing page email campaigns
+ */
+export const getListInterestCampaignsUrl = () => {
+  return `/api/admin/interest/campaigns`;
+};
+
+export const listInterestCampaigns = async (
+  options?: RequestInit,
+): Promise<InterestCampaignsResponse> => {
+  return customFetch<InterestCampaignsResponse>(getListInterestCampaignsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListInterestCampaignsQueryKey = () => {
+  return [`/api/admin/interest/campaigns`] as const;
+};
+
+export const getListInterestCampaignsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInterestCampaigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listInterestCampaigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListInterestCampaignsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listInterestCampaigns>>
+  > = ({ signal }) => listInterestCampaigns({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInterestCampaigns>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListInterestCampaignsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listInterestCampaigns>>
+>;
+export type ListInterestCampaignsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List landing page email campaigns
+ */
+
+export function useListInterestCampaigns<
+  TData = Awaited<ReturnType<typeof listInterestCampaigns>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listInterestCampaigns>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListInterestCampaignsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Prepare a campaign for consented landing page subscribers
+ */
+export const getCreateInterestCampaignUrl = () => {
+  return `/api/admin/interest/campaigns`;
+};
+
+export const createInterestCampaign = async (
+  interestCampaignInput: InterestCampaignInput,
+  options?: RequestInit,
+): Promise<InterestCampaign> => {
+  return customFetch<InterestCampaign>(getCreateInterestCampaignUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(interestCampaignInput),
+  });
+};
+
+export const getCreateInterestCampaignMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInterestCampaign>>,
+    TError,
+    { data: BodyType<InterestCampaignInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createInterestCampaign>>,
+  TError,
+  { data: BodyType<InterestCampaignInput> },
+  TContext
+> => {
+  const mutationKey = ["createInterestCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createInterestCampaign>>,
+    { data: BodyType<InterestCampaignInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createInterestCampaign(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateInterestCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createInterestCampaign>>
+>;
+export type CreateInterestCampaignMutationBody =
+  BodyType<InterestCampaignInput>;
+export type CreateInterestCampaignMutationError = ErrorType<void>;
+
+/**
+ * @summary Prepare a campaign for consented landing page subscribers
+ */
+export const useCreateInterestCampaign = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createInterestCampaign>>,
+    TError,
+    { data: BodyType<InterestCampaignInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createInterestCampaign>>,
+  TError,
+  { data: BodyType<InterestCampaignInput> },
+  TContext
+> => {
+  return useMutation(getCreateInterestCampaignMutationOptions(options));
+};
+
+/**
+ * @summary Send the next batch of a prepared campaign
+ */
+export const getDispatchInterestCampaignUrl = (id: string) => {
+  return `/api/admin/interest/campaigns/${id}/dispatch`;
+};
+
+export const dispatchInterestCampaign = async (
+  id: string,
+  options?: RequestInit,
+): Promise<InterestCampaign> => {
+  return customFetch<InterestCampaign>(getDispatchInterestCampaignUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDispatchInterestCampaignMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dispatchInterestCampaign>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof dispatchInterestCampaign>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["dispatchInterestCampaign"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof dispatchInterestCampaign>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return dispatchInterestCampaign(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DispatchInterestCampaignMutationResult = NonNullable<
+  Awaited<ReturnType<typeof dispatchInterestCampaign>>
+>;
+
+export type DispatchInterestCampaignMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Send the next batch of a prepared campaign
+ */
+export const useDispatchInterestCampaign = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof dispatchInterestCampaign>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof dispatchInterestCampaign>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDispatchInterestCampaignMutationOptions(options));
 };

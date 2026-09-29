@@ -105,6 +105,9 @@ timeoutMs = 180000
 VITE_CLERK_PUBLISHABLE_KEY = "pk_test_bmV3LWRyYWdvbi0xNS5jbGVyay5hY2NvdW50cy5kZXYk"
 CLERK_PROXY_URL = "/api/__clerk"
 
+[userenv.production]
+STORIGAM_PUBLIC_ORIGIN = "https://storigam.com"
+
 [nix]
 channel = "stable-25_05"
 packages = ["eas-cli"]

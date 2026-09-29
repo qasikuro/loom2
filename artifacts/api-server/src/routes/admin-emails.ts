@@ -1,5 +1,7 @@
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { SendAdminEmailBody, SendAdminEmailResponse } from "@workspace/api-zod";
+import { db, storigamInterestSignupTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import rateLimit from "express-rate-limit";
 import { Router, type IRouter } from "express";
 import { getUserId, requireAdmin } from "../middleware/auth";
@@ -41,6 +43,15 @@ router.post("/admin/emails", requireAdmin, emailRateLimit, async (req, res): Pro
   }
 
   try {
+    const [signup] = await db
+      .select({ unsubscribedAt: storigamInterestSignupTable.unsubscribedAt })
+      .from(storigamInterestSignupTable)
+      .where(eq(storigamInterestSignupTable.email, parsed.data.to.toLowerCase()))
+      .limit(1);
+    if (signup?.unsubscribedAt) {
+      res.status(409).json({ error: "This address opted out of Storigam emails. Do not send a direct message to it." });
+      return;
+    }
     const response = await new ReplitConnectors().proxy("resend", "/emails", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

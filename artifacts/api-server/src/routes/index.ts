@@ -35,6 +35,7 @@ import musicRouter from "./music";
 import mediaRouter from "./media";
 import storigamInterestRouter from "./storigam-interest";
 import adminEmailsRouter from "./admin-emails";
+import adminInterestCampaignsRouter from "./admin-interest-campaigns";
 
 const router: IRouter = Router();
 
@@ -74,5 +75,6 @@ router.use(musicRouter);
 router.use(mediaRouter);
 router.use(storigamInterestRouter);
 router.use(adminEmailsRouter);
+router.use(adminInterestCampaignsRouter);
 
 export default router;

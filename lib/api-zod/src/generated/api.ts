@@ -934,6 +934,20 @@ export const SubmitStorigamInterestResponse = zod.object({
 });
 
 /**
+ * @summary Show unsubscribe confirmation
+ */
+export const ViewStorigamUnsubscribeQueryParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+/**
+ * @summary Stop future Storigam interest emails
+ */
+export const ConfirmStorigamUnsubscribeQueryParams = zod.object({
+  token: zod.coerce.string(),
+});
+
+/**
  * Requires an authenticated administrator. The sender and provider credentials are kept on the server.
  * @summary Send one plain-text email from the admin console
  */
@@ -952,4 +966,95 @@ export const SendAdminEmailBody = zod.object({
 export const SendAdminEmailResponse = zod.object({
   ok: zod.boolean(),
   id: zod.string(),
+});
+
+/**
+ * @summary List landing page signups and consent status
+ */
+export const ListInterestSubscribersResponse = zod.object({
+  subscribers: zod.array(
+    zod.object({
+      email: zod.string().email(),
+      interests: zod.array(zod.string()),
+      consentedAt: zod.coerce.date(),
+      createdAt: zod.coerce.date(),
+      unsubscribedAt: zod.coerce.date().nullable(),
+    }),
+  ),
+  total: zod.number(),
+  activeTotal: zod.number(),
+  audienceCounts: zod.object({
+    all: zod.number(),
+    beta_tester: zod.number(),
+    content_creator: zod.number(),
+  }),
+});
+
+/**
+ * @summary List landing page email campaigns
+ */
+export const ListInterestCampaignsResponse = zod.object({
+  campaigns: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      audience: zod.enum(["all", "beta_tester", "content_creator"]),
+      subject: zod.string(),
+      message: zod.string(),
+      createdAt: zod.coerce.date(),
+      total: zod.number(),
+      accepted: zod.number(),
+      failed: zod.number(),
+      pending: zod.number(),
+      uncertain: zod.number(),
+      skipped: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * @summary Prepare a campaign for consented landing page subscribers
+ */
+export const createInterestCampaignBodySubjectMax = 200;
+
+export const createInterestCampaignBodyMessageMax = 10000;
+
+export const CreateInterestCampaignBody = zod.object({
+  audience: zod.enum(["all", "beta_tester", "content_creator"]),
+  subject: zod.string().min(1).max(createInterestCampaignBodySubjectMax),
+  message: zod.string().min(1).max(createInterestCampaignBodyMessageMax),
+});
+
+export const CreateInterestCampaignResponse = zod.object({
+  id: zod.string().uuid(),
+  audience: zod.enum(["all", "beta_tester", "content_creator"]),
+  subject: zod.string(),
+  message: zod.string(),
+  createdAt: zod.coerce.date(),
+  total: zod.number(),
+  accepted: zod.number(),
+  failed: zod.number(),
+  pending: zod.number(),
+  uncertain: zod.number(),
+  skipped: zod.number(),
+});
+
+/**
+ * @summary Send the next batch of a prepared campaign
+ */
+export const DispatchInterestCampaignParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const DispatchInterestCampaignResponse = zod.object({
+  id: zod.string().uuid(),
+  audience: zod.enum(["all", "beta_tester", "content_creator"]),
+  subject: zod.string(),
+  message: zod.string(),
+  createdAt: zod.coerce.date(),
+  total: zod.number(),
+  accepted: zod.number(),
+  failed: zod.number(),
+  pending: zod.number(),
+  uncertain: zod.number(),
+  skipped: zod.number(),
 });

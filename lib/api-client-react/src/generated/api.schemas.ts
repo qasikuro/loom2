@@ -65,6 +65,78 @@ export interface StorigamInterestResponse {
   ok: boolean;
 }
 
+export interface InterestSubscriber {
+  email: string;
+  interests: string[];
+  consentedAt: string;
+  createdAt: string;
+  /** @nullable */
+  unsubscribedAt: string | null;
+}
+
+export type InterestSubscribersResponseAudienceCounts = {
+  all: number;
+  beta_tester: number;
+  content_creator: number;
+};
+
+export interface InterestSubscribersResponse {
+  subscribers: InterestSubscriber[];
+  total: number;
+  activeTotal: number;
+  audienceCounts: InterestSubscribersResponseAudienceCounts;
+}
+
+export type InterestCampaignInputAudience =
+  (typeof InterestCampaignInputAudience)[keyof typeof InterestCampaignInputAudience];
+
+export const InterestCampaignInputAudience = {
+  all: "all",
+  beta_tester: "beta_tester",
+  content_creator: "content_creator",
+} as const;
+
+export interface InterestCampaignInput {
+  audience: InterestCampaignInputAudience;
+  /**
+   * @minLength 1
+   * @maxLength 200
+   */
+  subject: string;
+  /**
+   * @minLength 1
+   * @maxLength 10000
+   */
+  message: string;
+}
+
+export type InterestCampaignAudience =
+  (typeof InterestCampaignAudience)[keyof typeof InterestCampaignAudience];
+
+export const InterestCampaignAudience = {
+  all: "all",
+  beta_tester: "beta_tester",
+  content_creator: "content_creator",
+} as const;
+
+export interface InterestCampaign {
+  id: string;
+  audience: InterestCampaignAudience;
+  subject: string;
+  message: string;
+  createdAt: string;
+  total: number;
+  accepted: number;
+  failed: number;
+  pending: number;
+  uncertain: number;
+  skipped: number;
+}
+
+export interface InterestCampaignsResponse {
+  campaigns: InterestCampaign[];
+}
+
 export interface AdminEmailInput {
   /** @maxLength 254 */
   to: string;
@@ -504,3 +576,11 @@ export interface AppConfig {
   min_app_version: string;
   features: FeatureFlags;
 }
+
+export type ViewStorigamUnsubscribeParams = {
+  token: string;
+};
+
+export type ConfirmStorigamUnsubscribeParams = {
+  token: string;
+};

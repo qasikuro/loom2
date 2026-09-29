@@ -3,8 +3,8 @@ import pino from "pino";
 import pinoHttp from "pino-http";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { db, characterTable } from "@workspace/db";
-import { inArray } from "drizzle-orm";
+import { db, characterTable, storigamInterestSignupTable } from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
 
 const { proxy } = vi.hoisted(() => ({ proxy: vi.fn() }));
 
@@ -23,6 +23,7 @@ import adminEmailsRouter from "../routes/admin-emails";
 
 const ADMIN_ID = "test-admin-emails-admin";
 const USER_ID = "test-admin-emails-user";
+const OPTED_OUT_EMAIL = "test-admin-emails-opted-out@example.invalid";
 const fixtureIds = [ADMIN_ID, USER_ID];
 
 const app = express();
@@ -39,6 +40,12 @@ describe("POST /admin/emails", () => {
       { userId: ADMIN_ID, isAdmin: true },
       { userId: USER_ID, isAdmin: false },
     ]);
+    await db.insert(storigamInterestSignupTable).values({
+      email: OPTED_OUT_EMAIL,
+      interests: ["beta_tester"],
+      consentedAt: new Date(),
+      unsubscribedAt: new Date(),
+    }).onConflictDoNothing();
   });
 
   afterEach(() => {
@@ -47,6 +54,7 @@ describe("POST /admin/emails", () => {
   });
 
   afterAll(async () => {
+    await db.delete(storigamInterestSignupTable).where(eq(storigamInterestSignupTable.email, OPTED_OUT_EMAIL));
     await db.delete(characterTable).where(inArray(characterTable.userId, fixtureIds));
   });
 
@@ -95,6 +103,13 @@ describe("POST /admin/emails", () => {
     vi.stubEnv("RESEND_REPLY_TO_EMAIL", "invalid-address");
     const result = await request(app).post("/admin/emails").set("x-test-user-id", ADMIN_ID).send(email);
     expect(result.status).toBe(503);
+    expect(proxy).not.toHaveBeenCalled();
+  });
+
+  it("does not let direct admin sends bypass a landing subscriber's opt-out", async () => {
+    const result = await request(app).post("/admin/emails").set("x-test-user-id", ADMIN_ID)
+      .send({ ...email, to: OPTED_OUT_EMAIL });
+    expect(result.status).toBe(409);
     expect(proxy).not.toHaveBeenCalled();
   });
 

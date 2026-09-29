@@ -35,6 +35,10 @@ export const api = {
   getStats:      () => apiFetch<Stats>("/admin/stats"),
   getUsers:      (q = "", offset = 0) => apiFetch<{ users: AdminUser[]; total: number }>(`/admin/users?q=${encodeURIComponent(q)}&offset=${offset}&limit=50`),
   sendEmail:     (input: AdminEmailInput) => apiFetch<AdminEmailResponse>("/admin/emails", { method: "POST", body: JSON.stringify(input) }),
+  getInterestSubscribers: () => apiFetch<InterestSubscribersResponse>("/admin/interest/subscribers"),
+  getInterestCampaigns: () => apiFetch<{ campaigns: Campaign[] }>("/admin/interest/campaigns"),
+  createInterestCampaign: (input: InterestCampaignInput) => apiFetch<Campaign>("/admin/interest/campaigns", { method: "POST", body: JSON.stringify(input) }),
+  dispatchInterestCampaign: (id: string) => apiFetch<Campaign>(`/admin/interest/campaigns/${encodeURIComponent(id)}/dispatch`, { method: "POST" }),
   banUser:       (id: string) => apiFetch(`/admin/users/${id}/ban`, { method: "PUT" }),
   unbanUser:     (id: string) => apiFetch(`/admin/users/${id}/unban`, { method: "PUT" }),
   deleteUser:    (id: string) => apiFetch(`/admin/users/${id}`, { method: "DELETE" }),
@@ -76,6 +80,40 @@ export const api = {
   generateInventory: (body: GenerateInventoryBody) => apiFetch<{ inventory: EventInventoryItem[]; prompt: string }>("/admin/events/generate-inventory", { method: "POST", body: JSON.stringify(body) }),
   grantEvent:        (id: string) => apiFetch<{ granted: number; stars: number; aura: number; shards: number; itemsGranted: number; message: string }>(`/admin/events/${id}/grant`, { method: "POST" }),
 };
+
+export type InterestAudience = "all" | "beta_tester" | "content_creator";
+
+export interface InterestSubscriber {
+  email: string;
+  interests: string[];
+  consentedAt: string;
+  createdAt: string;
+  unsubscribedAt: string | null;
+}
+
+export interface InterestSubscribersResponse {
+  subscribers: InterestSubscriber[];
+  total: number;
+  activeTotal: number;
+  audienceCounts: Record<InterestAudience, number>;
+}
+
+export interface InterestCampaignInput {
+  audience: InterestAudience;
+  subject: string;
+  message: string;
+}
+
+export interface Campaign extends InterestCampaignInput {
+  id: string;
+  createdAt: string;
+  total: number;
+  accepted: number;
+  failed: number;
+  pending: number;
+  uncertain: number;
+  skipped: number;
+}
 
 export interface AdminBadge {
   id:          string;
