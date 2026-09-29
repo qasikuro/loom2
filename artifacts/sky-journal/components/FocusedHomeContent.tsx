@@ -53,7 +53,8 @@ export function FocusedHomeContent({
   const { width: screenWidth } = useWindowDimensions();
   const [resumeDraft, setResumeDraft] = useState<ResumableStoryDraft | null>(null);
   const [draftCheckComplete, setDraftCheckComplete] = useState(false);
-  const friendCardWidth = Math.max(88, Math.min(116, (screenWidth - 58) / 3.5));
+  // Let the next cover peek into view without reducing stories to tiny thumbnails.
+  const friendCardWidth = Math.max(122, Math.min(142, (screenWidth - 48) * 0.39));
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -86,7 +87,7 @@ export function FocusedHomeContent({
       <View style={s.header}>
         <View style={s.greetingBlock}>
           <Text style={[s.greeting, { color: colors.mutedForeground }]}>{greeting},</Text>
-          <Text style={[s.name, { color: accent }]} numberOfLines={1}>{characterName}</Text>
+          <Text style={[s.name, { color: accent }]} numberOfLines={2}>{characterName}</Text>
         </View>
         <TouchableOpacity
           testID="home-notifications"
@@ -135,27 +136,28 @@ export function FocusedHomeContent({
         ))}
       </View>
 
-      <View style={[s.createCard, { borderColor: `${accent}65` }]}>
+      <View style={[s.createCard, { borderColor: `${accent}65`, backgroundColor: colors.card }]}>
         <Image source={storyImage} style={StyleSheet.absoluteFill} contentFit="cover" />
         <LinearGradient
           colors={resumeDraft
-            ? [`${colors.background}38`, `${colors.background}9A`, `${colors.background}F2`]
-            : [`${colors.background}E8`, `${accent}35`, `${colors.background}F2`]}
-          locations={resumeDraft ? [0, 0.48, 1] : [0, 0.55, 1]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+            ? [`${colors.background}F5`, `${colors.background}C9`, `${colors.background}E8`]
+            : [`${colors.background}F7`, `${colors.background}BD`, `${colors.background}E8`]}
+          locations={[0, 0.58, 1]}
+          start={{ x: 0, y: 0.25 }}
+          end={{ x: 1, y: 0.85 }}
           style={StyleSheet.absoluteFill}
         />
-        {!resumeDraft && <View style={[s.createGlow, { backgroundColor: `${accent}28` }]} />}
-        <Text style={[s.eyebrow, { color: accent }]}>
-          {resumeDraft ? 'PICK UP WHERE YOU LEFT OFF' : 'MAKE SOMETHING YOURS'}
-        </Text>
-        <Text style={[s.createTitle, { color: colors.foreground }]}>
-          {resumeDraft ? 'Continue your story' : 'New story'}
-        </Text>
-        <Text style={[s.createDescription, { color: colors.mutedForeground }]} numberOfLines={2}>
-          {resumeDraft ? resumeDraft.title : 'Choose how you would like to start.'}
-        </Text>
+        <View style={s.createCopy}>
+          <Text style={[s.eyebrow, { color: accent }]}>
+            {resumeDraft ? 'PICK UP WHERE YOU LEFT OFF' : 'MAKE SOMETHING YOURS'}
+          </Text>
+          <Text style={[s.createTitle, { color: colors.foreground }]}>
+            {resumeDraft ? 'Continue your story' : 'New story'}
+          </Text>
+          <Text style={[s.createDescription, { color: colors.mutedForeground }]} numberOfLines={2}>
+            {resumeDraft ? resumeDraft.title : 'Choose how you would like to start.'}
+          </Text>
+        </View>
         <TouchableOpacity
           testID={resumeDraft ? 'home-continue-story' : 'home-new-story'}
           accessibilityRole="button"
@@ -179,9 +181,9 @@ export function FocusedHomeContent({
           }}
           activeOpacity={0.84}
         >
-          <Icon name={resumeDraft ? 'book-open' : 'edit-2'} size={17} color="#FFFFFF" />
-          <Text style={s.storyActionText}>{resumeDraft ? 'Continue' : 'New story'}</Text>
-          <Icon name="arrow-right" size={15} color="#FFFFFF" />
+          <Icon name={resumeDraft ? 'book-open' : 'edit-2'} size={17} color={colors.primaryForeground} />
+          <Text style={[s.storyActionText, { color: colors.primaryForeground }]}>{resumeDraft ? 'Continue' : 'New story'}</Text>
+          <Icon name="arrow-right" size={16} color={colors.primaryForeground} />
         </TouchableOpacity>
       </View>
 
@@ -189,14 +191,15 @@ export function FocusedHomeContent({
         testID="home-character-profile"
         accessibilityRole="button"
         accessibilityLabel="Give your character a story and create an outfit on your profile"
-        style={[s.characterCard, { borderColor: `${accent}65` }]}
+        style={[s.characterCard, { borderColor: `${accent}65`, backgroundColor: colors.card }]}
         onPress={() => openRoute('/(tabs)/profile')}
         activeOpacity={0.86}
       >
         <LinearGradient
-          colors={[`${accent}32`, `${colors.background}EF`, `${colors.background}B0`]}
-          start={{ x: 0.9, y: 0.2 }}
-          end={{ x: 0.05, y: 0.8 }}
+          colors={[`${accent}2A`, colors.card, colors.card]}
+          locations={[0, 0.62, 1]}
+          start={{ x: 1, y: 0 }}
+          end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFill}
         />
         <Image
@@ -204,6 +207,14 @@ export function FocusedHomeContent({
           style={s.characterImage}
           contentFit="contain"
           contentPosition="right center"
+        />
+        <LinearGradient
+          colors={[colors.card, `${colors.card}F5`, `${colors.card}00`]}
+          locations={[0, 0.56, 1]}
+          start={{ x: 0, y: 0.5 }}
+          end={{ x: 0.8, y: 0.5 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
         />
         <View style={s.characterCopy}>
           <View style={[s.characterIcon, { borderColor: `${accent}70`, backgroundColor: `${accent}20` }]}>
@@ -215,8 +226,8 @@ export function FocusedHomeContent({
           <Text style={[s.characterDescription, { color: colors.mutedForeground }]}>
             Shape their personality, traits, and lore. Make a new outfit on your profile.
           </Text>
-          <View style={[s.characterArrow, { backgroundColor: colors.foreground }]}>
-            <Icon name="arrow-right" size={20} color={colors.background} />
+          <View style={[s.characterArrow, { backgroundColor: `${accent}20`, borderColor: `${accent}65` }]}>
+            <Icon name="arrow-right" size={18} color={accent} />
           </View>
         </View>
       </TouchableOpacity>
@@ -224,8 +235,8 @@ export function FocusedHomeContent({
       <View style={s.friendsSection}>
         <View style={s.friendsHeader}>
           <View style={s.friendsTitleBlock}>
-            <Icon name="users" size={20} color={accent} />
-            <Text style={[s.friendsTitle, { color: colors.foreground }]}>Friends’ creations</Text>
+            <Icon name="users" size={18} color={accent} />
+            <Text style={[s.friendsTitle, { color: colors.foreground }]} numberOfLines={1}>Friends’ creations</Text>
             {friendCount > 0 && (
               <View style={[s.friendCount, { backgroundColor: `${accent}20` }]}>
                 <Text style={[s.friendCountText, { color: accent }]}>{friendCount}</Text>
@@ -266,7 +277,7 @@ export function FocusedHomeContent({
                     s.friendCard,
                     {
                       width: friendCardWidth,
-                      height: friendCardWidth * 1.24,
+                      height: friendCardWidth * 1.34,
                       borderColor: colors.border,
                     },
                   ]}
@@ -325,80 +336,87 @@ export function FocusedHomeContent({
 }
 
 const s = StyleSheet.create({
-  content: { gap: 14, paddingBottom: 10 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 11, minHeight: 58 },
-  greetingBlock: { flex: 1, minWidth: 0, justifyContent: 'center' },
-  greeting: { fontSize: 15, fontFamily: 'Satoshi-Medium', lineHeight: 20 },
-  name: { fontSize: 29, fontFamily: 'Satoshi-Black', lineHeight: 33, letterSpacing: -0.5 },
+  content: { gap: 17, paddingBottom: 18 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 64, marginBottom: 2 },
+  greetingBlock: { flex: 1, minWidth: 0, justifyContent: 'center', paddingRight: 3 },
+  greeting: { fontSize: 14, fontFamily: 'Satoshi-Medium', lineHeight: 19 },
+  name: { fontSize: 27, fontFamily: 'Satoshi-Black', lineHeight: 31, letterSpacing: -0.65, flexShrink: 1 },
   headerButton: {
-    width: 40, height: 40, borderRadius: 15, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center',
+    width: 44, height: 44, borderRadius: 15, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   notificationDot: {
-    position: 'absolute', top: 7, right: 7, width: 8, height: 8,
+    position: 'absolute', top: 8, right: 8, width: 8, height: 8,
     borderRadius: 4, backgroundColor: '#FF5C72', borderWidth: 1, borderColor: '#100A28',
   },
   avatarRing: {
     width: 48, height: 48, borderRadius: 24, borderWidth: 2,
-    overflow: 'hidden', alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  shortcutRow: { flexDirection: 'row', gap: 8 },
+  shortcutRow: { flexDirection: 'row', gap: 7 },
   shortcut: {
-    flex: 1, minWidth: 0, minHeight: 82, borderRadius: 17, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 3, paddingVertical: 8,
+    flex: 1, minWidth: 0, minHeight: 91, borderRadius: 18, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 2, paddingVertical: 9,
   },
-  shortcutIcon: { width: 39, height: 39, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  shortcutLabel: { fontSize: 10, lineHeight: 13, fontFamily: 'Satoshi-Medium' },
+  shortcutIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  shortcutLabel: { fontSize: 11, lineHeight: 15, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
   createCard: {
-    borderWidth: 1, borderRadius: 22, padding: 15, overflow: 'hidden',
-    backgroundColor: 'rgba(20,12,45,0.94)',
+    minHeight: 205, borderWidth: 1, borderRadius: 23, padding: 18, overflow: 'hidden',
   },
-  createGlow: { position: 'absolute', width: 180, height: 180, borderRadius: 90, right: -92, top: -90 },
-  eyebrow: { fontSize: 9, lineHeight: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, marginBottom: 4 },
-  createTitle: { fontSize: 24, lineHeight: 29, fontFamily: 'Satoshi-Black', letterSpacing: -0.4 },
-  createDescription: { fontSize: 12, lineHeight: 17, fontFamily: 'Satoshi-Regular', marginTop: 2, marginBottom: 13 },
+  createCopy: { flex: 1, justifyContent: 'center', paddingBottom: 15 },
+  eyebrow: { fontSize: 10, lineHeight: 14, fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, marginBottom: 6 },
+  createTitle: { fontSize: 25, lineHeight: 30, fontFamily: 'Satoshi-Black', letterSpacing: -0.55 },
+  createDescription: { fontSize: 13, lineHeight: 18, fontFamily: 'Satoshi-Medium', marginTop: 5 },
   storyActionButton: {
-    minHeight: 50, borderRadius: 15, paddingHorizontal: 14,
+    minHeight: 50, borderRadius: 15, paddingHorizontal: 16,
     flexDirection: 'row', alignItems: 'center', gap: 10,
   },
-  storyActionText: { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#FFFFFF' },
+  storyActionText: { flex: 1, fontSize: 13, fontFamily: 'Satoshi-Bold' },
   characterCard: {
-    minHeight: 158, borderRadius: 22, borderWidth: 1, overflow: 'hidden',
-    backgroundColor: 'rgba(23,14,47,0.95)',
+    minHeight: 246, borderRadius: 23, borderWidth: 1, overflow: 'hidden',
   },
-  characterImage: { position: 'absolute', right: 0, bottom: -8, width: '52%', height: '108%' },
-  characterCopy: { width: '72%', minHeight: 158, padding: 14, alignItems: 'flex-start', justifyContent: 'center' },
+  characterImage: { position: 'absolute', right: 0, bottom: 0, width: '40%', height: '100%' },
+  characterCopy: {
+    width: '60%', minHeight: 246, paddingLeft: 17, paddingRight: 2, paddingVertical: 17,
+    alignItems: 'flex-start', justifyContent: 'center',
+  },
   characterIcon: {
-    width: 34, height: 34, borderRadius: 11, borderWidth: 1,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+    width: 33, height: 33, borderRadius: 11, borderWidth: 1,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
   },
-  characterTitle: { fontSize: 19, lineHeight: 23, fontFamily: 'Satoshi-Black', letterSpacing: -0.25 },
-  characterDescription: { maxWidth: 224, fontSize: 11.5, lineHeight: 16, fontFamily: 'Satoshi-Regular', marginTop: 5 },
+  characterTitle: { fontSize: 19, lineHeight: 23, fontFamily: 'Satoshi-Black', letterSpacing: -0.35 },
+  characterDescription: { fontSize: 12, lineHeight: 17, fontFamily: 'Satoshi-Medium', marginTop: 7 },
   characterArrow: {
-    width: 38, height: 38, borderRadius: 19, alignItems: 'center',
-    justifyContent: 'center', marginTop: 10,
+    width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center',
+    justifyContent: 'center', marginTop: 13,
   },
-  friendsSection: { gap: 11, marginTop: 1 },
-  friendsHeader: { minHeight: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  friendsTitleBlock: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 },
-  friendsTitle: { fontSize: 17, lineHeight: 22, fontFamily: 'Satoshi-Black', letterSpacing: -0.25 },
-  friendCount: { minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  friendsSection: { gap: 10, marginTop: 5 },
+  friendsHeader: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  friendsTitleBlock: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 },
+  friendsTitle: { fontSize: 16, lineHeight: 21, fontFamily: 'Satoshi-Black', letterSpacing: -0.35, flexShrink: 1 },
+  friendCount: {
+    minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center',
+    justifyContent: 'center', paddingHorizontal: 5, flexShrink: 0,
+  },
   friendCountText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 5, paddingLeft: 5 },
-  seeAllText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  friendCards: { flexDirection: 'row', gap: 8 },
-  friendCard: { borderRadius: 17, borderWidth: 1, overflow: 'hidden', justifyContent: 'flex-end' },
-  friendCardCopy: { paddingHorizontal: 8, paddingBottom: 9, paddingTop: 34 },
-  friendCardTitle: { color: '#FFFFFF', fontSize: 10.5, lineHeight: 13, fontFamily: 'Satoshi-Bold' },
-  friendAuthor: { color: 'rgba(255,255,255,0.72)', fontSize: 9, lineHeight: 12, fontFamily: 'Satoshi-Medium', marginTop: 2 },
-  friendLikes: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 5 },
-  friendLikesText: { color: '#FFFFFF', fontSize: 9, fontFamily: 'Satoshi-Medium' },
-  emptyFriends: {
-    minHeight: 76, borderWidth: 1, borderRadius: 18, paddingHorizontal: 13, paddingVertical: 11,
-    flexDirection: 'row', alignItems: 'center', gap: 11,
+  seeAll: {
+    minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',
+    gap: 4, paddingLeft: 6, flexShrink: 0,
   },
-  emptyFriendsIcon: { width: 38, height: 38, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  seeAllText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  friendCards: { flexDirection: 'row', gap: 10, paddingRight: 16 },
+  friendCard: { borderRadius: 18, borderWidth: 1, overflow: 'hidden', justifyContent: 'flex-end' },
+  friendCardCopy: { paddingHorizontal: 10, paddingBottom: 11, paddingTop: 36 },
+  friendCardTitle: { color: '#FFFFFF', fontSize: 12, lineHeight: 15, fontFamily: 'Satoshi-Bold' },
+  friendAuthor: { color: 'rgba(255,255,255,0.78)', fontSize: 10, lineHeight: 13, fontFamily: 'Satoshi-Medium', marginTop: 3 },
+  friendLikes: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 7 },
+  friendLikesText: { color: '#FFFFFF', fontSize: 10, fontFamily: 'Satoshi-Medium' },
+  emptyFriends: {
+    minHeight: 86, borderWidth: 1, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+  },
+  emptyFriendsIcon: { width: 42, height: 42, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   emptyFriendsCopy: { flex: 1, minWidth: 0 },
-  emptyFriendsTitle: { fontSize: 12, fontFamily: 'Satoshi-Bold', marginBottom: 2 },
-  emptyFriendsText: { fontSize: 10.5, lineHeight: 14, fontFamily: 'Satoshi-Regular' },
+  emptyFriendsTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold', marginBottom: 3 },
+  emptyFriendsText: { fontSize: 11, lineHeight: 15, fontFamily: 'Satoshi-Medium' },
 });
