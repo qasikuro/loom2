@@ -32,4 +32,21 @@ describe("custom domain root routing", () => {
       expect(response.text).toContain("GameJo");
     }
   });
+
+  it("always returns fresh Admin bootstrap config instead of 304", async () => {
+    const first = await request(app).get("/api/admin/config");
+    expect(first.status).toBe(200);
+    expect(first.headers["cache-control"]).toBe("no-store");
+    expect(first.body.publishableKey).toEqual(expect.any(String));
+    expect(first.body._ts).toEqual(expect.any(Number));
+
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    const second = await request(app)
+      .get("/api/admin/config")
+      .set("If-None-Match", first.headers.etag);
+
+    expect(second.status).toBe(200);
+    expect(second.body.publishableKey).toBe(first.body.publishableKey);
+    expect(second.body._ts).not.toBe(first.body._ts);
+  });
 });

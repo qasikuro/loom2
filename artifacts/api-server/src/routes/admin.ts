@@ -24,7 +24,10 @@ const router: IRouter = Router();
 
 // ── Public config (no auth) ───────────────────────────────────────────────────
 router.get("/admin/config", (_req: Request, res: Response) => {
-  res.json({ publishableKey: process.env.CLERK_PUBLISHABLE_KEY ?? "" });
+  res.set("Cache-Control", "no-store").json({
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY ?? "",
+    _ts: Date.now(),
+  });
 });
 
 // ── Bootstrap: claim first-admin (requires auth + out-of-band setup secret)
