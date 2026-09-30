@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
   Alert,
   Animated,

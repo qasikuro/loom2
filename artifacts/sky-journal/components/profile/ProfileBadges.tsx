@@ -2,7 +2,7 @@
  * ProfileBadges — renders Founder and/or Beta Tester badge images inline.
  * Used on own profile and public profiles.
  */
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 

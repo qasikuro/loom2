@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import type { DiscoverPost } from '@/context/AppContext';
 import { Video, ResizeMode } from 'expo-av';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -30,6 +31,7 @@ interface Props {
 export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
   const insets              = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { uri: videoUri, renew: renewVideoUri } = useSecureMediaUri(post?.videoUri);
   const { width: W, height: H } = useWindowDimensions();
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
   const bottomInset = Platform.OS === 'web' ? 34 : insets.bottom;
@@ -209,7 +211,8 @@ export function DiscoverVideoPlayerModal({ post, onClose }: Props) {
       <View style={[vp.backdrop, { width: W, height: H }]}>
         {/* Video */}
         <Video
-          source={{ uri: post.videoUri }}
+          source={{ uri: videoUri ?? post.videoUri }}
+          onError={renewVideoUri}
           shouldPlay
           isLooping
           isMuted={videoMuted}

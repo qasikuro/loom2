@@ -7,7 +7,7 @@ import { apiFetch, type Character, type Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
 import {

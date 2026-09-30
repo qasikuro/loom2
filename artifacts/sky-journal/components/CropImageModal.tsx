@@ -12,7 +12,7 @@ import {
   View,
 } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';

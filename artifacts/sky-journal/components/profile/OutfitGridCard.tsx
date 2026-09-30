@@ -3,7 +3,7 @@ import { SHADOW } from '@/constants/colors';
 import type { Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';

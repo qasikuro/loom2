@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { Video, ResizeMode } from 'expo-av';
 import Constants from 'expo-constants';
 import {

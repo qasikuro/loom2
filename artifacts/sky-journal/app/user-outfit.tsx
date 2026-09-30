@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
   Animated,
   Platform,

@@ -8,8 +8,19 @@ import { syncConstellation } from "../services/constellationService";
 import { sendPushNotification, sendPushToTokens } from "../services/pushService";
 import * as cache from "../lib/cache";
 import { claimUpload } from "../lib/uploadTracking";
+import { assertOwnedMediaReferences, MediaOwnershipError, normalizeManagedMediaPath, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
 
 const router: IRouter = Router();
+
+function isExternalMusicStream(uri: string): boolean {
+  if (normalizeManagedMediaPath(uri)) return false;
+  try {
+    normalizeMediaReference(uri);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 const OverlaySchema = z.object({
   id:          z.string(),
@@ -42,7 +53,9 @@ const MusicSchema = z.object({
   duration:   z.number().int().min(1).max(3600),
   genre:      z.string().max(100).nullable(),
   mood:       z.string().max(100).nullable(),
-  streamUrl:  z.string().url().max(2000),
+  streamUrl:  z.string().url().max(2000).refine(isExternalMusicStream, {
+    message: "Managed media cannot be used as a music stream URL",
+  }),
   embedded: z.boolean().optional(),
   baked: z.boolean().optional(),
   segmentStartSeconds: z.number().min(0).optional(),
@@ -131,7 +144,7 @@ router.get("/stories", requireAuth, async (req, res) => {
       .orderBy(desc(storiesTable.date));
 
     const stickerCounts = await fetchStickerCounts(rows.map(r => r.id));
-    const serialized = rows.map(r => serializeStory(r, stickerCounts[r.id] ?? 0));
+    const serialized = rows.map(r => withOwnerMediaUrls(serializeStory(r, stickerCounts[r.id] ?? 0), userId));
     const valid: typeof serialized = [];
     for (const story of serialized) {
       const result = StoryOutputSchema.safeParse(story);
@@ -157,8 +170,23 @@ router.post("/stories", requireAuth, async (req, res) => {
 
   try {
     const { id, date, panels, ...rest } = parsed.data;
-    const sanitizedPanels = panels.map(sanitizePanel);
-    const sanitizedPages = rest.pages?.map(page => ({
+    const normalizedPanels = panels.map(normalizePanelMedia);
+    const normalizedPages = rest.pages?.map(page => ({
+      ...page,
+      panels: page.panels.map(normalizePanelMedia),
+    })) ?? null;
+    const music = rest.music
+      ? { ...rest.music, artworkUrl: rest.music.artworkUrl ? normalizeMediaReference(rest.music.artworkUrl) : null }
+      : rest.music;
+    await assertOwnedMediaReferences(userId, collectStoryMediaReferences({
+      panels: normalizedPanels,
+      pages: normalizedPages,
+      videoUri: rest.videoUri,
+      thumbnailUri: rest.thumbnailUri,
+    }));
+    await assertOwnedMediaReferences(userId, [music?.artworkUrl]);
+    const sanitizedPanels = normalizedPanels.map(sanitizePanel);
+    const sanitizedPages = normalizedPages?.map(page => ({
       ...page,
       panels: page.panels.map(sanitizePanel),
     })) ?? null;
@@ -196,6 +224,7 @@ router.post("/stories", requireAuth, async (req, res) => {
         }
         videoUri = composition.videoPath;
         thumbnailUri = composition.thumbnailPath;
+        await assertOwnedMediaReferences(userId, [videoUri, thumbnailUri]);
 
         const [insertedVideo] = await tx.insert(storiesTable).values({
           ...(id ? { id } : {}),
@@ -212,7 +241,7 @@ router.post("/stories", requireAuth, async (req, res) => {
           contentType: 'video',
           videoUri,
           thumbnailUri,
-          music: rest.music ?? null,
+          music: music ?? null,
         }).returning();
         if (!insertedVideo) throw new StoryCompositionError("A story with this id already exists.");
         await tx.update(mediaCompositionsTable)
@@ -238,13 +267,13 @@ router.post("/stories", requireAuth, async (req, res) => {
           contentType: rest.contentType ?? 'story',
           videoUri,
           thumbnailUri,
-          music: rest.music ?? null,
+          music: music ?? null,
         })
         .returning();
       return { created: inserted, existing: undefined };
     });
 
-    if (!created && existing) return res.status(200).json(serializeStory(existing));
+    if (!created && existing) return res.status(200).json(withOwnerMediaUrls(serializeStory(existing), userId));
     if (!created) return res.status(409).json({ error: "A story with this id already exists" });
 
     // L-3: Mark every panel image as claimed so the orphan-cleanup interval
@@ -262,11 +291,12 @@ router.post("/stories", requireAuth, async (req, res) => {
       await grantReward(userId, "story_created", created.id);
     syncConstellation(userId).catch(() => null);
 
-    return res.status(201).json({ ...serializeStory(created), rewardGranted, rewardAmounts });
+    return res.status(201).json({ ...withOwnerMediaUrls(serializeStory(created), userId), rewardGranted, rewardAmounts });
   } catch (err) {
     if (err instanceof StoryCompositionError) {
       return res.status(400).json({ error: err.message });
     }
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to create story");
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -396,7 +426,7 @@ router.get("/stories/:id", requireAuth, async (req, res) => {
       return res.json(serializeStory(publicRows[0].story, counts[storyId] ?? 0));
     }
     const counts = await fetchStickerCounts([storyId]);
-    return res.json(serializeStory(rows[0], counts[storyId] ?? 0));
+    return res.json(withOwnerMediaUrls(serializeStory(rows[0], counts[storyId] ?? 0), userId));
   } catch (err) {
     req.log.error({ err }, "Failed to get story");
     return res.status(500).json({ error: "Internal server error" });
@@ -412,25 +442,43 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
   }
   try {
     const updateSet: Record<string, unknown> = {};
+    if (parsed.data.panels !== undefined) {
+      const panels = parsed.data.panels.map(normalizePanelMedia);
+      await assertOwnedMediaReferences(userId, collectStoryMediaReferences({ panels }));
+      updateSet.panels = panels.map(sanitizePanel);
+    }
+    if ('pages' in parsed.data) {
+      const pages = parsed.data.pages?.map(page => ({
+        ...page,
+        panels: page.panels.map(normalizePanelMedia),
+      })) ?? null;
+      await assertOwnedMediaReferences(userId, collectStoryMediaReferences({ pages }));
+      updateSet.pages = pages?.map(page => ({
+        ...page,
+        panels: page.panels.map(sanitizePanel),
+      })) ?? null;
+    }
+    for (const key of ["videoUri", "thumbnailUri"] as const) {
+      if (key in parsed.data) {
+        const uri = parsed.data[key] == null ? parsed.data[key] : normalizeMediaReference(parsed.data[key]!);
+        await assertOwnedMediaReferences(userId, [uri]);
+        updateSet[key] = uri ?? null;
+      }
+    }
     if (parsed.data.chapterTitle  !== undefined) updateSet.chapterTitle  = parsed.data.chapterTitle;
     if (parsed.data.description   !== undefined) updateSet.description   = parsed.data.description;
     if (parsed.data.mood          !== undefined) updateSet.mood          = parsed.data.mood;
     if (parsed.data.location      !== undefined) updateSet.location      = parsed.data.location;
     if (parsed.data.isPublic      !== undefined) updateSet.isPublic      = parsed.data.isPublic;
     if ('pageLayoutKey' in parsed.data)          updateSet.pageLayoutKey = parsed.data.pageLayoutKey ?? null;
-    if ('pages' in parsed.data) {
-      updateSet.pages = parsed.data.pages?.map(page => ({
-        ...page,
-        panels: page.panels.map(sanitizePanel),
-      })) ?? null;
-    }
-    if (parsed.data.panels        !== undefined) {
-      updateSet.panels = parsed.data.panels.map(sanitizePanel);
-    }
     if (parsed.data.contentType  !== undefined) updateSet.contentType  = parsed.data.contentType;
-    if ('videoUri'    in parsed.data)            updateSet.videoUri     = parsed.data.videoUri    ?? null;
-    if ('thumbnailUri' in parsed.data)           updateSet.thumbnailUri = parsed.data.thumbnailUri ?? null;
-    if ('music'        in parsed.data)            updateSet.music        = parsed.data.music ?? null;
+    if ('music' in parsed.data) {
+      const music = parsed.data.music
+        ? { ...parsed.data.music, artworkUrl: parsed.data.music.artworkUrl ? normalizeMediaReference(parsed.data.music.artworkUrl) : null }
+        : null;
+      await assertOwnedMediaReferences(userId, [music?.artworkUrl]);
+      updateSet.music = music;
+    }
 
     // Cross-field validation: preserve valid story/video invariant after patch
     const currentContentType = parsed.data.contentType ?? 'story';
@@ -451,8 +499,9 @@ router.patch("/stories/:id", requireAuth, async (req, res) => {
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
     invalidateFollowerDiscoverCaches(userId).catch(() => null);
-    return res.json(serializeStory(updated));
+    return res.json(withOwnerMediaUrls(serializeStory(updated), userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to update story");
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -613,7 +662,13 @@ router.post("/stories/:id/witness", requireAuth, async (req, res) => {
     const [fresh] = await db.select().from(storiesTable).where(eq(storiesTable.id, storyId));
 
     return res.json({
-      ...(fresh ? serializeStory(fresh) : serializeStory(updated)),
+      ...(fresh
+        ? (fresh.userId === actorId
+          ? withOwnerMediaUrls(serializeStory(fresh), actorId)
+          : serializeStory(fresh))
+        : (updated.userId === actorId
+          ? withOwnerMediaUrls(serializeStory(updated), actorId)
+          : serializeStory(updated))),
       rewardGranted,
       rewardAmounts,
       milestone: milestonePayload,
@@ -830,6 +885,27 @@ function safeImageUri(uri: string | null | undefined): string | null {
   if (!uri) return null;
   if (uri.startsWith('file://') || uri.startsWith('data:') || uri.startsWith('blob:')) return null;
   return uri;
+}
+
+function normalizePanelMedia<T extends { imageUri?: string | null }>(panel: T): T {
+  return {
+    ...panel,
+    imageUri: panel.imageUri == null ? panel.imageUri : normalizeMediaReference(panel.imageUri),
+  };
+}
+
+function collectStoryMediaReferences(data: {
+  panels?: Array<{ imageUri?: string | null }>;
+  pages?: Array<{ panels: Array<{ imageUri?: string | null }> }> | null;
+  videoUri?: string | null;
+  thumbnailUri?: string | null;
+}): Array<string | null | undefined> {
+  return [
+    ...(data.panels ?? []).map(panel => panel.imageUri),
+    ...(data.pages ?? []).flatMap(page => page.panels.map(panel => panel.imageUri)),
+    data.videoUri,
+    data.thumbnailUri,
+  ];
 }
 
 function sanitizePanels(panels: unknown): Array<Record<string, unknown>> {

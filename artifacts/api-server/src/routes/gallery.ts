@@ -3,8 +3,16 @@ import { and, count, desc, eq } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { assertOwnedMediaReferences, MediaOwnershipError, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
 
 const router: IRouter = Router();
+
+router.use("/gallery", (_req, res, next) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.vary("Authorization");
+  res.vary("Cookie");
+  next();
+});
 
 const DEFAULT_LIMIT = 200;
 
@@ -39,12 +47,12 @@ router.get("/gallery", requireAuth, async (req, res) => {
       .where(eq(galleryTable.userId, userId))
       .orderBy(desc(galleryTable.createdAt));
     return res.json(
-      rows.map(r => ({
+      rows.map(r => withOwnerMediaUrls({
         id:        r.id,
         imageUri:  r.imageUri,
         caption:   r.caption,
         createdAt: r.createdAt.toISOString(),
-      })),
+      }, userId)),
     );
   } catch (err) {
     req.log.error({ err }, "Failed to list gallery");
@@ -65,6 +73,8 @@ router.post("/gallery", requireAuth, async (req, res) => {
   }
 
   try {
+    const imageUri = normalizeMediaReference(parsed.data.imageUri);
+    await assertOwnedMediaReferences(userId, [imageUri]);
     const [countRow] = await db
       .select({ n: count() })
       .from(galleryTable)
@@ -84,16 +94,17 @@ router.post("/gallery", requireAuth, async (req, res) => {
 
     const [created] = await db
       .insert(galleryTable)
-      .values({ userId, imageUri: parsed.data.imageUri, caption: parsed.data.caption })
+      .values({ userId, imageUri, caption: parsed.data.caption })
       .returning();
 
-    return res.status(201).json({
+    return res.status(201).json(withOwnerMediaUrls({
       id:        created.id,
       imageUri:  created.imageUri,
       caption:   created.caption,
       createdAt: created.createdAt.toISOString(),
-    });
+    }, userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to add gallery photo");
     return res.status(500).json({ error: "Internal server error" });
   }

@@ -7,7 +7,7 @@ import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useAuth, useUser } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';

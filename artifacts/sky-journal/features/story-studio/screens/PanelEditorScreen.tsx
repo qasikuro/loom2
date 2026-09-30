@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
   Animated,
   KeyboardAvoidingView,

@@ -1,12 +1,14 @@
-import { db, characterTable, badgesTable, characterBadgesTable } from "@workspace/db";
+import { db, characterTable, badgesTable, characterBadgesTable, outfitsTable } from "@workspace/db";
 import { and, asc, eq, ne } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
+import { assertOwnedMediaReferences, MediaOwnershipError, normalizeManagedMediaPath, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
 
 /** Strip device-local URIs that are invisible to other users. */
 function safeImageUri(uri: string | null | undefined): string | null {
   if (!uri) return null;
+  if (normalizeManagedMediaPath(uri)) return normalizeMediaReference(uri);
   if (uri.startsWith("http://") || uri.startsWith("https://")) return uri;
   // Uploaded avatars served by our own API are safe (/api/images/…)
   if (uri.startsWith("/api/images/")) return uri;
@@ -90,7 +92,7 @@ router.get("/character", requireAuth, async (req, res) => {
       .where(eq(characterBadgesTable.userId, userId))
       .orderBy(asc(badgesTable.sortOrder));
 
-    return res.json({ ...char, badges });
+    return res.json({ ...withOwnerMediaUrls(char, userId), badges });
   } catch (err) {
     req.log.error({ err }, "Failed to get character");
     return res.status(500).json({ error: "Internal server error" });
@@ -105,6 +107,8 @@ router.put("/character", requireAuth, async (req, res) => {
   }
 
   try {
+    const avatarUri = parsed.data.avatarUri == null ? parsed.data.avatarUri : normalizeMediaReference(parsed.data.avatarUri);
+    await assertOwnedMediaReferences(userId, [avatarUri]);
     // Username is permanent once set — reject attempts to change it
     const [existing] = await db
       .select({ username: characterTable.username })
@@ -117,7 +121,7 @@ router.put("/character", requireAuth, async (req, res) => {
       // If username already locked, always keep the existing one regardless of what was sent.
       // Never block the whole save just because username differs — silently preserve it.
       username:          existing?.username ?? parsed.data.username,
-      avatarUri:         safeImageUri(parsed.data.avatarUri),
+      avatarUri:         safeImageUri(avatarUri),
       activeOutfitId:    parsed.data.activeOutfitId    ?? null,
       guideBio:          parsed.data.guideBio          ?? undefined,
       guideTopics:       parsed.data.guideTopics       ?? undefined,
@@ -134,8 +138,9 @@ router.put("/character", requireAuth, async (req, res) => {
         set: { ...safeData, updatedAt: new Date() },
       })
       .returning();
-    return res.json(updated);
+    return res.json(withOwnerMediaUrls(updated, userId));
   } catch (err: unknown) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     const pgErr = err as { code?: string; constraint?: string };
     if (pgErr?.code === "23505" && String(pgErr?.constraint ?? "").includes("username")) {
       return res.status(409).json({ error: "Username already taken" });
@@ -149,6 +154,12 @@ router.patch("/character/active-outfit", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   const { activeOutfitId } = req.body as { activeOutfitId: string | null };
   try {
+    if (activeOutfitId) {
+      const [outfit] = await db.select({ id: outfitsTable.id }).from(outfitsTable)
+        .where(and(eq(outfitsTable.id, activeOutfitId), eq(outfitsTable.userId, userId)))
+        .limit(1);
+      if (!outfit) return res.status(404).json({ error: "Outfit not found" });
+    }
     await db
       .insert(characterTable)
       .values({ userId, name: "Player", activeOutfitId: activeOutfitId ?? null, updatedAt: new Date() })

@@ -3,7 +3,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { apiFetch, useApp, type ProfileLink } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {

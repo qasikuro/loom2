@@ -40,6 +40,8 @@ import type {
   JournalEntryInput,
   MangaGenerationInput,
   MangaGenerationResult,
+  MediaReadUrlsInput,
+  MediaReadUrlsResponse,
   Notification,
   Outfit,
   OutfitInput,
@@ -148,6 +150,92 @@ export const useGenerateMangaPage = <
   TContext
 > => {
   return useMutation(getGenerateMangaPageMutationOptions(options));
+};
+
+/**
+ * @summary Resolve managed media paths into owner-authorized read URLs
+ */
+export const getResolveMediaReadUrlsUrl = () => {
+  return `/api/media/read-urls`;
+};
+
+export const resolveMediaReadUrls = async (
+  mediaReadUrlsInput: MediaReadUrlsInput,
+  options?: RequestInit,
+): Promise<MediaReadUrlsResponse> => {
+  return customFetch<MediaReadUrlsResponse>(getResolveMediaReadUrlsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(mediaReadUrlsInput),
+  });
+};
+
+export const getResolveMediaReadUrlsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveMediaReadUrls>>,
+    TError,
+    { data: BodyType<MediaReadUrlsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveMediaReadUrls>>,
+  TError,
+  { data: BodyType<MediaReadUrlsInput> },
+  TContext
+> => {
+  const mutationKey = ["resolveMediaReadUrls"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveMediaReadUrls>>,
+    { data: BodyType<MediaReadUrlsInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resolveMediaReadUrls(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveMediaReadUrlsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveMediaReadUrls>>
+>;
+export type ResolveMediaReadUrlsMutationBody = BodyType<MediaReadUrlsInput>;
+export type ResolveMediaReadUrlsMutationError = ErrorType<void>;
+
+/**
+ * @summary Resolve managed media paths into owner-authorized read URLs
+ */
+export const useResolveMediaReadUrls = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveMediaReadUrls>>,
+    TError,
+    { data: BodyType<MediaReadUrlsInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof resolveMediaReadUrls>>,
+  TError,
+  { data: BodyType<MediaReadUrlsInput> },
+  TContext
+> => {
+  return useMutation(getResolveMediaReadUrlsMutationOptions(options));
 };
 
 /**

@@ -25,6 +25,7 @@ import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
 import { registerPendingUpload, startOrphanCleanup } from "../lib/uploadTracking";
 import { pool } from "@workspace/db";
+import { mediaOwnerMetadata } from "../lib/mediaAccess";
 
 const BUCKET_ID     = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
 const MAX_DIM       = 1600;
@@ -209,7 +210,10 @@ async function processAndSave(
     );
 
     const file = objectStorageClient.bucket(BUCKET_ID).file(`images/${fname}`);
-    await file.save(compressed, { metadata: { contentType }, resumable: false });
+    await file.save(compressed, {
+      metadata: { contentType, metadata: mediaOwnerMetadata(getUserId(req)) },
+      resumable: false,
+    });
     const publicPath = `/api/images/${fname}`;
     await pool.query(
       `INSERT INTO uploaded_images (path, user_id, byte_size)
@@ -335,7 +339,7 @@ router.post(
       const fname = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}.${format.extension}`;
       const file  = objectStorageClient.bucket(BUCKET_ID).file(`videos/${fname}`);
       await file.save(multipartFile.buffer, {
-        metadata:  { contentType: format.contentType },
+        metadata:  { contentType: format.contentType, metadata: mediaOwnerMetadata(getUserId(req)) },
         resumable: false,
       });
 

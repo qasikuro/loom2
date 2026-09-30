@@ -5,8 +5,6 @@ import express, {
   type NextFunction,
 } from "express";
 import cors from "cors";
-import { join } from "path";
-import { access } from "fs/promises";
 import pinoHttp from "pino-http";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -20,7 +18,6 @@ import {
   clerkProxyMiddleware,
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
-import { objectStorageClient, ObjectStorageService, ObjectNotFoundError } from "./lib/objectStorage";
 
 const app: Express = express();
 
@@ -106,83 +103,6 @@ const skipForUpload = (fn: express.RequestHandler): express.RequestHandler =>
   );
 app.use(skipForUpload(express.json({ limit: "1mb" })));
 app.use(skipForUpload(express.urlencoded({ extended: true, limit: "1mb" })));
-
-// ── Image serving: local disk fallback → GCS ──────────────────────────────────
-// New uploads go to GCS. Old local files are served from disk as a fallback
-// so existing database URLs keep working without a forced re-upload.
-const UPLOAD_DIR    = join(process.cwd(), "uploads");
-const GCS_BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID ?? "";
-
-app.get("/api/images/:filename", async (req: Request, res: Response) => {
-  const fname = String(req.params.filename ?? "");
-  if (!/^[\w.-]+$/.test(fname)) return res.status(400).end();
-
-  // 1. Try local disk (legacy uploads that predate GCS migration)
-  const localPath = join(UPLOAD_DIR, fname);
-  try {
-    await access(localPath);
-    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-    return res.sendFile(localPath);
-  } catch { /* not on disk — fall through to GCS */ }
-
-  // 2. Try GCS — stream directly (one roundtrip instead of exists + getMetadata + read)
-  if (!GCS_BUCKET_ID) return res.status(404).end();
-  try {
-    const file   = objectStorageClient.bucket(GCS_BUCKET_ID).file(`images/${fname}`);
-    const [meta] = await file.getMetadata();
-    res.setHeader("Content-Type", (meta.contentType as string) || "image/jpeg");
-    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-    file.createReadStream().pipe(res);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    // GCS returns 404 when the object doesn't exist
-    if (err?.code === 404 || err?.code === "404") return res.status(404).end();
-    return res.status(404).end();
-  }
-});
-
-// ── Video serving: /api/videos/:filename ──────────────────────────────────────
-app.get("/api/videos/:filename", async (req: Request, res: Response) => {
-  const fname = String(req.params.filename ?? "");
-  if (!/^[\w.-]+$/.test(fname)) return res.status(400).end();
-
-  if (!GCS_BUCKET_ID) return res.status(404).end();
-  try {
-    const file   = objectStorageClient.bucket(GCS_BUCKET_ID).file(`videos/${fname}`);
-    const [meta] = await file.getMetadata();
-    res.setHeader("Content-Type", (meta.contentType as string) || "video/mp4");
-    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-    return void file.createReadStream().pipe(res);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    if (err?.code === 404 || err?.code === "404") return res.status(404).end();
-    return res.status(404).end();
-  }
-});
-
-// ── Object storage serving: /api/storage/objects/uploads/:uuid ────────────────
-// Publicly accessible — no auth required. Used by badge images and any other
-// admin-uploaded objects stored via ObjectStorageService presigned-URL flow.
-// The objectPath passed to getObjectEntityFile must start with "/objects/".
-app.get("/api/storage/objects/uploads/:uuid", async (req: Request, res: Response) => {
-  const entityPath = `/objects/uploads/${req.params.uuid}`;
-  try {
-    const svc  = new ObjectStorageService();
-    const file = await svc.getObjectEntityFile(entityPath);
-    const [meta] = await file.getMetadata();
-    res.setHeader("Content-Type", (meta.contentType as string) || "application/octet-stream");
-    res.setHeader("Cache-Control", "public, max-age=604800, immutable");
-    file.createReadStream().pipe(res);
-    return;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } catch (err: any) {
-    if (err instanceof ObjectNotFoundError || err?.code === 404 || err?.code === "404") {
-      return void res.status(404).end();
-    }
-    logger.error({ err }, "GET /api/storage/objects/uploads/:uuid failed");
-    return void res.status(500).end();
-  }
-});
 
 // ── Auth ───────────────────────────────────────────────────────────────────────
 // Wrap clerkMiddleware() so we can trace every step of the auth pipeline.

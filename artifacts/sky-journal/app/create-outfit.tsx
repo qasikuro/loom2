@@ -10,7 +10,7 @@ import { persistImageUri } from '@/utils/persistImage';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
   Animated,
   Easing,

@@ -3,7 +3,7 @@ import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch, resolveUri, useApp } from '@/context/AppContext';
 import { safeBack } from '@/utils/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,

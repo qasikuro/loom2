@@ -6,6 +6,7 @@ import { pool } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { requireAiAccess } from "../middleware/ai-access";
 import { objectStorageClient } from "../lib/objectStorage";
+import { mediaOwnerMetadata } from "../lib/mediaAccess";
 
 const CONFIG = {
   model: "gpt-image-1",
@@ -228,7 +229,7 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
     const filename = `manga_${generationId}.png`;
     await objectStorageClient.bucket(bucketId).file(`images/${filename}`).save(finalImage, {
       resumable: false,
-      metadata: { contentType: "image/png" },
+      metadata: { contentType: "image/png", metadata: mediaOwnerMetadata(userId) },
     });
     const imageUri = `/api/images/${filename}`;
     await pool.query(

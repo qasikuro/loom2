@@ -1,6 +1,7 @@
 import { Platform, Share } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { resolveMediaReadUrl } from '@/utils/mediaAccess';
 
 const APP_URL = 'https://loom-qasiland.replit.app';
 
@@ -91,7 +92,8 @@ export async function shareOutfit(opts: {
         const ext = (imageUri.split('.').pop()?.split('?')[0] ?? 'jpg').toLowerCase();
         const safeExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) ? ext : 'jpg';
         const tmpUri  = `${FileSystem.cacheDirectory}sky_outfit_share.${safeExt}`;
-        const dl      = await FileSystem.downloadAsync(imageUri, tmpUri);
+        const renewedUri = await resolveMediaReadUrl(imageUri);
+        const dl      = await FileSystem.downloadAsync(renewedUri, tmpUri);
         if (dl.status === 200) {
           // shareAsync opens the native sheet with the image; caption goes in dialogTitle / subject
           await Sharing.shareAsync(dl.uri, {

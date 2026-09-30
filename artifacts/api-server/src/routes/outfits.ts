@@ -4,12 +4,24 @@ import { Router, type IRouter, type Request } from "express";
 import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { syncConstellation } from "../services/constellationService";
+import { assertOwnedMediaReferences, MediaOwnershipError, normalizeManagedMediaPath, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
 
 /** Strip device-local URIs that are invisible to other users. */
 function safeImageUri(uri: string | null | undefined): string | null {
   if (!uri) return null;
+  if (normalizeManagedMediaPath(uri)) return normalizeMediaReference(uri);
   if (uri.startsWith("http://") || uri.startsWith("https://")) return uri;
   return null;
+}
+
+function isExternalMusicStream(uri: string): boolean {
+  if (normalizeManagedMediaPath(uri)) return false;
+  try {
+    normalizeMediaReference(uri);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const router: IRouter = Router();
@@ -22,7 +34,9 @@ const MusicSchema = z.object({
   duration:   z.number().int().min(1).max(75),
   genre:      z.string().max(100).nullable(),
   mood:       z.string().max(100).nullable(),
-  streamUrl:  z.string().url().max(2000),
+  streamUrl:  z.string().url().max(2000).refine(isExternalMusicStream, {
+    message: "Managed media cannot be used as a music stream URL",
+  }),
 }).nullable().optional();
 
 const OutfitInputSchema = z.object({
@@ -45,7 +59,7 @@ router.get("/outfits", requireAuth, async (req, res) => {
       .from(outfitsTable)
       .where(and(eq(outfitsTable.userId, userId), eq(outfitsTable.isHidden, false)))
       .orderBy(desc(outfitsTable.date));
-    return res.json(rows.map(serializeOutfit));
+    return res.json(rows.map(row => withOwnerMediaUrls(serializeOutfit(row), userId)));
   } catch (err) {
     req.log.error({ err }, "Failed to list outfits");
     return res.status(500).json({ error: "Internal server error" });
@@ -61,13 +75,20 @@ router.post("/outfits", requireAuth, async (req, res) => {
 
   try {
     const { id, date, ...rest } = parsed.data;
+    const normalizedImageUri = rest.imageUri == null ? rest.imageUri : normalizeMediaReference(rest.imageUri);
+    const music = rest.music
+      ? { ...rest.music, artworkUrl: rest.music.artworkUrl ? normalizeMediaReference(rest.music.artworkUrl) : null }
+      : rest.music;
+    await assertOwnedMediaReferences(userId, [normalizedImageUri]);
+    await assertOwnedMediaReferences(userId, [music?.artworkUrl]);
 
     const insertValues = {
       ...(id ? { id } : {}),
       userId,
       date: new Date(date),
       ...rest,
-      imageUri: safeImageUri(rest.imageUri),
+      music,
+      imageUri: safeImageUri(normalizedImageUri),
     };
 
     const [created] = await db
@@ -75,9 +96,11 @@ router.post("/outfits", requireAuth, async (req, res) => {
       .values(insertValues)
       .onConflictDoUpdate({
         target: outfitsTable.id,
-        set: { userId, date: new Date(date), ...rest, imageUri: safeImageUri(rest.imageUri) },
+        set: { date: new Date(date), ...rest, music, imageUri: safeImageUri(normalizedImageUri) },
+        setWhere: eq(outfitsTable.userId, userId),
       })
       .returning();
+    if (!created) return res.status(404).json({ error: "Not found" });
 
     // Fan-out notifications to followers (fire & forget, non-blocking)
     if (rest.isPublic) {
@@ -86,8 +109,9 @@ router.post("/outfits", requireAuth, async (req, res) => {
     // Sync constellation progress — outfit count drives the Seasonal star
     syncConstellation(userId).catch(() => null);
 
-    return res.status(201).json(serializeOutfit(created));
+    return res.status(201).json(withOwnerMediaUrls(serializeOutfit(created), userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to create outfit");
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -142,9 +166,19 @@ router.patch("/outfits/:id", requireAuth, async (req, res) => {
     if (parsed.data.name        !== undefined) updateSet.name        = parsed.data.name;
     if (parsed.data.description !== undefined) updateSet.description = parsed.data.description;
     if ('story' in rawBody && rawBody.story  !== undefined) updateSet.story = String(rawBody.story ?? '');
-    if ('imageUri' in parsed.data)             updateSet.imageUri    = safeImageUri(parsed.data.imageUri);
+    if ('imageUri' in parsed.data) {
+      const imageUri = parsed.data.imageUri == null ? parsed.data.imageUri : normalizeMediaReference(parsed.data.imageUri);
+      await assertOwnedMediaReferences(userId, [imageUri]);
+      updateSet.imageUri = safeImageUri(imageUri);
+    }
     if (parsed.data.tags        !== undefined) updateSet.tags        = parsed.data.tags;
-    if ('music' in rawBody)                   updateSet.music       = parsed.data.music ?? null;
+    if ('music' in rawBody) {
+      const music = parsed.data.music
+        ? { ...parsed.data.music, artworkUrl: parsed.data.music.artworkUrl ? normalizeMediaReference(parsed.data.music.artworkUrl) : null }
+        : null;
+      await assertOwnedMediaReferences(userId, [music?.artworkUrl]);
+      updateSet.music = music;
+    }
     if (parsed.data.isPublic    !== undefined) updateSet.isPublic    = parsed.data.isPublic;
 
     const [updated] = await db
@@ -153,8 +187,9 @@ router.patch("/outfits/:id", requireAuth, async (req, res) => {
       .where(and(eq(outfitsTable.id, outfitId), eq(outfitsTable.userId, userId)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
-    return res.json(serializeOutfit(updated));
+    return res.json(withOwnerMediaUrls(serializeOutfit(updated), userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to update outfit");
     return res.status(500).json({ error: "Internal server error" });
   }

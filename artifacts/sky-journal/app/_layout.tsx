@@ -8,7 +8,7 @@ import * as Font from 'expo-font';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Stack, router, usePathname, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Do not mount react-native-keyboard-controller at the navigation root.
@@ -29,6 +29,7 @@ import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { SoundProvider } from '@/context/SoundContext';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
+import { setMediaAuthScope } from '@/utils/mediaAccess';
 
 // expo-notifications throws at import time in Expo Go SDK 53+ because Android push
 // notifications were removed. Lazy-require it so the error can't crash _layout.tsx
@@ -92,7 +93,7 @@ function IntentionStalenessGuard() {
 }
 
 function AuthTokenBridge() {
-  const { getToken, isSignedIn, isLoaded } = useAuth();
+  const { getToken, isSignedIn, isLoaded, userId } = useAuth();
   // useSession gives us the raw SessionResource. We store it in a ref so the
   // token getter always reads the LATEST session — even between effect runs.
   // The ref is updated on every render (the assignment below is outside useEffect),
@@ -106,21 +107,25 @@ function AuthTokenBridge() {
   const { reloadData, clearUserData } = useApp();
   const prevSignedIn = useRef<boolean | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isLoaded) return;
+    if (!isSignedIn) setAuthTokenGetter(async () => null);
+    setMediaAuthScope(isSignedIn ? userId ?? null : null);
+  }, [isLoaded, isSignedIn, userId]);
+
+  useLayoutEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) {
+      setAuthTokenGetter(async () => null);
+      return;
+    }
     setAuthTokenGetter(async () => {
-      // Path 1: useAuth().getToken() — signal-aware, preferred.
       try {
         const t = await getToken();
         if (t) return t;
       } catch (e) {
-        // Log in all builds so adb logcat captures this in the production APK.
         console.warn('[AuthTokenBridge] getToken() (path 1) threw:', e);
       }
-      // Path 2: sessionRef.current.getToken() — direct SessionResource call.
-      // Reads sessionRef (not a closure-captured session value) so it always
-      // reflects the latest session even if this getter was registered before
-      // the session was populated by setActive() in OAuth / Google sign-in flows.
       try {
         const t = await sessionRef.current?.getToken();
         return t ?? null;
@@ -129,6 +134,10 @@ function AuthTokenBridge() {
         return null;
       }
     });
+  }, [isLoaded, isSignedIn, userId, getToken]);
+
+  useEffect(() => {
+    if (!isLoaded) return;
     if (isSignedIn && prevSignedIn.current !== true) {
       reloadData();
       if (Platform.OS !== 'web' && Notifications) {

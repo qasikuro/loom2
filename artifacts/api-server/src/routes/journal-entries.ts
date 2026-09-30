@@ -5,8 +5,16 @@ import { z } from "zod";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { grantReward } from "../services/rewardService";
 import { syncConstellation } from "../services/constellationService";
+import { assertOwnedMediaReferences, MediaOwnershipError, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
 
 const router: IRouter = Router();
+
+router.use("/journal-entries", (_req, res, next) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  res.vary("Authorization");
+  res.vary("Cookie");
+  next();
+});
 
 const JournalEntryInputSchema = z.object({
   id:         z.string().uuid().optional().nullable(),
@@ -38,7 +46,7 @@ router.get("/journal-entries", requireAuth, async (req, res) => {
       .where(eq(journalEntriesTable.userId, userId))
       .orderBy(desc(journalEntriesTable.date));
 
-    const serialized = rows.map(serializeEntry);
+    const serialized = rows.map(row => withOwnerMediaUrls(serializeEntry(row), userId));
     const valid: typeof serialized = [];
     for (const entry of serialized) {
       const result = JournalEntryOutputSchema.safeParse(entry);
@@ -64,6 +72,8 @@ router.post("/journal-entries", requireAuth, async (req, res) => {
 
   try {
     const { id, date, ...rest } = parsed.data;
+    const imageUri = rest.imageUri == null ? rest.imageUri : normalizeMediaReference(rest.imageUri);
+    await assertOwnedMediaReferences(userId, [imageUri]);
 
     const [created] = await db
       .insert(journalEntriesTable)
@@ -72,12 +82,15 @@ router.post("/journal-entries", requireAuth, async (req, res) => {
         userId,
         date: new Date(date),
         ...rest,
+        imageUri,
       })
       .onConflictDoUpdate({
         target: journalEntriesTable.id,
-        set: { userId, date: new Date(date), ...rest },
+        set: { date: new Date(date), ...rest, imageUri },
+        setWhere: eq(journalEntriesTable.userId, userId),
       })
       .returning();
+    if (!created) return res.status(404).json({ error: "Not found" });
 
     // Grant daily journal reward (once per calendar day) — await so we can
     // return granted status to the client for feedback display
@@ -86,8 +99,9 @@ router.post("/journal-entries", requireAuth, async (req, res) => {
       await grantReward(userId, "journal_daily", today);
     syncConstellation(userId).catch(() => null);
 
-    return res.status(201).json({ ...serializeEntry(created), rewardGranted, rewardAmounts });
+    return res.status(201).json({ ...withOwnerMediaUrls(serializeEntry(created), userId), rewardGranted, rewardAmounts });
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to create journal entry");
     return res.status(500).json({ error: "Internal server error" });
   }

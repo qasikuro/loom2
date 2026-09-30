@@ -6,7 +6,7 @@ import { useColors } from '@/hooks/useColors';
 import { setAppLanguage, supportedLanguages } from '@/i18n';
 import i18n from '@/i18n';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { router } from 'expo-router';
 import React from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';

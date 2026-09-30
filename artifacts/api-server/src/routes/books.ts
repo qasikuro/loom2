@@ -23,6 +23,7 @@ import { db, booksTable, chaptersTable, followsTable, notificationsTable, charac
 import { requireAuth, getUserId } from "../middleware/auth";
 import { sendPushToTokens } from "../services/pushService";
 import * as cache from "../lib/cache";
+import { assertOwnedMediaReferences, MediaOwnershipError, normalizeManagedMediaPath, normalizeMediaReference, withOwnerMediaUrls } from "../lib/mediaAccess";
 
 const router: IRouter = Router();
 
@@ -37,7 +38,9 @@ const BookInputSchema = z.object({
   language:      z.string().default("English"),
   ageRating:     z.string().default("All Ages"),
   visibility:    z.enum(["public", "private"]).default("public"),
-  coverImageUri: z.string().url().nullish(),
+  coverImageUri: z.string().max(2000).nullish().refine(value =>
+    value == null || normalizeManagedMediaPath(value) !== null || z.string().url().safeParse(value).success,
+  ),
 });
 
 const ChapterInputSchema = z.object({
@@ -66,7 +69,7 @@ router.get("/books", requireAuth, async (req, res) => {
       .groupBy(booksTable.id)
       .orderBy(desc(booksTable.updatedAt));
 
-    return res.json(rows.map(r => ({ ...serializeBook(r.book), chapterCount: Number(r.chapterCount) })));
+    return res.json(rows.map(r => withOwnerMediaUrls({ ...serializeBook(r.book), chapterCount: Number(r.chapterCount) }, userId)));
   } catch (err) {
     req.log.error({ err }, "Failed to list books");
     return res.status(500).json({ error: "Internal server error" });
@@ -80,12 +83,15 @@ router.post("/books", requireAuth, async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
 
   try {
+    const coverImageUri = parsed.data.coverImageUri == null ? parsed.data.coverImageUri : normalizeMediaReference(parsed.data.coverImageUri);
+    await assertOwnedMediaReferences(userId, [coverImageUri]);
     const [book] = await db
       .insert(booksTable)
-      .values({ userId, ...parsed.data, coverImageUri: parsed.data.coverImageUri ?? null })
+      .values({ userId, ...parsed.data, coverImageUri: coverImageUri ?? null })
       .returning();
-    return res.status(201).json({ ...serializeBook(book!), chapterCount: 0 });
+    return res.status(201).json(withOwnerMediaUrls({ ...serializeBook(book!), chapterCount: 0 }, userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to create book");
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -106,7 +112,7 @@ router.get("/books/:id", requireAuth, async (req, res) => {
 
     if (!rows.length) return res.status(404).json({ error: "Not found" });
     const { book, chapterCount } = rows[0]!;
-    return res.json({ ...serializeBook(book), chapterCount: Number(chapterCount) });
+    return res.json(withOwnerMediaUrls({ ...serializeBook(book), chapterCount: Number(chapterCount) }, userId));
   } catch (err) {
     req.log.error({ err }, "Failed to get book");
     return res.status(500).json({ error: "Internal server error" });
@@ -121,14 +127,20 @@ router.patch("/books/:id", requireAuth, async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
 
   try {
+    if ("coverImageUri" in parsed.data) {
+      const uri = parsed.data.coverImageUri == null ? parsed.data.coverImageUri : normalizeMediaReference(parsed.data.coverImageUri);
+      await assertOwnedMediaReferences(userId, [uri]);
+      parsed.data.coverImageUri = uri;
+    }
     const [updated] = await db
       .update(booksTable)
       .set({ ...parsed.data, updatedAt: new Date() })
       .where(and(eq(booksTable.id, bookId), eq(booksTable.userId, userId)))
       .returning();
     if (!updated) return res.status(404).json({ error: "Not found" });
-    return res.json(serializeBook(updated));
+    return res.json(withOwnerMediaUrls(serializeBook(updated), userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to update book");
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -168,7 +180,7 @@ router.get("/books/:id/chapters", requireAuth, async (req, res) => {
       .where(eq(chaptersTable.bookId, bookId))
       .orderBy(asc(chaptersTable.orderIndex), asc(chaptersTable.createdAt));
 
-    return res.json(rows.map(serializeChapter));
+    return res.json(rows.map(row => withOwnerMediaUrls(serializeChapter(row), userId)));
   } catch (err) {
     req.log.error({ err }, "Failed to list chapters");
     return res.status(500).json({ error: "Internal server error" });
@@ -192,6 +204,8 @@ router.post("/books/:id/chapters", requireAuth, async (req, res) => {
     if (!books.length) return res.status(404).json({ error: "Not found" });
 
     const { pages, publishedAt, ...rest } = parsed.data;
+    const normalizedPages = normalizePageMedia(pages ?? []);
+    await assertOwnedMediaReferences(userId, collectPageMediaReferences(normalizedPages));
     const [chapter] = await db
       .insert(chaptersTable)
       .values({
@@ -201,15 +215,16 @@ router.post("/books/:id/chapters", requireAuth, async (req, res) => {
         status:     rest.status ?? "draft",
         publishedAt: publishedAt ? new Date(publishedAt) : null,
         pageCount:  rest.pageCount ?? 0,
-        pages:      (pages ?? []) as typeof chaptersTable.$inferInsert["pages"],
+        pages:      normalizedPages as typeof chaptersTable.$inferInsert["pages"],
       })
       .returning();
 
     // Bump book updatedAt
     await db.update(booksTable).set({ updatedAt: new Date() }).where(eq(booksTable.id, bookId));
 
-    return res.status(201).json(serializeChapter(chapter!));
+    return res.status(201).json(withOwnerMediaUrls(serializeChapter(chapter!), userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to create chapter");
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -228,7 +243,7 @@ router.get("/chapters/:id", requireAuth, async (req, res) => {
       .limit(1);
 
     if (!rows.length) return res.status(404).json({ error: "Not found" });
-    return res.json(serializeChapter(rows[0]!.chapter));
+    return res.json(withOwnerMediaUrls(serializeChapter(rows[0]!.chapter), userId));
   } catch (err) {
     req.log.error({ err }, "Failed to get chapter");
     return res.status(500).json({ error: "Internal server error" });
@@ -257,7 +272,11 @@ router.patch("/chapters/:id", requireAuth, async (req, res) => {
 
     const { pages, publishedAt, ...rest } = parsed.data;
     const updateSet: Record<string, unknown> = { ...rest, updatedAt: new Date() };
-    if (pages !== undefined) updateSet.pages = pages;
+    if (pages !== undefined) {
+      const normalizedPages = normalizePageMedia(pages);
+      await assertOwnedMediaReferences(userId, collectPageMediaReferences(normalizedPages));
+      updateSet.pages = normalizedPages;
+    }
     if (publishedAt !== undefined) updateSet.publishedAt = publishedAt ? new Date(publishedAt) : null;
 
     const [updated] = await db
@@ -277,8 +296,9 @@ router.patch("/chapters/:id", requireAuth, async (req, res) => {
       invalidateFollowerDiscoverCaches(userId).catch(() => null);
     }
 
-    return res.json(serializeChapter(updated));
+    return res.json(withOwnerMediaUrls(serializeChapter(updated), userId));
   } catch (err) {
+    if (err instanceof MediaOwnershipError) return res.status(403).json({ error: err.message });
     req.log.error({ err }, "Failed to update chapter");
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -406,6 +426,22 @@ function serializeChapter(c: typeof chaptersTable.$inferSelect) {
     createdAt:   c.createdAt.toISOString(),
     updatedAt:   c.updatedAt.toISOString(),
   };
+}
+
+function normalizePageMedia(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizePageMedia);
+  if (typeof value === "string") {
+    return normalizeManagedMediaPath(value) ? normalizeMediaReference(value) : value;
+  }
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, normalizePageMedia(entry)]));
+}
+
+function collectPageMediaReferences(value: unknown): Array<string | null | undefined> {
+  if (Array.isArray(value)) return value.flatMap(collectPageMediaReferences);
+  if (typeof value === "string") return [value];
+  if (!value || typeof value !== "object") return [];
+  return Object.values(value).flatMap(collectPageMediaReferences);
 }
 
 export default router;

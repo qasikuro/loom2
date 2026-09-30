@@ -5,6 +5,17 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+export interface MediaReadUrlsInput {
+  /** @maxItems 100 */
+  paths: string[];
+}
+
+export type MediaReadUrlsResponseUrls = { [key: string]: string };
+
+export interface MediaReadUrlsResponse {
+  urls: MediaReadUrlsResponseUrls;
+}
+
 export type MangaGenerationInputStyle =
   (typeof MangaGenerationInputStyle)[keyof typeof MangaGenerationInputStyle];
 

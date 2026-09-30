@@ -36,6 +36,31 @@ export interface ObjectAclPolicy {
   aclRules?: Array<ObjectAclRule>;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function validateObjectAclPolicy(value: unknown): ObjectAclPolicy {
+  if (!isRecord(value) ||
+      typeof value.owner !== "string" || value.owner.trim().length === 0 ||
+      (value.visibility !== "public" && value.visibility !== "private")) {
+    throw new Error("Malformed object ACL policy");
+  }
+  if (value.aclRules !== undefined) {
+    if (!Array.isArray(value.aclRules)) throw new Error("Malformed object ACL rules");
+    const validGroupTypes = new Set(Object.values(ObjectAccessGroupType) as string[]);
+    for (const rule of value.aclRules) {
+      if (!isRecord(rule) || !isRecord(rule.group) ||
+          typeof rule.group.type !== "string" || !validGroupTypes.has(rule.group.type) ||
+          typeof rule.group.id !== "string" || rule.group.id.trim().length === 0 ||
+          (rule.permission !== ObjectPermission.READ && rule.permission !== ObjectPermission.WRITE)) {
+        throw new Error("Malformed object ACL rule");
+      }
+    }
+  }
+  return value as unknown as ObjectAclPolicy;
+}
+
 function isPermissionAllowed(
   requested: ObjectPermission,
   granted: ObjectPermission,
@@ -71,6 +96,7 @@ export async function setObjectAclPolicy(
   objectFile: File,
   aclPolicy: ObjectAclPolicy,
 ): Promise<void> {
+  const validatedPolicy = validateObjectAclPolicy(aclPolicy);
   const [exists] = await objectFile.exists();
   if (!exists) {
     throw new Error(`Object not found: ${objectFile.name}`);
@@ -78,7 +104,7 @@ export async function setObjectAclPolicy(
 
   await objectFile.setMetadata({
     metadata: {
-      [ACL_POLICY_METADATA_KEY]: JSON.stringify(aclPolicy),
+      [ACL_POLICY_METADATA_KEY]: JSON.stringify(validatedPolicy),
     },
   });
 }
@@ -88,10 +114,17 @@ export async function getObjectAclPolicy(
 ): Promise<ObjectAclPolicy | null> {
   const [metadata] = await objectFile.getMetadata();
   const aclPolicy = metadata?.metadata?.[ACL_POLICY_METADATA_KEY];
-  if (!aclPolicy) {
+  if (aclPolicy === undefined || aclPolicy === null) {
     return null;
   }
-  return JSON.parse(aclPolicy as string);
+  if (typeof aclPolicy !== "string") throw new Error("Malformed object ACL metadata");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(aclPolicy);
+  } catch {
+    throw new Error("Malformed object ACL metadata");
+  }
+  return validateObjectAclPolicy(parsed);
 }
 
 export async function canAccessObject({

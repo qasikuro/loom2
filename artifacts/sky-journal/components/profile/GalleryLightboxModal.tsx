@@ -1,7 +1,7 @@
 import { Icon } from '@/components/Icon';
 import type { GalleryPhoto } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 

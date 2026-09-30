@@ -4,7 +4,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import type { Character, Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useUser } from '@clerk/expo';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {

@@ -3,7 +3,8 @@ import { BadgeTray } from '@/components/profile/BadgeTray';
 import type { DiscoverPost } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
 import { Video, ResizeMode } from 'expo-av';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
+import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,6 +51,7 @@ export function ReelCard({
 }: Props) {
   const { t } = useTranslation();
   const isVideo = post.contentType === 'video' && !!post.videoUri;
+  const { uri: videoUri, renew: renewVideoUri } = useSecureMediaUri(post.videoUri);
   const imageUri = isVideo ? post.thumbnailUri : (post.panels?.[0]?.imageUri ?? post.imageUri);
   const elapsed = Date.now() - new Date(post.date).getTime();
   const mins = Math.floor(elapsed / 60_000);
@@ -74,7 +76,8 @@ export function ReelCard({
       )}
       {isVideo && playing && (
         <Video
-          source={{ uri: post.videoUri! }}
+          source={{ uri: videoUri ?? post.videoUri! }}
+          onError={renewVideoUri}
           shouldPlay
           isLooping
           isMuted={muted}

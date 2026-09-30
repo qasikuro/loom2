@@ -5,7 +5,7 @@ import { useColors } from '@/hooks/useColors';
 import { getResumableStoryDraft, type ResumableStoryDraft } from '@/utils/entryDraftStore';
 import type { DiscoverPost } from '@/context/mappers';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';

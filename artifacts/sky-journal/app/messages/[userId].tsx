@@ -9,7 +9,7 @@ import { useSound } from '@/context/SoundContext';
 import { useSSE } from '@/hooks/useSSE';
 import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

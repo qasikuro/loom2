@@ -30,6 +30,23 @@ export const GenerateMangaPageResponse = zod.object({
 });
 
 /**
+ * @summary Resolve managed media paths into owner-authorized read URLs
+ */
+export const resolveMediaReadUrlsBodyPathsItemMax = 2048;
+
+export const resolveMediaReadUrlsBodyPathsMax = 100;
+
+export const ResolveMediaReadUrlsBody = zod.object({
+  paths: zod
+    .array(zod.string().min(1).max(resolveMediaReadUrlsBodyPathsItemMax))
+    .max(resolveMediaReadUrlsBodyPathsMax),
+});
+
+export const ResolveMediaReadUrlsResponse = zod.object({
+  urls: zod.record(zod.string(), zod.string()),
+});
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({

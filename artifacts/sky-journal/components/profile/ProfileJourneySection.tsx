@@ -4,7 +4,7 @@ import type { Story, JournalEntry, Character } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { TitlesGallerySection } from './TitlesGallerySection';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';

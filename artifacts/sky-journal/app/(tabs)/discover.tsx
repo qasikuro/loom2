@@ -5,7 +5,7 @@ import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';

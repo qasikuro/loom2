@@ -12,7 +12,7 @@ import {
 import { markOnboardingDone } from '@/components/OnboardingOverlay';
 import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';

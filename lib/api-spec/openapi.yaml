@@ -53,6 +53,31 @@ paths:
         "429":
           description: Daily generation limit reached
 
+  /media/read-urls:
+    post:
+      operationId: resolveMediaReadUrls
+      tags: [stories]
+      summary: Resolve managed media paths into owner-authorized read URLs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaReadUrlsInput"
+      responses:
+        "200":
+          description: Canonical media paths mapped to raw public paths or short-lived owner URLs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaReadUrlsResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "404":
+          description: Media unavailable
+
   /healthz:
     get:
       operationId: healthCheck
@@ -791,6 +816,28 @@ paths:
 
 components:
   schemas:
+    MediaReadUrlsInput:
+      type: object
+      additionalProperties: false
+      properties:
+        paths:
+          type: array
+          maxItems: 100
+          items:
+            type: string
+            minLength: 1
+            maxLength: 2048
+      required: [paths]
+
+    MediaReadUrlsResponse:
+      type: object
+      properties:
+        urls:
+          type: object
+          additionalProperties:
+            type: string
+      required: [urls]
+
     MangaGenerationInput:
       type: object
       properties:

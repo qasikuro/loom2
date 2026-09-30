@@ -1,7 +1,8 @@
 import { Icon } from '@/components/Icon';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef, useState } from 'react';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
+import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import { Video, ResizeMode } from 'expo-av';
 import { Animated, Easing, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -57,6 +58,7 @@ export function DiscoverCard({
   const { t } = useTranslation();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
+  const { uri: videoUri, renew: renewVideoUri } = useSecureMediaUri(post.videoUri);
 
   const pullQuote = extractPullQuote(post.panels ?? []) || post.storySnippet || '';
   const heroPanelImage = post.panels?.[0]?.imageUri ?? null;
@@ -126,7 +128,8 @@ export function DiscoverCard({
                   paused players mounted still allocates native decoders. */}
               {isVideoPlaying && (
                 <Video
-                  source={{ uri: post.videoUri }}
+                  source={{ uri: videoUri ?? post.videoUri }}
+                  onError={renewVideoUri}
                   shouldPlay
                   isLooping
                   isMuted={videoMuted}

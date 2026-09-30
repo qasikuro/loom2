@@ -3,7 +3,8 @@ import type { GalleryPhoto, Outfit, Story } from '@/context/AppContext';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
+import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Images } from '@/assets/images/index';
@@ -66,6 +67,7 @@ function VideoPlayerModal({
   const { width: W, height: H } = useWindowDimensions();
   const [muted, setMuted] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const { uri: videoUri, renew: renewVideoUri } = useSecureMediaUri(story?.videoUri);
   const deleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
@@ -93,7 +95,8 @@ function VideoPlayerModal({
     <Modal visible transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <View style={[vp.backdrop, { width: W, height: H }]}>
         <Video
-          source={{ uri: story.videoUri }}
+          source={{ uri: videoUri ?? story.videoUri }}
+          onError={renewVideoUri}
           shouldPlay
           isLooping
           isMuted={muted}

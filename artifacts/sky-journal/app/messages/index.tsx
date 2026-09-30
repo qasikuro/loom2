@@ -3,7 +3,7 @@ import { Icon } from '@/components/Icon';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';

@@ -11,6 +11,12 @@ function resolveApiBase(): string {
   return getApiBase();
 }
 
+function uploadedMediaUrl(apiBase: string, path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  const domain = apiBase.replace(/\/api\/?$/, '');
+  return `${domain}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
 /**
  * Typed error thrown by persistImageUri on failure.
  * Callers can catch this to display `err.userMessage` instead of a generic string.
@@ -136,8 +142,7 @@ async function uploadNative(fileUri: string): Promise<string> {
   if (result.status >= 200 && result.status < 300) {
     try {
       const json    = JSON.parse(result.body) as { path: string };
-      const domain  = apiBase.replace(/\/api$/, '');
-      return `${domain}${json.path}`;
+      return uploadedMediaUrl(apiBase, json.path);
     } catch {
       throw new ImageUploadError('The server returned an unexpected response. Please try again.');
     }
@@ -212,8 +217,7 @@ async function uploadWeb(base64Data: string, ext: string): Promise<string> {
   }
 
   const json   = await res.json() as { path: string };
-  const domain = apiBase.replace(/\/api$/, '');
-  return `${domain}${json.path}`;
+  return uploadedMediaUrl(apiBase, json.path);
 }
 
 /**
@@ -334,8 +338,7 @@ async function uploadVideoWeb(uri: string, options: VideoUploadOptions): Promise
     if (result.ok) {
       try {
         const json = await result.json() as { path: string };
-        const domain = apiBase.replace(/\/api$/, '');
-        return `${domain}${json.path}`;
+        return uploadedMediaUrl(apiBase, json.path);
       } catch {
         throw new ImageUploadError('The server returned an unexpected response. Please try again.');
       }
@@ -404,8 +407,7 @@ export async function persistVideoUri(uri: string, options: VideoUploadOptions =
   if (result.status >= 200 && result.status < 300) {
     try {
       const json   = JSON.parse(result.body) as { path: string };
-      const domain = apiBase.replace(/\/api$/, '');
-      return `${domain}${json.path}`;
+      return uploadedMediaUrl(apiBase, json.path);
     } catch {
       throw new ImageUploadError('The server returned an unexpected response. Please try again.');
     }

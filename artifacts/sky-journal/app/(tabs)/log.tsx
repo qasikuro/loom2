@@ -6,7 +6,7 @@ import { router, useFocusEffect } from 'expo-router';
 
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
   Animated,
   Easing,

@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
   Animated,
   Easing,

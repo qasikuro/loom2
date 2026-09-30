@@ -12,7 +12,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
-import { Image } from 'expo-image';
+import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
@@ -27,6 +27,7 @@ import { apiFetch, ApiError, resolveUri, useApp } from '@/context/AppContext';
 import { AudiusMusicPicker } from '@/features/story-studio/components/AudiusMusicPicker';
 import type { StoryMusic } from '@/context/mappers';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
+import { resolveMediaReadUrl } from '@/utils/mediaAccess';
 import { ReportSheet } from '@/components/ReportSheet';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { useTranslation } from 'react-i18next';
@@ -246,6 +247,7 @@ export default function MangaStoryScreen() {
       let shareUri = generatedImageUri;
       if (!shareUri.startsWith('file:')) {
         const localUri = `${FileSystem.cacheDirectory}ximo-manga-${generationId ?? 'page'}.png`;
+        shareUri = await resolveMediaReadUrl(shareUri);
         const download = await FileSystem.downloadAsync(shareUri, localUri);
         if (download.status !== 200) throw new Error('Download failed');
         shareUri = download.uri;
@@ -547,10 +549,10 @@ export default function MangaStoryScreen() {
                         return;
                       }
                       setImageLoading(true);
-                      FileSystem.downloadAsync(
-                        retryUri,
+                      resolveMediaReadUrl(retryUri, true).then(renewedUri => FileSystem.downloadAsync(
+                        renewedUri,
                         `${FileSystem.cacheDirectory}ximo-manga-${generationId}-${Date.now()}.png`,
-                      ).then(download => {
+                      )).then(download => {
                         if (download.status !== 200) throw new Error('Download failed');
                         setGeneratedImageUri(download.uri);
                       }).catch(() => setImageLoadFailed(true)).finally(() => setImageLoading(false));

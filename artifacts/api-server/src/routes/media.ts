@@ -13,6 +13,7 @@ import { z } from "zod";
 import { db, mediaCompositionsTable } from "@workspace/db";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { objectStorageClient } from "../lib/objectStorage";
+import { mediaOwnerMetadata } from "../lib/mediaAccess";
 import { audiusStreamUrl } from "../services/audius";
 import {
   composeVideo,
@@ -255,11 +256,11 @@ router.post(
       const generatedVideoPath = generatedMediaPath(workDir, "final.mp4");
       const generatedThumbnailPath = generatedMediaPath(workDir, "thumbnail.jpg");
       await objectStorageClient.bucket(BUCKET_ID).file(videoPath).save(await readFile(generatedVideoPath), {
-        metadata: { contentType: "video/mp4" }, resumable: false,
+        metadata: { contentType: "video/mp4", metadata: mediaOwnerMetadata(getUserId(req)) }, resumable: false,
       });
       uploadedPaths.push(videoPath);
       await objectStorageClient.bucket(BUCKET_ID).file(thumbPath).save(await readFile(generatedThumbnailPath), {
-        metadata: { contentType: "image/jpeg" }, resumable: false,
+        metadata: { contentType: "image/jpeg", metadata: mediaOwnerMetadata(getUserId(req)) }, resumable: false,
       });
       uploadedPaths.push(thumbPath);
       const [composition] = await db.insert(mediaCompositionsTable).values({
