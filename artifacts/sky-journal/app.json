@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "storigam",
+    "name": "Storigam",
     "slug": "storigam",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/storigam-icon.png",
     "scheme": "storigam",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/ximo_splash.jpg",
-      "resizeMode": "cover",
-      "backgroundColor": "#D7D8FC"
+      "image": "./assets/images/storigam-mark.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#030014"
     },
     "ios": {
       "supportsTablet": false,
@@ -21,12 +21,12 @@
     "android": {
       "package": "com.storigam.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/ximo_adaptive_icon.png",
-        "backgroundColor": "#F0EAFE"
+        "foregroundImage": "./assets/images/storigam-adaptive-icon.png",
+        "backgroundColor": "#030014"
       }
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/storigam-favicon.png"
     },
     "plugins": [
       [
@@ -37,15 +37,24 @@
       ],
       "expo-web-browser",
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/storigam-mark.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#030014"
+        }
+      ],
+      [
         "expo-image-picker",
         {
-          "photosPermission": "Allow Ximo to access your photos to add images to your logs."
+          "photosPermission": "Allow Storigam to access your photos to add images to your logs."
         }
       ],
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/ximo_icon.png",
+          "icon": "./assets/images/storigam-notification.png",
           "color": "#7C3AED",
           "sounds": []
         }

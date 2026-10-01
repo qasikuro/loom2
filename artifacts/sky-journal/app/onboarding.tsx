@@ -10,6 +10,7 @@ import {
   type OnboardingStep,
 } from '@/utils/onboardingProgress';
 import { markOnboardingDone } from '@/components/OnboardingOverlay';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -19,7 +20,6 @@ import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   Platform,
   ScrollView,
   StyleSheet,

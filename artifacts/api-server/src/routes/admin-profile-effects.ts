@@ -179,7 +179,7 @@ router.delete("/admin/profile-effects/:id", requireAdmin, async (req: Request, r
 
 // ── POST /api/admin/profile-effects/generate-config ──────────────────────────
 
-const GENERATE_SYSTEM = `You are the creative director for Sky Journal, a dreamy mobile app inspired by Sky: Children of the Light. 
+const GENERATE_SYSTEM = `You are the creative director for Storigam, a dreamy mobile app inspired by Sky: Children of the Light.
 Generate a profile effect animation config JSON for the given theme/name.
 
 Config schema:

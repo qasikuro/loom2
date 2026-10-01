@@ -17,13 +17,13 @@ export const Images = {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   create_dashboard: require('./create_dashboard.png'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  splash: require('./ximo_splash.jpg'),
+  splash: require('./storigam-mark.png'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  icon: require('./ximo_icon.png'),
+  icon: require('./storigam-icon.png'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  logo: require('./ximo_logo.png'),
+  logo: require('./storigam-logo-light.png'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  logo_full: require('./ximo_logo.png'),
+  logo_full: require('./storigam-logo-light.png'),
 } as const;
 
 export type ImageKey = keyof typeof Images;

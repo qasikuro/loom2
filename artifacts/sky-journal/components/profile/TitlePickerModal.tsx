@@ -1,7 +1,8 @@
 import { Icon } from '@/components/Icon';
 import type { ConstellationState } from '@/components/ConstellationMap';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import React from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useColors } from '@/hooks/useColors';

@@ -262,8 +262,8 @@ const LANDING_HTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>GameJo — The friendships were real.</title>
-<meta name="description" content="GameJo is the social home for people who found their people inside a game. Keep what mattered. Tell it well."/>
+<title>Storigam — The friendships were real.</title>
+<meta name="description" content="Storigam is the social home for people who found their people inside a game. Keep what mattered. Tell it well."/>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500&display=swap');
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -339,12 +339,12 @@ const LANDING_HTML = `<!DOCTYPE html>
 <canvas id="stars"></canvas>
 <div class="orb"></div>
 <nav>
-  <div class="logo">game<span>jo</span></div>
+  <div class="logo">stori<span>gam</span></div>
   <div class="badge">Now Available</div>
 </nav>
 <main>
   <h1>The friendships were real.<em>So are the memories.</em></h1>
-  <p class="sub">GameJo is the social home for people who found their people inside a game. Keep what mattered. Tell it well. Read the stories of everyone still out there flying.</p>
+  <p class="sub">Storigam is the social home for people who found their people inside a game. Keep what mattered. Tell it well. Read the stories of everyone still out there flying.</p>
   <div class="cta-area">
     <a class="download-btn" href="https://drive.google.com/file/d/1SfVduWZ-0PtBksrkYe-R2WQ4Y-Z6lS44/view?usp=drivesdk" target="_blank" rel="noopener">
       <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zm-1 14.17l-3.59-3.58 1.42-1.42L11 13.34V7h2v6.34l2.17-2.17 1.42 1.42L13 16.17l-1 1z"/></svg>

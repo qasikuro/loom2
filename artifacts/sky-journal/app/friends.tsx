@@ -4,11 +4,12 @@ import { FriendAvatar } from '@/components/FriendAvatar';
 import { ApiError, apiFetch, resolveUri, useApp, type FriendSummary } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SecureImage as Image } from '@/components/SecureImage';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, FlatList, Platform, RefreshControl, StyleSheet,
+  FlatList, Platform, RefreshControl, StyleSheet,
   Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

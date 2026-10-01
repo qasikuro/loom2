@@ -9,7 +9,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { useTranslation } from 'react-i18next';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';

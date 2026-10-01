@@ -1,8 +1,9 @@
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import React from 'react';
-import { ActivityIndicator, Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 type PingState = 'idle' | 'sending' | 'sent' | 'cooldown';

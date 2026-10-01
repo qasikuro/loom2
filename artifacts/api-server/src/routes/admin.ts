@@ -483,7 +483,7 @@ router.delete("/admin/content/stories/:id", requireAdmin, async (req: Request, r
     await db.insert(notificationsTable).values({
       userId:    story.userId,
       actorId:   "system",
-      actorName: "Sky Journal",
+      actorName: "Storigam",
       type:      "content_removed",
       refId:     id,
       title:     "Your story was removed by a moderator",
@@ -542,7 +542,7 @@ router.delete("/admin/content/outfits/:id", requireAdmin, async (req: Request, r
     await db.insert(notificationsTable).values({
       userId:    outfit.userId,
       actorId:   "system",
-      actorName: "Sky Journal",
+      actorName: "Storigam",
       type:      "content_removed",
       refId:     id,
       title:     "Your outfit was removed by a moderator",
@@ -605,7 +605,7 @@ router.delete("/admin/campfire-messages/:id", requireAdmin, async (req: Request,
       await db.insert(notificationsTable).values({
         userId:    authorId,
         actorId:   "system",
-        actorName: "Sky Journal",
+        actorName: "Storigam",
         type:      "content_removed",
         refId:     messageId,
         title:     "Your campfire message was removed by a moderator",
@@ -738,7 +738,7 @@ router.put("/admin/reports/:id/resolve", requireAdmin, async (req: Request, res:
     await db.insert(notificationsTable).values({
       userId:    report.reporterId,
       actorId:   "system",
-      actorName: "Sky Journal",
+      actorName: "Storigam",
       type:      status === "resolved" ? "report_resolved" : "report_dismissed",
       refId:     reportId,
       title:     notificationTitle,
@@ -794,7 +794,7 @@ router.put("/admin/users/:id/toggle-founder", requireAdmin, async (req: Request,
     await db.insert(notificationsTable).values({
       userId:    targetId,
       actorId:   "system",
-      actorName: "Sky Journal",
+      actorName: "Storigam",
       type:      newValue ? "badge_granted" : "badge_removed",
       refId:     "founder",
       title:     newValue
@@ -807,7 +807,7 @@ router.put("/admin/users/:id/toggle-founder", requireAdmin, async (req: Request,
     sendPushNotification(targetId, {
       title: newValue ? "🏆 Founder Badge Granted!" : "Founder Badge Removed",
       body:  newValue
-        ? "You've been recognized as a Founder of Sky Journal!"
+        ? "You've been recognized as a Founder of Storigam!"
         : "Your Founder badge has been removed by an admin.",
     }).catch(() => {});
 
@@ -848,7 +848,7 @@ router.put("/admin/users/:id/toggle-beta", requireAdmin, async (req: Request, re
     await db.insert(notificationsTable).values({
       userId:    targetId,
       actorId:   "system",
-      actorName: "Sky Journal",
+      actorName: "Storigam",
       type:      newValue ? "badge_granted" : "badge_removed",
       refId:     "beta_tester",
       title:     newValue
@@ -861,7 +861,7 @@ router.put("/admin/users/:id/toggle-beta", requireAdmin, async (req: Request, re
     sendPushNotification(targetId, {
       title: newValue ? "🧪 Beta Tester Badge!" : "Beta Tester Badge Removed",
       body:  newValue
-        ? "Welcome to the inner circle — you're now a Sky Journal Beta Tester!"
+        ? "Welcome to the inner circle — you're now a Storigam Beta Tester!"
         : "Your Beta Tester badge has been removed by an admin.",
     }).catch(() => {});
 

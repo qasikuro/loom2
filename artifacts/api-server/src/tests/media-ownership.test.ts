@@ -141,8 +141,8 @@ describe("record ownership and managed media", () => {
         mood: null,
         streamUrl,
       });
-      const audiusCreateStream = "https://discoveryprovider.audius.co/v1/tracks/create-track/stream?app_name=SkyJournal";
-      const audiusUpdateStream = "https://discoveryprovider.audius.co/v1/tracks/update-track/stream?app_name=SkyJournal";
+      const audiusCreateStream = "https://discoveryprovider.audius.co/v1/tracks/create-track/stream?app_name=Storigam";
+      const audiusUpdateStream = "https://discoveryprovider.audius.co/v1/tracks/update-track/stream?app_name=Storigam";
       setTestUserId(ATTACKER);
 
       for (const streamUrl of managedStreams) {

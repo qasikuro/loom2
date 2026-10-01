@@ -9,9 +9,10 @@ import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { SecureImage as Image } from '@/components/SecureImage';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
@@ -136,8 +137,8 @@ export function ProfileHeaderSection({
   }
   async function shareProfile() {
     await Share.share({
-      title: `${character.name} on Ximo`,
-      message: `Meet ${character.name} on Ximo${currentTitle ? ` — ${currentTitle}` : ''}.`,
+      title: `${character.name} on Storigam`,
+      message: `Meet ${character.name} on Storigam${currentTitle ? ` — ${currentTitle}` : ''}.`,
     });
   }
 

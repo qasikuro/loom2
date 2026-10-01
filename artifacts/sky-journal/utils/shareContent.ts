@@ -25,7 +25,7 @@ export async function shareStory(opts: {
     `✦ "${title}"`,
     moodLine,
     trimmed ? `\n"${trimmed}"` : '',
-    `\nby ${authorName} · Ximo`,
+    `\nby ${authorName} · Storigam`,
     `\n${storyLink}`,
   ];
 
@@ -68,7 +68,7 @@ export async function shareOutfit(opts: {
     `✦ ${name}`,
     tagLine,
     desc ? `\n"${desc}"` : '',
-    `\nLogged on Ximo ✨`,
+    `\nLogged on Storigam ✨`,
     `\n${APP_URL}`,
   ];
 

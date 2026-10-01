@@ -219,7 +219,7 @@ router.post("/manga/generate", requireAuth, requireAiAccess, async (req: Request
       inputFidelity: "high",
     });
     const creditSvg = Buffer.from(
-      `<svg width="1024" height="1536"><rect x="775" y="1480" width="225" height="44" rx="10" fill="rgba(8,5,22,.78)"/><text x="887" y="1508" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="white">Made by Gamejo</text></svg>`,
+      `<svg width="1024" height="1536"><rect x="775" y="1480" width="225" height="44" rx="10" fill="rgba(8,5,22,.78)"/><text x="887" y="1508" text-anchor="middle" font-family="Arial,sans-serif" font-size="19" font-weight="700" fill="white">Made by Storigam</text></svg>`,
     );
     const finalImage = await sharp(generated)
       .resize(1024, 1536, { fit: "cover" })

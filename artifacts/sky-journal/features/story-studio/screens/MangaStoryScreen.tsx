@@ -238,7 +238,7 @@ export default function MangaStoryScreen() {
     try {
       if (Platform.OS === 'web') {
         await import('react-native').then(({ Share }) =>
-          Share.share({ title: 'My Ximo manga', message: `My manga story — Made by Ximo\n${generatedImageUri}` }),
+          Share.share({ title: 'My Storigam manga', message: `My manga story — Made by Storigam\n${generatedImageUri}` }),
         );
         return;
       }
@@ -253,7 +253,7 @@ export default function MangaStoryScreen() {
         shareUri = download.uri;
       }
       await Sharing.shareAsync(shareUri, {
-        dialogTitle: 'Share your Ximo manga',
+        dialogTitle: 'Share your Storigam manga',
         mimeType: 'image/png',
         UTI: 'public.png',
       });
@@ -280,7 +280,7 @@ export default function MangaStoryScreen() {
       id,
       date: new Date().toISOString(),
       chapterTitle: customStory.slice(0, 80) || 'My Manga Story',
-      description: `Created in ${selectedStyle.label.replace('\n', ' ')} style with Ximo AI.`,
+      description: `Created in ${selectedStyle.label.replace('\n', ' ')} style with Storigam AI.`,
       panels: [panel],
       mood: 'Creative',
       location: 'Isle of Dawn',

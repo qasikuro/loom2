@@ -351,7 +351,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   en: [
     'Skip', "Couldn't reach the sky. Check your connection and try again.", '← Back', 'Begin your sky →', 'Choose your mood →', 'This is me →',
     'Save my first line →', 'Skip for now →', 'Setting your sky…', 'Retry →', 'Enter your sky ✦', 'Sign out and try again',
-    'WELCOME', 'Your sky is waiting', "Ximo is a dreamy space for your memories, stories, and soul. In just a moment, we'll shape your world to feel like home.", 'Takes about 60 seconds ✦',
+    'WELCOME', 'Your sky is waiting', "Storigam is a dreamy space for your memories, stories, and soul. In just a moment, we'll shape your world to feel like home.", 'Takes about 60 seconds ✦',
     'YOUR VIBE', 'How does your sky feel today?', 'Pick the mood that fits right now. You can change this any time.', 'YOUR CONSTELLATION', 'What kind of sky child are you?',
     'YOUR FIRST LINE', 'Write one line about today', "Just one honest sentence. It'll be your first journal entry — completely private.", 'Today I feel…',
     'YOUR SKY IS READY', 'Welcome, {{type}}', 'Your sky is {{mood}} and waiting. Your constellation lights the way. Let the journey begin.', 'Sky Child',
@@ -362,7 +362,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   ja: [
     'スキップ', '空に接続できません。接続を確認して再試行してください。', '← 戻る', '空を始める →', '気分を選ぶ →', 'これが私 →',
     '最初の一文を保存 →', '今はスキップ →', '空を設定中…', '再試行 →', '空へ進む ✦', 'サインアウトして再試行',
-    'ようこそ', 'あなたの空が待っています', 'Ximoは思い出や物語、心を綴る夢のような場所です。すぐに、あなたの世界を居心地のよい場所に整えます。', '約60秒で完了 ✦',
+    'ようこそ', 'あなたの空が待っています', 'Storigamは思い出や物語、心を綴る夢のような場所です。すぐに、あなたの世界を居心地のよい場所に整えます。', '約60秒で完了 ✦',
     'あなたの雰囲気', '今日の空はどんな気分？', '今の気分を選びましょう。いつでも変更できます。', 'あなたの星座', 'あなたはどんな空の子？',
     '最初の一文', '今日のことを一文で書く', '正直な一文を書きましょう。最初の日記として非公開で保存されます。', '今日はこんな気分…',
     'あなたの空ができました', 'ようこそ、{{type}}', 'あなたの空は{{mood}}色に輝いています。星座が道を照らします。旅を始めましょう。', '空の子',
@@ -373,7 +373,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   es: [
     'Omitir', 'No se pudo conectar con el cielo. Comprueba tu conexión e inténtalo de nuevo.', '← Atrás', 'Comienza tu cielo →', 'Elige tu ánimo →', 'Así soy yo →',
     'Guardar mi primera frase →', 'Omitir por ahora →', 'Preparando tu cielo…', 'Reintentar →', 'Entrar en tu cielo ✦', 'Cerrar sesión e intentarlo de nuevo',
-    'TE DAMOS LA BIENVENIDA', 'Tu cielo te espera', 'Ximo es un espacio de ensueño para tus recuerdos, historias y esencia. En un momento, haremos que tu mundo se sienta como en casa.', 'Tardarás unos 60 segundos ✦',
+    'TE DAMOS LA BIENVENIDA', 'Tu cielo te espera', 'Storigam es un espacio de ensueño para tus recuerdos, historias y esencia. En un momento, haremos que tu mundo se sienta como en casa.', 'Tardarás unos 60 segundos ✦',
     'TU VIBRA', '¿Cómo se siente tu cielo hoy?', 'Elige el ánimo que mejor encaje. Puedes cambiarlo cuando quieras.', 'TU CONSTELACIÓN', '¿Qué tipo de habitante del cielo eres?',
     'TU PRIMERA FRASE', 'Escribe una frase sobre hoy', 'Solo una frase sincera. Será tu primera entrada del diario, completamente privada.', 'Hoy me siento…',
     'TU CIELO ESTÁ LISTO', 'Te damos la bienvenida, {{type}}', 'Tu cielo está {{mood}} y te espera. Tu constelación ilumina el camino. Que comience el viaje.', 'Habitante del cielo',
@@ -384,7 +384,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   tr: [
     'Atla', 'Gökyüzüne ulaşılamadı. Bağlantını kontrol edip tekrar dene.', '← Geri', 'Gökyüzünü başlat →', 'Ruh hâlini seç →', 'Ben buyum →',
     'İlk cümlemi kaydet →', 'Şimdilik geç →', 'Gökyüzün ayarlanıyor…', 'Tekrar dene →', 'Gökyüzüne gir ✦', 'Çıkış yap ve tekrar dene',
-    'HOŞ GELDİN', 'Gökyüzün seni bekliyor', 'Ximo; anıların, hikâyelerin ve ruhun için düş gibi bir alan. Birazdan dünyanı sana yuva gibi hissettireceğiz.', 'Yaklaşık 60 saniye sürer ✦',
+    'HOŞ GELDİN', 'Gökyüzün seni bekliyor', 'Storigam; anıların, hikâyelerin ve ruhun için düş gibi bir alan. Birazdan dünyanı sana yuva gibi hissettireceğiz.', 'Yaklaşık 60 saniye sürer ✦',
     'ENERJİN', 'Gökyüzün bugün nasıl hissediyor?', 'Şu ana uyan ruh hâlini seç. İstediğin zaman değiştirebilirsin.', 'TAKIM YILDIZIN', 'Nasıl bir gökyüzü çocuğusun?',
     'İLK CÜMLEN', 'Bugün hakkında bir cümle yaz', 'İçten tek bir cümle. İlk günlük girişin olacak ve tamamen gizli kalacak.', 'Bugün hissediyorum ki…',
     'GÖKYÜZÜN HAZIR', 'Hoş geldin, {{type}}', 'Gökyüzün {{mood}} ve seni bekliyor. Takım yıldızın yolunu aydınlatıyor. Yolculuk başlasın.', 'Gökyüzü çocuğu',
@@ -395,7 +395,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   fr: [
     'Passer', 'Impossible de rejoindre le ciel. Vérifiez votre connexion et réessayez.', '← Retour', 'Commencer votre ciel →', 'Choisir votre humeur →', 'C’est moi →',
     'Enregistrer ma première phrase →', 'Passer pour le moment →', 'Préparation de votre ciel…', 'Réessayer →', 'Entrer dans votre ciel ✦', 'Se déconnecter et réessayer',
-    'BIENVENUE', 'Votre ciel vous attend', 'Ximo est un espace rêvé pour vos souvenirs, vos histoires et votre âme. Dans un instant, votre monde vous semblera comme chez vous.', 'Environ 60 secondes ✦',
+    'BIENVENUE', 'Votre ciel vous attend', 'Storigam est un espace rêvé pour vos souvenirs, vos histoires et votre âme. Dans un instant, votre monde vous semblera comme chez vous.', 'Environ 60 secondes ✦',
     'VOTRE VIBE', 'Quelle est l’ambiance de votre ciel aujourd’hui ?', 'Choisissez l’humeur qui vous correspond. Vous pourrez la modifier à tout moment.', 'VOTRE CONSTELLATION', 'Quel genre d’enfant du ciel êtes-vous ?',
     'VOTRE PREMIÈRE PHRASE', 'Écrivez une phrase sur aujourd’hui', 'Une seule phrase sincère. Elle deviendra votre première entrée de journal, entièrement privée.', 'Aujourd’hui, je me sens…',
     'VOTRE CIEL EST PRÊT', 'Bienvenue, {{type}}', 'Votre ciel est {{mood}} et vous attend. Votre constellation éclaire le chemin. Que le voyage commence.', 'Enfant du ciel',
@@ -406,7 +406,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   de: [
     'Überspringen', 'Der Himmel ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut.', '← Zurück', 'Deinen Himmel beginnen →', 'Stimmung wählen →', 'Das bin ich →',
     'Erste Zeile speichern →', 'Vorerst überspringen →', 'Dein Himmel wird eingerichtet…', 'Erneut versuchen →', 'Deinen Himmel betreten ✦', 'Abmelden und erneut versuchen',
-    'WILLKOMMEN', 'Dein Himmel wartet', 'Ximo ist ein verträumter Ort für deine Erinnerungen, Geschichten und deine Seele. Gleich fühlt sich deine Welt wie ein Zuhause an.', 'Dauert etwa 60 Sekunden ✦',
+    'WILLKOMMEN', 'Dein Himmel wartet', 'Storigam ist ein verträumter Ort für deine Erinnerungen, Geschichten und deine Seele. Gleich fühlt sich deine Welt wie ein Zuhause an.', 'Dauert etwa 60 Sekunden ✦',
     'DEIN VIBE', 'Wie fühlt sich dein Himmel heute an?', 'Wähle die passende Stimmung. Du kannst sie jederzeit ändern.', 'DEIN STERNBILD', 'Was für ein Himmelskind bist du?',
     'DEINE ERSTE ZEILE', 'Schreibe eine Zeile über heute', 'Nur ein ehrlicher Satz. Er wird dein erster Tagebucheintrag und bleibt ganz privat.', 'Heute fühle ich…',
     'DEIN HIMMEL IST BEREIT', 'Willkommen, {{type}}', 'Dein Himmel ist {{mood}} und wartet auf dich. Dein Sternbild weist dir den Weg. Das Abenteuer beginnt.', 'Himmelskind',
@@ -417,7 +417,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   pt: [
     'Pular', 'Não foi possível alcançar o céu. Verifique sua conexão e tente novamente.', '← Voltar', 'Começar seu céu →', 'Escolher seu humor →', 'Este sou eu →',
     'Salvar minha primeira frase →', 'Pular por enquanto →', 'Preparando seu céu…', 'Tentar novamente →', 'Entrar no seu céu ✦', 'Sair e tentar novamente',
-    'BOAS-VINDAS', 'Seu céu está esperando', 'Ximo é um espaço dos sonhos para suas memórias, histórias e alma. Em instantes, seu mundo vai parecer um lar.', 'Leva cerca de 60 segundos ✦',
+    'BOAS-VINDAS', 'Seu céu está esperando', 'Storigam é um espaço dos sonhos para suas memórias, histórias e alma. Em instantes, seu mundo vai parecer um lar.', 'Leva cerca de 60 segundos ✦',
     'SUA VIBE', 'Como está seu céu hoje?', 'Escolha o humor que combina agora. Você pode mudar quando quiser.', 'SUA CONSTELAÇÃO', 'Que tipo de criança do céu você é?',
     'SUA PRIMEIRA FRASE', 'Escreva uma frase sobre hoje', 'Só uma frase sincera. Ela será sua primeira entrada no diário, totalmente privada.', 'Hoje eu me sinto…',
     'SEU CÉU ESTÁ PRONTO', 'Boas-vindas, {{type}}', 'Seu céu está {{mood}} e esperando. Sua constelação ilumina o caminho. Que comece a jornada.', 'Criança do céu',
@@ -428,7 +428,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   ko: [
     '건너뛰기', '하늘에 연결할 수 없습니다. 연결을 확인하고 다시 시도하세요.', '← 뒤로', '나만의 하늘 시작 →', '기분 선택 →', '이게 나야 →',
     '첫 문장 저장 →', '지금은 건너뛰기 →', '하늘 설정 중…', '다시 시도 →', '하늘로 들어가기 ✦', '로그아웃 후 다시 시도',
-    '환영합니다', '당신의 하늘이 기다려요', 'Ximo는 추억과 이야기, 마음을 담는 꿈같은 공간이에요. 잠시 후면 내 세상이 집처럼 편안해질 거예요.', '약 60초 걸려요 ✦',
+    '환영합니다', '당신의 하늘이 기다려요', 'Storigam은 추억과 이야기, 마음을 담는 꿈같은 공간이에요. 잠시 후면 내 세상이 집처럼 편안해질 거예요.', '약 60초 걸려요 ✦',
     '나의 분위기', '오늘 하늘은 어떤 기분인가요?', '지금 어울리는 기분을 선택하세요. 언제든 바꿀 수 있어요.', '나의 별자리', '어떤 하늘 아이인가요?',
     '첫 문장', '오늘에 대해 한 문장 쓰기', '솔직한 한 문장만 적어 보세요. 완전히 비공개인 첫 일기 항목이 돼요.', '오늘 나는…',
     '하늘이 준비됐어요', '{{type}}님, 환영합니다', '당신의 하늘은 {{mood}}빛으로 기다리고 있어요. 별자리가 길을 밝혀 줍니다. 여정을 시작해요.', '하늘 아이',
@@ -439,7 +439,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   zh: [
     '跳过', '无法连接天空。请检查网络后重试。', '← 返回', '开启你的天空 →', '选择心情 →', '这就是我 →',
     '保存我的第一句话 →', '暂时跳过 →', '正在设置你的天空…', '重试 →', '进入你的天空 ✦', '退出登录并重试',
-    '欢迎', '你的天空正在等待', 'Ximo 是承载记忆、故事与心灵的梦幻空间。片刻之后，我们会让你的世界变得像家一样温暖。', '大约需要 60 秒 ✦',
+    '欢迎', '你的天空正在等待', 'Storigam 是承载记忆、故事与心灵的梦幻空间。片刻之后，我们会让你的世界变得像家一样温暖。', '大约需要 60 秒 ✦',
     '你的氛围', '今天你的天空感觉如何？', '选择此刻最贴合的心情，之后随时可以更改。', '你的星座', '你是哪种天空孩子？',
     '你的第一句话', '写一句关于今天的话', '只需一句真诚的话，它将成为完全私密的第一篇日记。', '今天我感觉…',
     '你的天空准备好了', '欢迎你，{{type}}', '你的天空充满{{mood}}，正等待着你。星座为你照亮道路。旅程开始吧。', '天空孩子',
@@ -450,7 +450,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   ru: [
     'Пропустить', 'Не удалось связаться с небом. Проверьте подключение и повторите попытку.', '← Назад', 'Начать своё небо →', 'Выбрать настроение →', 'Это я →',
     'Сохранить первую строку →', 'Пока пропустить →', 'Настройка неба…', 'Повторить →', 'Войти в своё небо ✦', 'Выйти и попробовать снова',
-    'ДОБРО ПОЖАЛОВАТЬ', 'Твоё небо ждёт', 'Ximo — волшебное место для воспоминаний, историй и души. Скоро твой мир станет по-настоящему родным.', 'Это займёт около 60 секунд ✦',
+    'ДОБРО ПОЖАЛОВАТЬ', 'Твоё небо ждёт', 'Storigam — волшебное место для воспоминаний, историй и души. Скоро твой мир станет по-настоящему родным.', 'Это займёт около 60 секунд ✦',
     'ТВОЁ НАСТРОЕНИЕ', 'Какое сегодня настроение у твоего неба?', 'Выбери подходящее настроение. Его можно изменить в любое время.', 'ТВОЁ СОЗВЕЗДИЕ', 'Какое ты дитя неба?',
     'ТВОЯ ПЕРВАЯ СТРОКА', 'Напиши одну строку о сегодняшнем дне', 'Всего одно искреннее предложение. Это будет первая запись в дневнике, полностью личная.', 'Сегодня я чувствую…',
     'ТВОЁ НЕБО ГОТОВО', 'Добро пожаловать, {{type}}', 'Твоё небо {{mood}} и ждёт тебя. Созвездие осветит путь. Пусть путешествие начнётся.', 'Дитя неба',
@@ -461,7 +461,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   ar: [
     'تخطٍ', 'تعذّر الوصول إلى السماء. تحقق من اتصالك وحاول مجددًا.', '← رجوع', 'ابدأ سماءك →', 'اختر حالتك المزاجية →', 'هذا أنا →',
     'احفظ أول سطر →', 'تخطَّ الآن →', 'جارٍ إعداد سمائك…', 'إعادة المحاولة →', 'ادخل إلى سمائك ✦', 'سجّل الخروج وحاول مجددًا',
-    'مرحبًا', 'سماؤك بانتظارك', 'Ximo مساحة حالمة لذكرياتك وقصصك وروحك. بعد لحظات، سنجعل عالمك يشبه البيت.', 'يستغرق نحو ٦٠ ثانية ✦',
+    'مرحبًا', 'سماؤك بانتظارك', 'Storigam مساحة حالمة لذكرياتك وقصصك وروحك. بعد لحظات، سنجعل عالمك يشبه البيت.', 'يستغرق نحو ٦٠ ثانية ✦',
     'أجواؤك', 'كيف تبدو سماؤك اليوم؟', 'اختر الحالة التي تناسبك الآن. يمكنك تغييرها في أي وقت.', 'كوكبتك', 'أي نوع من أبناء السماء أنت؟',
     'سطرُك الأول', 'اكتب سطرًا عن يومك', 'جملة صادقة واحدة فقط. ستكون أول تدوينة خاصة بك بالكامل.', 'أشعر اليوم…',
     'سماؤك جاهزة', 'مرحبًا بك، {{type}}', 'سماؤك {{mood}} وتنتظرك. كوكبتك تنير الطريق. لتبدأ الرحلة.', 'ابن السماء',
@@ -472,7 +472,7 @@ const onboardingRows: Record<Locale, readonly string[]> = {
   it: [
     'Salta', 'Impossibile raggiungere il cielo. Controlla la connessione e riprova.', '← Indietro', 'Inizia il tuo cielo →', 'Scegli il tuo umore →', 'Sono io →',
     'Salva la mia prima frase →', 'Salta per ora →', 'Preparazione del cielo…', 'Riprova →', 'Entra nel tuo cielo ✦', 'Esci e riprova',
-    'BENVENUTO', 'Il tuo cielo ti aspetta', 'Ximo è uno spazio da sogno per ricordi, storie e anima. Tra poco il tuo mondo ti sembrerà casa.', 'Ci vogliono circa 60 secondi ✦',
+    'BENVENUTO', 'Il tuo cielo ti aspetta', 'Storigam è uno spazio da sogno per ricordi, storie e anima. Tra poco il tuo mondo ti sembrerà casa.', 'Ci vogliono circa 60 secondi ✦',
     'LA TUA VIBE', 'Che atmosfera ha il tuo cielo oggi?', 'Scegli l’umore che ti rappresenta. Puoi cambiarlo quando vuoi.', 'LA TUA COSTELLAZIONE', 'Che tipo di figlio del cielo sei?',
     'LA TUA PRIMA FRASE', 'Scrivi una frase su oggi', 'Solo una frase sincera. Sarà la tua prima voce del diario, completamente privata.', 'Oggi mi sento…',
     'IL TUO CIELO È PRONTO', 'Benvenuto, {{type}}', 'Il tuo cielo è {{mood}} e ti aspetta. La tua costellazione illumina la via. Che il viaggio abbia inizio.', 'Figlio del cielo',

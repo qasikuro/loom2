@@ -110,7 +110,7 @@ export default function ReelsScreen() {
     const path = post.bookId
       ? `book-public?bookId=${encodeURIComponent(post.bookId)}`
       : `story/${encodeURIComponent(post.id)}`;
-    const appLink = `sky-journal:///${path}`;
+    const appLink = `storigam:///${path}`;
     const mediaLink = post.contentType === 'video' && post.videoUri?.startsWith('https://')
       ? post.videoUri
       : null;

@@ -12,8 +12,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SecureImage as Image } from '@/components/SecureImage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   KeyboardAvoidingView,

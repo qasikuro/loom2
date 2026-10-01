@@ -136,7 +136,7 @@ router.post("/notify/ping-friends", requireAuth, async (req, res) => {
         },
         body: JSON.stringify(chunk.map(token => ({
           to:    token,
-          title: '✨ Sky Journal',
+          title: '✨ Storigam',
           body:  `${senderName} wants you online right now`,
           data:  { type: 'ping', userId },
           sound: 'default',

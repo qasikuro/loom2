@@ -3,7 +3,6 @@ import { useAuth } from '@clerk/expo';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  ActivityIndicator,
   Animated,
   Easing,
   Platform,

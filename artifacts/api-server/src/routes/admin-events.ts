@@ -133,7 +133,7 @@ router.delete("/admin/events/:id", requireAdmin, async (req: Request, res: Respo
 
 // ── AI inventory generation ────────────────────────────────────────────────────
 
-const AI_SYSTEM = `You are the content designer for Sky Journal — a dreamy, Sky: Children of the Light-inspired mobile app with a soft aesthetic. You design reward inventories for in-game events.
+const AI_SYSTEM = `You are the content designer for Storigam — a dreamy, Sky: Children of the Light-inspired mobile app with a soft aesthetic. You design reward inventories for in-game events.
 
 Respond ONLY with valid JSON: an array of inventory items. No markdown fences. No explanation. Just the array.
 
@@ -152,7 +152,7 @@ router.post("/admin/events/generate-inventory", requireAdmin, requireAiAccess, a
 
   const { title, description, theme, extra } = parsed.data;
 
-  const userPrompt = `Design a reward inventory for this Sky Journal event:
+  const userPrompt = `Design a reward inventory for this Storigam event:
 
 Title: ${title}
 Theme: ${theme}

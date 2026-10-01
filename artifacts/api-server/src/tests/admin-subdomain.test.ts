@@ -46,7 +46,7 @@ describe("custom domain root routing", () => {
     for (const host of ["notmyadmin.storigam.com", "www2.storigam.com"]) {
       const response = await request(app).get("/").set("Host", host);
       expect(response.status).toBe(200);
-      expect(response.text).toContain("GameJo");
+      expect(response.text).toContain("Storigam");
     }
   });
 

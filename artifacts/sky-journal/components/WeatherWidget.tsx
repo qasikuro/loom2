@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
+import { StyleSheet, Text, View } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { useWeather } from '@/hooks/useWeather';
 

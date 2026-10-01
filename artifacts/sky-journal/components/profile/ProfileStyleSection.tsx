@@ -9,9 +9,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Images } from '@/assets/images/index';
 import { Video, ResizeMode } from 'expo-av';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import React, { useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Animated,
   Modal,
   Pressable,

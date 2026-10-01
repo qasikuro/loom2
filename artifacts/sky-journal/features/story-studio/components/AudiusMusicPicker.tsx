@@ -1,9 +1,9 @@
 import { apiFetch } from '@/context/AppContext';
 import { Icon } from '@/components/Icon';
+import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { registerNativeSound, unregisterNativeSound } from '@/utils/soundRegistry';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   Image,
   Modal,

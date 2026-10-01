@@ -300,7 +300,7 @@ router.post("/admin/users/:id/badges/:badgeId", requireAdmin, async (req: Reques
     await db.insert(notificationsTable).values({
       userId:    targetId,
       actorId:   "system",
-      actorName: "Sky Journal",
+      actorName: "Storigam",
       type:      "badge_granted",
       refId:     badge.slug,
       title:     `${badge.emoji} You've been granted the ${badge.name} badge!`,
@@ -310,7 +310,7 @@ router.post("/admin/users/:id/badges/:badgeId", requireAdmin, async (req: Reques
     // Push notification (fire-and-forget)
     sendPushNotification(targetId, {
       title: `${badge.emoji} ${badge.name} Badge Granted!`,
-      body:  `You've been awarded the ${badge.name} badge on Sky Journal!`,
+      body:  `You've been awarded the ${badge.name} badge on Storigam!`,
     }).catch(() => {});
 
     req.log.info({ targetId, badgeId, slug: badge.slug }, "Admin granted badge");
@@ -342,7 +342,7 @@ router.delete("/admin/users/:id/badges/:badgeId", requireAdmin, async (req: Requ
     await db.insert(notificationsTable).values({
       userId:    targetId,
       actorId:   "system",
-      actorName: "Sky Journal",
+      actorName: "Storigam",
       type:      "badge_removed",
       refId:     badge.slug,
       title:     `Your ${badge.name} badge has been removed.`,
