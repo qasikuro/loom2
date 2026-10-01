@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.98.0",
-    "@clerk/express": "^2.1.12",
-    "@clerk/shared": "^4.10.2",
+    "@clerk/express": "^2.1.73",
+    "@clerk/shared": "^4.37.0",
     "@google-cloud/storage": "^7.19.0",
     "@replit/connectors-sdk": "^0.4.3",
     "@workspace/api-zod": "workspace:*",

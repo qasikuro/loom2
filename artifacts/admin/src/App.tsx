@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { ClerkProvider, SignIn, useAuth, useUser } from "@clerk/clerk-react";
+import { ClerkProvider, SignIn, useAuth, useUser } from "@clerk/react";
 import {
   Activity,
   BarChart3,
@@ -392,5 +392,5 @@ export default function App() {
   }, []);
   if (keyError) return <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6 text-sm text-destructive"><div className="flex items-center gap-2"><CircleHelp size={16} />Failed to connect to API server.</div></div>;
   if (!publishableKey) return <LoadingScreen label="Connecting to Storigam" />;
-  return <ClerkProvider publishableKey={publishableKey} routerPush={() => {}} routerReplace={() => {}} localization={{ signIn: { start: { title: "Sign in to Storigam Admin", titleCombined: "Sign in to Storigam Admin" } } }}><AdminApp /></ClerkProvider>;
+  return <ClerkProvider publishableKey={publishableKey} proxyUrl={import.meta.env.VITE_CLERK_PROXY_URL} routerPush={() => {}} routerReplace={() => {}} localization={{ signIn: { start: { title: "Sign in to Storigam Admin", titleCombined: "Sign in to Storigam Admin" } } }}><AdminApp /></ClerkProvider>;
 }
