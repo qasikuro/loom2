@@ -301,7 +301,7 @@ export default function DiscoverScreen() {
                 </Text>
                 <Text style={[
                   styles.tabText,
-                  { color: active ? '#C8B0FF' : 'rgba(200,184,232,0.55)' },
+                  { color: active ? '#F2ECFF' : 'rgba(237,232,255,0.82)' },
                 ]}>
                   {t(`discoverLog.tab${tab}`)}
                 </Text>
@@ -456,9 +456,9 @@ export default function DiscoverScreen() {
             <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(100,60,220,0.18)', top: -40, right: -20, pointerEvents: 'none' }} />
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
               <Icon name="star" size={16} color="#C8A84B" />
-              <Text style={styles.guideBannerTitle}>{t('discoverLog.guidesTitle')}</Text>
+              <Text style={[styles.guideBannerTitle, { color: colors.foreground }]}>{t('discoverLog.guidesTitle')}</Text>
             </View>
-            <Text style={styles.guideBannerSub}>
+            <Text style={[styles.guideBannerSub, { color: colors.mutedForeground }]}>
               {t('discoverLog.guidesSubtitle')}
             </Text>
           </LinearGradient>
@@ -466,23 +466,32 @@ export default function DiscoverScreen() {
           {/* Topic filter chips */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.guideTopicRow}>
             <TouchableOpacity
-              style={[styles.guideTopicChip, !guideTopicFilter && { backgroundColor: 'rgba(155,120,232,0.22)', borderColor: 'rgba(155,120,232,0.55)' }, !guideTopicFilter ? {} : { borderColor: 'rgba(200,184,232,0.18)' }]}
+              style={[
+                styles.guideTopicChip,
+                guideTopicFilter
+                  ? { backgroundColor: colors.card, borderColor: colors.border }
+                  : { backgroundColor: `${colors.tint}18`, borderColor: `${colors.tint}70` },
+              ]}
               onPress={() => { setGuideTopicFilter(null); loadGuides(null, guideAvailNow); Haptics.selectionAsync(); }}
               activeOpacity={0.8}
             >
-              <Text style={[styles.guideTopicText, { color: guideTopicFilter ? 'rgba(200,184,232,0.55)' : '#C8B8E8' }]}>{t('discoverLog.allTopics')}</Text>
+              <Text style={[styles.guideTopicText, { color: guideTopicFilter ? colors.mutedForeground : colors.tint }]}>{t('discoverLog.allTopics')}</Text>
             </TouchableOpacity>
             {GUIDE_TOPICS.map(topic => {
               const active = guideTopicFilter === topic;
-              const col    = TOPIC_COLORS[topic] ?? '#9878D8';
               return (
                 <TouchableOpacity
                   key={topic}
-                  style={[styles.guideTopicChip, active ? { backgroundColor: `${col}22`, borderColor: `${col}55` } : { borderColor: 'rgba(200,184,232,0.14)' }]}
+                  style={[
+                    styles.guideTopicChip,
+                    active
+                      ? { backgroundColor: `${colors.tint}18`, borderColor: `${colors.tint}70` }
+                      : { backgroundColor: colors.card, borderColor: colors.border },
+                  ]}
                   onPress={() => { const next = active ? null : topic; setGuideTopicFilter(next); loadGuides(next, guideAvailNow); Haptics.selectionAsync(); }}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.guideTopicText, { color: active ? col : 'rgba(200,184,232,0.55)' }]}>{t(`discoverLog.topic${GUIDE_TOPICS.indexOf(topic)}`)}</Text>
+                  <Text style={[styles.guideTopicText, { color: active ? colors.tint : colors.mutedForeground }]}>{t(`discoverLog.topic${GUIDE_TOPICS.indexOf(topic)}`)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -490,12 +499,17 @@ export default function DiscoverScreen() {
 
           {/* Available now toggle */}
           <TouchableOpacity
-            style={[styles.guideAvailToggle, guideAvailNow ? { backgroundColor: 'rgba(80,200,130,0.14)', borderColor: 'rgba(80,200,130,0.40)' } : { borderColor: 'rgba(200,184,232,0.14)' }]}
+            style={[
+              styles.guideAvailToggle,
+              guideAvailNow
+                ? { backgroundColor: 'rgba(80,200,130,0.14)', borderColor: 'rgba(80,200,130,0.40)' }
+                : { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
             onPress={() => { const next = !guideAvailNow; setGuideAvailNow(next); loadGuides(guideTopicFilter, next); Haptics.selectionAsync(); }}
             activeOpacity={0.8}
           >
             <View style={[styles.availDot, { backgroundColor: guideAvailNow ? '#60D890' : '#808090' }]} />
-            <Text style={[styles.guideAvailText, { color: guideAvailNow ? '#70E8A0' : 'rgba(200,184,232,0.55)' }]}>
+            <Text style={[styles.guideAvailText, { color: guideAvailNow ? colors.tint : colors.mutedForeground }]}>
               {guideAvailNow ? t('discoverLog.availableNow') : t('discoverLog.allGuides')}
             </Text>
           </TouchableOpacity>
@@ -514,20 +528,20 @@ export default function DiscoverScreen() {
             </View>
           ) : guidesData.length === 0 ? (
             <View style={styles.emptyWrap}>
-              <View style={[styles.emptyIconBox, { backgroundColor: 'rgba(155,120,232,0.12)' }]}>
-                <Icon name="star" size={30} color="rgba(155,120,232,0.6)" />
+            <View style={[styles.emptyIconBox, { backgroundColor: `${colors.tint}12` }]}>
+              <Icon name="star" size={30} color={colors.tint} />
               </View>
               {guideTopicFilter ? (
                 <>
-                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>{t('discoverLog.noGuidesForTopic')}</Text>
-                  <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discoverLog.noGuidesForTopic')}</Text>
+                  <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
                     {t('discoverLog.noGuidesTopic', { topic: t(`discoverLog.topic${GUIDE_TOPICS.indexOf(guideTopicFilter as typeof GUIDE_TOPICS[number])}`) })}
                   </Text>
                 </>
               ) : (
                 <>
-                  <Text style={[styles.emptyTitle, { color: 'rgba(220,210,255,0.90)' }]}>{t('discoverLog.guidesUnavailable')}</Text>
-                  <Text style={[styles.emptyBody, { color: 'rgba(200,184,232,0.55)' }]}>
+                  <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discoverLog.guidesUnavailable')}</Text>
+                  <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
                     {t('discoverLog.guidesUnavailableBody')}
                   </Text>
                 </>
@@ -541,7 +555,7 @@ export default function DiscoverScreen() {
                 return (
                   <TouchableOpacity
                     key={g.userId}
-                    style={styles.guideCard}
+                    style={[styles.guideCard, { backgroundColor: colors.card, borderColor: colors.border }]}
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: g.userId } } as any)}
                     activeOpacity={0.88}
@@ -556,32 +570,32 @@ export default function DiscoverScreen() {
                       {!g.avatarUri && (
                         <Text style={styles.guideCardInitial}>{g.name.charAt(0).toUpperCase()}</Text>
                       )}
-                      <View style={[styles.guideCardAvailDot, { backgroundColor: g.isAvailableNow ? '#60D890' : '#808090' }]} />
+                      <View style={[styles.guideCardAvailDot, { backgroundColor: g.isAvailableNow ? '#60D890' : '#808090', borderColor: colors.card }]} />
                     </View>
 
                     {/* Info */}
                      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                        <Text style={styles.guideCardName} numberOfLines={1}>{g.name}</Text>
+                        <Text style={[styles.guideCardName, { color: colors.foreground }]} numberOfLines={1}>{g.name}</Text>
                         {g.isAvailableNow && (
                           <View style={styles.guideNowBadge}>
-                            <Text style={styles.guideNowText}>{t('discoverLog.now')}</Text>
+                            <Text style={[styles.guideNowText, { color: colors.tint }]}>{t('discoverLog.now')}</Text>
                           </View>
                         )}
                       </View>
                       {g.username && (
-                        <Text style={styles.guideCardHandle}>@{g.username}</Text>
+                        <Text style={[styles.guideCardHandle, { color: colors.tint }]}>@{g.username}</Text>
                       )}
                       {!!g.guideBio && (
-                        <Text style={styles.guideCardBio} numberOfLines={2}>{g.guideBio}</Text>
+                        <Text style={[styles.guideCardBio, { color: colors.mutedForeground }]} numberOfLines={2}>{g.guideBio}</Text>
                       )}
                        {nextSession && (
-                         <View style={styles.guideSessionPreview}>
-                           <Text style={styles.guideSessionTitle} numberOfLines={1}>{nextSession.title}</Text>
-                           <Text style={styles.guideSessionDescription} numberOfLines={2}>{nextSession.description}</Text>
+                          <View style={[styles.guideSessionPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                            <Text style={[styles.guideSessionTitle, { color: colors.foreground }]} numberOfLines={1}>{nextSession.title}</Text>
+                            <Text style={[styles.guideSessionDescription, { color: colors.mutedForeground }]} numberOfLines={2}>{nextSession.description}</Text>
                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                             <Icon name="clock" size={11} color="#BFA8FF" />
-                             <Text style={styles.guideSessionTime}>
+                              <Icon name="clock" size={11} color={colors.tint} />
+                              <Text style={[styles.guideSessionTime, { color: colors.tint }]}>
                                 {new Date(nextSession.startsAt).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
                              </Text>
                            </View>
@@ -593,7 +607,7 @@ export default function DiscoverScreen() {
                             const col = TOPIC_COLORS[topic] ?? '#9878D8';
                             return (
                               <View key={topic} style={[styles.guideTagPill, { backgroundColor: `${col}16`, borderColor: `${col}30` }]}>
-                                <Text style={[styles.guideTagText, { color: col }]}>{topic}</Text>
+                                <Text style={[styles.guideTagText, { color: colors.foreground }]}>{topic}</Text>
                               </View>
                             );
                           })}
@@ -609,14 +623,14 @@ export default function DiscoverScreen() {
                       style={[
                         styles.followBtn,
                         isFollowing
-                          ? { backgroundColor: 'rgba(155,120,232,0.14)', borderColor: 'rgba(155,120,232,0.35)' }
-                          : { backgroundColor: 'rgba(155,120,232,0.85)', borderColor: 'rgba(155,120,232,0.85)' },
+                            ? { backgroundColor: `${colors.tint}18`, borderColor: `${colors.tint}55` }
+                            : { backgroundColor: colors.tint, borderColor: colors.tint },
                       ]}
                       onPress={() => handleGuideFollow(g)}
                       activeOpacity={0.8}
                     >
-                      <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={13} color={isFollowing ? '#C8B0FF' : '#fff'} />
-                      <Text style={[styles.followBtnText, { color: isFollowing ? '#C8B0FF' : '#fff' }]}>
+                      <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={13} color={isFollowing ? colors.tint : colors.primaryForeground} />
+                      <Text style={[styles.followBtnText, { color: isFollowing ? colors.tint : colors.primaryForeground }]}>
                         {isFollowing ? t('discoverLog.following') : t('discoverLog.follow')}
                       </Text>
                     </TouchableOpacity>
@@ -838,7 +852,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   tabIcon: { fontSize: 9, fontFamily: 'Satoshi-Bold' },
-  tabText: { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
+  tabText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
   sep: { height: StyleSheet.hairlineWidth },
 
@@ -914,18 +928,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   guideBannerTitle: {
-    fontSize: 17,
+    fontSize: 19,
     fontFamily: 'Satoshi-Bold',
-    color: 'rgba(220,210,255,0.95)',
     letterSpacing: -0.3,
   },
   guideBannerSub: {
-    fontSize: 12,
-    fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.55)',
+    fontSize: 14,
+    fontFamily: 'Satoshi-Medium',
     marginTop: 4,
-    fontStyle: 'italic',
-    lineHeight: 18,
+    lineHeight: 20,
   },
   guideTopicRow: {
     paddingHorizontal: 16,
@@ -938,10 +949,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: 20,
     borderWidth: 1,
-    backgroundColor: 'rgba(200,184,232,0.06)',
   },
   guideTopicText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Satoshi-Bold',
     letterSpacing: 0.1,
   },
@@ -958,16 +968,14 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   availDot: { width: 8, height: 8, borderRadius: 4 },
-  guideAvailText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  guideAvailText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   guideCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
     width: '100%', maxWidth: 760, alignSelf: 'center',
-    backgroundColor: 'rgba(30,20,60,0.65)',
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: 'rgba(155,120,232,0.18)',
     padding: 14,
   },
   guideCardAvatar: {
@@ -995,30 +1003,28 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: 'rgba(12,8,32,0.9)',
   },
-  guideCardName:   { fontSize: 14, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)', flexShrink: 1 },
-  guideCardHandle: { fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(155,120,232,0.70)' },
-  guideCardBio:    { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', lineHeight: 17 },
+  guideCardName:   { fontSize: 16, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
+  guideCardHandle: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  guideCardBio:    { fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 19 },
   guideSessionPreview: {
     marginTop: 5,
     padding: 9,
     borderRadius: 11,
-    backgroundColor: 'rgba(155,120,232,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(155,120,232,0.18)',
     gap: 3,
   },
-  guideSessionTitle: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(225,216,255,0.94)' },
-  guideSessionDescription: { fontSize: 10, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.62)' },
-  guideSessionTime: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: '#BFA8FF' },
+  guideSessionTitle: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  guideSessionDescription: { fontSize: 11, lineHeight: 15, fontFamily: 'Satoshi-Regular' },
+  guideSessionTime: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
   guideNowBadge: {
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: 8, backgroundColor: 'rgba(80,200,130,0.18)',
     borderWidth: 1, borderColor: 'rgba(80,200,130,0.40)',
   },
-  guideNowText: { fontSize: 9, fontFamily: 'Satoshi-Bold', color: '#70E8A0' },
+  guideNowText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
   guideTagPill:  { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
   guideTagText:  { fontSize: 10, fontFamily: 'Satoshi-Medium' },
-  guideTagMore:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)', alignSelf: 'center' },
+  guideTagMore:  { fontSize: 11, fontFamily: 'Satoshi-Regular', alignSelf: 'center' },
 
   // People
   peopleRoot: { flex: 1 },
