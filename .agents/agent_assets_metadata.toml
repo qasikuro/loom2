@@ -295,3 +295,17 @@ mtime_ms = 1790531289105
 storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a1cef6ff-3139-40c9-912c-4c93501f36f4/a59d3d17-175e-4835-8437-c7445abb1cc3/5474b604-313f-4e8c-a6da-2a6b51567349"
 storage_version_token = "1790531309359949"
 content_type = "application/pdf"
+
+[[outputs]]
+id = "dcvwp7fcUliNAI6Avb8Ut"
+uri = "file://deliverables/pending-suggested-tasks.pdf"
+type = "pdf"
+title = "Pending and Suggested Project Tasks"
+description = "Complete list: 9 pending tasks and 63 suggested tasks."
+logical_id = "99858d04-359a-4409-8872-6dcdf529185d"
+content_hash = "sha256:674e167e6e654f75931ebb5162d0e064d0356a89a456be53a98c568be8e3a408"
+size = 62637
+mtime_ms = 1790815704710
+storage_uri = "gcs://replit-rams-assets-pike/rams/assets/repl:a1cef6ff-3139-40c9-912c-4c93501f36f4/99858d04-359a-4409-8872-6dcdf529185d/b730c072-00e2-4feb-bb11-380f15e42872"
+storage_version_token = "1790815708179045"
+content_type = "application/pdf"
