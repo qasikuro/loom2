@@ -11,6 +11,7 @@ import { ConstellationProgressCard } from '@/components/profile/ConstellationPro
 import { TitlesGallerySection } from '@/components/profile/TitlesGallerySection';
 import { useTranslation } from 'react-i18next';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
+import { getAvailableProfileTitles } from '@/components/profile/profileTitles';
 import { useApp, apiFetch } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import * as Haptics from 'expo-haptics';
@@ -176,17 +177,7 @@ export default function ConstellationScreen() {
       <TitlePickerModal
         visible={showTitlePicker}
         constellation={constellation ?? null}
-        availableTitles={
-          constellation
-            ? constellation.unlockedStars.map((_, i) => {
-                const titles: Record<number, string> = {
-                  1: 'Star Wanderer', 2: 'Memory Keeper', 3: 'Rising Star',
-                  4: 'Dreamer',       5: 'Guiding Light', 6: 'Legend',
-                };
-                return titles[i + 1] ?? '';
-              }).filter(Boolean)
-            : []
-        }
+        availableTitles={getAvailableProfileTitles(constellation?.unlockedStars.length ?? 0)}
         saving={savingTitle}
         onSelect={handleSetActiveTitle}
         onClose={() => setShowTitlePicker(false)}

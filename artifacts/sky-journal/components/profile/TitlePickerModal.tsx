@@ -5,6 +5,7 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useColors } from '@/hooks/useColors';
+import { PROFILE_TITLE_CATALOG } from './profileTitles';
 
 interface Props {
   visible: boolean;
@@ -20,6 +21,8 @@ export function TitlePickerModal({ visible, constellation, availableTitles, savi
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  const availableTitleSet = new Set(availableTitles);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
@@ -37,19 +40,64 @@ export function TitlePickerModal({ visible, constellation, availableTitles, savi
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.content}
           >
-          <Text style={[styles.heading, { color: colors.foreground }]}>{t('components.titlePicker.heading')}</Text>
-          {availableTitles.map(title => {
-            const active = constellation?.activeTitle === title;
+          <Text style={[styles.heading, { color: colors.foreground }]}>
+            {t('components.titlePicker.heading')}
+          </Text>
+          <Text style={[styles.intro, { color: colors.mutedForeground }]}>
+            Titles unlock as you earn constellation stars. Choose any title you have unlocked.
+          </Text>
+          {availableTitles.length === 0 && (
+            <View style={[styles.emptyHint, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <Text style={[styles.emptyHintText, { color: colors.foreground }]}>
+                Unlock your first constellation star to earn your first profile title.
+              </Text>
+            </View>
+          )}
+          {PROFILE_TITLE_CATALOG.map(({ name, meaning, requiredStars }) => {
+            const unlocked = availableTitleSet.has(name);
+            const active = constellation?.activeTitle === name;
+            const status = active ? 'Selected' : unlocked ? 'Unlocked' : 'Locked';
+
             return (
-              <TouchableOpacity key={title} onPress={() => onSelect(title)} disabled={saving}
+              <TouchableOpacity
+                key={name}
+                testID={`profile-title-${name.toLowerCase().replaceAll(' ', '-')}`}
+                accessibilityRole="button"
+                accessibilityLabel={`${name}. ${meaning}. ${unlocked ? 'Unlocked' : `Unlock with ${requiredStars} constellation star${requiredStars === 1 ? '' : 's'}`}`}
+                accessibilityState={{ disabled: !unlocked || saving, selected: active }}
+                onPress={() => onSelect(name)}
+                disabled={!unlocked || saving}
                 style={[
                   styles.titleRow,
                   { backgroundColor: colors.muted, borderColor: colors.border },
                   active && { backgroundColor: `${colors.gold}18`, borderColor: `${colors.gold}55` },
+                  !unlocked && styles.lockedTitleRow,
                 ]}
               >
-                <Text style={[styles.titleText, { color: colors.foreground }]} numberOfLines={2}>✦ {title}</Text>
-                {active && <Icon name="check" size={14} color={colors.gold} />}
+                <View style={styles.titleCopy}>
+                  <Text style={[styles.titleText, { color: colors.foreground }]}>{name}</Text>
+                  <Text style={[styles.meaningText, { color: colors.mutedForeground }]}>{meaning}</Text>
+                  <Text style={[styles.unlockText, { color: unlocked ? colors.primary : colors.mutedForeground }]}>
+                    {unlocked
+                      ? active ? 'Currently selected' : 'Tap to choose'
+                      : `Unlock with ${requiredStars} constellation star${requiredStars === 1 ? '' : 's'}`}
+                  </Text>
+                </View>
+                <View style={[
+                  styles.status,
+                  {
+                    backgroundColor: active ? `${colors.gold}18` : unlocked ? `${colors.primary}18` : colors.card,
+                    borderColor: active ? `${colors.gold}55` : colors.border,
+                  },
+                ]}>
+                  {active && <Icon name="check" size={11} color={colors.gold} />}
+                  <Text style={[
+                    styles.statusText,
+                    { color: active ? colors.gold : unlocked ? colors.primary : colors.mutedForeground },
+                  ]}>
+                    {status}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
@@ -66,6 +114,15 @@ const styles = StyleSheet.create({
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, borderTopWidth: 1 },
   content: { gap: 10 },
   heading: { fontFamily: 'Satoshi-Bold', fontSize: 16, marginBottom: 4 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 13, borderRadius: 12, borderWidth: 1 },
-  titleText: { flex: 1, minWidth: 0, fontFamily: 'Satoshi-Medium', fontSize: 14 },
+  intro: { fontFamily: 'Satoshi-Regular', fontSize: 13, lineHeight: 18, marginBottom: 2 },
+  emptyHint: { borderWidth: 1, borderRadius: 12, padding: 12 },
+  emptyHintText: { fontFamily: 'Satoshi-Medium', fontSize: 12, lineHeight: 17 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1 },
+  lockedTitleRow: { opacity: 0.88 },
+  titleCopy: { flex: 1, minWidth: 0, gap: 3 },
+  titleText: { fontFamily: 'Satoshi-Bold', fontSize: 14 },
+  meaningText: { fontFamily: 'Satoshi-Regular', fontSize: 12, lineHeight: 16 },
+  unlockText: { fontFamily: 'Satoshi-Medium', fontSize: 11, marginTop: 2 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
+  statusText: { fontFamily: 'Satoshi-Bold', fontSize: 9, textTransform: 'uppercase' },
 });

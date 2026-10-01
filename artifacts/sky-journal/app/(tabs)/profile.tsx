@@ -26,13 +26,10 @@ import { ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection'
 import { ProfileStyleSection } from '@/components/profile/ProfileStyleSection';
 import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
+import { getAvailableProfileTitles } from '@/components/profile/profileTitles';
 import { useGalleryState } from '@/hooks/useGalleryState';
 import { loadOnboardingProgress, saveOnboardingProgress, type OnboardingProgress, type OnboardingStep } from '@/utils/onboardingProgress';
 
-const STAR_TITLES: Record<number, string> = {
-  1: 'Star Wanderer', 2: 'Memory Keeper',   3: 'Rising Star',
-  4: 'Dreamer', 5: 'Guiding Light', 6: 'Legend',
-};
 const XP_PER_LEVEL = 300;
 
 function CorruptionBanner({ onRefresh }: { onRefresh: () => void }) {
@@ -80,9 +77,7 @@ export default function CharacterScreen() {
   const xpBase          = rewardBalance?.stars ?? 0;
   const profileLevel    = Math.max(1, Math.floor(xpBase / XP_PER_LEVEL) + 1);
   const profileXpPct    = (xpBase % XP_PER_LEVEL) / XP_PER_LEVEL;
-  const availableTitles = constellation
-    ? (Array.from({ length: constellation.unlockedStars.length }, (_, i) => STAR_TITLES[i + 1]).filter(Boolean) as string[])
-    : [];
+  const availableTitles = getAvailableProfileTitles(constellation?.unlockedStars.length ?? 0);
   const avatarSource = character.avatarUri
     ? { uri: character.avatarUri }
     : activeOutfit?.imageUri ? { uri: activeOutfit.imageUri } : Images.character_default;
