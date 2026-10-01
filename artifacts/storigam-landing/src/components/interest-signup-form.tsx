@@ -2,10 +2,9 @@ import {
   useSubmitStorigamInterest,
   type StorigamInterestInputInterestsItem,
 } from "@workspace/api-client-react";
+import { Mail } from "lucide-react";
 import { useState } from "react";
 import type { LandingCopy } from "@/i18n/en";
-
-const interestOptions: StorigamInterestInputInterestsItem[] = ["beta_tester", "content_creator"];
 
 export default function InterestSignupForm({ copy }: { copy: LandingCopy }) {
   const submission = useSubmitStorigamInterest();

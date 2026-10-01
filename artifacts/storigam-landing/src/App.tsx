@@ -6,13 +6,11 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import NotFound from '@/pages/not-found';
 import InterestSignupForm from '@/components/interest-signup-form';
 import {
-  ArrowDownRight,
   ArrowUpRight,
   ImagePlus,
   MessageCircleMore,
   Sparkles,
   Globe2,
-  Mail,
   Menu,
   X,
 } from 'lucide-react';
