@@ -21,6 +21,12 @@ Ownership validation must recognize or reject every alias that the serving route
 
 **How to apply:** Test normalization against actual routing behavior, not only string examples. Explicitly reject ambiguous managed-looking paths rather than treating them as external media.
 
+When a private gallery photo is reused to create an outfit, the new outfit should start private; publishing it must remain a separate, explicit choice.
+
+**Why:** Reusing a gallery photo should not make it public as a side effect, since gallery content is private by default.
+
+**How to apply:** Prefilled outfit creation from gallery photos should use the private visibility setting while keeping the existing visibility control available.
+
 Story and outfit music streams do not accept uploaded image/video media references.
 
 **Why:** The current music feature selects external Audius streams. Accepting uploaded-media URLs there would allow a private read capability to be persisted and exposed through a public music object.

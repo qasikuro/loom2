@@ -96,6 +96,7 @@ export default function CreateOutfitScreen() {
     editDescription?: string;
     editStory?:       string;
     editImageUri?:    string;
+    initialImageUri?: string;
     editTags?:        string;
     editIsPublic?:    string;
     editMusic?:       string;
@@ -103,11 +104,14 @@ export default function CreateOutfitScreen() {
 
   const editId = params.editId;
   const isEditing = !!editId;
+  const initialIsPublic = params.editIsPublic === undefined
+    ? !params.initialImageUri
+    : params.editIsPublic !== 'false';
 
   const [name, setName]               = useState(params.editName ?? '');
   const [description, setDescription] = useState(params.editDescription ?? '');
   const [story, setStory]             = useState(params.editStory ?? '');
-  const [imageUri, setImageUri]       = useState<string | undefined>(params.editImageUri || undefined);
+  const [imageUri, setImageUri]       = useState<string | undefined>(params.editImageUri || params.initialImageUri || undefined);
   const [pendingUri, setPendingUri]   = useState<string | null>(null);
   const [uploading, setUploading]     = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>(() => {
@@ -125,7 +129,7 @@ export default function CreateOutfitScreen() {
     }
     catch { return null; }
   });
-  const [isPublic, setIsPublic]       = useState(params.editIsPublic !== 'false');
+  const [isPublic, setIsPublic]       = useState(initialIsPublic);
   const [music, setMusic] = useState<StoryMusic | null>(() => {
     try { return params.editMusic ? JSON.parse(params.editMusic) as StoryMusic : null; }
     catch { return null; }
@@ -147,7 +151,7 @@ export default function CreateOutfitScreen() {
     name:         params.editName        ?? '',
     description:  params.editDescription ?? '',
     story:        params.editStory       ?? '',
-    imageUri:     params.editImageUri    || undefined as string | undefined,
+    imageUri:     params.editImageUri    || params.initialImageUri || undefined as string | undefined,
     tags:         (() => {
       try {
         const all = params.editTags ? (JSON.parse(params.editTags) as string[]) : [];
@@ -161,7 +165,7 @@ export default function CreateOutfitScreen() {
         return vt ? vt.slice(5) : null as string | null;
       } catch { return null; }
     })(),
-    isPublic:     params.editIsPublic !== 'false',
+    isPublic:     initialIsPublic,
     music: (() => {
       try { return JSON.stringify(params.editMusic ? JSON.parse(params.editMusic) : null); }
       catch { return 'null'; }

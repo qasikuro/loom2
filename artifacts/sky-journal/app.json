@@ -52,6 +52,14 @@
         }
       ],
       [
+        "expo-media-library",
+        {
+          "photosPermission": false,
+          "savePhotosPermission": "Allow Storigam to save gallery photos to your library.",
+          "granularPermissions": []
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/images/storigam-notification.png",

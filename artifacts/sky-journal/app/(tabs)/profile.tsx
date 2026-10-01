@@ -300,7 +300,21 @@ export default function CharacterScreen() {
         character={character} deletingConfirm={deletingOutfitInModal} avatarSource={avatarSource}
         onClose={closeOutfit} onSetDisplay={handleSetDisplay} onDelete={handleModalDelete}
       />
-      <GalleryLightboxModal photo={selectedPhoto} deletingConfirm={deletingPhoto} onClose={closePhoto} onDelete={handleDeletePhoto} />
+      <GalleryLightboxModal
+        photo={selectedPhoto}
+        deletingConfirm={deletingPhoto}
+        onClose={closePhoto}
+        onDelete={handleDeletePhoto}
+        onUseAsOutfit={(photo) => {
+          closePhoto();
+          setTimeout(() => {
+            router.push({
+              pathname: '/create-outfit',
+              params: { initialImageUri: photo.imageUri },
+            } as never);
+          }, Platform.OS === 'ios' ? 400 : 50);
+        }}
+      />
       <MoodPickerModal visible={showMoodPicker} currentMood={character.mood ?? 'Dreamy'} onSelect={mood => setCharacter({ ...character, mood })} onClose={() => setShowMoodPicker(false)} />
       <TitlePickerModal visible={showTitlePicker} constellation={constellation} availableTitles={availableTitles} saving={savingTitle} onSelect={saveTitle} onClose={() => setShowTitlePicker(false)} />
       <ShopModal visible={showShop} onClose={() => setShowShop(false)} />
