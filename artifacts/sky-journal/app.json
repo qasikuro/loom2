@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Ximo",
-    "slug": "sky-journal",
+    "name": "storigam",
+    "slug": "storigam",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/ximo_icon.png",
-    "scheme": "sky-journal",
+    "icon": "./assets/images/icon.png",
+    "scheme": "storigam",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -15,18 +15,18 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.gamejo.app",
+      "bundleIdentifier": "com.storigam.app",
       "buildNumber": "1"
     },
     "android": {
-      "package": "com.gamejo.app",
+      "package": "com.storigam.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/ximo_adaptive_icon.png",
         "backgroundColor": "#F0EAFE"
       }
     },
     "web": {
-      "favicon": "./assets/images/ximo_icon.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       [
@@ -55,7 +55,9 @@
         {
           "android": {
             "packagingOptions": {
-              "exclude": ["META-INF/versions/9/OSGI-INF/MANIFEST.MF"]
+              "exclude": [
+                "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+              ]
             }
           }
         }
