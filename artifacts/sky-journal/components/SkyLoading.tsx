@@ -1,11 +1,12 @@
-import React from 'react';
-import { StyleSheet, Text, View, useWindowDimensions, type ActivityIndicatorProps, type ViewStyle } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, Platform, StyleSheet, Text, View, useWindowDimensions, type ActivityIndicatorProps, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import themeColors from '@/constants/colors';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { SkeletonCard } from '@/components/Skeleton';
-import { StorigamFluidBackdrop, StorigamLogo } from '@/components/StorigamBrand';
+import { StorigamFluidBackdrop, StorigamLogo, useBrandReducedMotion } from '@/components/StorigamBrand';
 
 /** The supplied Storigam symbol, animated without changing its orientation. */
 export function StorigamLoadingMark({
@@ -36,6 +37,61 @@ export function StorigamActivityIndicator({
       style={[styles.indicator, style]}
     >
       <StorigamLogo size={size === 'large' ? 36 : size === 'small' ? 20 : size} color={color} animated={animating} accessible={false} />
+    </View>
+  );
+}
+
+/** Compact black loader for opening a conversation. */
+export function ConversationLoadingOverlay() {
+  const { t } = useTranslation();
+  const reduceMotion = useBrandReducedMotion();
+  const position = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      position.setValue(0);
+      return;
+    }
+
+    const movement = Animated.loop(
+      Animated.sequence([
+        Animated.timing(position, {
+          toValue: 1,
+          duration: 620,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+        Animated.timing(position, {
+          toValue: 0,
+          duration: 620,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+      ]),
+    );
+    movement.start();
+    return () => {
+      movement.stop();
+      position.stopAnimation();
+    };
+  }, [position, reduceMotion]);
+
+  const translateX = position.interpolate({ inputRange: [0, 1], outputRange: [-9, 9] });
+  const label = t('common.loading');
+
+  return (
+    <View
+      style={[styles.conversationLoading, { backgroundColor: themeColors.dark.night }]}
+      accessible
+      accessibilityViewIsModal
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityState={{ busy: true }}
+    >
+      <Animated.View style={{ transform: [{ translateX }] }}>
+        <StorigamLogo size={38} animated={false} accessible={false} />
+      </Animated.View>
+      <Text style={styles.conversationLoadingLabel}>{label}</Text>
     </View>
   );
 }
@@ -81,5 +137,7 @@ export function LoadingCard({ style }: { style?: ViewStyle }) {
 const styles = StyleSheet.create({
   indicator: { alignItems: 'center', justifyContent: 'center' },
   overlay: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: 24 },
+  conversationLoading: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  conversationLoadingLabel: { color: themeColors.dark.foreground, fontSize: 12, lineHeight: 18, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4 },
   message: { zIndex: 1, fontSize: 14, lineHeight: 21, fontFamily: 'Satoshi-Medium', textAlign: 'center', paddingHorizontal: 24 },
 });

@@ -1,6 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
-import { SkyLoadingMark, SkyLoadingOverlay } from '@/components/SkyLoading';
+import { ConversationLoadingOverlay, SkyLoadingMark } from '@/components/SkyLoading';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal } from '@/components/Toast';
@@ -590,7 +590,7 @@ export default function MessagesScreen() {
 
       {/* ── Messages ─────────────────────────────────────────── */}
       {loading ? (
-        <SkyLoadingOverlay message={t('social.openingConversation')} />
+        <ConversationLoadingOverlay />
       ) : error ? (
         <View style={styles.centerWrap}>
           <Text style={{ color: MUTED, fontFamily: 'Satoshi-Regular' }}>{error}</Text>
