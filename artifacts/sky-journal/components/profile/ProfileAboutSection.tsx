@@ -265,7 +265,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
             <View style={s.guideHeroTitleRow}>
               <View style={s.guideHeroIconWrap}><Icon name="star" size={24} color="#D7BE65" /></View>
               <View style={s.guideHeroCopy}>
-                <Text style={s.guideHeroTitle}>{t('social.guide')}</Text>
+                <Text style={s.guideHeroTitle} numberOfLines={2}>{t('social.guide')}</Text>
                 <Text style={s.guideHeroSub}>
                   {character.isGuide ? t('components.about.guideActive') : t('components.about.guideHelp')}
                 </Text>
@@ -484,13 +484,13 @@ const s = StyleSheet.create({
   guidePlanet:      { position: 'absolute', width: 156, height: 156, borderRadius: 78, backgroundColor: 'rgba(139,88,224,0.12)', right: -22, bottom: -110 },
   guideSparkleOne:  { position: 'absolute', width: 4, height: 4, borderRadius: 2, backgroundColor: '#D7BE65', right: 121, top: 18 },
   guideSparkleTwo:  { position: 'absolute', width: 3, height: 3, borderRadius: 2, backgroundColor: '#BA9BEE', right: 102, top: 48 },
-  guideHeroRow:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  guideHeroRow:     { flexDirection: 'column', alignItems: 'stretch', gap: 12 },
   guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, minWidth: 0 },
-  guideHeroIconWrap:{ width: 50, height: 50, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
+  guideHeroIconWrap:{ width: 46, height: 46, flexShrink: 0, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
   guideHeroCopy:    { flex: 1, minWidth: 0 },
-  guideHeroTitle:   { fontSize: 20, fontFamily: 'Satoshi-Bold', color: '#F5F0FF', letterSpacing: -0.3 },
+  guideHeroTitle:   { fontSize: 18, flexShrink: 1, fontFamily: 'Satoshi-Bold', color: '#F5F0FF', letterSpacing: -0.3 },
   guideHeroSub:     { fontSize: 12, lineHeight: 16, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 3 },
-  guideHeroEnd:     { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  guideHeroEnd:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 },
   guideStatus:      { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 9, paddingVertical: 7 },
   guideStatusOn:    { borderColor: 'rgba(172,139,246,0.55)', backgroundColor: 'rgba(149,105,240,0.18)' },
   guideStatusDot:   { width: 7, height: 7, borderRadius: 4, backgroundColor: '#77718E' },

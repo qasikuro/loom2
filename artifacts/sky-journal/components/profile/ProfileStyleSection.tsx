@@ -389,19 +389,19 @@ export function ProfileStyleSection({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.myStories')}</Text>
             {stories.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-                <Text style={[s.countPillText, { color: '#B89AE8' }]}>{stories.length}</Text>
+              <View style={[s.countPill, { backgroundColor: colors.muted }]}>
+                <Text style={[s.countPillText, { color: colors.foreground }]}>{stories.length}</Text>
               </View>
             )}
           </View>
           <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}
+            style={[s.addBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
             onPress={() => { Haptics.selectionAsync(); router.push('/my-stories' as never); }}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon name="book-open" size={12} color="#B89AE8" />
-            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>{t('components.profileSection.seeAll')}</Text>
+            <Text style={[s.addBtnText, { color: colors.foreground }]}>{t('components.profileSection.seeAll')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -411,12 +411,12 @@ export function ProfileStyleSection({
           ))}
           {/* Add Story Card Placeholder */}
           <TouchableOpacity
-            style={[sc.card, { borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }]}
+            style={[sc.card, { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed', backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}
             onPress={() => router.push('/(tabs)/create' as never)}
             activeOpacity={0.75}
           >
-            <Icon name="plus" size={18} color="rgba(255,255,255,0.8)" />
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('components.profileSection.newStory')}</Text>
+            <Icon name="plus" size={20} color={colors.foreground} />
+            <Text style={{ color: colors.foreground, fontSize: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('components.profileSection.newStory')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -427,19 +427,19 @@ export function ProfileStyleSection({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
             {outfits.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-                <Text style={[s.countPillText, { color: '#B89AE8' }]}>{outfits.length}</Text>
+              <View style={[s.countPill, { backgroundColor: colors.muted }]}>
+                <Text style={[s.countPillText, { color: colors.foreground }]}>{outfits.length}</Text>
               </View>
             )}
           </View>
           <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}
+            style={[s.addBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
             onPress={() => router.push('/create-outfit' as never)}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon name="plus" size={13} color="#B89AE8" />
-            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>{t('components.profileSection.newOutfit')}</Text>
+            <Text style={[s.addBtnText, { color: colors.foreground }]}>{t('components.profileSection.newOutfit')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -449,7 +449,7 @@ export function ProfileStyleSection({
             return (
               <TouchableOpacity
                 key={outfit.id}
-                style={[s.outfitCard, { borderColor: isActive ? colors.primary : 'rgba(255,255,255,0.1)' }]}
+                style={[s.outfitCard, { borderColor: isActive ? colors.primary : colors.border }]}
                 onPress={() => openOutfit(outfit.id)}
                 activeOpacity={0.85}
               >
@@ -485,13 +485,13 @@ export function ProfileStyleSection({
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.galleryUsage')}</Text>
             {gallery.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-                <Text style={[s.countPillText, { color: '#B89AE8' }]}>{gallery.length}</Text>
+              <View style={[s.countPill, { backgroundColor: colors.muted }]}>
+                <Text style={[s.countPillText, { color: colors.foreground }]}>{gallery.length}</Text>
               </View>
             )}
           </View>
           <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)' }]}
+            style={[s.addBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
             onPress={handleAddGalleryPhoto}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -501,7 +501,7 @@ export function ProfileStyleSection({
             ) : (
               <Icon name="plus" size={13} color="#B89AE8" />
             )}
-            <Text style={[s.addBtnText, { color: '#B89AE8' }]}>{t('common.addPhoto')}</Text>
+            <Text style={[s.addBtnText, { color: colors.foreground }]}>{t('common.addPhoto')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -512,12 +512,12 @@ export function ProfileStyleSection({
             </TouchableOpacity>
           ))}
           <TouchableOpacity
-            style={[s.galleryThumb, { borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', borderStyle: 'dashed', backgroundColor: 'transparent', alignItems: 'center', justifyContent: 'center' }]}
+            style={[s.galleryThumb, { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed', backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}
             onPress={handleAddGalleryPhoto}
             activeOpacity={0.75}
           >
-            <Icon name="plus" size={18} color="rgba(255,255,255,0.8)" />
-            <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('common.addPhoto')}</Text>
+            <Icon name="plus" size={20} color={colors.foreground} />
+            <Text style={{ color: colors.foreground, fontSize: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('common.addPhoto')}</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -543,12 +543,12 @@ export function ProfileStyleSection({
 // ── Section styles ────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  section:       { marginBottom: 24 },
+  section:       { marginBottom: 28 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  sectionTitle:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  sectionTitle:  { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
   countPill:     { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   countPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 5, borderWidth: 1 },
+  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, paddingHorizontal: 12, minHeight: 36, borderWidth: 1 },
   addBtnText:    { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   scrollPad:     { paddingRight: 16, gap: 12 },
   outfitCard:    { width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },

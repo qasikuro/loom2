@@ -238,7 +238,7 @@ export default function CharacterScreen() {
         </View>
 
         {/* Section content - completely un-tabbed */}
-        <View style={[{ paddingHorizontal: 20, paddingTop: 12 }, screenW >= 760 && { maxWidth: 800, alignSelf: 'center', width: '100%' }]}>
+        <View style={[{ paddingHorizontal: 20, paddingTop: 18 }, screenW >= 760 && { maxWidth: 800, alignSelf: 'center', width: '100%' }]}>
           {onboardingProgress && onboardingProgress.completed.length < 4 && (
             <TouchableOpacity
               style={[s.setupCard, { borderColor: colors.border, backgroundColor: `${colors.primary}0D` }]}
@@ -319,18 +319,18 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
-  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 4, borderRadius: 16, borderWidth: 1, minWidth: 0 },
-  statCol:      { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 3 },
+  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 14, borderRadius: 18, borderWidth: 1, minWidth: 0 },
+  statCol:      { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 4, paddingVertical: 14, gap: 4 },
   statNum:      { fontSize: 21, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
-  statMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.0 },
+  statMeta:     { flexDirection: 'column', alignItems: 'center', gap: 4 },
+  statLabel:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2, textAlign: 'center' },
   statDivider:  { width: 1, marginVertical: 10 },
-  setupCard: { minHeight: 76, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(181,140,255,0.24)', backgroundColor: 'rgba(139,92,224,0.10)', padding: 13, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
+  setupCard: { minHeight: 76, borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   setupIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(181,140,255,0.14)' },
   setupTitle: { fontFamily: 'Satoshi-Bold', fontSize: 14 },
-  setupSubtitle: { fontFamily: 'Satoshi-Regular', fontSize: 11, marginTop: 3 },
-  setupButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 11, backgroundColor: '#8C68D8' },
-  setupButtonText: { color: '#fff', fontFamily: 'Satoshi-Bold', fontSize: 11 },
+  setupSubtitle: { fontFamily: 'Satoshi-Regular', fontSize: 12, marginTop: 3 },
+  setupButton: { paddingHorizontal: 14, minHeight: 40, justifyContent: 'center', borderRadius: 11, backgroundColor: '#8C68D8' },
+  setupButtonText: { fontFamily: 'Satoshi-Bold', fontSize: 12 },
   wornBanner:   { minHeight: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1 },
   wornBadge:    { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, marginBottom: 5, backgroundColor: 'rgba(232,120,156,0.13)', borderWidth: 1, borderColor: 'rgba(232,120,156,0.25)' },
   wornBadgeText:{ fontSize: 7, fontFamily: 'Satoshi-Bold', color: '#E88EAE', letterSpacing: 1.0 },

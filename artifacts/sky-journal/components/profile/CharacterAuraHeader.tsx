@@ -5,6 +5,8 @@ import React, { useEffect, useRef } from 'react';
 import {
   Animated, Easing, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
+import { useTheme } from '@/context/ThemeContext';
+import { useColors } from '@/hooks/useColors';
 import { ProfileEffect } from '@/components/ProfileEffect';
 import {
   ACCENT_CONFIGS, DEFAULT_AURA, FRAME_CONFIGS, MOOD_AURA, MOOD_ORBS,
@@ -126,6 +128,11 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }
   children: React.ReactNode;
 }) {
   const aura   = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const { isDark } = useTheme();
+  const colors = useColors();
+  const heroColors: React.ComponentProps<typeof LinearGradient>['colors'] = isDark
+    ? aura.gradient
+    : [colors.background, colors.card, `${aura.accent}25`];
   const { width: screenW } = useWindowDimensions();
   const breatheAnim   = useRef(new Animated.Value(0)).current;
   const particleAnims = useRef(
@@ -175,8 +182,8 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }
   const corner2Opacity = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.05, 0.15, 0.05] });
 
   return (
-    <View style={[s.header, { paddingTop, overflow: 'hidden' }]}>
-      <LinearGradient colors={aura.gradient} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+    <View style={[s.header, { paddingTop, overflow: 'hidden', backgroundColor: colors.background }]}>
+      <LinearGradient colors={heroColors} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
       {activeEffect && <ProfileEffect effectId={activeEffect} />}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.1, left: -screenW * 0.1, width: screenW * 1.2, height: screenW * 1.2, borderRadius: screenW * 0.6, backgroundColor: aura.accent, opacity: glow2Opacity, transform: [{ scale: glowScale }] }} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.4, left: screenW * 0.15, width: screenW * 0.70, height: screenW * 0.70, borderRadius: screenW * 0.35, backgroundColor: aura.accent, opacity: glowOpacity, transform: [{ scale: glowScale }] }} />
@@ -199,5 +206,5 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }
 export { ACCENT_CONFIGS, FRAME_CONFIGS };
 
 const s = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingBottom: 12 },
+  header: { paddingHorizontal: 20, paddingBottom: 16 },
 });
