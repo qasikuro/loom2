@@ -35,5 +35,5 @@
 - [Guide sessions use Campfire rooms](guide-session-campfire.md) — scheduling and attendance are separate, but every session enters one existing Campfire chat
 - [Landing page language bridge](landing-language-bridge.md) — native app language storage is invisible to the browser; pass locale in landing links and retain a web-side choice
 - [Admin email credential boundary](admin-email-credential-boundary.md) — Resend authentication lives in its Replit connector, not a browser or duplicate API-key secret
-- [Root route differs across environments](root-route-environment-variance.md) — development root and prior published root reached different artifacts; verify custom-domain routing in both
+- [Root route differs across environments](root-route-environment-variance.md) — custom-domain `/` can reach Expo or API; preserve host and manifest routing, then verify after DNS activation
 - [Media privacy boundary](media-privacy-boundary.md) — live publicity, owner-bound native read links, account isolation, and router-equivalent alias validation

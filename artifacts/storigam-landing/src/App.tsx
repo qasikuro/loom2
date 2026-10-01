@@ -328,10 +328,18 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 function App() {
+  const isCanonicalDomainRoot =
+    typeof window !== 'undefined' &&
+    window.location.hostname.toLowerCase() === 'www.storigam.com' &&
+    window.location.pathname === '/';
+  const routerBase = isCanonicalDomainRoot
+    ? ''
+    : import.meta.env.BASE_URL.replace(/\/$/, '');
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+        <WouterRouter base={routerBase}>
           <Router />
         </WouterRouter>
         <Toaster />

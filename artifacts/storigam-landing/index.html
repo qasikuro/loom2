@@ -9,10 +9,26 @@
     <meta property="og:title" content="Storigam | Stories made by gamers" />
     <meta property="og:description" content="Turn your gaming moments into stories. Save a screenshot, tell the moment, and share it with friends." />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.storigam.com/" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Storigam | Stories made by gamers" />
     <meta name="twitter:description" content="Turn your gaming moments into stories. Save a screenshot, tell the moment, and share it with friends." />
+    <link rel="canonical" href="https://www.storigam.com/" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <script>
+      (() => {
+        const host = window.location.hostname.toLowerCase();
+        const path = window.location.pathname.replace(/\/+$/, '') || '/';
+        if (
+          (host === 'storigam.com' || host === 'www.storigam.com') &&
+          path === '/storigam'
+        ) {
+          window.location.replace(
+            `https://www.storigam.com/${window.location.search}${window.location.hash}`,
+          );
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

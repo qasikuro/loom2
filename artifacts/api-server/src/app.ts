@@ -4,6 +4,9 @@ import express, {
   type Response,
   type NextFunction,
 } from "express";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import helmet from "helmet";
@@ -372,11 +375,20 @@ const LANDING_HTML = `<!DOCTYPE html>
 
 app.get("/", (req: Request, res: Response) => {
   // Custom domains attach to the whole published project, not a single artifact.
-  // Keep the existing Admin app and its Clerk session on this project's domain.
+  // Serve the Storigam landing page at its canonical www root without moving the
+  // landing artifact or taking the root path away from the Expo artifact.
   const host = req.get("host")?.split(":")[0]?.toLowerCase();
-  if (host === "storigam.com" || host === "www.storigam.com") {
+  if (host === "storigam.com") {
     res.setHeader("Cache-Control", "no-store");
-    res.redirect(301, "/storigam/");
+    res.redirect(301, "https://www.storigam.com/");
+    return;
+  }
+  if (host === "www.storigam.com") {
+    res.setHeader("Cache-Control", "no-store");
+    const landingIndexPath = process.env.STORIGAM_ROOT_LANDING_INDEX
+      ? path.resolve(process.env.STORIGAM_ROOT_LANDING_INDEX)
+      : fileURLToPath(new URL("./storigam-landing-index.html", import.meta.url));
+    res.type("html").send(readFileSync(landingIndexPath, "utf8"));
     return;
   }
   if (host === "myadmin.storigam.com") {

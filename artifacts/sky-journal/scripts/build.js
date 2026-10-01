@@ -1,6 +1,7 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 const { Readable } = require("stream");
 const { pipeline } = require("stream/promises");
 
@@ -28,6 +29,53 @@ function exitWithError(message) {
     metroProcess.kill();
   }
   process.exit(1);
+}
+
+function packageStorigamLandingRootPage() {
+  const tempBuildDir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "storigam-root-index-"),
+  );
+  try {
+    const build = spawnSync(
+      "pnpm",
+      [
+        "--filter",
+        "@workspace/storigam-landing",
+        "exec",
+        "vite",
+        "build",
+        "--config",
+        "vite.config.ts",
+        "--outDir",
+        tempBuildDir,
+      ],
+      {
+        cwd: workspaceRoot,
+        env: {
+          ...process.env,
+          NODE_ENV: "production",
+          PORT: "24248",
+          BASE_PATH: "/storigam/",
+        },
+        stdio: "inherit",
+      },
+    );
+    if (build.error) throw build.error;
+    if (build.status !== 0) {
+      throw new Error("Failed to build the Storigam root landing page.");
+    }
+
+    const sourceIndex = path.join(tempBuildDir, "index.html");
+    if (!fs.existsSync(sourceIndex)) {
+      throw new Error("The Storigam root landing page build produced no index.html.");
+    }
+    fs.copyFileSync(
+      sourceIndex,
+      path.join(projectRoot, "static-build", "storigam-landing-root.html"),
+    );
+  } finally {
+    fs.rmSync(tempBuildDir, { recursive: true, force: true });
+  }
 }
 
 function setupSignalHandlers() {
@@ -522,6 +570,7 @@ async function main() {
   const timestamp = `${Date.now()}-${process.pid}`;
 
   prepareDirectories(timestamp);
+  packageStorigamLandingRootPage();
   clearMetroCache();
 
   await startMetro(domain, expoPublicReplId);

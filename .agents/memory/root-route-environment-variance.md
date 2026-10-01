@@ -3,8 +3,8 @@ name: Root route differs across environments
 description: Why host-based root routing needs checks against both the workspace preview and the published site.
 ---
 
-The development preview's root request has reached the Expo artifact, while the previously published site's root has served the API artifact's landing page. Do not assume one handler covers both.
+The workspace preview and published custom domain can route `/` to different artifacts. Root traffic may reach the Expo server or the API server, so do not assume one handler covers every deployment. In this project, Ximo keeps the default Expo root and Storigam must be selected only for the exact `www.storigam.com` host; Expo platform-manifest requests must retain priority.
 
 **Why:** Published artifact routing may reflect a different build or artifact set than the current development proxy. A root redirect tested in one environment can miss the other, and publishing may change which artifact serves the main domain.
 
-**How to apply:** For custom-domain root changes, probe development and the existing published domain separately, preserve the normal-domain behavior in whichever root handlers may receive traffic, and verify the live routes again after publishing and DNS activation.
+**How to apply:** For custom-domain root changes, identify every server that can receive `/`, test exact-host behavior and Expo manifest requests, keep artifact asset paths intact, and verify the live route again after publishing and DNS activation.

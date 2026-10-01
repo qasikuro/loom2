@@ -1,9 +1,11 @@
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { copyFile, mkdtemp, rm } from "node:fs/promises";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -118,6 +120,46 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  const landingBuildDir = await mkdtemp(
+    path.join(tmpdir(), "storigam-root-index-"),
+  );
+  try {
+    const landingBuild = spawnSync(
+      "pnpm",
+      [
+        "--filter",
+        "@workspace/storigam-landing",
+        "exec",
+        "vite",
+        "build",
+        "--config",
+        "vite.config.ts",
+        "--outDir",
+        landingBuildDir,
+      ],
+      {
+        cwd: path.resolve(artifactDir, "../.."),
+        env: {
+          ...process.env,
+          NODE_ENV: "production",
+          PORT: "24248",
+          BASE_PATH: "/storigam/",
+        },
+        stdio: "inherit",
+      },
+    );
+    if (landingBuild.error) throw landingBuild.error;
+    if (landingBuild.status !== 0) {
+      throw new Error("Failed to build the Storigam root landing page.");
+    }
+    await copyFile(
+      path.join(landingBuildDir, "index.html"),
+      path.join(distDir, "storigam-landing-index.html"),
+    );
+  } finally {
+    await rm(landingBuildDir, { recursive: true, force: true });
+  }
 }
 
 buildAll().catch((err) => {

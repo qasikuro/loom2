@@ -3,7 +3,7 @@
  *
  * Serves the output of build.js (static-build/) with two special routes:
  * - GET / or /manifest with expo-platform header → platform manifest JSON
- * - GET / without expo-platform → landing page HTML
+ * - GET / without expo-platform → host-specific landing page HTML
  * Everything else falls through to static file serving from ./static-build/.
  *
  * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
@@ -15,6 +15,10 @@ const path = require("path");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
 const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
+const STORIGAM_LANDING_TEMPLATE_PATH = path.resolve(
+  STATIC_ROOT,
+  "storigam-landing-root.html",
+);
 const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
 const STATIC_FILES = new Map();
 
@@ -105,6 +109,24 @@ function serveLandingPage(req, res, landingPageTemplate, appName) {
   res.end(html);
 }
 
+function getRequestHost(req) {
+  const forwardedHost = req.headers["x-forwarded-host"];
+  const rawHost = forwardedHost || req.headers.host || "";
+  return String(rawHost)
+    .split(",")[0]
+    .trim()
+    .replace(/:\d+$/, "")
+    .toLowerCase();
+}
+
+function serveStorigamLandingPage(res, landingPage) {
+  res.writeHead(200, {
+    "content-type": "text/html; charset=utf-8",
+    "cache-control": "no-store",
+  });
+  res.end(landingPage);
+}
+
 function serveStaticFile(urlPath, res) {
   let relativePath;
   try {
@@ -135,6 +157,10 @@ function serveStaticFile(urlPath, res) {
 }
 
 const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
+const storigamLandingPage = fs.readFileSync(
+  STORIGAM_LANDING_TEMPLATE_PATH,
+  "utf-8",
+);
 const appName = getAppName();
 
 const server = http.createServer((req, res) => {
@@ -152,9 +178,13 @@ const server = http.createServer((req, res) => {
     }
 
     if (pathname === "/") {
+      if (getRequestHost(req) === "www.storigam.com") {
+        return serveStorigamLandingPage(res, storigamLandingPage);
+      }
+
       // Replit custom domains route to the project as a whole. Send the admin
       // subdomain to the existing /admin/ artifact without changing Ximo's root.
-      if (req.headers.host?.split(":")[0]?.toLowerCase() === "myadmin.storigam.com") {
+      if (getRequestHost(req) === "myadmin.storigam.com") {
         res.writeHead(302, { Location: "/admin/", "Cache-Control": "no-store" });
         res.end();
         return;

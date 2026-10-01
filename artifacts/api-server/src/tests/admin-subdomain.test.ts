@@ -1,4 +1,5 @@
 import request from "supertest";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@clerk/express", () => ({
@@ -16,12 +17,28 @@ describe("custom domain root routing", () => {
     expect(response.headers["cache-control"]).toBe("no-store");
   });
 
-  it("routes both website domains to the landing page", async () => {
-    for (const host of ["storigam.com", "www.storigam.com"]) {
-      const response = await request(app).get("/").set("Host", host);
-      expect(response.status).toBe(301);
-      expect(response.headers.location).toBe("/storigam/");
+  it("redirects the apex domain to the canonical www root", async () => {
+    const response = await request(app).get("/").set("Host", "storigam.com");
+    expect(response.status).toBe(301);
+    expect(response.headers.location).toBe("https://www.storigam.com/");
+    expect(response.headers["cache-control"]).toBe("no-store");
+  });
+
+  it("serves the Storigam landing page at the canonical www root", async () => {
+    const fixturePath = fileURLToPath(
+      new URL("./fixtures/storigam-root-index.html", import.meta.url),
+    );
+    vi.stubEnv("STORIGAM_ROOT_LANDING_INDEX", fixturePath);
+
+    try {
+      const response = await request(app)
+        .get("/")
+        .set("Host", "www.storigam.com");
+      expect(response.status).toBe(200);
       expect(response.headers["cache-control"]).toBe("no-store");
+      expect(response.text).toContain("Storigam landing page fixture");
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 
