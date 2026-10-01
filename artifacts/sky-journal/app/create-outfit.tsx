@@ -27,7 +27,8 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
-import palette from '@/constants/colors';
+import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { AudiusMusicPicker } from '@/features/story-studio/components/AudiusMusicPicker';
@@ -44,6 +45,17 @@ const VIBE_TAGS = [
   { label: 'Ethereal',  color: '#77DDF6', icon: 'zap' },
 ];
 
+const LIGHT_TAG_COLORS: Record<string, string> = {
+  Casual: '#7044AF',
+  Formal: '#6847A2',
+  Dreamy: '#504A9C',
+  Adventure: '#1D7450',
+  Cozy: '#895000',
+  Dark: '#64499B',
+  Soft: '#A3346A',
+  Ethereal: '#126E83',
+};
+
 const VIBES = [
   { id: 'romantic',    label: 'Romantic',    symbol: '♡', color: '#FF89B0', desc: 'Hearts drift above your look' },
   { id: 'happy',       label: 'Happy',       symbol: '✦', color: '#FFD86F', desc: 'Sparkles burst around you' },
@@ -56,7 +68,8 @@ const VIBES = [
 ];
 
 export default function CreateOutfitScreen() {
-  const colors = palette.dark;
+  const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { t: tr } = useTranslation();
@@ -64,6 +77,18 @@ export default function CreateOutfitScreen() {
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = 24;
   const contentWidth = Math.min(windowWidth, 720);
+  const actionTextColor = isDark ? '#211342' : '#FFFFFF';
+  const headerButtonSurface = isDark ? '#201838' : colors.card;
+  const headerButtonBorder = isDark ? '#514073' : colors.border;
+  const photoCardSurface = isDark ? '#17132D' : colors.card;
+  const photoCardBorder = isDark ? '#453A64' : colors.border;
+  const pickerSurface = isDark ? '#1B1633' : colors.card;
+  const pickerBorder = isDark ? '#8F79BA' : colors.border;
+  const inputSurface = isDark ? '#1B1934' : colors.card;
+  const inputBorder = isDark ? '#493D66' : colors.border;
+  const headerGradient: [string, string, string] = isDark
+    ? ['#26164D', '#121027', colors.background]
+    : ['#EEE8FB', '#F5F1FC', colors.background];
 
   const params = useLocalSearchParams<{
     editId?:          string;
@@ -282,10 +307,13 @@ export default function CreateOutfitScreen() {
         <LinearGradient colors={['#26164D', '#121027', '#0A0818']} style={[styles.headerGrad, { height: topPad + 118 }]} />
 
         <View style={[styles.header, { paddingTop: topPad + 8, maxWidth: 720, width: '100%', alignSelf: 'center' }]}>
-          <BackButton style={styles.iconBtn} iconName="arrow-left" size={21} color={colors.foreground} onPress={() => navigation.goBack()} />
+          <BackButton
+            style={[styles.iconBtn, { backgroundColor: headerButtonSurface, borderColor: headerButtonBorder }]}
+            iconName="arrow-left" size={21} color={colors.foreground} onPress={() => navigation.goBack()}
+          />
           <View style={styles.headerCopy}>
-            <Text style={styles.headerTitle}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')} <Text style={{ color: colors.primary }}>✦</Text></Text>
-            <Text style={styles.headerSubtitle}>{tr('outfitJournal.createSubtitle')}</Text>
+            <Text style={[styles.headerTitle, { color: colors.foreground }]}>{isEditing ? tr('outfit.editTitle') : tr('outfit.logTitle')} <Text style={{ color: colors.primary }}>✦</Text></Text>
+            <Text style={[styles.headerSubtitle, { color: colors.text }]}>{tr('outfitJournal.createSubtitle')}</Text>
           </View>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: saving ? colors.muted : colors.primary }]}
@@ -294,7 +322,7 @@ export default function CreateOutfitScreen() {
             accessibilityLabel={isEditing ? tr('outfitJournal.saveChanges') : tr('outfitJournal.saveOutfit')}
           >
             {saving && <SkyLoadingMark size={16} color={colors.mutedForeground} />}
-            <Text style={styles.saveBtnText}>{saving ? tr('outfitJournal.saving') : tr('outfitJournal.save')}</Text>
+            <Text style={[styles.saveBtnText, { color: saving ? colors.mutedForeground : actionTextColor }]}>{saving ? tr('outfitJournal.saving') : tr('outfitJournal.save')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -304,7 +332,10 @@ export default function CreateOutfitScreen() {
         >
           <View style={styles.photoRow}>
             <TouchableOpacity
-              style={[styles.imagePicker, { borderColor: error && !imageUri ? colors.destructive : '#8F79BA' }]}
+              style={[styles.imagePicker, {
+                backgroundColor: pickerSurface,
+                borderColor: error && !imageUri ? colors.destructive : pickerBorder,
+              }]}
               onPress={() => !uploading && setShowSheet(true)}
               activeOpacity={0.8}
               disabled={uploading}
@@ -314,10 +345,10 @@ export default function CreateOutfitScreen() {
               {uploading ? (
                 <View style={styles.imagePlaceholder}>
                   <SkyLoadingMark color={colors.lavender} size={32} />
-                  <Text style={styles.imagePlaceholderTitle}>{tr('outfitJournal.uploading')}</Text>
-                  <View style={styles.uploadBarTrack}>
+                  <Text style={[styles.imagePlaceholderTitle, { color: colors.foreground }]}>{tr('outfitJournal.uploading')}</Text>
+                  <View style={[styles.uploadBarTrack, { backgroundColor: colors.border }]}>
                     <Animated.View
-                      style={[styles.uploadBarFill, {
+                      style={[styles.uploadBarFill, { backgroundColor: colors.primary }, {
                         width: uploadProgress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
                       }]}
                     />
@@ -335,25 +366,25 @@ export default function CreateOutfitScreen() {
                 </>
               ) : (
                 <View style={styles.imagePlaceholder}>
-                  <View style={styles.cameraCircle}><Icon name="camera" size={24} color={colors.lavender} /></View>
-                  <Text style={styles.imagePlaceholderTitle}>{tr('outfit.addPhoto')}</Text>
-                  <Text style={styles.imagePlaceholderSub}>{tr('outfitJournal.tapUploadRequired')}</Text>
+                  <View style={[styles.cameraCircle, { backgroundColor: colors.muted }]}><Icon name="camera" size={24} color={colors.lavender} /></View>
+                  <Text style={[styles.imagePlaceholderTitle, { color: colors.foreground }]}>{tr('outfit.addPhoto')}</Text>
+                  <Text style={[styles.imagePlaceholderSub, { color: colors.mutedForeground }]}>{tr('outfitJournal.tapUploadRequired')}</Text>
                 </View>
               )}
             </TouchableOpacity>
-            <View style={styles.photoTips}>
-              <View style={styles.tipsHeader}><Icon name="sun" size={16} color={colors.gold} /><Text style={styles.tipsTitle}>{tr('outfitJournal.photoTips')}</Text></View>
-              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>{tr('outfitJournal.fullOutfit')}</Text></View>
-              <View style={styles.tipRow}><Icon name="check-circle" size={14} color="#70DAAB" /><Text style={styles.tipText}>{tr('outfitJournal.goodLighting')}</Text></View>
-              <View style={styles.tipRow}><Icon name="alert-circle" size={14} color={colors.destructive} /><Text style={styles.tipText}>{tr('outfitJournal.avoidBlurry')}</Text></View>
+            <View style={[styles.photoTips, { backgroundColor: photoCardSurface, borderColor: photoCardBorder }]}>
+              <View style={styles.tipsHeader}><Icon name="sun" size={16} color={colors.gold} /><Text style={[styles.tipsTitle, { color: colors.foreground }]}>{tr('outfitJournal.photoTips')}</Text></View>
+              <View style={styles.tipRow}><Icon name="check-circle" size={14} color={isDark ? '#70DAAB' : '#18774C'} /><Text style={[styles.tipText, { color: colors.text }]}>{tr('outfitJournal.fullOutfit')}</Text></View>
+              <View style={styles.tipRow}><Icon name="check-circle" size={14} color={isDark ? '#70DAAB' : '#18774C'} /><Text style={[styles.tipText, { color: colors.text }]}>{tr('outfitJournal.goodLighting')}</Text></View>
+              <View style={styles.tipRow}><Icon name="alert-circle" size={14} color={colors.destructive} /><Text style={[styles.tipText, { color: colors.text }]}>{tr('outfitJournal.avoidBlurry')}</Text></View>
             </View>
           </View>
 
           {/* Name */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="edit-2" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfit.name')}</Text><Text style={styles.counter}>{name.length}/50</Text></View>
+            <View style={styles.fieldHeading}><Icon name="edit-2" size={17} color={colors.lavender} /><Text style={[styles.fieldLabel, { color: colors.foreground }]}>{tr('outfit.name')}</Text><Text style={[styles.counter, { color: colors.mutedForeground }]}>{name.length}/50</Text></View>
             <TextInput
-              style={styles.nameInput}
+              style={[styles.nameInput, { backgroundColor: inputSurface, borderColor: inputBorder, color: colors.foreground }]}
               placeholder={tr('outfit.namePlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               value={name}
@@ -365,9 +396,9 @@ export default function CreateOutfitScreen() {
 
           {/* Description / notes */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="file-text" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfit.notes')} <Text style={styles.optional}>({tr('outfitJournal.optional')})</Text></Text><Text style={styles.counter}>{description.length}/200</Text></View>
+            <View style={styles.fieldHeading}><Icon name="file-text" size={17} color={colors.lavender} /><Text style={[styles.fieldLabel, { color: colors.foreground }]}>{tr('outfit.notes')} <Text style={[styles.optional, { color: colors.mutedForeground }]}>({tr('outfitJournal.optional')})</Text></Text><Text style={[styles.counter, { color: colors.mutedForeground }]}>{description.length}/200</Text></View>
             <TextInput
-              style={styles.descInput}
+              style={[styles.descInput, { backgroundColor: inputSurface, borderColor: inputBorder, color: colors.foreground }]}
               placeholder={tr('outfit.notesPlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               value={description}
@@ -380,10 +411,10 @@ export default function CreateOutfitScreen() {
 
           {/* Character story — visible to other users */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfitJournal.characterStory')}</Text><Text style={styles.counter}>{story.length}/300</Text></View>
-            <Text style={styles.storyHint}>{tr(isPublic ? 'outfitJournal.storyHintPublic' : 'outfitJournal.storyHintPrivate')}</Text>
+            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={[styles.fieldLabel, { color: colors.foreground }]}>{tr('outfitJournal.characterStory')}</Text><Text style={[styles.counter, { color: colors.mutedForeground }]}>{story.length}/300</Text></View>
+            <Text style={[styles.storyHint, { color: colors.text }]}>{tr(isPublic ? 'outfitJournal.storyHintPublic' : 'outfitJournal.storyHintPrivate')}</Text>
             <TextInput
-              style={styles.storyInput}
+              style={[styles.storyInput, { backgroundColor: inputSurface, borderColor: inputBorder, color: colors.foreground }]}
               placeholder={tr('outfitJournal.storyPlaceholder')}
               placeholderTextColor={colors.mutedForeground}
               value={story}
@@ -396,24 +427,25 @@ export default function CreateOutfitScreen() {
 
           {/* Style Tags */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="heart" size={17} color={colors.blush} /><Text style={styles.fieldLabel}>{tr('outfit.vibeTags')}</Text><Text style={styles.counter}>{tr('outfitJournal.selectedCount', { count: selectedTags.length })}</Text></View>
-            <Text style={styles.storyHint}>{tr('outfitJournal.chooseThree')}</Text>
+            <View style={styles.fieldHeading}><Icon name="heart" size={17} color={colors.blush} /><Text style={[styles.fieldLabel, { color: colors.foreground }]}>{tr('outfit.vibeTags')}</Text><Text style={[styles.counter, { color: colors.mutedForeground }]}>{tr('outfitJournal.selectedCount', { count: selectedTags.length })}</Text></View>
+            <Text style={[styles.storyHint, { color: colors.text }]}>{tr('outfitJournal.chooseThree')}</Text>
             <View style={styles.tagsGrid}>
               {VIBE_TAGS.map(t => {
                 const active = selectedTags.includes(t.label);
+                const tagColor = isDark ? t.color : LIGHT_TAG_COLORS[t.label];
                 return (
                   <TouchableOpacity key={t.label}
                     style={[styles.tagChip, {
-                      backgroundColor: active ? `${t.color}32` : colors.card,
-                      borderColor: active ? t.color : `${t.color}55`,
+                      backgroundColor: active ? `${tagColor}20` : colors.card,
+                      borderColor: active ? tagColor : (isDark ? '#493D66' : colors.border),
                     }]}
                     onPress={() => toggleTag(t.label)}
                     disabled={!active && selectedTags.length >= 3}
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: active, disabled: !active && selectedTags.length >= 3 }}
                   >
-                    <Icon name={t.icon} size={15} color={t.color} />
-                    <Text style={styles.tagText}>{tr(`outfitJournal.tag${t.label}`)}</Text>
+                    <Icon name={t.icon} size={15} color={tagColor} />
+                    <Text style={[styles.tagText, { color: colors.foreground }]}>{tr(`outfitJournal.tag${t.label}`)}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -422,19 +454,28 @@ export default function CreateOutfitScreen() {
 
           {/* Vibe Animation */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="volume-2" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfitJournal.outfitMusic')}</Text></View>
-            <Text style={styles.storyHint}>{tr('outfitJournal.musicOptional')}</Text>
+            <View style={styles.fieldHeading}><Icon name="volume-2" size={17} color={colors.lavender} /><Text style={[styles.fieldLabel, { color: colors.foreground }]}>{tr('outfitJournal.outfitMusic')}</Text></View>
+            <Text style={[styles.storyHint, { color: colors.text }]}>{tr('outfitJournal.musicOptional')}</Text>
             <AudiusMusicPicker value={music} mood={selectedVibe ?? undefined} onChange={setMusic} context="outfit" />
           </View>
 
           {/* Vibe Animation */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('outfitJournal.vibeAnimation')}</Text></View>
-            <Text style={styles.storyHint}>{tr('outfitJournal.animationOptional')}</Text>
+            <View style={styles.fieldHeading}><Icon name="star" size={17} color={colors.lavender} /><Text style={[styles.fieldLabel, { color: colors.foreground }]}>{tr('outfitJournal.vibeAnimation')}</Text></View>
+            <Text style={[styles.storyHint, { color: colors.text }]}>{tr('outfitJournal.animationOptional')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.vibeGrid}>
-              <TouchableOpacity style={[styles.vibeChip, !selectedVibe && styles.vibeChipActive]} onPress={() => setSelectedVibe(null)} accessibilityRole="radio" accessibilityState={{ selected: !selectedVibe }}>
-                <View style={styles.vibePreview}><Icon name="slash" size={30} color={colors.lavender} /></View>
-                <Text style={styles.vibeLabel}>{tr('outfitJournal.none')}</Text>
+              <TouchableOpacity
+                style={[styles.vibeChip, {
+                  backgroundColor: isDark ? '#18142F' : colors.card,
+                  borderColor: !selectedVibe ? colors.tint : (isDark ? '#493D66' : colors.border),
+                  borderWidth: !selectedVibe ? 2 : 1,
+                }]}
+                onPress={() => setSelectedVibe(null)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: !selectedVibe }}
+              >
+                <View style={[styles.vibePreview, { backgroundColor: isDark ? '#30204F' : colors.muted }]}><Icon name="slash" size={30} color={colors.lavender} /></View>
+                <Text style={[styles.vibeLabel, { color: colors.foreground }]}>{tr('outfitJournal.none')}</Text>
               </TouchableOpacity>
               {VIBES.map(v => {
                 const active = selectedVibe === v.id;
@@ -442,6 +483,7 @@ export default function CreateOutfitScreen() {
                   <TouchableOpacity
                     key={v.id}
                     style={[styles.vibeChip, {
+                      backgroundColor: isDark ? '#18142F' : colors.card,
                       borderColor: active ? v.color : colors.border,
                     }]}
                     onPress={() => {
@@ -454,7 +496,7 @@ export default function CreateOutfitScreen() {
                     accessibilityState={{ selected: active }}
                   >
                     <LinearGradient colors={[`${v.color}68`, '#21163B', '#111025']} style={styles.vibePreview}><Text style={[styles.vibeSymbol, { color: v.color }]}>{v.symbol}</Text></LinearGradient>
-                    <Text style={styles.vibeLabel}>{tr(`outfitJournal.vibe${v.label}`)}</Text>
+                    <Text style={[styles.vibeLabel, { color: colors.foreground }]}>{tr(`outfitJournal.vibe${v.label}`)}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -463,8 +505,8 @@ export default function CreateOutfitScreen() {
 
           {/* Visibility */}
           <View style={styles.field}>
-            <View style={styles.fieldHeading}><Icon name="lock" size={17} color={colors.lavender} /><Text style={styles.fieldLabel}>{tr('common.visibility')}</Text></View>
-            <Text style={styles.storyHint}>{tr('outfitJournal.visibilityHint')}</Text>
+            <View style={styles.fieldHeading}><Icon name="lock" size={17} color={colors.lavender} /><Text style={[styles.fieldLabel, { color: colors.foreground }]}>{tr('common.visibility')}</Text></View>
+            <Text style={[styles.storyHint, { color: colors.text }]}>{tr('outfitJournal.visibilityHint')}</Text>
             <View style={styles.privacyRow}>
               {(['Private', 'Public'] as const).map(opt => {
                 const active = opt === 'Private' ? !isPublic : isPublic;
@@ -480,7 +522,7 @@ export default function CreateOutfitScreen() {
                     accessibilityState={{ selected: active }}
                   >
                     <Icon name={opt === 'Private' ? 'lock' : 'globe'} size={20} color={active ? colors.primary : colors.mutedForeground} />
-                    <View><Text style={[styles.privText, { color: active ? colors.foreground : colors.mutedForeground }]}>{opt === 'Private' ? tr('common.private') : tr('common.public')}</Text><Text style={styles.privSub}>{opt === 'Private' ? tr('outfitJournal.onlyYou') : tr('outfitJournal.visibleProfile')}</Text></View>
+                    <View><Text style={[styles.privText, { color: active ? colors.foreground : colors.mutedForeground }]}>{opt === 'Private' ? tr('common.private') : tr('common.public')}</Text><Text style={[styles.privSub, { color: colors.mutedForeground }]}>{opt === 'Private' ? tr('outfitJournal.onlyYou') : tr('outfitJournal.visibleProfile')}</Text></View>
                     {active && <Icon name="check-circle" size={17} color={colors.primary} />}
                   </TouchableOpacity>
                 );
@@ -488,16 +530,20 @@ export default function CreateOutfitScreen() {
             </View>
           </View>
         </KeyboardAwareScrollView>
-        <View style={[styles.footer, { paddingBottom: Platform.OS === 'web' ? 34 : Math.max(insets.bottom, 12) }]}>
+        <View style={[styles.footer, {
+          backgroundColor: isDark ? '#100C23' : colors.background,
+          borderTopColor: isDark ? '#3C3156' : colors.border,
+          paddingBottom: Platform.OS === 'web' ? 34 : Math.max(insets.bottom, 12),
+        }]}>
           {error && (
-            <View style={styles.errorBanner}>
+            <View style={[styles.errorBanner, { borderColor: colors.destructive, backgroundColor: `${colors.destructive}14` }]}>
               <Icon name="alert-circle" size={14} color={colors.destructive} />
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={[styles.errorText, { color: colors.destructive }]}>{error}</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.footerButton} onPress={handleSave} disabled={saving || uploading} accessibilityRole="button" accessibilityLabel={isEditing ? tr('outfitJournal.saveChanges') : tr('outfitJournal.saveOutfit')}>
-            {saving ? <SkyLoadingMark size={20} color="#fff" /> : <Icon name="star" size={19} color="#fff" />}
-            <Text style={styles.footerText}>{saving ? tr('outfitJournal.saving') : tr('outfit.saveOutfit')}</Text>
+          <TouchableOpacity style={[styles.footerButton, { backgroundColor: colors.primary }]} onPress={handleSave} disabled={saving || uploading} accessibilityRole="button" accessibilityLabel={isEditing ? tr('outfitJournal.saveChanges') : tr('outfitJournal.saveOutfit')}>
+            {saving ? <SkyLoadingMark size={20} color={actionTextColor} /> : <Icon name="star" size={19} color={actionTextColor} />}
+            <Text style={[styles.footerText, { color: actionTextColor }]}>{saving ? tr('outfitJournal.saving') : tr('outfit.saveOutfit')}</Text>
           </TouchableOpacity>
         </View>
       </View>

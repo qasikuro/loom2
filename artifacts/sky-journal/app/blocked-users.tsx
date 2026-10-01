@@ -16,6 +16,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 
 interface BlockedUser {
   blockedId:  string;
@@ -26,8 +28,13 @@ interface BlockedUser {
 
 export default function BlockedUsersScreen() {
   const { t } = useTranslation();
+  const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
+  const backgroundGradient: [string, string, string] = isDark
+    ? ['#0A081A', '#120E28', '#0A081A']
+    : ['#EFE9F8', '#F9F7F0', colors.background];
 
   const { unblockUser, blockedIds } = useApp();
 
@@ -74,25 +81,31 @@ export default function BlockedUsersScreen() {
   }, [t, unblockUser]);
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={['#0A081A', '#120E28', '#0A081A']}
+        colors={backgroundGradient}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
       />
 
       {/* ── Header ── */}
-      <View style={[s.header, { paddingTop: topPad + 10 }]}>
+      <View style={[s.header, {
+        paddingTop: topPad + 10,
+        borderBottomColor: isDark ? 'rgba(200,184,232,0.08)' : colors.border,
+      }]}>
         <TouchableOpacity
           onPress={() => safeBack()}
-          style={s.backBtn}
+          style={[s.backBtn, {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : colors.card,
+            borderColor: isDark ? 'rgba(200,184,232,0.14)' : colors.border,
+          }]}
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon name="chevron-left" size={20} color="rgba(200,184,232,0.85)" />
+          <Icon name="chevron-left" size={20} color={isDark ? 'rgba(200,184,232,0.85)' : colors.mutedForeground} />
         </TouchableOpacity>
-        <Text style={s.title}>{t('social.blockedUsers')}</Text>
+        <Text style={[s.title, { color: colors.foreground }]}>{t('social.blockedUsers')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -106,29 +119,42 @@ export default function BlockedUsersScreen() {
         </ScrollView>
       ) : hasError ? (
         <View style={s.center}>
-          <View style={s.emptyIconWrap}>
-            <Icon name="wifi-off" size={26} color="rgba(200,184,232,0.4)" />
+          <View style={[s.emptyIconWrap, {
+            backgroundColor: isDark ? 'rgba(200,184,232,0.06)' : colors.glowPurple,
+            borderColor: isDark ? 'rgba(200,184,232,0.12)' : colors.border,
+          }]}>
+            <Icon name="wifi-off" size={26} color={isDark ? 'rgba(200,184,232,0.4)' : colors.mutedForeground} />
           </View>
-          <Text style={s.emptyHead}>{t('social.loadBlockedError')}</Text>
-          <Text style={s.emptySub}>{t('social.connectionRetry')}</Text>
-          <TouchableOpacity style={s.retryBtn} onPress={fetchBlocked} activeOpacity={0.75}>
-            <Text style={s.retryText}>{t('social.retry')}</Text>
+          <Text style={[s.emptyHead, { color: colors.foreground }]}>{t('social.loadBlockedError')}</Text>
+          <Text style={[s.emptySub, { color: colors.mutedForeground }]}>{t('social.connectionRetry')}</Text>
+          <TouchableOpacity
+            style={[s.retryBtn, {
+              backgroundColor: isDark ? 'rgba(200,184,232,0.10)' : colors.primary,
+              borderColor: isDark ? 'rgba(200,184,232,0.18)' : colors.primary,
+            }]}
+            onPress={fetchBlocked}
+            activeOpacity={0.75}
+          >
+            <Text style={[s.retryText, { color: isDark ? 'rgba(200,184,232,0.75)' : colors.primaryForeground }]}>{t('social.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : visibleUsers.length === 0 ? (
         <View style={s.center}>
-          <View style={s.emptyIconWrap}>
-            <Icon name="user-check" size={26} color="rgba(200,184,232,0.4)" />
+          <View style={[s.emptyIconWrap, {
+            backgroundColor: isDark ? 'rgba(200,184,232,0.06)' : colors.glowPurple,
+            borderColor: isDark ? 'rgba(200,184,232,0.12)' : colors.border,
+          }]}>
+            <Icon name="user-check" size={26} color={isDark ? 'rgba(200,184,232,0.4)' : colors.mutedForeground} />
           </View>
-          <Text style={s.emptyHead}>{t('social.noBlockedUsers')}</Text>
-          <Text style={s.emptySub}>{t('social.blockedEmpty')}</Text>
+          <Text style={[s.emptyHead, { color: colors.foreground }]}>{t('social.noBlockedUsers')}</Text>
+          <Text style={[s.emptySub, { color: colors.mutedForeground }]}>{t('social.blockedEmpty')}</Text>
         </View>
       ) : (
         <ScrollView
           contentContainerStyle={[s.list, { paddingBottom: insets.bottom + 40 }]}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={s.listNote}>
+          <Text style={[s.listNote, { color: isDark ? 'rgba(200,184,232,0.70)' : colors.mutedForeground }]}>
             {t('social.blockedNotice')}
           </Text>
           {visibleUsers.map(user => {
@@ -140,31 +166,44 @@ export default function BlockedUsersScreen() {
               : require('@/assets/images/character_default.png');
 
             return (
-              <View key={user.blockedId} style={s.row}>
+              <View key={user.blockedId} style={[s.row, {
+                backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : colors.card,
+                borderColor: isDark ? 'rgba(200,184,232,0.10)' : colors.border,
+              }]}>
                 {/* Avatar */}
-                <View style={s.avatar}>
+                <View style={[s.avatar, {
+                  backgroundColor: isDark ? 'rgba(155,120,255,0.15)' : colors.glowPurple,
+                  borderColor: isDark ? 'rgba(155,120,255,0.25)' : `${colors.tint}55`,
+                }]}>
                   <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
                 </View>
 
                 {/* Info */}
                 <View style={s.info}>
-                  <Text style={s.name} numberOfLines={1}>{displayName}</Text>
+                  <Text style={[s.name, { color: colors.foreground }]} numberOfLines={1}>{displayName}</Text>
                   {user.username ? (
-                    <Text style={s.handle} numberOfLines={1}>@{user.username}</Text>
+                    <Text style={[s.handle, { color: colors.mutedForeground }]} numberOfLines={1}>@{user.username}</Text>
                   ) : null}
                 </View>
 
                 {/* Unblock button */}
                 <TouchableOpacity
-                  style={[s.unblockBtn, isPending && s.unblockBtnPending]}
+                  style={[
+                    s.unblockBtn,
+                    {
+                      backgroundColor: isDark ? 'rgba(200,184,232,0.10)' : colors.destructive,
+                      borderColor: isDark ? 'rgba(200,184,232,0.20)' : colors.destructive,
+                    },
+                    isPending && s.unblockBtnPending,
+                  ]}
                   onPress={() => handleUnblock(user)}
                   disabled={isPending}
                   activeOpacity={0.75}
                 >
                   {isPending ? (
-                    <SkyLoadingMark size={20} color="rgba(200,184,232,0.7)" />
+                    <SkyLoadingMark size={20} color={isDark ? 'rgba(200,184,232,0.7)' : colors.destructiveForeground} />
                   ) : (
-                    <Text style={s.unblockText}>{t('social.unblock')}</Text>
+                    <Text style={[s.unblockText, { color: isDark ? 'rgba(200,184,232,0.80)' : colors.destructiveForeground }]}>{t('social.unblock')}</Text>
                   )}
                 </TouchableOpacity>
               </View>

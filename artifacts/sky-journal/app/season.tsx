@@ -19,24 +19,26 @@ import {
   Text, TouchableOpacity, View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 
 // ── Season definitions (mirrors constants in Home tab) ────────────────────────
 const SEASON_BY_MONTH: Record<number, {
-  name: string; icon: string; color: string;
+  name: string; icon: string; color: string; lightColor: string;
   bgA: string; bgB: string; endMonth: number;
 }> = {
-  0:  { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.22)', bgB: 'rgba(80,140,200,0.10)',  endMonth: 2  },
-  1:  { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.22)', bgB: 'rgba(80,140,200,0.10)',  endMonth: 2  },
-  2:  { name: 'Spring Season',    icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.24)', bgB: 'rgba(168,100,180,0.10)', endMonth: 5  },
-  3:  { name: 'Spring Season',    icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.24)', bgB: 'rgba(168,100,180,0.10)', endMonth: 5  },
-  4:  { name: 'Spring Season',    icon: '🌸', color: '#F4A0C0', bgA: 'rgba(244,160,192,0.24)', bgB: 'rgba(168,100,180,0.10)', endMonth: 5  },
-  5:  { name: 'Summer Solstice',  icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.24)',  bgB: 'rgba(200,120,40,0.10)',  endMonth: 8  },
-  6:  { name: 'Summer Solstice',  icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.24)',  bgB: 'rgba(200,120,40,0.10)',  endMonth: 8  },
-  7:  { name: 'Summer Solstice',  icon: '☀️', color: '#F0C040', bgA: 'rgba(240,192,64,0.24)',  bgB: 'rgba(200,120,40,0.10)',  endMonth: 8  },
-  8:  { name: 'Autumn Memories',  icon: '🍂', color: '#E08050', bgA: 'rgba(224,128,80,0.24)',  bgB: 'rgba(160,80,40,0.10)',   endMonth: 11 },
-  9:  { name: 'Autumn Memories',  icon: '🍂', color: '#E08050', bgA: 'rgba(224,128,80,0.24)',  bgB: 'rgba(160,80,40,0.10)',   endMonth: 11 },
-  10: { name: 'Autumn Memories',  icon: '🍂', color: '#E08050', bgA: 'rgba(224,128,80,0.24)',  bgB: 'rgba(160,80,40,0.10)',   endMonth: 11 },
-  11: { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', bgA: 'rgba(128,192,240,0.22)', bgB: 'rgba(80,140,200,0.10)',  endMonth: 2  },
+  0:  { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', lightColor: '#41749A', bgA: 'rgba(128,192,240,0.22)', bgB: 'rgba(80,140,200,0.10)',  endMonth: 2  },
+  1:  { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', lightColor: '#41749A', bgA: 'rgba(128,192,240,0.22)', bgB: 'rgba(80,140,200,0.10)',  endMonth: 2  },
+  2:  { name: 'Spring Season',    icon: '🌸', color: '#F4A0C0', lightColor: '#A33C6D', bgA: 'rgba(244,160,192,0.24)', bgB: 'rgba(168,100,180,0.10)', endMonth: 5  },
+  3:  { name: 'Spring Season',    icon: '🌸', color: '#F4A0C0', lightColor: '#A33C6D', bgA: 'rgba(244,160,192,0.24)', bgB: 'rgba(168,100,180,0.10)', endMonth: 5  },
+  4:  { name: 'Spring Season',    icon: '🌸', color: '#F4A0C0', lightColor: '#A33C6D', bgA: 'rgba(244,160,192,0.24)', bgB: 'rgba(168,100,180,0.10)', endMonth: 5  },
+  5:  { name: 'Summer Solstice',  icon: '☀️', color: '#F0C040', lightColor: '#8B6100', bgA: 'rgba(240,192,64,0.24)',  bgB: 'rgba(200,120,40,0.10)',  endMonth: 8  },
+  6:  { name: 'Summer Solstice',  icon: '☀️', color: '#F0C040', lightColor: '#8B6100', bgA: 'rgba(240,192,64,0.24)',  bgB: 'rgba(200,120,40,0.10)',  endMonth: 8  },
+  7:  { name: 'Summer Solstice',  icon: '☀️', color: '#F0C040', lightColor: '#8B6100', bgA: 'rgba(240,192,64,0.24)',  bgB: 'rgba(200,120,40,0.10)',  endMonth: 8  },
+  8:  { name: 'Autumn Memories',  icon: '🍂', color: '#E08050', lightColor: '#9D4D2A', bgA: 'rgba(224,128,80,0.24)',  bgB: 'rgba(160,80,40,0.10)',   endMonth: 11 },
+  9:  { name: 'Autumn Memories',  icon: '🍂', color: '#E08050', lightColor: '#9D4D2A', bgA: 'rgba(224,128,80,0.24)',  bgB: 'rgba(160,80,40,0.10)',   endMonth: 11 },
+  10: { name: 'Autumn Memories',  icon: '🍂', color: '#E08050', lightColor: '#9D4D2A', bgA: 'rgba(224,128,80,0.24)',  bgB: 'rgba(160,80,40,0.10)',   endMonth: 11 },
+  11: { name: "Winter's Light",   icon: '❄️', color: '#80C0F0', lightColor: '#41749A', bgA: 'rgba(128,192,240,0.22)', bgB: 'rgba(80,140,200,0.10)',  endMonth: 2  },
 };
 
 function getSeasonStart(): Date {
@@ -49,22 +51,24 @@ function getSeasonStart(): Date {
 }
 
 const ALL_STARS = [
-  { key: 'social',   icon: '👥', color: '#78C8A8' },
-  { key: 'memory',   icon: '📖', color: '#9878C8' },
-  { key: 'quiet',    icon: '🌙', color: '#7890C8' },
-  { key: 'creative', icon: '✨', color: '#C87AA8' },
-  { key: 'helping',  icon: '💛', color: '#C8A84B' },
-  { key: 'seasonal', icon: '🍃', color: '#68B8B0' },
+  { key: 'social',   icon: '👥', color: '#78C8A8', lightColor: '#26785F' },
+  { key: 'memory',   icon: '📖', color: '#9878C8', lightColor: '#65509B' },
+  { key: 'quiet',    icon: '🌙', color: '#7890C8', lightColor: '#4E6398' },
+  { key: 'creative', icon: '✨', color: '#C87AA8', lightColor: '#9A4974' },
+  { key: 'helping',  icon: '💛', color: '#C8A84B', lightColor: '#805B13' },
+  { key: 'seasonal', icon: '🍃', color: '#68B8B0', lightColor: '#307C76' },
 ];
 
 export default function SeasonScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { constellation } = useApp();
+  const colors = useColors();
+  const { isDark } = useTheme();
 
   const month  = new Date().getMonth();
   const sd     = SEASON_BY_MONTH[month]!;
-  const color  = sd.color;
+  const color  = isDark ? sd.color : sd.lightColor;
   const { name, icon, bgA, bgB } = sd;
 
   // Season end
@@ -91,12 +95,15 @@ export default function SeasonScreen() {
 
   const topPad    = Platform.OS === 'web' ? 60 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 80 : insets.bottom + 40;
+  const backgroundGradient: [string, string, string] = isDark
+    ? ['#100A28', '#08061A', '#04030C']
+    : ['#EEE8FB', '#F7F4ED', colors.background];
 
   return (
-    <Animated.View style={[s.root, { opacity: fadeIn }]}>
+    <Animated.View style={[s.root, { backgroundColor: colors.background, opacity: fadeIn }]}>
       {/* Background */}
       <LinearGradient
-        colors={['#100A28', '#08061A', '#04030C']}
+        colors={backgroundGradient}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
         pointerEvents="none"
@@ -111,13 +118,13 @@ export default function SeasonScreen() {
       {/* Header */}
       <View style={[s.header, { paddingTop: topPad + 8 }]}>
         <TouchableOpacity
-          style={s.backBtn}
+          style={[s.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : colors.card, borderColor: isDark ? 'transparent' : colors.border, borderWidth: 1 }]}
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); safeBack(); }}
           activeOpacity={0.75}
         >
-          <Icon name="chevron-left" size={18} color="rgba(242,232,255,0.80)" />
+          <Icon name="chevron-left" size={18} color={isDark ? 'rgba(242,232,255,0.80)' : colors.mutedForeground} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>{t('feature.season.title')}</Text>
+        <Text style={[s.headerTitle, { color: colors.foreground }]}>{t('feature.season.title')}</Text>
         <View style={{ width: 38 }} />
       </View>
 
@@ -126,7 +133,10 @@ export default function SeasonScreen() {
         contentContainerStyle={{ paddingBottom: bottomPad }}
       >
         {/* Season hero card */}
-        <View style={s.heroCard}>
+        <View style={[s.heroCard, {
+          backgroundColor: isDark ? 'rgba(255,255,255,0.028)' : colors.card,
+          borderColor: isDark ? 'rgba(200,180,255,0.12)' : colors.border,
+        }]}>
           <View style={[s.glowOrb, { backgroundColor: color }]} />
           <View style={s.eyebrowRow}>
             <Text style={s.seasonIconLg}>{icon}</Text>
@@ -136,15 +146,15 @@ export default function SeasonScreen() {
               <Text style={[s.daysChipTxt, { color }]}>{t('feature.season.daysLeft', { n: daysLeft })}</Text>
             </View>
           </View>
-          <Text style={s.seasonName}>{name}</Text>
-          <Text style={s.dayLabel}>{t('feature.season.dayOfSeason', { n: dayN })}</Text>
+          <Text style={[s.seasonName, { color: colors.foreground }]}>{name}</Text>
+          <Text style={[s.dayLabel, { color: isDark ? 'rgba(200,184,232,0.65)' : colors.mutedForeground }]}>{t('feature.season.dayOfSeason', { n: dayN })}</Text>
 
           {/* Progress bar */}
           <View style={s.progRow}>
-            <View style={s.progTrack}>
+            <View style={[s.progTrack, { backgroundColor: isDark ? 'rgba(255,255,255,0.10)' : colors.muted }]}>
               <View style={[s.progFill, { width: `${Math.round(pct * 100)}%` as `${number}%`, backgroundColor: color }]} />
             </View>
-            <Text style={[s.progLabel, { color: `${color}BB` }]}>
+            <Text style={[s.progLabel, { color: isDark ? `${color}BB` : color }]}>
               {t('feature.season.starsProgress', { n: starsCount })}
             </Text>
           </View>
@@ -152,26 +162,31 @@ export default function SeasonScreen() {
 
         {/* Stars grid */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>{t('feature.season.starsTitle')}</Text>
+          <Text style={[s.sectionLabel, { color: isDark ? 'rgba(200,184,232,0.55)' : colors.mutedForeground }]}>{t('feature.season.starsTitle')}</Text>
           <View style={s.starsGrid}>
             {ALL_STARS.map(star => {
               const unlocked = unlockedStars.includes(star.key);
+              const starColor = isDark ? star.color : star.lightColor;
               return (
                 <View
                   key={star.key}
                   style={[
                     s.starCard,
-                    unlocked && { borderColor: `${star.color}55`, backgroundColor: `${star.color}0C` },
+                    {
+                      backgroundColor: isDark ? 'rgba(255,255,255,0.022)' : colors.card,
+                      borderColor: isDark ? 'rgba(200,185,255,0.06)' : colors.border,
+                    },
+                    unlocked && { borderColor: `${starColor}66`, backgroundColor: `${starColor}12` },
                   ]}
                 >
-                  <View style={[s.starDot, { backgroundColor: unlocked ? star.color : 'rgba(255,255,255,0.08)' }]}>
+                  <View style={[s.starDot, { backgroundColor: unlocked ? starColor : (isDark ? 'rgba(255,255,255,0.08)' : colors.muted) }]}>
                     {unlocked && <Text style={s.starDotIcon}>✦</Text>}
                   </View>
-                  <Text style={[s.starLabel, unlocked && { color: star.color }]}>{t(`feature.season.${star.key}`)}</Text>
-                  <Text style={s.starHint}>{t(`feature.season.${star.key}Hint`)}</Text>
+                  <Text style={[s.starLabel, { color: unlocked ? starColor : colors.foreground }]}>{t(`feature.season.${star.key}`)}</Text>
+                  <Text style={[s.starHint, { color: isDark ? 'rgba(180,165,230,0.55)' : colors.mutedForeground }]}>{t(`feature.season.${star.key}Hint`)}</Text>
                   {unlocked && (
-                    <View style={[s.unlockedBadge, { backgroundColor: `${star.color}22` }]}>
-                      <Text style={[s.unlockedTxt, { color: star.color }]}>{t('feature.season.unlocked')}</Text>
+                    <View style={[s.unlockedBadge, { backgroundColor: `${starColor}22` }]}>
+                      <Text style={[s.unlockedTxt, { color: starColor }]}>{t('feature.season.unlocked')}</Text>
                     </View>
                   )}
                 </View>
@@ -182,8 +197,11 @@ export default function SeasonScreen() {
 
         {/* How to earn */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>{t('feature.season.advance')}</Text>
-          <View style={[s.infoCard, { borderColor: `${color}1E` }]}>
+          <Text style={[s.sectionLabel, { color: isDark ? 'rgba(200,184,232,0.55)' : colors.mutedForeground }]}>{t('feature.season.advance')}</Text>
+          <View style={[s.infoCard, {
+            borderColor: isDark ? `${color}1E` : colors.border,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.022)' : colors.card,
+          }]}>
             {[
               { icon: '📖', key: 'howMemory' },
               { icon: '🌙', key: 'howQuiet' },
@@ -194,7 +212,7 @@ export default function SeasonScreen() {
             ].map(({ icon: ic, key }, i) => (
               <View key={i} style={s.infoRow}>
                 <Text style={s.infoIcon}>{ic}</Text>
-                <Text style={s.infoText}>{t(`feature.season.${key}`)}</Text>
+                <Text style={[s.infoText, { color: isDark ? 'rgba(200,184,232,0.72)' : colors.text }]}>{t(`feature.season.${key}`)}</Text>
               </View>
             ))}
           </View>
@@ -203,7 +221,10 @@ export default function SeasonScreen() {
         {/* Write CTA */}
         <View style={s.ctaSection}>
           <TouchableOpacity
-            style={[s.ctaBtn, { borderColor: `${color}44`, backgroundColor: `${color}11` }]}
+            style={[s.ctaBtn, {
+              borderColor: isDark ? `${color}44` : `${color}80`,
+              backgroundColor: isDark ? `${color}11` : `${color}16`,
+            }]}
             onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/(tabs)/create'); }}
             activeOpacity={0.80}
           >

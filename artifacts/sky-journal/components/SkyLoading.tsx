@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
-import palette from '@/constants/colors';
 import { SkeletonCard } from '@/components/Skeleton';
 import { StorigamFluidBackdrop, StorigamLogo } from '@/components/StorigamBrand';
 
@@ -50,12 +49,13 @@ export function StorigamLoadingOverlay({
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const label = message || t('common.loading');
+  const transparentOverlay = isDark ? colors.overlay : 'rgba(252,251,248,0.96)';
   return (
     <View
       style={[
         styles.overlay,
         { backgroundColor: colors.background, paddingTop: insets.top, paddingBottom: insets.bottom },
-        transparent && [StyleSheet.absoluteFillObject, { backgroundColor: palette.dark.overlay, zIndex: 9999 }],
+        transparent && [StyleSheet.absoluteFillObject, { backgroundColor: transparentOverlay, zIndex: 9999 }],
       ]}
       accessible
       accessibilityViewIsModal
@@ -64,8 +64,8 @@ export function StorigamLoadingOverlay({
       accessibilityState={{ busy: true }}
     >
       {!transparent && <StorigamFluidBackdrop dark={isDark} />}
-      <StorigamLogo size={Math.min(width * 0.68, height * 0.4, 320)} variant="lockup" dark={transparent || isDark} accessible={false} />
-      <Text style={[styles.message, { color: transparent ? palette.dark.foreground : colors.foreground }]}>{label}</Text>
+      <StorigamLogo size={Math.min(width * 0.68, height * 0.4, 320)} variant="lockup" dark={isDark} accessible={false} />
+      <Text style={[styles.message, { color: colors.foreground }]}>{label}</Text>
     </View>
   );
 }

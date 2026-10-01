@@ -30,6 +30,8 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -43,6 +45,8 @@ function useWarmUpBrowser() {
 
 export default function SignInScreen() {
   const { t } = useTranslation();
+  const colors = useColors();
+  const { isDark } = useTheme();
   useWarmUpBrowser();
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startSSOFlow } = useSSO();
@@ -50,6 +54,9 @@ export default function SignInScreen() {
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
+  const backgroundGradient: [string, string, string] = isDark
+    ? ['#0D0B1E', '#1A1630', '#2D1F5E']
+    : [colors.background, colors.card, colors.background];
 
   const [email, setEmail]               = useState('');
   const [password, setPassword]         = useState('');
@@ -130,13 +137,13 @@ export default function SignInScreen() {
   const fieldError = catchError;
 
   return (
-    <LinearGradient colors={['#0D0B1E', '#1A1630', '#2D1F5E']} style={styles.root}>
+    <LinearGradient colors={backgroundGradient} style={styles.root}>
 
       {/* decorative floating stars */}
-      <Text style={[styles.star, { top: '12%', left: '8%',  fontSize: 10 }]}>✦</Text>
-      <Text style={[styles.star, { top: '22%', right: '12%', fontSize: 7  }]}>✦</Text>
-      <Text style={[styles.star, { top: '38%', left: '5%',  fontSize: 6  }]}>✦</Text>
-      <Text style={[styles.star, { top: '60%', right: '7%', fontSize: 9  }]}>✦</Text>
+      <Text style={[styles.star, { top: '12%', left: '8%',  fontSize: 10, color: isDark ? 'rgba(200,184,232,0.18)' : colors.glowPurple }]}>✦</Text>
+      <Text style={[styles.star, { top: '22%', right: '12%', fontSize: 7, color: isDark ? 'rgba(200,184,232,0.18)' : colors.glowPurple }]}>✦</Text>
+      <Text style={[styles.star, { top: '38%', left: '5%',  fontSize: 6, color: isDark ? 'rgba(200,184,232,0.18)' : colors.glowPurple }]}>✦</Text>
+      <Text style={[styles.star, { top: '60%', right: '7%', fontSize: 9, color: isDark ? 'rgba(200,184,232,0.18)' : colors.glowPurple }]}>✦</Text>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView
@@ -150,8 +157,8 @@ export default function SignInScreen() {
               <Image source={Images.logo} style={styles.logo} contentFit="contain" />
             </View>
 
-            <Text style={styles.title}>{t('auth.welcomeBack')}</Text>
-            <Text style={styles.subtitle}>{t('auth.signInSub')}</Text>
+            <Text style={[styles.title, !isDark && { color: colors.foreground }]}>{t('auth.welcomeBack')}</Text>
+            <Text style={[styles.subtitle, !isDark && { color: colors.mutedForeground }]}>{t('auth.signInSub')}</Text>
 
             {/* ── Google button ──────────────────── */}
             <TouchableOpacity
@@ -172,18 +179,22 @@ export default function SignInScreen() {
 
             {/* ── Divider ────────────────────────── */}
             <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>{t('auth.or')}</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, !isDark && { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, !isDark && { color: colors.mutedForeground }]}>{t('auth.or')}</Text>
+              <View style={[styles.dividerLine, !isDark && { backgroundColor: colors.border }]} />
             </View>
 
             {/* ── Email / password form ───────────── */}
             <View style={styles.form}>
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t('auth.email')}</Text>
-                <View style={[styles.inputBox, focusedField === 'email' && styles.inputBoxFocused]}>
+                <Text style={[styles.fieldLabel, !isDark && { color: colors.text }]}>{t('auth.email')}</Text>
+                <View style={[
+                  styles.inputBox,
+                  focusedField === 'email' && styles.inputBoxFocused,
+                  !isDark && { backgroundColor: colors.card, borderColor: focusedField === 'email' ? colors.tint : colors.border },
+                ]}>
                   <TextInput
-                    style={styles.inputText}
+                    style={[styles.inputText, !isDark && { color: colors.foreground }]}
                     value={email}
                     onChangeText={v => { setEmail(v); setCatchError(''); }}
                     onFocus={() => setFocusedField('email')}
@@ -191,7 +202,7 @@ export default function SignInScreen() {
                     autoCapitalize="none"
                     keyboardType="email-address"
                     placeholder={t('auth.emailPlaceholder')}
-                    placeholderTextColor="rgba(200,184,232,0.35)"
+                    placeholderTextColor={isDark ? 'rgba(200,184,232,0.35)' : colors.mutedForeground}
                     autoComplete="email"
                     returnKeyType="next"
                   />
@@ -199,38 +210,48 @@ export default function SignInScreen() {
               </View>
 
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t('auth.password')}</Text>
-                <View style={[styles.inputBox, focusedField === 'password' && styles.inputBoxFocused]}>
+                <Text style={[styles.fieldLabel, !isDark && { color: colors.text }]}>{t('auth.password')}</Text>
+                <View style={[
+                  styles.inputBox,
+                  focusedField === 'password' && styles.inputBoxFocused,
+                  !isDark && { backgroundColor: colors.card, borderColor: focusedField === 'password' ? colors.tint : colors.border },
+                ]}>
                   <TextInput
-                    style={[styles.inputText, { paddingRight: 52 }]}
+                    style={[styles.inputText, { paddingRight: 52 }, !isDark && { color: colors.foreground }]}
                     value={password}
                     onChangeText={v => { setPassword(v); setCatchError(''); }}
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     secureTextEntry={!showPassword}
                     placeholder="••••••••"
-                    placeholderTextColor="rgba(200,184,232,0.35)"
+                    placeholderTextColor={isDark ? 'rgba(200,184,232,0.35)' : colors.mutedForeground}
                     autoComplete="password"
                     returnKeyType="done"
                     onSubmitEditing={handleSignIn}
                   />
                   <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowPassword(p => !p)}>
                     <Icon name={showPassword ? 'eye-off' : 'eye'} size={18}
-                      color={focusedField === 'password' ? 'rgba(200,184,232,0.8)' : 'rgba(200,184,232,0.4)'} />
+                      color={isDark
+                        ? (focusedField === 'password' ? 'rgba(200,184,232,0.8)' : 'rgba(200,184,232,0.4)')
+                        : (focusedField === 'password' ? colors.tint : colors.mutedForeground)} />
                   </TouchableOpacity>
                 </View>
               </View>
 
-              {!!fieldError && <Text style={styles.errorText}>{fieldError}</Text>}
+              {!!fieldError && <Text style={[styles.errorText, !isDark && { color: colors.destructive, backgroundColor: `${colors.destructive}14` }]}>{fieldError}</Text>}
 
               <TouchableOpacity
-                style={[styles.primaryBtn, (!email || !password || isLoading) && styles.primaryBtnDisabled]}
+                style={[
+                  styles.primaryBtn,
+                  !isDark && { backgroundColor: colors.primary },
+                  (!email || !password || isLoading) && styles.primaryBtnDisabled,
+                ]}
                 onPress={handleSignIn}
                 disabled={!email || !password || isLoading}
               >
                 {isLoading
                   ? <ActivityIndicator color="#fff" />
-                    : <Text style={styles.primaryBtnText}>{t('auth.signIn')}</Text>
+                    : <Text style={[styles.primaryBtnText, !isDark && { color: colors.primaryForeground }]}>{t('auth.signIn')}</Text>
                 }
               </TouchableOpacity>
 
@@ -239,11 +260,11 @@ export default function SignInScreen() {
 
             {/* ── Footer link ────────────────────── */}
             <View style={styles.footerRow}>
-              <Text style={styles.footerText}>{t('auth.newHere')}</Text>
+              <Text style={[styles.footerText, !isDark && { color: colors.mutedForeground }]}>{t('auth.newHere')}</Text>
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               <Link href={'/(auth)/sign-up' as any} asChild>
                 <Pressable hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Text style={styles.footerLink}>{t('auth.createAccount')}</Text>
+                  <Text style={[styles.footerLink, !isDark && { color: colors.tint }]}>{t('auth.createAccount')}</Text>
                 </Pressable>
               </Link>
             </View>

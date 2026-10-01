@@ -3,6 +3,7 @@ import { Icon } from '@/components/Icon';
 import { FriendAvatar } from '@/components/FriendAvatar';
 import { ApiError, apiFetch, resolveUri, useApp, type FriendSummary } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -52,9 +53,27 @@ function lastActive(value: string | null | undefined, t: TFunction): string {
 export default function FriendsScreen() {
   const { t } = useTranslation();
   const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ tab?: string }>();
+  const heroGradient: [string, string, string] = isDark
+    ? ['#251445', '#120E2D', '#0A0818']
+    : ['#EEE8FB', '#F5F1FC', colors.background];
+  const accentColor = isDark ? colors.primary : colors.tint;
+  const selectedTabColor = isDark ? colors.primary : colors.secondary;
+  const actionSurface = isDark ? '#7850C2' : colors.secondary;
+  const actionText = isDark ? '#FFFFFF' : colors.secondaryForeground;
+  const acceptSurface = isDark ? '#875DE4' : colors.secondary;
+  const subtleText = isDark ? '#AFA5C8' : colors.mutedForeground;
+  const cardSurface = isDark ? '#17152B' : colors.card;
+  const cardBorder = isDark ? 'rgba(180,160,220,0.08)' : colors.border;
+  const searchSurface = isDark ? '#17142A' : colors.card;
+  const searchBorder = isDark ? 'rgba(180,160,220,0.22)' : colors.border;
+  const tabBorder = isDark ? 'rgba(180,160,220,0.13)' : colors.border;
+  const circleBorder = isDark ? 'rgba(190,170,225,0.25)' : colors.border;
+  const countSurface = isDark ? '#292143' : colors.muted;
+  const errorSurface = isDark ? 'rgba(216,90,118,0.15)' : `${colors.destructive}14`;
   const { blockedIds, refreshFriends } = useApp();
   const [tab, setTab] = useState<Tab>(params.tab === 'suggestions' ? 'suggestions' : 'all');
   const [friends, setFriends] = useState<FriendSummary[]>([]);
@@ -165,16 +184,16 @@ export default function FriendsScreen() {
   }
 
   const friendRow = (friend: FriendSummary) => (
-    <View key={friend.userId} style={styles.row}>
+    <View key={friend.userId} style={[styles.row, { backgroundColor: cardSurface, borderColor: cardBorder }]}>
       <TouchableOpacity style={styles.person} onPress={() => profile(friend.userId)} accessibilityLabel={t('social.viewProfileFor', { name: friend.name })}>
         <FriendAvatar name={friend.name} uri={friend.avatarUri} online={friend.isOnline} size={48} largeOnlineDot />
         <View style={styles.personText}>
-          <Text style={styles.name} numberOfLines={1}>{friend.name}</Text>
-          <Text style={styles.detail} numberOfLines={1}>{friend.isOnline ? t('social.onlineNow') : lastActive(friend.lastSeenAt, t)}</Text>
+          <Text style={[styles.name, { color: isDark ? '#F4EEFF' : colors.foreground }]} numberOfLines={1}>{friend.name}</Text>
+          <Text style={[styles.detail, { color: subtleText }]} numberOfLines={1}>{friend.isOnline ? t('social.onlineNow') : lastActive(friend.lastSeenAt, t)}</Text>
         </View>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.circleButton} onPress={() => chat(friend)} accessibilityLabel={t('social.chatWith', { name: friend.name })} testID={`chat-${friend.userId}`}>
-        <Icon name="message-circle" size={20} color="#EDE8FF" />
+      <TouchableOpacity style={[styles.circleButton, { borderColor: circleBorder, backgroundColor: isDark ? 'transparent' : colors.muted }]} onPress={() => chat(friend)} accessibilityLabel={t('social.chatWith', { name: friend.name })} testID={`chat-${friend.userId}`}>
+        <Icon name="message-circle" size={20} color={colors.foreground} />
       </TouchableOpacity>
     </View>
   );
@@ -183,87 +202,87 @@ export default function FriendsScreen() {
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <View style={[styles.sectionDot, { backgroundColor: dot }]} />
-        <Text style={styles.sectionTitle}>{title}</Text>
-        <Text style={styles.count}>{list.length}</Text>
+        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>{title}</Text>
+        <Text style={[styles.count, { color: isDark ? '#C8B8E8' : colors.foreground, backgroundColor: countSurface }]}>{list.length}</Text>
       </View>
       {list.map(friendRow)}
     </View>
   );
 
   const requestRow = (request: Invitation) => (
-    <View key={request.id} style={styles.row}>
+    <View key={request.id} style={[styles.row, { backgroundColor: cardSurface, borderColor: cardBorder }]}>
       <TouchableOpacity style={styles.person} onPress={() => profile(request.userId)}>
         <FriendAvatar name={request.name} uri={request.avatarUri} size={48} />
         <View style={styles.personText}>
-          <Text style={styles.name} numberOfLines={1}>{request.name}</Text>
-          <Text style={styles.detail} numberOfLines={1}>
+          <Text style={[styles.name, { color: isDark ? '#F4EEFF' : colors.foreground }]} numberOfLines={1}>{request.name}</Text>
+          <Text style={[styles.detail, { color: subtleText }]} numberOfLines={1}>
             {request.direction === 'incoming' ? t('social.wantsFriend') : t('social.requestSent')}
           </Text>
         </View>
       </TouchableOpacity>
       {request.direction === 'incoming' && (
-        <TouchableOpacity style={styles.accept} disabled={!!busy} onPress={() => void changeRequest(request.id, 'accept')}
+        <TouchableOpacity style={[styles.accept, { backgroundColor: acceptSurface }]} disabled={!!busy} onPress={() => void changeRequest(request.id, 'accept')}
           accessibilityLabel={t('social.acceptFriendRequest', { name: request.name })} testID={`accept-${request.id}`}>
-          {busy === request.id ? <ActivityIndicator color="#fff" size="small" /> : <Icon name="check" size={19} color="#fff" />}
+          {busy === request.id ? <ActivityIndicator color={actionText} size="small" /> : <Icon name="check" size={19} color={actionText} />}
         </TouchableOpacity>
       )}
-      <TouchableOpacity style={styles.circleButton} disabled={!!busy} onPress={() => void changeRequest(request.id, 'remove')}
+      <TouchableOpacity style={[styles.circleButton, { borderColor: circleBorder, backgroundColor: isDark ? 'transparent' : colors.muted }]} disabled={!!busy} onPress={() => void changeRequest(request.id, 'remove')}
         accessibilityLabel={t(request.direction === 'incoming' ? 'social.declineRequest' : 'social.cancelRequest', { name: request.name })}>
-        <Icon name="x" size={18} color="#AFA5C8" />
+        <Icon name="x" size={18} color={subtleText} />
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <View style={[styles.root, { backgroundColor: '#0A0818' }]}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
       <FlatList
         data={[]}
         renderItem={null}
         contentContainerStyle={[styles.content, { maxWidth: Math.min(width, 680), paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor={accentColor} />}
         ListHeaderComponent={
           <>
-            <LinearGradient colors={['#251445', '#120E2D', '#0A0818']} style={[styles.hero, { paddingTop: Platform.OS === 'web' ? 67 : insets.top + 8 }]}>
-              <BackButton color="#EDE8FF" />
+            <LinearGradient colors={heroGradient} style={[styles.hero, { paddingTop: Platform.OS === 'web' ? 67 : insets.top + 8 }]}>
+              <BackButton color={colors.foreground} />
               <View style={styles.titleLine}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.title}>{t('social.friends')} <Text style={styles.titleCount}>{friends.length}</Text></Text>
-                  <Text style={styles.subtitle}>{t('social.connectShare')}</Text>
+              <Text style={[styles.title, { color: isDark ? '#F4EEFF' : colors.foreground }]}>{t('social.friends')} <Text style={[styles.titleCount, { color: isDark ? '#BC9BFF' : accentColor }]}>{friends.length}</Text></Text>
+                  <Text style={[styles.subtitle, { color: colors.text }]}>{t('social.connectShare')}</Text>
                 </View>
-                <TouchableOpacity style={styles.addButton} onPress={() => { setTab('suggestions'); setQuery(''); }} testID="find-friends">
-                  <Icon name="user-plus" size={16} color="#fff" /><Text style={styles.addLabel}>{t('social.addFriends')}</Text>
+                <TouchableOpacity style={[styles.addButton, { backgroundColor: actionSurface, borderColor: isDark ? '#B492F0' : colors.tint }]} onPress={() => { setTab('suggestions'); setQuery(''); }} testID="find-friends">
+                  <Icon name="user-plus" size={16} color={actionText} /><Text style={[styles.addLabel, { color: actionText }]}>{t('social.addFriends')}</Text>
                 </TouchableOpacity>
               </View>
             </LinearGradient>
             <View style={styles.body}>
-              <View style={styles.searchBox}>
-                <Icon name="search" size={19} color="#AFA5C8" />
+              <View style={[styles.searchBox, { backgroundColor: searchSurface, borderColor: searchBorder }]}>
+                <Icon name="search" size={19} color={subtleText} />
                 <TextInput
-                  style={styles.searchInput}
+                  style={[styles.searchInput, { color: colors.foreground }]}
                   placeholder={t(tab === 'suggestions' ? 'social.searchPeople' : 'social.searchFriends')}
-                  placeholderTextColor="#AFA5C8"
+                  placeholderTextColor={subtleText}
                   value={query} onChangeText={setQuery} autoCapitalize="none"
                   returnKeyType="search" accessibilityLabel={t('social.searchFriendsLabel')}
                 />
-                {!!query && <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('social.clearSearch')}><Icon name="x" size={17} color="#AFA5C8" /></TouchableOpacity>}
+                {!!query && <TouchableOpacity onPress={() => setQuery('')} accessibilityLabel={t('social.clearSearch')}><Icon name="x" size={17} color={subtleText} /></TouchableOpacity>}
               </View>
               <View style={styles.tabs}>
                 {TABS.map(item => {
                   const selected = tab === item.id;
-                  return <TouchableOpacity key={item.id} style={[styles.tab, selected && { backgroundColor: colors.primary }]}
+                  return <TouchableOpacity key={item.id} style={[styles.tab, { backgroundColor: searchSurface, borderColor: tabBorder }, selected && { backgroundColor: selectedTabColor }]}
                     onPress={() => { setTab(item.id); setQuery(''); }} testID={`friends-tab-${item.id}`}>
-                    <Icon name={item.icon as never} size={14} color={selected ? '#fff' : '#AFA5C8'} />
-                    <Text style={[styles.tabLabel, { color: selected ? '#fff' : '#AFA5C8' }]}>{t(`social.${item.key}`)}</Text>
+                    <Icon name={item.icon as never} size={14} color={selected ? (isDark ? '#fff' : colors.secondaryForeground) : subtleText} />
+                    <Text style={[styles.tabLabel, { color: selected ? (isDark ? '#fff' : colors.secondaryForeground) : subtleText }]}>{t(`social.${item.key}`)}</Text>
                     {item.id === 'requests' && incoming.length > 0 && <Text style={styles.badge}>{incoming.length}</Text>}
                   </TouchableOpacity>;
                 })}
               </View>
 
-              {!!error && <TouchableOpacity style={styles.error} onPress={() => void load()}>
-                <Text style={styles.errorText}>{error} {t('social.tapToRetry')}</Text>
+              {!!error && <TouchableOpacity style={[styles.error, { backgroundColor: errorSurface }]} onPress={() => void load()}>
+                <Text style={[styles.errorText, { color: isDark ? '#F0A5B5' : colors.destructive }]}>{error} {t('social.tapToRetry')}</Text>
               </TouchableOpacity>}
-              {loading ? <ActivityIndicator style={styles.loader} color={colors.primary} /> : (
+              {loading ? <ActivityIndicator style={styles.loader} color={accentColor} /> : (
                 <>
                   {tab === 'all' && (visibleFriends.length
                     ? <>{section(t('social.onlineFriends'), online, '#45D79B')}{section(t('social.offlineFriends'), offline, '#8982B0')}</>
@@ -272,34 +291,34 @@ export default function FriendsScreen() {
                      ? section(t('social.onlineFriends'), online, '#45D79B')
                      : <Empty text={t('social.noOnline')} />)}
                   {tab === 'requests' && (requests.length
-                    ? <>{incoming.length > 0 && <View style={styles.section}><Text style={styles.sectionTitle}>Received · {incoming.length}</Text>{incoming.map(requestRow)}</View>}
-                        {outgoing.length > 0 && <View style={styles.section}><Text style={styles.sectionTitle}>Sent · {outgoing.length}</Text>{outgoing.map(requestRow)}</View>}</>
+                    ? <>{incoming.length > 0 && <View style={styles.section}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Received · {incoming.length}</Text>{incoming.map(requestRow)}</View>}
+                        {outgoing.length > 0 && <View style={styles.section}><Text style={[styles.sectionTitle, { color: colors.foreground }]}>Sent · {outgoing.length}</Text>{outgoing.map(requestRow)}</View>}</>
                      : <Empty text={t('social.noRequests')} />)}
                   {tab === 'suggestions' && (query.trim().length < 2
                      ? <Empty text={t('social.searchToRequest')} />
-                    : searching ? <ActivityIndicator style={styles.loader} color={colors.primary} />
+                     : searching ? <ActivityIndicator style={styles.loader} color={accentColor} />
                     : searchError ? <Empty text={searchError} />
                     : suggested.length ? <View style={styles.section}>{suggested.map(person => (
-                      <View key={person.userId} style={styles.row}>
+                      <View key={person.userId} style={[styles.row, { backgroundColor: cardSurface, borderColor: cardBorder }]}>
                         <TouchableOpacity style={styles.person} onPress={() => profile(person.userId)}>
                           <FriendAvatar name={person.name} uri={person.avatarUri} size={48} />
                           <View style={styles.personText}>
-                            <Text style={styles.name} numberOfLines={1}>{person.name}</Text>
-                            <Text style={styles.detail} numberOfLines={1}>{person.username ? `@${person.username}` : person.bio || t('social.viewProfile')}</Text>
+                            <Text style={[styles.name, { color: isDark ? '#F4EEFF' : colors.foreground }]} numberOfLines={1}>{person.name}</Text>
+                            <Text style={[styles.detail, { color: subtleText }]} numberOfLines={1}>{person.username ? `@${person.username}` : person.bio || t('social.viewProfile')}</Text>
                           </View>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.accept} disabled={!!busy} onPress={() => void sendRequest(person.userId)}
+                         <TouchableOpacity style={[styles.accept, { backgroundColor: acceptSurface }]} disabled={!!busy} onPress={() => void sendRequest(person.userId)}
                           accessibilityLabel={t('social.sendFriendRequest', { name: person.name })} testID={`add-${person.userId}`}>
-                          {busy === person.userId ? <ActivityIndicator color="#fff" size="small" /> : <Icon name="user-plus" size={17} color="#fff" />}
+                           {busy === person.userId ? <ActivityIndicator color={actionText} size="small" /> : <Icon name="user-plus" size={17} color={actionText} />}
                         </TouchableOpacity>
                       </View>
                     ))}</View> : <Empty text={t('social.noNewPeople')} />)}
                 </>
               )}
               <TouchableOpacity style={styles.inboxLink} onPress={() => router.push('/messages')}>
-                <Icon name="message-circle" size={18} color={colors.primary} />
-                <Text style={[styles.inboxText, { color: colors.primary }]}>{t('social.viewConversations')}</Text>
-                <Icon name="chevron-right" size={16} color={colors.primary} />
+                <Icon name="message-circle" size={18} color={accentColor} />
+                <Text style={[styles.inboxText, { color: accentColor }]}>{t('social.viewConversations')}</Text>
+                <Icon name="chevron-right" size={16} color={accentColor} />
               </TouchableOpacity>
             </View>
           </>
@@ -310,7 +329,14 @@ export default function FriendsScreen() {
 }
 
 function Empty({ text }: { text: string }) {
-  return <View style={styles.empty}><Icon name="users" size={31} color="#9888BC" /><Text style={styles.emptyText}>{text}</Text></View>;
+  const colors = useColors();
+  const { isDark } = useTheme();
+  return (
+    <View style={styles.empty}>
+      <Icon name="users" size={31} color={isDark ? '#9888BC' : colors.tint} />
+      <Text style={[styles.emptyText, { color: isDark ? '#B5A9D1' : colors.mutedForeground }]}>{text}</Text>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -14,6 +14,8 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 
 interface Purchase {
   id:          string;
@@ -38,12 +40,12 @@ const ITEM_EMOJI: Record<string, string> = {
   effect_leaves:       '🍃',
 };
 
-function categoryMeta(itemId: string): { key: string; color: string } {
-  if (itemId.startsWith('frame_'))  return { key: 'frame',  color: '#C8A84B' };
-  if (itemId.startsWith('accent_')) return { key: 'accent', color: '#9B8BCC' };
-  if (itemId.startsWith('theme_'))  return { key: 'theme',  color: '#78B8E8' };
-  if (itemId.startsWith('effect_')) return { key: 'effect', color: '#70C8A0' };
-  return { key: 'item', color: '#C8B8E8' };
+function categoryMeta(itemId: string, isDark: boolean): { key: string; color: string } {
+  if (itemId.startsWith('frame_'))  return { key: 'frame',  color: isDark ? '#C8A84B' : '#805B13' };
+  if (itemId.startsWith('accent_')) return { key: 'accent', color: isDark ? '#9B8BCC' : '#5F4D92' };
+  if (itemId.startsWith('theme_'))  return { key: 'theme',  color: isDark ? '#78B8E8' : '#2F699B' };
+  if (itemId.startsWith('effect_')) return { key: 'effect', color: isDark ? '#70C8A0' : '#267850' };
+  return { key: 'item', color: isDark ? '#C8B8E8' : '#69578B' };
 }
 
 function costStr(p: Purchase, freeLabel: string): string {
@@ -66,8 +68,14 @@ function formatDate(iso: string): string {
 
 export default function PurchaseHistoryScreen() {
   const { t } = useTranslation();
+  const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
+  const backgroundGradient: [string, string, string] = isDark
+    ? ['#0A081A', '#120E28', '#0A081A']
+    : ['#EFE9F8', '#F9F7F0', colors.background];
+  const costColor = isDark ? 'rgba(200,168,75,0.80)' : '#805B13';
 
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading,   setLoading]   = useState(true);
@@ -81,27 +89,33 @@ export default function PurchaseHistoryScreen() {
   }, []);
 
   return (
-    <View style={s.root}>
+    <View style={[s.root, { backgroundColor: colors.background }]}>
       <LinearGradient
-        colors={['#0A081A', '#120E28', '#0A081A']}
+        colors={backgroundGradient}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.2, y: 0 }}
         end={{ x: 0.8, y: 1 }}
       />
 
       {/* ── Header ── */}
-      <View style={[s.header, { paddingTop: topPad + 10 }]}>
+      <View style={[s.header, {
+        paddingTop: topPad + 10,
+        borderBottomColor: isDark ? 'rgba(200,184,232,0.08)' : colors.border,
+      }]}>
         <TouchableOpacity
           onPress={() => safeBack()}
-          style={s.backBtn}
+          style={[s.backBtn, {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : colors.card,
+            borderColor: isDark ? 'rgba(200,184,232,0.14)' : colors.border,
+          }]}
           activeOpacity={0.7}
           accessibilityRole="button"
           accessibilityLabel={t('shell.purchaseHistory.back')}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Icon name="chevron-left" size={20} color="rgba(200,184,232,0.85)" />
+          <Icon name="chevron-left" size={20} color={isDark ? 'rgba(200,184,232,0.85)' : colors.mutedForeground} />
         </TouchableOpacity>
-        <Text style={s.title}>{t('shell.purchaseHistory.title')}</Text>
+        <Text style={[s.title, { color: colors.foreground }]}>{t('shell.purchaseHistory.title')}</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -116,16 +130,16 @@ export default function PurchaseHistoryScreen() {
       ) : hasError ? (
         <View style={s.center}>
           <Text style={{ fontSize: 32, marginBottom: 8 }}>✦</Text>
-          <Text style={s.emptyHead}>{t('shell.purchaseHistory.loadErrorTitle')}</Text>
-          <Text style={s.emptySub}>{t('shell.purchaseHistory.loadErrorBody')}</Text>
+          <Text style={[s.emptyHead, { color: colors.foreground }]}>{t('shell.purchaseHistory.loadErrorTitle')}</Text>
+          <Text style={[s.emptySub, { color: colors.mutedForeground }]}>{t('shell.purchaseHistory.loadErrorBody')}</Text>
         </View>
       ) : purchases.length === 0 ? (
         <View style={s.center}>
           <View style={s.emptyIconWrap}>
-            <Icon name="shopping-bag" size={26} color="rgba(200,168,75,0.55)" />
+            <Icon name="shopping-bag" size={26} color={isDark ? 'rgba(200,168,75,0.55)' : colors.gold} />
           </View>
-          <Text style={s.emptyHead}>{t('shell.purchaseHistory.emptyTitle')}</Text>
-          <Text style={s.emptySub}>{t('shell.purchaseHistory.emptyBody')}</Text>
+          <Text style={[s.emptyHead, { color: colors.foreground }]}>{t('shell.purchaseHistory.emptyTitle')}</Text>
+          <Text style={[s.emptySub, { color: colors.mutedForeground }]}>{t('shell.purchaseHistory.emptyBody')}</Text>
         </View>
       ) : (
         <ScrollView
@@ -133,12 +147,19 @@ export default function PurchaseHistoryScreen() {
           showsVerticalScrollIndicator={false}
         >
           {purchases.map((p, i) => {
-            const cat  = categoryMeta(p.itemId);
+            const cat  = categoryMeta(p.itemId, isDark);
             const emoji = ITEM_EMOJI[p.itemId] ?? '✦';
             return (
               <View
                 key={p.id}
-                style={[s.row, i === 0 && { marginTop: 4 }]}
+                style={[
+                  s.row,
+                  {
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : colors.card,
+                    borderColor: isDark ? 'rgba(200,184,232,0.10)' : colors.border,
+                  },
+                  i === 0 && { marginTop: 4 },
+                ]}
               >
                 {/* Icon bubble */}
                 <View style={[s.iconBubble, { backgroundColor: `${cat.color}18`, borderColor: `${cat.color}30` }]}>
@@ -149,15 +170,18 @@ export default function PurchaseHistoryScreen() {
                 <View style={s.info}>
                   <Text style={s.itemName} numberOfLines={1}>{p.itemName}</Text>
                   <View style={s.metaRow}>
-                    <View style={[s.catPill, { backgroundColor: `${cat.color}15`, borderColor: `${cat.color}28` }]}>
+                    <View style={[s.catPill, {
+                      backgroundColor: `${cat.color}15`,
+                      borderColor: `${cat.color}55`,
+                    }]}>
                       <Text style={[s.catPillText, { color: cat.color }]}>{t(`shell.purchaseHistory.category.${cat.key}`)}</Text>
                     </View>
-                    <Text style={s.dateText}>{formatDate(p.purchasedAt)}</Text>
+                    <Text style={[s.dateText, { color: colors.mutedForeground }]}>{formatDate(p.purchasedAt)}</Text>
                   </View>
                 </View>
 
                 {/* Cost */}
-                <Text style={s.costText}>{costStr(p, t('shell.purchaseHistory.free'))}</Text>
+                <Text style={[s.costText, { color: costColor }]}>{costStr(p, t('shell.purchaseHistory.free'))}</Text>
               </View>
             );
           })}

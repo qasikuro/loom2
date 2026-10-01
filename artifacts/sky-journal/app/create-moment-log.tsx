@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 
@@ -33,8 +34,20 @@ const MOODS = [
   { label: 'Joyful',   icon: 'smile'   as const, color: '#60A878' },
 ];
 
+const LIGHT_MOOD_COLORS: Record<string, string> = {
+  Hopeful: '#8A6700',
+  Lonely: '#3E6090',
+  Peaceful: '#28728E',
+  Dreamy: '#68438A',
+  Soft: '#725890',
+  Chaotic: '#AD4D21',
+  Grateful: '#A83F73',
+  Joyful: '#33784B',
+};
+
 export default function CreateMomentLogScreen() {
-  useColors();
+  const colors = useColors();
+  const { isDark } = useTheme();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -43,6 +56,9 @@ export default function CreateMomentLogScreen() {
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 80;
   const contentWidth = Math.min(windowWidth, 720);
+  const backgroundGradient: [string, string, string] = isDark
+    ? ['#1A1630', '#231A48', '#1E2848']
+    : ['#EEE8FB', '#F5F1FC', colors.background];
 
   const [text, setText] = useState('');
   const [mood, setMood] = useState('Peaceful');
@@ -72,9 +88,9 @@ export default function CreateMomentLogScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Night sky background */}
-      <LinearGradient colors={['#1A1630', '#231A48', '#1E2848']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={backgroundGradient} style={StyleSheet.absoluteFill} />
       {/* Stars */}
       {[{ t: 70, l: 50, s: 3 }, { t: 110, r: 70, s: 2 }, { t: 50, r: 120, s: 4 },
         { t: 160, l: 100, s: 2 }, { t: 90, r: 40, s: 3 }, { t: 140, l: 40, s: 2 }].map((star, i) => (
@@ -82,28 +98,47 @@ export default function CreateMomentLogScreen() {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           top: star.t, left: (star as any).l, right: (star as any).r,
           width: star.s, height: star.s,
-          backgroundColor: `rgba(240,210,130,${0.4 + i * 0.07})`,
+          backgroundColor: isDark
+            ? `rgba(240,210,130,${0.4 + i * 0.07})`
+            : `rgba(183,132,47,${0.16 + i * 0.035})`,
         }]} />
       ))}
 
       <View style={[styles.header, { paddingTop: topPad + 10, maxWidth: 800, width: '100%', alignSelf: 'center' }]}>
-        <BackButton style={[styles.iconBtn, { backgroundColor: 'rgba(255,255,255,0.09)' }]} iconName="x" size={18} color="rgba(240,234,248,0.75)" />
+        <BackButton
+          style={[styles.iconBtn, {
+            backgroundColor: isDark ? 'rgba(255,255,255,0.09)' : colors.card,
+            borderWidth: isDark ? 0 : 1,
+            borderColor: colors.border,
+          }]}
+          iconName="x" size={18} color={isDark ? 'rgba(240,234,248,0.75)' : colors.foreground}
+        />
         <View style={styles.headerCenter}>
           <Text style={styles.headerEmoji}>🌙</Text>
-          <Text style={styles.headerTitle}>{t('journal.quickMomentTitle')}</Text>
-          <View style={styles.privatePill}>
-            <Icon name="lock" size={10} color="rgba(200,184,232,0.7)" />
-            <Text style={styles.privatePillText}>{t('common.private')}</Text>
+          <Text style={[styles.headerTitle, { color: isDark ? 'rgba(200,184,232,0.9)' : colors.foreground }]}>{t('journal.quickMomentTitle')}</Text>
+          <View style={[styles.privatePill, { backgroundColor: isDark ? 'rgba(200,184,232,0.1)' : colors.muted }]}>
+            <Icon name="lock" size={10} color={isDark ? 'rgba(200,184,232,0.7)' : colors.mutedForeground} />
+            <Text style={[styles.privatePillText, { color: isDark ? 'rgba(200,184,232,0.7)' : colors.mutedForeground }]}>{t('common.private')}</Text>
           </View>
         </View>
         <TouchableOpacity
-          style={[styles.saveBtn, { backgroundColor: saving ? 'rgba(255,255,255,0.08)' : 'rgba(200,184,232,0.22)', borderColor: 'rgba(200,184,232,0.4)', borderWidth: 1 }]}
+          style={[styles.saveBtn, {
+            backgroundColor: saving
+              ? (isDark ? 'rgba(255,255,255,0.08)' : colors.muted)
+              : (isDark ? 'rgba(200,184,232,0.22)' : colors.secondary),
+            borderColor: isDark ? 'rgba(200,184,232,0.4)' : colors.secondary,
+            borderWidth: 1,
+          }]}
           onPress={handleSave} disabled={saving}
           accessibilityRole="button"
           accessibilityLabel={saving ? t('outfitJournal.saving') : t('outfitJournal.save')}
         >
-          {saving && <SkyLoadingMark size={16} color="rgba(200,184,232,0.4)" />}
-          <Text style={[styles.saveBtnText, { color: saving ? 'rgba(200,184,232,0.4)' : 'rgba(200,184,232,0.9)' }]}>
+          {saving && <SkyLoadingMark size={16} color={isDark ? 'rgba(200,184,232,0.4)' : colors.mutedForeground} />}
+          <Text style={[styles.saveBtnText, {
+            color: saving
+              ? (isDark ? 'rgba(200,184,232,0.4)' : colors.mutedForeground)
+              : (isDark ? 'rgba(200,184,232,0.9)' : colors.secondaryForeground),
+          }]}>
             {saving ? t('outfitJournal.saving') : t('outfitJournal.save')}
           </Text>
         </TouchableOpacity>
@@ -116,61 +151,77 @@ export default function CreateMomentLogScreen() {
       >
         {/* Prompt */}
         <TouchableOpacity
-          style={[styles.promptCard, { borderColor: 'rgba(200,184,232,0.18)', backgroundColor: 'rgba(200,184,232,0.06)' }]}
+          style={[styles.promptCard, {
+            borderColor: isDark ? 'rgba(200,184,232,0.18)' : `${colors.secondary}35`,
+            backgroundColor: isDark ? 'rgba(200,184,232,0.06)' : `${colors.secondary}0A`,
+          }]}
           onPress={() => inputRef.current?.focus()}
           accessibilityRole="button"
           accessibilityLabel={prompt}
         >
-          <Icon name="feather" size={13} color="rgba(200,184,232,0.5)" />
-          <Text style={styles.promptText}>{prompt}</Text>
+          <Icon name="feather" size={13} color={isDark ? 'rgba(200,184,232,0.5)' : colors.tint} />
+          <Text style={[styles.promptText, { color: isDark ? 'rgba(200,184,232,0.55)' : colors.text }]}>{prompt}</Text>
         </TouchableOpacity>
 
         {/* Text area */}
         <TextInput
           ref={inputRef}
-          style={styles.textArea}
+          style={[styles.textArea, {
+            color: isDark ? 'rgba(240,234,248,0.9)' : colors.foreground,
+            borderColor: isDark ? 'rgba(200,184,232,0.18)' : colors.border,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : colors.card,
+          }]}
           placeholder={t('outfitJournal.momentPlaceholder')}
-          placeholderTextColor="rgba(200,184,232,0.28)"
+          placeholderTextColor={isDark ? 'rgba(200,184,232,0.28)' : colors.mutedForeground}
           value={text}
           onChangeText={t => { setText(t); if (error) setError(null); }}
           multiline
           textAlignVertical="top"
           autoFocus
         />
-        <Text style={styles.charCount}>{t('outfitJournal.characterCount', { count: text.length })}</Text>
+        <Text style={[styles.charCount, { color: isDark ? 'rgba(200,184,232,0.3)' : colors.mutedForeground }]}>{t('outfitJournal.characterCount', { count: text.length })}</Text>
 
         {/* Mood */}
-        <Text style={styles.moodLabel}>{t('journal.moodPlaceholder')}</Text>
+        <Text style={[styles.moodLabel, { color: isDark ? 'rgba(200,184,232,0.45)' : colors.mutedForeground }]}>{t('journal.moodPlaceholder')}</Text>
         <View style={styles.moodGrid}>
-          {MOODS.map(m => (
-            <TouchableOpacity key={m.label}
+          {MOODS.map(m => {
+            const moodColor = isDark ? m.color : LIGHT_MOOD_COLORS[m.label];
+            return (
+              <TouchableOpacity key={m.label}
               style={[styles.moodChip, {
-                backgroundColor: mood === m.label ? `${m.color}30` : `${m.color}12`,
-                borderColor: mood === m.label ? `${m.color}70` : `${m.color}25`,
+                backgroundColor: mood === m.label ? `${moodColor}30` : `${moodColor}12`,
+                borderColor: mood === m.label ? `${moodColor}70` : `${moodColor}25`,
                 borderWidth: mood === m.label ? 1.5 : 1,
               }]}
               onPress={() => { setMood(m.label); Haptics.selectionAsync(); }}
               accessibilityRole="radio"
               accessibilityState={{ selected: mood === m.label }}
-              accessibilityLabel={t(`outfitJournal.mood${m.label}`)}
-            >
-              <Icon name={m.icon} size={14} color={m.color} />
-              <Text style={[styles.moodChipText, { color: m.color }]}>{t(`outfitJournal.mood${m.label}`)}</Text>
-            </TouchableOpacity>
-          ))}
+                accessibilityLabel={t(`outfitJournal.mood${m.label}`)}
+              >
+                <Icon name={m.icon} size={14} color={moodColor} />
+                <Text style={[styles.moodChipText, { color: moodColor }]}>{t(`outfitJournal.mood${m.label}`)}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Inline validation error */}
         {error && (
-          <View style={styles.errorBanner}>
-            <Icon name="alert-circle" size={14} color="#F87171" />
-            <Text style={styles.errorText}>{error}</Text>
+          <View style={[styles.errorBanner, {
+            borderColor: isDark ? 'rgba(248,113,113,0.4)' : `${colors.destructive}55`,
+            backgroundColor: isDark ? 'rgba(248,113,113,0.12)' : `${colors.destructive}12`,
+          }]}>
+            <Icon name="alert-circle" size={14} color={isDark ? '#F87171' : colors.destructive} />
+            <Text style={[styles.errorText, { color: isDark ? '#F87171' : colors.destructive }]}>{error}</Text>
           </View>
         )}
 
-        <View style={styles.privateNote}>
-          <Icon name="lock" size={12} color="rgba(200,184,232,0.4)" />
-          <Text style={styles.privateNoteText}>
+        <View style={[styles.privateNote, {
+          borderColor: isDark ? 'rgba(200,184,232,0.12)' : colors.border,
+          backgroundColor: isDark ? 'rgba(200,184,232,0.04)' : colors.muted,
+        }]}>
+          <Icon name="lock" size={12} color={isDark ? 'rgba(200,184,232,0.4)' : colors.mutedForeground} />
+          <Text style={[styles.privateNoteText, { color: isDark ? 'rgba(200,184,232,0.45)' : colors.text }]}>
             {t('outfitJournal.momentPrivate')}
           </Text>
         </View>

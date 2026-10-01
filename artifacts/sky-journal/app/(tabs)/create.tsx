@@ -20,6 +20,7 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import { useTranslation } from 'react-i18next';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 
 const MODES = [
   {
@@ -29,6 +30,8 @@ const MODES = [
     descriptionKey: 'feature.create.quickDesc',
     color:       '#FFD05B',
     border:      '#F8C84A',
+    lightColor:  '#8A5A00',
+    lightBorder: '#B8841A',
     image:       Images.story_bg3,
     featured:    true,
     route:       '/quick-moment',
@@ -40,6 +43,8 @@ const MODES = [
     descriptionKey: 'feature.create.journalDesc',
     color:       '#B58CFF',
     border:      '#8054D8',
+    lightColor:  '#6540A8',
+    lightBorder: '#9671C5',
     image:       Images.create_quick,
     featured:    false,
     route:       '/(tabs)/log',
@@ -51,6 +56,8 @@ const MODES = [
     descriptionKey: 'feature.create.chapterDesc',
     color:       '#A968FF',
     border:      '#7D3DDE',
+    lightColor:  '#6935A8',
+    lightBorder: '#9667C2',
     image:       Images.create_chapter,
     featured:    false,
     route:       '/chapter-editor',
@@ -62,6 +69,8 @@ const MODES = [
     descriptionKey: 'feature.create.videoDesc',
     color:       '#FF68A8',
     border:      '#D63388',
+    lightColor:  '#A83168',
+    lightBorder: '#C16B8B',
     image:       Images.create_video,
     featured:    false,
     route:       '/post-video',
@@ -73,6 +82,8 @@ const MODES = [
     descriptionKey: 'feature.create.dashboardDesc',
     color:       '#42E0D0',
     border:      '#18AFA9',
+    lightColor:  '#0B746C',
+    lightBorder: '#42968E',
     image:       Images.create_dashboard,
     featured:    false,
     route:       '/creator-dashboard',
@@ -82,6 +93,7 @@ const MODES = [
 export default function CreateScreen() {
   const { t } = useTranslation();
   const colors = useColors();
+  const { isDark } = useTheme();
   const insets  = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.92, 820);
@@ -173,42 +185,57 @@ export default function CreateScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {MODES.map(mode => (
-            <TouchableOpacity
-              key={mode.id}
-              style={[s.tile, mode.featured && s.featuredTile]}
-              onPress={() => selectMode(mode.route)}
-              activeOpacity={0.82}
-            >
-              <Image
-                source={mode.image}
-                style={s.tileArtwork}
-                contentFit="cover"
-                contentPosition="right center"
-              />
-              <LinearGradient
-                colors={[
+          {MODES.map(mode => {
+            const accent = isDark ? mode.color : mode.lightColor;
+            const tileBorder = isDark ? mode.border : mode.lightBorder;
+            const tileGradient: [string, string, string] = isDark
+              ? [
                   mode.id === 'quick' ? 'rgba(36,21,13,0.98)' : 'rgba(15,8,35,0.97)',
                   `${mode.color}45`,
                   'rgba(8,5,24,0.16)',
+                ]
+              : [
+                  'rgba(252,251,248,0.995)',
+                  'rgba(252,251,248,0.94)',
+                  'rgba(252,251,248,0.28)',
+                ];
+            return (
+              <TouchableOpacity
+                key={mode.id}
+                style={[
+                  s.tile,
+                  mode.featured && s.featuredTile,
+                  !isDark && { backgroundColor: colors.card, borderColor: tileBorder },
                 ]}
-                locations={[0, 0.58, 1]}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
-              />
-              <View pointerEvents="none" style={[s.tileBorder, { borderColor: mode.border }]} />
-              <View style={[s.iconWrap, { backgroundColor: `${mode.color}20`, borderColor: `${mode.color}A0` }]}>
-                <Icon name={mode.icon} size={mode.featured ? 27 : 25} color={mode.color} />
-              </View>
-              <View style={s.tileText}>
-              <Text style={s.tileName} numberOfLines={1}>{t(mode.nameKey)}</Text>
-              <Text style={s.tileDesc} numberOfLines={3}>{t(mode.descriptionKey)}</Text>
-              </View>
-              <View style={[s.arrowBtn, { borderColor: `${mode.color}80` }]}>
-                <Icon name="chevron-right" size={20} color="#FFFFFF" />
-              </View>
-            </TouchableOpacity>
-          ))}
+                onPress={() => selectMode(mode.route)}
+                activeOpacity={0.82}
+              >
+                <Image
+                  source={mode.image}
+                  style={s.tileArtwork}
+                  contentFit="cover"
+                  contentPosition="right center"
+                />
+                <LinearGradient
+                  colors={tileGradient}
+                  locations={isDark ? [0, 0.58, 1] : [0, 0.72, 1]}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }}
+                />
+                <View pointerEvents="none" style={[s.tileBorder, { borderColor: tileBorder }]} />
+                <View style={[s.iconWrap, { backgroundColor: `${accent}20`, borderColor: `${accent}A0` }]}>
+                  <Icon name={mode.icon} size={mode.featured ? 27 : 25} color={accent} />
+                </View>
+                <View style={s.tileText}>
+                  <Text style={[s.tileName, { color: isDark ? '#FFFFFF' : colors.foreground }]} numberOfLines={1}>{t(mode.nameKey)}</Text>
+                  <Text style={[s.tileDesc, { color: isDark ? 'rgba(225,216,246,0.88)' : colors.text }]} numberOfLines={3}>{t(mode.descriptionKey)}</Text>
+                </View>
+                <View style={[s.arrowBtn, { borderColor: `${accent}80` }]}>
+                  <Icon name="chevron-right" size={20} color="#FFFFFF" />
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
       </Animated.View>
