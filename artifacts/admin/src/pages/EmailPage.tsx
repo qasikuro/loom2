@@ -137,7 +137,7 @@ export default function EmailPage() {
     }
   }
 
-  function usePreset(name: PresetName) {
+  function handlePresetSelect(name: PresetName) {
     setSelectedPreset(name);
     setCampaignSubject(presets[name].subject);
     setCampaignMessage(presets[name].message);
@@ -338,7 +338,7 @@ export default function EmailPage() {
               <div className="flex flex-wrap gap-2">
                 {(Object.keys(DEFAULT_PRESETS) as PresetName[]).map(name => (
                   <button key={name} type="button" data-testid={`button-preset-${name.toLowerCase().replaceAll(" ", "-")}`}
-                    disabled={creating || !!dispatchingId} onClick={() => usePreset(name)}
+                    disabled={creating || !!dispatchingId} onClick={() => handlePresetSelect(name)}
                     className={`rounded-full border px-3.5 py-2 text-xs font-semibold transition-colors ${selectedPreset === name ? "border-primary bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}>
                     {name}
                   </button>

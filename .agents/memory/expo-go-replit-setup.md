@@ -53,3 +53,11 @@ The Replit screenshot browser may not carry a Clerk session. Protected Expo rout
 **Why:** The screenshot browser is separate from the user's signed-in app session and reports Clerk's `dev-browser-missing` state.
 
 **How to apply:** Check Metro and typecheck results before treating a splash-only screenshot as a code failure. Verify protected screens in a signed-in session.
+
+### Phone-only hostname failures
+
+When Android reports that it cannot resolve the Expo host, compare the hostname in the current workflow QR with the landing page's copied address. Then check that hostname using a public DNS resolver and request the Android manifest and its exact launch-asset URL through the public edge. If those succeed while the phone still reports a lookup failure, the remaining fault is on that phone's DNS/network path, before the app's JavaScript starts. Do not diagnose it as an app bundle error.
+
+**Why:** The Replit workspace may resolve a preview domain through internal routing that a physical phone does not use; a workspace-only request does not prove public-device reachability.
+
+**How to apply:** Confirm public DNS and the manifest/bundle first. If they work, direct the user to scan the current QR in the official Expo Go app and check another network, VPN, or Private DNS on the device. Never use `localhost:8081` as a remote phone address.
