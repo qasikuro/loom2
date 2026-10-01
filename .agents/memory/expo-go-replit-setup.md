@@ -56,8 +56,8 @@ The Replit screenshot browser may not carry a Clerk session. Protected Expo rout
 
 ### Phone-only hostname failures
 
-When Android reports that it cannot resolve the Expo host, compare the hostname in the current workflow QR with the landing page's copied address. Then check that hostname using a public DNS resolver and request the Android manifest and its exact launch-asset URL through the public edge. If those succeed while the phone still reports a lookup failure, the remaining fault is on that phone's DNS/network path, before the app's JavaScript starts. Do not diagnose it as an app bundle error.
+When Android reports that it cannot resolve the Expo host, compare the hostname in the current workflow QR with the landing page's copied address. Then check multiple public DNS resolvers and request the Android manifest and its exact launch-asset URL through the public edge. Successful public checks establish those routes only; they do not identify whether a phone's NXDOMAIN comes from caching, filtering, or inconsistent DNS infrastructure. Do not blame the carrier definitively or describe the user's general internet connection as broken. The failure occurs before the app's JavaScript starts.
 
-**Why:** The Replit workspace may resolve a preview domain through internal routing that a physical phone does not use; a workspace-only request does not prove public-device reachability.
+**Why:** The Replit workspace may resolve a preview domain through internal routing that a physical phone does not use. A phone's Chrome and development client both returned NXDOMAIN while Google and Cloudflare resolved the same host and public-edge manifest/bundle downloads worked.
 
-**How to apply:** Confirm public DNS and the manifest/bundle first. If they work, direct the user to scan the current QR in the official Expo Go app and check another network, VPN, or Private DNS on the device. Never use `localhost:8081` as a remote phone address.
+**How to apply:** Confirm public DNS and the manifest/bundle first. Network or resolver changes are diagnostic options, not proof of fault. If offering an alternate preview hostname, first verify its routing and every advertised manifest/bundle host: merely typing a different base URL can still return assets on the failing original origin. Never use `localhost:8081` as a remote phone address.
