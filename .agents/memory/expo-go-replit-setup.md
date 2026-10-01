@@ -61,3 +61,11 @@ When Android reports that it cannot resolve the Expo host, compare the hostname 
 **Why:** The Replit workspace may resolve a preview domain through internal routing that a physical phone does not use. A phone's Chrome and development client both returned NXDOMAIN while Google and Cloudflare resolved the same host and public-edge manifest/bundle downloads worked.
 
 **How to apply:** Confirm public DNS and the manifest/bundle first. Network or resolver changes are diagnostic options, not proof of fault. If offering an alternate preview hostname, first verify its routing and every advertised manifest/bundle host: merely typing a different base URL can still return assets on the failing original origin. Never use `localhost:8081` as a remote phone address.
+
+### Temporary phone tunnel tradeoff
+
+A temporary Cloudflare tunnel is a development-only workaround when a physical phone cannot resolve the Replit preview hosts and Expo's own tunnel is unavailable. Advertise the reachable origin consistently for both Metro and the development API; loading JavaScript alone is not a working phone preview. Keep native identity, production domains, and EAS build settings unchanged.
+
+**Why:** Both Replit preview host variants failed on the phone despite successful public DNS and bundle checks. Cloudflare provided an independent route without requiring a standalone APK or changing the installed native identity.
+
+**How to apply:** Verify the public manifest, full Android bundle, API health, unauthenticated API rejection, and WebSocket upgrade. The origin changes on restart, so the phone must use the current address. Do not claim full real-time feature support: Cloudflare Quick Tunnels explicitly do not support SSE; use a supported named tunnel or an intentional development polling fallback for those features.
