@@ -7,7 +7,7 @@ const en = {
   libraryTitle: 'Ximo Library', librarySubtitle: 'Explore serialised stories from writers in the community',
   noBooks: 'No books yet', firstBook: 'Be the first to publish a book series in Ximo',
   chapterCount_one: '{{count}} chapter', chapterCount_other: '{{count}} chapters',
-  byAuthor: 'By {{name}}', guidesTitle: 'Constellation Guides',
+  byAuthor: 'By {{name}}', guidesTitle: 'Game Guides',
   guidesSubtitle: 'Wanderers who light the path — find people who resonate with your journey',
   allTopics: 'All Topics', availableNow: 'Available Now', allGuides: 'All Guides',
   noGuidesForTopic: 'No guides here', noGuidesTopic: 'No guides for "{{topic}}" yet — try another topic',
@@ -48,7 +48,7 @@ const ja = {
   libraryTitle: 'Ximoライブラリ', librarySubtitle: 'コミュニティの作家による連載ストーリーを見つけよう',
   noBooks: '本はまだありません', firstBook: '最初のシリーズをXimoで公開しましょう',
   chapterCount_one: '{{count}}章', chapterCount_other: '{{count}}章', byAuthor: '著者：{{name}}',
-  guidesTitle: '星座ガイド', guidesSubtitle: '道を照らす旅人たち — 心に響く人を見つけましょう',
+  guidesTitle: 'ゲームガイド', guidesSubtitle: '道を照らす旅人たち — 心に響く人を見つけましょう',
   allTopics: 'すべてのトピック', availableNow: '現在対応可能', allGuides: 'すべてのガイド',
   noGuidesForTopic: 'ガイドが見つかりません', noGuidesTopic: '「{{topic}}」のガイドはまだいません。別のトピックをお試しください',
   guidesUnavailable: '一部のガイドを利用できません', guidesUnavailableBody: '現在お休み中です。また後で確認してください',
@@ -87,7 +87,7 @@ const es = {
   libraryTitle: 'Biblioteca Ximo', librarySubtitle: 'Explora historias por entregas de escritores de la comunidad',
   noBooks: 'Aún no hay libros', firstBook: 'Sé la primera persona en publicar una serie en Ximo',
   chapterCount_one: '{{count}} capítulo', chapterCount_other: '{{count}} capítulos', byAuthor: 'De {{name}}',
-  guidesTitle: 'Guías de constelación', guidesSubtitle: 'Viajeros que iluminan el camino: encuentra personas afines a tu viaje',
+  guidesTitle: 'Guías de juego', guidesSubtitle: 'Viajeros que iluminan el camino: encuentra personas afines a tu viaje',
   allTopics: 'Todos los temas', availableNow: 'Disponible ahora', allGuides: 'Todas las guías',
   noGuidesForTopic: 'No hay guías aquí', noGuidesTopic: 'Aún no hay guías de «{{topic}}»; prueba otro tema',
   guidesUnavailable: 'Algunas guías no están disponibles', guidesUnavailableBody: 'Algunas guías están descansando; vuelve pronto',
@@ -125,7 +125,7 @@ const es = {
 const tr = {
   updating: 'Güncelleniyor', tabGuides: 'Rehberler', tabBooks: 'Kitaplar', tabPeople: 'Kişiler',
   libraryTitle: 'Ximo Kütüphanesi', noBooks: 'Henüz kitap yok', firstBook: 'Ximo’da ilk kitap serisini yayımlayan sen ol',
-  guidesTitle: 'Takımyıldız Rehberleri', allTopics: 'Tüm konular', availableNow: 'Şu an uygun', allGuides: 'Tüm rehberler',
+  guidesTitle: 'Oyun Rehberleri', allTopics: 'Tüm konular', availableNow: 'Şu an uygun', allGuides: 'Tüm rehberler',
   now: 'Şimdi', following: 'Takip ediliyor', follow: 'Takip et', findFriends: 'Arkadaş Bul',
   searchHint: 'İsim veya @kullanıcı adıyla ara', searchPeoplePlaceholder: 'İsim veya @kullanıcı adıyla ara…',
   noPeopleResults: 'Kişi bulunamadı', tryDifferentPeople: 'Başka bir isim veya kullanıcı adı deneyin.',
@@ -167,7 +167,7 @@ const tr = {
 const fr = {
   updating: 'Mise à jour', tabGuides: 'Accompagnants', tabBooks: 'Livres', tabPeople: 'Personnes',
   libraryTitle: 'Bibliothèque Ximo', noBooks: 'Pas encore de livres', firstBook: 'Soyez la première personne à publier une série sur Ximo',
-  guidesTitle: 'Guides constellation', allTopics: 'Tous les thèmes', availableNow: 'Disponible maintenant', allGuides: 'Tous les guides',
+  guidesTitle: 'Guides de jeu', allTopics: 'Tous les thèmes', availableNow: 'Disponible maintenant', allGuides: 'Tous les guides',
   now: 'Maintenant', following: 'Abonné·e', follow: 'Suivre', findFriends: 'Trouver des amis',
   searchHint: 'Recherchez par nom ou @identifiant', searchPeoplePlaceholder: 'Rechercher par nom ou @identifiant…',
   noPeopleResults: 'Aucune personne trouvée', tryDifferentPeople: 'Essayez un autre nom ou identifiant.',
@@ -210,7 +210,7 @@ const fr = {
 const de = {
   updating: 'Wird aktualisiert', tabGuides: 'Begleiter', tabBooks: 'Bücher', tabPeople: 'Personen',
   libraryTitle: 'Ximo-Bibliothek', noBooks: 'Noch keine Bücher', firstBook: 'Veröffentliche als Erste:r eine Buchreihe auf Ximo',
-  guidesTitle: 'Sternbild-Guides', allTopics: 'Alle Themen', availableNow: 'Jetzt verfügbar', allGuides: 'Alle Guides',
+  guidesTitle: 'Spiele-Guides', allTopics: 'Alle Themen', availableNow: 'Jetzt verfügbar', allGuides: 'Alle Guides',
   now: 'Jetzt', following: 'Folge ich', follow: 'Folgen', findFriends: 'Freunde finden',
   searchHint: 'Suche nach Namen oder @Nutzername', searchPeoplePlaceholder: 'Nach Name oder @Nutzername suchen …',
   noPeopleResults: 'Keine Personen gefunden', tryDifferentPeople: 'Versuche einen anderen Namen oder Nutzernamen.',
@@ -253,7 +253,7 @@ const de = {
 const pt = {
   updating: 'Atualizando', tabGuides: 'Guias', tabBooks: 'Livros', tabPeople: 'Pessoas',
   libraryTitle: 'Biblioteca Ximo', noBooks: 'Ainda não há livros', firstBook: 'Seja a primeira pessoa a publicar uma série no Ximo',
-  guidesTitle: 'Guias da constelação', allTopics: 'Todos os temas', availableNow: 'Disponível agora', allGuides: 'Todos os guias',
+  guidesTitle: 'Guias de jogo', allTopics: 'Todos os temas', availableNow: 'Disponível agora', allGuides: 'Todos os guias',
   now: 'Agora', following: 'Seguindo', follow: 'Seguir', findFriends: 'Encontrar amigos',
   searchHint: 'Pesquise por nome ou @usuário', searchPeoplePlaceholder: 'Buscar por nome ou @usuário…',
   noPeopleResults: 'Nenhuma pessoa encontrada', tryDifferentPeople: 'Tente outro nome ou usuário.',
@@ -296,7 +296,7 @@ const pt = {
 const ko = {
   updating: '업데이트 중', tabGuides: '가이드', tabBooks: '책', tabPeople: '사람',
   libraryTitle: 'Ximo 라이브러리', noBooks: '아직 책이 없습니다', firstBook: 'Ximo에서 첫 번째 시리즈를 출간해 보세요',
-  guidesTitle: '별자리 가이드', allTopics: '모든 주제', availableNow: '지금 이용 가능', allGuides: '모든 가이드',
+  guidesTitle: '게임 가이드', allTopics: '모든 주제', availableNow: '지금 이용 가능', allGuides: '모든 가이드',
   now: '지금', following: '팔로잉', follow: '팔로우', findFriends: '친구 찾기',
   searchHint: '이름 또는 @사용자 이름으로 검색', searchPeoplePlaceholder: '이름 또는 @사용자 이름으로 검색…',
   noPeopleResults: '사람을 찾을 수 없습니다', tryDifferentPeople: '다른 이름이나 사용자 이름을 입력해 보세요.',
@@ -338,7 +338,7 @@ const ko = {
 const zh = {
   updating: '正在更新', tabGuides: '向导', tabBooks: '书籍', tabPeople: '人物',
   libraryTitle: 'Ximo 图书馆', noBooks: '暂无书籍', firstBook: '成为第一个在 Ximo 发布系列作品的人',
-  guidesTitle: '星座向导', allTopics: '所有主题', availableNow: '现在有空', allGuides: '所有向导',
+  guidesTitle: '游戏向导', allTopics: '所有主题', availableNow: '现在有空', allGuides: '所有向导',
   now: '现在', following: '已关注', follow: '关注', findFriends: '寻找朋友',
   searchHint: '尝试按姓名或 @用户名搜索', searchPeoplePlaceholder: '按姓名或 @用户名搜索…',
   noPeopleResults: '没有找到相关人物', tryDifferentPeople: '请尝试其他姓名或用户名。',
@@ -380,7 +380,7 @@ const zh = {
 const ru = {
   updating: 'Обновление', tabGuides: 'Гиды', tabBooks: 'Книги', tabPeople: 'Люди',
   libraryTitle: 'Библиотека Ximo', noBooks: 'Книг пока нет', firstBook: 'Станьте первым автором серии в Ximo',
-  guidesTitle: 'Проводники созвездия', allTopics: 'Все темы', availableNow: 'Сейчас доступны', allGuides: 'Все гиды',
+  guidesTitle: 'Игровые проводники', allTopics: 'Все темы', availableNow: 'Сейчас доступны', allGuides: 'Все гиды',
   now: 'Сейчас', following: 'Вы подписаны', follow: 'Подписаться', findFriends: 'Найти друзей',
   searchHint: 'Ищите по имени или @имени пользователя', searchPeoplePlaceholder: 'Поиск по имени или @имени пользователя…',
   noPeopleResults: 'Люди не найдены', tryDifferentPeople: 'Попробуйте другое имя или имя пользователя.',
@@ -423,7 +423,7 @@ const ru = {
 const ar = {
   updating: 'جارٍ التحديث', tabGuides: 'المرشدون', tabBooks: 'الكتب', tabPeople: 'الأشخاص',
   libraryTitle: 'مكتبة Ximo', noBooks: 'لا توجد كتب بعد', firstBook: 'كن أول من ينشر سلسلة كتب في Ximo',
-  guidesTitle: 'مرشدو الكوكبة', allTopics: 'كل المواضيع', availableNow: 'متاح الآن', allGuides: 'كل المرشدين',
+  guidesTitle: 'مرشدو الألعاب', allTopics: 'كل المواضيع', availableNow: 'متاح الآن', allGuides: 'كل المرشدين',
   now: 'الآن', following: 'تتابعه', follow: 'متابعة', findFriends: 'اعثر على أصدقاء',
   searchHint: 'ابحث بالاسم أو @اسم المستخدم', searchPeoplePlaceholder: 'ابحث بالاسم أو @اسم المستخدم…',
   noPeopleResults: 'لم يتم العثور على أشخاص', tryDifferentPeople: 'جرّب اسمًا أو اسم مستخدم آخر.',
@@ -466,7 +466,7 @@ const ar = {
 const it = {
   updating: 'Aggiornamento', tabGuides: 'Guide', tabBooks: 'Libri', tabPeople: 'Persone',
   libraryTitle: 'Biblioteca Ximo', noBooks: 'Ancora nessun libro', firstBook: 'Pubblica per primo una serie su Ximo',
-  guidesTitle: 'Guide della costellazione', allTopics: 'Tutti gli argomenti', availableNow: 'Disponibile ora', allGuides: 'Tutte le guide',
+  guidesTitle: 'Guide di gioco', allTopics: 'Tutti gli argomenti', availableNow: 'Disponibile ora', allGuides: 'Tutte le guide',
   now: 'Ora', following: 'Seguiti', follow: 'Segui', findFriends: 'Trova amici',
   searchHint: 'Cerca per nome o @nomeutente', searchPeoplePlaceholder: 'Cerca per nome o @nomeutente…',
   noPeopleResults: 'Nessuna persona trovata', tryDifferentPeople: 'Prova un altro nome o nome utente.',

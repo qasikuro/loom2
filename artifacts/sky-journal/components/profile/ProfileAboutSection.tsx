@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import type { Character } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -22,7 +23,11 @@ interface Props {
 export function ProfileAboutSection({ character, setCharacter }: Props) {
   const { t } = useTranslation();
   const colors = useColors();
+  const { isDark } = useTheme();
   const { user } = useUser();
+  const guideGradientColors: React.ComponentProps<typeof LinearGradient>['colors'] = isDark
+    ? ['#1A152E', '#1B1431', '#22143F']
+    : [colors.card, colors.card, `${colors.secondary}12`];
   const socialCount = character.links?.length ?? 0;
   const selectedRole = ROLES.find(role => role.key === character.role);
 
@@ -247,7 +252,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
       </View>
 
       {/* ── Guide ─── */}
-      <View style={[s.guideCard, SHADOW.sm]}>
+      <View style={[s.guideCard, SHADOW.sm, !isDark && { backgroundColor: colors.card, borderColor: colors.border }]}>
         <TouchableOpacity
           onPress={() => setGuideExpanded(open => !open)}
           activeOpacity={0.85}
@@ -256,27 +261,27 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           accessibilityState={{ expanded: guideExpanded }}
           style={[s.guideHero, guideExpanded && s.guideHeroOpen]}
         >
-          <LinearGradient colors={['#1A152E', '#1B1431', '#22143F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-          <View pointerEvents="none" style={s.guideOrbit} />
-          <View pointerEvents="none" style={s.guidePlanet} />
+          <LinearGradient colors={guideGradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+          <View pointerEvents="none" style={[s.guideOrbit, !isDark && { borderColor: `${colors.primary}24` }]} />
+          <View pointerEvents="none" style={[s.guidePlanet, !isDark && { backgroundColor: `${colors.primary}08` }]} />
           <View pointerEvents="none" style={s.guideSparkleOne} />
           <View pointerEvents="none" style={s.guideSparkleTwo} />
           <View style={s.guideHeroRow}>
             <View style={s.guideHeroTitleRow}>
-              <View style={s.guideHeroIconWrap}><Icon name="star" size={24} color="#D7BE65" /></View>
+              <View style={[s.guideHeroIconWrap, !isDark && { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}24` }]}><Icon name="star" size={24} color={isDark ? '#D7BE65' : colors.secondary} /></View>
               <View style={s.guideHeroCopy}>
-                <Text style={s.guideHeroTitle} numberOfLines={2}>{t('social.guide')}</Text>
-                <Text style={s.guideHeroSub}>
+                <Text style={[s.guideHeroTitle, !isDark && { color: colors.foreground }]} numberOfLines={2}>{t('social.guide')}</Text>
+                <Text style={[s.guideHeroSub, !isDark && { color: colors.mutedForeground }]}>
                   {character.isGuide ? t('components.about.guideActive') : t('components.about.guideHelp')}
                 </Text>
               </View>
             </View>
             <View style={s.guideHeroEnd}>
-              <View style={[s.guideStatus, character.isGuide && s.guideStatusOn]}>
-                <View style={[s.guideStatusDot, character.isGuide && s.guideStatusDotOn]} />
-                <Text style={[s.guideStatusText, character.isGuide && s.guideStatusTextOn]}>{character.isGuide ? t('components.about.statusOn') : t('components.about.statusOff')}</Text>
+              <View style={[s.guideStatus, !isDark && { backgroundColor: colors.muted, borderColor: colors.border }, character.isGuide && s.guideStatusOn, character.isGuide && !isDark && { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}50` }]}>
+                <View style={[s.guideStatusDot, !isDark && { backgroundColor: colors.mutedForeground }, character.isGuide && s.guideStatusDotOn, character.isGuide && !isDark && { backgroundColor: colors.secondary }]} />
+                <Text style={[s.guideStatusText, !isDark && { color: colors.mutedForeground }, character.isGuide && s.guideStatusTextOn, character.isGuide && !isDark && { color: colors.secondary }]}>{character.isGuide ? t('components.about.statusOn') : t('components.about.statusOff')}</Text>
               </View>
-              <Icon name={guideExpanded ? 'chevron-down' : 'chevron-right'} size={16} color="#A49ABF" />
+              <Icon name={guideExpanded ? 'chevron-down' : 'chevron-right'} size={16} color={isDark ? '#A49ABF' : colors.mutedForeground} />
             </View>
           </View>
         </TouchableOpacity>
