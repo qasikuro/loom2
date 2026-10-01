@@ -1,7 +1,7 @@
 import { Icon } from '@/components/Icon';
 import type { ConstellationState } from '@/components/ConstellationMap';
 import React from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useColors } from '@/hooks/useColors';
@@ -49,7 +49,9 @@ export function TitlePickerModal({ visible, constellation, availableTitles, savi
           {availableTitles.length === 0 && (
             <View style={[styles.emptyHint, { backgroundColor: colors.muted, borderColor: colors.border }]}>
               <Text style={[styles.emptyHintText, { color: colors.foreground }]}>
-                Unlock your first constellation star to earn your first profile title.
+                {constellation
+                  ? 'Unlock your first constellation star to earn your first profile title.'
+                  : 'Your constellation has not loaded yet, so titles are not available right now.'}
               </Text>
             </View>
           )}
@@ -61,7 +63,7 @@ export function TitlePickerModal({ visible, constellation, availableTitles, savi
             return (
               <TouchableOpacity
                 key={name}
-                testID={`profile-title-${name.toLowerCase().replaceAll(' ', '-')}`}
+                testID={`profile-title-${name.toLowerCase().replace(/\s+/g, '-')}`}
                 accessibilityRole="button"
                 accessibilityLabel={`${name}. ${meaning}. ${unlocked ? 'Unlocked' : `Unlock with ${requiredStars} constellation star${requiredStars === 1 ? '' : 's'}`}`}
                 accessibilityState={{ disabled: !unlocked || saving, selected: active }}
