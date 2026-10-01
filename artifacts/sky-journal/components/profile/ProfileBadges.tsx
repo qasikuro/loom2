@@ -7,9 +7,9 @@ import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const FOUNDER_IMG  = require('@/assets/images/badge_founder.png');
+export const PROFILE_FOUNDER_BADGE_IMAGE = require('@/assets/images/badge_founder.png');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const BETA_IMG     = require('@/assets/images/badge_beta.png');
+export const PROFILE_BETA_BADGE_IMAGE = require('@/assets/images/badge_beta.png');
 
 interface Props {
   isFounder?:    boolean;
@@ -27,13 +27,13 @@ export function ProfileBadges({ isFounder, isBetaTester, size = 36, showLabel = 
     <View style={s.row}>
       {isFounder && (
         <View style={s.badgeWrap}>
-          <Image source={FOUNDER_IMG} style={{ width: size, height: size }} contentFit="contain" />
+          <Image source={PROFILE_FOUNDER_BADGE_IMAGE} style={{ width: size, height: size }} contentFit="contain" />
           {showLabel && <Text style={s.label}>Founder</Text>}
         </View>
       )}
       {isBetaTester && (
         <View style={s.badgeWrap}>
-          <Image source={BETA_IMG} style={{ width: size, height: size }} contentFit="contain" />
+          <Image source={PROFILE_BETA_BADGE_IMAGE} style={{ width: size, height: size }} contentFit="contain" />
           {showLabel && <Text style={s.label}>Beta</Text>}
         </View>
       )}

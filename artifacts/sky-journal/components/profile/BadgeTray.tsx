@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SecureImage as Image } from '@/components/SecureImage';
+import { PROFILE_BETA_BADGE_IMAGE, PROFILE_FOUNDER_BADGE_IMAGE } from './ProfileBadges';
 import {
   View, Text, StyleSheet,
   TouchableOpacity, Modal, Pressable,
@@ -20,6 +21,12 @@ interface Props {
   badges: BadgeItem[];
 }
 
+function getBadgeImageSource(badge: BadgeItem) {
+  if (badge.slug === 'founder') return PROFILE_FOUNDER_BADGE_IMAGE;
+  if (badge.slug === 'beta_tester') return PROFILE_BETA_BADGE_IMAGE;
+  return badge.imageUrl ? { uri: badge.imageUrl } : null;
+}
+
 /**
  * Compact badge tray — tappable image-only circles in a horizontal row.
  * Tapping a badge shows a small tooltip sheet with the badge name and description.
@@ -29,29 +36,37 @@ export function BadgeTray({ badges }: Props) {
   const [selected, setSelected] = useState<BadgeItem | null>(null);
 
   if (!badges || badges.length === 0) return null;
+  const selectedImageSource = selected ? getBadgeImageSource(selected) : null;
 
   return (
     <>
       <View style={s.row}>
-        {badges.map((badge) => (
-          <TouchableOpacity
-            key={badge.id}
-            style={[s.chip, { backgroundColor: badge.color + '22', borderColor: badge.color + '55' }]}
-            onPress={() => setSelected(badge)}
-            activeOpacity={0.72}
-            hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-          >
-            {badge.imageUrl ? (
-              <Image
-                source={{ uri: badge.imageUrl }}
-                style={s.img}
-                contentFit="contain"
-              />
-            ) : (
-              <Text style={s.emoji}>{badge.emoji}</Text>
-            )}
-          </TouchableOpacity>
-        ))}
+        {badges.map((badge) => {
+          const imageSource = getBadgeImageSource(badge);
+
+          return (
+            <TouchableOpacity
+              key={badge.id}
+              testID={`badge-${badge.slug}`}
+              accessibilityRole="button"
+              accessibilityLabel={`${badge.name}${badge.description ? `. ${badge.description}` : ''}`}
+              style={[s.chip, { backgroundColor: badge.color + '22', borderColor: badge.color + '55' }]}
+              onPress={() => setSelected(badge)}
+              activeOpacity={0.72}
+              hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+            >
+              {imageSource ? (
+                <Image
+                  source={imageSource}
+                  style={s.img}
+                  contentFit="contain"
+                />
+              ) : (
+                <Text style={s.emoji}>{badge.emoji || '✦'}</Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Badge tooltip modal */}
@@ -72,14 +87,14 @@ export function BadgeTray({ badges }: Props) {
                   { backgroundColor: selected.color + '33', borderColor: selected.color + '77' },
                 ]}
               >
-                {selected.imageUrl ? (
+                {selectedImageSource ? (
                   <Image
-                    source={{ uri: selected.imageUrl }}
+                    source={selectedImageSource}
                     style={s.sheetImg}
                     contentFit="contain"
                   />
                 ) : (
-                  <Text style={s.sheetEmoji}>{selected.emoji}</Text>
+                  <Text style={s.sheetEmoji}>{selected.emoji || '✦'}</Text>
                 )}
               </View>
 
