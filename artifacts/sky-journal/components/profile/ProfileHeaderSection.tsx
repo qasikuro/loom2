@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import CropImageModal from '@/components/CropImageModal';
 import { BadgeTray } from '@/components/profile/BadgeTray';
+import { ProfileBadges } from '@/components/profile/ProfileBadges';
 import { Images } from '@/assets/images';
 import type { ConstellationState } from '@/components/ConstellationMap';
 import { apiFetch, type Character, type Outfit } from '@/context/AppContext';
@@ -54,6 +55,11 @@ export function ProfileHeaderSection({
   const colors = useColors();
   const { isDark } = useTheme();
   const { t }  = useTranslation();
+  const dynamicBadges = character.badges ?? [];
+  const hasDynamicFounderBadge = dynamicBadges.some(badge => badge.slug === 'founder');
+  const hasDynamicBetaBadge = dynamicBadges.some(badge => badge.slug === 'beta_tester');
+  const showLegacyFounderBadge = Boolean(character.isFounder) && !hasDynamicFounderBadge;
+  const showLegacyBetaBadge = Boolean(character.isBetaTester) && !hasDynamicBetaBadge;
 
   const [editingName,       setEditingName]       = useState(false);
   const [nameVal,           setNameVal]           = useState(character.name);
@@ -290,9 +296,19 @@ export function ProfileHeaderSection({
           </View>
 
           {/* Achievement badges */}
-          {(character.badges ?? []).length > 0 && (
+          {dynamicBadges.length > 0 && (
             <View style={{ marginTop: 5 }}>
-              <BadgeTray badges={character.badges ?? []} />
+              <BadgeTray badges={dynamicBadges} />
+            </View>
+          )}
+          {(showLegacyFounderBadge || showLegacyBetaBadge) && (
+            <View style={{ marginTop: 5 }}>
+              <ProfileBadges
+                isFounder={showLegacyFounderBadge}
+                isBetaTester={showLegacyBetaBadge}
+                size={32}
+                showLabel
+              />
             </View>
           )}
         </View>

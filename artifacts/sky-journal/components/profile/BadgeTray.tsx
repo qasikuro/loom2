@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
-  View, Image, Text, StyleSheet,
+  View, Text, StyleSheet,
   TouchableOpacity, Modal, Pressable,
 } from 'react-native';
 
@@ -44,7 +45,7 @@ export function BadgeTray({ badges }: Props) {
               <Image
                 source={{ uri: badge.imageUrl }}
                 style={s.img}
-                resizeMode="contain"
+                contentFit="contain"
               />
             ) : (
               <Text style={s.emoji}>{badge.emoji}</Text>
@@ -75,7 +76,7 @@ export function BadgeTray({ badges }: Props) {
                   <Image
                     source={{ uri: selected.imageUrl }}
                     style={s.sheetImg}
-                    resizeMode="contain"
+                    contentFit="contain"
                   />
                 ) : (
                   <Text style={s.sheetEmoji}>{selected.emoji}</Text>

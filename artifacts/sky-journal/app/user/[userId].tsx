@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { BadgeTray, type BadgeItem } from '@/components/profile/BadgeTray';
+import { ProfileBadges } from '@/components/profile/ProfileBadges';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -830,10 +831,15 @@ export default function UserProfileScreen() {
   const totalWitnessed = stories.reduce((s, st) => s + st.witnessedCount, 0);
   const totalLikes = (profile?.profileLikeCount ?? 0) + stories.reduce((sum, story) => sum + (story.likeCount ?? 0), 0);
   const isTopExplorer  = totalWitnessed >= 10 || stories.length >= 3;
-  const isFounder      = (profile?.badges ?? []).some(b => b.slug === 'founder');
-  const isBeta         = (profile?.badges ?? []).some(b => b.slug === 'beta_tester');
-  const founderBadge   = isFounder ? (profile?.badges ?? []).find(b => b.slug === 'founder') : null;
-  const betaBadge      = isBeta    ? (profile?.badges ?? []).find(b => b.slug === 'beta_tester') : null;
+  const profileBadges = profile?.badges ?? [];
+  const hasDynamicFounderBadge = profileBadges.some(badge => badge.slug === 'founder');
+  const hasDynamicBetaBadge = profileBadges.some(badge => badge.slug === 'beta_tester');
+  const isFounder = Boolean(profile?.isFounder) || hasDynamicFounderBadge;
+  const isBeta = Boolean(profile?.isBetaTester) || hasDynamicBetaBadge;
+  const founderBadge = hasDynamicFounderBadge ? profileBadges.find(badge => badge.slug === 'founder') : null;
+  const betaBadge = hasDynamicBetaBadge ? profileBadges.find(badge => badge.slug === 'beta_tester') : null;
+  const showLegacyFounderBadge = Boolean(profile?.isFounder) && !hasDynamicFounderBadge;
+  const showLegacyBetaBadge = Boolean(profile?.isBetaTester) && !hasDynamicBetaBadge;
 
   if (loading) {
     return (
@@ -1005,9 +1011,19 @@ export default function UserProfileScreen() {
           ) : null}
 
           {/* Dynamic badges */}
-          {(profile.badges ?? []).length > 0 && (
+          {profileBadges.length > 0 && (
             <View style={{ marginTop: 6 }}>
-              <BadgeTray badges={profile.badges ?? []} />
+              <BadgeTray badges={profileBadges} />
+            </View>
+          )}
+          {(showLegacyFounderBadge || showLegacyBetaBadge) && (
+            <View style={{ marginTop: 6 }}>
+              <ProfileBadges
+                isFounder={showLegacyFounderBadge}
+                isBetaTester={showLegacyBetaBadge}
+                size={32}
+                showLabel
+              />
             </View>
           )}
 
