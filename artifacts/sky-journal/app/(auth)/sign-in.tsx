@@ -8,7 +8,7 @@ import { useSSO } from '@clerk/expo';
 // with no setActive, and useClerk().setActive bypasses the cache → 401 on every call.
 import { useSignIn } from '@clerk/expo/legacy';
 import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
+import { createOAuthRedirectUrl } from '../../utils/oauthRedirect';
 import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -76,7 +76,7 @@ export default function SignInScreen() {
     setGoogleLoading(true);
     setCatchError('');
     try {
-      const redirectUrl = Linking.createURL('oauth-native-callback');
+      const redirectUrl = createOAuthRedirectUrl();
       // Do NOT destructure setActive from startSSOFlow — that setActive bypasses
       // the native SecureStore token cache, so getToken() returns null in the APK
       // on every subsequent API call.  Use the setActive from useSignIn() (legacy)

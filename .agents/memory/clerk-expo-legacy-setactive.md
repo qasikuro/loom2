@@ -75,3 +75,11 @@ import { useSignIn, useSignUp } from '@clerk/expo';
 - `SignUpResource` (legacy) has no `reset()` method — use `router.replace` to remount instead
 - Loading state: use `useState` bool + `isLoaded` from hook (no `fetchStatus`)
 - Errors come from `try/catch` — `err?.errors?.[0]?.longMessage` (no `errors.fields` on the hook)
+
+### OAuth callbacks must match the installed native scheme
+
+When an existing development APK predates a JS/app-config scheme rebrand, the JavaScript OAuth redirect cannot register the new scheme inside that already-installed APK. For a development-only compatibility flow, generate the callback with the scheme baked into the installed client; keep the current scheme as the default outside that flow.
+
+**Why:** After Google approval, Android opens the callback using the native intent filter installed in the APK. A callback using only the newer manifest scheme can remain in Chrome when the older client does not register it.
+
+**How to apply:** Confirm the installed APK's registered scheme before changing OAuth return handling; do not globally replace the production scheme or assume editing app config updates an installed APK.
