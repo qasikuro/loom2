@@ -20,6 +20,7 @@
     },
     "android": {
       "package": "com.storigam.app",
+      "versionCode": 2,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/storigam-adaptive-icon.png",
         "backgroundColor": "#030014"
