@@ -10,38 +10,34 @@ const interestOptions: StorigamInterestInputInterestsItem[] = ["beta_tester", "c
 export default function InterestSignupForm({ copy }: { copy: LandingCopy }) {
   const submission = useSubmitStorigamInterest();
   const [email, setEmail] = useState("");
-  const [interests, setInterests] = useState<StorigamInterestInputInterestsItem[]>([]);
+  const [creatorInterest, setCreatorInterest] = useState(false);
   const [consent, setConsent] = useState(false);
   const [website, setWebsite] = useState("");
-  const [interestError, setInterestError] = useState(false);
-
-  const toggleInterest = (interest: StorigamInterestInputInterestsItem) => {
-    submission.reset();
-    setInterestError(false);
-    setInterests((selected) =>
-      selected.includes(interest)
-        ? selected.filter((item) => item !== interest)
-        : [...selected, interest],
-    );
-  };
+  const interests: StorigamInterestInputInterestsItem[] = creatorInterest
+    ? ["beta_tester", "content_creator"]
+    : ["beta_tester"];
 
   return (
     <form
+      id="waitlist"
       className="interest-form"
       aria-label={copy.formAria}
       aria-busy={submission.isPending}
       onSubmit={(event) => {
         event.preventDefault();
-        if (interests.length === 0) {
-          setInterestError(true);
-          return;
-        }
-        setInterestError(false);
         submission.mutate({
           data: { email: email.trim(), interests, consent, website },
         });
       }}
     >
+      <div className="interest-form-heading">
+        <span className="interest-form-icon" aria-hidden="true"><Mail size={20} /></span>
+        <div>
+          <h2>{copy.formLegend}</h2>
+          <p>{copy.formHint}</p>
+        </div>
+      </div>
+
       <label className="interest-field" htmlFor="storigam-interest-email">
         <span>{copy.formEmail}</span>
         <input
@@ -62,26 +58,18 @@ export default function InterestSignupForm({ copy }: { copy: LandingCopy }) {
         />
       </label>
 
-      <fieldset className="interest-options">
-        <legend>{copy.formLegend}</legend>
-        {interestOptions.map((option) => (
-          <label className="interest-option" key={option}>
-            <input
-              type="checkbox"
-              checked={interests.includes(option)}
-              onChange={() => toggleInterest(option)}
-              data-testid={`checkbox-${option}`}
-            />
-            <span>{option === "beta_tester" ? copy.formBeta : copy.formCreator}</span>
-          </label>
-        ))}
-        <span className="interest-hint">{copy.formHint}</span>
-        {interestError && (
-          <span className="interest-validation" role="alert">
-            {copy.formValidation}
-          </span>
-        )}
-      </fieldset>
+      <label className="interest-option interest-creator-option">
+        <input
+          type="checkbox"
+          checked={creatorInterest}
+          onChange={(event) => {
+            submission.reset();
+            setCreatorInterest(event.target.checked);
+          }}
+          data-testid="checkbox-content_creator"
+        />
+        <span>{copy.formCreator}</span>
+      </label>
 
       <label className="interest-consent">
         <input

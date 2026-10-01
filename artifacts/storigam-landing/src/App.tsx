@@ -12,6 +12,7 @@ import {
   MessageCircleMore,
   Sparkles,
   Globe2,
+  Mail,
   Menu,
   X,
 } from 'lucide-react';
@@ -75,7 +76,7 @@ function Home() {
               <a href="#how-it-works" onClick={closeMenu} data-testid="link-how-it-works">{copy.navHow}</a>
               <a href="#character-story" onClick={closeMenu} data-testid="link-character-stories">{copy.navCharacters}</a>
               <a href="#community" onClick={closeMenu} data-testid="link-community">{copy.navCommunity}</a>
-              <a className="nav-cta" href="#start" onClick={closeMenu} data-testid="link-start">{copy.navStart} <ArrowUpRight size={15} /></a>
+              <a className="nav-cta" href="#waitlist" onClick={closeMenu} data-testid="link-start">{copy.formSubmit} <ArrowUpRight size={15} /></a>
             </nav>
             <label className="language-control">
               <Globe2 size={17} aria-hidden="true" />
@@ -115,9 +116,10 @@ function Home() {
               <strong>{copy.heroStrong}</strong>
             </p>
             <div className="hero-actions">
-              <a className="button button-primary" href="#from-screenshot" data-testid="link-create-story">{copy.heroMake} <ArrowDownRight size={17} /></a>
+              <a className="button button-primary" href="#waitlist" data-testid="link-join-waitlist">{copy.formSubmit} <ArrowUpRight size={17} /></a>
               <a className="button button-quiet" href="#how-it-works" data-testid="link-how-it-works-hero">{copy.navHow}</a>
             </div>
+            <InterestSignupForm copy={copy} />
           </div>
           <div className="hero-stage reveal delay-2" role="img" aria-label={copy.heroVisualAlt}>
             <div className="stage-backdrop" />
@@ -292,7 +294,9 @@ function Home() {
           <p className="eyebrow">{copy.finalEyebrow}</p>
           <h2 className="display">{copy.finalOne}<br />{copy.finalTwo}<br />{copy.finalThree}</h2>
           <p className="final-lines">{copy.finalCopy}</p>
-          <InterestSignupForm copy={copy} />
+          <a className="button button-primary final-join" href="#waitlist" data-testid="link-join-waitlist-footer">
+            {copy.formSubmit} <ArrowUpRight size={17} />
+          </a>
         </div>
       </section>
 
