@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import type { ConstellationState } from '@/components/ConstellationMap';
 import { useTranslation } from 'react-i18next';
+import { useColors } from '@/hooks/useColors';
 
 interface ProgressRowDef {
   key: string;
@@ -16,6 +17,7 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
   triggerAnim?: number;
 }) {
   const { t } = useTranslation();
+  const colors = useColors();
   const rows: ProgressRowDef[] = [
     { key: 'social', count: constellation.socialCount, threshold: 5, color: '#78C8A8', icon: '⬡' },
     { key: 'memory', count: constellation.memoryCount, threshold: 10, color: '#9878C8', icon: '◇' },
@@ -50,15 +52,15 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
   }, [triggerAnim]);
 
   return (
-    <View style={s.card}>
-      <View style={s.header}>
-        <Text style={s.headerLabel}>{t('components.progress.title')}</Text>
+    <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+      <View style={[s.header, { borderBottomColor: colors.border }]}>
+        <Text style={[s.headerLabel, { color: colors.mutedForeground }]}>{t('components.progress.title')}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Text style={s.totalPct}>{totalPct}%</Text>
-          <Text style={s.overallLabel}>{t('components.progress.overall')}</Text>
+          <Text style={[s.totalPct, { color: colors.foreground }]}>{totalPct}%</Text>
+          <Text style={[s.overallLabel, { color: colors.mutedForeground }]}>{t('components.progress.overall')}</Text>
         </View>
       </View>
-      <View style={s.overallBarBg}>
+      <View style={[s.overallBarBg, { backgroundColor: colors.muted }]}>
         <Animated.View style={[s.overallBarFill, {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           width: overallAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) as any,
@@ -72,8 +74,8 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
             <View key={r.key}>
               <View style={s.rowHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 10, color: done ? r.color : 'rgba(200,184,232,0.30)' }}>{r.icon}</Text>
-                  <Text style={[s.rowLabel, { color: done ? r.color : 'rgba(200,184,232,0.55)' }]}>{t(`feature.season.${r.key}`)}</Text>
+                  <Text style={{ fontSize: 10, color: done ? r.color : colors.mutedForeground }}>{r.icon}</Text>
+                  <Text style={[s.rowLabel, { color: done ? r.color : colors.foreground }]}>{t(`feature.season.${r.key}`)}</Text>
                   {done && (
                     <View style={[s.doneBadge, { backgroundColor: `${r.color}22` }]}>
                       <Text style={[s.doneBadgeText, { color: r.color }]}>✓ {t('components.progress.done')}</Text>
@@ -81,15 +83,15 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
                   )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[s.rowCount, { color: done ? r.color : 'rgba(200,184,232,0.50)' }]}>
+                  <Text style={[s.rowCount, { color: done ? r.color : colors.foreground }]}>
                     {r.count} / {r.threshold}
                   </Text>
-                  <Text style={[s.rowPct, { color: done ? `${r.color}BB` : 'rgba(200,184,232,0.35)' }]}>
+                  <Text style={[s.rowPct, { color: done ? `${r.color}BB` : colors.mutedForeground }]}>
                     {pctN}%
                   </Text>
                 </View>
               </View>
-              <View style={s.barBg}>
+              <View style={[s.barBg, { backgroundColor: colors.muted }]}>
                 <Animated.View style={[s.barFill, {
                   backgroundColor: r.color, opacity: done ? 0.55 : 0.80,
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -105,12 +107,12 @@ export function ConstellationProgressCard({ constellation, triggerAnim = 0 }: {
 }
 
 const s = StyleSheet.create({
-  card:         { marginHorizontal: 16, marginTop: 8, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(107,91,149,0.18)', backgroundColor: 'rgba(8,6,20,0.55)' },
-  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  headerLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.55)', letterSpacing: 0.8 },
-  totalPct:     { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.80)' },
-  overallLabel: { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.40)' },
-  overallBarBg: { marginHorizontal: 14, marginTop: 8, marginBottom: 4, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  card:         { marginHorizontal: 16, marginTop: 8, borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, paddingTop: 12, paddingBottom: 8, borderBottomWidth: 1 },
+  headerLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.8 },
+  totalPct:     { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  overallLabel: { fontSize: 10, fontFamily: 'Satoshi-Regular' },
+  overallBarBg: { marginHorizontal: 14, marginTop: 8, marginBottom: 4, height: 3, borderRadius: 2, overflow: 'hidden' },
   overallBarFill: { height: '100%', borderRadius: 2, backgroundColor: '#9B78E8', opacity: 0.7 },
   rows:         { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 12, gap: 10 },
   rowHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 },
@@ -119,6 +121,6 @@ const s = StyleSheet.create({
   doneBadgeText:{ fontSize: 9, fontFamily: 'Satoshi-Bold' },
   rowCount:     { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   rowPct:       { fontSize: 10, fontFamily: 'Satoshi-Bold', minWidth: 32, textAlign: 'right' },
-  barBg:        { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
+  barBg:        { height: 5, borderRadius: 3, overflow: 'hidden' },
   barFill:      { height: '100%', borderRadius: 3 },
 });

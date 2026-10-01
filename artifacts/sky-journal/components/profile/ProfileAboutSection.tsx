@@ -472,7 +472,7 @@ const s = StyleSheet.create({
   roleSelDot:       { width: 5, height: 5, borderRadius: 2.5, marginLeft: 2 },
   platformChip:     { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 12, backgroundColor: 'rgba(155,120,255,0.06)', paddingHorizontal: 10, paddingVertical: 7, minWidth: '43%', flexGrow: 1 },
   platformChipIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  platformChipLabel:{ fontSize: 12, fontFamily: 'Satoshi-Medium', color: '#EDE8FF' },
+  platformChipLabel:{ fontSize: 12, fontFamily: 'Satoshi-Medium' },
   socialIcon:       { fontSize: 17, lineHeight: 20 },
   socialBadge:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   handleInput:      { fontSize: 13, fontFamily: 'Satoshi-Regular', backgroundColor: 'rgba(155,120,255,0.10)', borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },

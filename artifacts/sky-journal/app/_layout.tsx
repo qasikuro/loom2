@@ -25,7 +25,8 @@ import { XPFlash } from '@/components/XPFlash';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
 import { AppProvider, setAuthTokenGetter, useApp, apiFetch, getAuthToken } from '@/context/AppContext';
-import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { ThemeProvider } from '@/context/ThemeContext';
+import { useColors } from '@/hooks/useColors';
 import { SoundProvider } from '@/context/SoundContext';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
@@ -53,9 +54,9 @@ if (Platform.OS !== 'web' && Notifications) {
 }
 
 function ThemedRoot({ children }: { children: React.ReactNode }) {
-  const { isDark } = useTheme();
+  const colors = useColors();
   return (
-    <View style={{ flex: 1, backgroundColor: isDark ? '#080714' : '#F5F2FF' }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       {children}
     </View>
   );

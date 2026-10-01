@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 function SoundToggle() {
   const { t } = useTranslation();
   const { soundEnabled, setSoundEnabled } = useSound();
+  const colors = useColors();
   return (
     <TouchableOpacity
       style={s.drawerItem}
@@ -24,12 +25,12 @@ function SoundToggle() {
       activeOpacity={0.75}
     >
       <View style={s.drawerItemIcon}>
-        <Icon name={soundEnabled ? 'volume-2' : 'volume-x'} size={15} color="rgba(200,184,232,0.75)" />
+        <Icon name={soundEnabled ? 'volume-2' : 'volume-x'} size={15} color={colors.mutedForeground} />
       </View>
-      <Text style={[s.drawerItemLabel, { flex: 1 }]}>{t('settings.animationSounds')}</Text>
-      <View style={[s.soundPill, soundEnabled ? s.soundPillOn : s.soundPillOff]}>
+      <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.animationSounds')}</Text>
+      <View style={[s.soundPill, soundEnabled ? s.soundPillOn : s.soundPillOff, { backgroundColor: colors.muted, borderColor: colors.border }]}>
         <View style={[s.soundKnob, {
-          backgroundColor: soundEnabled ? '#A080F8' : 'rgba(200,184,232,0.35)',
+          backgroundColor: soundEnabled ? colors.primary : colors.mutedForeground,
           transform: [{ translateX: soundEnabled ? 16 : 0 }],
         }]} />
       </View>
@@ -79,10 +80,11 @@ const LANGUAGE_NAMES: Record<string, string> = {
 
 function LanguageChooser() {
   const { t } = useTranslation();
+  const colors = useColors();
   const [languageError, setLanguageError] = React.useState(false);
   return (
     <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
-      <Text style={[s.drawerItemLabel, { marginBottom: 10 }]}>{t('common.language')}</Text>
+      <Text style={[s.drawerItemLabel, { color: colors.foreground, marginBottom: 10 }]}>{t('common.language')}</Text>
       <View style={s.languageOptions}>
         {supportedLanguages.map(language => (
           <TouchableOpacity
@@ -93,13 +95,13 @@ function LanguageChooser() {
               setLanguageError(false);
               void setAppLanguage(language).catch(() => setLanguageError(true));
             }}
-            style={[s.languageOption, i18n.language === language && { borderColor: '#A080F8', backgroundColor: 'rgba(160,128,248,0.16)' }]}
+            style={[s.languageOption, { backgroundColor: colors.card }, i18n.language === language && { borderColor: colors.primary, backgroundColor: `${colors.primary}12` }]}
           >
-            <Text style={s.languageText}>{LANGUAGE_NAMES[language] ?? language}</Text>
+            <Text style={[s.languageText, { color: colors.foreground }]}>{LANGUAGE_NAMES[language] ?? language}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      {languageError && <Text style={s.languageError}>{t('settings.languageSaveError')}</Text>}
+      {languageError && <Text style={[s.languageError, { color: colors.destructive }]}>{t('settings.languageSaveError')}</Text>}
     </View>
   );
 }
@@ -139,43 +141,43 @@ export function ProfileSettingsDrawer({
       )}
 
       <Animated.View
-        style={[s.drawer, { width: drawerWidth, paddingTop: topPad, backgroundColor: '#100E20' }, { transform: [{ translateX: drawerX }] }]}
+        style={[s.drawer, { width: drawerWidth, paddingTop: topPad, backgroundColor: colors.card }, { transform: [{ translateX: drawerX }] }]}
         pointerEvents={drawerOpen ? 'auto' : 'none'}
       >
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
 
-          <View style={s.drawerHeader}>
+          <View style={[s.drawerHeader, { borderBottomColor: colors.border }]}>
             <View style={[s.drawerAvatar, { borderColor: `${colors.primary}60` }]}>
               <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit="cover" />
             </View>
-            <Text style={s.drawerName}>{character.name}</Text>
-            {character.username && <Text style={s.drawerHandle}>@{character.username}</Text>}
+            <Text style={[s.drawerName, { color: colors.foreground }]}>{character.name}</Text>
+            {character.username && <Text style={[s.drawerHandle, { color: colors.mutedForeground }]}>@{character.username}</Text>}
           </View>
 
-          <Text style={s.drawerSectionLabel}>{t('settings.account')}</Text>
-          <View style={s.drawerGroup}>
+          <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.account')}</Text>
+          <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/messages' as any), 260); }} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="message-circle" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={[s.drawerItemLabel, { flex: 1 }]}>{t('settings.messages')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="message-circle" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.messages')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} onPress={toggleVisibility} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="lock" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={[s.drawerItemLabel, { flex: 1 }]}>{t('settings.privacy')}</Text>
-              <View style={{ backgroundColor: character.isPublic ? 'rgba(107,91,149,0.30)' : 'rgba(255,255,255,0.08)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: character.isPublic ? 'rgba(107,91,149,0.45)' : 'rgba(255,255,255,0.12)' }}>
-                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: character.isPublic ? colors.primary : 'rgba(200,184,232,0.55)' }}>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="lock" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.privacy')}</Text>
+              <View style={{ backgroundColor: character.isPublic ? `${colors.primary}18` : colors.muted, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: character.isPublic ? `${colors.primary}40` : colors.border }}>
+                <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: character.isPublic ? colors.primary : colors.mutedForeground }}>
                   {t(character.isPublic ? 'common.public' : 'common.private')}
                 </Text>
               </View>
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} onPress={toggleOnlineStatus} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="radio" size={15} color="rgba(200,184,232,0.75)" /></View>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="radio" size={15} color={colors.mutedForeground} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={s.drawerItemLabel}>{t('settings.onlineStatus')}</Text>
-                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)', marginTop: 1 }}>
+                <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.onlineStatus')}</Text>
+                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
                   {(character.showOnlineStatus ?? true) ? t('settings.onlineVisible') : t('settings.onlineHidden')}
                 </Text>
               </View>
@@ -189,54 +191,54 @@ export function ProfileSettingsDrawer({
             <View style={s.drawerDivider} />
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/blocked-users' as any), 260); }} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="slash" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={[s.drawerItemLabel, { flex: 1 }]}>{t('settings.blockedUsers')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="slash" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.blockedUsers')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             <TouchableOpacity style={s.drawerItem} onPress={() => { closeDrawer(); setTimeout(() => router.push('/purchase-history' as any), 260); }} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="shopping-bag" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={[s.drawerItemLabel, { flex: 1 }]}>{t('settings.purchaseHistory')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="shopping-bag" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.purchaseHistory')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
-          <Text style={s.drawerSectionLabel}>{t('settings.appearance')}</Text>
-          <View style={[s.drawerGroup, { paddingVertical: 4, paddingHorizontal: 8 }]}>
+          <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.appearance')}</Text>
+          <View style={[s.drawerGroup, { paddingVertical: 4, paddingHorizontal: 8, backgroundColor: colors.card, borderColor: colors.border }]}>
             <ThemeToggle />
           </View>
 
-          <View style={[s.drawerGroup, { marginTop: 8 }]}>
+          <View style={[s.drawerGroup, { marginTop: 8, backgroundColor: colors.card, borderColor: colors.border }]}>
             <LanguageChooser />
           </View>
 
-          <Text style={s.drawerSectionLabel}>{t('settings.sound')}</Text>
-          <View style={s.drawerGroup}>
+          <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.sound')}</Text>
+          <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <SoundToggle />
           </View>
 
-          <Text style={s.drawerSectionLabel}>{t('settings.myAccount')}</Text>
-          <View style={s.drawerGroup}>
+          <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.myAccount')}</Text>
+          <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={s.drawerItem}>
-              <View style={s.drawerItemIcon}><Icon name="mail" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={[s.drawerItemLabel, { flex: 1 }]} numberOfLines={1}>{user?.primaryEmailAddress?.emailAddress ?? '—'}</Text>
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="mail" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]} numberOfLines={1}>{user?.primaryEmailAddress?.emailAddress ?? '—'}</Text>
             </View>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="mail" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={s.drawerItemLabel}>{t('settings.changeEmail')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="mail" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.changeEmail')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="lock" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={s.drawerItemLabel}>{t('settings.changePassword')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="lock" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.changePassword')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity
-              style={[s.drawerItem, confirmingSignOut && { backgroundColor: '#EF444418' }]}
+              style={[s.drawerItem, confirmingSignOut && { backgroundColor: `${colors.destructive}18` }]}
               onPress={handleSignOut}
               activeOpacity={0.7}
             >
@@ -247,28 +249,28 @@ export function ProfileSettingsDrawer({
             </TouchableOpacity>
           </View>
 
-          <Text style={s.drawerSectionLabel}>{t('settings.support')}</Text>
-          <View style={s.drawerGroup}>
+          <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.support')}</Text>
+          <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="help-circle" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={s.drawerItemLabel}>{t('settings.helpCenter')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="help-circle" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.helpCenter')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="message-square" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={s.drawerItemLabel}>{t('settings.sendFeedback')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="message-square" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.sendFeedback')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
-              <View style={s.drawerItemIcon}><Icon name="info" size={15} color="rgba(200,184,232,0.75)" /></View>
-              <Text style={s.drawerItemLabel}>{t('settings.about')}</Text>
-              <Icon name="chevron-right" size={13} color="rgba(200,184,232,0.3)" />
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="info" size={15} color={colors.mutedForeground} /></View>
+              <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.about')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
           </View>
 
-          <Text style={s.drawerVersion}>{t('settings.appVersion', { version: '1.0.0' })}</Text>
+          <Text style={[s.drawerVersion, { color: colors.mutedForeground }]}>{t('settings.appVersion', { version: '1.0.0' })}</Text>
         </ScrollView>
       </Animated.View>
     </>
@@ -276,18 +278,18 @@ export function ProfileSettingsDrawer({
 }
 
 const s = StyleSheet.create({
-  drawer:           { position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 30, shadowColor: '#000', shadowOpacity: 0.5, shadowOffset: { width: -8, height: 0 }, shadowRadius: 24, elevation: 20 },
-  drawerHeader:     { alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: 'rgba(155,120,255,0.12)', gap: 6 },
+  drawer:           { position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 30, shadowColor: '#000', shadowOpacity: 0.16, shadowOffset: { width: -8, height: 0 }, shadowRadius: 24, elevation: 20 },
+  drawerHeader:     { alignItems: 'center', paddingHorizontal: 20, paddingTop: 20, paddingBottom: 20, borderBottomWidth: 1, gap: 6 },
   drawerAvatar:     { width: 72, height: 72, borderRadius: 36, borderWidth: 2.5, overflow: 'hidden', marginBottom: 4 },
-  drawerName:       { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#EDE8FF', letterSpacing: -0.3 },
-  drawerHandle:     { fontSize: 13, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.60)' },
-  drawerSectionLabel: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2, color: 'rgba(200,184,232,0.40)', textTransform: 'uppercase', paddingHorizontal: 16, marginTop: 20, marginBottom: 8 },
-  drawerGroup:      { marginHorizontal: 12, borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(155,120,255,0.14)', backgroundColor: 'rgba(255,255,255,0.04)' },
+  drawerName:       { fontSize: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  drawerHandle:     { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  drawerSectionLabel: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 2, textTransform: 'uppercase', paddingHorizontal: 16, marginTop: 20, marginBottom: 8 },
+  drawerGroup:      { marginHorizontal: 12, borderRadius: 14, overflow: 'hidden', borderWidth: 1 },
   drawerItem:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12, gap: 12, minHeight: 48 },
-  drawerItemIcon:   { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(155,120,255,0.12)' },
-  drawerItemLabel:  { fontSize: 13, fontFamily: 'Satoshi-Medium', color: '#EDE8FF' },
-  drawerDivider:    { height: 1, backgroundColor: 'rgba(155,120,255,0.10)', marginHorizontal: 14 },
-  drawerVersion:    { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.30)', textAlign: 'center', marginTop: 28, marginBottom: 8 },
+  drawerItemIcon:   { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  drawerItemLabel:  { fontSize: 13, fontFamily: 'Satoshi-Medium' },
+  drawerDivider:    { height: 1, backgroundColor: 'rgba(107,91,149,0.14)', marginHorizontal: 14 },
+  drawerVersion:    { fontSize: 11, fontFamily: 'Satoshi-Regular', textAlign: 'center', marginTop: 28, marginBottom: 8 },
   soundPill:        { width: 36, height: 20, borderRadius: 10, borderWidth: 1, justifyContent: 'center', paddingHorizontal: 2 },
   soundPillOn:      { backgroundColor: 'rgba(120,70,255,0.22)', borderColor: 'rgba(120,70,255,0.55)' },
   soundPillOff:     { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(200,184,232,0.20)' },

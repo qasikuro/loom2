@@ -161,41 +161,42 @@ function FriendCard({ entry, onDelete, stickerCount }: JournalCardProps) {
 
 // ── Moment card ────────────────────────────────────────────────────────────
 function MomentCard({ entry, onDelete, stickerCount }: JournalCardProps) {
+  const colors = useColors();
   const { t, i18n } = useTranslation();
   return (
-    <View style={[styles.momentCard, SHADOW.md]}>
+    <View style={[styles.momentCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: colors.secondary }, SHADOW.md]}>
       <View style={styles.topRow}>
         <View style={styles.metaLeft}>
-          <View style={[styles.typeIcon, { backgroundColor: 'rgba(200,184,232,0.12)' }]}>
-            <Icon name="moon" size={12} color="rgba(200,184,232,0.75)" />
+          <View style={[styles.typeIcon, { backgroundColor: `${colors.primary}12` }]}>
+            <Icon name="moon" size={12} color={colors.primary} />
           </View>
           <View>
-            <Text style={styles.momentDate}>{formatDate(entry.date, i18n.language)}</Text>
-            <Text style={styles.momentTime}>{formatTime(entry.date, i18n.language)}</Text>
+            <Text style={[styles.momentDate, { color: colors.foreground }]}>{formatDate(entry.date, i18n.language)}</Text>
+            <Text style={[styles.momentTime, { color: colors.mutedForeground }]}>{formatTime(entry.date, i18n.language)}</Text>
           </View>
         </View>
         {onDelete && (
           <TouchableOpacity
-            style={[styles.deleteBtn, { backgroundColor: 'rgba(255,255,255,0.07)' }]}
+            style={[styles.deleteBtn, { backgroundColor: colors.muted }]}
             onPress={onDelete}
             hitSlop={{ top: 8, right: 8, bottom: 8, left: 6 }}
             accessibilityRole="button"
             accessibilityLabel={t('discoverLog.delete')}
           >
-            <Icon name="trash-2" size={12} color="rgba(200,184,232,0.4)" />
+            <Icon name="trash-2" size={12} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
       </View>
 
-      <View style={[styles.divider, { backgroundColor: 'rgba(200,184,232,0.12)' }]} />
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-      <Text style={styles.momentText} numberOfLines={5}>{entry.text}</Text>
+      <Text style={[styles.momentText, { color: colors.foreground }]} numberOfLines={5}>{entry.text}</Text>
 
       <View style={styles.footer}>
         <MoodBadge mood={entry.mood} size="sm" />
         {stickerCount != null && stickerCount > 0 && (
-          <View style={[styles.stickerBadge, { backgroundColor: 'rgba(200,168,75,0.12)', borderColor: 'rgba(200,168,75,0.28)' }]}>
-            <Text style={[styles.stickerBadgeText, { color: '#C8A84B' }]}>✦ {stickerCount}</Text>
+          <View style={[styles.stickerBadge, { backgroundColor: `${colors.gold}18`, borderColor: `${colors.gold}44` }]}>
+            <Text style={[styles.stickerBadgeText, { color: colors.gold }]}>✦ {stickerCount}</Text>
           </View>
         )}
       </View>
@@ -267,7 +268,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(200,184,232,0.10)',
     borderLeftWidth: 3,
     borderLeftColor: '#6858B8',
-    backgroundColor: '#0C0A20',
     padding: 14,
     marginBottom: 10,
     gap: 0,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 4,
   },
-  momentDate: { fontSize: 13, fontFamily: 'Satoshi-Bold', color: 'rgba(230,220,255,0.88)' },
-  momentTime: { fontSize: 10, fontFamily: 'Satoshi-Regular', marginTop: 1, color: 'rgba(200,184,232,0.40)' },
-  momentText: { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 22, color: 'rgba(240,234,255,0.85)', marginBottom: 8 },
+  momentDate: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  momentTime: { fontSize: 10, fontFamily: 'Satoshi-Regular', marginTop: 1 },
+  momentText: { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 22, marginBottom: 8 },
 });

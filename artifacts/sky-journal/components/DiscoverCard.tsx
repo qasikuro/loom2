@@ -54,7 +54,7 @@ export function DiscoverCard({
   post, onPress, onSave, onDelete, onReport, onAuthorPress, delay = 0,
   isVideoPlaying = false, videoMuted = true, onMuteToggle,
 }: DiscoverCardProps) {
-  useColors();
+  const colors = useColors();
   const { t } = useTranslation();
   const initial  = post.authorName.charAt(0).toUpperCase();
   const gradient = getGradient(post.mood);
@@ -103,7 +103,7 @@ export function DiscoverCard({
   return (
     <Animated.View style={{ opacity: mountOpacity, transform: [{ translateY: mountY }, { scale: pressScale }] }}>
       <Pressable
-        style={styles.card}
+        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}
@@ -224,22 +224,22 @@ export function DiscoverCard({
         </View>
 
         {/* ── Below-image content block ── */}
-        <View style={styles.contentBlock}>
+        <View style={[styles.contentBlock, { borderBottomColor: colors.border }]}>
           {/* Book series label (only for book chapters) */}
           {!!post.bookId && !!post.bookTitle && (
             <View style={styles.bookLabelRow}>
               <Text style={styles.bookLabelIcon}>📖</Text>
-              <Text style={styles.bookLabelText} numberOfLines={1}>{post.bookTitle}</Text>
+              <Text style={[styles.bookLabelText, { color: colors.mutedForeground }]} numberOfLines={1}>{post.bookTitle}</Text>
             </View>
           )}
 
           {/* Title */}
-          <Text style={styles.chapterTitle} numberOfLines={2}>{post.chapterTitle}</Text>
+          <Text style={[styles.chapterTitle, { color: colors.foreground }]} numberOfLines={2}>{post.chapterTitle}</Text>
 
           {/* @handle row */}
-          <Text style={styles.handleText} numberOfLines={1}>
+          <Text style={[styles.handleText, { color: colors.mutedForeground }]} numberOfLines={1}>
             {post.authorHandle || post.authorName}
-            {!!post.authorTitle && <Text style={styles.titleBadge}> · {post.authorTitle}</Text>}
+            {!!post.authorTitle && <Text style={[styles.titleBadge, { color: colors.mutedForeground }]}> · {post.authorTitle}</Text>}
           </Text>
 
           {/* Author badges */}
@@ -254,17 +254,17 @@ export function DiscoverCard({
 
           {/* Pull quote */}
           {!!pullQuote && (
-            <Text style={styles.pullQuote} numberOfLines={2}>{pullQuote}</Text>
+            <Text style={[styles.pullQuote, { color: colors.mutedForeground }]} numberOfLines={2}>{pullQuote}</Text>
           )}
         </View>
 
         {/* ── Action bar ── */}
-        <View style={styles.actionBar}>
+        <View style={[styles.actionBar, { backgroundColor: colors.muted }]}>
           {/* Left: witness count */}
           <View style={styles.statsGroup}>
             <View style={styles.statPill}>
-              <Icon name="eye" size={10} color="rgba(200,184,232,0.55)" />
-              <Text style={styles.statText}>
+              <Icon name="eye" size={10} color={colors.mutedForeground} />
+              <Text style={[styles.statText, { color: colors.mutedForeground }]}>
                 {post.witnessedCount >= 1000
                   ? `${(post.witnessedCount / 1000).toFixed(1)}k`
                   : post.witnessedCount}
@@ -279,7 +279,8 @@ export function DiscoverCard({
                 onPress={handleDeletePress}
                 style={[
                   styles.iconBtn,
-                  confirmingDelete && { backgroundColor: 'rgba(224,68,85,0.18)', borderColor: 'rgba(224,68,85,0.4)' },
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  confirmingDelete && { backgroundColor: `${colors.destructive}18`, borderColor: `${colors.destructive}66` },
                 ]}
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                 activeOpacity={0.75}
@@ -287,8 +288,8 @@ export function DiscoverCard({
                 accessibilityLabel={confirmingDelete ? t('discoverLog.confirmDelete') : t('discoverLog.delete')}
               >
                 {confirmingDelete
-                  ? <Text style={styles.deleteText}>{t('discoverLog.confirmDelete')}</Text>
-                  : <Icon name="trash-2" size={13} color="rgba(200,184,232,0.4)" />
+                  ? <Text style={[styles.deleteText, { color: colors.destructive }]}>{t('discoverLog.confirmDelete')}</Text>
+                  : <Icon name="trash-2" size={13} color={colors.mutedForeground} />
                 }
               </TouchableOpacity>
             )}
@@ -299,7 +300,8 @@ export function DiscoverCard({
               onPress={onSave}
               style={[
                 styles.iconBtn,
-                post.saved && { backgroundColor: 'rgba(107,91,149,0.2)', borderColor: 'rgba(107,91,149,0.45)' },
+                { backgroundColor: colors.card, borderColor: colors.border },
+                post.saved && { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}55` },
               ]}
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
               accessibilityRole="button"
@@ -308,23 +310,23 @@ export function DiscoverCard({
               <Icon
                 name="bookmark"
                 size={13}
-                color={post.saved ? '#9B8DC4' : 'rgba(200,184,232,0.4)'}
+                color={post.saved ? colors.primary : colors.mutedForeground}
               />
             </TouchableOpacity>
             {onReport && (
               <TouchableOpacity
                 onPress={onReport}
-                style={styles.iconBtn}
+                style={[styles.iconBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
                 hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
                 accessibilityRole="button"
                 accessibilityLabel={t('discoverLog.report')}
               >
-                <Icon name="flag" size={13} color="rgba(200,184,232,0.35)" />
+                <Icon name="flag" size={13} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
-            <TouchableOpacity onPress={onPress} style={styles.readBtn} activeOpacity={0.82}>
-              <Text style={styles.readBtnText}>{post.contentType === 'video' ? t('discoverLog.watch') : t('discoverLog.read')}</Text>
-              <Icon name="chevron-right" size={11} color="#B8A8E0" />
+            <TouchableOpacity onPress={onPress} style={[styles.readBtn, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}40` }]} activeOpacity={0.82}>
+              <Text style={[styles.readBtnText, { color: colors.primary }]}>{post.contentType === 'video' ? t('discoverLog.watch') : t('discoverLog.read')}</Text>
+              <Icon name="chevron-right" size={11} color={colors.primary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -338,9 +340,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     marginBottom: 14,
-    backgroundColor: '#161228',
     borderWidth: 0.75,
-    borderColor: 'rgba(107,91,149,0.22)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.28,
@@ -435,14 +435,12 @@ const styles = StyleSheet.create({
   chapterTitle: {
     fontSize: 17,
     fontFamily: 'Satoshi-Bold',
-    color: '#F0EAFF',
     letterSpacing: -0.3,
     lineHeight: 22,
   },
   handleText: {
     fontSize: 12,
     fontFamily: 'Satoshi-Regular',
-    color: 'rgba(200,184,232,0.65)',
   },
   titleBadge: {
     fontStyle: 'italic',
@@ -455,7 +453,6 @@ const styles = StyleSheet.create({
   pullQuote: {
     fontSize: 12,
     fontFamily: 'Satoshi-Regular',
-    color: 'rgba(210,198,255,0.70)',
     fontStyle: 'italic',
     lineHeight: 17,
     marginTop: 2,
@@ -469,12 +466,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     paddingHorizontal: 12,
     paddingVertical: 9,
-    backgroundColor: 'rgba(255,255,255,0.025)',
   },
 
   statsGroup: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 36 },
   statPill:   { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  statText:   { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)' },
+  statText:   { fontSize: 10, fontFamily: 'Satoshi-Regular' },
 
   actionsGroup: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap', maxWidth: '100%' },
   iconBtn: {
@@ -492,5 +488,5 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(107,91,149,0.2)',
     borderWidth: 0.75, borderColor: 'rgba(107,91,149,0.45)',
   },
-  readBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#B8A8E0' },
+  readBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 });

@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 import { useSound } from '@/context/SoundContext';
 import { useApp } from '@/context/AppContext';
@@ -167,6 +168,7 @@ function OfflinePill() {
 
 function ClassicTabLayout() {
   const colors = useColors();
+  const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const isWeb  = Platform.OS === 'web';
   const { t }  = useTranslation();
@@ -181,8 +183,8 @@ function ClassicTabLayout() {
       initialRouteName="reels"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor:   '#D0B4FF',
-        tabBarInactiveTintColor: 'rgba(200,184,232,0.45)',
+        tabBarActiveTintColor:   colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
 
         tabBarStyle: {
           marginHorizontal: isWeb ? 0 : 16,
@@ -196,12 +198,12 @@ function ClassicTabLayout() {
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: 'rgba(180,140,255,0.10)',
-          elevation: 28,
-          shadowColor: '#5820A8',
+          borderColor: colors.border,
+          elevation: isDark ? 28 : 8,
+          shadowColor: isDark ? '#5820A8' : colors.secondary,
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.70,
-          shadowRadius: 30,
+          shadowOpacity: isDark ? 0.70 : 0.12,
+          shadowRadius: isDark ? 30 : 14,
         },
 
         tabBarLabelStyle: {

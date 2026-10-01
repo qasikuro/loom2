@@ -27,6 +27,7 @@ import { FriendAvatar } from '@/components/FriendAvatar';
 import { FocusedHomeContent } from '@/components/FocusedHomeContent';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import { useTranslation } from 'react-i18next';
 
 // ─── Active Event types + theme map ──────────────────────────────────────────
@@ -1080,6 +1081,7 @@ export default function HomeScreen() {
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const insets  = useSafeAreaInsets();
   const colors  = useColors();
+  const { isDark } = useTheme();
   const {
     character, journalEntries, stories, outfits,
     activeOutfitId, setActiveOutfitId,
@@ -1422,15 +1424,18 @@ export default function HomeScreen() {
   const dashboardFriends = friends.slice(0, screenWidth < 390 ? 4 : 5);
 
   return (
-    <Animated.View style={[s.root, { opacity: fadeIn }]}>
-      {/* ── Deep space void ── */}
-      <LinearGradient
-        colors={['#100A28', '#08061A', '#04030C']}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
-        pointerEvents="none"
-      />
-      <StarField density="high" />
+    <Animated.View style={[s.root, { backgroundColor: colors.background, opacity: fadeIn }]}>
+      {isDark && (
+        <>
+          <LinearGradient
+            colors={['#100A28', '#08061A', '#04030C']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0.15, y: 0 }} end={{ x: 0.85, y: 1 }}
+            pointerEvents="none"
+          />
+          <StarField density="high" />
+        </>
+      )}
 
       {/* ── Reward banner — one at a time, anti-stack gate ── */}
       {!bannerGate && displayedReward && (

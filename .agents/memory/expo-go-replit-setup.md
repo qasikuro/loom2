@@ -36,6 +36,14 @@ http://localhost:20450/index.bundle?platform=android&dev=true&hot=false&transfor
 
 **How to apply:** After each Metro restart (e.g. after code changes that require restart), run the pre-warm curl before telling the user to scan the QR code.
 
+### Pre-warm failure after workflow restart
+
+On 2026-10-01, the documented localhost URL returned HTTP 404 with `UnableToResolveError` for `./index` under `/home/runner/workspace`, even though the managed Expo workflow had started from `artifacts/sky-journal`.
+
+**Why:** The cached pre-warm URL can stop matching Metro's current entry resolution in this monorepo; a 404 is not a successful warm-up.
+
+**How to apply:** Check the HTTP status and response before treating a restart as pre-warmed. If Metro resolves `./index` from the workspace root, do not keep retrying the same URL or change app entry code to hide it; inspect the current Expo entry URL or let the device request the bundle.
+
 ## APK builds unaffected
 The `--go` flag only changes the local dev server mode. EAS Build (`eas build`) is independent and uses the project config + slug/owner to identify the project — not the dev server mode. APK builds continue to work normally.
 

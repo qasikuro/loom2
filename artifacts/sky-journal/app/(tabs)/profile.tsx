@@ -193,13 +193,13 @@ export default function CharacterScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: '#05030A' }]}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
       {(!apiOnline || storiesLoadError || outfitsLoadError) && !isLoading && (
-        <View style={offlineS.row}>
+        <View style={[offlineS.row, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={offlineS.dot} />
-          <Text style={offlineS.msg}>{(storiesLoadError || outfitsLoadError) && apiOnline ? t('components.profileSection.loadSomeError') : t('components.profileSection.offlineSaved')}</Text>
+          <Text style={[offlineS.msg, { color: colors.mutedForeground }]}>{(storiesLoadError || outfitsLoadError) && apiOnline ? t('components.profileSection.loadSomeError') : t('components.profileSection.offlineSaved')}</Text>
           <TouchableOpacity style={offlineS.btn} onPress={reloadData} activeOpacity={0.75}>
-            <Text style={offlineS.btnText}>{t('components.profileSection.retry')}</Text>
+            <Text style={[offlineS.btnText, { color: colors.primary }]}>{t('components.profileSection.retry')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -221,7 +221,7 @@ export default function CharacterScreen() {
         </CharacterAuraHeader>
 
         {/* Stats card */}
-        <View style={[s.statsCard, screenW >= 760 && { maxWidth: 760, alignSelf: 'center' }]}>
+        <View style={[s.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, screenW >= 760 && { maxWidth: 760, alignSelf: 'center' }]}>
           {([
             { icon: 'book-open', count: stories.length,  label: t('components.profile.stats.stories') },
             { icon: 'user',      count: outfits.length,  label: t('components.profile.stats.outfits') },
@@ -229,13 +229,13 @@ export default function CharacterScreen() {
             { icon: 'heart',     count: profileLikeCount, label: t('components.profile.stats.profileLikes') },
           ] as const).map((item, i) => (
             <React.Fragment key={item.label}>
-              {i > 0 && <View style={s.statDivider} />}
+              {i > 0 && <View style={[s.statDivider, { backgroundColor: colors.border }]} />}
               <View style={s.statCol}>
-                <Text style={s.statNum}>{item.count}</Text>
+                <Text style={[s.statNum, { color: colors.foreground }]}>{item.count}</Text>
                 <View style={s.statMeta}>
                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  <Icon name={item.icon as any} size={11} color="rgba(200,184,232,0.5)" />
-                  <Text style={s.statLabel}>{item.label}</Text>
+                  <Icon name={item.icon as any} size={11} color={colors.mutedForeground} />
+                  <Text style={[s.statLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
                 </View>
               </View>
             </React.Fragment>
@@ -246,16 +246,16 @@ export default function CharacterScreen() {
         <View style={[{ paddingHorizontal: 20, paddingTop: 12 }, screenW >= 760 && { maxWidth: 800, alignSelf: 'center', width: '100%' }]}>
           {onboardingProgress && onboardingProgress.completed.length < 4 && (
             <TouchableOpacity
-              style={s.setupCard}
+              style={[s.setupCard, { borderColor: colors.border, backgroundColor: `${colors.primary}0D` }]}
               onPress={continueOnboarding}
               activeOpacity={0.82}
             >
-              <View style={s.setupIcon}><Icon name="check-circle" size={18} color="#CDB7FF" /></View>
+              <View style={[s.setupIcon, { backgroundColor: `${colors.primary}18` }]}><Icon name="check-circle" size={18} color={colors.primary} /></View>
               <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={s.setupTitle}>{t('components.profileSection.finishSetup')}</Text>
-                <Text style={s.setupSubtitle}>{t('components.profileSection.setupProgress', { count: onboardingProgress.completed.length })}</Text>
+                <Text style={[s.setupTitle, { color: colors.foreground }]}>{t('components.profileSection.finishSetup')}</Text>
+                <Text style={[s.setupSubtitle, { color: colors.mutedForeground }]}>{t('components.profileSection.setupProgress', { count: onboardingProgress.completed.length })}</Text>
               </View>
-              <View style={s.setupButton}><Text style={s.setupButtonText}>{t('components.profileSection.continue')}</Text></View>
+              <View style={[s.setupButton, { backgroundColor: colors.primary }]}><Text style={[s.setupButtonText, { color: colors.primaryForeground }]}>{t('components.profileSection.continue')}</Text></View>
             </TouchableOpacity>
           )}
           {isLoading && character.name === 'Player' && (<><SkeletonProfileCard /><SkeletonProfileCard /></>)}
@@ -272,25 +272,27 @@ export default function CharacterScreen() {
           )}
 
           {activeOutfit && (
-            <TouchableOpacity style={s.wornBanner} onPress={() => openOutfit(activeOutfit.id)} activeOpacity={0.88}>
+            <TouchableOpacity style={[s.wornBanner, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => openOutfit(activeOutfit.id)} activeOpacity={0.88}>
               {activeOutfit.imageUri && (
                 <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
               )}
-              <LinearGradient
-                colors={['rgba(10,6,22,0.98)', 'rgba(14,9,30,0.76)', 'rgba(14,9,30,0.28)']}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={StyleSheet.absoluteFill}
-              />
+              {activeOutfit.imageUri && (
+                <LinearGradient
+                  colors={['rgba(10,6,22,0.98)', 'rgba(14,9,30,0.76)', 'rgba(14,9,30,0.28)']}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={StyleSheet.absoluteFill}
+                />
+              )}
               <View style={{ flex: 1, minWidth: 0, zIndex: 1 }}>
-                <View style={s.wornBadge}>
+              <View style={[s.wornBadge, !activeOutfit.imageUri && { backgroundColor: `${colors.accent}20`, borderColor: `${colors.accent}40` }]}>
                   <Text style={s.wornBadgeText}>{t('components.profileSection.currentlyWorn')}</Text>
                 </View>
-                <Text style={s.wornTitleText} numberOfLines={1}>{activeOutfit.name}</Text>
+                <Text style={[s.wornTitleText, !activeOutfit.imageUri && { color: colors.foreground }]} numberOfLines={1}>{activeOutfit.name}</Text>
               </View>
-              <View style={s.wornBtn}>
-                <Icon name="user" size={13} color="rgba(235,225,255,0.88)" />
-                <Text style={s.wornBtnText}>{t('components.profileSection.changeOutfit')}</Text>
+              <View style={[s.wornBtn, !activeOutfit.imageUri && { borderColor: colors.border, backgroundColor: colors.muted }]}>
+                <Icon name="user" size={13} color={activeOutfit.imageUri ? 'rgba(235,225,255,0.88)' : colors.foreground} />
+                <Text style={[s.wornBtnText, !activeOutfit.imageUri && { color: colors.foreground }]}>{t('components.profileSection.changeOutfit')}</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -322,19 +324,19 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
-  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 4, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', minWidth: 0 },
+  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 4, borderRadius: 16, borderWidth: 1, minWidth: 0 },
   statCol:      { flex: 1, alignItems: 'center', paddingVertical: 10, gap: 3 },
-  statNum:      { fontSize: 21, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.5 },
+  statNum:      { fontSize: 21, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
   statMeta:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)', letterSpacing: 1.0 },
-  statDivider:  { width: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginVertical: 10 },
+  statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.0 },
+  statDivider:  { width: 1, marginVertical: 10 },
   setupCard: { minHeight: 76, borderRadius: 17, borderWidth: 1, borderColor: 'rgba(181,140,255,0.24)', backgroundColor: 'rgba(139,92,224,0.10)', padding: 13, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 11 },
   setupIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(181,140,255,0.14)' },
-  setupTitle: { color: '#F2EAFF', fontFamily: 'Satoshi-Bold', fontSize: 14 },
-  setupSubtitle: { color: 'rgba(210,195,240,0.52)', fontFamily: 'Satoshi-Regular', fontSize: 11, marginTop: 3 },
+  setupTitle: { fontFamily: 'Satoshi-Bold', fontSize: 14 },
+  setupSubtitle: { fontFamily: 'Satoshi-Regular', fontSize: 11, marginTop: 3 },
   setupButton: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 11, backgroundColor: '#8C68D8' },
   setupButtonText: { color: '#fff', fontFamily: 'Satoshi-Bold', fontSize: 11 },
-  wornBanner:   { minHeight: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(193,151,255,0.18)', backgroundColor: '#130F24' },
+  wornBanner:   { minHeight: 72, marginBottom: 8, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', overflow: 'hidden', borderWidth: 1 },
   wornBadge:    { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9, marginBottom: 5, backgroundColor: 'rgba(232,120,156,0.13)', borderWidth: 1, borderColor: 'rgba(232,120,156,0.25)' },
   wornBadgeText:{ fontSize: 7, fontFamily: 'Satoshi-Bold', color: '#E88EAE', letterSpacing: 1.0 },
   wornTitleText:{ fontSize: 15, fontFamily: 'Satoshi-Bold', color: '#FFF', flexShrink: 1 },

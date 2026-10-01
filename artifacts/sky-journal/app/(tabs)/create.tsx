@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images';
 import { useTranslation } from 'react-i18next';
+import { useColors } from '@/hooks/useColors';
 
 const MODES = [
   {
@@ -80,6 +81,7 @@ const MODES = [
 
 export default function CreateScreen() {
   const { t } = useTranslation();
+  const colors = useColors();
   const insets  = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.92, 820);
@@ -142,7 +144,7 @@ export default function CreateScreen() {
 
       {/* ── Bottom sheet ─────────────────────────────────────────── */}
       <Animated.View
-        style={[s.sheet, { height: sheetHeight, paddingBottom: botPad, transform: [{ translateY: sheetY }] }]}
+        style={[s.sheet, { backgroundColor: colors.card, borderColor: colors.border, height: sheetHeight, paddingBottom: botPad, transform: [{ translateY: sheetY }] }]}
         pointerEvents="box-none"
       >
         {/* Drag handle */}
@@ -150,18 +152,18 @@ export default function CreateScreen() {
 
         {/* Header row */}
         <View style={s.headerRow}>
-          <Text style={s.sheetTitle}>{t('feature.create.title')}</Text>
-          <TouchableOpacity style={s.closeBtn} onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Icon name="x" size={16} color="rgba(200,185,255,0.50)" />
+          <Text style={[s.sheetTitle, { color: colors.foreground }]}>{t('feature.create.title')}</Text>
+          <TouchableOpacity style={[s.closeBtn, { backgroundColor: colors.muted, borderColor: colors.border }]} onPress={dismiss} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Icon name="x" size={16} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
         {hasEventContext ? (
-          <View style={s.eventCtx}>
-            <Text style={s.eventCtxLabel}>✦  {t('feature.create.eventPrompt')}</Text>
-            <Text style={s.eventCtxText} numberOfLines={3}>{eventPrompt}</Text>
+            <View style={[s.eventCtx, { backgroundColor: `${colors.secondary}10`, borderColor: `${colors.secondary}30` }]}>
+            <Text style={[s.eventCtxLabel, { color: colors.secondary }]}>✦  {t('feature.create.eventPrompt')}</Text>
+            <Text style={[s.eventCtxText, { color: colors.foreground }]} numberOfLines={3}>{eventPrompt}</Text>
           </View>
         ) : (
-          <Text style={s.sheetSub}>{t('feature.create.subtitle')}</Text>
+          <Text style={[s.sheetSub, { color: colors.mutedForeground }]}>{t('feature.create.subtitle')}</Text>
         )}
 
         {/* Mode tiles — scroll independently on short phones/landscape */}
@@ -227,7 +229,6 @@ const s = StyleSheet.create({
   sheet: {
     position:        'absolute',
     left:            0, right: 0, bottom: 0,
-    backgroundColor: '#08051C',
     borderTopLeftRadius:  30,
     borderTopRightRadius: 30,
     borderTopWidth:  1,
@@ -259,36 +260,32 @@ const s = StyleSheet.create({
   sheetTitle: {
     fontSize:    30,
     fontFamily:  'Satoshi-Black',
-    color:       'rgba(248,244,255,0.97)',
     letterSpacing: -0.6,
   },
   closeBtn: {
     width: 38, height: 38, borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: 'rgba(200,185,255,0.09)',
+    borderWidth: 1,
     alignItems: 'center', justifyContent: 'center',
   },
 
   sheetSub: {
     fontSize:   14,
     fontFamily: 'Satoshi-Regular',
-    color:      'rgba(200,185,255,0.40)',
     marginBottom: 16,
   },
 
   eventCtx: {
-    backgroundColor: 'rgba(168,136,248,0.09)',
-    borderWidth: 1, borderColor: 'rgba(168,136,248,0.20)',
+    borderWidth: 1,
     borderRadius: 14, paddingHorizontal: 12, paddingVertical: 10,
     marginBottom: 16,
   },
   eventCtxLabel: {
     fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.6,
-    textTransform: 'uppercase', color: 'rgba(168,136,248,0.65)', marginBottom: 4,
+    textTransform: 'uppercase', marginBottom: 4,
   },
   eventCtxText: {
     fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic',
-    color: 'rgba(220,210,255,0.72)', lineHeight: 18,
+    lineHeight: 18,
   },
 
   tilesScroll: { flex: 1, minHeight: 0 },

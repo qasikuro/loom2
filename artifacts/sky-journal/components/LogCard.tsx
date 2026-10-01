@@ -102,16 +102,16 @@ function MomentCard({ entry, onPress, onDelete }: LogCardProps) {
   const { t, i18n } = useTranslation();
   return (
     <TouchableOpacity
-      style={[styles.card, styles.momentCard, { borderColor: 'rgba(104,88,168,0.2)', borderLeftWidth: 3, borderLeftColor: '#6858A8' }]}
+      style={[styles.card, styles.momentCard, { backgroundColor: colors.card, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: colors.secondary }]}
       onPress={onPress}
       activeOpacity={0.87}
     >
-      <View style={[styles.momentHeader, { backgroundColor: '#1A1630' }]}>
+      <View style={[styles.momentHeader, { backgroundColor: colors.muted }]}>
         <Text style={{ fontSize: 16 }}>🌙</Text>
-        <Text style={[styles.momentLabel, { color: 'rgba(200,184,232,0.7)' }]}>{t('discoverLog.moment')} · {formatDate(entry.date, i18n.language)}</Text>
+        <Text style={[styles.momentLabel, { color: colors.foreground }]}>{t('discoverLog.moment')} · {formatDate(entry.date, i18n.language)}</Text>
         {onDelete && (
           <TouchableOpacity onPress={onDelete} style={{ marginLeft: 'auto' }} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }} accessibilityRole="button" accessibilityLabel={t('discoverLog.delete')}>
-            <Icon name="trash-2" size={13} color="rgba(200,184,232,0.4)" />
+            <Icon name="trash-2" size={13} color={colors.mutedForeground} />
           </TouchableOpacity>
         )}
       </View>
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   friendCard: { borderRadius: 14 },
-  momentCard: { borderRadius: 14, backgroundColor: '#FAFAF8' },
+  momentCard: { borderRadius: 14 },
   coverWrap: { width: '100%', height: 190, position: 'relative' },
   coverImg: { width: '100%', height: '100%' },
   coverOverlay: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 70, backgroundColor: 'transparent' },

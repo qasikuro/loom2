@@ -5,6 +5,7 @@ import { Images } from '@/assets/images';
 import type { ConstellationState } from '@/components/ConstellationMap';
 import { apiFetch, type Character, type Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -51,6 +52,7 @@ export function ProfileHeaderSection({
   profileLevel, profileXpPct,
 }: Props) {
   const colors = useColors();
+  const { isDark } = useTheme();
   const { t }  = useTranslation();
 
   const [editingName,       setEditingName]       = useState(false);
@@ -154,23 +156,23 @@ export function ProfileHeaderSection({
       <View style={s.headerTopRow}>
         <TouchableOpacity
           style={[s.visPill, {
-            backgroundColor: character.isPublic ? 'rgba(155,120,255,0.15)' : 'rgba(255,255,255,0.05)',
-            borderColor: character.isPublic ? 'rgba(155,120,255,0.3)' : 'rgba(255,255,255,0.1)',
+            backgroundColor: character.isPublic ? `${colors.primary}18` : colors.muted,
+            borderColor: character.isPublic ? `${colors.primary}40` : colors.border,
           }]}
           onPress={toggleVisibility}
         >
-          <Icon name={character.isPublic ? 'globe' : 'lock'} size={11} color={character.isPublic ? '#B89AE8' : 'rgba(200,184,232,0.7)'} />
-          <Text style={[s.visPillText, { color: character.isPublic ? '#B89AE8' : 'rgba(200,184,232,0.7)' }]}>
+          <Icon name={character.isPublic ? 'globe' : 'lock'} size={11} color={character.isPublic ? colors.primary : colors.mutedForeground} />
+          <Text style={[s.visPillText, { color: character.isPublic ? colors.primary : colors.mutedForeground }]}>
             {character.isPublic ? 'Public' : 'Private'}
           </Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={s.headerIconBtn} onPress={shareProfile} activeOpacity={0.75}>
-            <Icon name="share-2" size={14} color="rgba(200,184,232,0.7)" />
+          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={shareProfile} activeOpacity={0.75}>
+            <Icon name="share-2" size={14} color={colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={s.headerIconBtn} onPress={openDrawer} activeOpacity={0.75}>
-            <Icon name="settings" size={14} color="rgba(200,184,232,0.7)" />
+          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={openDrawer} activeOpacity={0.75}>
+            <Icon name="settings" size={14} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
@@ -189,13 +191,13 @@ export function ProfileHeaderSection({
           <BreathingAvatarRing mood={currentMood} />
           {activeFrame && <FrameRing frameId={activeFrame} />}
           <TouchableOpacity
-            style={[s.avatarEditBtn, { backgroundColor: '#130F28', borderColor: 'rgba(255,255,255,0.15)' }]}
+            style={[s.avatarEditBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={pickAvatar}
             activeOpacity={0.75}
           >
             {avatarUploading
               ? <ActivityIndicator size="small" color={colors.primary} />
-              : <Icon name="camera" size={11} color="rgba(230,220,255,0.9)" />
+              : <Icon name="camera" size={11} color={colors.foreground} />
             }
           </TouchableOpacity>
         </View>
@@ -205,8 +207,8 @@ export function ProfileHeaderSection({
           {/* Display name */}
           {editingName ? (
             <View style={[s.nameEditWrap, { borderBottomColor: colors.primary }]}>
-              <TextInput
-                style={[s.nameEditInput, { color: '#FFFFFF' }]}
+                <TextInput
+                style={[s.nameEditInput, { color: colors.foreground }]}
                 value={nameVal} onChangeText={setNameVal}
                 autoFocus returnKeyType="done"
                 onSubmitEditing={saveName} onBlur={saveName}
@@ -214,27 +216,27 @@ export function ProfileHeaderSection({
             </View>
           ) : (
             <TouchableOpacity style={s.nameRow} onPress={() => setEditingName(true)}>
-              <Text style={s.profileName}>{character.name}</Text>
-              <Icon name="edit-2" size={12} color="rgba(200,184,232,0.5)" style={{ marginLeft: 6 }} />
+              <Text style={[s.profileName, { color: colors.foreground }]}>{character.name}</Text>
+              <Icon name="edit-2" size={12} color={colors.mutedForeground} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           )}
 
           {/* Username */}
           {character.username ? (
             <View style={s.usernameRow}>
-              <Text style={s.profileHandle}>@{character.username}</Text>
-              <Icon name="lock" size={10} color="rgba(200,184,232,0.4)" style={{ marginLeft: 4 }} />
+              <Text style={[s.profileHandle, { color: colors.mutedForeground }]}>@{character.username}</Text>
+              <Icon name="lock" size={10} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
             </View>
           ) : editingUsername ? (
-            <View style={[s.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+            <View style={[s.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: colors.card }]}>
               <Text style={[s.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
               <TextInput
-                style={[s.usernameEditInput, { color: '#FFFFFF' }]}
+                style={[s.usernameEditInput, { color: colors.foreground }]}
                 value={usernameVal}
                 onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
                 autoFocus autoCapitalize="none" autoCorrect={false}
                 returnKeyType="done" onSubmitEditing={saveUsername} onBlur={saveUsername}
-                placeholder="your_handle" placeholderTextColor="rgba(200,184,232,0.4)"
+                placeholder="your_handle" placeholderTextColor={colors.mutedForeground}
                 maxLength={20}
               />
               {usernameChecking && <ActivityIndicator size="small" color={colors.primary} />}
@@ -244,8 +246,8 @@ export function ProfileHeaderSection({
               style={s.usernameRow}
               onPress={() => { setUsernameVal(''); setEditingUsername(true); setUsernameError(null); }}
             >
-              <Text style={[s.profileHandle, { color: 'rgba(200,184,232,0.38)', fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
-              <Icon name="edit-2" size={10} color="rgba(200,184,232,0.4)" style={{ marginLeft: 4 }} />
+              <Text style={[s.profileHandle, { color: colors.mutedForeground, fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
+              <Icon name="edit-2" size={10} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           )}
           {usernameError && <Text style={[s.usernameError, { color: colors.destructive }]}>{usernameError}</Text>}
@@ -254,18 +256,18 @@ export function ProfileHeaderSection({
           <View style={s.titleRow}>
             {hasTitle ? (
               <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={s.titleStar}>✦</Text>
-                <Text style={s.titleText}>{currentTitle}</Text>
+                <Text style={[s.titleStar, { color: colors.gold }]}>✦</Text>
+                <Text style={[s.titleText, { color: colors.gold }]}>{currentTitle}</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titleAddBtn}>
-                <Icon name="plus" size={10} color="rgba(200,184,232,0.50)" />
-                <Text style={s.titleAddText}>Add title</Text>
+                <Icon name="plus" size={10} color={colors.mutedForeground} />
+                <Text style={[s.titleAddText, { color: colors.mutedForeground }]}>Add title</Text>
               </TouchableOpacity>
             )}
             {hasTitle && (
               <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titlePlusBtn}>
-                <Icon name="plus" size={10} color="rgba(200,184,232,0.50)" />
+                <Icon name="plus" size={10} color={colors.mutedForeground} />
               </TouchableOpacity>
             )}
           </View>
@@ -273,16 +275,16 @@ export function ProfileHeaderSection({
           {/* Level / XP inline */}
           <View style={s.levelXpRow}>
              <View style={s.xpLevelBadge}>
-                <Icon name="moon" size={10} color="#C8A84B" />
-                <Text style={s.xpLevelText}>Level {profileLevel}</Text>
+                 <Icon name="moon" size={10} color={colors.gold} />
+                 <Text style={[s.xpLevelText, { color: colors.gold }]}>Level {profileLevel}</Text>
              </View>
              <View style={s.xpContainer}>
-                <Text style={s.xpNumbers}>
+                 <Text style={[s.xpNumbers, { color: colors.mutedForeground }]}>
                   {((rewardBalance?.stars ?? 0) % 300).toLocaleString()} / 300 XP
                 </Text>
-                <View style={s.xpBarTrack}>
+                 <View style={[s.xpBarTrack, { backgroundColor: colors.muted }]}>
                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                   <View style={[s.xpBarFill, { width: `${Math.round(profileXpPct * 100)}%` as any }]} />
+                    <View style={[s.xpBarFill, { width: `${Math.round(profileXpPct * 100)}%` as any, backgroundColor: colors.gold }]} />
                 </View>
              </View>
           </View>
@@ -299,21 +301,21 @@ export function ProfileHeaderSection({
       {/* Row 3: Bento layout for Intention/Bio and Vibe */}
       <View style={s.bentoRow}>
         {/* Intention / Bio Box */}
-        <View style={s.intentionBioBox}>
-          <Image source={Images.story_bg3} style={StyleSheet.absoluteFill} contentFit="cover" />
-          <LinearGradient colors={['rgba(15,10,30,0.4)', 'rgba(15,10,30,0.8)']} style={StyleSheet.absoluteFill} />
+        <View style={[s.intentionBioBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {isDark && <Image source={Images.story_bg3} style={StyleSheet.absoluteFill} contentFit="cover" />}
+          {isDark && <LinearGradient colors={['rgba(15,10,30,0.4)', 'rgba(15,10,30,0.8)']} style={StyleSheet.absoluteFill} />}
 
           <View style={s.ibInner}>
              {/* Intention */}
              {editingIntention ? (
                <View style={s.intentionEditRow}>
-                 <Text style={s.intentionIcon}>✦</Text>
+                  <Text style={[s.intentionIcon, { color: colors.gold }]}>✦</Text>
                  <TextInput
-                   style={[s.intentionInput, { color: '#FFFFFF', flex: 1 }]}
+                    style={[s.intentionInput, { color: colors.foreground, flex: 1 }]}
                    value={intentionVal}
                    onChangeText={v => setIntentionVal(v.slice(0, 80))}
                    placeholder="Set an intention for today…"
-                   placeholderTextColor="rgba(220,200,255,0.4)"
+                    placeholderTextColor={colors.mutedForeground}
                    autoFocus returnKeyType="done" maxLength={80}
                    onSubmitEditing={() => {
                      setCharacter({ ...character, intention: intentionVal.trim() || null, intentionDate: intentionVal.trim() ? todayISO() : null });
@@ -331,11 +333,11 @@ export function ProfileHeaderSection({
                  onPress={() => { setIntentionVal(character.intentionDate === todayISO() ? (character.intention ?? '') : ''); setEditingIntention(true); }}
                  activeOpacity={0.75}
                >
-                 <Text style={s.intentionIcon}>✦</Text>
+                  <Text style={[s.intentionIcon, { color: colors.gold }]}>✦</Text>
                  {character.intentionDate === todayISO() && character.intention ? (
-                   <Text style={s.intentionText} numberOfLines={2}>{character.intention}</Text>
+                    <Text style={[s.intentionText, { color: colors.foreground }]} numberOfLines={2}>{character.intention}</Text>
                  ) : (
-                   <Text style={s.intentionPlaceholder}>Set an intention for today...</Text>
+                    <Text style={[s.intentionPlaceholder, { color: colors.mutedForeground }]}>Set an intention for today...</Text>
                  )}
                </TouchableOpacity>
              )}
@@ -343,11 +345,11 @@ export function ProfileHeaderSection({
              {/* Bio */}
              {editingBio ? (
                <TextInput
-                 style={[s.bioInput, { color: '#FFFFFF' }]}
+                  style={[s.bioInput, { color: colors.foreground }]}
                  value={bioVal} onChangeText={setBioVal}
                  multiline autoFocus returnKeyType="done" onBlur={saveBio}
                  placeholder="Tap to add a bio..."
-                 placeholderTextColor="rgba(220,200,255,0.4)"
+                  placeholderTextColor={colors.mutedForeground}
                />
              ) : (
                <TouchableOpacity
@@ -355,18 +357,18 @@ export function ProfileHeaderSection({
                  activeOpacity={0.75}
                  style={s.bioRow}
                >
-                 <Text style={[s.profileBio, { flex: 1, color: character.bio ? 'rgba(230,220,255,0.9)' : 'rgba(220,200,255,0.4)' }]}>
+                  <Text style={[s.profileBio, { flex: 1, color: character.bio ? colors.foreground : colors.mutedForeground }]}>
                    {character.bio || 'Tap to add a bio...'}
                  </Text>
-                 <Icon name="edit-2" size={13} color="rgba(220,200,255,0.5)" />
+                  <Icon name="edit-2" size={13} color={colors.mutedForeground} />
                </TouchableOpacity>
              )}
           </View>
         </View>
 
         {/* Vibe Box */}
-        <View style={s.vibeBox}>
-           <Text style={s.vibeLabel}>VIBE</Text>
+         <View style={[s.vibeBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[s.vibeLabel, { color: colors.mutedForeground }]}>VIBE</Text>
            <View style={s.orbContainer}>
               {MOOD_ORBS.map((m) => {
                  const sel = m.key === currentMood;
@@ -376,46 +378,46 @@ export function ProfileHeaderSection({
                      style={[s.vibeOrb, { backgroundColor: m.accent, opacity: sel ? 1 : 0.4 }]}
                      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCharacter({ ...character, mood: m.key }); }}
                    >
-                     {sel && <View style={s.vibeOrbRing} />}
+                      {sel && <View style={[s.vibeOrbRing, { borderColor: colors.foreground }]} />}
                    </TouchableOpacity>
                  );
               })}
            </View>
            <Text style={[s.vibeCurrentText, { color: currentMoodData.accent }]}>{currentMood}</Text>
 
-           <TouchableOpacity style={s.addTraitBtn} onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}>
-              <Icon name="plus" size={11} color="rgba(200,184,232,0.6)" />
-              <Text style={s.addTraitBtnText}>Add trait</Text>
+            <TouchableOpacity style={[s.addTraitBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => { setAddingTrait(true); setShowSuggestions(true); }}>
+               <Icon name="plus" size={11} color={colors.mutedForeground} />
+               <Text style={[s.addTraitBtnText, { color: colors.mutedForeground }]}>Add trait</Text>
            </TouchableOpacity>
         </View>
       </View>
 
       {/* Trait suggestions / input inline */}
       {addingTrait && (
-        <View style={[s.traitAddWrap, { borderColor: colors.primary, backgroundColor: 'rgba(120,86,255,0.1)', marginTop: 8 }]}>
+        <View style={[s.traitAddWrap, { borderColor: colors.primary, backgroundColor: `${colors.primary}12`, marginTop: 8 }]}>
           <TextInput
-            style={[s.traitInput, { color: '#FFFFFF' }]}
+            style={[s.traitInput, { color: colors.foreground }]}
             value={newTrait}
             onChangeText={v => { setNewTrait(v); setShowSuggestions(true); }}
             placeholder={t('profile.traitPlaceholder')}
-            placeholderTextColor="rgba(200,184,232,0.4)"
+            placeholderTextColor={colors.mutedForeground}
             autoFocus returnKeyType="done"
             onSubmitEditing={() => addTrait(newTrait)}
             onBlur={() => setTimeout(() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }, 200)}
           />
           <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
-            <Icon name="x" size={13} color="rgba(200,184,232,0.5)" />
+            <Icon name="x" size={13} color={colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       )}
       {showSuggestions && suggestions.length > 0 && (
         <View style={s.suggRow}>
-          <Text style={s.suggLabel}>{t('profile.suggestions')}</Text>
+          <Text style={[s.suggLabel, { color: colors.mutedForeground }]}>{t('profile.suggestions')}</Text>
           <View style={s.suggChips}>
             {suggestions.slice(0, 8).map(sg => (
-              <TouchableOpacity key={sg} style={s.suggChip} onPress={() => addTrait(sg)}>
-                <Icon name="plus" size={10} color="rgba(200,184,232,0.5)" />
-                <Text style={s.suggText}>{sg}</Text>
+              <TouchableOpacity key={sg} style={[s.suggChip, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => addTrait(sg)}>
+                <Icon name="plus" size={10} color={colors.mutedForeground} />
+                <Text style={[s.suggText, { color: colors.mutedForeground }]}>{sg}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -426,15 +428,15 @@ export function ProfileHeaderSection({
       {character.traits.length > 0 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.traitScroll} contentContainerStyle={s.traitRow}>
           {character.traits.map(tr => (
-            <View key={tr} style={s.traitChip}>
-              <Text style={s.traitText}>{tr}</Text>
-              <Text style={{ fontSize: 8, color: 'rgba(200,184,232,0.45)', marginLeft: 1 }}>✦</Text>
+            <View key={tr} style={[s.traitChip, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
+              <Text style={[s.traitText, { color: colors.primary }]}>{tr}</Text>
+              <Text style={{ fontSize: 8, color: colors.mutedForeground, marginLeft: 1 }}>✦</Text>
               <TouchableOpacity
                 onPress={() => removeTrait(tr)}
                 hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                style={s.traitRemove}
+                style={[s.traitRemove, { backgroundColor: `${colors.primary}18` }]}
               >
-                <Icon name="x" size={9} color="rgba(200,184,232,0.7)" />
+                <Icon name="x" size={9} color={colors.primary} />
               </TouchableOpacity>
             </View>
           ))}
@@ -442,7 +444,7 @@ export function ProfileHeaderSection({
       )}
 
       {avatarError && (
-        <Text style={{ color: '#DC2626', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 6 }}>
+        <Text style={{ color: colors.destructive, fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 6 }}>
           {avatarError}
         </Text>
       )}
@@ -461,7 +463,7 @@ export function ProfileHeaderSection({
 
 const s = StyleSheet.create({
   headerTopRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  headerIconBtn:    { width: 30, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' },
+  headerIconBtn:    { width: 30, height: 30, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   visPill:          { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 18, borderWidth: 1 },
   visPillText:      { fontSize: 10.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
@@ -472,11 +474,11 @@ const s = StyleSheet.create({
 
   profileInfo:      { flex: 1, gap: 3 },
   nameRow:          { flexDirection: 'row', alignItems: 'center' },
-  profileName:      { fontSize: 21, fontFamily: 'Satoshi-Bold', color: '#FFFFFF', letterSpacing: -0.3 },
+  profileName:      { fontSize: 21, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   nameEditWrap:     { borderBottomWidth: 2, paddingBottom: 3 },
   nameEditInput:    { fontSize: 21, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   usernameRow:      { flexDirection: 'row', alignItems: 'center', marginTop: -2 },
-  profileHandle:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.7)' },
+  profileHandle:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
   usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
   usernameAt:       { fontSize: 14, fontFamily: 'Satoshi-Bold' },
   usernameEditInput:{ flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular' },
@@ -498,37 +500,37 @@ const s = StyleSheet.create({
   xpBarFill:        { height: 4, borderRadius: 2, backgroundColor: '#C8A84B' },
 
   bentoRow:         { height: 104, flexDirection: 'row', gap: 10, marginTop: 3, marginBottom: 0 },
-  intentionBioBox:  { flex: 1.5, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: '#120F24' },
+  intentionBioBox:  { flex: 1.5, borderRadius: 16, overflow: 'hidden', borderWidth: 1 },
   ibInner:          { padding: 10, gap: 8, flex: 1, justifyContent: 'center' },
   intentionRow:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
   intentionEditRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   intentionIcon:    { fontSize: 12, color: '#C8A84B' },
-  intentionText:    { flex: 1, fontSize: 10.5, fontFamily: 'Satoshi-Medium', fontStyle: 'italic', color: '#FFFFFF' },
-  intentionPlaceholder:{ flex: 1, fontSize: 10.5, fontFamily: 'Satoshi-Medium', fontStyle: 'italic', color: 'rgba(220,200,255,0.6)' },
+  intentionText:    { flex: 1, fontSize: 10.5, fontFamily: 'Satoshi-Medium', fontStyle: 'italic' },
+  intentionPlaceholder:{ flex: 1, fontSize: 10.5, fontFamily: 'Satoshi-Medium', fontStyle: 'italic' },
   intentionInput:   { fontSize: 10.5, fontFamily: 'Satoshi-Medium', fontStyle: 'italic' },
   bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
   profileBio:       { fontSize: 10, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
   bioInput:         { fontSize: 10, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', padding: 0 },
 
-  vibeBox:          { flex: 1, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(20,16,38,0.6)', padding: 10, alignItems: 'center' },
+  vibeBox:          { flex: 1, borderRadius: 16, borderWidth: 1, padding: 10, alignItems: 'center' },
   vibeLabel:        { fontSize: 9, fontFamily: 'Satoshi-Bold', color: 'rgba(200,184,232,0.5)', letterSpacing: 1.2, alignSelf: 'flex-start' },
   orbContainer:     { flexDirection: 'row', gap: 4, justifyContent: 'center', marginTop: 7 },
   vibeOrb:          { width: 10, height: 10, borderRadius: 5, position: 'relative', alignItems: 'center', justifyContent: 'center' },
   vibeOrbRing:      { position: 'absolute', top: -3, left: -3, right: -3, bottom: -3, borderRadius: 12, borderWidth: 1, borderColor: '#FFF' },
   vibeCurrentText:  { fontSize: 11, fontFamily: 'Satoshi-Bold', marginTop: 7, letterSpacing: 0.2 },
-  addTraitBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'rgba(255,255,255,0.03)', marginTop: 7 },
-  addTraitBtnText:  { fontSize: 9.5, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.7)' },
+  addTraitBtn:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 14, borderWidth: 1, marginTop: 7 },
+  addTraitBtnText:  { fontSize: 9.5, fontFamily: 'Satoshi-Medium' },
 
   traitScroll:      { marginTop: 10 },
   traitRow:         { flexDirection: 'row', gap: 6 },
-  traitChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 16, borderWidth: 1, backgroundColor: 'rgba(120,86,255,0.15)', borderColor: 'rgba(120,86,255,0.3)' },
-  traitText:        { fontSize: 11, fontFamily: 'Satoshi-Medium', color: 'rgba(210,195,255,0.92)' },
-  traitRemove:      { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(120,86,255,0.2)' },
+  traitChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 8, paddingRight: 4, paddingVertical: 4, borderRadius: 16, borderWidth: 1 },
+  traitText:        { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  traitRemove:      { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   traitAddWrap:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
   traitInput:       { fontSize: 12, fontFamily: 'Satoshi-Regular', minWidth: 80, maxWidth: 120 },
   suggRow:          { marginTop: 14, gap: 8 },
   suggLabel:        { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase', color: 'rgba(200,184,232,0.55)' },
   suggChips:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  suggChip:         { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.18)' },
-  suggText:         { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.5)' },
+  suggChip:         { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12, borderWidth: 1 },
+  suggText:         { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 });
