@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/storigam-icon.png",
-    "scheme": "storigam",
+    "scheme": ["storigam", "sky-journal"],
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.storigam.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/storigam-adaptive-icon.png",
         "backgroundColor": "#030014"
@@ -88,8 +88,14 @@
       "typedRoutes": true,
       "reactCompiler": false
     },
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "updates": {
-      "enabled": false
+      "enabled": true,
+      "url": "https://u.expo.dev/95bfb37d-2b50-4ab2-abea-799b09a08144",
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
     },
     "extra": {
       "eas": {
