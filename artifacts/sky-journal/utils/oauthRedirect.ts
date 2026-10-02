@@ -1,15 +1,26 @@
 import * as Linking from 'expo-linking';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { Platform } from 'react-native';
 
-const LEGACY_PHONE_DEV_CLIENT_SCHEME = 'sky-journal';
+const COMPATIBLE_NATIVE_OAUTH_SCHEME = 'sky-journal';
 const OAUTH_CALLBACK_PATH = 'oauth-native-callback';
 
 export function createOAuthRedirectUrl(): string {
-  if (process.env.EXPO_PUBLIC_PHONE_DEV === 'true') {
-    // The installed phone development client predates the Storigam rebrand and
-    // only has this scheme registered natively. Its JavaScript bundle can use
-    // the newer brand, but Android still needs the native scheme to reopen it.
+  const isNativeApp =
+    Platform.OS !== 'web' &&
+    Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+  const redirectScheme =
+    process.env.EXPO_PUBLIC_CLERK_REDIRECT_SCHEME ||
+    (process.env.EXPO_PUBLIC_PHONE_DEV === 'true' || isNativeApp
+      ? COMPATIBLE_NATIVE_OAUTH_SCHEME
+      : undefined);
+
+  if (redirectScheme) {
+    // Preserve the pre-rebrand OAuth callback even when build-time env is
+    // missing. The branded scheme remains available for normal app links.
+    // Switch OAuth schemes only after verifying the production Clerk allowlist.
     return Linking.createURL(OAUTH_CALLBACK_PATH, {
-      scheme: LEGACY_PHONE_DEV_CLIENT_SCHEME,
+      scheme: redirectScheme,
     });
   }
 
