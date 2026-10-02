@@ -4,12 +4,17 @@ const LEGACY_PHONE_DEV_CLIENT_SCHEME = 'sky-journal';
 const OAUTH_CALLBACK_PATH = 'oauth-native-callback';
 
 export function createOAuthRedirectUrl(): string {
-  if (process.env.EXPO_PUBLIC_PHONE_DEV === 'true') {
-    // The installed phone development client predates the Storigam rebrand and
-    // only has this scheme registered natively. Its JavaScript bundle can use
-    // the newer brand, but Android still needs the native scheme to reopen it.
+  const redirectScheme =
+    process.env.EXPO_PUBLIC_CLERK_REDIRECT_SCHEME ||
+    (process.env.EXPO_PUBLIC_PHONE_DEV === 'true'
+      ? LEGACY_PHONE_DEV_CLIENT_SCHEME
+      : undefined);
+
+  if (redirectScheme) {
+    // Keep the older OAuth callback available while Storigam uses its branded
+    // scheme for normal app links. Both schemes are registered in app.json.
     return Linking.createURL(OAUTH_CALLBACK_PATH, {
-      scheme: LEGACY_PHONE_DEV_CLIENT_SCHEME,
+      scheme: redirectScheme,
     });
   }
 
