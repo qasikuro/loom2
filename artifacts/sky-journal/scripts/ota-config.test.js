@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const { readFileSync } = require('node:fs');
+const path = require('node:path');
 const { test } = require('node:test');
 const config = require('../app.json').expo;
 const profiles = require('../eas.json').build;
@@ -13,6 +15,14 @@ test('OTA is enabled for the existing Expo project', () => {
   );
   assert.ok(manifest.dependencies['expo-updates']);
   assert.equal(manifest.devDependencies['expo-updates'], undefined);
+});
+
+test('EAS fingerprint ignores the generated Android directory', () => {
+  const fingerprintIgnore = readFileSync(
+    path.join(__dirname, '..', '.fingerprintignore'),
+    'utf8',
+  );
+  assert.ok(fingerprintIgnore.split(/\r?\n/).includes('android/**/*'));
 });
 
 test('native fingerprint protects against incompatible updates', () => {
