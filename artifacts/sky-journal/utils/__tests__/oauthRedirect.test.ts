@@ -29,6 +29,15 @@ describe('createOAuthRedirectUrl', () => {
     });
   });
 
+  it('uses the previously deployed callback scheme for production builds', () => {
+    vi.stubEnv('EXPO_PUBLIC_CLERK_REDIRECT_SCHEME', 'sky-journal');
+
+    expect(createOAuthRedirectUrl()).toBe('sky-journal://oauth-native-callback');
+    expect(linking.createURL).toHaveBeenCalledWith('oauth-native-callback', {
+      scheme: 'sky-journal',
+    });
+  });
+
   it('keeps the normal Expo-generated redirect for all other environments', () => {
     expect(createOAuthRedirectUrl()).toBe('exp://example/oauth-native-callback');
     expect(linking.createURL).toHaveBeenCalledWith('oauth-native-callback');
