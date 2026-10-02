@@ -11,13 +11,27 @@ The replacement APK includes the compatible OAuth callback and the native
 ## Sending a later update
 
 1. Sync and verify the intended JavaScript or asset changes on GitHub `main`.
-2. Open the **EAS Update — Production** GitHub Actions workflow.
-3. Choose **Run workflow** on `main` and provide a short update description.
-4. Confirm the run succeeds and inspect the EAS update it links to.
+2. In an environment already signed in to the Expo account for this app, run:
 
-The workflow uses the existing GitHub `EXPO_TOKEN` secret and loads the same
-public API, Clerk, and callback configuration as production native builds.
-Updates are manual; pushing a commit alone does not send it to installed apps.
+   ```sh
+   node artifacts/sky-journal/scripts/update-production.js --message "Describe the update"
+   ```
+
+3. Confirm the command succeeds and inspect the EAS update it links to.
+
+The command loads the same public API, Clerk, and callback configuration as
+production native builds. It deliberately requires a release description.
+Pushing a commit alone does not send an update to installed apps.
+
+### Optional GitHub Actions publishing
+
+The workflow definition is `.github/workflows/eas-update-production.yml`.
+Installing it on GitHub requires permission to write workflow files, in addition
+to ordinary repository content permission. Once installed, open **EAS Update —
+Production**, choose **Run workflow** on `main`, and enter an update description.
+
+That workflow runs the same publishing command using the existing GitHub
+`EXPO_TOKEN` secret. Neither the command nor a native build needs a new secret.
 
 ## What users see
 
