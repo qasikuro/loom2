@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/storigam-icon.png",
-    "scheme": "storigam",
+    "scheme": ["storigam", "sky-journal"],
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
