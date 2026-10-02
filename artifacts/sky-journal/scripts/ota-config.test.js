@@ -15,13 +15,13 @@ test('OTA is enabled for the existing Expo project', () => {
   assert.equal(manifest.devDependencies['expo-updates'], undefined);
 });
 
-test('production EAS builds fingerprint the managed project despite generated native folders', () => {
+test('production EAS profiles retain the managed workflow override', () => {
   assert.equal(profiles.production.env.EXPO_UPDATES_WORKFLOW_OVERRIDE, 'managed');
   assert.equal(profiles['production-apk'].env.EXPO_UPDATES_WORKFLOW_OVERRIDE, 'managed');
 });
 
-test('native fingerprint protects against incompatible updates', () => {
-  assert.deepEqual(config.runtimeVersion, { policy: 'fingerprint' });
+test('OTA runtime version follows the app version', () => {
+  assert.deepEqual(config.runtimeVersion, { policy: 'appVersion' });
   assert.notEqual(config.updates.disableAntiBrickingMeasures, true);
 });
 
