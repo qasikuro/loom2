@@ -49,6 +49,22 @@ describe('media access ticket cache', () => {
     expect(canonicalMediaUri('/unmanaged/private%2Dphoto.jpg?media_sig=keep')).toBe('/unmanaged/private%2Dphoto.jpg?media_sig=keep');
   });
 
+  it('routes legacy Replit development media URLs through the current API', async () => {
+    const legacyUrl = 'https://old-workspace.pike.replit.dev/api/images/private-photo.jpg?old_ticket=stale';
+    vi.mocked(apiFetch).mockResolvedValueOnce({
+      urls: { [path]: readUrl('current-owner') },
+    } as never);
+    setMediaAuthScope('legacy-media-owner');
+
+    expect(canonicalMediaUri(legacyUrl)).toBe(`https://media.test${path}`);
+    expect(await resolveMediaReadUrl(legacyUrl)).toBe(readUrl('current-owner'));
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(vi.mocked(apiFetch).mock.calls[0][1]?.body))).toEqual({ paths: [path] });
+
+    const insecureLegacyUrl = 'http://old-workspace.pike.replit.dev/api/images/private-photo.jpg';
+    expect(canonicalMediaUri(insecureLegacyUrl)).toBe(insecureLegacyUrl);
+  });
+
   it('ignores a late response after account change and rejects the old request', async () => {
     let finishOldRequest!: (response: { urls: Record<string, string> }) => void;
     vi.mocked(apiFetch)
