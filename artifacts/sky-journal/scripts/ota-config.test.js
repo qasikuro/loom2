@@ -11,7 +11,8 @@ test('OTA is enabled for the existing Expo project', () => {
     config.updates.url,
     `https://u.expo.dev/${config.extra.eas.projectId}`,
   );
-  assert.ok(manifest.devDependencies['expo-updates'] || manifest.dependencies['expo-updates']);
+  assert.ok(manifest.dependencies['expo-updates']);
+  assert.equal(manifest.devDependencies['expo-updates'], undefined);
 });
 
 test('native fingerprint protects against incompatible updates', () => {
