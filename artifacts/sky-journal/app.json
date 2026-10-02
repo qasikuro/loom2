@@ -89,7 +89,7 @@
       "reactCompiler": false
     },
     "runtimeVersion": {
-      "policy": "fingerprint"
+      "policy": "appVersion"
     },
     "updates": {
       "enabled": true,
