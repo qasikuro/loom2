@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const config = require('../app.json').expo;
 const profiles = require('../eas.json').build;
 const manifest = require('../package.json');
+const { createProductionUpdateCommand } = require('./update-production');
 
 test('OTA is enabled for the existing Expo project', () => {
   assert.equal(config.updates.enabled, true);
@@ -36,5 +37,30 @@ test('native builds retain the compatible OAuth scheme', () => {
   for (const name of ['production', 'production-apk']) {
     assert.equal(profiles[name].env.EXPO_PUBLIC_CLERK_REDIRECT_SCHEME, 'sky-journal');
     assert.ok(schemes.includes(profiles[name].env.EXPO_PUBLIC_CLERK_REDIRECT_SCHEME));
+  }
+});
+
+test('manual OTA publishing uses the production build environment and channel', () => {
+  const command = createProductionUpdateCommand(' Callback fix ', {
+    EXPO_PUBLIC_API_URL: 'https://wrong.example/api',
+    EXPO_PUBLIC_CLERK_REDIRECT_SCHEME: 'wrong-scheme',
+    CI: 'true',
+  });
+  assert.deepEqual(command.args, [
+    'exec', 'eas', 'update',
+    '--channel', 'production',
+    '--platform', 'all',
+    '--message', 'Callback fix',
+    '--non-interactive',
+  ]);
+  for (const [key, value] of Object.entries(profiles.production.env)) {
+    assert.equal(command.env[key], value);
+  }
+  assert.equal(command.env.CI, 'true');
+});
+
+test('manual OTA publishing requires a nonempty release description', () => {
+  for (const message of [undefined, '', '   ']) {
+    assert.throws(() => createProductionUpdateCommand(message), /--message/);
   }
 });
