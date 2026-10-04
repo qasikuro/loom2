@@ -36,6 +36,9 @@ export interface PanelOverlay {
   yPct:         number;
   fontFamily?:  string;
   fontSize?:    number;
+  fontStyle?:   'normal' | 'italic';
+  textTransform?: 'none' | 'uppercase' | 'capitalize';
+  textColor?:   string;
   bubbleStyle?: BubbleStyle;
   color?:       string;
 }

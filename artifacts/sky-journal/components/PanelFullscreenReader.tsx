@@ -17,6 +17,7 @@ import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images/index';
 import type { PanelOverlay } from '@/context/AppContext';
 import { PanelSticker } from '@/components/PanelSticker';
+import { PanelOverlayText } from '@/components/PanelOverlayText';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const BG_PRESET_MAP: Record<string, any> = {
@@ -450,19 +451,18 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
             const left = ov.xPct * screenW;
             const top  = ov.yPct * screenH;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const ff   = (ov.fontFamily ?? 'Satoshi-Medium') as any;
             const fs   = Math.min((ov.fontSize ?? (ov.type === 'sticker' ? 28 : 13)) * 1.5, 34);
             const bR   = ov.bubbleStyle === 'sharp' ? 3 : ov.bubbleStyle === 'oval' ? 50 : 14;
             return (
               <View key={ov.id} style={{ position: 'absolute', left, top, zIndex: 15 }}>
                 {ov.type === 'bubble' && (
                   <View style={[styles.bubble, { borderRadius: bR, position: 'relative', top: 0, left: 0, maxWidth: screenW * 0.65 }]}>
-                    <Text style={[styles.bubbleTxt, { fontFamily: ff, fontSize: fs }]}>{ov.content}</Text>
+                    <PanelOverlayText overlay={ov} fontSize={fs} style={styles.bubbleTxt} />
                     {ov.bubbleStyle !== 'oval' && <View style={styles.bubbleTail} />}
                   </View>
                 )}
                 {ov.type === 'text' && (
-                  <Text style={[styles.ovText, { fontFamily: ff, fontSize: fs, color: ov.color ?? '#fff' }]}>{ov.content}</Text>
+                  <PanelOverlayText overlay={ov} fontSize={fs} style={styles.ovText} />
                 )}
                 {ov.type === 'sticker' && (
                   <PanelSticker content={ov.content} size={fs} imageSize={(ov.fontSize ?? 30) * 1.5} />

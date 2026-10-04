@@ -34,6 +34,7 @@ import { Images } from '@/assets/images/index';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { useTranslation } from 'react-i18next';
 import { PanelSticker } from '@/components/PanelSticker';
+import { PanelOverlayText } from '@/components/PanelOverlayText';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -117,8 +118,6 @@ function PanelCell({ panel, cellW, cellH }: { panel: ChapterPanel; cellW: number
       {(panel.overlays ?? []).map(ov => {
         const left = ov.xPct * cellW;
         const top  = ov.yPct * cellH;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const fontFam = (ov.fontFamily ?? 'Satoshi-Medium') as any;
         const fontSize = ov.fontSize ?? (ov.type === 'sticker' ? 24 : 12);
         const bRadius = ov.bubbleStyle === 'sharp' ? 2 : ov.bubbleStyle === 'oval' ? 50 : 10;
         const hasTail = ov.bubbleStyle !== 'oval';
@@ -126,12 +125,12 @@ function PanelCell({ panel, cellW, cellH }: { panel: ChapterPanel; cellW: number
           <View key={ov.id} style={{ position: 'absolute', left, top, zIndex: 15 }}>
             {ov.type === 'bubble' && (
               <View style={[styles.bubble, { borderRadius: bRadius, maxWidth: cellW * 0.72 }]}>
-                <Text style={[styles.bubbleTxt, { fontFamily: fontFam, fontSize }]} numberOfLines={6}>{ov.content}</Text>
+                <PanelOverlayText overlay={ov} fontSize={fontSize} style={styles.bubbleTxt} numberOfLines={6} />
                 {hasTail && <View style={styles.bubbleTail} />}
               </View>
             )}
             {ov.type === 'text' && (
-              <Text style={[styles.overlayTxt, { fontFamily: fontFam, fontSize, color: ov.color ?? '#fff' }]}>{ov.content}</Text>
+              <PanelOverlayText overlay={ov} fontSize={fontSize} style={styles.overlayTxt} />
             )}
             {ov.type === 'sticker' && <PanelSticker content={ov.content} size={fontSize} />}
           </View>

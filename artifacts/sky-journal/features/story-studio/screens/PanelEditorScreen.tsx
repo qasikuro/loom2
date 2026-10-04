@@ -34,6 +34,16 @@ import CropImageModal from '@/components/CropImageModal';
 import { ImageSourceSheet } from '@/components/ImageSourceSheet';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { PanelSticker } from '@/components/PanelSticker';
+import {
+  defaultPanelOverlayColor,
+  PANEL_FONT_OPTIONS,
+  PANEL_FONT_STYLES,
+  PANEL_TEXT_CASES,
+  PANEL_TEXT_COLORS,
+  PanelOverlayText,
+  panelOverlayColor,
+  resolvePanelFontFamily,
+} from '@/components/PanelOverlayText';
 import { STORIGAM_STICKERS } from '@/assets/stickers';
 
 const GAP      = 3;
@@ -109,12 +119,6 @@ function LayoutIcon({ layout, size = 38 }: { layout: Layout; size?: number }) {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FONTS = [
-  { key: 'Satoshi-Regular', label: 'fontRegular' },
-  { key: 'Satoshi-Medium',  label: 'fontMedium'  },
-  { key: 'Satoshi-Bold',    label: 'fontBold'    },
-] as const;
-
 const BUBBLE_STYLES: { key: BubbleStyle; label: string; radius: number; hasTail: boolean }[] = [
   { key: 'rounded', label: 'rounded', radius: 12, hasTail: true  },
   { key: 'sharp',   label: 'sharp',   radius: 2,  hasTail: true  },
@@ -171,8 +175,6 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
   })).current;
 
   const bStyle   = BUBBLE_STYLES.find(b => b.key === (overlay.bubbleStyle ?? 'rounded')) ?? BUBBLE_STYLES[0];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fontFam  = (overlay.fontFamily ?? 'Satoshi-Medium') as any;
   const fontSize = overlay.fontSize ?? (overlay.type === 'sticker' ? 30 : 13);
 
   return (
@@ -182,15 +184,23 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
     >
       {overlay.type === 'bubble' && (
         <View style={[styles.bubbleBox, { borderRadius: bStyle.radius }, isSelected && styles.bubbleBoxSelected]}>
-          <Text style={[styles.bubbleBoxText, { fontFamily: fontFam, fontSize }]}>{overlay.content || '...'}</Text>
+          <PanelOverlayText
+            overlay={overlay}
+            fontSize={fontSize}
+            style={styles.bubbleBoxText}
+            fallbackText="..."
+          />
           {bStyle.hasTail && <View style={styles.bubbleTailDown} />}
         </View>
       )}
       {overlay.type === 'text' && (
         <View style={isSelected ? styles.textBoxSelected : undefined}>
-          <Text style={[styles.overlayText, { fontFamily: fontFam, fontSize, color: overlay.color ?? '#ffffff' }]}>
-            {overlay.content || 'Text'}
-          </Text>
+          <PanelOverlayText
+            overlay={overlay}
+            fontSize={fontSize}
+            style={styles.overlayText}
+            fallbackText="Text"
+          />
         </View>
       )}
       {overlay.type === 'sticker' && (
@@ -217,8 +227,6 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
   const left    = overlay.xPct * panelW;
   const top     = overlay.yPct * panelH;
   const bStyle  = BUBBLE_STYLES.find(b => b.key === (overlay.bubbleStyle ?? 'rounded')) ?? BUBBLE_STYLES[0];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const fontFam = (overlay.fontFamily ?? 'Satoshi-Medium') as any;
   const scale   = 0.58;
   const fontSize = Math.max(8, (overlay.fontSize ?? (overlay.type === 'sticker' ? 30 : 13)) * scale);
 
@@ -229,9 +237,12 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
           borderRadius: bStyle.radius * scale,
           paddingHorizontal: 6, paddingVertical: 4, maxWidth: 90,
         }]}>
-          <Text style={[styles.bubbleBoxText, { fontFamily: fontFam, fontSize }]} numberOfLines={2}>
-            {overlay.content}
-          </Text>
+          <PanelOverlayText
+            overlay={overlay}
+            fontSize={fontSize}
+            style={styles.bubbleBoxText}
+            numberOfLines={2}
+          />
           {bStyle.hasTail && (
             <View style={[styles.bubbleTailDown, {
               borderTopWidth: 5, borderLeftWidth: 5, borderRightWidth: 5, bottom: -5,
@@ -240,9 +251,12 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
         </View>
       )}
       {overlay.type === 'text' && (
-        <Text style={[styles.overlayText, { fontFamily: fontFam, fontSize, color: overlay.color ?? '#ffffff' }]} numberOfLines={1}>
-          {overlay.content}
-        </Text>
+        <PanelOverlayText
+          overlay={overlay}
+          fontSize={fontSize}
+          style={styles.overlayText}
+          numberOfLines={1}
+        />
       )}
       {overlay.type === 'sticker' && (
         <PanelSticker content={overlay.content} size={Math.max(12, fontSize)} />
@@ -499,7 +513,7 @@ export default function PanelEditorScreen() {
       fontFamily:  'Satoshi-Medium',
       fontSize:     type === 'sticker' ? 48 : 13,
       bubbleStyle: 'rounded',
-      color:       '#ffffff',
+      color:       defaultPanelOverlayColor(type),
     };
     updatePanel(activeIdx, { overlays: [...(activePanel?.overlays ?? []), ov] });
     setSelId(id);
@@ -878,7 +892,7 @@ export default function PanelEditorScreen() {
             {/* ── Font quick-bar (always-visible for bubble/text) ── */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <View style={[styles.fontBar, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                {FONTS.map(f => {
+                {PANEL_FONT_OPTIONS.map(f => {
                   const active = selOverlay.fontFamily === f.key;
                   return (
                     <TouchableOpacity
@@ -888,7 +902,7 @@ export default function PanelEditorScreen() {
                       activeOpacity={0.75}
                     >
                       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      <Text style={[styles.fontBarSample, { fontFamily: f.key as any, color: active ? colors.primary : colors.foreground }]}>
+                      <Text style={[styles.fontBarSample, { fontFamily: resolvePanelFontFamily(f.key), color: active ? colors.primary : colors.foreground }]}>
                         Aa
                       </Text>
                       <Text style={[styles.fontBarLabel, { color: active ? colors.primary : colors.mutedForeground }]}>
@@ -926,11 +940,145 @@ export default function PanelEditorScreen() {
               </View>
             )}
 
+            {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
+              <>
+                <View style={styles.formattingSection}>
+                  <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>
+                    {t('studioEditor.textStyleHeading')}
+                  </Text>
+                  <View style={styles.formattingChipRow}>
+                    {PANEL_FONT_STYLES.map(option => {
+                      const active = (selOverlay.fontStyle ?? 'normal') === option.key;
+                      return (
+                        <TouchableOpacity
+                          key={option.key}
+                          style={[
+                            styles.formattingChip,
+                            {
+                              borderColor: active ? colors.primary : colors.border,
+                              backgroundColor: active ? `${colors.primary}18` : colors.muted,
+                            },
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            updateOverlay(selOverlay.id, { fontStyle: option.key });
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(`studioEditor.${option.label}`)}
+                          accessibilityState={{ selected: active }}
+                        >
+                          <Text
+                            style={[
+                              styles.formattingChipSample,
+                              {
+                                fontFamily: resolvePanelFontFamily(selOverlay.fontFamily),
+                                fontStyle: option.key,
+                                color: active ? colors.primary : colors.foreground,
+                              },
+                            ]}
+                          >
+                            {option.sample}
+                          </Text>
+                          <Text style={[styles.formattingChipLabel, { color: active ? colors.primary : colors.mutedForeground }]}>
+                            {t(`studioEditor.${option.label}`)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.formattingSection}>
+                  <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>
+                    {t('studioEditor.textCaseHeading')}
+                  </Text>
+                  <View style={styles.formattingChipRow}>
+                    {PANEL_TEXT_CASES.map(option => {
+                      const active = (selOverlay.textTransform ?? 'none') === option.key;
+                      return (
+                        <TouchableOpacity
+                          key={option.key}
+                          style={[
+                            styles.formattingChip,
+                            {
+                              borderColor: active ? colors.primary : colors.border,
+                              backgroundColor: active ? `${colors.primary}18` : colors.muted,
+                            },
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            updateOverlay(selOverlay.id, { textTransform: option.key });
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={t(`studioEditor.${option.label}`)}
+                          accessibilityState={{ selected: active }}
+                        >
+                          <Text
+                            style={[
+                              styles.formattingChipSample,
+                              {
+                                fontFamily: resolvePanelFontFamily(selOverlay.fontFamily),
+                                fontStyle: selOverlay.fontStyle ?? 'normal',
+                                textTransform: option.key,
+                                color: active ? colors.primary : colors.foreground,
+                              },
+                            ]}
+                          >
+                            {option.sample}
+                          </Text>
+                          <Text style={[styles.formattingChipLabel, { color: active ? colors.primary : colors.mutedForeground }]}>
+                            {t(`studioEditor.${option.label}`)}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.formattingSection}>
+                  <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>
+                    {t('studioEditor.textColor')}
+                  </Text>
+                  <View style={styles.textColorRow}>
+                    {PANEL_TEXT_COLORS.map(color => {
+                      const active = panelOverlayColor(selOverlay) === color;
+                      return (
+                        <TouchableOpacity
+                          key={color}
+                          style={[
+                            styles.textColorSwatch,
+                            {
+                              backgroundColor: color,
+                              borderColor: active ? colors.primary : colors.border,
+                              borderWidth: active ? 3 : 1,
+                            },
+                          ]}
+                          onPress={() => {
+                            Haptics.selectionAsync();
+                            updateOverlay(selOverlay.id, { color, textColor: color });
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${t('studioEditor.textColor')} ${color}`}
+                          accessibilityState={{ selected: active }}
+                        />
+                      );
+                    })}
+                  </View>
+                </View>
+              </>
+            )}
+
             {/* Text input */}
             {(selOverlay.type === 'bubble' || selOverlay.type === 'text') && (
               <TextInput
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                style={[styles.editorInput, { color: colors.foreground, borderColor: colors.border, fontFamily: (selOverlay.fontFamily ?? 'Satoshi-Medium') as any }]}
+                style={[styles.editorInput, {
+                  color: colors.foreground,
+                  borderColor: colors.border,
+                  fontFamily: resolvePanelFontFamily(selOverlay.fontFamily),
+                  fontStyle: selOverlay.fontStyle ?? 'normal',
+                  textTransform: selOverlay.textTransform ?? 'none',
+                }]}
                 value={selOverlay.content}
                 onChangeText={t => updateOverlay(selOverlay.id, { content: t })}
                 placeholder={selOverlay.type === 'bubble' ? t('studioEditor.bubblePlaceholder') : t('studioEditor.panelPlaceholder')}
@@ -1169,6 +1317,18 @@ const styles = StyleSheet.create({
   fontBarSample: { fontSize: 16 },
   fontBarLabel:  { fontSize: 8, fontFamily: 'Satoshi-Medium', letterSpacing: 0.2 },
   fontBarDivider:{ width: 1, height: 32, marginHorizontal: 4 },
+  formattingSection: { gap: 7 },
+  formattingChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  formattingChip: {
+    minWidth: 82, flexGrow: 1,
+    alignItems: 'center', justifyContent: 'center', gap: 3,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderRadius: 10, borderWidth: 1,
+  },
+  formattingChipSample: { fontSize: 15, lineHeight: 18 },
+  formattingChipLabel: { fontSize: 9, fontFamily: 'Satoshi-Medium' },
+  textColorRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
+  textColorSwatch: { width: 32, height: 32, borderRadius: 16 },
   sizePill: {
     paddingHorizontal: 7, paddingVertical: 5,
     borderRadius: 7, borderWidth: 1,

@@ -30,6 +30,9 @@ const OverlaySchema = z.object({
   yPct:        z.number(),
   fontFamily:  z.string().optional().nullable(),
   fontSize:    z.number().optional().nullable(),
+  fontStyle:   z.enum(['normal', 'italic']).optional().nullable(),
+  textTransform: z.enum(['none', 'uppercase', 'capitalize']).optional().nullable(),
+  textColor:   z.string().regex(/^#[0-9a-fA-F]{6}$/).optional().nullable(),
   bubbleStyle: z.string().optional().nullable(),
   color:       z.string().optional().nullable(),
 });
