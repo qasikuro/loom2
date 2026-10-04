@@ -35,6 +35,7 @@ import { useTranslation } from 'react-i18next';
 import { shareStory } from '@/utils/shareContent';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { AudiusTrackPlayer } from '../components/AudiusMusicPicker';
+import { PanelSticker } from '@/components/PanelSticker';
 
 // ── Layout registry (mirrors panel-editor.tsx) ────────────────────────────────
 
@@ -197,7 +198,7 @@ function PanelCell({
               </Text>
             )}
             {ov.type === 'sticker' && (
-              <Text style={{ fontSize }}>{ov.content}</Text>
+              <PanelSticker content={ov.content} size={fontSize} />
             )}
           </View>
         );

@@ -33,6 +33,8 @@ import { useTranslation } from 'react-i18next';
 import CropImageModal from '@/components/CropImageModal';
 import { ImageSourceSheet } from '@/components/ImageSourceSheet';
 import { SkyLoadingMark } from '@/components/SkyLoading';
+import { PanelSticker } from '@/components/PanelSticker';
+import { STORIGAM_STICKERS } from '@/assets/stickers';
 
 const GAP      = 3;
 const CANVAS_H = 390;
@@ -119,8 +121,6 @@ const BUBBLE_STYLES: { key: BubbleStyle; label: string; radius: number; hasTail:
   { key: 'oval',    label: 'oval',    radius: 50, hasTail: false },
 ];
 
-const STICKERS = ['✨','🌟','💫','🌙','☁️','🕊️','🌸','🍃','⭐','🌊','🦋','🌈','🔮','🌺','❄️','🌿'];
-
 function getBgSource(panel?: StoryPanel) {
   if (!panel) return null;
   if (panel.imageUri) return { uri: panel.imageUri };
@@ -195,7 +195,7 @@ function DraggableOverlay({ overlay, panelW, panelH, isSelected, onSelect, onMov
       )}
       {overlay.type === 'sticker' && (
         <View style={isSelected ? styles.stickerSelected : undefined}>
-          <Text style={{ fontSize }}>{overlay.content}</Text>
+          <PanelSticker content={overlay.content} size={fontSize} />
         </View>
       )}
       {isSelected && (
@@ -220,7 +220,7 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const fontFam = (overlay.fontFamily ?? 'Satoshi-Medium') as any;
   const scale   = 0.58;
-  const fontSize = Math.max(8, (overlay.fontSize ?? 13) * scale);
+  const fontSize = Math.max(8, (overlay.fontSize ?? (overlay.type === 'sticker' ? 30 : 13)) * scale);
 
   return (
     <View style={{ position: 'absolute', left, top, zIndex: 10 }}>
@@ -245,7 +245,7 @@ function StaticOverlay({ overlay, panelW, panelH }: { overlay: PanelOverlay; pan
         </Text>
       )}
       {overlay.type === 'sticker' && (
-        <Text style={{ fontSize: Math.max(12, fontSize) }}>{overlay.content}</Text>
+        <PanelSticker content={overlay.content} size={Math.max(12, fontSize)} />
       )}
     </View>
   );
@@ -497,7 +497,7 @@ export default function PanelEditorScreen() {
       id, type, content,
       xPct: 0.08, yPct: 0.08,
       fontFamily:  'Satoshi-Medium',
-      fontSize:     type === 'sticker' ? 30 : 13,
+      fontSize:     type === 'sticker' ? 48 : 13,
       bubbleStyle: 'rounded',
       color:       '#ffffff',
     };
@@ -841,13 +841,16 @@ export default function PanelEditorScreen() {
           <View style={[styles.stickerCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.pickerLabel, { color: colors.mutedForeground }]}>{t('create.stickers')}</Text>
             <View style={styles.stickerGrid}>
-              {STICKERS.map(e => (
+              {STORIGAM_STICKERS.map(sticker => (
                 <TouchableOpacity
-                  key={e}
+                  key={sticker.id}
                   style={[styles.stickerBtn, { backgroundColor: `${colors.primary}10`, borderColor: colors.border }]}
-                  onPress={() => addOverlay('sticker', e)}
+                  accessibilityRole="button"
+                  accessibilityLabel={sticker.label}
+                  testID={`panel-sticker-${sticker.id}`}
+                  onPress={() => addOverlay('sticker', sticker.id)}
                 >
-                  <Text style={styles.stickerEmoji}>{e}</Text>
+                  <PanelSticker content={sticker.id} size={36} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -974,7 +977,7 @@ export default function PanelEditorScreen() {
                     <Text style={{ fontSize: 16, color: colors.mutedForeground, fontFamily: 'Satoshi-Bold' }}>−</Text>
                   </Pressable>
                   <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground, minWidth: 36, textAlign: 'center' }}>
-                    {selOverlay.fontSize ?? 30}
+                     {selOverlay.fontSize ?? 30}
                   </Text>
                   <Pressable
                     style={({ pressed }) => [styles.chip, styles.chipSq, { borderColor: colors.border, backgroundColor: pressed ? `${colors.primary}22` : colors.muted }]}
@@ -1144,7 +1147,6 @@ const styles = StyleSheet.create({
   stickerCard:  { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   stickerGrid:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   stickerBtn:   { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  stickerEmoji: { fontSize: 24 },
 
   overlayEditor:     { borderWidth: 1, borderRadius: 16, padding: 14, gap: 10 },
   editorHeaderRow:   { flexDirection: 'row', alignItems: 'center', gap: 8 },

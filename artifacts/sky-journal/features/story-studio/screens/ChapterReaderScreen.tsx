@@ -33,6 +33,7 @@ import type { PanelOverlay } from '@/context/AppContext';
 import { Images } from '@/assets/images/index';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { useTranslation } from 'react-i18next';
+import { PanelSticker } from '@/components/PanelSticker';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -132,7 +133,7 @@ function PanelCell({ panel, cellW, cellH }: { panel: ChapterPanel; cellW: number
             {ov.type === 'text' && (
               <Text style={[styles.overlayTxt, { fontFamily: fontFam, fontSize, color: ov.color ?? '#fff' }]}>{ov.content}</Text>
             )}
-            {ov.type === 'sticker' && <Text style={{ fontSize }}>{ov.content}</Text>}
+            {ov.type === 'sticker' && <PanelSticker content={ov.content} size={fontSize} />}
           </View>
         );
       })}

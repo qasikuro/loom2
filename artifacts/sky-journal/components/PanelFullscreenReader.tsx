@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { Images } from '@/assets/images/index';
 import type { PanelOverlay } from '@/context/AppContext';
+import { PanelSticker } from '@/components/PanelSticker';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const BG_PRESET_MAP: Record<string, any> = {
@@ -463,7 +464,9 @@ export function PanelFullscreenReader({ panels, initialIndex, gradient, onClose 
                 {ov.type === 'text' && (
                   <Text style={[styles.ovText, { fontFamily: ff, fontSize: fs, color: ov.color ?? '#fff' }]}>{ov.content}</Text>
                 )}
-                {ov.type === 'sticker' && <Text style={{ fontSize: fs }}>{ov.content}</Text>}
+                {ov.type === 'sticker' && (
+                  <PanelSticker content={ov.content} size={fs} imageSize={(ov.fontSize ?? 30) * 1.5} />
+                )}
               </View>
             );
           })}
