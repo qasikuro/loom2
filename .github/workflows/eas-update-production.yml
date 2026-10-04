@@ -1,0 +1,52 @@
+name: EAS Update — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      message:
+        description: Description of the JavaScript or asset update
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eas-update-production
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify release configuration
+        run: node --test artifacts/sky-journal/scripts/ota-config.test.js
+
+      - name: Publish compatible JavaScript and asset update
+        working-directory: artifacts/sky-journal
+        env:
+          UPDATE_MESSAGE: ${{ inputs.message }}
+        run: node scripts/update-production.js --message "$UPDATE_MESSAGE"
