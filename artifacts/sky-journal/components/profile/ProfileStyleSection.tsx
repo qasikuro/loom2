@@ -454,7 +454,7 @@ export function ProfileStyleSection({
                 activeOpacity={0.85}
               >
                 {outfit.imageUri ? (
-                  <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
                 ) : (
                   <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }]}>
                     <Icon name="camera" size={22} color="rgba(255,255,255,0.3)" />

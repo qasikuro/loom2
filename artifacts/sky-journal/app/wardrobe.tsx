@@ -89,7 +89,7 @@ function OutfitCard({ outfit, isActive, onSetActive, colors, cardWidth }: {
           <Image
             source={{ uri: outfit.imageUri }}
             style={StyleSheet.absoluteFill}
-            contentFit="cover"
+            contentFit="contain"
             cachePolicy="memory-disk"
           />
         ) : (

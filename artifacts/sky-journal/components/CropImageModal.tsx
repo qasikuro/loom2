@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Image as RNImage,
   Modal,
   PanResponder,
   Platform,
@@ -12,10 +11,12 @@ import {
   View,
 } from 'react-native';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { ImageManipulator as ExpoImageManipulator } from 'expo-image-manipulator';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';
+import { cropSelectionToPixels, prepareCropInput, type CropRect } from '@/utils/cropImage';
 
 export interface CropImageModalProps {
   visible: boolean;
@@ -25,7 +26,6 @@ export interface CropImageModalProps {
   onCancel: () => void;
 }
 
-type CropRect = { x: number; y: number; w: number; h: number };
 type Corner = 'TL' | 'TR' | 'BL' | 'BR';
 const CORNERS: Corner[] = ['TL', 'TR', 'BL', 'BR'];
 const MIN_SIZE = 48;
@@ -53,11 +53,14 @@ function centeredRect(w: number, h: number, ratio: number | null): CropRect {
 
 export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCancel }: CropImageModalProps) {
   const insets = useSafeAreaInsets();
-  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
+  const [cropSource, setCropSource] = useState<{ uri: string; w: number; h: number } | null>(null);
+  const naturalSize = cropSource;
   const [canvas, setCanvas] = useState({ w: 0, h: 0 });
   const [ratio, setRatio] = useState<number | null>(aspectRatio ?? null);
   const [selection, setSelection] = useState<CropRect | null>(null);
   const [applying, setApplying] = useState(false);
+  const applyingRef = useRef(false);
+  const imageContextRef = useRef<ReturnType<typeof ExpoImageManipulator.manipulate> | null>(null);
   const rectRef = useRef<CropRect | null>(null);
   const gestureStart = useRef<CropRect | null>(null);
   const gestureAction = useRef<Corner | 'move' | null>(null);
@@ -77,17 +80,39 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
 
   useEffect(() => {
     if (!visible || !uri) return;
-    setNaturalSize(null);
+    setCropSource(null);
     rectRef.current = null;
     setSelection(null);
     setRatio(aspectRatio ?? null);
+    imageContextRef.current = null;
+    let cropContext: ReturnType<typeof ExpoImageManipulator.manipulate> | null = null;
     let active = true;
-    RNImage.getSize(uri, (w, h) => {
-      if (active) setNaturalSize({ w, h });
-    }, () => {
-      if (active) Alert.alert('Photo unavailable', 'Could not read this photo. Please choose another one.');
-    });
-    return () => { active = false; };
+
+    void (async () => {
+      try {
+        const prepared = await prepareCropInput(
+          uri,
+          sourceUri => ExpoImageManipulator.manipulate(sourceUri),
+        );
+        if (!active) {
+          prepared.context.release();
+          return;
+        }
+        cropContext = prepared.context;
+        imageContextRef.current = cropContext;
+        setCropSource(prepared.preview);
+      } catch {
+        if (active) {
+          Alert.alert('Photo unavailable', 'Could not read this photo. Please choose another one.');
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+      if (imageContextRef.current === cropContext) imageContextRef.current = null;
+      cropContext?.release();
+    };
   }, [uri, visible, aspectRatio]);
 
   useEffect(() => {
@@ -169,29 +194,37 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
 
   async function applyCrop() {
     const rect = rectRef.current;
-    if (!naturalSize || !image || !rect || applying) return;
+    const context = imageContextRef.current;
+    if (!naturalSize || !image || !rect || !context || applyingRef.current) return;
+    applyingRef.current = true;
     setApplying(true);
     try {
-      const left = limit(Math.round(rect.x * naturalSize.w / image.w), 0, naturalSize.w - 1);
-      const top = limit(Math.round(rect.y * naturalSize.h / image.h), 0, naturalSize.h - 1);
-      const right = limit(Math.round((rect.x + rect.w) * naturalSize.w / image.w), left + 1, naturalSize.w);
-      const bottom = limit(Math.round((rect.y + rect.h) * naturalSize.h / image.h), top + 1, naturalSize.h);
-      const cropW = right - left;
-      const cropH = bottom - top;
-      const actions: ImageManipulator.Action[] = [
-        { crop: { originX: left, originY: top, width: cropW, height: cropH } },
-      ];
+      const crop = cropSelectionToPixels(rect, image, naturalSize);
+      const { width: cropW, height: cropH } = crop;
+      context.crop(crop);
       if (cropW > 1600 || cropH > 1600) {
-        actions.push(cropW >= cropH ? { resize: { width: 1600 } } : { resize: { height: 1600 } });
+        context.resize(cropW >= cropH ? { width: 1600 } : { height: 1600 });
       }
-      const result = await ImageManipulator.manipulateAsync(uri, actions, {
-        compress: 0.92,
-        format: ImageManipulator.SaveFormat.JPEG,
-      });
-      onDone(result.uri, cropW / cropH, 'contain');
+      const croppedImage = await context.renderAsync();
+      let result: Awaited<ReturnType<typeof croppedImage.saveAsync>>;
+      try {
+        result = await croppedImage.saveAsync({
+          compress: 0.92,
+          format: ImageManipulator.SaveFormat.JPEG,
+        });
+      } finally {
+        croppedImage.release();
+      }
+      if (imageContextRef.current === context) {
+        onDone(result.uri, result.width / result.height, 'contain');
+      }
     } catch {
-      Alert.alert('Crop failed', 'The selected area could not be saved. Please try again or use the original.');
+      if (imageContextRef.current === context) {
+        context.reset();
+        Alert.alert('Crop failed', 'The selected area could not be saved. Please try again or use the original.');
+      }
     } finally {
+      applyingRef.current = false;
       setApplying(false);
     }
   }
@@ -230,9 +263,17 @@ export default function CropImageModal({ visible, uri, aspectRatio, onDone, onCa
           const { width: w, height: h } = e.nativeEvent.layout;
           setCanvas(previous => previous.w === w && previous.h === h ? previous : { w, h });
         }}>
+          {visible && cropSource && image ? (
+            <Image
+              source={{ uri: cropSource.uri }}
+              style={{ position: 'absolute', left: image.x, top: image.y, width: image.w, height: image.h }}
+              contentFit="contain"
+              cachePolicy="memory"
+              onError={() => Alert.alert('Photo unavailable', 'Could not read this photo. Please choose another one.')}
+            />
+          ) : null}
           {image && selection ? (
             <View style={{ position: 'absolute', left: image.x, top: image.y, width: image.w, height: image.h }}>
-              <Image source={{ uri }} style={StyleSheet.absoluteFill} contentFit="fill" cachePolicy="memory" />
               <View pointerEvents="none" style={[styles.dim, { top: 0, left: 0, right: 0, height: selection.y }]} />
               <View pointerEvents="none" style={[styles.dim, { top: selection.y + selection.h, left: 0, right: 0, bottom: 0 }]} />
               <View pointerEvents="none" style={[styles.dim, { top: selection.y, left: 0, width: selection.x, height: selection.h }]} />

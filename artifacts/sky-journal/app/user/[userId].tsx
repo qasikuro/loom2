@@ -1299,7 +1299,7 @@ export default function UserProfileScreen() {
                     <Image
                       source={{ uri: profile.activeOutfit.imageUri }}
                       style={StyleSheet.absoluteFill}
-                      contentFit="cover"
+                      contentFit="contain"
                       cachePolicy="memory-disk"
                     />
                   ) : (
@@ -1404,7 +1404,7 @@ export default function UserProfileScreen() {
                       <Image
                         source={{ uri: outfit.imageUri }}
                         style={StyleSheet.absoluteFill}
-                        contentFit="cover"
+                        contentFit="contain"
                         cachePolicy="memory-disk"
                       />
                     ) : (

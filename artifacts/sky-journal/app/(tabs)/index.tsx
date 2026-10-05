@@ -2223,7 +2223,7 @@ export default function HomeScreen() {
               {outfits.map(o => (
                 <TouchableOpacity key={o.id} style={[m.oCard, activeOutfitId === o.id && { borderColor: accent }]} onPress={() => { Haptics.selectionAsync(); setActiveOutfitId(o.id); setShowOutfits(false); }}>
                   {o.imageUri
-                    ? <Image source={{ uri: o.imageUri }} style={m.oImg} contentFit="cover" />
+                    ? <Image source={{ uri: o.imageUri }} style={m.oImg} contentFit="contain" />
                     : <View style={[m.oImg, { backgroundColor: `${accent}12`, alignItems: 'center', justifyContent: 'center' }]}><Icon name="star" size={20} color={`${accent}50`} /></View>
                   }
                   <Text style={[m.oName, { color: colors.mutedForeground }]} numberOfLines={1}>{o.name}</Text>

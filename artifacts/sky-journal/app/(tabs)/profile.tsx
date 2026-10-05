@@ -269,7 +269,7 @@ export default function CharacterScreen() {
           {activeOutfit && (
             <TouchableOpacity style={[s.wornBanner, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => openOutfit(activeOutfit.id)} activeOpacity={0.88}>
               {activeOutfit.imageUri && (
-                <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                <Image source={{ uri: activeOutfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
               )}
               {activeOutfit.imageUri && (
                 <LinearGradient

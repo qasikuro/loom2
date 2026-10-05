@@ -41,7 +41,7 @@ export function OutfitGridCard({
         ]}
       >
         {outfit.imageUri ? (
-          <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
         ) : (
           <View style={[StyleSheet.absoluteFill, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 4 }]}>
             <Icon name="camera" size={20} color={`${colors.primary}55`} />

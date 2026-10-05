@@ -1,6 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
-import { VibeMotion, VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
+import { VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -271,10 +271,6 @@ export default function UserOutfitScreen() {
     inputRange: [screenHeight * 0.72, screenHeight * 0.88],
     outputRange: [0, 1], extrapolate: 'clamp',
   });
-  const imageParallax = scrollY.interpolate({
-    inputRange: [0, screenHeight],
-    outputRange: [0, -screenHeight * 0.22], extrapolate: 'clamp',
-  });
   const heroFade = scrollY.interpolate({
     inputRange: [0, screenHeight * 0.32],
     outputRange: [1, 0], extrapolate: 'clamp',
@@ -424,19 +420,12 @@ export default function UserOutfitScreen() {
             ══════════════════════════════════════════════════ */}
         <Pressable style={[styles.hero, { height: screenHeight }]} onPress={handleTap}>
 
-          {/* Keep crop data untouched; selected vibe adds only restrained render-time camera motion. */}
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
-              {
-                opacity: transitionAnim,
-                transform: [
-                  { translateY: imageParallax },
-                ],
-              },
+              { opacity: transitionAnim },
             ]}
           >
-            <VibeMotion vibe={vibe ?? ''}>
               {outfit?.imageUri ? (
                 <Image
                   source={{ uri: outfit.imageUri }}
@@ -451,7 +440,6 @@ export default function UserOutfitScreen() {
                   end={{ x: 0.75, y: 1 }}
                 />
               )}
-            </VibeMotion>
           </Animated.View>
           {!!outfit?.music && (
             <Animated.View style={[styles.musicPill, { top: topPad + 62, opacity: heroFade }]}>
