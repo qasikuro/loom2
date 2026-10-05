@@ -1,6 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
-import { VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
+import { VibeMotion, VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -92,15 +92,6 @@ function visibleTags(tags: string[]): string[] {
   return tags.filter(t => !t.startsWith('vibe:'));
 }
 
-// ── Ken Burns targets ────────────────────────────────────────────────────────
-const KB_TARGETS = [
-  { scale: 1.07, x: -10, y: -6 },
-  { scale: 1.05, x:  8,  y: -10 },
-  { scale: 1.09, x: -6,  y:  5 },
-  { scale: 1.06, x:  10, y:  8 },
-  { scale: 1.08, x:  0,  y: -8 },
-];
-
 export default function UserOutfitScreen() {
   const colors    = useColors();
   const { t, i18n } = useTranslation();
@@ -157,12 +148,6 @@ export default function UserOutfitScreen() {
   const admireOpacity = useRef(new Animated.Value(0)).current;
   const transitionAnim = useRef(new Animated.Value(1)).current;
 
-  // ── Cinematic: Ken Burns (slow camera drift) ─────────────────────────────
-  const kbScale = useRef(new Animated.Value(1.0)).current;
-  const kbX     = useRef(new Animated.Value(0)).current;
-  const kbY     = useRef(new Animated.Value(0)).current;
-  const kbAnim  = useRef<Animated.CompositeAnimation | null>(null);
-
   // ── Cinematic: Studio light sweep ───────────────────────────────────────
   const sweepX    = useRef(new Animated.Value(-windowWidth * 0.4)).current;
   const sweepAnim = useRef<Animated.CompositeAnimation | null>(null);
@@ -175,8 +160,6 @@ export default function UserOutfitScreen() {
 
   const [reportVisible, setReportVisible]   = useState(false);
   const [appreciated, setAppreciated]       = useState(false);
-  const [previewVibe, setPreviewVibe]       = useState<string | null>(null);
-  const [vibePickerOpen, setVibePickerOpen] = useState(false);
   const [musicMuted, setMusicMuted] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
   const [musicRetry, setMusicRetry] = useState(0);
@@ -220,6 +203,7 @@ export default function UserOutfitScreen() {
     const start = async () => {
       try {
         const { Audio } = await import('expo-av');
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => null);
         const result = await Audio.Sound.createAsync(
           { uri: track.streamUrl },
           { shouldPlay: true, isLooping: true, volume: 0.5, isMuted: musicMuted },
@@ -260,8 +244,7 @@ export default function UserOutfitScreen() {
   }, [musicMuted]);
 
   const vibe       = extractVibe(outfit?.tags ?? []);
-  const activeVibe = previewVibe ?? vibe;
-  const vibeInfo   = activeVibe ? (VIBE_DEFS[activeVibe] ?? VIBE_LABELS[activeVibe] ?? null) : null;
+  const vibeInfo   = vibe ? (VIBE_DEFS[vibe] ?? VIBE_LABELS[vibe] ?? null) : null;
   const tags       = visibleTags(outfit?.tags ?? []);
   const traits     = params.authorTraits ? (JSON.parse(params.authorTraits) as string[]) : [];
   const moodColor  = MOOD_COLORS[params.authorMood ?? ''] ?? colors.primary;
@@ -269,7 +252,6 @@ export default function UserOutfitScreen() {
   const isFollowing = followingIds.includes(params.authorUserId ?? '');
   const initial    = (params.authorName ?? '?').charAt(0).toUpperCase();
   const total      = allOutfits.length;
-  const localizedVibe = (label: string) => t(`outfitJournal.vibe${label}`);
   const localizedTag = (tag: string) => {
     const key = `outfitJournal.tag${tag.charAt(0).toUpperCase()}${tag.slice(1).toLowerCase()}`;
     return ['Casual', 'Formal', 'Dreamy', 'Adventure', 'Cozy', 'Dark', 'Soft', 'Ethereal'].includes(tag)
@@ -292,10 +274,6 @@ export default function UserOutfitScreen() {
   const imageParallax = scrollY.interpolate({
     inputRange: [0, screenHeight],
     outputRange: [0, -screenHeight * 0.22], extrapolate: 'clamp',
-  });
-  const imagePullScale = scrollY.interpolate({
-    inputRange: [-screenHeight * 0.2, 0],
-    outputRange: [1.22, 1], extrapolate: 'clamp',
   });
   const heroFade = scrollY.interpolate({
     inputRange: [0, screenHeight * 0.32],
@@ -321,39 +299,6 @@ export default function UserOutfitScreen() {
     ).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Ken Burns — restart each time currentIdx changes so each photo gets fresh movement
-  useEffect(() => {
-    kbAnim.current?.stop();
-    let isMounted = true;
-    let targetIdx = Math.floor(Math.random() * KB_TARGETS.length);
-
-    const step = () => {
-      if (!isMounted) return;
-      const t = KB_TARGETS[targetIdx % KB_TARGETS.length];
-      targetIdx++;
-      const dur = rnd(7000, 11000);
-      kbAnim.current = Animated.parallel([
-        Animated.timing(kbScale, { toValue: t.scale, duration: dur, useNativeDriver: true }),
-        Animated.timing(kbX,     { toValue: t.x,     duration: dur, useNativeDriver: true }),
-        Animated.timing(kbY,     { toValue: t.y,     duration: dur, useNativeDriver: true }),
-      ]);
-      kbAnim.current.start(({ finished }) => { if (finished && isMounted) step(); });
-    };
-    // Reset to natural start
-    kbScale.setValue(1.0);
-    kbX.setValue(0);
-    kbY.setValue(0);
-    step();
-    return () => { isMounted = false; kbAnim.current?.stop(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentIdx]);
-
-  // Reset effect preview when switching outfit
-  useEffect(() => {
-    setPreviewVibe(null);
-    setVibePickerOpen(false);
-  }, [currentIdx]);
 
   // Studio light sweep
   useEffect(() => {
@@ -479,7 +424,7 @@ export default function UserOutfitScreen() {
             ══════════════════════════════════════════════════ */}
         <Pressable style={[styles.hero, { height: screenHeight }]} onPress={handleTap}>
 
-          {/* ── Photo with Ken Burns parallax ── */}
+          {/* Keep crop data untouched; selected vibe adds only restrained render-time camera motion. */}
           <Animated.View
             style={[
               StyleSheet.absoluteFill,
@@ -487,28 +432,26 @@ export default function UserOutfitScreen() {
                 opacity: transitionAnim,
                 transform: [
                   { translateY: imageParallax },
-                  { scale:      imagePullScale },
-                  { scale:      kbScale },
-                  { translateX: kbX },
-                  { translateY: kbY },
                 ],
               },
             ]}
           >
-            {outfit?.imageUri ? (
-              <Image
-                source={{ uri: outfit.imageUri }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-              />
-            ) : (
-              <LinearGradient
-                colors={darkBg}
-                style={StyleSheet.absoluteFill}
-                start={{ x: 0.25, y: 0 }}
-                end={{ x: 0.75, y: 1 }}
-              />
-            )}
+            <VibeMotion vibe={vibe ?? ''}>
+              {outfit?.imageUri ? (
+                <Image
+                  source={{ uri: outfit.imageUri }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="contain"
+                />
+              ) : (
+                <LinearGradient
+                  colors={darkBg}
+                  style={StyleSheet.absoluteFill}
+                  start={{ x: 0.25, y: 0 }}
+                  end={{ x: 0.75, y: 1 }}
+                />
+              )}
+            </VibeMotion>
           </Animated.View>
           {!!outfit?.music && (
             <Animated.View style={[styles.musicPill, { top: topPad + 62, opacity: heroFade }]}>
@@ -559,7 +502,7 @@ export default function UserOutfitScreen() {
           </Animated.View>
 
           {/* ── Vibe particles ── */}
-          {activeVibe ? <VibeOverlay vibe={activeVibe} /> : null}
+          {vibe ? <VibeOverlay vibe={vibe} /> : null}
 
           {/* ── Studio light sweep ── */}
           <Animated.View
@@ -597,84 +540,15 @@ export default function UserOutfitScreen() {
             <Text style={[styles.liveText, { color: moodColor }]}>{t('outfitJournal.modelingNow')}</Text>
           </Animated.View>
 
-          {/* ── Vibe badge (top-right corner, tappable to open picker) ── */}
-          <Animated.View style={[styles.vibeBadge, { top: topPad + 12, opacity: heroFade }]}>
-            <TouchableOpacity
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setVibePickerOpen(o => !o);
-              }}
-              activeOpacity={0.8}
-            >
-              {vibeInfo ? (
-                <>
-                  <Text style={[styles.vibeBadgeSymbol, { color: vibeInfo.color }]}>{vibeInfo.symbol}</Text>
-                  <Text style={[styles.vibeBadgeLabel, { color: vibeInfo.color }]}>{vibeInfo.label}</Text>
-                </>
-              ) : (
-                <>
-                  <Icon name="sparkles" size={12} color="rgba(200,184,232,0.75)" />
-                  <Text style={[styles.vibeBadgeLabel, { color: 'rgba(200,184,232,0.75)' }]}>{t('outfitJournal.addEffect')}</Text>
-                </>
-              )}
-              <Icon
-                name={vibePickerOpen ? 'chevron-up' : 'chevron-down'}
-                size={10}
-                color={vibeInfo ? vibeInfo.color : 'rgba(200,184,232,0.55)'}
-              />
-            </TouchableOpacity>
-          </Animated.View>
-
-          {/* ── Vibe picker strip ── */}
-          {vibePickerOpen && (
+          {/* ── Saved vibe badge (display-only on public outfit profiles) ── */}
+          {vibeInfo && (
             <Animated.View
-              style={[styles.vibePickerWrap, { top: topPad + 52, opacity: heroFade }]}
+              style={[styles.vibeBadge, { top: topPad + 12, opacity: heroFade }]}
             >
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.vibePickerRow}
-              >
-                {/* "None" option */}
-                <TouchableOpacity
-                  style={[
-                    styles.vibeChip,
-                    !activeVibe && styles.vibeChipActive,
-                    !activeVibe && { borderColor: 'rgba(200,184,232,0.70)' },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setPreviewVibe(null);
-                  }}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.vibeChipSymbol, { color: 'rgba(200,184,232,0.70)' }]}>✕</Text>
-                  <Text style={[styles.vibeChipLabel, { color: 'rgba(200,184,232,0.70)' }]}>{t('outfitJournal.none')}</Text>
-                </TouchableOpacity>
-                {Object.entries(VIBE_DEFS).map(([key, def]) => {
-                  const isActive = activeVibe === key;
-                  return (
-                    <TouchableOpacity
-                      key={key}
-                      style={[
-                        styles.vibeChip,
-                        isActive && styles.vibeChipActive,
-                        isActive && { borderColor: def.color },
-                        isActive && { backgroundColor: `${def.color}22` },
-                      ]}
-                      onPress={() => {
-                        Haptics.selectionAsync();
-                        setPreviewVibe(key);
-                      }}
-                      activeOpacity={0.75}
-                    >
-                      <Text style={[styles.vibeChipSymbol, { color: def.color }]}>{def.symbol}</Text>
-                      <Text style={[styles.vibeChipLabel, { color: isActive ? def.color : 'rgba(220,210,248,0.78)' }]}>{localizedVibe(def.label)}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <Text style={[styles.vibeBadgeSymbol, { color: vibeInfo.color }]}>{vibeInfo.symbol}</Text>
+                <Text style={[styles.vibeBadgeLabel, { color: vibeInfo.color }]}>{vibeInfo.label}</Text>
+              </View>
             </Animated.View>
           )}
 
@@ -985,26 +859,6 @@ const styles = StyleSheet.create({
   },
   vibeBadgeSymbol: { fontSize: 13 },
   vibeBadgeLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4 },
-
-  // ── Vibe picker ─────────────────────────────────────────────────────────
-  vibePickerWrap: {
-    position: 'absolute', right: 0, left: 0,
-  },
-  vibePickerRow: {
-    paddingHorizontal: 14, paddingVertical: 6, gap: 8, flexDirection: 'row',
-  },
-  vibeChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: 'rgba(8,6,15,0.65)',
-    borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7,
-    borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
-  },
-  vibeChipActive: {
-    backgroundColor: 'rgba(14,10,32,0.82)',
-    borderWidth: 1.5,
-  },
-  vibeChipSymbol: { fontSize: 13 },
-  vibeChipLabel:  { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
 
   // ── Hero content ────────────────────────────────────────────────────────
   heroContent: {

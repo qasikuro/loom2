@@ -32,6 +32,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { AudiusMusicPicker } from '@/features/story-studio/components/AudiusMusicPicker';
+import { VIBE_DEFS } from '@/components/VibeOverlay';
 import type { StoryMusic } from '@/context/mappers';
 
 const VIBE_TAGS = [
@@ -56,16 +57,7 @@ const LIGHT_TAG_COLORS: Record<string, string> = {
   Ethereal: '#126E83',
 };
 
-const VIBES = [
-  { id: 'romantic',    label: 'Romantic',    symbol: '♡', color: '#FF89B0', desc: 'Hearts drift above your look' },
-  { id: 'happy',       label: 'Happy',       symbol: '✦', color: '#FFD86F', desc: 'Sparkles burst around you' },
-  { id: 'dark',        label: 'Dark',        symbol: '◉', color: '#9070C8', desc: 'Shadows drift and linger' },
-  { id: 'mythical',    label: 'Mythical',    symbol: '✧', color: '#B090FF', desc: 'Constellation stars appear' },
-  { id: 'dreamy',      label: 'Dreamy',      symbol: '○', color: '#80C8FF', desc: 'Soft orbs float through' },
-  { id: 'ethereal',    label: 'Ethereal',    symbol: '◇', color: '#50EED0', desc: 'Light wisps shimmer' },
-  { id: 'cozy',        label: 'Cozy',        symbol: '·', color: '#FFB840', desc: 'Warm embers glow' },
-  { id: 'adventurous', label: 'Adventurous', symbol: '◈', color: '#60D888', desc: 'Wind-caught symbols drift' },
-];
+const VIBES = Object.entries(VIBE_DEFS).map(([id, vibe]) => ({ id, ...vibe }));
 
 export default function CreateOutfitScreen() {
   const colors = useColors();
@@ -483,6 +475,8 @@ export default function CreateOutfitScreen() {
               </TouchableOpacity>
               {VIBES.map(v => {
                 const active = selectedVibe === v.id;
+                const label = tr(`outfitJournal.vibe${v.label}`, { defaultValue: v.label });
+                const description = tr(`outfitJournal.vibeDesc${v.label}`, { defaultValue: v.desc });
                 return (
                   <TouchableOpacity
                     key={v.id}
@@ -496,15 +490,20 @@ export default function CreateOutfitScreen() {
                     }}
                     activeOpacity={0.75}
                     accessibilityRole="radio"
-                    accessibilityLabel={`${tr(`outfitJournal.vibe${v.label}`)}: ${tr(`outfitJournal.vibeDesc${v.label}`)}`}
+                    accessibilityLabel={`${label}: ${description}. ${v.effects.map(effect => effect.label).join(', ')}`}
                     accessibilityState={{ selected: active }}
                   >
                     <LinearGradient colors={[`${v.color}68`, '#21163B', '#111025']} style={styles.vibePreview}><Text style={[styles.vibeSymbol, { color: v.color }]}>{v.symbol}</Text></LinearGradient>
-                    <Text style={[styles.vibeLabel, { color: colors.foreground }]}>{tr(`outfitJournal.vibe${v.label}`)}</Text>
+                    <Text style={[styles.vibeLabel, { color: colors.foreground }]}>{label}</Text>
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
+            {selectedVibe && VIBE_DEFS[selectedVibe] ? (
+              <Text style={[styles.vibeEffects, { color: colors.text }]}>
+                {VIBE_DEFS[selectedVibe].effects.map(effect => effect.label).join('  ·  ')}
+              </Text>
+            ) : null}
           </View>
 
           {/* Visibility */}
@@ -621,6 +620,7 @@ const styles = StyleSheet.create({
   vibePreview: { width: '100%', height: 54, alignItems: 'center', justifyContent: 'center', backgroundColor: '#30204F' },
   vibeSymbol: { fontSize: 33, fontFamily: 'Satoshi-Black', textAlign: 'center' },
   vibeLabel: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#F4EEFF', marginTop: 3 },
+  vibeEffects: { fontSize: 10, lineHeight: 15, fontFamily: 'Satoshi-Medium', marginTop: 6 },
   privacyRow: { flexDirection: 'row', gap: 8 },
   privBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, height: 57, borderRadius: 11, paddingHorizontal: 8 },
   privText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
