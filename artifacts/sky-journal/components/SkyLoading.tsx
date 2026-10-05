@@ -126,9 +126,43 @@ export function StorigamLoadingOverlay({
   );
 }
 
-// Keep existing imports compatible; these names are not displayed in the app.
+/** Compact animated loader for in-app screens while navigation data loads. */
+export function StorigamScreenLoadingOverlay({
+  message, transparent = false,
+}: { message?: string; transparent?: boolean }) {
+  const colors = useColors();
+  const { isDark } = useTheme();
+  const { t } = useTranslation();
+  const transparentOverlay = isDark ? colors.overlay : 'rgba(252,251,248,0.96)';
+
+  return (
+    <View
+      style={[
+        styles.screenOverlay,
+        { backgroundColor: colors.background },
+        transparent && [
+          StyleSheet.absoluteFillObject,
+          { backgroundColor: transparentOverlay, zIndex: 9999 },
+        ],
+      ]}
+      accessible
+      accessibilityViewIsModal
+      accessibilityRole="progressbar"
+      accessibilityLabel={message || t('common.loading')}
+      accessibilityState={{ busy: true }}
+    >
+      <StorigamActivityIndicator
+        size={36}
+        color={colors.primary}
+        accessible={false}
+      />
+    </View>
+  );
+}
+
+// Keep existing screen imports compact; app startup uses the full brand overlay.
 export const SkyLoadingMark = StorigamLoadingMark;
-export const SkyLoadingOverlay = StorigamLoadingOverlay;
+export const SkyLoadingOverlay = StorigamScreenLoadingOverlay;
 
 export function LoadingCard({ style }: { style?: ViewStyle }) {
   return <SkeletonCard style={style} />;
@@ -136,6 +170,7 @@ export function LoadingCard({ style }: { style?: ViewStyle }) {
 
 const styles = StyleSheet.create({
   indicator: { alignItems: 'center', justifyContent: 'center' },
+  screenOverlay: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
   overlay: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: 24 },
   conversationLoading: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center', gap: 10 },
   conversationLoadingLabel: { color: themeColors.dark.foreground, fontSize: 12, lineHeight: 18, fontFamily: 'Satoshi-Medium', letterSpacing: 0.4 },

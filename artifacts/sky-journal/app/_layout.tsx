@@ -28,7 +28,7 @@ import { AppProvider, setAuthTokenGetter, useApp, apiFetch, getAuthToken } from 
 import { ThemeProvider } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { SoundProvider } from '@/context/SoundContext';
-import { SkyLoadingOverlay } from '@/components/SkyLoading';
+import { StorigamLoadingOverlay } from '@/components/SkyLoading';
 import { hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
 import { setMediaAuthScope } from '@/utils/mediaAccess';
 
@@ -392,11 +392,11 @@ export default function RootLayout() {
           <SafeAreaProvider>
             {/* Show a spinner while fonts load (AppSplashScreen overlays this) */}
             {!fontsReady ? (
-              <SkyLoadingOverlay />
+              <StorigamLoadingOverlay />
             ) : (
               <>
               <ClerkLoading>
-                <SkyLoadingOverlay />
+                <StorigamLoadingOverlay />
               </ClerkLoading>
               <ClerkLoaded>
                 <ErrorBoundary>

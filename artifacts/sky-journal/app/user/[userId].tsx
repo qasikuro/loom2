@@ -1,5 +1,5 @@
 import { Icon } from '@/components/Icon';
-import { SkyLoadingOverlay } from '@/components/SkyLoading';
+import { StorigamActivityIndicator } from '@/components/SkyLoading';
 import { BadgeTray, type BadgeItem } from '@/components/profile/BadgeTray';
 import { ProfileBadges } from '@/components/profile/ProfileBadges';
 import * as Haptics from 'expo-haptics';
@@ -844,7 +844,7 @@ export default function UserProfileScreen() {
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <SkyLoadingOverlay message={t('publicProfile.loading')} />
+        <StorigamActivityIndicator size={36} color={colors.primary} />
       </View>
     );
   }
