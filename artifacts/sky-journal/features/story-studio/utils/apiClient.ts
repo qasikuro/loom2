@@ -7,8 +7,9 @@
  */
 import { useCallback } from 'react';
 import { useAuth } from '@clerk/expo';
+import { getApiBase } from '@/utils/apiBase';
 
-const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`;
+const BASE_URL = getApiBase();
 
 export function useApiFetch() {
   const { getToken } = useAuth();

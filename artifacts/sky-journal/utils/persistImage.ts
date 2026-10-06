@@ -1,6 +1,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { getApiBase } from '@/utils/apiBase';
+import { isAbortError } from '@/utils/isAbortError';
 import { Platform } from 'react-native';
 import { getAuthToken } from '@/context/AppContext';
 
@@ -354,7 +355,7 @@ async function uploadVideoWeb(uri: string, options: VideoUploadOptions): Promise
     throw new ImageUploadError(errMsg || `Upload failed (${result.status}) — please try again.`);
   } catch (err) {
     if (err instanceof ImageUploadError) throw err;
-    if (err instanceof DOMException && err.name === 'AbortError') {
+    if (isAbortError(err)) {
       throw new ImageUploadError('Upload timed out — check your connection and try again.');
     }
     throw new ImageUploadError('Could not reach the server — check your connection and try again.', err);

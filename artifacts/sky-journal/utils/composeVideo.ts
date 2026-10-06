@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import { getAuthToken } from '@/context/AppContext';
 import type { StoryMusic } from '@/context/mappers';
 import { ImageUploadError } from '@/utils/persistImage';
+import { isAbortError } from '@/utils/isAbortError';
 
 export type ComposeVideoResult = {
   compositionId: string;
@@ -136,7 +137,7 @@ export function composeVideo(options: ComposeVideoOptions): ComposeVideoControll
     options.onProgress?.(1);
     return normalizeResult(body);
   })().catch(error => {
-    if (error instanceof DOMException && error.name === 'AbortError') {
+    if (isAbortError(error)) {
       throw new ImageUploadError('Video processing was cancelled.');
     }
     if (error instanceof ImageUploadError) throw error;
