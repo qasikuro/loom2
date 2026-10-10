@@ -2,6 +2,7 @@ import { Icon } from '@/components/Icon';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
@@ -104,6 +105,7 @@ interface GuideSessionPreview {
 }
 
 export default function DiscoverScreen() {
+  const { open: openFriendsDrawer } = useFriendsDrawer();
   const colors    = useColors();
   const insets    = useSafeAreaInsets();
   const { width: viewportWidth } = useWindowDimensions();
@@ -267,7 +269,8 @@ export default function DiscoverScreen() {
             <TouchableOpacity
               style={styles.usersBtn}
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              onPress={() => router.push('/messages' as any)}
+              onPress={() => openFriendsDrawer('all')}
+              accessibilityRole="button" accessibilityLabel={t('social.openMessages')}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Icon name="message-circle" size={18} color="rgba(200,184,232,0.85)" />

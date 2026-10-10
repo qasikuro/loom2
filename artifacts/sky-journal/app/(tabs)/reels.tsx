@@ -3,6 +3,7 @@ import { Icon } from '@/components/Icon';
 import { ReelCard } from '@/components/ReelCard';
 import { ReportSheet } from '@/components/ReportSheet';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
+import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useIsFocused } from '@react-navigation/native';
@@ -42,7 +43,9 @@ export default function ReelsScreen() {
     apiOnline,
     discoverLoadError,
     hasCorruptedDiscover,
+    dmUnread,
   } = useApp();
+  const { open: openFriendsDrawer } = useFriendsDrawer();
 
   const [filter, setFilter] = useState<ReelFilter>('All');
   const [refreshing, setRefreshing] = useState(false);
@@ -225,6 +228,17 @@ export default function ReelsScreen() {
         <View style={styles.headerInner}>
           <View style={styles.titleRow}>
             <Text style={styles.title}>{t('reels.title')} <Text style={styles.titleStar}>✦</Text></Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <TouchableOpacity
+                style={styles.createButton}
+                onPress={() => openFriendsDrawer('all')}
+                accessibilityRole="button" accessibilityLabel={t('social.openMessages')}
+                activeOpacity={0.78}
+                testID="reels-chat"
+              >
+                <Icon name="message-circle" size={19} color="#F4EEFF" />
+                {dmUnread > 0 && <View style={styles.dmDot} />}
+              </TouchableOpacity>
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => {
@@ -236,6 +250,7 @@ export default function ReelsScreen() {
             >
               <Icon name="plus" size={19} color="#F4EEFF" />
             </TouchableOpacity>
+            </View>
           </View>
 
           <View style={styles.filterRow}>
@@ -323,10 +338,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   titleStar: { color: '#D6B8FF', fontSize: 22 },
+  dmDot: { position: 'absolute', top: 6, right: 6, width: 9, height: 9, borderRadius: 5, backgroundColor: '#E05568' },
   createButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(180,130,255,0.17)',

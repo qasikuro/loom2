@@ -28,6 +28,7 @@ import { FocusedHomeContent } from '@/components/FocusedHomeContent';
 import { useSound } from '@/context/SoundContext';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
+import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useTranslation } from 'react-i18next';
 
 // ─── Active Event types + theme map ──────────────────────────────────────────
@@ -1077,6 +1078,7 @@ const cm = StyleSheet.create({
 });
 
 export default function HomeScreen() {
+  const { open: openFriendsDrawer } = useFriendsDrawer();
   const { t } = useTranslation();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
   const insets  = useSafeAreaInsets();
@@ -1506,7 +1508,7 @@ export default function HomeScreen() {
         <View style={s.dashboardActions}>
           {[
              { label: 'Add your post', icon: 'edit-2', color: '#D45CFF', comingSoon: false, onPress: () => logHomePress('add post', () => router.push('/(tabs)/create')) },
-             { label: 'Chats', icon: 'message-circle', color: '#55B8FF', comingSoon: false, onPress: () => logHomePress('chats', () => router.push('/friends' as never)) },
+             { label: 'Chats', icon: 'message-circle', color: '#55B8FF', comingSoon: false, onPress: () => logHomePress('chats', () => openFriendsDrawer('all')) },
             { label: 'Discover games', icon: 'gamepad-2', color: '#FF914D', comingSoon: true, onPress: undefined },
              { label: 'Lumi AI Chat', icon: 'star', color: '#B878FF', comingSoon: false, onPress: () => logHomePress('Lumi AI Chat', () => router.push('/(tabs)/drift')) },
              { label: 'Daily prompt', icon: 'lightbulb', color: '#F4CB55', comingSoon: false, onPress: () => logHomePress('daily prompt', () => router.push({ pathname: '/create-journal-entry', params: { initialPrompt: dashboardPrompt.text, initialMood: dashboardPrompt.mood } } as never)) },
@@ -1754,7 +1756,7 @@ export default function HomeScreen() {
             <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
               <TouchableOpacity
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                onPress={() => { router.push('/friends' as any); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                onPress={() => { openFriendsDrawer('all'); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
                 style={s.heroBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Icon name="message-circle" size={16} color={dmUnread > 0 ? '#9B78E8' : 'rgba(220,210,255,0.75)'} />

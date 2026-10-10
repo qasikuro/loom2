@@ -340,6 +340,17 @@ export interface FriendSummary {
   lastSeenAt?: string | null;
 }
 
+/** Canonical inbox rows shared by the drawer, inbox, and unread badge. */
+export interface DmThread {
+  partnerId: string;
+  partnerName: string;
+  partnerHandle: string | null;
+  partnerAvatar: string | null;
+  lastMessage: string;
+  lastAt: string;
+  unread: boolean;
+}
+
 // ── Raw API response shapes ────────────────────────────────────────────────────
 // Explicit typed interfaces for every API boundary — replace all `any` params
 // in mapper functions and `apiFetch<any>` call sites.
@@ -442,6 +453,10 @@ interface AppContextValue {
   campfireBadgeSeenAt:  string | null;
 
   dmUnread:         number;
+  dmThreads: DmThread[];
+  dmThreadsLoading: boolean;
+  dmThreadsError: string | null;
+  refreshDmThreads: () => Promise<void>;
   unreadDmThreads:  { partnerId: string; partnerName: string; partnerHandle: string | null; lastAt: string }[];
   markDmThreadRead: (partnerId: string) => void;
   dmBadgeSeenAt:    string | null;
@@ -573,6 +588,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [unreadCampfireRooms, setUnreadCampfireRooms] = useState<{ id: string; name: string; mood: string; lastAt: string }[]>([]);
   const [campfireBadgeSeenAt, setCampfireBadgeSeenAt] = useState<string | null>(null);
   const [dmUnread,        setDmUnread]        = useState(0);
+  const [dmThreads, setDmThreads] = useState<DmThread[]>([]);
+  const [dmThreadsLoading, setDmThreadsLoading] = useState(false);
+  const [dmThreadsError, setDmThreadsError] = useState<string | null>(null);
+  const dmRequestRef = useRef<Promise<void> | null>(null);
+  const dmEpochRef = useRef(0);
+  const dmReadDuringRefreshRef = useRef(new Set<string>());
   const [unreadDmThreads, setUnreadDmThreads] = useState<{ partnerId: string; partnerName: string; partnerHandle: string | null; lastAt: string }[]>([]);
   const [dmBadgeSeenAt,   setDmBadgeSeenAt]   = useState<string | null>(null);
   const campfireToastShownRef = useRef<Set<string>>(new Set());
@@ -708,6 +729,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setGalleryUsage({ count: 0, limit: 200 });
     setDiscoverFeedRaw([]);
     setFollowingIds([]);
+    setFriends([]);
+    setBlockedIds([]);
+    dmEpochRef.current += 1;
+    dmRequestRef.current = null;
+    dmReadDuringRefreshRef.current = new Set();
+    setDmThreads([]);
+    setDmThreadsError(null);
+    setDmThreadsLoading(false);
+    setUnreadDmThreads([]);
+    setDmUnread(0);
+    setDmBadgeSeenAt(null);
     setActiveOutfitIdState(null);
     setServerNotifications([]);
     setSavedStoryIds(new Set());
@@ -1227,26 +1259,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // The thread list is the canonical source for the notifications sheet; badge
   // suppression (dot vs. no dot) is handled separately via dmBadgeSeenAt.
   const pollDmUnread = useCallback(async () => {
-    try {
-      const threads = await apiFetch<{
-        partnerId: string; partnerName: string; partnerHandle: string | null;
-        lastMessage: string; lastAt: string; unread: boolean;
-      }[]>('/messages');
-      if (!threads || !Array.isArray(threads)) return;
-      const unreadThreads = threads
-        .filter(t => t.unread)
-        .map(t => ({
-          partnerId:    t.partnerId,
-          partnerName:  t.partnerName,
-          partnerHandle:t.partnerHandle,
-          lastAt:       t.lastAt,
+    if (dmRequestRef.current) return dmRequestRef.current;
+    const epoch = dmEpochRef.current;
+    const readDuringRefresh = new Set<string>();
+    dmReadDuringRefreshRef.current = readDuringRefresh;
+    setDmThreadsLoading(true);
+    const request = (async () => {
+      try {
+        const rows = await apiFetch<DmThread[]>('/messages');
+        if (epoch !== dmEpochRef.current) return;
+        if (!Array.isArray(rows)) throw new Error('Invalid inbox response');
+        const threads = rows.map(thread => readDuringRefresh.has(thread.partnerId)
+          ? { ...thread, unread: false } : thread)
+          .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
+        setDmThreads(threads);
+        setDmThreadsError(null);
+        const unreadThreads = threads.filter(thread => thread.unread).map(thread => ({
+          partnerId: thread.partnerId, partnerName: thread.partnerName,
+          partnerHandle: thread.partnerHandle, lastAt: thread.lastAt,
         }));
-      setUnreadDmThreads(unreadThreads);
-      setDmUnread(unreadThreads.length);
-    } catch { /* silent */ }
+        setUnreadDmThreads(unreadThreads);
+        setDmUnread(unreadThreads.length);
+      } catch (error) {
+        if (epoch !== dmEpochRef.current) return;
+        setDmThreadsError(error instanceof ApiError ? String(error.status) : 'network');
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          setDmThreads([]);
+          setUnreadDmThreads([]);
+          setDmUnread(0);
+        }
+      } finally {
+        if (epoch === dmEpochRef.current) {
+          dmRequestRef.current = null;
+          setDmThreadsLoading(false);
+        }
+      }
+    })();
+    dmRequestRef.current = request;
+    return request;
   }, []);
 
   const markDmThreadRead = useCallback((partnerId: string) => {
+    dmReadDuringRefreshRef.current.add(partnerId);
+    setDmThreads(prev => prev.map(thread => thread.partnerId === partnerId
+      ? { ...thread, unread: false } : thread));
     setUnreadDmThreads(prev => {
       const next = prev.filter(t => t.partnerId !== partnerId);
       setDmUnread(next.length);
@@ -1275,6 +1331,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (appStateRef.current !== 'active' && nextState === 'active') {
         softLoadData();
         pollCampfireUnread();
+        pollDmUnread();
         // H-1: Drain any mutations that failed their retry while the app was
         // backgrounded so profile/outfit/cosmetic saves are not silently lost.
         drainMutationQueue(apiFetch).catch(() => null);
@@ -2085,7 +2142,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
     serverNotifications, markServerNotificationsRead, deleteServerNotification,
     campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
-    dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
+    dmUnread: unreadDmThreads.filter(thread => !blockedIds.includes(thread.partnerId)).length,
+    dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads: pollDmUnread,
+    unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
     discoverMoodFilter, setDiscoverMoodFilter,
     reloadData,
     refreshFeed,
@@ -2107,7 +2166,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
     serverNotifications, markServerNotificationsRead, deleteServerNotification,
     campfireUnread, unreadCampfireRooms, markCampfireRoomRead, campfireBadgeSeenAt,
-    dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
+    dmUnread, dmThreads, dmThreadsLoading, dmThreadsError, pollDmUnread,
+    unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
     discoverMoodFilter, setDiscoverMoodFilter,
     reloadData,
     refreshFeed,

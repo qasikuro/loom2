@@ -1,7 +1,7 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
-import { apiFetch } from '@/context/AppContext';
+import { apiFetch, useApp, type DmThread as Thread } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,16 +19,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-
-interface Thread {
-  partnerId:     string;
-  partnerName:   string;
-  partnerHandle: string | null;
-  partnerAvatar: string | null;
-  lastMessage:   string;
-  lastAt:        string;
-  unread:        boolean;
-}
 
 function fmtThreadTime(iso: string, t: (key: string) => string): string {
   const d   = new Date(iso);
@@ -51,31 +41,21 @@ export default function MessagesInboxScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const topPad  = Platform.OS === 'web' ? 67 : insets.top;
 
-  const [threads,  setThreads]  = useState<Thread[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState<string | null>(null);
+  const { dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads, blockedIds } = useApp();
+  const threads = dmThreads.filter(thread => !blockedIds.includes(thread.partnerId));
+  const loading = dmThreadsLoading && threads.length === 0;
+  const [actionError, setActionError] = useState<string | null>(null);
+  const error = actionError ?? (dmThreadsError ? t('social.loadMessagesError') : null);
   const [clearingId, setClearingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const data = await apiFetch<Thread[]>('/messages');
-      const sorted = (data ?? []).sort(
-        (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
-      );
-      setThreads(sorted);
-      setError(null);
-    } catch {
-      setError(t('social.loadMessagesError'));
-    } finally {
-      setLoading(false);
-    }
-  }, [t]);
+    setActionError(null);
+    await refreshDmThreads();
+  }, [refreshDmThreads]);
 
   useFocusEffect(
     useCallback(() => {
       void load();
-      const interval = setInterval(() => { void load(); }, 15000);
-      return () => clearInterval(interval);
     }, [load]),
   );
 
@@ -112,16 +92,11 @@ export default function MessagesInboxScreen() {
                   text: t('social.clear'),
                   style: 'destructive',
                   onPress: async () => {
-                    // Remove from list immediately for instant feedback
-                    setThreads(prev => prev.filter(t => t.partnerId !== thread.partnerId));
                     setClearingId(thread.partnerId);
                     try {
                       await apiFetch(`/messages/conversation/${thread.partnerId}`, { method: 'DELETE' });
+                      await refreshDmThreads();
                     } catch {
-                      // Restore the thread if the API call failed
-                      setThreads(prev => [...prev, thread].sort(
-                        (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
-                      ));
                       Alert.alert(t('social.error'), t('social.clearError'));
                     } finally {
                       setClearingId(null);
