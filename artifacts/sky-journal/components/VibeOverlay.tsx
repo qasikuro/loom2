@@ -303,7 +303,9 @@ function startSparkle(p: Particle) {
 
 export function VibeOverlay({ vibe }: { vibe: string }) {
   const def = VIBE_DEFS[vibe];
-  const { width, height } = useWindowDimensions();
+  const window = useWindowDimensions();
+  const [bounds, setBounds] = React.useState<{ width: number; height: number } | null>(null);
+  const { width, height } = bounds ?? window;
   const particles = React.useMemo(
     () => def ? buildParticles(def, width, height) : [],
     [def, width, height],
@@ -327,7 +329,16 @@ export function VibeOverlay({ vibe }: { vibe: string }) {
   if (!def) return null;
 
   return (
-    <View style={[StyleSheet.absoluteFill, styles.overlay]}>
+    <View
+      style={[StyleSheet.absoluteFill, styles.overlay]}
+      onLayout={({ nativeEvent: { layout } }) => {
+        if (layout.width > 0 && layout.height > 0) {
+          setBounds(previous => previous?.width === layout.width && previous?.height === layout.height
+            ? previous
+            : { width: layout.width, height: layout.height });
+        }
+      }}
+    >
       {particles.map(p => (
         <Animated.Text
           key={p.id}

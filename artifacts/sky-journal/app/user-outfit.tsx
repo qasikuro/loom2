@@ -1,6 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
-import { VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
+import { VibeMotion, VibeOverlay, VIBE_DEFS } from '@/components/VibeOverlay';
 import { SHADOW } from '@/constants/colors';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -427,11 +427,13 @@ export default function UserOutfitScreen() {
             ]}
           >
               {outfit?.imageUri ? (
-                <Image
-                  source={{ uri: outfit.imageUri }}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="contain"
-                />
+                <VibeMotion key={outfit.imageUri + ':' + (vibe ?? '')} vibe={vibe ?? ''}>
+                  <Image
+                    source={{ uri: outfit.imageUri }}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="contain"
+                  />
+                </VibeMotion>
               ) : (
                 <LinearGradient
                   colors={darkBg}

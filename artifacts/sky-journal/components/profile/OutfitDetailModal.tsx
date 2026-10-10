@@ -1,5 +1,6 @@
 import { Icon } from '@/components/Icon';
 import { MoodBadge } from '@/components/MoodBadge';
+import { VibeMotion, VibeOverlay } from '@/components/VibeOverlay';
 
 import type { Character, Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
@@ -33,6 +34,7 @@ export function OutfitDetailModal({
   const { t, i18n }     = useTranslation();
   const { user }        = useUser();
   const [imageFit, setImageFit] = useState<'contain' | 'cover'>('contain');
+  const vibe = outfit?.tags?.find(tag => tag.startsWith('vibe:'))?.slice(5) ?? '';
   const displayTag = (tag: string) => {
     if (tag.startsWith('vibe:')) {
       const label = tag.slice(5).replace(/(^\w|-\w)/g, value => value.replace('-', '').toUpperCase());
@@ -60,11 +62,16 @@ export function OutfitDetailModal({
                 {/* ── Image with fit toggle ─── */}
                 <View style={[s.imageWrap, { backgroundColor: `${colors.primary}14` }]}>
                   {outfit.imageUri ? (
-                    <Image
-                      source={{ uri: outfit.imageUri }}
-                      style={s.image}
-                      contentFit={imageFit}
-                    />
+                    <View style={s.photoFrame}>
+                      <VibeMotion key={outfit.id + ':' + vibe} vibe={vibe}>
+                        <Image
+                          source={{ uri: outfit.imageUri }}
+                          style={StyleSheet.absoluteFill}
+                          contentFit={imageFit}
+                        />
+                      </VibeMotion>
+                      {vibe ? <VibeOverlay key={outfit.id + ':' + vibe} vibe={vibe} /> : null}
+                    </View>
                   ) : (
                     <View style={[s.image, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 10 }]}>
                       <Icon name="camera" size={36} color={`${colors.primary}50`} />
@@ -317,6 +324,7 @@ const s = StyleSheet.create({
   sheet:         { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%', overflow: 'hidden' },
   handle:        { width: 36, height: 4, borderRadius: 2, backgroundColor: 'rgba(120,86,255,0.25)', alignSelf: 'center', marginTop: 10, marginBottom: 6 },
   imageWrap:     { position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  photoFrame:    { width: '100%', height: 260, overflow: 'hidden' },
   image:         { width: '100%', height: 260, alignItems: 'center', justifyContent: 'center' },
   fitToggle:     {
     position: 'absolute', top: 10, right: 10,
