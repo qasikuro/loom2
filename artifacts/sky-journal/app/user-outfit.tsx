@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { registerNativeSound, unregisterNativeSound } from '@/utils/soundRegistry';
+import { prepareNativeOutfitAudio } from '@/utils/prepareNativeOutfitAudio';
 
 const MOOD_COLORS: Record<string, string> = {
   Peaceful:    '#8B7AB5',
@@ -203,8 +204,7 @@ export default function UserOutfitScreen() {
 
     const start = async () => {
       try {
-        const { Audio } = await import('expo-av');
-        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => null);
+        const Audio = await prepareNativeOutfitAudio();
         if (cancelled || generation !== audioGeneration.current) return;
         const result = await Audio.Sound.createAsync(
           { uri: track.streamUrl },

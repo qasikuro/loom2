@@ -29,6 +29,7 @@ import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
 import { getAvailableProfileTitles } from '@/components/profile/profileTitles';
 import { useGalleryState } from '@/hooks/useGalleryState';
 import { loadOnboardingProgress, saveOnboardingProgress, type OnboardingProgress, type OnboardingStep } from '@/utils/onboardingProgress';
+import { prepareNativeOutfitAudio } from '@/utils/prepareNativeOutfitAudio';
 
 const XP_PER_LEVEL = 300;
 
@@ -93,6 +94,11 @@ export default function CharacterScreen() {
   const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
   const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
   const [profileLikeCount, setProfileLikeCount] = useState(0);
+
+  useFocusEffect(useCallback(() => {
+    if (Platform.OS === 'web') return;
+    void prepareNativeOutfitAudio().catch(() => null);
+  }, []));
 
   useFocusEffect(useCallback(() => {
     if (!userId) return;

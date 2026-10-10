@@ -30,11 +30,19 @@ function deferred<T>() {
   const promise = new Promise<T>(r => { resolve = r; });
   return { promise, resolve };
 }
-function outfitEffect(createAsync: ReturnType<typeof vi.fn>) {
+function outfitEffect(
+  createAsync: ReturnType<typeof vi.fn>,
+  prepareAudio?: ReturnType<typeof vi.fn>,
+) {
   const text = source('app/user-outfit.tsx');
   const start = text.indexOf('useFocusEffect(useCallback(() => {');
   const end = text.indexOf('\n\n  useEffect(() => {', start);
   let focus!: () => () => void;
+  const audio = {
+    setAudioModeAsync: vi.fn().mockResolvedValue(undefined),
+    Sound: { createAsync },
+  };
+  const prepare = prepareAudio ?? vi.fn().mockResolvedValue(audio);
   run(text.slice(start, end), {
     useFocusEffect: (cb: typeof focus) => { focus = cb; },
     useCallback: (cb: unknown) => cb,
@@ -45,10 +53,10 @@ function outfitEffect(createAsync: ReturnType<typeof vi.fn>) {
     currentIdx: 0, musicRetry: 0, musicMuted: false,
     setMusicPlaying: vi.fn(),
     Platform: { OS: 'android' },
-    Audio: { setAudioModeAsync: vi.fn().mockResolvedValue(undefined), Sound: { createAsync } },
+    prepareNativeOutfitAudio: prepare,
     registerNativeSound: vi.fn(), unregisterNativeSound: vi.fn(),
   });
-  return focus;
+  return { focus, prepare };
 }
 function previewHook(createAsync: ReturnType<typeof vi.fn>) {
   const text = source('features/story-studio/components/AudiusMusicPicker.tsx');
@@ -70,9 +78,10 @@ describe('media playback navigation cleanup', () => {
   it('stops and unloads outfit music on blur, then creates a fresh player on return', async () => {
     const first = sound(), second = sound();
     const create = vi.fn().mockResolvedValueOnce({ sound: first }).mockResolvedValueOnce({ sound: second });
-    const focus = outfitEffect(create);
+    const { focus, prepare } = outfitEffect(create);
     const leave = focus();
     await flush();
+    expect(prepare).toHaveBeenCalledOnce();
     expect(first.playAsync).toHaveBeenCalledOnce();
     leave();
     await flush();
@@ -86,11 +95,29 @@ describe('media playback navigation cleanup', () => {
     expect(second.unloadAsync).toHaveBeenCalled();
   });
 
+  it('does not start loading a track when the route blurs during audio preparation', async () => {
+    const pending = deferred<unknown>();
+    const create = vi.fn();
+    const prepare = vi.fn().mockReturnValue(pending.promise);
+    const { focus } = outfitEffect(create, prepare);
+    const leave = focus();
+
+    await flush();
+    expect(prepare).toHaveBeenCalledOnce();
+    expect(create).not.toHaveBeenCalled();
+
+    leave();
+    pending.resolve({});
+    await flush();
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('never starts an outfit track that finishes loading after blur', async () => {
     const pending = deferred<{ sound: ReturnType<typeof sound> }>();
     const player = sound();
     const create = vi.fn().mockReturnValue(pending.promise);
-    const leave = outfitEffect(create)();
+    const { focus } = outfitEffect(create);
+    const leave = focus();
     await flush();
     expect(create.mock.calls[0][1].shouldPlay).toBe(false);
     leave();

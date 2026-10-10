@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
+import { prepareNativeOutfitAudio } from '@/utils/prepareNativeOutfitAudio';
 import { useTranslation } from 'react-i18next';
 import React, { useEffect, useRef, useState } from 'react';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -698,6 +699,11 @@ export default function UserProfileScreen() {
       setBooksError(true);
     }
   }
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    void prepareNativeOutfitAudio().catch(() => null);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
