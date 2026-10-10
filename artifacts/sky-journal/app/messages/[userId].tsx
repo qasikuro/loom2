@@ -1,10 +1,19 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
-import { ConversationLoadingOverlay, SkyLoadingMark } from '@/components/SkyLoading';
+import { SkyLoadingMark } from '@/components/SkyLoading';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal } from '@/components/Toast';
 import { safeBack } from '@/utils/navigation';
+import {
+  fetchDmConversation,
+  forgetDmConversation,
+  getDmConversationCache,
+  markDmConversationOpened,
+  rememberDmConversation,
+  wasDmConversationOpened,
+  type DmCachedMessage,
+} from '@/utils/dmConversationCache';
 import { useSound } from '@/context/SoundContext';
 import { useSSE } from '@/hooks/useSSE';
 import { useAuth } from '@clerk/expo';
@@ -12,7 +21,7 @@ import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -41,16 +50,7 @@ const BORDER  = 'rgba(200,184,232,0.10)';
 const MUTED   = 'rgba(200,184,232,0.45)';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-interface Message {
-  id:         string;
-  fromUserId: string;
-  toUserId:   string;
-  content:    string | null;
-  expression: string | null;
-  isRead:     boolean;
-  createdAt:  string;
-  isOwn:      boolean;
-}
+type Message = DmCachedMessage;
 
 type ListItem =
   | { type: 'date'; date: string; key: string }
@@ -205,12 +205,16 @@ export default function MessagesScreen() {
   }>();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
-  const { markDmThreadRead, blockedIds, blockUser, unblockUser } = useApp();
+  const { markDmThreadRead, blockedIds, blockUser, unblockUser, dmThreads } = useApp();
   const { playStickerSound } = useSound();
   const { userId: myUserId } = useAuth();
 
-  const [messages,      setMessages]      = useState<Message[]>([]);
-  const [loading,       setLoading]       = useState(true);
+  const initialMessages = useMemo(
+    () => getDmConversationCache(myUserId, userId),
+    [myUserId, userId],
+  );
+  const [messages,      setMessages]      = useState<Message[]>(initialMessages);
+  const [loading,       setLoading]       = useState(initialMessages.length === 0);
   const [sending,       setSending]       = useState(false);
   const [input,         setInput]         = useState('');
   const [error,         setError]         = useState<string | null>(null);
@@ -220,7 +224,11 @@ export default function MessagesScreen() {
 
   const [playingAnim, setPlayingAnim] = useState<{ type: StickerAnimType; emoji: string } | null>(null);
 
-  const lastMsgIdRef    = useRef<string | null>(null);
+  const lastMsgIdRef    = useRef<string | null>(
+    wasDmConversationOpened(myUserId, userId)
+      ? initialMessages[initialMessages.length - 1]?.id ?? null
+      : null,
+  );
   const flatRef         = useRef<FlatList<ListItem>>(null);
   const prevSseRef      = useRef(false);
   const typingTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -235,6 +243,11 @@ export default function MessagesScreen() {
     : handle ? `@${handle}` : null;
 
   const isBlocked = blockedIds.includes(userId ?? '');
+  const inboxPreview = dmThreads.find(thread => thread.partnerId === userId)?.lastMessage ?? '';
+
+  useEffect(() => {
+    if (myUserId && userId) rememberDmConversation(myUserId, userId, messages);
+  }, [messages, myUserId, userId]);
 
   const handleClearConversation = useCallback(() => {
     if (!userId) return;
@@ -249,6 +262,7 @@ export default function MessagesScreen() {
           onPress: async () => {
             try {
               await apiFetch(`/messages/conversation/${userId}`, { method: 'DELETE' });
+              forgetDmConversation(myUserId, userId);
               setMessages([]);
             } catch {
               Alert.alert(t('social.error'), t('social.clearError'));
@@ -257,7 +271,7 @@ export default function MessagesScreen() {
         },
       ],
     );
-  }, [t, userId]);
+  }, [t, userId, myUserId]);
 
   function handleMoreMenu() {
     if (!userId) return;
@@ -318,7 +332,11 @@ export default function MessagesScreen() {
       return;
     }
     try {
-      const data = await apiFetch<Message[]>(`/messages/${userId}`);
+      const data = await fetchDmConversation(
+        myUserId,
+        userId,
+        () => apiFetch<Message[]>(`/messages/${userId}`),
+      );
       const msgs = data ?? [];
       const isFirstLoad = lastMsgIdRef.current === null;
 
@@ -347,12 +365,15 @@ export default function MessagesScreen() {
 
       setMessages(msgs);
       markDmThreadRead(userId);
+      markDmConversationOpened(myUserId, userId);
     } catch {
-      setError(t('social.loadMessagesError'));
+      if (getDmConversationCache(myUserId, userId).length === 0) {
+        setError(t('social.loadMessagesError'));
+      }
     } finally {
       setLoading(false);
     }
-  }, [userId, markDmThreadRead, queueSticker]);
+  }, [userId, myUserId, markDmThreadRead, queueSticker]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -393,6 +414,7 @@ export default function MessagesScreen() {
       }
 
       if (ev?.type === 'conversation_cleared' && ev.partnerId === userId) {
+        forgetDmConversation(myUserId, userId);
         setMessages([]);
         return;
       }
@@ -402,7 +424,7 @@ export default function MessagesScreen() {
         if (typingClearRef.current) clearTimeout(typingClearRef.current);
         typingClearRef.current = setTimeout(() => setPartnerTyping(false), 4000);
       }
-    }, [userId, markDmThreadRead, queueSticker]),
+    }, [userId, myUserId, markDmThreadRead, queueSticker]),
   );
 
   // Gap-fill: when SSE reconnects, fetch to fill the gap
@@ -428,7 +450,7 @@ export default function MessagesScreen() {
 
   const handleSend = useCallback(async () => {
     const content = input.trim();
-    if (!content || sending || !userId) return;
+    if (!content || sending || loading || !userId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInput('');
     setSending(true);
@@ -455,7 +477,7 @@ export default function MessagesScreen() {
     } finally {
       setSending(false);
     }
-  }, [input, sending, userId]);
+  }, [input, sending, loading, userId]);
 
   const handleDeleteMsg = useCallback(async (msg: Message) => {
     if (!msg.isOwn) return;
@@ -484,7 +506,7 @@ export default function MessagesScreen() {
   }, []);
 
   const handleSticker = useCallback(async (def: StickerDef) => {
-    if (sending || !userId) return;
+    if (sending || loading || !userId) return;
     setShowPicker(false);
     setSending(true);
     playSticker(def);
@@ -510,7 +532,7 @@ export default function MessagesScreen() {
     } finally {
       setSending(false);
     }
-  }, [sending, userId, playSticker]);
+  }, [sending, loading, userId, playSticker]);
 
   // Build flat list with date separators
   const listData: ListItem[] = [];
@@ -589,9 +611,7 @@ export default function MessagesScreen() {
       </LinearGradient>
 
       {/* ── Messages ─────────────────────────────────────────── */}
-      {loading ? (
-        <ConversationLoadingOverlay />
-      ) : error ? (
+      {error && messages.length === 0 ? (
         <View style={styles.centerWrap}>
           <Text style={{ color: MUTED, fontFamily: 'Satoshi-Regular' }}>{error}</Text>
         </View>
@@ -624,20 +644,45 @@ export default function MessagesScreen() {
               </View>
             ) : null}
             ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <LinearGradient
-                  colors={[`${PURPLE}28`, `${PURPLE}10`]}
-                  style={styles.emptyIcon}
-                >
-                  <Text style={{ fontSize: 32 }}>✦</Text>
-                </LinearGradient>
-                <Text style={styles.emptyTitle}>{t('social.beginStory')}</Text>
-                <Text style={styles.emptyBody}>
-                  {isGuide === 'true'
-                    ? t('social.guideAwaits')
-                    : t('social.funWhisper')}
-                </Text>
-              </View>
+              loading ? (
+                <View style={styles.openingConversation}>
+                  {!!inboxPreview && (
+                    <View style={styles.openingPreview}>
+                      <Text style={styles.openingPreviewText} numberOfLines={3}>{inboxPreview}</Text>
+                    </View>
+                  )}
+                  <View style={styles.openingBubbleRow}>
+                    <View style={styles.openingAvatarPlaceholder} />
+                    <View style={[styles.openingBubblePlaceholder, { width: '64%' }]} />
+                  </View>
+                  <View style={[styles.openingBubbleRow, styles.openingBubbleOwn]}>
+                    <View style={[styles.openingBubblePlaceholder, { width: '48%', height: 34 }]} />
+                  </View>
+                  <View style={styles.openingBubbleRow}>
+                    <View style={styles.openingAvatarPlaceholder} />
+                    <View style={[styles.openingBubblePlaceholder, { width: '54%', height: 54 }]} />
+                  </View>
+                  <View style={styles.openingStatus}>
+                    <SkyLoadingMark size={18} color={PURPLE} />
+                    <Text style={styles.openingStatusText}>{t('social.openingConversation')}</Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.emptyWrap}>
+                  <LinearGradient
+                    colors={[`${PURPLE}28`, `${PURPLE}10`]}
+                    style={styles.emptyIcon}
+                  >
+                    <Text style={{ fontSize: 32 }}>✦</Text>
+                  </LinearGradient>
+                  <Text style={styles.emptyTitle}>{t('social.beginStory')}</Text>
+                  <Text style={styles.emptyBody}>
+                    {isGuide === 'true'
+                      ? t('social.guideAwaits')
+                      : t('social.funWhisper')}
+                  </Text>
+                </View>
+              )
             }
             renderItem={({ item }: { item: ListItem }) => {
               if (item.type === 'date') {
@@ -733,6 +778,7 @@ export default function MessagesScreen() {
                 showPicker && { backgroundColor: `${PURPLE}28`, borderColor: `${PURPLE}60` },
               ]}
               onPress={() => { Haptics.selectionAsync(); setShowPicker(v => !v); }}
+              disabled={loading}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               activeOpacity={0.75}
             >
@@ -743,6 +789,7 @@ export default function MessagesScreen() {
               <TextInput
                 style={styles.input}
                 value={input}
+                editable={!loading}
                 onChangeText={t => {
                   setInput(t);
                   if (showPicker) setShowPicker(false);
@@ -766,7 +813,7 @@ export default function MessagesScreen() {
             <TouchableOpacity
               style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
               onPress={handleSend}
-              disabled={!input.trim() || sending}
+              disabled={!input.trim() || sending || loading}
               activeOpacity={0.8}
             >
               {sending
@@ -823,6 +870,22 @@ const styles = StyleSheet.create({
   // ── Messages list
   centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listPad:    { paddingHorizontal: 14, paddingTop: 14 },
+  openingConversation: { flex: 1, paddingTop: 18, paddingHorizontal: 4, gap: 12 },
+  openingPreview: {
+    alignSelf: 'center', maxWidth: '88%', paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 16, backgroundColor: 'rgba(107,78,232,0.10)',
+    borderWidth: 1, borderColor: 'rgba(107,78,232,0.18)',
+  },
+  openingPreviewText: { color: 'rgba(220,210,255,0.72)', fontSize: 13, lineHeight: 19, fontFamily: 'Satoshi-Regular', textAlign: 'center' },
+  openingBubbleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 4 },
+  openingBubbleOwn: { justifyContent: 'flex-end' },
+  openingAvatarPlaceholder: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(200,184,232,0.10)' },
+  openingBubblePlaceholder: {
+    height: 44, borderRadius: 18, backgroundColor: 'rgba(200,184,232,0.08)',
+    borderWidth: 1, borderColor: 'rgba(200,184,232,0.07)',
+  },
+  openingStatus: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 5 },
+  openingStatusText: { color: MUTED, fontSize: 12, fontFamily: 'Satoshi-Medium' },
 
   // ── Empty state
   emptyWrap:  { alignItems: 'center', paddingTop: 70, paddingHorizontal: 40 },

@@ -1264,9 +1264,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const readDuringRefresh = new Set<string>();
     dmReadDuringRefreshRef.current = readDuringRefresh;
     setDmThreadsLoading(true);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
     const request = (async () => {
       try {
-        const rows = await apiFetch<DmThread[]>('/messages');
+        const rows = await apiFetch<DmThread[]>('/messages', { signal: controller.signal });
         if (epoch !== dmEpochRef.current) return;
         if (!Array.isArray(rows)) throw new Error('Invalid inbox response');
         const threads = rows.map(thread => readDuringRefresh.has(thread.partnerId)
@@ -1289,6 +1291,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setDmUnread(0);
         }
       } finally {
+        clearTimeout(timeout);
         if (epoch === dmEpochRef.current) {
           dmRequestRef.current = null;
           setDmThreadsLoading(false);

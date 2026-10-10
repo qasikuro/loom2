@@ -19,6 +19,8 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useAuth } from '@clerk/expo';
+import { fetchDmConversation, forgetDmConversation, type DmCachedMessage } from '@/utils/dmConversationCache';
 
 function fmtThreadTime(iso: string, t: (key: string) => string): string {
   const d   = new Date(iso);
@@ -40,9 +42,15 @@ export default function MessagesInboxScreen() {
   const insets  = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const topPad  = Platform.OS === 'web' ? 67 : insets.top;
+  const { userId: accountId } = useAuth();
 
   const { dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads, blockedIds } = useApp();
-  const threads = dmThreads.filter(thread => !blockedIds.includes(thread.partnerId));
+  const [clearedThreads, setClearedThreads] = useState<Record<string, { lastAt: string; lastMessage: string }>>({});
+  const threads = dmThreads.filter(thread => {
+    if (blockedIds.includes(thread.partnerId)) return false;
+    const cleared = clearedThreads[thread.partnerId];
+    return !cleared || cleared.lastAt !== thread.lastAt || cleared.lastMessage !== thread.lastMessage;
+  });
   const loading = dmThreadsLoading && threads.length === 0;
   const [actionError, setActionError] = useState<string | null>(null);
   const error = actionError ?? (dmThreadsError ? t('social.loadMessagesError') : null);
@@ -62,6 +70,13 @@ export default function MessagesInboxScreen() {
   const unreadCount = threads.filter(t => t.unread).length;
 
   function openThread(thread: Thread) {
+    if (accountId) {
+      void fetchDmConversation(
+        accountId,
+        thread.partnerId,
+        () => apiFetch<DmCachedMessage[]>(`/messages/${thread.partnerId}`),
+      ).catch(() => null);
+    }
     router.push({
       pathname: '/messages/[userId]',
       params: {
@@ -74,40 +89,35 @@ export default function MessagesInboxScreen() {
     } as any);
   }
 
-  function handleLongPressThread(thread: Thread) {
+  function handleDeleteThread(thread: Thread) {
     Alert.alert(
-      thread.partnerName,
-      undefined,
+      t('social.clearConversation'),
+      t('social.clearConversationBody'),
       [
         {
-          text: t('social.clearConversation'),
+          text: t('social.cancel'),
+          style: 'cancel',
+        },
+        {
+          text: t('social.clear'),
           style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              t('social.clearConversation'),
-              t('social.clearConversationBody'),
-              [
-                { text: t('social.cancel'), style: 'cancel' },
-                {
-                  text: t('social.clear'),
-                  style: 'destructive',
-                  onPress: async () => {
-                    setClearingId(thread.partnerId);
-                    try {
-                      await apiFetch(`/messages/conversation/${thread.partnerId}`, { method: 'DELETE' });
-                      await refreshDmThreads();
-                    } catch {
-                      Alert.alert(t('social.error'), t('social.clearError'));
-                    } finally {
-                      setClearingId(null);
-                    }
-                  },
-                },
-              ],
-            );
+          onPress: async () => {
+            setClearingId(thread.partnerId);
+            try {
+              await apiFetch(`/messages/conversation/${thread.partnerId}`, { method: 'DELETE' });
+              forgetDmConversation(accountId, thread.partnerId);
+              setClearedThreads(prev => ({
+                ...prev,
+                [thread.partnerId]: { lastAt: thread.lastAt, lastMessage: thread.lastMessage },
+              }));
+              await refreshDmThreads();
+            } catch {
+              Alert.alert(t('social.error'), t('social.clearError'));
+            } finally {
+              setClearingId(null);
+            }
           },
         },
-        { text: t('social.cancel'), style: 'cancel' },
       ],
     );
   }
@@ -115,57 +125,73 @@ export default function MessagesInboxScreen() {
   const renderThread = ({ item }: { item: Thread }) => {
     const initial = item.partnerName.charAt(0).toUpperCase();
     return (
-      <TouchableOpacity
-        style={[styles.threadRow, { borderBottomColor: `${colors.border}50` }]}
-        onPress={() => openThread(item)}
-        onLongPress={() => handleLongPressThread(item)}
-        delayLongPress={400}
-        activeOpacity={0.75}
-      >
-        {/* Avatar */}
-        <View style={[styles.avatar, { borderColor: item.unread ? colors.primary : 'transparent', borderWidth: item.unread ? 2 : 0 }]}>
-          {item.partnerAvatar ? (
-            <Image source={{ uri: item.partnerAvatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
-          ) : (
-            <LinearGradient
-              colors={['rgba(120,70,255,0.55)', 'rgba(60,140,240,0.40)']}
-              style={StyleSheet.absoluteFill}
-            />
-          )}
-          {!item.partnerAvatar && (
-            <Text style={styles.avatarInitial}>{initial}</Text>
-          )}
-        </View>
+      <View style={[styles.threadRow, { borderBottomColor: `${colors.border}50` }]}>
+        <TouchableOpacity
+          style={styles.threadMain}
+          onPress={() => openThread(item)}
+          onLongPress={() => handleDeleteThread(item)}
+          delayLongPress={500}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={`${item.partnerName}, ${item.lastMessage}`}
+        >
+          {/* Avatar */}
+          <View style={[styles.avatar, { borderColor: item.unread ? colors.primary : 'transparent', borderWidth: item.unread ? 2 : 0 }]}>
+            {item.partnerAvatar ? (
+              <Image source={{ uri: item.partnerAvatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : (
+              <LinearGradient
+                colors={['rgba(120,70,255,0.55)', 'rgba(60,140,240,0.40)']}
+                style={StyleSheet.absoluteFill}
+              />
+            )}
+            {!item.partnerAvatar && (
+              <Text style={styles.avatarInitial}>{initial}</Text>
+            )}
+          </View>
 
-        {/* Content */}
-        <View style={styles.threadContent}>
-          <View style={styles.threadTopRow}>
-            <Text style={[styles.threadName, { color: colors.foreground }, item.unread && styles.threadNameUnread]} numberOfLines={1}>
-              {item.partnerName}
-            </Text>
-            <Text style={[styles.threadTime, { color: item.unread ? colors.primary : colors.mutedForeground }]}>
-              {fmtThreadTime(item.lastAt, t)}
+          {/* Content */}
+          <View style={styles.threadContent}>
+            <View style={styles.threadTopRow}>
+              <Text style={[styles.threadName, { color: colors.foreground }, item.unread && styles.threadNameUnread]} numberOfLines={1}>
+                {item.partnerName}
+              </Text>
+              <Text style={[styles.threadTime, { color: item.unread ? colors.primary : colors.mutedForeground }]}>
+                {fmtThreadTime(item.lastAt, t)}
+              </Text>
+            </View>
+            {item.partnerHandle && (
+              <Text style={[styles.threadHandle, { color: colors.mutedForeground }]} numberOfLines={1}>
+                @{item.partnerHandle}
+              </Text>
+            )}
+            <Text
+              style={[styles.threadLastMsg, { color: item.unread ? colors.foreground : colors.mutedForeground }]}
+              numberOfLines={1}
+            >
+              {item.lastMessage}
             </Text>
           </View>
-          {item.partnerHandle && (
-            <Text style={[styles.threadHandle, { color: colors.mutedForeground }]} numberOfLines={1}>
-              @{item.partnerHandle}
-            </Text>
-          )}
-          <Text
-            style={[styles.threadLastMsg, { color: item.unread ? colors.foreground : colors.mutedForeground }]}
-            numberOfLines={1}
-          >
-            {item.lastMessage}
-          </Text>
-        </View>
 
-        {/* Unread dot */}
-        {item.unread && (
-          <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
-        )}
-        {clearingId === item.partnerId && <SkyLoadingMark size={18} color={colors.primary} />}
-      </TouchableOpacity>
+          {/* Unread dot */}
+          {item.unread && (
+            <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.deleteButton, clearingId === item.partnerId && styles.deleteButtonBusy]}
+          onPress={() => handleDeleteThread(item)}
+          disabled={clearingId !== null}
+          accessibilityRole="button"
+          accessibilityLabel={t('social.clearConversation')}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+        >
+          {clearingId === item.partnerId
+            ? <SkyLoadingMark size={17} color={colors.destructive} />
+            : <Icon name="trash-2" size={17} color={colors.destructive} />}
+        </TouchableOpacity>
+      </View>
     );
   };
 
@@ -247,7 +273,10 @@ const styles = StyleSheet.create({
 
   center:            { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  threadRow:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, gap: 12 },
+  threadRow:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth, gap: 8 },
+  threadMain:        { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  deleteButton:      { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(220,70,90,0.10)' },
+  deleteButtonBusy:  { opacity: 0.65 },
   avatar:            { width: 50, height: 50, borderRadius: 25, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
   avatarInitial:     { fontSize: 18, fontFamily: 'Satoshi-Bold', color: '#E8E0FF', position: 'absolute' },
   threadContent:     { flex: 1, gap: 2 },

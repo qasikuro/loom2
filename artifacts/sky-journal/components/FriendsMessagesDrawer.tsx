@@ -4,6 +4,7 @@ import {
   Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
+import { useAuth } from '@clerk/expo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -13,6 +14,8 @@ import { StorigamActivityIndicator as Spinner } from '@/components/SkyLoading';
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useChatAccent } from '@/hooks/useChatAccent';
+import { apiFetch } from '@/context/AppContext';
+import { fetchDmConversation, type DmCachedMessage } from '@/utils/dmConversationCache';
 import { matchesQuery, mergeContacts, type Contact } from '@/utils/friendsDrawerContacts';
 import { useFriendsDrawerData, type Invitation, type SearchResult } from '@/hooks/useFriendsDrawerData';
 import '@/i18n/drawerTranslations';
@@ -42,7 +45,8 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const { blockedIds, dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads, apiOnline } = useApp();
+  const { userId: accountId } = useAuth();
+  const { blockedIds, dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads } = useApp();
   const drawerW = Math.min(Math.round(width * 0.9), 440);
   const { accent, onAccent } = useChatAccent();
   const sub = colors.mutedForeground;
@@ -154,6 +158,13 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   }, [restricted, data.friends, data.requests, data.results, picking, tab, contacts, matches, incoming, outgoing, blockedIds, t]);
 
   function openChat(c: { userId: string; name: string; handle: string | null; avatar: string | null }) {
+    if (accountId) {
+      void fetchDmConversation(
+        accountId,
+        c.userId,
+        () => apiFetch<DmCachedMessage[]>(`/messages/${c.userId}`),
+      ).catch(() => null);
+    }
     dismiss(() => router.push({
       pathname: '/messages/[userId]',
       params: { userId: c.userId, name: c.name, handle: c.handle ?? '', avatarUri: c.avatar ?? '' },
@@ -168,7 +179,20 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
 
   function renderEmpty() {
     if (restricted) return <Empty icon="alert-circle" text={t('social.unavailableBody')} title={t('social.unavailable')} />;
-    if (initialLoading || (data.searching && tab === 'find')) return <View style={{ paddingTop: 48 }}><Spinner color={accent} /></View>;
+    if (((initialLoading || dmThreadsLoading) && tab !== 'find') || (data.searching && tab === 'find')) return (
+      <View style={{ paddingHorizontal: 16, paddingTop: 12, gap: 18 }} accessibilityLabel={t('social.openingConversation')}>
+        {[0, 1, 2, 3].map(i => (
+          <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, opacity: 1 - i * 0.15 }}>
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.muted }} />
+            <View style={{ flex: 1, gap: 9 }}>
+              <View style={{ width: '58%', height: 13, borderRadius: 6, backgroundColor: colors.muted }} />
+              <View style={{ width: '82%', height: 10, borderRadius: 5, backgroundColor: colors.muted }} />
+            </View>
+          </View>
+        ))}
+        <Spinner size="small" color={accent} />
+      </View>
+    );
     if (data.error && !contacts.length) return <Empty icon="alert-circle" text={t('social.loadFriendsError')} action={t('social.retry')} onAction={() => void data.load()} />;
     if (picking) return <Empty icon="users" text={q ? t('social.noContactsMatch') : t('social.pickerEmpty')} />;
     if (tab === 'find') {
@@ -271,8 +295,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
     : data.actionError === 'pending' ? t('social.pendingOrFriends')
     : data.actionError === 'send' ? t('social.sendRequestError') : null;
   const banner = errText ?? (!data.restricted && !initialLoading && data.error && contacts.length ? t('social.loadFriendsError') : null)
-    ?? (!apiOnline ? t('social.offlineNotice') : null)
-    ?? (!restricted && dmThreadsError ? t('social.conversationsLoadError') : null);
+    ?? (!restricted && !dmThreadsLoading && dmThreadsError ? t('social.conversationsLoadError') : null);
 
   return (
     <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={() => dismiss()}

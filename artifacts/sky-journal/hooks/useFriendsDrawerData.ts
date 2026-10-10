@@ -11,9 +11,9 @@ export type ActionError = 'accept' | 'remove' | 'send' | 'pending' | null;
 const isRestricted = (e: unknown) => e instanceof ApiError && (e.status === 401 || e.status === 403);
 
 /**
- * Loads friends + requests once per open (and after actions), plus debounced Find search.
- * No polling. Everything is cleared on close or when `scopeKey` (user id) changes, and
- * late responses are dropped via a generation token.
+ * Warms friends + requests on sign-in, revalidates on open, and keeps same-account
+ * data during refreshes/close. Account changes and unmount invalidate late responses.
+ * Find searches are only active while the drawer is visible.
  */
 export function useFriendsDrawerData(visible: boolean, scopeKey: string | null, query: string, findActive: boolean) {
   const { refreshFriends, refreshDmThreads } = useApp();
@@ -32,6 +32,8 @@ export function useFriendsDrawerData(visible: boolean, scopeKey: string | null, 
   const loadSeq = useRef(0);
   const searchSeq = useRef(0);
   const inFlight = useRef(false);
+  const loadPromise = useRef<Promise<void> | null>(null);
+  const loadedScope = useRef<string | null>(null);
   const refreshFriendsRef = useRef(refreshFriends);
   refreshFriendsRef.current = refreshFriends;
   const refreshThreadsRef = useRef(refreshDmThreads);
@@ -39,37 +41,59 @@ export function useFriendsDrawerData(visible: boolean, scopeKey: string | null, 
 
   const reset = useCallback(() => {
     gen.current++; loadSeq.current++; searchSeq.current++; inFlight.current = false;
+    loadPromise.current = null;
     setFriends([]); setRequests([]); setResults([]); setLoading(false); setError(false);
     setRestricted(false); setActionError(null); setBusy(null); setSearching(false); setSearchError(false);
   }, []);
 
-  const load = useCallback(async (afterMutation = false) => {
+  const load = useCallback((afterMutation = false): Promise<void> => {
+    if (loadPromise.current && !afterMutation) return loadPromise.current;
     const g = gen.current;
     const seq = ++loadSeq.current;
+    const current = () => g === gen.current && seq === loadSeq.current;
     setLoading(true);
-    try {
-      const [f, r] = await Promise.all([
-        apiFetch<FriendSummary[]>('/friends'),
-        apiFetch<Invitation[]>('/friends/requests'),
-      ]);
-      if (g !== gen.current || seq !== loadSeq.current) return;
-      setFriends(f ?? []); setRequests(r ?? []); setError(false); setRestricted(false);
-      if (afterMutation) void refreshFriendsRef.current();
-    } catch (e) {
-      if (g !== gen.current || seq !== loadSeq.current) return;
-      setFriends([]); setRequests([]); setResults([]);
-      if (isRestricted(e)) { setRestricted(true); setError(false); } else { setError(true); setRestricted(false); }
-    } finally {
-      if (g === gen.current && seq === loadSeq.current) setLoading(false);
-    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+    const request = (async () => {
+      try {
+        const responses = await Promise.allSettled([
+          apiFetch<FriendSummary[]>('/friends', { signal: controller.signal }).then(f => { if (current()) setFriends(f ?? []); }),
+          apiFetch<Invitation[]>('/friends/requests', { signal: controller.signal }).then(r => { if (current()) setRequests(r ?? []); }),
+        ]);
+        if (!current()) return;
+        const failures = responses.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+        const denied = failures.some(r => isRestricted(r.reason));
+        setRestricted(denied);
+        setError(!denied && failures.length > 0);
+        if (denied) { setFriends([]); setRequests([]); setResults([]); }
+        if (afterMutation) void refreshFriendsRef.current();
+      } finally {
+        clearTimeout(timeout);
+        if (current()) {
+          setLoading(false);
+          loadPromise.current = null;
+        }
+      }
+    })();
+    loadPromise.current = request;
+    return request;
   }, []);
 
   useEffect(() => () => { gen.current++; loadSeq.current++; searchSeq.current++; }, []);
 
   useEffect(() => {
     reset();
-    if (visible && scopeKey) { void load(); void refreshThreadsRef.current(); }
-  }, [visible, scopeKey, load, reset]);
+    loadedScope.current = scopeKey;
+    if (scopeKey) { void load(); void refreshThreadsRef.current(); }
+  }, [scopeKey, load, reset]);
+
+  useEffect(() => {
+    if (visible && scopeKey) {
+      setActionError(null);
+      void load();
+      void refreshThreadsRef.current();
+    }
+  }, [visible, scopeKey, load]);
 
   useEffect(() => {
     const q = query.trim();
@@ -106,7 +130,7 @@ export function useFriendsDrawerData(visible: boolean, scopeKey: string | null, 
         else setActionError(e instanceof ApiError && e.status === 409 ? 'pending' : fail);
       }
     }
-    if (g !== gen.current) return; // closed or scope changed: ignore completion
+    if (g !== gen.current) return; // account changed or unmounted: ignore completion
     inFlight.current = false;
     await load(true);
     if (g === gen.current) setBusy(null);
@@ -116,5 +140,12 @@ export function useFriendsDrawerData(visible: boolean, scopeKey: string | null, 
   const remove = (id: string) => mutate(id, `/friends/requests/${encodeURIComponent(id)}`, 'DELETE', 'remove');
   const send = (userId: string) => mutate(userId, `/friends/requests/${encodeURIComponent(userId)}`, 'POST', 'send');
 
-  return { friends, requests, loading, error, restricted, actionError, busy, results, searching, searchError, load, accept, remove, send };
+  const scopeMatches = loadedScope.current === scopeKey;
+  return {
+    friends: scopeMatches ? friends : [],
+    requests: scopeMatches ? requests : [],
+    loading, error, restricted, actionError, busy,
+    results: scopeMatches ? results : [], searching, searchError,
+    load, accept, remove, send,
+  };
 }

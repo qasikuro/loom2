@@ -16,6 +16,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
+import { useAuth } from '@clerk/expo';
+import { fetchDmConversation, type DmCachedMessage } from '@/utils/dmConversationCache';
 
 type Tab = 'all' | 'online' | 'requests' | 'suggestions';
 type Invitation = {
@@ -56,6 +58,7 @@ export default function FriendsScreen() {
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const { userId: accountId } = useAuth();
   const params = useLocalSearchParams<{ tab?: string }>();
   const heroGradient: [string, string, string] = isDark
     ? ['#251445', '#120E2D', '#0A0818']
@@ -177,6 +180,13 @@ export default function FriendsScreen() {
     router.push({ pathname: '/user/[userId]', params: { userId } });
   }
   function chat(friend: FriendSummary) {
+    if (accountId) {
+      void fetchDmConversation(
+        accountId,
+        friend.userId,
+        () => apiFetch<DmCachedMessage[]>(`/messages/${friend.userId}`),
+      ).catch(() => null);
+    }
     router.push({ pathname: '/messages/[userId]', params: {
       userId: friend.userId, name: friend.name, handle: friend.username ?? '',
       avatarUri: friend.avatarUri ?? '',
