@@ -53,16 +53,6 @@ export function ReelCard({
   const isVideo = post.contentType === 'video' && !!post.videoUri;
   const { uri: videoUri, renew: renewVideoUri } = useSecureMediaUri(post.videoUri);
   const imageUri = isVideo ? post.thumbnailUri : (post.panels?.[0]?.imageUri ?? post.imageUri);
-  const elapsed = Date.now() - new Date(post.date).getTime();
-  const mins = Math.floor(elapsed / 60_000);
-  const hours = Math.floor(elapsed / 3_600_000);
-  const days = Math.floor(elapsed / 86_400_000);
-  const timeLabel = !Number.isFinite(elapsed) || elapsed < 0 ? t(isVideo ? 'reels.video' : 'reels.story')
-    : mins < 1 ? t('common.justNow')
-    : mins < 60 ? t('common.minsAgo', { n: mins })
-    : hours < 24 ? t('common.hoursAgo', { n: hours })
-    : days === 1 ? t('common.yesterday')
-    : t('common.daysAgo', { n: days });
   return (
     <View style={[styles.card, { height }]}>
       {imageUri ? (
@@ -115,7 +105,6 @@ export function ReelCard({
           </View>
           <View style={styles.authorText}>
             <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
-            <Text style={styles.time}>{timeLabel}</Text>
           </View>
         </TouchableOpacity>
         <TouchableOpacity style={styles.chapterPill} onPress={onOpen} accessibilityLabel={t('reels.openChapter', { n: post.chapterNumber })}>
@@ -175,7 +164,6 @@ const styles = StyleSheet.create({
   avatarInitial: { color: '#FFFFFF', fontSize: 18, fontFamily: 'Satoshi-Bold' },
   authorText: { flex: 1 },
   authorName: { color: '#FFFFFF', fontSize: 14, fontFamily: 'Satoshi-Bold', textShadowColor: '#000', textShadowRadius: 4 },
-  time: { color: 'rgba(255,255,255,0.78)', fontSize: 11, fontFamily: 'Satoshi-Medium', marginTop: 2 },
   chapterPill: { backgroundColor: 'rgba(8,6,24,0.66)', paddingHorizontal: 10, height: 31, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 4 },
   chapterText: { color: '#FFFFFF', fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.5 },
   muteButton: { position: 'absolute', right: 20, top: '43%', backgroundColor: 'rgba(8,6,24,0.58)', padding: 11, borderRadius: 22 },
