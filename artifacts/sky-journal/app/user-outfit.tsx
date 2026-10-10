@@ -7,7 +7,7 @@ import { useColors } from '@/hooks/useColors';
 import { ReportSheet } from '@/components/ReportSheet';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -167,7 +167,8 @@ export default function UserOutfitScreen() {
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioGeneration = useRef(0);
 
-  useEffect(() => {
+  // Stack routes remain mounted under profiles; release music on blur too.
+  useFocusEffect(useCallback(() => {
     const generation = ++audioGeneration.current;
     let cancelled = false;
     const track = outfit?.music;
@@ -204,24 +205,31 @@ export default function UserOutfitScreen() {
       try {
         const { Audio } = await import('expo-av');
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: true }).catch(() => null);
+        if (cancelled || generation !== audioGeneration.current) return;
         const result = await Audio.Sound.createAsync(
           { uri: track.streamUrl },
-          { shouldPlay: true, isLooping: true, volume: 0.5, isMuted: musicMuted },
+          { shouldPlay: false, isLooping: true, volume: 0.5, isMuted: musicMuted },
         );
+        registerNativeSound(result.sound);
         if (cancelled || generation !== audioGeneration.current) {
+          unregisterNativeSound(result.sound);
           await result.sound.unloadAsync().catch(() => null);
           return;
         }
         musicRef.current = result.sound;
-        registerNativeSound(result.sound);
         result.sound.setOnPlaybackStatusUpdate((status: any) => {
           if (cancelled || generation !== audioGeneration.current) return;
           if (status.isLoaded) setMusicPlaying(status.isPlaying);
           else if (status.error) setMusicPlaying(false);
         });
+        await result.sound.playAsync();
+        if (cancelled || generation !== audioGeneration.current) {
+          await result.sound.stopAsync().catch(() => null);
+          await result.sound.unloadAsync().catch(() => null);
+        }
       } catch {
         // Autoplay can be blocked by the platform; the manual control remains available.
-        setMusicPlaying(false);
+        if (!cancelled && generation === audioGeneration.current) setMusicPlaying(false);
       }
     };
     void start();
@@ -231,12 +239,12 @@ export default function UserOutfitScreen() {
       musicRef.current = null;
       if (sound) {
         unregisterNativeSound(sound);
-        void sound.stopAsync().catch(() => null);
-        void sound.unloadAsync().catch(() => null);
+        sound.setOnPlaybackStatusUpdate(null);
+        void sound.stopAsync().catch(() => null).then(() => sound.unloadAsync().catch(() => null));
       }
       setMusicPlaying(false);
     };
-  }, [currentIdx, musicRetry, outfit?.music?.streamUrl]);
+  }, [currentIdx, musicRetry, outfit?.music?.streamUrl]));
 
   useEffect(() => {
     if (musicRef.current) void musicRef.current.setIsMutedAsync(musicMuted).catch(() => null);

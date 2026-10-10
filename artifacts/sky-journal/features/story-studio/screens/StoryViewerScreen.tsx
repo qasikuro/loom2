@@ -4,6 +4,7 @@ import { Images } from '@/assets/images/index';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { safeBack } from '@/utils/navigation';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -324,6 +325,7 @@ function MangaPage({
 // ── Main screen ───────────────────────────────────────────────────────────────
 
 export default function StoryScreen() {
+  const isFocused = useIsFocused();
   const colors = useColors();
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -764,7 +766,7 @@ export default function StoryScreen() {
             </View>
             {!!(story?.music ?? post?.music) && (
               <View style={styles.musicBar}>
-                <AudiusTrackPlayer track={(story?.music ?? post?.music)!} compact autoPlay />
+                {isFocused && <AudiusTrackPlayer track={(story?.music ?? post?.music)!} compact autoPlay />}
                 <View style={styles.musicBarCopy}>
                   <Text style={styles.musicBarLabel}>{t('studioReader.nowPlaying')}</Text>
                   <Text style={styles.musicBarTitle} numberOfLines={1}>{(story?.music ?? post?.music)!.title}</Text>

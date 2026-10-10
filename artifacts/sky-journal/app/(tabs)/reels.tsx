@@ -5,6 +5,7 @@ import { ReportSheet } from '@/components/ReportSheet';
 import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
@@ -28,6 +29,7 @@ type ReelFilter = 'All' | 'Stories' | 'Videos';
 const FILTERS: ReelFilter[] = ['All', 'Stories', 'Videos'];
 
 export default function ReelsScreen() {
+  const isFocused = useIsFocused();
   const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -147,7 +149,7 @@ export default function ReelsScreen() {
               pathname: '/user/[userId]',
               params: { userId: item.authorUserId },
             } as never)}
-            playing={item.id === visiblePostId && item.contentType === 'video'}
+            playing={isFocused && !selectedVideoPost && item.id === visiblePostId && item.contentType === 'video'}
             muted={videosMuted}
             onMuteToggle={() => setVideosMuted(muted => !muted)}
             onShare={() => { void sharePost(item); }}
@@ -287,7 +289,7 @@ export default function ReelsScreen() {
         onClose={() => setReportTargetId(null)}
       />
       <DiscoverVideoPlayerModal
-        post={selectedVideoPost}
+        post={isFocused ? selectedVideoPost : null}
         onClose={() => setSelectedVideoPost(null)}
       />
     </View>

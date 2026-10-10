@@ -62,13 +62,10 @@ function useAudiusPreview() {
 
   const stop = useCallback(async () => {
     playbackGenerationRef.current += 1;
+    activeIdRef.current = null;
+    setPlayingId(null);
     const native = nativeSoundRef.current;
     nativeSoundRef.current = null;
-    if (native) {
-      unregisterNativeSound(native);
-      await native.stopAsync().catch(() => null);
-      await native.unloadAsync().catch(() => null);
-    }
     const web = webAudioRef.current;
     webAudioRef.current = null;
     if (web) {
@@ -76,8 +73,11 @@ function useAudiusPreview() {
       web.pause();
       web.currentTime = 0;
     }
-    activeIdRef.current = null;
-    setPlayingId(null);
+    if (native) {
+      unregisterNativeSound(native);
+      await native.stopAsync().catch(() => null);
+      await native.unloadAsync().catch(() => null);
+    }
   }, []);
 
   const toggle = useCallback(async (track: AudiusTrack) => {
@@ -85,10 +85,12 @@ function useAudiusPreview() {
       await stop();
       return;
     }
-    await stop();
+    const stopping = stop();
     const generation = playbackGenerationRef.current;
     const isCurrent = () =>
       mountedRef.current && playbackGenerationRef.current === generation;
+    await stopping;
+    if (!isCurrent()) return;
 
     if (typeof window !== 'undefined' && typeof window.Audio === 'function') {
       const audio = new window.Audio(track.streamUrl);
@@ -126,9 +128,10 @@ function useAudiusPreview() {
 
     try {
       const { Audio } = await import('expo-av');
+      if (!isCurrent()) return;
       const result = await Audio.Sound.createAsync(
         { uri: track.streamUrl },
-        { shouldPlay: true, volume: 0.45 },
+        { shouldPlay: false, volume: 0.45 },
       );
       const sound = result.sound as unknown as PlayerSound;
       // Register before checking cancellation so every created native sound
@@ -143,10 +146,17 @@ function useAudiusPreview() {
       nativeSoundRef.current = sound;
       activeIdRef.current = track.id;
       sound.setOnPlaybackStatusUpdate(status => {
-        if (status.isLoaded && status.didJustFinish) {
+        if (isCurrent() && status.isLoaded && status.didJustFinish) {
           void stop();
         }
       });
+      await sound.playAsync();
+      if (!isCurrent()) {
+        unregisterNativeSound(sound);
+        await sound.stopAsync().catch(() => null);
+        await sound.unloadAsync().catch(() => null);
+        return;
+      }
       setPlayingId(track.id);
     } catch {
       if (isCurrent()) await stop();
