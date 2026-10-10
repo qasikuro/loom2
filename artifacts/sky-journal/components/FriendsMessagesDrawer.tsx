@@ -51,7 +51,6 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   const { accent, onAccent } = useChatAccent();
   const sub = colors.mutedForeground;
 
-  const [mounted, setMounted] = useState(visible);
   const [tab, setTab] = useState<DrawerTab>('all');
   const [picking, setPicking] = useState(false);
   const [query, setQuery] = useState('');
@@ -72,12 +71,10 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   useEffect(() => {
     if (visible) {
       closing.current = false;
-      setMounted(true); setTab(initialTab); setQuery(''); setPicking(false);
+      setTab(initialTab); setQuery(''); setPicking(false);
       Keyboard.dismiss();
       x.setValue(reduce ? 0 : drawerW);
       if (!reduce) Animated.timing(x, { toValue: 0, duration: 260, useNativeDriver: true }).start();
-    } else if (mounted && !closing.current) {
-      setMounted(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
@@ -97,7 +94,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
     pending.current = after ?? null;
     x.stopAnimation();
     const finish = () => {
-      onClose(); setMounted(false);
+      onClose();
       if (Platform.OS === 'ios' && pending.current) {
         // Modal.onDismiss normally runs the navigation; fall back if it never fires.
         fallbackTimer.current = setTimeout(runPending, 700);
@@ -298,7 +295,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
     ?? (!restricted && !dmThreadsLoading && dmThreadsError ? t('social.conversationsLoadError') : null);
 
   return (
-    <Modal visible={mounted} transparent animationType="none" statusBarTranslucent onRequestClose={() => dismiss()}
+    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={() => dismiss()}
       onDismiss={runPending}>
       <View style={st.fill}>
         <Animated.View style={[st.fill, { backgroundColor: colors.overlay, opacity: x.interpolate({ inputRange: [0, drawerW], outputRange: [1, 0], extrapolate: 'clamp' }) }]}>
