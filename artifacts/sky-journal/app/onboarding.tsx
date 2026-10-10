@@ -46,17 +46,11 @@ export default function OnboardingScreen() {
 
   useFocusEffect(useCallback(() => {
     if (!userId) return;
-    loadOnboardingProgress(userId, stories.length, outfits.length).then(saved => {
-      let next = saved;
-      if (saved.currentStep === 2 && stories.length > saved.storyBaseline) {
-        next = complete(saved, 2);
-      } else if (saved.currentStep === 3 && outfits.length > saved.outfitBaseline) {
-        next = complete(saved, 3);
-      }
-      setProgress(next);
-      if (next !== saved) saveOnboardingProgress(userId, next).catch(() => null);
-    });
-  }, [userId, stories.length, outfits.length]));
+    let active = true;
+    loadOnboardingProgress(userId, stories.length, outfits.length, character.username)
+      .then(next => { if (active) setProgress(next); });
+    return () => { active = false; };
+  }, [userId, stories.length, outfits.length, character.username]));
 
   const update = useCallback((next: OnboardingProgress) => {
     setProgress(next);

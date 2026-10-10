@@ -96,10 +96,12 @@ export default function CharacterScreen() {
 
   useFocusEffect(useCallback(() => {
     if (!userId) return;
-    loadOnboardingProgress(userId, stories.length, outfits.length)
-      .then(setOnboardingProgress)
+    let active = true;
+    loadOnboardingProgress(userId, stories.length, outfits.length, character.username)
+      .then(progress => { if (active) setOnboardingProgress(progress); })
       .catch(() => null);
-  }, [userId, stories.length, outfits.length]));
+    return () => { active = false; };
+  }, [userId, stories.length, outfits.length, character.username]));
 
   useFocusEffect(useCallback(() => {
     if (!userId) return;
