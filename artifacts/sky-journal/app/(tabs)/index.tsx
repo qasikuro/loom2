@@ -1102,8 +1102,8 @@ export default function HomeScreen() {
       refetchOnReconnect: true,
     },
   });
-  const shopEnabled = publicConfig?.features.shop ?? true;
-  const seasonEnabled = publicConfig?.features.season ?? true;
+  const shopEnabled = publicConfig?.features.shop === true && publicConfig.features.shop_button === true;
+  const seasonEnabled = publicConfig?.features.season === true && publicConfig.features.season_button === true;
   const floatingMenuItems = useMemo<FloatingMenuItem[]>(() => {
     const items: FloatingMenuItem[] = [];
     if (shopEnabled) {

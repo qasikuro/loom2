@@ -97,12 +97,9 @@ overrides:
   esbuild>@esbuild/win32-ia32: '-'
   esbuild>@esbuild/win32-x64: '-'
   eslint-plugin-react-hooks>zod-validation-error: ^5.0.0
-  js-cookie: ^3.0.8
+  image-size@1: 2.0.3
   joi@17: 17.13.8
-  minimatch@5: 5.1.9
-  nanoid@3: 3.3.20
-  postcss@8: 8.5.29
-  tar@7: 7.5.22
+  js-cookie: ^3.0.8
   lightningcss>lightningcss-android-arm64: '-'
   lightningcss>lightningcss-darwin-arm64: '-'
   lightningcss>lightningcss-darwin-x64: '-'
@@ -113,8 +110,11 @@ overrides:
   lightningcss>lightningcss-linux-x64-musl: '-'
   lightningcss>lightningcss-win32-arm64-msvc: '-'
   lightningcss>lightningcss-win32-x64-msvc: '-'
+  minimatch@5: 5.1.9
+  nanoid@3: 3.3.20
   picomatch@<3: 2.3.2
   picomatch@>=4: 4.0.5
+  postcss@8: 8.5.29
   rollup>@rollup/rollup-android-arm-eabi: '-'
   rollup>@rollup/rollup-android-arm64: '-'
   rollup>@rollup/rollup-darwin-arm64: '-'
@@ -139,9 +139,14 @@ overrides:
   rollup>@rollup/rollup-win32-ia32-msvc: '-'
   rollup>@rollup/rollup-win32-x64-gnu: '-'
   rollup>@rollup/rollup-win32-x64-msvc: '-'
+  tar@7: 7.5.22
   undici: ^6.27.0
+  uuid@>=3 <11: 11.1.1
   vite: ^7.3.6
   ws: ^8.21.1
 
 patchedDependencies:
+  braces@3.0.3: patches/braces@3.0.3.patch
   expo-av: patches/expo-av.patch
+  metro@0.83.3: patches/metro@0.83.3.patch
+  node-forge@1.4.0: patches/node-forge@1.4.0.patch

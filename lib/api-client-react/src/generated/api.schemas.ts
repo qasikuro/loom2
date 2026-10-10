@@ -580,6 +580,8 @@ export interface FeatureFlags {
   campfire: boolean;
   guides: boolean;
   notifications: boolean;
+  shop_button: boolean;
+  season_button: boolean;
 }
 
 export interface AppConfig {
