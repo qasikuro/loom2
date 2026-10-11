@@ -1,13 +1,6 @@
-export interface DmCachedMessage {
-  id: string;
-  fromUserId: string;
-  toUserId: string;
-  content: string | null;
-  expression: string | null;
-  isRead: boolean;
-  createdAt: string;
-  isOwn: boolean;
-}
+import type { ChatMessage } from '@workspace/api-client-react';
+
+export type DmCachedMessage = ChatMessage;
 
 interface CacheEntry {
   messages: DmCachedMessage[];

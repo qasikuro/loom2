@@ -2,6 +2,10 @@ import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
+import { ChatPhotoDraft, ChatPhotoViewer } from '@/components/ChatPhoto';
+import * as ImagePicker from 'expo-image-picker';
+import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
+import type { ChatMessageInput } from '@workspace/api-client-react';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal } from '@/components/Toast';
 import { safeBack } from '@/utils/navigation';
@@ -217,6 +221,22 @@ export default function MessagesScreen() {
   const [loading,       setLoading]       = useState(initialMessages.length === 0);
   const [sending,       setSending]       = useState(false);
   const [input,         setInput]         = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
+  const [pickingPhoto, setPickingPhoto] = useState(false);
+  const uploadedPhotoRef = useRef<{ uri: string; path: string } | null>(null);
+  const photoIdentity = JSON.stringify([myUserId, userId]);
+  const photoIdentityRef = useRef(photoIdentity);
+  photoIdentityRef.current = photoIdentity;
+  useEffect(() => {
+    photoIdentityRef.current = photoIdentity;
+    setPhotoUri(null);
+    setViewingPhoto(null);
+    setPickingPhoto(false);
+    setSending(false);
+    uploadedPhotoRef.current = null;
+    return () => { photoIdentityRef.current = ''; };
+  }, [photoIdentity]);
   const [error,         setError]         = useState<string | null>(null);
   const [headerH,       setHeaderH]       = useState(0);
   const [showPicker,    setShowPicker]    = useState(false);
@@ -387,7 +407,7 @@ export default function MessagesScreen() {
     useCallback((_channel: string, data: unknown) => {
       const ev = data as {
         type: string; id?: string; fromUserId?: string; toUserId?: string;
-        content?: string | null; expression?: string | null;
+        content?: string | null; expression?: string | null; imageUri?: string | null;
         isRead?: boolean; createdAt?: string; isOwn?: boolean;
         messageId?: string; forEveryone?: boolean; partnerId?: string;
       };
@@ -398,6 +418,7 @@ export default function MessagesScreen() {
           const newMsg: Message = {
             id: ev.id!, fromUserId: ev.fromUserId!, toUserId: ev.toUserId ?? '',
             content: ev.content ?? null, expression: ev.expression ?? null,
+            imageUri: ev.imageUri ?? null,
             isRead: ev.isRead ?? false, createdAt: ev.createdAt!, isOwn: false,
           };
           lastMsgIdRef.current = ev.id!;
@@ -448,24 +469,64 @@ export default function MessagesScreen() {
     flatRef.current?.scrollToEnd({ animated: false });
   }, []);
 
+  const pickPhoto = useCallback(async () => {
+    if (pickingPhoto || sending || loading) return;
+    const identity = photoIdentityRef.current;
+    setPickingPhoto(true);
+    setShowPicker(false);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'], allowsMultipleSelection: false, quality: 0.85,
+      });
+      if (identity !== photoIdentityRef.current) return;
+      if (!result.canceled && result.assets[0]?.uri) {
+        uploadedPhotoRef.current = null;
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch {
+      showToastGlobal('Could not open your photos. Check photo permissions and try again.', 'warning');
+    } finally {
+      if (identity === photoIdentityRef.current) setPickingPhoto(false);
+    }
+  }, [pickingPhoto, sending, loading]);
+
   const handleSend = useCallback(async () => {
     const content = input.trim();
-    if (!content || sending || loading || !userId) return;
+    if ((!content && !photoUri) || sending || loading || pickingPhoto || !userId) return;
+    const identity = photoIdentityRef.current;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInput('');
     setSending(true);
     const optimistic: Message = {
       id: `temp-${Date.now()}`, fromUserId: 'me', toUserId: userId,
-      content, expression: null, isRead: false, createdAt: new Date().toISOString(), isOwn: true,
+      content: content || null, imageUri: photoUri, expression: null, isRead: false, createdAt: new Date().toISOString(), isOwn: true,
     };
     setMessages(prev => [...prev, optimistic]);
     try {
-      const sent = await apiFetch<Message>(`/messages/${userId}`, {
-        method: 'POST', body: JSON.stringify({ content }),
+      const body: ChatMessageInput = { ...(content ? { content } : {}) };
+      if (photoUri) {
+        let path = uploadedPhotoRef.current?.uri === photoUri ? uploadedPhotoRef.current.path : null;
+        if (!path) {
+          const uploaded = await persistImageUri(photoUri);
+          path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
+          if (!/^\/api\/images\/[\w.-]+$/.test(path)) throw new Error('Invalid uploaded photo');
+          if (identity !== photoIdentityRef.current) return;
+          uploadedPhotoRef.current = { uri: photoUri, path };
+        }
+        body.imageUri = path;
+      }
+      if (identity !== photoIdentityRef.current) return;
+      const sent = await apiFetch<Message>(`/messages/${userId}${photoUri ? '/photos' : ''}`, {
+        method: 'POST', body: JSON.stringify(body),
       });
-      setMessages(prev => prev.map(m => m.id === optimistic.id ? (sent ?? optimistic) : m));
+      if (!sent?.id) throw new Error('Message was not confirmed');
+      if (identity !== photoIdentityRef.current) return;
+      setMessages(prev => prev.map(m => m.id === optimistic.id ? sent : m));
+      setPhotoUri(null);
+      uploadedPhotoRef.current = null;
       if (sent?.id) lastMsgIdRef.current = sent.id;
     } catch (err) {
+      if (identity !== photoIdentityRef.current) return;
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
       setInput(content);
       if (err instanceof ApiError && err.status === 429) {
@@ -473,11 +534,13 @@ export default function MessagesScreen() {
           ? ` Try again in ${err.retryAfter}s.`
           : '';
         showToastGlobal(`${t('social.slowDown')}${suffix}`, 'warning');
+      } else {
+        showToastGlobal(err instanceof ImageUploadError ? err.userMessage : 'Could not send your message. Please try again.', 'warning');
       }
     } finally {
-      setSending(false);
+      if (identity === photoIdentityRef.current) setSending(false);
     }
-  }, [input, sending, loading, userId]);
+  }, [input, photoUri, sending, loading, pickingPhoto, userId, t]);
 
   const handleDeleteMsg = useCallback(async (msg: Message) => {
     if (!msg.isOwn) return;
@@ -724,6 +787,8 @@ export default function MessagesScreen() {
                       msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
                     ]}
                     onLongPress={() => handleDeleteMsg(msg)}
+                    onPress={() => { if (msg.imageUri) setViewingPhoto(msg.imageUri); }}
+                    accessibilityLabel={msg.imageUri ? 'View photo; hold for message options' : undefined}
                     activeOpacity={0.85}
                     delayLongPress={350}
                   >
@@ -734,9 +799,12 @@ export default function MessagesScreen() {
                         style={StyleSheet.absoluteFill}
                       />
                     )}
-                    <Text style={[styles.bubbleText, { color: msg.isOwn ? 'rgba(255,255,255,0.95)' : 'rgba(220,210,255,0.90)' }]}>
+                    {msg.imageUri && (
+                      <Image source={{ uri: msg.imageUri }} style={{ width: Math.min(contentWidth * 0.52, 270), height: 220, borderRadius: 12 }} contentFit="contain" accessibilityLabel="Shared photo" />
+                    )}
+                    {!!msg.content && <Text style={[styles.bubbleText, { color: msg.isOwn ? 'rgba(255,255,255,0.95)' : 'rgba(220,210,255,0.90)' }]}>
                       {msg.content}
-                    </Text>
+                    </Text>}
                     <Text style={[styles.bubbleTime, { color: msg.isOwn ? 'rgba(255,255,255,0.40)' : 'rgba(200,184,232,0.40)' }]}>
                       {fmtTime(msg.createdAt)}
                     </Text>
@@ -771,7 +839,15 @@ export default function MessagesScreen() {
           )}
 
           {/* ── Input bar ─────────────────────────────────── */}
+          {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color="rgba(220,210,255,0.90)" onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
            <View style={[styles.inputBar, { width: contentWidth, paddingBottom: Math.max(bottomPad, 8) }]}>
+            <TouchableOpacity
+              style={styles.stickerToggleBtn} onPress={pickPhoto}
+              disabled={loading || sending || pickingPhoto} accessibilityLabel="Attach a photo"
+              activeOpacity={0.75}
+            >
+              {pickingPhoto ? <SkyLoadingMark size={20} color={PURPLE} /> : <Icon name="image" size={21} color={PURPLE} />}
+            </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.stickerToggleBtn,
@@ -789,7 +865,7 @@ export default function MessagesScreen() {
               <TextInput
                 style={styles.input}
                 value={input}
-                editable={!loading}
+                editable={!loading && !sending}
                 onChangeText={t => {
                   setInput(t);
                   if (showPicker) setShowPicker(false);
@@ -811,25 +887,27 @@ export default function MessagesScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+              style={[styles.sendBtn, !input.trim() && !photoUri && styles.sendBtnDisabled]}
               onPress={handleSend}
-              disabled={!input.trim() || sending || loading}
+              disabled={(!input.trim() && !photoUri) || sending || loading || pickingPhoto}
               activeOpacity={0.8}
             >
               {sending
                 ? <SkyLoadingMark size={19} color="rgba(255,255,255,0.9)" />
                 : (
                   <LinearGradient
-                    colors={input.trim() ? [PURPLE, PURPLE2] : ['rgba(107,78,232,0.25)', 'rgba(59,42,140,0.25)']}
+                    colors={input.trim() || photoUri ? [PURPLE, PURPLE2] : ['rgba(107,78,232,0.25)', 'rgba(59,42,140,0.25)']}
                     style={StyleSheet.absoluteFill}
                   />
                 )
               }
-              {!sending && <Icon name="send" size={15} color={input.trim() ? '#fff' : 'rgba(255,255,255,0.30)'} />}
+              {!sending && <Icon name="send" size={15} color={input.trim() || photoUri ? '#fff' : 'rgba(255,255,255,0.30)'} />}
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
       )}
+
+      {viewingPhoto && <ChatPhotoViewer uri={viewingPhoto} onClose={() => setViewingPhoto(null)} background={NIGHT} color="rgba(220,210,255,0.90)" />}
 
       {/* ── Full-screen sticker animation overlay ─────────── */}
       {playingAnim && (
