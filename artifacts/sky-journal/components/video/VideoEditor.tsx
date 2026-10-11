@@ -185,29 +185,33 @@ export function VideoEditor({ metadata, value, onChange, onPublish, onCancel, on
 
   useEffect(() => {
     let cancelled = false;
+    const thumbnailCount = 5;
     const loadThumbs = async () => {
-      const result: string[] = [];
+      // Let users trim immediately; generating seek frames must not block the
+      // timeline from rendering or responding to gestures.
+      setThumbs(Array.from({ length: thumbnailCount }, () => ''));
       if (Platform.OS === 'web' || Constants.appOwnership === 'expo') {
-        if (!cancelled) setThumbs(Array.from({ length: 7 }, () => ''));
         return;
       }
       try {
         const module = await import('expo-video-thumbnails');
-        for (let index = 0; index < 7; index += 1) {
+        const frames = await Promise.all(
+          Array.from({ length: thumbnailCount }, async (_, index) => {
           try {
             const frame = await module.getThumbnailAsync(metadata.uri, {
-              time: Math.max(0, (metadata.durationSeconds * index) / 6) * 1000,
-              quality: 0.45,
+              time: Math.max(0, (metadata.durationSeconds * index) / (thumbnailCount - 1)) * 1000,
+              quality: 0.3,
             });
-            result.push(frame.uri);
+            return frame.uri;
           } catch {
-            result.push('');
+            return '';
           }
-        }
+          }),
+        );
+        if (!cancelled) setThumbs(frames);
       } catch {
-        result.push(...Array.from({ length: 7 }, () => ''));
+        if (!cancelled) setThumbs(Array.from({ length: thumbnailCount }, () => ''));
       }
-      if (!cancelled) setThumbs(result);
     };
     void loadThumbs();
     return () => { cancelled = true; };
