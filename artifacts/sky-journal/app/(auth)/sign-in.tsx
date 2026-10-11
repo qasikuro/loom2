@@ -8,7 +8,9 @@ import { useSSO } from '@clerk/expo';
 // with no setActive, and useClerk().setActive bypasses the cache → 401 on every call.
 import { useSignIn } from '@clerk/expo/legacy';
 import * as WebBrowser from 'expo-web-browser';
+import * as Updates from 'expo-updates';
 import { createOAuthRedirectUrl } from '../../utils/oauthRedirect';
+import { ensureOAuthUpdateIsCurrent } from '../../utils/ensureOAuthUpdate';
 import { type Href, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -50,6 +52,9 @@ export default function SignInScreen() {
   useWarmUpBrowser();
   const { signIn, setActive, isLoaded } = useSignIn();
   const { startSSOFlow } = useSSO();
+  const updateStatus = Updates.useUpdates();
+  const updateStatusRef = useRef(updateStatus);
+  updateStatusRef.current = updateStatus;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -83,6 +88,8 @@ export default function SignInScreen() {
     setGoogleLoading(true);
     setCatchError('');
     try {
+      if (!(await ensureOAuthUpdateIsCurrent(() => updateStatusRef.current))) return;
+
       const redirectUrl = createOAuthRedirectUrl();
       // Do NOT destructure setActive from startSSOFlow — that setActive bypasses
       // the native SecureStore token cache, so getToken() returns null in the APK
