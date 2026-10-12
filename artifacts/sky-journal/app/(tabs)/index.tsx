@@ -163,56 +163,56 @@ function lumiAwareness(
 
   // Social activity — highest priority
   if (witnessed > 0 && saved > 0 && newCircleStories > 0)
-    return `${witnessed} people liked your story, ${saved} saved it — and ${newCircleStories} new ${newCircleStories > 1 ? 'stories' : 'story'} from people you follow`;
+    return `${witnessed} likes and ${saved} saves on your stories. ${newCircleStories} new ${newCircleStories > 1 ? 'stories' : 'story'} from people you follow.`;
   if (witnessed > 0 && newCircleStories > 0)
-    return `${witnessed} ${witnessed > 1 ? 'people' : 'person'} liked your story, and ${newCircleStories} new ${newCircleStories > 1 ? 'posts' : 'post'} from people you follow`;
+    return `${witnessed} ${witnessed > 1 ? 'people liked' : 'person liked'} your story. ${newCircleStories} new ${newCircleStories > 1 ? 'posts' : 'post'} from people you follow.`;
   if (witnessed > 0 && liveCampfires > 0)
-    return `${witnessed} ${witnessed > 1 ? 'people' : 'person'} liked your story — and ${liveCampfires} live chat${liveCampfires > 1 ? 's are' : ' is'} active right now`;
+    return `${witnessed} ${witnessed > 1 ? 'people liked' : 'person liked'} your story. ${liveCampfires} live ${liveCampfires > 1 ? 'chats are' : 'chat is'} active now.`;
   if (witnessed > 0 && saved > 0)
-    return `${witnessed} liked your story and ${saved} ${saved > 1 ? 'people' : 'person'} saved it — your words are reaching people`;
+    return `${witnessed} likes and ${saved} ${saved > 1 ? 'saves' : 'save'} on your stories.`;
   if (witnessed > 0)
     return `${witnessed} ${witnessed > 1 ? 'people' : 'person'} liked your story while you were away, ${n}`;
   if (saved > 0 && newCircleStories > 0)
-    return `${saved} ${saved > 1 ? 'people' : 'person'} saved what you made, and ${newCircleStories} new ${newCircleStories > 1 ? 'posts' : 'post'} from people you follow`;
+    return `${saved} ${saved > 1 ? 'people saved' : 'person saved'} your story. ${newCircleStories} new ${newCircleStories > 1 ? 'posts' : 'post'} from people you follow.`;
   if (saved > 0)
-    return `${saved} ${saved > 1 ? 'people' : 'person'} saved your story — your words stayed with them`;
+    return `${saved} ${saved > 1 ? 'people saved' : 'person saved'} your story.`;
   if (newCircleStories > 0 && liveCampfires > 0)
-    return `${newCircleStories} new ${newCircleStories === 1 ? 'post' : 'posts'} from people you follow, and ${liveCampfires} live chat${liveCampfires > 1 ? 's' : ''} happening now`;
+    return `${newCircleStories} new ${newCircleStories === 1 ? 'post' : 'posts'} from people you follow. ${liveCampfires} live ${liveCampfires > 1 ? 'chats' : 'chat'} now.`;
   if (newCircleStories > 0)
     return newCircleStories === 1
       ? 'Someone you follow posted a new story — go check it out'
       : `${newCircleStories} new stories from people you follow`;
   if (liveCampfires > 0)
-    return `${liveCampfires} live chat${liveCampfires > 1 ? 's are' : ' is'} active right now — join the conversation`;
+    return `${liveCampfires} live ${liveCampfires > 1 ? 'chats are' : 'chat is'} active now. Join if you like.`;
 
   // Progress awareness — when the world is quiet, Lumi reflects on your progress
   if (constellation) {
     const unlocked = constellation.unlockedStars.length;
     if (unlocked === 6)
-      return `You've unlocked all six progress milestones, ${n}. Keep going — there's always more to explore`;
+      return `You reached all 6 milestones, ${n}.`;
     if (unlocked >= 4)
-      return `${unlocked} of 6 milestones unlocked, ${n}. Only ${6 - unlocked} more to go`;
+      return `${unlocked} of 6 milestones reached, ${n}. ${6 - unlocked} left.`;
     if (unlocked >= 2)
-      return `${unlocked} milestones unlocked, ${n} — you're making great progress`;
+      return `${unlocked} milestones reached, ${n}. Nice work.`;
     if (unlocked === 1)
-      return `First milestone unlocked, ${n}${constellation.activeTitle ? ` — ${constellation.activeTitle}` : ''}. Keep it up`;
+      return `You reached your first milestone, ${n}${constellation.activeTitle ? `: ${constellation.activeTitle}` : ''}.`;
     if (constellation.quietStreak >= 5 && !constellation.unlockedStars.includes('quiet'))
-      return `${constellation.quietStreak} days journalling in a row, ${n} — almost at your next milestone`;
+      return `You wrote in your journal ${constellation.quietStreak} days in a row, ${n}.`;
     if (rewardBalance && rewardBalance.stars >= 6)
-      return `✦ ${rewardBalance.stars} stars collected so far, ${n}. You're on a roll`;
+      return `You have ${rewardBalance.stars} stars, ${n}.`;
   }
 
   // Time-aware fallback
-  if (hour < 6)  return `Up late, ${n}? The app is all yours right now`;
+  if (hour < 6)  return `Up late, ${n}? You can read or write a story any time.`;
   if (hour < 12) return todayEntries
-    ? `Good morning, ${n} — you already wrote ${todayEntries} ${todayEntries === 1 ? 'entry' : 'entries'} today`
-    : `Good morning, ${n} — what's on your mind today?`;
+    ? `Good morning, ${n}. You wrote ${todayEntries} ${todayEntries === 1 ? 'journal entry' : 'journal entries'} today.`
+    : `Good morning, ${n}. What would you like to do today?`;
   if (hour < 17) return stories.length
-    ? `You have ${stories.length} ${stories.length === 1 ? 'story' : 'stories'} out there — the afternoon is still yours`
-    : `Good afternoon, ${n} — start something new today`;
-  if (hour < 20) return 'The evening is a great time to write or explore stories';
+    ? `You have ${stories.length} ${stories.length === 1 ? 'story' : 'stories'} to read.`
+    : `Good afternoon, ${n}. Start a story or read one.`;
+  if (hour < 20) return 'Write a story or read one this evening.';
   return todayEntries === 0
-    ? `Good evening, ${n} — a quiet moment to write something`
+    ? `Good evening, ${n}. Want to write a story or journal entry?`
     : `Good evening — you wrote ${todayEntries} ${todayEntries === 1 ? 'entry' : 'entries'} today`;
 }
 

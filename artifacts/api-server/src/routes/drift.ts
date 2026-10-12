@@ -40,6 +40,8 @@ const SYSTEM_PROMPT = `You are Lumi — a warm, perceptive companion in Storigam
 
 Your job: read someone's pre-session check-in and craft a completely personalised session plan that feels like it was written just for them. Be specific to their answers. Be honest. Be gentle when they need gentle, focused when they need focus.
 
+Do not use labels like "drifter", "wanderer", "dreamer", "soul", or "kindred spirit". Avoid phrases about journeys, paths, stars, whispers, or "vibes". Never claim this mode changes a game's maps, timers, rewards, events, or other features. Lumi only gives optional suggestions and session prompts.
+
 Respond ONLY with a valid JSON object. No markdown fences. No explanation. Just the JSON.`;
 
 function buildPrompt(answers: Record<string, string>, characterName?: string, characterMood?: string): string {
@@ -50,18 +52,18 @@ ${characterName ? `\nPlayer name: ${characterName}` : ""}
 ${characterMood ? `Current mood: ${characterMood}` : ""}
 
 Choose the ONE mode that best fits them:
-• challenge — locked in, competitive, wants hard goals, high energy, achievement-hungry
-• flow — peaceful, habitual comfort, no pressure, journey over destination, just drifting
-• echo — escaping, introspective, solo, looking for something they can't quite name
-• social — energised by others, wants to connect, community-driven, thrives in groups
-• clarity — uncertain of direction, wants to map their path before walking it, strategic
-• recovery — drained, burnt out, running on fumes, just showing up is already the win
+• challenge — wants a goal, competition, or a focused session
+• flow — wants a relaxed session at their own pace
+• echo — prefers solo play or quiet exploration
+• social — enjoys playing or talking with other people
+• clarity — wants help choosing what to do next
+• recovery — has less energy and wants an easy session or a break
 
 Return exactly this JSON structure — every field required:
 
 {
   "mode": "echo",
-  "archetype": "The Quiet Seeker",
+  "archetype": "Solo Explorer",
   "confidence": 82,
   "intention": "Tonight is for wandering without a map.",
   "lumiIntro": "I see you choosing this space again. That says something. Let's go somewhere quiet together.",
@@ -84,14 +86,18 @@ Return exactly this JSON structure — every field required:
 }
 
 Rules for quality:
-— archetype: poetic title specific to their answers (e.g. "The Late-Night Grinder", "The Comfort Returner", "The Exit Seeker")
+— Use clear, everyday language that typical gamers can understand.
+— Keep every sentence short and direct. Avoid metaphors, poetic lines, jargon, and abstract labels.
+— archetype: use a plain title such as Focused Player, Relaxed Explorer, Solo Explorer, Team Player, Planner, or Low-Energy Player
 — confidence: 66–95, higher if answers all point the same way
 — stability: 60–92, reflects how settled/grounded they seem right now
-— intention: 1 short sentence, "Tonight is for..." or "This session is about..."
-— lumiIntro: 1–2 sentences, warm and specific — NOT generic. Should reference something real from their answers
-— lumiMessages: exactly 5 strings, 8–18 words each, poetic, feel like Lumi is present in the room with them
-— quests: exactly 3, each typed as one of: discovery, mindful, creation, connection, challenge, rest
-— All text must feel hand-written for this exact person, not templated`;
+— intention: one short, plain sentence about the session
+— lumiIntro: 1–2 short, friendly sentences based on something they actually shared
+— lumiMessages: exactly 5 short strings, 6–12 words each; warm, direct, and useful
+— quests: exactly 3 optional, easy-to-understand suggestions; each title is 3–6 words and each description is one short sentence
+— quests must be safe and appropriate for the game; never ask players to share private details or contact strangers
+— Keep the writing personal without using complicated or flowery language
+— Before returning, check every player-facing sentence for poetic or vague wording and rewrite it in plain language`;
 }
 
 router.post("/drift/analyze", requireAuth, requireAiAccess, async (req, res) => {
@@ -127,15 +133,25 @@ router.post("/drift/analyze", requireAuth, requireAiAccess, async (req, res) => 
       plan.mode = "echo";
     }
 
+    const plainArchetypes: Record<string, string> = {
+      challenge: "Focused Player",
+      flow: "Relaxed Explorer",
+      echo: "Solo Explorer",
+      social: "Team Player",
+      clarity: "Planner",
+      recovery: "Low-Energy Player",
+    };
+    plan.archetype = plainArchetypes[plan.mode];
+
     // Ensure arrays have expected shapes
     if (!Array.isArray(plan.lumiMessages) || plan.lumiMessages.length < 3) {
-      plan.lumiMessages = [plan.lumiIntro ?? "I'm here with you.", "You're doing well.", "Keep going.", "This moment is yours.", "The stars are watching."];
+      plan.lumiMessages = [plan.lumiIntro ?? "I'm here if you need help.", "Want help choosing what to do next?", "Keep going if you want to.", "Take your time.", "You can stop whenever you like."];
     }
     if (!Array.isArray(plan.quests) || plan.quests.length < 1) {
-      plan.quests = [{ title: "Just be here", description: "No goals — presence is enough.", type: "mindful" }];
+      plan.quests = [{ title: "Choose one game goal", description: "Pick one thing you would like to do in the game.", type: "gameplay" }];
     }
     if (!Array.isArray(plan.evolution) || plan.evolution.length < 3) {
-      plan.evolution = ["Wanderer", "Seeker", "Trail Blazer"];
+      plan.evolution = ["Getting Started", "Making Progress", "Ready for More"];
     }
 
     plan.confidence = Math.max(66, Math.min(95, Number(plan.confidence) || 78));
@@ -167,7 +183,9 @@ Rules:
 - Be specific to what they say. Don't give generic advice.
 - Ask one gentle question sometimes, but don't interrogate.
 - Be honest and grounding, not just positive. If they're struggling, acknowledge it — don't skip to "you've got this."
-- Use very occasional soft poetic language, but mostly just speak plainly and warmly.
+- Keep your tone warm, helpful, and direct. Avoid metaphors, poetic language, jargon, and vague advice.
+- Keep suggestions optional and focused on the game.
+- Do not use labels like "drifter", "wanderer", "dreamer", "soul", or "kindred spirit". Avoid phrases about journeys, paths, stars, whispers, or "vibes".
 - Never use bullet points, headers, or lists. Just speak.
 - Don't say "I understand" or "Of course" — just respond to the actual thing they said.`;
 

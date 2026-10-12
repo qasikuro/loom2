@@ -33,21 +33,21 @@ type SessionResult = { elapsed: number; questDone: number; momentsFound: number 
 // ─── Survey data ─────────────────────────────────────────────────────────────
 const QUESTIONS = [
   {
-    id: 'session', q: 'How are you stepping in today?',
+    id: 'session', q: 'What kind of game session do you want today?',
     opts: [
-      { id: 'locked_in',     label: 'Locked In',           desc: "Numbers up, let's achieve goals",      em: '⚔️' },
-      { id: 'just_existing', label: 'Just Existing',        desc: 'No pressure, just here',               em: '🌙' },
-      { id: 'grinding',      label: 'Grinding Again',       desc: "Let's go, no giving up",               em: '🔥' },
-      { id: 'escaping',      label: 'Escaping Reality',     desc: "Don't know what I'm doing here",       em: '🌀' },
+      { id: 'locked_in',     label: 'Focused',              desc: 'I want to work toward a goal.',          em: '⚔️' },
+      { id: 'just_existing', label: 'Relaxed',              desc: 'I want to play without a plan.',         em: '🌙' },
+      { id: 'grinding',      label: 'Ready to keep going',  desc: 'I want to make more progress.',          em: '🔥' },
+      { id: 'escaping',      label: 'Need a change',        desc: 'I want a break from my usual routine.',  em: '🌀' },
     ],
   },
   {
-    id: 'depth', q: 'How deep did you go recently?',
+    id: 'depth', q: 'How long did you play last time?',
     opts: [
-      { id: 'quick',      label: 'Just 10 mins',            desc: 'In and out, nice and clean',            em: '⚡' },
-      { id: 'one_hour',   label: 'About 1 hour',             desc: 'A proper session',                     em: '🕐' },
-      { id: 'two_three',  label: '2 – 3 hours',              desc: 'Deep in it',                           em: '🌊' },
-      { id: 'three_plus', label: '3+ hours',                 desc: 'I looked outside and it was morning',  em: '🌄' },
+      { id: 'quick',      label: 'About 10 minutes',         desc: 'A short session.',                     em: '⚡' },
+      { id: 'one_hour',   label: 'About 1 hour',             desc: 'A regular session.',                   em: '🕐' },
+      { id: 'two_three',  label: '2–3 hours',                desc: 'A longer session.',                    em: '🌊' },
+      { id: 'three_plus', label: 'More than 3 hours',        desc: 'A very long session.',                 em: '🌄' },
     ],
   },
   {
@@ -55,38 +55,53 @@ const QUESTIONS = [
     opts: [
       { id: 'once_week',  label: 'Once a week',             desc: 'Quality over quantity',                em: '📅' },
       { id: 'daily',      label: 'Daily',                   desc: "It's part of the routine",             em: '⭐' },
-      { id: 'multiple',   label: 'Multiple times daily',    desc: 'It keeps calling me back',             em: '🔔' },
-      { id: 'instantly',  label: 'Close → reopen instantly',desc: "Can't stop, won't stop",               em: '🌀' },
+      { id: 'multiple',   label: 'Several times a day',     desc: 'I play more than once most days.',      em: '🔔' },
+      { id: 'instantly',  label: 'Several times in a row',  desc: 'I often reopen it soon after playing.', em: '🌀' },
     ],
   },
   {
     id: 'who', q: 'Who do you usually play with?',
     opts: [
       { id: 'friends',  label: 'Friends',                   desc: 'The squad shows up',                   em: '🤝' },
-      { id: 'randoms',  label: 'Randoms',                   desc: "Whoever's around",                     em: '🌍' },
+      { id: 'randoms',  label: 'Other players',             desc: 'People I meet in the game.',            em: '🌍' },
       { id: 'solo',     label: 'Solo only',                 desc: 'My world, my rules',                   em: '🌙' },
-      { id: 'menus',    label: 'Just vibing in menus',      desc: 'The vibe is enough',                   em: '✨' },
+      { id: 'menus',    label: 'Mostly in menus',           desc: 'I like setting things up or browsing.', em: '✨' },
     ],
   },
   {
-    id: 'pull', q: 'What keeps pulling you back?',
+    id: 'pull', q: 'What do you enjoy most about the game?',
     opts: [
-      { id: 'progress',    label: 'Progress',               desc: 'Gotta see those numbers go up',        em: '📈' },
-      { id: 'habit',       label: 'Habit',                  desc: "It's just what I do now",              em: '🔁' },
-      { id: 'comfort',     label: 'Comfort',                desc: 'It feels safe here',                   em: '🏡' },
-      { id: 'competition', label: 'Competition',            desc: 'I will not be last',                   em: '🏆' },
+      { id: 'progress',    label: 'Making progress',        desc: 'I like seeing what I have achieved.',  em: '📈' },
+      { id: 'habit',       label: 'My routine',              desc: 'Playing is part of my day.',           em: '🔁' },
+      { id: 'comfort',     label: 'It helps me relax',       desc: 'I enjoy spending time in the game.',   em: '🏡' },
+      { id: 'competition', label: 'Competing',               desc: 'I like testing my skills.',            em: '🏆' },
     ],
   },
   {
     id: 'energy', q: 'How would you describe your energy right now?',
     opts: [
-      { id: 'clear',   label: 'Clear and ready',            desc: "Focused, let's go",                    em: '☀️' },
-      { id: 'calm',    label: 'Calm but here',              desc: 'Peaceful and present',                 em: '🌙' },
-      { id: 'drained', label: 'Drained but pushing',        desc: 'Running on fumes',                     em: '🌧️' },
-      { id: 'wired',   label: 'Wired and intense',          desc: "Brain won't stop, let's use it",      em: '⚡' },
+      { id: 'clear',   label: 'Ready',                      desc: 'I have energy to play.',               em: '☀️' },
+      { id: 'calm',    label: 'Calm',                       desc: 'I want a quiet session.',              em: '🌙' },
+      { id: 'drained', label: 'Tired',                      desc: 'I have less energy than usual.',       em: '🌧️' },
+      { id: 'wired',   label: 'Restless',                   desc: 'I have energy but feel unsettled.',    em: '⚡' },
     ],
   },
 ];
+
+const LUMI_DATA_NOTICE: Record<string, string> = {
+  en: 'Your answers are sent to the AI service to set up your session.',
+  ja: '回答はセッションを設定するためにAIサービスへ送信されます。',
+  es: 'Tus respuestas se envían al servicio de IA para preparar tu sesión.',
+  tr: 'Yanıtların oturumunu hazırlamak için yapay zekâ hizmetine gönderilir.',
+  fr: 'Vos réponses sont envoyées au service d’IA pour préparer votre session.',
+  de: 'Deine Antworten werden an den KI-Dienst gesendet, um deine Session einzurichten.',
+  pt: 'Suas respostas são enviadas ao serviço de IA para preparar sua sessão.',
+  ko: '답변은 세션을 준비하기 위해 AI 서비스로 전송돼요.',
+  zh: '你的回答会发送给 AI 服务，用于设置本次游戏时段。',
+  ru: 'Ваши ответы отправляются в сервис ИИ, чтобы настроить сеанс.',
+  ar: 'تُرسل إجاباتك إلى خدمة الذكاء الاصطناعي لإعداد جلستك.',
+  it: 'Le tue risposte vengono inviate al servizio AI per preparare la sessione.',
+};
 
 // ─── Mode config ──────────────────────────────────────────────────────────────
 // ─── AI plan (from /api/drift/analyze) ───────────────────────────────────────
@@ -118,111 +133,111 @@ interface ModeConfig {
 
 const MODES: Record<string, ModeConfig> = {
   challenge: {
-    name: 'Challenge Mode', archetype: 'The Locked-In Achiever', symbol: '⚔️',
+    name: 'Challenge Mode', archetype: 'Focused Player', symbol: '⚔️',
     color: '#FF7070', gradient: ['#2A0808', '#3E1010', '#4E1818'] as const,
     bg: ['#1A0404', '#2A0808'] as const,
-    tagline: 'High focus. Hard goals. No ceiling.',
-    description: "You're locked in and ready to push. You discover things through persistence — and right now, that engine is running hot.",
-    traits: ['Goal-driven', 'High intensity', 'Achievement-focused'],
-    perks: ['Hard Objectives Active', 'Adaptive Events On', 'Streak Tracking'],
-    whatChanged: ['Hard objectives are now available', 'Achievement tracking is enabled', 'Competitive events will surface', 'Lumi tracks your milestones'],
-    lumiIntro: "I can feel your focus from here. Let's channel it into something real.",
-    lumiSession: "Let's go. I'll be right there pushing with you. ⚔️",
-    quest: 'Complete 3 objectives without stopping', questTotal: 3,
-    events: ['⚔️ Hard Mode engaged — objectives scaled up', '🔥 Streak building — keep the momentum!', '📊 You\'re performing in the top tier today', '🏆 Milestone reached: Relentless'],
-    softRescue: 'Try the harder path. It might be what you\'re really looking for.',
-    reflection: "You pushed hard, reached further, and didn't stop when it got difficult. That's not just a session — that's character.",
-    evolution: ['Locked In', 'Peak Performer', 'Trail Blazer'],
+    tagline: 'Choose a goal and work toward it.',
+    description: 'You want to focus and make progress. Pick one goal for this session.',
+    traits: ['Likes goals', 'Ready to focus', 'Enjoys a challenge'],
+    perks: ['Optional goal ideas', 'Small challenges', 'A session recap'],
+    whatChanged: ['Choose a goal if you want one', 'Try a small challenge', 'Track what you did', 'Ask Lumi for a new idea'],
+    lumiIntro: 'Want to choose one goal for this session?',
+    lumiSession: 'Pick a goal, and take it one step at a time.',
+    quest: 'Choose one goal to work on', questTotal: 1,
+    events: ['Choose a goal for this session.', 'Want a challenge? Pick one to try.', 'Take one step at a time.', 'You can change your goal whenever you like.'],
+    softRescue: 'Want a challenge? Try one small step first.',
+    reflection: 'What did you try? What would you like to do next time?',
+    evolution: ['Focused Player', 'Goal Setter', 'Challenge Seeker'],
     stability: 88,
   },
   flow: {
-    name: 'Flow Mode', archetype: 'The Peaceful Drifter', symbol: '🌊',
+    name: 'Flow Mode', archetype: 'Relaxed Explorer', symbol: '🌊',
     color: '#6BC5FF', gradient: ['#08182A', '#102238', '#183248'] as const,
     bg: ['#040E1A', '#08182A'] as const,
-    tagline: 'Calm, steady, pressure-free.',
-    description: "You're here for the journey, not the destination. Flow Mode removes pressure and lets beauty surface naturally — because that's how you move.",
-    traits: ['Relaxed focus', 'Journey-minded', 'Pressure-free'],
-    perks: ['Pressure Removed', 'Ambient Depth +', 'Rare Drops Increased'],
-    whatChanged: ['Timers and pressure are off', 'Ambient beauty is amplified', 'Rare moments surface more often', 'Lumi guides without pushing'],
-    lumiIntro: "Take your time. I'll walk with you — no rush, no pressure. Just the path.",
-    lumiSession: 'No rush. The path will always open for you. 🌊',
-    quest: 'Explore one new area without a timer', questTotal: 1,
-    events: ['🌊 Calm zone active — breathe easy', '🌿 A hidden path appears...', '🎵 Ambient depth engaged', '✦ Something beautiful found you'],
-    softRescue: 'Try the northern bridge. Take your time with it.',
-    reflection: "You embraced the calm, explored deeply, and stayed true to your path. That's growth. Keep going.",
-    evolution: ['Peaceful Drifter', 'Flow Wanderer', 'Eternal Drifter'],
+    tagline: 'Take your time and play your way.',
+    description: 'Take your time and play at your own pace. Lumi can suggest something to try.',
+    traits: ['Likes to explore', 'Easygoing', 'Plays at their own pace'],
+    perks: ['Optional ideas', 'Simple session goals', 'Lumi is here if you need help'],
+    whatChanged: ['Choose an idea if you want one', 'Take breaks when you like', 'Explore at your own pace', 'Ask Lumi for help'],
+    lumiIntro: "Take your time. Explore wherever you like. I'm here if you need help.",
+    lumiSession: 'No rush. Pick a place and explore at your own pace.',
+    quest: 'Explore a new area at your own pace', questTotal: 1,
+    events: ['Take your time.', 'Choose somewhere you want to explore.', 'Take a break whenever you need one.', 'Ask Lumi for an idea if you get stuck.'],
+    softRescue: 'Want a change? Try a different place in your game.',
+    reflection: 'What did you enjoy? Is there anything you want to try next time?',
+    evolution: ['Relaxed Explorer', 'Curious Player', 'World Explorer'],
     stability: 82,
   },
   echo: {
-    name: 'Echo Mode', archetype: 'The Lone Wanderer', symbol: '🌙',
+    name: 'Echo Mode', archetype: 'Solo Explorer', symbol: '🌙',
     color: '#B090FF', gradient: ['#100828', '#1C1040', '#281850'] as const,
     bg: ['#080418', '#100828'] as const,
-    tagline: 'Explore, reflect, discover.',
-    description: "You enjoy solitude and exploration. You discover things others miss. Echo Mode gives you space to go deep — with a companion who knows when to stay quiet.",
-    traits: ['Independent', 'Deep Thinker', 'Exploration Seeker'],
-    perks: ['Guided Hints On', 'Discovery Boost', 'Companion Enabled'],
-    whatChanged: ['Cutting guidance in the world', 'Faster resource discovery', 'Calmer overall experience', 'Companion walks with you quietly'],
-    lumiIntro: "I'll be here with you. I won't push — just walk alongside.",
-    lumiSession: "I'll be here with you. Need anything, just ask. 🌙",
-    quest: 'Find 3 hidden places no one talks about', questTotal: 3,
-    events: ['🌙 The old guide whispers a hint...', '✧ A hidden constellation appears above you', '🔍 Something glowing just over there...', '🌙 A secret path opened for you'],
-    softRescue: 'The old guide whispers: Try the northern bridge. It may help.',
-    reflection: "You walked alone and found things others miss. Every quiet step you took was a discovery.",
-    evolution: ['Lone Wanderer', 'Path Seeker', 'Trail Blazer'],
+    tagline: 'Explore on your own terms.',
+    description: 'You like exploring by yourself. Go at your own pace, and ask Lumi for an idea if you want one.',
+    traits: ['Enjoys solo play', 'Likes to explore', 'Sets their own pace'],
+    perks: ['Optional suggestions', 'Simple session goals', 'Chat with Lumi when you want'],
+    whatChanged: ['Choose a suggestion if you want one', 'Explore at your own pace', 'Take a break whenever you like', 'Ask Lumi for help'],
+    lumiIntro: 'You can explore on your own. Ask me if you want an idea.',
+    lumiSession: 'No rush. Choose where you want to go next.',
+    quest: 'Explore a place you have not visited before', questTotal: 1,
+    events: ['Take your time.', 'Choose somewhere you want to explore.', 'You can play on your own or ask Lumi for help.', 'Take a break whenever you need one.'],
+    softRescue: 'Want a change? Try a different area in your game.',
+    reflection: 'Did you enjoy exploring? What would you like to do next time?',
+    evolution: ['Solo Explorer', 'Curious Player', 'Path Finder'],
     stability: 79,
   },
   social: {
-    name: 'Social Mode', archetype: 'The Social Hunter', symbol: '✨',
+    name: 'Social Mode', archetype: 'Team Player', symbol: '✨',
     color: '#6BD48A', gradient: ['#08200E', '#102A16', '#183A1E'] as const,
     bg: ['#04100A', '#08200E'] as const,
-    tagline: 'Connect, level up, vibe.',
-    description: "You thrive around others. Social Mode activates party boosts, surfaces nearby players to connect with, and turns shared moments into something lasting.",
-    traits: ['Community-driven', 'Collaborative', 'Socially energized'],
-    perks: ['Party Finder Active', 'Group Rewards +', 'Social Events On'],
-    whatChanged: ['Party finder is now live', 'Group rewards are doubled', 'Social events are surfacing', 'Lumi introduces you to kind souls'],
-    lumiIntro: "There are good people out here. Let's find them together.",
-    lumiSession: 'A kind soul is nearby. Want to join their journey? ✨',
-    quest: 'Connect with one new player today', questTotal: 1,
-    events: ['👥 A kind soul is nearby!', '🎉 Group bonus activated', '🌟 Someone just joined your path', '💫 A community moment is forming'],
-    softRescue: 'A kind soul spotted something nearby. They thought you should know.',
-    reflection: "You reached out, connected, and made this world feel less alone. That energy stays with the people you touched.",
-    evolution: ['Social Hunter', 'Community Weaver', 'Soul Connector'],
+    tagline: 'Play with people you know.',
+    description: 'You enjoy playing with others. You can plan a group activity or message a friend.',
+    traits: ['Likes playing with others', 'Enjoys teamwork', 'Values time with friends'],
+    perks: ['Ideas for group play', 'Optional team goals', 'Time to catch up'],
+    whatChanged: ['Choose a group activity if you want one', 'Try a team goal', 'Invite someone you know', 'Ask Lumi for an idea'],
+    lumiIntro: 'Want to play with someone today? We can think of something to do together.',
+    lumiSession: 'If you like, invite a friend you know to play.',
+    quest: 'Choose a game activity to do with a friend', questTotal: 1,
+    events: ['Want company? Message a friend you know.', 'Pick a game activity to do together.', 'You can play solo or with friends.', 'Ask Lumi for an idea for your next group session.'],
+    softRescue: 'If you want company, message a friend you know.',
+    reflection: 'Did you play or chat with someone? What would you like to do together next time?',
+    evolution: ['Team Player', 'Good Teammate', 'Friend Finder'],
     stability: 84,
   },
   clarity: {
-    name: 'Clarity Mode', archetype: 'The Strategic Mind', symbol: '🔮',
+    name: 'Clarity Mode', archetype: 'Planner', symbol: '🔮',
     color: '#FFD86F', gradient: ['#1A1200', '#2A1E00', '#3A2A00'] as const,
     bg: ['#0E0A00', '#1A1200'] as const,
-    tagline: 'Find direction. No stress.',
-    description: "You want to understand your path before you walk it. Clarity Mode maps the way forward — one intentional step at a time.",
-    traits: ['Strategic', 'Progress-aware', 'Direction-seeking'],
-    perks: ['Smart Suggestions On', 'Path Mapped', 'Priority Visible'],
-    whatChanged: ['Smart quest suggestions are on', 'Your progress is mapped clearly', 'The priority path is highlighted', 'Lumi helps you choose wisely'],
-    lumiIntro: "Let's figure this out together. I can see a few paths forward from here.",
-    lumiSession: "Let's figure this out together. I see a path forward. 🔮",
-    quest: 'Identify your top priority and take one step', questTotal: 1,
-    events: ['🔮 Smart suggestion available', '📍 Priority path identified', '💡 New insight unlocked', '🗺️ Your progress map was updated'],
-    softRescue: 'Start with the thing that feels most stuck. That\'s usually the right move.',
-    reflection: "You chose to understand before you acted. That kind of patience shapes everything that follows.",
-    evolution: ['Strategic Mind', 'Pathfinder', 'Visionary'],
+    tagline: 'Choose what to do next.',
+    description: 'You want a clear plan. Pick one thing to do first, then decide what comes next.',
+    traits: ['Likes a plan', 'Thinks things through', 'Prefers clear steps'],
+    perks: ['Simple suggestions', 'One goal at a time', 'A session recap'],
+    whatChanged: ['Choose one thing to focus on', 'Break a goal into small steps', 'Change your plan any time', 'Ask Lumi for help deciding'],
+    lumiIntro: 'What would you like to do first? I can help you choose.',
+    lumiSession: 'Choose one thing to do next. We can keep it simple.',
+    quest: 'Choose one thing to do and take the first step', questTotal: 1,
+    events: ['What would you like to do next?', 'Choose one goal to focus on.', 'You can change your plan at any time.', 'Ask Lumi if you want help choosing.'],
+    softRescue: 'Start with one small step. You can decide what comes next later.',
+    reflection: 'What did you choose to do? Would you plan it the same way next time?',
+    evolution: ['Planner', 'Clear Thinker', 'Goal Planner'],
     stability: 81,
   },
   recovery: {
-    name: 'Recovery Mode', archetype: 'The Burnout Drifter', symbol: '🌸',
+    name: 'Recovery Mode', archetype: 'Low-Energy Player', symbol: '🌸',
     color: '#FF89B0', gradient: ['#200814', '#301220', '#401A2C'] as const,
     bg: ['#100408', '#200814'] as const,
-    tagline: 'You matter. Take it slow.',
-    description: "You need rest, not pressure. Recovery Mode removes all friction and gives you gentle wins, soft support, and the reminder that just showing up is already enough.",
-    traits: ['Burnout-aware', 'Needs gentleness', 'Recovery-focused'],
-    perks: ['All Pressure Off', 'Easy Moments Surface', 'Gentle Check-ins'],
-    whatChanged: ['All timers and pressure are removed', 'Easy wins will surface for you', 'Mood is gently lifted', 'Lumi checks in softly, without asking too much'],
-    lumiIntro: "Hey. You showed up. I know that wasn't easy. I'm proud of you.",
-    lumiSession: "Hey. You showed up. That's already enough. 🌸",
-    quest: 'Do one thing that brings you peace today', questTotal: 1,
-    events: ['🌸 Easy moment available nearby', '☕ Take it slow — you\'re doing great', '✨ A gentle uplift found you', '🌷 A peaceful moment is yours if you want it'],
-    softRescue: 'Take it slow. There\'s no rush here. Rest is part of the journey.',
-    reflection: "You showed up even when it was hard. That's not weakness — that's the bravest thing there is.",
-    evolution: ['Burnout Drifter', 'Gentle Soul', 'Renewed Spirit'],
+    tagline: 'Keep it easy today.',
+    description: 'If you have less energy, keep this session simple. You can take a break or stop whenever you like.',
+    traits: ['Wants an easy session', 'Taking it slow', 'Likes simple goals'],
+    perks: ['Optional easy goals', 'Breaks when you need them', 'Friendly check-ins'],
+    whatChanged: ['Choose one small thing to try', 'Take a break whenever you like', 'Skip any suggestion', 'Ask Lumi for help'],
+    lumiIntro: 'You do not need to do a lot today. Try one small thing, or take a break.',
+    lumiSession: 'Go at your own pace. It is okay to stop or rest.',
+    quest: 'Choose one small thing to try, or take a break', questTotal: 1,
+    events: ['Keep it simple today.', 'Take a break if you need one.', 'You can stop whenever you like.', 'Ask Lumi for an easy idea.'],
+    softRescue: 'If you are tired, pause the game or stop for today.',
+    reflection: 'Did anything feel fun or relaxing today? It is okay if you just rested.',
+    evolution: ['Easy Start', 'Steady Player', 'Ready Again'],
     stability: 73,
   },
 };
@@ -396,54 +411,54 @@ function Constellation({ color = '#B090FF' }: { color?: string }) {
 // ─── Lumi quips (tapped reactions, mode-specific) ─────────────────────────────
 const LUMI_QUIPS: Record<string, string[]> = {
   challenge: [
-    "You're doing the thing. The actual thing. *proud ghost noises* ✦",
-    "I would help but honestly you look like you don't need it. Intimidatingly capable.",
-    "Some people dream about what you're doing right now. You're living it.",
-    "Whatever just happened — I saw it. That was real.",
-    "Okay but you know you're kind of crushing this, right?",
+    "Want help choosing your next goal?",
+    "You can take this one step at a time.",
+    "Need a new challenge? I can suggest one.",
+    "You can change your goal whenever you like.",
+    "How is your goal going so far?",
   ],
   flow: [
-    "Shhh. Don't break it. You're in it. 🌊",
-    "I wasn't going to say anything but you look *really* at peace right now.",
-    "This is the part of the movie where everything quietly goes right.",
-    "You found your pace. That's rare. Keep that.",
-    "The stars are literally arranging themselves around your vibe tonight.",
+    "Take your time.",
+    "Play at your own pace.",
+    "Want an idea for what to do next?",
+    "You can take a break whenever you like.",
+    "Is there somewhere you want to explore?",
   ],
   echo: [
-    "Fun fact: you're doing better than you think. Not fluff — actual fact.",
-    "I've been watching quietly. You're exploring in exactly the right direction.",
-    "There's something about you tonight. Can't quite put my finger on it.",
-    "The fact that you're here means something. Even if you don't know what yet.",
-    "I see you. Even when you're moving quietly in the dark. Especially then.",
+    "Want to explore somewhere new?",
+    "You can play on your own or ask me for an idea.",
+    "No rush. Choose where you want to go.",
+    "Need help deciding what to do next?",
+    "Take a break whenever you need one.",
   ],
   social: [
-    "You have the energy of someone who makes people feel genuinely seen. Use that.",
-    "If warmth were a skill you'd be fully maxed out. No upgrades needed.",
-    "Other people don't know it yet, but they're glad you're here.",
-    "I like you. There. I said it. No take-backs.",
-    "You light up spaces without trying. That's a whole thing.",
+    "Want to invite a friend you know to play?",
+    "What would you like to do together?",
+    "You can play with friends or on your own.",
+    "Need an idea for a group session?",
+    "A quick message can help make a plan.",
   ],
   clarity: [
-    "The answer is closer than you think. Statistically speaking.",
-    "You're literally using your brain to solve problems in real time. That's impressive.",
-    "You're asking the right questions. Most people never even get that far.",
-    "The fog always lifts eventually. You're already walking through it.",
-    "Okay wait — what you just figured out? That matters.",
+    "What would you like to do first?",
+    "Choose one goal to focus on.",
+    "You can change your plan at any time.",
+    "Want help deciding what to do next?",
+    "A small first step is enough.",
   ],
   recovery: [
-    "Showing up when everything is heavy? That's the hardest version of brave.",
-    "I'm not going anywhere. We can both be tired here. It's fine.",
-    "You don't have to be okay. But I'm really glad you're here.",
-    "Rest is not a reward. It's the work. You are doing the work right now.",
-    "Hey. You came back. That's everything.",
+    "It is okay to keep this session short.",
+    "Take a break if you need one.",
+    "You can stop whenever you like.",
+    "Want an easy idea, or would you rather rest?",
+    "There is no need to finish a goal today.",
   ],
 };
 
 const LUMI_QUIPS_DEFAULT = [
-  "Hey. You're doing something real right now. ✦",
-  "I see you. That's not nothing.",
-  "Whatever brought you here tonight — I'm glad it did.",
-  "You're the kind of person who shows up. That matters more than you think.",
+  "What would you like help with?",
+  "Want an idea for your next game session?",
+  "You can take a break whenever you like.",
+  "Tell me what you want to do, and I will try to help.",
 ];
 
 // ─── Lumi emotion system ──────────────────────────────────────────────────────
@@ -1011,11 +1026,14 @@ function TraitPill({ label, color }: { label: string; color: string }) {
 // ════════════════════════════════════════════════════════════════════════════
 
 function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const enter  = useRef(new Animated.Value(0)).current;
   const enterY = enter.interpolate({ inputRange: [0, 1], outputRange: [36, 0] });
+  const language = (i18n.resolvedLanguage ?? i18n.language).split('-')[0];
+  const surveyIntro = t('feature.drift.surveyIntro').split('\n')[0];
+  const dataNotice = LUMI_DATA_NOTICE[language] ?? LUMI_DATA_NOTICE.en;
   useEffect(() => {
     Animated.timing(enter, { toValue: 1, duration: 900, delay: 150, useNativeDriver: true }).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1041,7 +1059,7 @@ function WelcomeScreen({ onStart, name }: { onStart: () => void; name: string })
         </Animated.Text>
         <Animated.View style={{ opacity: enter, backgroundColor: 'rgba(176,144,255,0.07)', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(176,144,255,0.16)', paddingHorizontal: 20, paddingVertical: 14, marginBottom: 32, width: '100%' }}>
           <Text style={{ fontSize: 12.5, fontFamily: 'Satoshi-Regular', color: 'rgba(190,170,255,0.72)', textAlign: 'center', lineHeight: 20 }}>
-            {t('feature.drift.surveyIntro')}
+            {surveyIntro}{'\n'}{dataNotice}
           </Text>
         </Animated.View>
         <Animated.View style={{ opacity: enter, alignItems: 'center', gap: 12, width: '100%' }}>
@@ -1468,14 +1486,14 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
   // Phase-aware Lumi messages — early pool, mid pool, deep pool, wind-down pool
   const allLumiMsgs = cfg.lumiMessages?.length
     ? cfg.lumiMessages
-    : [cfg.lumiSession, 'You\'re doing great.', 'I\'m watching the stars with you.', 'This moment is yours.', 'Still here with you.'];
+    : [cfg.lumiSession, 'Want help choosing what to do next?', 'I\'m here if you need help.', 'Take your time.', 'Hope you\'re enjoying the game.'];
 
   // Spread 5 messages across 4 phases; cycle within current phase's message
   const _phaseMsg = allLumiMsgs[Math.min(phase, allLumiMsgs.length - 1)];
   const windDownMsgs = [
-    'You\'re almost at the end. Let that feel like something.',
-    'This is the part where you take a breath and look back.',
-    'Nearly there. You showed up. That matters.',
+    'Your session is almost over. You can finish whenever you like.',
+    'What did you enjoy about this session?',
+    'Would you like to play again later?',
   ];
   const currentLumiMsg = phase === 3
     ? windDownMsgs[lumiIdx % windDownMsgs.length]
@@ -1520,10 +1538,10 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
   // Ambient whispers
   useEffect(() => {
     const pool = [
-      'still watching', 'you\'re doing it', 'I see you',
-      'right here with you', 'breathe', 'this moment is real',
-      'not going anywhere', 'you\'re still here', 'something is shifting',
-      'stay with it', 'I\'m proud of you', 'keep going',
+      'Need an idea?', 'Take your time', 'I’m here if you need help',
+      'Want to take a break?', 'How is the game going?', 'You can change your goal',
+      'No rush', 'Want help choosing?', 'Keep it simple',
+      'You can stop whenever you like', 'What would you like to do next?', 'Keep going if you want to',
     ];
     let idx = 0;
     function fire() {
@@ -1743,7 +1761,7 @@ function SessionScreen({ cfg, sessionStart, duration, onEnd, onChat }: {
             <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.5)', letterSpacing: 1.5, marginBottom: 8 }}>{t('feature.drift.yourCompanion')}</Text>
             <Text style={{ fontSize: 14, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', marginBottom: 4 }}>Need to talk?</Text>
             <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(210,195,255,0.72)', marginBottom: 14 }}>
-              Whatever's on your mind, she's present. No pressure.
+              Ask Lumi for help with your game session or an idea for what to do next.
             </Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
@@ -2020,10 +2038,10 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
         <Animated.View style={{ opacity: enter, alignItems: 'center' }}>
           <LumiCharacter color={cfg.color} size={110} />
           <Text style={{ fontSize: 34, fontFamily: 'Satoshi-Bold', color: '#F0E6FF', textAlign: 'center', marginTop: 32, marginBottom: 12, lineHeight: 42 }}>
-            See you soon,{'\n'}dreamer ✦
+            See you soon.
           </Text>
           <Text style={{ fontSize: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.60)', textAlign: 'center', lineHeight: 24, marginBottom: 56 }}>
-            The stars will be here when you return.
+            Come back anytime to start another session.
           </Text>
           <PrimaryBtn label="Home" onPress={onHome} color={cfg.color} />
         </Animated.View>
@@ -2035,34 +2053,34 @@ function FarewellScreen({ cfg, onHome }: { cfg: ModeConfig; onHome: () => void }
 // ─── Fallback quest tasks (when AI plan not available) ────────────────────────
 const FALLBACK_QUESTS: Record<string, DriftQuest[]> = {
   challenge: [
-    { title: 'Set one clear goal for this session', description: 'Write it down or say it aloud. What\'s the one thing you want to finish tonight?', type: 'challenge' },
-    { title: '5-breath reset between tasks', description: 'When you switch tasks, pause. Five slow breaths. Reset your focus before the next thing.', type: 'mindful' },
-    { title: 'Log one obstacle you solved', description: 'What got in your way today, and how did you handle it? Name it.', type: 'creation' },
+    { title: 'Choose one game goal', description: 'Pick one thing you would like to do in the game.', type: 'challenge' },
+    { title: 'Try one small challenge', description: 'Choose a challenge that feels right for this session.', type: 'challenge' },
+    { title: 'Check your progress', description: 'Think about what you have done so far.', type: 'creation' },
   ],
   flow: [
-    { title: 'Pick one thing and stay with it', description: 'No switching for 15 minutes. Just this one thing. Let yourself sink in.', type: 'challenge' },
-    { title: 'Remove one distraction from your space', description: 'Silence a notification. Close a tab. Create one small quiet.', type: 'mindful' },
-    { title: 'Notice the moment you enter flow', description: 'When it happens — that absorbed, effortless feeling — write one word about it.', type: 'discovery' },
+    { title: 'Explore a new area', description: "Visit a place in the game you haven't seen before.", type: 'discovery' },
+    { title: 'Go somewhere you like', description: 'Visit a place in the game that you enjoy.', type: 'discovery' },
+    { title: 'Take a short break', description: 'Pause the game and come back when you want.', type: 'rest' },
   ],
   echo: [
-    { title: 'Find something most people overlook', description: 'A detail, a sound, a path no one seems to take. Look for it intentionally.', type: 'discovery' },
-    { title: '60 seconds of complete stillness', description: 'Stop. Just breathe and let the world exist around you for one full minute.', type: 'mindful' },
-    { title: 'Capture one moment worth keeping', description: 'Something you\'d want to remember from tonight. A screenshot, a word, a feeling.', type: 'creation' },
+    { title: 'Explore a new area', description: 'Visit a place in the game you have not seen before.', type: 'discovery' },
+    { title: 'Choose what to do next', description: 'Pick one thing you want to try in the game.', type: 'gameplay' },
+    { title: 'Take a short break', description: 'Pause the game and come back when you want.', type: 'rest' },
   ],
   social: [
-    { title: 'Say something kind to someone', description: 'One genuine message to another person — a player, a friend, anyone in your world.', type: 'connection' },
-    { title: 'Do something alongside someone', description: 'A quest, a walk, anything. Just be present with another person for a moment.', type: 'connection' },
-    { title: 'Write what you value about someone close to you', description: 'One sentence about someone who makes your experience better. Just notice it.', type: 'creation' },
+    { title: 'Invite a friend you know', description: 'Ask a friend if they would like to play with you.', type: 'connection' },
+    { title: 'Choose a group activity', description: 'Pick something you and your friends can do together.', type: 'connection' },
+    { title: 'Plan your next game', description: 'Ask a friend what they would like to play next time.', type: 'connection' },
   ],
   clarity: [
-    { title: 'Write your biggest open question', description: 'The thing you\'re still figuring out. Get it out of your head and somewhere real.', type: 'creation' },
-    { title: 'Make one small decision you\'ve been sitting on', description: 'Decide now, even if imperfectly. Movement beats perfection.', type: 'challenge' },
-    { title: 'Name three things you know for certain', description: 'Ground yourself. What\'s solid right now? What\'s actually true?', type: 'mindful' },
+    { title: 'Choose one thing to do', description: 'Pick one goal for this game session.', type: 'gameplay' },
+    { title: 'Break a goal into steps', description: 'Choose one small step to start with.', type: 'challenge' },
+    { title: 'Make a simple plan', description: 'Decide what you want to do first in the game.', type: 'gameplay' },
   ],
   recovery: [
-    { title: 'Let yourself do nothing for 5 minutes', description: 'No goals. No productivity. Just exist. This is the whole task — you\'re already doing it.', type: 'rest' },
-    { title: 'Write one thing you\'re releasing today', description: 'Something you\'ve been carrying. Set it down just for now. It\'ll be there later if you need it.', type: 'creation' },
-    { title: 'Find one thing that feels okay', description: 'Not great — just okay. Small. Real. It exists somewhere. Find it.', type: 'mindful' },
+    { title: 'Keep this session short', description: 'Play for a little while, or stop whenever you want.', type: 'rest' },
+    { title: 'Choose an easy game goal', description: 'Pick one simple thing you would like to try.', type: 'gameplay' },
+    { title: 'Take a break', description: 'Pause the game and rest if you need to.', type: 'rest' },
   ],
 };
 
