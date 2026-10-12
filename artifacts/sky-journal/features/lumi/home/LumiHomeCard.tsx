@@ -4,8 +4,11 @@
  * this component shows the speech bubble and at most two real actions.
  */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import { ImageBackground, Pressable, StyleSheet, Text, TouchableOpacity, View, type DimensionValue, useWindowDimensions } from 'react-native';
+import Animated, {
+  cancelAnimation, Easing, FadeIn, FadeOut, interpolate, useAnimatedStyle,
+  useSharedValue, withDelay, withRepeat, withTiming,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -42,6 +45,67 @@ const DEFAULT_TEXT: Record<LumiReaction | 'idle', string> = {
   tapAffectionate: "Aww, come here. I'm really glad you're here.",
 };
 
+const FAIRY_LIGHTS = [
+  { x: '13%', y: '29%', kind: 'firefly' },
+  { x: '32%', y: '17%', kind: 'dust' },
+  { x: '61%', y: '42%', kind: 'firefly' },
+  { x: '84%', y: '24%', kind: 'dust' },
+  { x: '51%', y: '74%', kind: 'firefly' },
+  { x: '26%', y: '59%', kind: 'dust' },
+] as const;
+
+function FairyLight({
+  x, y, index, kind, active, reducedMotion,
+}: {
+  x: string;
+  y: string;
+  index: number;
+  kind: 'firefly' | 'dust';
+  active: boolean;
+  reducedMotion: boolean;
+}) {
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    cancelAnimation(progress);
+    if (!active) {
+      progress.value = 0;
+    } else if (reducedMotion) {
+      progress.value = 0.45;
+    } else {
+      progress.value = withDelay(index * 520, withRepeat(
+        withTiming(1, { duration: 3400 + index * 290, easing: Easing.inOut(Easing.sin) }),
+        -1,
+        true,
+      ));
+    }
+
+    return () => cancelAnimation(progress);
+  }, [active, index, progress, reducedMotion]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: reducedMotion
+      ? (kind === 'firefly' ? 0.7 : 0.38)
+      : interpolate(progress.value, [0, 0.45, 1], [0.12, 0.96, 0.24]),
+    transform: [
+      { translateX: reducedMotion ? 0 : interpolate(progress.value, [0, 1], [-7, 7]) },
+      { translateY: reducedMotion ? 0 : interpolate(progress.value, [0, 1], [8, -11]) },
+      { scale: reducedMotion ? 1 : interpolate(progress.value, [0, 0.45, 1], [0.72, 1.16, 0.78]) },
+    ],
+  }));
+
+  return (
+    <Animated.View
+      accessible={false}
+      pointerEvents="none"
+      style={[s.fairyLight, { left: x as DimensionValue, top: y as DimensionValue }, animatedStyle]}
+    >
+      {kind === 'firefly' && <View style={s.fireflyHalo} />}
+      <View style={kind === 'firefly' ? s.fireflyCore : s.dustCore} />
+    </Animated.View>
+  );
+}
+
 function creationRoute(kind?: LumiCreationKind, id?: string): string | null {
   if (!kind) return null;
   if (kind === 'outfit') return '/wardrobe';
@@ -64,6 +128,7 @@ export function LumiHomeCard(props: {
 }) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
   const managerRef = useRef(initialManagerState());
   const [dialog, setDialog] = useState<Playing | null>(null);
   const lingerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,16 +221,46 @@ export function LumiHomeCard(props: {
     if (route) action = { label: t('lumiHome.view', 'Take a look'), onPress: () => go(route) };
   }
 
-  const size = props.compact ? 112 : 136;
+  const size = Math.max(128, Math.min(props.compact ? 148 : 184, (screenWidth - 80) * 0.52));
+  const cardHeight = props.compact ? 218 : 246;
   const bg: readonly [string, string, string] = isDark ? ['#241058', '#37157A', '#180A42'] : ['#EBDDFF', '#F6ECFF', '#FFE9E4'];
 
   return (
-    <View style={[s.card, { minHeight: size + 24, borderColor: isDark ? 'rgba(190,142,255,0.24)' : 'rgba(150,100,220,0.22)' }]}>
-      <LinearGradient colors={bg} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-      <View style={[s.glow, { backgroundColor: props.accent }]} />
+    <ImageBackground
+      source={require('./lumi-fairy-garden.jpg')}
+      resizeMode="cover"
+      imageStyle={[s.sceneImage, { opacity: isDark ? 0.93 : 0.36 }]}
+      style={[
+        s.card,
+        { height: cardHeight, borderColor: isDark ? 'rgba(190,142,255,0.34)' : 'rgba(150,100,220,0.30)' },
+      ]}
+      testID="lumi-fairy-scene"
+    >
+      <LinearGradient
+        colors={isDark
+          ? ['rgba(8,7,23,0.14)', 'rgba(14,8,32,0.22)', 'rgba(10,6,25,0.74)']
+          : ['rgba(255,247,252,0.32)', 'rgba(247,236,255,0.28)', 'rgba(42,22,57,0.64)']}
+        locations={[0, 0.48, 1]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <View style={[s.avatarAura, { backgroundColor: isDark ? '#FFD794' : '#F1C5FF' }]} pointerEvents="none" />
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        {FAIRY_LIGHTS.map((light, index) => (
+          <FairyLight
+            key={`${light.kind}-${index}`}
+            {...light}
+            index={index}
+            active={ctx.visible}
+            reducedMotion={ctx.reducedMotion}
+          />
+        ))}
+      </View>
       <Pressable
         onPress={onTap}
-        style={[s.stage, { width: size, height: size }]}
+        style={[s.stage, { width: size, height: size, left: -size * 0.025, bottom: -size * 0.035 }]}
         accessibilityRole="button"
         accessibilityLabel={t('lumiHome.a11yLumi', 'Lumi. Tap to play with her.')}
         testID="lumi-home-character"
@@ -173,50 +268,59 @@ export function LumiHomeCard(props: {
         <LumiRigView v={rig.values} size={size} />
       </Pressable>
 
-      <View style={s.right}>
-        <Text style={[s.eyebrow, { color: props.accent }]}>{t('lumiHome.eyebrow', 'LUMI')}</Text>
+      <View style={s.dialogueArea}>
+        <Text style={s.eyebrow}>{t('lumiHome.eyebrow', 'LUMI · YOUR COMPANION')}</Text>
         <Animated.View key={dialog?.key ?? 'idle'} entering={FadeIn.duration(220)} exiting={FadeOut.duration(160)} style={s.bubble}>
           <View style={s.tail} />
-          <Text style={s.line} numberOfLines={props.compact ? 3 : 4} testID="lumi-home-line">{line}</Text>
+          <Text style={s.line} numberOfLines={3} testID="lumi-home-line">{line}</Text>
           {dialog && (
             <TouchableOpacity onPress={dismiss} hitSlop={10} style={s.close} accessibilityLabel={t('lumiHome.notNow', 'Not now')}>
               <Icon name="x" size={12} color={INK.sub} />
             </TouchableOpacity>
           )}
         </Animated.View>
-        <View style={s.actions}>
-          {action && (
-            <TouchableOpacity onPress={action.onPress} style={[s.btn, { backgroundColor: INK.sprout }]} activeOpacity={0.8} testID="lumi-home-action">
-              <Text style={s.btnText} numberOfLines={1}>{action.label}</Text>
-            </TouchableOpacity>
-          )}
+        {action && (
           <TouchableOpacity
-            onPress={() => go('/(tabs)/drift')}
-            style={[s.btn, action ? s.btnGhost : { backgroundColor: props.accent }, action && { borderColor: props.accent }]}
+            onPress={action.onPress}
+            style={[s.actionBtn, { backgroundColor: INK.sprout }]}
             activeOpacity={0.8}
-            testID="lumi-home-chat"
+            testID="lumi-home-action"
           >
-            <Icon name="message-circle" size={12} color={action ? props.accent : '#FFFFFF'} />
-            <Text style={[s.btnText, action && { color: props.accent }]} numberOfLines={1}>{t('lumiHome.chat', 'Chat with Lumi')}</Text>
+            <Text style={s.btnText} numberOfLines={1}>{action.label}</Text>
+            <Icon name="arrow-right" size={13} color="#FFFFFF" />
           </TouchableOpacity>
-        </View>
+        )}
+        <TouchableOpacity
+          onPress={() => go('/(tabs)/drift')}
+          style={[s.chatBtn, { backgroundColor: props.accent }]}
+          activeOpacity={0.8}
+          testID="lumi-home-chat"
+          accessibilityRole="button"
+        >
+          <Icon name="message-circle" size={15} color="#FFFFFF" />
+          <Text style={s.btnText} numberOfLines={1}>{t('lumiHome.chat', 'Talk to Lumi')}</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
 
 const s = StyleSheet.create({
-  card: { borderRadius: 18, overflow: 'hidden', borderWidth: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingLeft: 4, paddingRight: 12 },
-  glow: { position: 'absolute', left: -30, bottom: -60, width: 190, height: 190, borderRadius: 95, opacity: 0.16 },
-  stage: { alignItems: 'center', justifyContent: 'center' },
-  right: { flex: 1, minWidth: 0, gap: 6, paddingLeft: 6 },
-  eyebrow: { fontSize: 10.5, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4 },
+  card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: '#16102C' },
+  sceneImage: { borderRadius: 22 },
+  avatarAura: { position: 'absolute', left: '17%', bottom: -46, width: 174, height: 108, borderRadius: 100, opacity: 0.24 },
+  stage: { position: 'absolute', zIndex: 2, alignItems: 'center', justifyContent: 'center' },
+  fairyLight: { position: 'absolute', width: 16, height: 16, alignItems: 'center', justifyContent: 'center', zIndex: 1 },
+  fireflyHalo: { position: 'absolute', width: 16, height: 16, borderRadius: 8, backgroundColor: '#FFE7AD', opacity: 0.26, shadowColor: '#FFCB70', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.85, shadowRadius: 8, elevation: 5 },
+  fireflyCore: { width: 4, height: 4, borderRadius: 2, backgroundColor: '#FFF5C9', shadowColor: '#FFD783', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.95, shadowRadius: 6, elevation: 4 },
+  dustCore: { width: 2, height: 2, borderRadius: 1, backgroundColor: '#F5D5FF', shadowColor: '#EBCBFF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 3, elevation: 2 },
+  dialogueArea: { position: 'absolute', top: 26, right: 14, left: '39%', zIndex: 3, gap: 9, alignItems: 'flex-start' },
+  eyebrow: { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.3, color: '#F2D7FF', textShadowColor: 'rgba(20,8,34,0.82)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 5 },
   bubble: { backgroundColor: INK.bubble, borderColor: INK.bubbleBorder, borderWidth: 1, borderRadius: 16, borderTopLeftRadius: 6, paddingVertical: 9, paddingLeft: 12, paddingRight: 24 },
-  tail: { position: 'absolute', left: -5, top: 10, width: 10, height: 10, backgroundColor: INK.bubble, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: INK.bubbleBorder, transform: [{ rotate: '45deg' }] },
-  line: { fontFamily: 'Satoshi-Medium', fontSize: 13.5, lineHeight: 19, color: INK.text },
+  tail: { position: 'absolute', left: -5, top: 10, width: 10, height: 10, backgroundColor: INK.bubble, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: INK.bubbleBorder, transform: [{ rotate: '45deg' }], zIndex: -1 },
+  line: { fontFamily: 'Satoshi-Medium', fontSize: 12.5, lineHeight: 17, color: INK.text },
   close: { position: 'absolute', right: 7, top: 7, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  btn: { height: 30, borderRadius: 15, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '100%' },
-  btnGhost: { borderWidth: 1, backgroundColor: 'transparent' },
-  btnText: { fontFamily: 'Satoshi-Bold', fontSize: 11.5, color: '#FFFFFF' },
+  actionBtn: { minHeight: 29, maxWidth: '100%', borderRadius: 15, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  chatBtn: { minHeight: 34, maxWidth: '100%', borderRadius: 17, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  btnText: { flexShrink: 1, fontFamily: 'Satoshi-Bold', fontSize: 10.5, color: '#FFFFFF' },
 });
