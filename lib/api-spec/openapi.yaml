@@ -32,6 +32,63 @@ tags:
     description: AI manga generation
 
 paths:
+  /drift/companion:
+    post:
+      operationId: converseWithLumi
+      tags: [lumi]
+      summary: Chat with Lumi and receive optional supported action suggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LumiConversationInput"
+      responses:
+        "200":
+          description: Validated response, or an explicitly marked local fallback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LumiConversationResult"
+        "429":
+          description: Configured usage limit reached
+  /drift/companion-state:
+    get:
+      operationId: getLumiState
+      tags: [lumi]
+      responses:
+        "200":
+          description: Only the authenticated player's opted-in history and preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LumiState"
+    put:
+      operationId: updateLumiState
+      tags: [lumi]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LumiPreferencesInput"
+      responses:
+        "200":
+          description: Updated preferences; opting out deletes saved history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LumiState"
+    delete:
+      operationId: clearLumiState
+      tags: [lumi]
+      responses:
+        "200":
+          description: Conversation and preferences deleted; remembering disabled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LumiClearResult"
   /manga/generate:
     post:
       operationId: generateMangaPage
@@ -816,6 +873,111 @@ paths:
 
 components:
   schemas:
+    LumiMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+        content:
+          type: string
+          minLength: 1
+          maxLength: 1600
+    LumiConversationInput:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+          minLength: 1
+          maxLength: 800
+        history:
+          type: array
+          maxItems: 20
+          items:
+            $ref: "#/components/schemas/LumiMessage"
+        locale:
+          type: string
+          maxLength: 32
+        game:
+          type: string
+          maxLength: 100
+    LumiRecommendation:
+      type: object
+      required: [type, title, reason]
+      properties:
+        type:
+          type: string
+          enum: [music, guides, friends, campfire, outfit, manga, journal, session, chat]
+        title:
+          type: string
+          maxLength: 80
+        reason:
+          type: string
+          maxLength: 240
+        query:
+          type: string
+          maxLength: 80
+        draft:
+          type: string
+          maxLength: 1000
+        duration:
+          type: integer
+          enum: [5, 15, 30]
+    LumiConversationResult:
+      type: object
+      required: [reply, recommendations, fallback]
+      properties:
+        reply:
+          type: string
+          maxLength: 1600
+        recommendations:
+          type: array
+          maxItems: 3
+          items:
+            $ref: "#/components/schemas/LumiRecommendation"
+        fallback:
+          type: boolean
+    LumiPreferences:
+      type: object
+      properties:
+        game:
+          type: string
+          maxLength: 100
+        musicStyle:
+          type: string
+          maxLength: 80
+        duration:
+          type: integer
+          enum: [5, 15, 30]
+    LumiPreferencesInput:
+      type: object
+      required: [remember]
+      properties:
+        remember:
+          type: boolean
+        preferences:
+          $ref: "#/components/schemas/LumiPreferences"
+    LumiState:
+      type: object
+      required: [remember, messages, preferences]
+      properties:
+        remember:
+          type: boolean
+        messages:
+          type: array
+          maxItems: 40
+          items:
+            $ref: "#/components/schemas/LumiMessage"
+        preferences:
+          $ref: "#/components/schemas/LumiPreferences"
+    LumiClearResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
     MediaReadUrlsInput:
       type: object
       additionalProperties: false

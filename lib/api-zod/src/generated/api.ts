@@ -8,6 +8,181 @@
 import * as zod from "zod";
 
 /**
+ * @summary Chat with Lumi and receive optional supported action suggestions
+ */
+export const converseWithLumiBodyMessageMax = 800;
+
+export const converseWithLumiBodyHistoryItemContentMax = 1600;
+
+export const converseWithLumiBodyHistoryMax = 20;
+
+export const converseWithLumiBodyLocaleMax = 32;
+
+export const converseWithLumiBodyGameMax = 100;
+
+export const ConverseWithLumiBody = zod.object({
+  message: zod.string().min(1).max(converseWithLumiBodyMessageMax),
+  history: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "assistant"]),
+        content: zod
+          .string()
+          .min(1)
+          .max(converseWithLumiBodyHistoryItemContentMax),
+      }),
+    )
+    .max(converseWithLumiBodyHistoryMax)
+    .optional(),
+  locale: zod.string().max(converseWithLumiBodyLocaleMax).optional(),
+  game: zod.string().max(converseWithLumiBodyGameMax).optional(),
+});
+
+export const converseWithLumiResponseReplyMax = 1600;
+
+export const converseWithLumiResponseRecommendationsItemTitleMax = 80;
+
+export const converseWithLumiResponseRecommendationsItemReasonMax = 240;
+
+export const converseWithLumiResponseRecommendationsItemQueryMax = 80;
+
+export const converseWithLumiResponseRecommendationsItemDraftMax = 1000;
+
+export const converseWithLumiResponseRecommendationsMax = 3;
+
+export const ConverseWithLumiResponse = zod.object({
+  reply: zod.string().max(converseWithLumiResponseReplyMax),
+  recommendations: zod
+    .array(
+      zod.object({
+        type: zod.enum([
+          "music",
+          "guides",
+          "friends",
+          "campfire",
+          "outfit",
+          "manga",
+          "journal",
+          "session",
+          "chat",
+        ]),
+        title: zod
+          .string()
+          .max(converseWithLumiResponseRecommendationsItemTitleMax),
+        reason: zod
+          .string()
+          .max(converseWithLumiResponseRecommendationsItemReasonMax),
+        query: zod
+          .string()
+          .max(converseWithLumiResponseRecommendationsItemQueryMax)
+          .optional(),
+        draft: zod
+          .string()
+          .max(converseWithLumiResponseRecommendationsItemDraftMax)
+          .optional(),
+        duration: zod
+          .union([zod.literal(5), zod.literal(15), zod.literal(30)])
+          .optional(),
+      }),
+    )
+    .max(converseWithLumiResponseRecommendationsMax),
+  fallback: zod.boolean(),
+});
+
+export const getLumiStateResponseMessagesItemContentMax = 1600;
+
+export const getLumiStateResponseMessagesMax = 40;
+
+export const getLumiStateResponsePreferencesGameMax = 100;
+
+export const getLumiStateResponsePreferencesMusicStyleMax = 80;
+
+export const GetLumiStateResponse = zod.object({
+  remember: zod.boolean(),
+  messages: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "assistant"]),
+        content: zod
+          .string()
+          .min(1)
+          .max(getLumiStateResponseMessagesItemContentMax),
+      }),
+    )
+    .max(getLumiStateResponseMessagesMax),
+  preferences: zod.object({
+    game: zod.string().max(getLumiStateResponsePreferencesGameMax).optional(),
+    musicStyle: zod
+      .string()
+      .max(getLumiStateResponsePreferencesMusicStyleMax)
+      .optional(),
+    duration: zod
+      .union([zod.literal(5), zod.literal(15), zod.literal(30)])
+      .optional(),
+  }),
+});
+
+export const updateLumiStateBodyPreferencesGameMax = 100;
+
+export const updateLumiStateBodyPreferencesMusicStyleMax = 80;
+
+export const UpdateLumiStateBody = zod.object({
+  remember: zod.boolean(),
+  preferences: zod
+    .object({
+      game: zod.string().max(updateLumiStateBodyPreferencesGameMax).optional(),
+      musicStyle: zod
+        .string()
+        .max(updateLumiStateBodyPreferencesMusicStyleMax)
+        .optional(),
+      duration: zod
+        .union([zod.literal(5), zod.literal(15), zod.literal(30)])
+        .optional(),
+    })
+    .optional(),
+});
+
+export const updateLumiStateResponseMessagesItemContentMax = 1600;
+
+export const updateLumiStateResponseMessagesMax = 40;
+
+export const updateLumiStateResponsePreferencesGameMax = 100;
+
+export const updateLumiStateResponsePreferencesMusicStyleMax = 80;
+
+export const UpdateLumiStateResponse = zod.object({
+  remember: zod.boolean(),
+  messages: zod
+    .array(
+      zod.object({
+        role: zod.enum(["user", "assistant"]),
+        content: zod
+          .string()
+          .min(1)
+          .max(updateLumiStateResponseMessagesItemContentMax),
+      }),
+    )
+    .max(updateLumiStateResponseMessagesMax),
+  preferences: zod.object({
+    game: zod
+      .string()
+      .max(updateLumiStateResponsePreferencesGameMax)
+      .optional(),
+    musicStyle: zod
+      .string()
+      .max(updateLumiStateResponsePreferencesMusicStyleMax)
+      .optional(),
+    duration: zod
+      .union([zod.literal(5), zod.literal(15), zod.literal(30)])
+      .optional(),
+  }),
+});
+
+export const ClearLumiStateResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
  * @summary Generate one AI manga page from uploaded reference images
  */
 export const generateMangaPageBodyImageUrisMax = 10;

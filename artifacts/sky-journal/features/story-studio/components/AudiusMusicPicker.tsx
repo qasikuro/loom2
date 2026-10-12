@@ -45,6 +45,7 @@ type PlayerSound = {
   unloadAsync: () => Promise<void>;
   setOnPlaybackStatusUpdate: (callback: (status: { isLoaded?: boolean; didJustFinish?: boolean }) => void) => void;
   playAsync: () => Promise<void>;
+  pauseAsync?: () => Promise<unknown>;
 };
 
 function formatDuration(seconds: number): string {
@@ -52,18 +53,31 @@ function formatDuration(seconds: number): string {
   return `${minutes}:${String(Math.max(0, seconds % 60)).padStart(2, '0')}`;
 }
 
-function useAudiusPreview() {
+/**
+ * Single-track preview controller. Default behavior is unchanged for existing
+ * callers (tapping the active track stops it). With `retainOnPause`, tapping
+ * the active track pauses/resumes and keeps the playback position.
+ */
+export function useAudiusPreview(options?: { retainOnPause?: boolean }) {
+  const retainOnPause = !!options?.retainOnPause;
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [pausedId, setPausedId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [errorId, setErrorId] = useState<string | null>(null);
   const activeIdRef = useRef<string | null>(null);
   const nativeSoundRef = useRef<PlayerSound | null>(null);
   const webAudioRef = useRef<HTMLAudioElement | null>(null);
   const playbackGenerationRef = useRef(0);
   const mountedRef = useRef(true);
+  const pausedIdRef = useRef<string | null>(null);
+  pausedIdRef.current = pausedId;
 
   const stop = useCallback(async () => {
     playbackGenerationRef.current += 1;
     activeIdRef.current = null;
     setPlayingId(null);
+    setPausedId(null);
+    setLoadingId(null);
     const native = nativeSoundRef.current;
     nativeSoundRef.current = null;
     const web = webAudioRef.current;
@@ -80,17 +94,58 @@ function useAudiusPreview() {
     }
   }, []);
 
+  const pause = useCallback(async () => {
+    const id = activeIdRef.current;
+    if (!id) return;
+    const generation = playbackGenerationRef.current;
+    try {
+      if (webAudioRef.current) webAudioRef.current.pause();
+      else if (nativeSoundRef.current?.pauseAsync) await nativeSoundRef.current.pauseAsync();
+      else { await stop(); return; }
+      if (playbackGenerationRef.current !== generation || !mountedRef.current) return;
+      setPlayingId(null);
+      setPausedId(id);
+    } catch {
+      await stop();
+    }
+  }, [stop]);
+
+  const resume = useCallback(async () => {
+    const id = activeIdRef.current;
+    if (!id) return;
+    const generation = playbackGenerationRef.current;
+    setLoadingId(id);
+    try {
+      if (webAudioRef.current) await webAudioRef.current.play();
+      else if (nativeSoundRef.current) await nativeSoundRef.current.playAsync();
+      else return;
+      if (playbackGenerationRef.current !== generation || !mountedRef.current) return;
+      setPausedId(null);
+      setPlayingId(id);
+    } catch {
+      if (playbackGenerationRef.current === generation) { setErrorId(id); await stop(); }
+    } finally {
+      if (playbackGenerationRef.current === generation && mountedRef.current) setLoadingId(null);
+    }
+  }, [stop]);
+
   const toggle = useCallback(async (track: AudiusTrack) => {
     if (activeIdRef.current === track.id) {
-      await stop();
+      if (!retainOnPause) { await stop(); return; }
+      if (pausedIdRef.current === track.id) await resume();
+      else await pause();
       return;
     }
     const stopping = stop();
+    setErrorId(null);
     const generation = playbackGenerationRef.current;
     const isCurrent = () =>
       mountedRef.current && playbackGenerationRef.current === generation;
     await stopping;
     if (!isCurrent()) return;
+    setLoadingId(track.id);
+    const fail = async () => { if (isCurrent()) { setErrorId(track.id); await stop(); } };
+    const done = () => { if (isCurrent()) setLoadingId(null); };
 
     if (typeof window !== 'undefined' && typeof window.Audio === 'function') {
       const audio = new window.Audio(track.streamUrl);
@@ -113,8 +168,9 @@ function useAudiusPreview() {
           return;
         }
         setPlayingId(track.id);
+        done();
       } catch {
-        if (isCurrent()) await stop();
+        if (isCurrent()) await fail();
         else {
           audio.onended = null;
           audio.pause();
@@ -158,10 +214,11 @@ function useAudiusPreview() {
         return;
       }
       setPlayingId(track.id);
+      done();
     } catch {
-      if (isCurrent()) await stop();
+      await fail();
     }
-  }, [stop]);
+  }, [stop, pause, resume, retainOnPause]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -171,7 +228,7 @@ function useAudiusPreview() {
     };
   }, [stop]);
 
-  return { playingId, toggle, stop };
+  return { playingId, pausedId, loadingId, errorId, toggle, stop, pause, resume };
 }
 
 type PreviewController = {

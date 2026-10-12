@@ -29,6 +29,8 @@ type FocusedHomeContentProps = {
   onOpenNotifications: () => void;
   friendStories: DiscoverPost[];
   friendCount: number;
+  /** Living Lumi companion slot (upper home), rendered above the shortcuts. */
+  companion?: React.ReactNode;
 };
 
 const SHORTCUTS = [
@@ -47,6 +49,7 @@ export function FocusedHomeContent({
   onOpenNotifications,
   friendStories,
   friendCount,
+  companion,
 }: FocusedHomeContentProps) {
   const colors = useColors();
   const { t } = useTranslation();
@@ -114,6 +117,8 @@ export function FocusedHomeContent({
           <Image source={characterImage} style={StyleSheet.absoluteFill} contentFit="cover" />
         </TouchableOpacity>
       </View>
+
+      {companion}
 
       <View style={s.shortcutRow}>
         {SHORTCUTS.map((item, index) => (

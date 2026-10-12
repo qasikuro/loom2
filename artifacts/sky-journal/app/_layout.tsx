@@ -31,6 +31,7 @@ import { SoundProvider } from '@/context/SoundContext';
 import { StorigamLoadingOverlay } from '@/components/SkyLoading';
 import { hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
 import { FriendsDrawerProvider } from '@/context/FriendsDrawerContext';
+import { LumiMusicProvider } from '@/features/lumi/music/LumiMusicProvider';
 import { GlobalChatButton } from '@/components/GlobalChatButton';
 import { setMediaAuthScope } from '@/utils/mediaAccess';
 
@@ -414,6 +415,7 @@ export default function RootLayout() {
                         <GestureHandlerRootView style={{ flex: 1 }}>
                         <KeyboardProviderWrapper>
                           <FriendsDrawerProvider>
+                          <LumiMusicProvider>
                           <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="(auth)" />
                             <Stack.Screen name="(tabs)" />
@@ -491,6 +493,7 @@ export default function RootLayout() {
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />
                           </Stack>
+                          </LumiMusicProvider>
                           <XPFlash />
                           <GlobalChatButton />
                           </FriendsDrawerProvider>

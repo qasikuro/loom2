@@ -5,6 +5,115 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+export type LumiMessageRole =
+  (typeof LumiMessageRole)[keyof typeof LumiMessageRole];
+
+export const LumiMessageRole = {
+  user: "user",
+  assistant: "assistant",
+} as const;
+
+export interface LumiMessage {
+  role: LumiMessageRole;
+  /**
+   * @minLength 1
+   * @maxLength 1600
+   */
+  content: string;
+}
+
+export interface LumiConversationInput {
+  /**
+   * @minLength 1
+   * @maxLength 800
+   */
+  message: string;
+  /** @maxItems 20 */
+  history?: LumiMessage[];
+  /** @maxLength 32 */
+  locale?: string;
+  /** @maxLength 100 */
+  game?: string;
+}
+
+export type LumiRecommendationType =
+  (typeof LumiRecommendationType)[keyof typeof LumiRecommendationType];
+
+export const LumiRecommendationType = {
+  music: "music",
+  guides: "guides",
+  friends: "friends",
+  campfire: "campfire",
+  outfit: "outfit",
+  manga: "manga",
+  journal: "journal",
+  session: "session",
+  chat: "chat",
+} as const;
+
+export type LumiRecommendationDuration =
+  (typeof LumiRecommendationDuration)[keyof typeof LumiRecommendationDuration];
+
+export const LumiRecommendationDuration = {
+  NUMBER_5: 5,
+  NUMBER_15: 15,
+  NUMBER_30: 30,
+} as const;
+
+export interface LumiRecommendation {
+  type: LumiRecommendationType;
+  /** @maxLength 80 */
+  title: string;
+  /** @maxLength 240 */
+  reason: string;
+  /** @maxLength 80 */
+  query?: string;
+  /** @maxLength 1000 */
+  draft?: string;
+  duration?: LumiRecommendationDuration;
+}
+
+export interface LumiConversationResult {
+  /** @maxLength 1600 */
+  reply: string;
+  /** @maxItems 3 */
+  recommendations: LumiRecommendation[];
+  fallback: boolean;
+}
+
+export type LumiPreferencesDuration =
+  (typeof LumiPreferencesDuration)[keyof typeof LumiPreferencesDuration];
+
+export const LumiPreferencesDuration = {
+  NUMBER_5: 5,
+  NUMBER_15: 15,
+  NUMBER_30: 30,
+} as const;
+
+export interface LumiPreferences {
+  /** @maxLength 100 */
+  game?: string;
+  /** @maxLength 80 */
+  musicStyle?: string;
+  duration?: LumiPreferencesDuration;
+}
+
+export interface LumiPreferencesInput {
+  remember: boolean;
+  preferences?: LumiPreferences;
+}
+
+export interface LumiState {
+  remember: boolean;
+  /** @maxItems 40 */
+  messages: LumiMessage[];
+  preferences: LumiPreferences;
+}
+
+export interface LumiClearResult {
+  success: boolean;
+}
+
 export interface MediaReadUrlsInput {
   /** @maxItems 100 */
   paths: string[];

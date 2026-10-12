@@ -25,6 +25,17 @@ export async function runStartupMigrations(): Promise<void> {
   const client = await pool.connect();
   try {
     await client.query(`
+      CREATE TABLE IF NOT EXISTS lumi_state (
+        user_id TEXT PRIMARY KEY,
+        remember BOOLEAN NOT NULL DEFAULT FALSE,
+        revision INTEGER NOT NULL DEFAULT 0,
+        messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+        preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query(`ALTER TABLE lumi_state ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 0`);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS friend_requests (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         sender_id TEXT NOT NULL,

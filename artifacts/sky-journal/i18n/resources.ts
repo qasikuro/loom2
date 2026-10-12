@@ -12,6 +12,8 @@ import { studioEditorTranslations } from './studioEditorTranslations';
 import { studioReaderTranslations } from './studioReaderTranslations';
 import { discoverLogTranslations } from './discoverLogTranslations';
 import { outfitJournalTranslations } from './outfitJournalTranslations';
+import { lumiTranslations } from './lumiTranslations';
+import { lumiHomeTranslations } from '@/features/lumi/home/translations';
 
 type Tree = Record<string, unknown>;
 
@@ -44,6 +46,7 @@ const extensions: Tree[] = [
   studioReaderTranslations,
   discoverLogTranslations,
   outfitJournalTranslations,
+  lumiHomeTranslations as unknown as Tree,
 ];
 
 export const mergedTranslations = Object.fromEntries(
@@ -53,5 +56,10 @@ export const mergedTranslations = Object.fromEntries(
       (result, extension) => mergeTree(result, (extension[locale] ?? {}) as Tree),
       base as Tree,
     ),
+  ]).map(([locale, tree]) => [
+    locale,
+    // Lumi companion strings fill gaps only: keys already supplied directly
+    // by any locale catalog are never overwritten.
+    mergeTree((lumiTranslations[locale as keyof typeof lumiTranslations] ?? {}) as Tree, tree as Tree),
   ]),
 ) as Record<keyof typeof translations, Tree>;

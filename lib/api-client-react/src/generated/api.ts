@@ -38,6 +38,11 @@ import type {
   InterestSubscribersResponse,
   JournalEntry,
   JournalEntryInput,
+  LumiClearResult,
+  LumiConversationInput,
+  LumiConversationResult,
+  LumiPreferencesInput,
+  LumiState,
   MangaGenerationInput,
   MangaGenerationResult,
   MediaReadUrlsInput,
@@ -65,6 +70,315 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type Awaited<O> = O extends AwaitedInput<infer T> ? T : never;
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+/**
+ * @summary Chat with Lumi and receive optional supported action suggestions
+ */
+export const getConverseWithLumiUrl = () => {
+  return `/api/drift/companion`;
+};
+
+export const converseWithLumi = async (
+  lumiConversationInput: LumiConversationInput,
+  options?: RequestInit,
+): Promise<LumiConversationResult> => {
+  return customFetch<LumiConversationResult>(getConverseWithLumiUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(lumiConversationInput),
+  });
+};
+
+export const getConverseWithLumiMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof converseWithLumi>>,
+    TError,
+    { data: BodyType<LumiConversationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof converseWithLumi>>,
+  TError,
+  { data: BodyType<LumiConversationInput> },
+  TContext
+> => {
+  const mutationKey = ["converseWithLumi"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof converseWithLumi>>,
+    { data: BodyType<LumiConversationInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return converseWithLumi(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConverseWithLumiMutationResult = NonNullable<
+  Awaited<ReturnType<typeof converseWithLumi>>
+>;
+export type ConverseWithLumiMutationBody = BodyType<LumiConversationInput>;
+export type ConverseWithLumiMutationError = ErrorType<void>;
+
+/**
+ * @summary Chat with Lumi and receive optional supported action suggestions
+ */
+export const useConverseWithLumi = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof converseWithLumi>>,
+    TError,
+    { data: BodyType<LumiConversationInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof converseWithLumi>>,
+  TError,
+  { data: BodyType<LumiConversationInput> },
+  TContext
+> => {
+  return useMutation(getConverseWithLumiMutationOptions(options));
+};
+
+export const getGetLumiStateUrl = () => {
+  return `/api/drift/companion-state`;
+};
+
+export const getLumiState = async (
+  options?: RequestInit,
+): Promise<LumiState> => {
+  return customFetch<LumiState>(getGetLumiStateUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLumiStateQueryKey = () => {
+  return [`/api/drift/companion-state`] as const;
+};
+
+export const getGetLumiStateQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLumiState>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLumiState>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLumiStateQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLumiState>>> = ({
+    signal,
+  }) => getLumiState({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getLumiState>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetLumiStateQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getLumiState>>
+>;
+export type GetLumiStateQueryError = ErrorType<unknown>;
+
+export function useGetLumiState<
+  TData = Awaited<ReturnType<typeof getLumiState>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getLumiState>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetLumiStateQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+export const getUpdateLumiStateUrl = () => {
+  return `/api/drift/companion-state`;
+};
+
+export const updateLumiState = async (
+  lumiPreferencesInput: LumiPreferencesInput,
+  options?: RequestInit,
+): Promise<LumiState> => {
+  return customFetch<LumiState>(getUpdateLumiStateUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(lumiPreferencesInput),
+  });
+};
+
+export const getUpdateLumiStateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLumiState>>,
+    TError,
+    { data: BodyType<LumiPreferencesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateLumiState>>,
+  TError,
+  { data: BodyType<LumiPreferencesInput> },
+  TContext
+> => {
+  const mutationKey = ["updateLumiState"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateLumiState>>,
+    { data: BodyType<LumiPreferencesInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateLumiState(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateLumiStateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateLumiState>>
+>;
+export type UpdateLumiStateMutationBody = BodyType<LumiPreferencesInput>;
+export type UpdateLumiStateMutationError = ErrorType<unknown>;
+
+export const useUpdateLumiState = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateLumiState>>,
+    TError,
+    { data: BodyType<LumiPreferencesInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateLumiState>>,
+  TError,
+  { data: BodyType<LumiPreferencesInput> },
+  TContext
+> => {
+  return useMutation(getUpdateLumiStateMutationOptions(options));
+};
+
+export const getClearLumiStateUrl = () => {
+  return `/api/drift/companion-state`;
+};
+
+export const clearLumiState = async (
+  options?: RequestInit,
+): Promise<LumiClearResult> => {
+  return customFetch<LumiClearResult>(getClearLumiStateUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearLumiStateMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearLumiState>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearLumiState>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["clearLumiState"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearLumiState>>,
+    void
+  > = () => {
+    return clearLumiState(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearLumiStateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearLumiState>>
+>;
+
+export type ClearLumiStateMutationError = ErrorType<unknown>;
+
+export const useClearLumiState = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearLumiState>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearLumiState>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getClearLumiStateMutationOptions(options));
+};
 
 /**
  * @summary Generate one AI manga page from uploaded reference images

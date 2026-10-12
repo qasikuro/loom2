@@ -28,6 +28,9 @@ const escRe = (p) => p.replace(/[/\\]/g, "[\\\\/\\\\\\\\]").replace(/\./g, "\\."
 config.resolver.blockList = new RegExp(
   [
     escRe(path.resolve(workspaceRoot, ".local")) + "[\\/\\\\].*",
+    // Package runners create/remove temporary modules here during codegen.
+    // They are not app dependencies and must not be watched by Metro.
+    escRe(path.resolve(workspaceRoot, ".cache")) + "[\\/\\\\].*",
     escRe(path.resolve(projectRoot))             + "[\\/\\\\].*__tests__[\\/\\\\].*",
     escRe(path.resolve(projectRoot))             + "[\\/\\\\].*\\.test\\.[jt]sx?$",
     escRe(path.resolve(projectRoot))             + "[\\/\\\\].*\\.spec\\.[jt]sx?$",

@@ -24,3 +24,4 @@ export * from "./uploadedImages";
 export * from "./mediaCompositions";
 export * from "./guideSessions";
 export * from "./storigamInterest";
+export * from "./lumi";

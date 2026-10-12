@@ -7,12 +7,30 @@ import { z } from "zod";
 const router = Router();
 
 const BodySchema = z.object({
-  answers:       z.record(z.string(), z.string()),
-  characterName: z.string().optional(),
-  characterMood: z.string().optional(),
+  answers:       z.record(z.string().max(32), z.string().max(100)).refine(value => Object.keys(value).length <= 6),
+  characterName: z.string().max(100).optional(),
+  characterMood: z.string().max(100).optional(),
+  locale: z.string().max(32).regex(/^[a-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*$/).default("en"),
 });
 
 const VALID_MODES = ["challenge", "flow", "echo", "social", "clarity", "recovery"] as const;
+const PlanSchema = z.object({
+  mode: z.enum(VALID_MODES),
+  archetype: z.string().min(1).max(100),
+  confidence: z.number().min(0).max(100),
+  stability: z.number().min(0).max(100),
+  intention: z.string().min(1).max(300),
+  lumiIntro: z.string().min(1).max(600),
+  lumiMessages: z.array(z.string().min(1).max(400)).min(3).max(5),
+  quests: z.array(z.object({
+    title: z.string().min(1).max(100),
+    description: z.string().min(1).max(500),
+    type: z.enum(["discovery", "mindful", "creation", "connection", "challenge", "rest", "gameplay"]),
+  })).min(1).max(3),
+  softRescue: z.string().max(400),
+  reflection: z.string().max(600),
+  evolution: z.array(z.string().min(1).max(100)).length(3),
+});
 
 const anthropic = new Anthropic({
   baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
@@ -90,7 +108,7 @@ Rules for quality:
 — Keep every sentence short and direct. Avoid metaphors, poetic lines, jargon, and abstract labels.
 — archetype: use a plain title such as Focused Player, Relaxed Explorer, Solo Explorer, Team Player, Planner, or Low-Energy Player
 — confidence: 66–95, higher if answers all point the same way
-— stability: 60–92, reflects how settled/grounded they seem right now
+— stability: use 75 for this legacy display field; it is not a psychological assessment
 — intention: one short, plain sentence about the session
 — lumiIntro: 1–2 short, friendly sentences based on something they actually shared
 — lumiMessages: exactly 5 short strings, 6–12 words each; warm, direct, and useful
@@ -106,14 +124,14 @@ router.post("/drift/analyze", requireAuth, requireAiAccess, async (req, res) => 
     return res.status(400).json({ error: "Invalid request", details: parsed.error.issues });
   }
 
-  const { answers, characterName, characterMood } = parsed.data;
+  const { answers, characterName, characterMood, locale } = parsed.data;
 
   try {
     const message = await anthropic.messages.create({
       model:      "claude-sonnet-4-6",
       max_tokens: 8192,
       system:     SYSTEM_PROMPT,
-      messages:   [{ role: "user", content: buildPrompt(answers, characterName, characterMood) }],
+      messages:   [{ role: "user", content: `${buildPrompt(answers, characterName, characterMood)}\nWrite all player-facing text in language ${locale}.` }],
     });
 
     const rawText = message.content[0]?.type === "text" ? message.content[0].text : "";
@@ -121,7 +139,7 @@ router.post("/drift/analyze", requireAuth, requireAiAccess, async (req, res) => 
     // Strip any accidental markdown fences
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      req.log.error({ rawText }, "drift/analyze: no JSON found in AI response");
+      req.log.error("drift/analyze: no JSON found in AI response");
       return res.status(502).json({ error: "AI returned unparseable response" });
     }
 
@@ -155,24 +173,28 @@ router.post("/drift/analyze", requireAuth, requireAiAccess, async (req, res) => 
     }
 
     plan.confidence = Math.max(66, Math.min(95, Number(plan.confidence) || 78));
-    plan.stability  = Math.max(60, Math.min(92, Number(plan.stability)  || 75));
+    plan.stability = 75;
 
-    return res.json(plan);
+    const validated = PlanSchema.safeParse(plan);
+    if (!validated.success) return res.status(502).json({ error: "Session suggestions are temporarily unavailable." });
+
+    return res.json(validated.data);
   } catch (err: unknown) {
     req.log.error({ err }, "drift/analyze failed");
-    return res.status(500).json({ error: "Analysis failed", message: (err as { message?: string })?.message });
+    return res.status(500).json({ error: "Session suggestions are temporarily unavailable." });
   }
 });
 
 // ─── Chat ────────────────────────────────────────────────────────────────────
 const ChatSchema = z.object({
   message:       z.string().min(1).max(800),
-  mode:          z.string().optional(),
-  characterName: z.string().optional(),
-  intention:     z.string().optional(),
+  mode:          z.string().max(100).optional(),
+  characterName: z.string().max(100).optional(),
+  intention:     z.string().max(300).optional(),
+  locale: z.string().max(32).regex(/^[a-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*$/).default("en"),
   history: z.array(z.object({
     role:    z.enum(["user", "assistant"]),
-    content: z.string(),
+    content: z.string().min(1).max(1600),
   })).max(20).optional().default([]),
 });
 
@@ -195,7 +217,7 @@ router.post("/drift/chat", requireAuth, requireAiAccess, async (req, res) => {
     return res.status(400).json({ error: "Invalid request", details: parsed.error.issues });
   }
 
-  const { message, mode, characterName, intention, history } = parsed.data;
+  const { message, mode, characterName, intention, history, locale } = parsed.data;
 
   const contextLine = [
     characterName ? `The player's name is ${characterName}.` : "",
@@ -215,15 +237,15 @@ router.post("/drift/chat", requireAuth, requireAiAccess, async (req, res) => {
     const response = await anthropic.messages.create({
       model:      "claude-sonnet-4-6",
       max_tokens: 256,
-      system:     CHAT_SYSTEM,
+      system:     `${CHAT_SYSTEM}\nRespond in language ${locale}. Do not diagnose or claim to observe gameplay. In a crisis encourage trusted people and appropriate local emergency or professional support.`,
       messages,
     });
 
     const reply = response.content[0]?.type === "text" ? response.content[0].text.trim() : "I'm here with you.";
-    return res.json({ reply });
+    return res.json({ reply: reply.slice(0, 1600) });
   } catch (err: unknown) {
     req.log.error({ err }, "drift/chat failed");
-    return res.status(500).json({ error: "Chat failed", message: (err as { message?: string })?.message });
+    return res.status(500).json({ error: "Lumi could not reply. Please try again." });
   }
 });
 

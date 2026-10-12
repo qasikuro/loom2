@@ -19,9 +19,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useApp, apiFetch } from '@/context/AppContext';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
+import { useAuth } from '@clerk/expo';
+import { LumiCompanion } from '@/features/lumi/components/LumiCompanion';
+import { LumiAvatar } from '@/features/lumi/home/LumiCharacter';
 
 // ─── Flow ────────────────────────────────────────────────────────────────────
 type FlowStep =
+  | 'companion'
   | 'welcome' | 'survey' | 'allset'
   | 'analyzing' | 'vibe_reveal'
   | 'mode_cinematic' | 'mode_perks' | 'meet_lumi'
@@ -1223,7 +1228,7 @@ function VibeRevealScreen({ cfg, confidence, onContinue }: { cfg: ModeConfig; co
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <View style={[{ paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, backgroundColor: `${cfg.color}15`, borderColor: `${cfg.color}40` }]}>
               <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: cfg.color }}>
-                {confidence}% match
+                {cfg.name}
               </Text>
             </View>
           </View>
@@ -1880,18 +1885,7 @@ function SummaryScreen({ cfg, result, onReflect }: { cfg: ModeConfig; result: Se
           </Text>
         </Animated.View>
 
-        {/* Vibe Stability */}
-        <Animated.View style={{ opacity: enter, width: '100%', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 24, borderWidth: 1, borderColor: `${cfg.color}25`, padding: 24, marginBottom: 16, overflow: 'hidden', alignItems: 'center' }}>
-          <LinearGradient colors={[`${cfg.color}14`, 'transparent']} style={StyleSheet.absoluteFill} />
-          <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(200,180,255,0.45)', letterSpacing: 1.5, marginBottom: 16 }}>{t('feature.drift.stability')}</Text>
-          <View style={{ width: 120, height: 120, borderRadius: 60, borderWidth: 3, borderColor: `${cfg.color}35`, alignItems: 'center', justifyContent: 'center', backgroundColor: `${cfg.color}10`, marginBottom: 12 }}>
-            <View style={{ position: 'absolute', inset: 0, borderRadius: 60, borderWidth: 3, borderColor: cfg.color, opacity: 0.85, transform: [{ rotate: `${-90 + (cfg.stability / 100) * 360}deg` }] }} />
-            <Text style={{ fontSize: 34, fontFamily: 'Satoshi-Bold', color: cfg.color }}>{cfg.stability}%</Text>
-          </View>
-          <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: 'rgba(200,180,255,0.62)', textAlign: 'center' }}>
-            Your vibe was consistent and strong throughout.
-          </Text>
-        </Animated.View>
+        {/* Stability scoring intentionally not shown to players */}
 
         {/* Achievements */}
         <Animated.View style={{ opacity: enter, width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 22, borderWidth: 1, borderColor: `${cfg.color}20`, padding: 22, marginBottom: 24 }}>
@@ -2121,10 +2115,10 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
     setInput('');
     setLoading(true);
     try {
-      const history = next.slice(0, -1).map(m => ({ role: m.role, content: m.content }));
+      const history = next.slice(0, -1).slice(-20).map(m => ({ role: m.role, content: m.content.slice(0, 800) }));
       const res = await apiFetch<{ reply: string }>('/drift/chat', {
         method: 'POST',
-        body: JSON.stringify({ message: text, mode: cfg.name, characterName, intention, history }),
+        body: JSON.stringify({ message: text.slice(0, 800), mode: cfg.name, characterName, intention, history, locale: (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0] }),
       });
       setMessages(prev => [...prev, { role: 'assistant', content: res.reply }]);
     } catch {
@@ -2234,9 +2228,10 @@ function LumiChatScreen({ cfg, characterName, intention, onBack }: {
 // ════════════════════════════════════════════════════════════════════════════
 export default function DriftScreen() {
   const { character } = useApp();
+  const { userId } = useAuth();
   const displayName   = character?.name && character.name !== 'Player' ? character.name : 'Calm Space';
 
-  const [step,            setStep]           = useState<FlowStep>('welcome');
+  const [step,            setStep]           = useState<FlowStep>('companion');
   const [questionIdx,     setQuestionIdx]    = useState(0);
   const [answers,         setAnswers]        = useState<Record<string, string>>({});
   const [mode,            setMode]           = useState<string | null>(null);
@@ -2264,24 +2259,31 @@ export default function DriftScreen() {
     });
   }
 
-  // Restore active session
+  // Account-scoped saved session. Never auto-enters; companion offers Resume.
+  const sessionKey = userId ? `drift_session_v1:${userId}` : null;
   useEffect(() => {
-    AsyncStorage.getItem('drift_session_v1').then(saved => {
-      if (!saved) return;
+    let alive = true;
+    setMode(null); setAnswers({}); setSessionStart(null); setDriftPlan(null);
+    setStep('companion');
+    // Legacy global key could belong to another account: discard it.
+    AsyncStorage.removeItem('drift_session_v1').catch(() => {});
+    if (!sessionKey) return;
+    AsyncStorage.getItem(sessionKey).then(saved => {
+      if (!alive || !saved) return;
       try {
         const d = JSON.parse(saved);
-        if (d.mode && d.sessionStart && (Date.now() - d.sessionStart) < 8 * 3600 * 1000) {
+        if (d.mode && MODES[d.mode] && d.sessionStart && (Date.now() - d.sessionStart) < 8 * 3600 * 1000) {
           setMode(d.mode);
           setAnswers(d.answers ?? {});
           setSessionStart(d.sessionStart);
           if (d.duration) setSessionDuration(d.duration);
-          setStep('session');
         } else {
-          AsyncStorage.removeItem('drift_session_v1');
+          AsyncStorage.removeItem(sessionKey).catch(() => {});
         }
       } catch { /* ignore */ }
     }).catch(() => {});
-  }, []);
+    return () => { alive = false; };
+  }, [sessionKey]);
 
   function handleAnswer(qId: string, optId: string) {
     Haptics.selectionAsync();
@@ -2306,9 +2308,9 @@ export default function DriftScreen() {
           answers,
           characterName: character?.name,
           characterMood: character?.mood,
+          locale: (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0],
         }),
       }).catch(() => null as DriftPlan | null),
-      new Promise<void>(resolve => setTimeout(resolve, 4200)),
     ]);
 
     if (plan && MODES[plan.mode]) {
@@ -2323,17 +2325,26 @@ export default function DriftScreen() {
     go('vibe_reveal');
   }
 
-  function handleStartSession(durationSecs: number) {
+  function handleStartSession(durationSecs: number, modeOverride?: string, answersOverride?: Record<string, string>) {
     const start = Date.now();
-    setSessionStart(start);
-    setSessionDuration(durationSecs);
-    AsyncStorage.setItem('drift_session_v1', JSON.stringify({ mode, answers, sessionStart: start, duration: durationSecs })).catch(() => {});
-    go('session');
+    const m = modeOverride ?? mode;
+    const a = answersOverride ?? answers;
+    if (sessionKey) AsyncStorage.setItem(sessionKey, JSON.stringify({ mode: m, answers: a, sessionStart: start, duration: durationSecs })).catch(() => {});
+    go('session', () => {
+      if (modeOverride) { setMode(modeOverride); setDriftPlan(null); setAnswers(a); }
+      setSessionStart(start);
+      setSessionDuration(durationSecs);
+    });
+  }
+
+  // Quick start without the six-question check-in: calm Flow mode, chosen duration.
+  function handleQuickStart(minutes: 5 | 15 | 30) {
+    handleStartSession(minutes * 60, 'flow', {});
   }
 
   function handleEndSession(r: SessionResult) {
     setResult(r);
-    AsyncStorage.removeItem('drift_session_v1').catch(() => {});
+    if (sessionKey) AsyncStorage.removeItem(sessionKey).catch(() => {});
     go('summary');
   }
 
@@ -2345,8 +2356,8 @@ export default function DriftScreen() {
     setSessionStart(null);
     setSessionDuration(900);
     setResult({ elapsed: 0, questDone: 0, momentsFound: 0 });
-    AsyncStorage.removeItem('drift_session_v1').catch(() => {});
-    go('welcome');
+    if (sessionKey) AsyncStorage.removeItem(sessionKey).catch(() => {});
+    go('companion');
   }
 
   const cfg: ModeConfig | null = mode && MODES[mode] ? {
@@ -2367,6 +2378,27 @@ export default function DriftScreen() {
 
   return (
     <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+      {step === 'companion' && (
+        <LumiCompanion
+          userId={userId}
+          name={character?.name && character.name !== 'Player' ? character.name : null}
+          renderCharacter={(size, emotion) => <LumiAvatar size={size} expression={emotion} />}
+          hasActiveSession={!!sessionStart && !!mode}
+          onResumeSession={() => go('session')}
+          onQuickStart={handleQuickStart}
+          onCheckIn={() => go('welcome', () => setQuestionIdx(0))}
+        />
+      )}
+      {step !== 'companion' && step !== 'analyzing' && step !== 'lumi_chat' && (
+        <TouchableOpacity
+          onPress={() => go('companion')}
+          accessibilityRole="button"
+          accessibilityLabel={i18n.t('lumi.back')}
+          style={{ position: 'absolute', zIndex: 50, right: 14, top: Platform.OS === 'web' ? 72 : 52, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, backgroundColor: 'rgba(20,14,40,0.72)', borderWidth: 1, borderColor: 'rgba(176,144,255,0.35)' }}
+        >
+          <Text style={{ color: '#E8DEFF', fontFamily: 'Satoshi-Bold', fontSize: 12 }}>Lumi</Text>
+        </TouchableOpacity>
+      )}
       {step === 'welcome'         && <WelcomeScreen       onStart={() => go('survey', () => setQuestionIdx(0))} name={displayName} />}
       {step === 'survey'          && <SurveyScreen        question={QUESTIONS[questionIdx]} qIdx={questionIdx} total={QUESTIONS.length} onAnswer={handleAnswer} answers={answers} />}
       {step === 'allset'          && <AllSetScreen        onBegin={handleBeginAnalysis} />}

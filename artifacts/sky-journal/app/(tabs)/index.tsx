@@ -16,7 +16,8 @@ import {
   Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@clerk/expo';
+import { useAuth, useUser } from '@clerk/expo';
+import { LumiHomeCard } from '@/features/lumi/home/LumiHomeCard';
 import {
   useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
   type ConstellationState, type RewardBalance as RewardBalanceData,
@@ -1093,6 +1094,7 @@ export default function HomeScreen() {
     reloadData, myGuides, rewardBalance, constellation,
     unreadCampfireRooms, campfireBadgeSeenAt,
     dmUnread, unreadDmThreads, markDmThreadRead, dmBadgeSeenAt, markAllUnreadSeen,
+    creationDataReady,
   } = useApp();
   const { data: publicConfig } = useGetAppConfig({
     query: {
@@ -1125,6 +1127,12 @@ export default function HomeScreen() {
     return items;
   }, [shopEnabled, seasonEnabled, t]);
   const { userId: clerkUserId } = useAuth();
+  const { user: clerkUser, isLoaded: lumiAccountReady } = useUser();
+  // Home Lumi only animates while her card is actually on screen.
+  const lumiCardBoundsRef = useRef({ top: Number.POSITIVE_INFINITY, bottom: Number.POSITIVE_INFINITY });
+  const lumiScrollYRef = useRef(0);
+  const lumiViewportRef = useRef(screenHeight);
+  const [lumiInView, setLumiInView] = useState(false);
   const { playSound } = useSound();
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
@@ -1423,6 +1431,35 @@ export default function HomeScreen() {
   // Browser chrome reduces the reported viewport height substantially on mobile.
   // Only use the compact fallback on genuinely tiny devices.
   const isShortScreen = screenHeight < 560;
+  const expandedHome = showExpandedDashboard();
+  const updateLumiVisibility = () => {
+    const { top, bottom } = lumiCardBoundsRef.current;
+    const viewportTop = lumiScrollYRef.current + topPad;
+    const viewportBottom = lumiScrollYRef.current + Math.max(0, lumiViewportRef.current - bottomPad);
+    const next = bottom > viewportTop && top < viewportBottom;
+    setLumiInView(prev => prev === next ? prev : next);
+  };
+  const lumiCard = (
+  <View onLayout={e => {
+    const top = e.nativeEvent.layout.y + (expandedHome ? 0 : topPad + 4);
+    lumiCardBoundsRef.current = { top, bottom: top + e.nativeEvent.layout.height };
+    updateLumiVisibility();
+  }}>
+    <LumiHomeCard
+      key={clerkUserId ?? 'signed-out'}
+      userId={clerkUserId}
+      accountReady={lumiAccountReady}
+      accountCreatedAt={clerkUser?.createdAt ? new Date(clerkUser.createdAt).getTime() : null}
+      dataReady={creationDataReady}
+      storyCount={stories.length}
+      journalCount={journalEntries.length}
+      outfitCount={outfits.length}
+      inView={lumiInView}
+      accent={accent}
+      compact={isShortScreen}
+    />
+  </View>
+  );
   const dashboardFriends = friends.slice(0, screenWidth < 390 ? 4 : 5);
 
   return (
@@ -1473,9 +1510,18 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
+        onLayout={e => {
+          lumiViewportRef.current = e.nativeEvent.layout.height;
+          updateLumiVisibility();
+        }}
+        scrollEventThrottle={64}
+        onScroll={e => {
+          lumiScrollYRef.current = e.nativeEvent.contentOffset.y;
+          updateLumiVisibility();
+        }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={accent} />}
       >
-        {showExpandedDashboard() ? (
+        {expandedHome ? (
           <>
         <View style={s.dashboardHeader}>
            <View style={{ flex: 1, minWidth: 0 }}>
@@ -1563,34 +1609,7 @@ export default function HomeScreen() {
           })}
         </View>
 
-        <TouchableOpacity
-          style={[s.dashboardLumi, isShortScreen && s.dashboardLumiShort]}
-           onPress={() => logHomePress('Lumi card', () => {
-             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-             router.push('/(tabs)/drift');
-           })}
-          activeOpacity={0.84}
-        >
-          <LinearGradient colors={['#241058', '#37157A', '#180A42']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-          <View style={s.dashboardLumiGlow} />
-          <Image source={Images.character_default} style={s.dashboardLumiImage} contentFit="cover" contentPosition={{ left: '50%', top: '68%' }} />
-          <LinearGradient
-            colors={['rgba(36,16,88,0)', 'rgba(45,18,104,0.38)', '#351470']}
-            locations={[0, 0.58, 1]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 1, y: 0.5 }}
-            style={s.dashboardLumiBlend}
-          />
-          <View style={s.dashboardLumiCopy}>
-            <Text style={[s.dashboardLumiEyebrow, { color: accent }]}>✦ LUMI</Text>
-            <Text style={s.dashboardLumiTitle}>{t('feature.home.talkToLumi')}</Text>
-            <Text style={s.dashboardLumiText} numberOfLines={2}>{t('feature.home.lumiDesc')}</Text>
-            <View style={[s.dashboardLumiButton, { backgroundColor: accent }]}>
-              <Text style={s.dashboardLumiButtonText}>{t('feature.home.chatWithLumi')}</Text>
-              <Icon name="arrow-right" size={13} color="#FFFFFF" />
-            </View>
-          </View>
-        </TouchableOpacity>
+        {lumiCard}
 
         {!isShortScreen && (
           <>
@@ -1710,6 +1729,7 @@ export default function HomeScreen() {
             onOpenNotifications={openNotificationsPanel}
             friendStories={circleStories.slice(0, 5)}
             friendCount={friends.length}
+            companion={lumiCard}
           />
         )}
       </ScrollView>

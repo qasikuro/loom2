@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@clerk/expo';
+import { clearLumiCreations, publishLumiCreation } from '@/features/lumi/home/events';
 import { enqueueMutation, drainMutationQueue, clearMutation } from '@/utils/mutationQueue';
 import { registerCustomEffects, type EffectDef } from '@/components/ProfileEffect';
 import { showToastGlobal } from '@/components/Toast';
@@ -394,6 +396,7 @@ interface RawShopResponse {
 interface AppContextValue {
   isLoading: boolean;
   apiOnline: boolean;
+  creationDataReady: boolean;
 
   character:    Character;
   setCharacter: (c: Character) => void;
@@ -545,6 +548,15 @@ function parseOrDefault<F>(schema: SafeSchema, raw: unknown, fallback: F, endpoi
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const { userId } = useAuth();
+  const lumiUserIdRef = useRef(userId);
+  lumiUserIdRef.current = userId;
+  const [creationDataAccountId, setCreationDataAccountId] = useState<string | null>(null);
+  const creationDataReady = !!userId && creationDataAccountId === userId;
+  useEffect(() => {
+    setCreationDataAccountId(null);
+    return () => { if (userId) clearLumiCreations(userId); };
+  }, [userId]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiOnline, setApiOnline] = useState(false);
 
@@ -766,6 +778,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Prevent two concurrent loads (e.g. rapid sign-out / sign-in)
     if (isLoadingRef.current) return;
     isLoadingRef.current = true;
+    const creationRequestAccount = lumiUserIdRef.current;
+    setCreationDataAccountId(null);
 
     // Only show the skeleton spinner on a true cold start (no cache data yet).
     // Returning users see their cached content while the API refreshes silently.
@@ -877,6 +891,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (entriesRaw !== null) setJournalEntries(entries);
       if (storiesRaw !== null) setStories(stors);
       if (outfitsRaw !== null) setOutfits(outs);
+      // Empty content means "nothing created" only after all three endpoints
+      // were validated for this account, not after a missing/failed request.
+      if (creationRequestAccount && creationRequestAccount === lumiUserIdRef.current &&
+          entriesRaw !== null && storiesRaw !== null && outfitsRaw !== null) {
+        setCreationDataAccountId(creationRequestAccount);
+      }
       if (galleryRaw !== null) {
         setGallery(gal);
         setGalleryUsage({ count: usageRaw?.count ?? gal.length, limit: usageRaw?.limit ?? 200 });
@@ -1556,6 +1576,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       // Always sync constellation so memory count & star progress update immediately
       reloadConstellation().catch(() => null);
+      publishLumiCreation(userId, 'journal', safeEntry.id);
       import('@/utils/xpFlash').then(m => m.fireXPFlash('Memory grows in the night sky')).catch(() => {});
     } catch {
       // H-3: Revert the optimistic add — the entry must not persist locally as
@@ -1582,10 +1603,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           writeJournalCache(JSON.stringify(restored));
           return restored;
         });
-        apiFetch('/journal-entries', { method: 'POST', body: retryBody }).catch(() => null);
+        apiFetch('/journal-entries', { method: 'POST', body: retryBody })
+          .then(() => { publishLumiCreation(userId, 'journal', safeEntry.id); })
+          .catch(() => null);
       });
     }
-  }, [fireToast, reloadRewards, reloadConstellation]);
+  }, [fireToast, reloadRewards, reloadConstellation, userId]);
 
   const deleteJournalEntry = useCallback((id: string) => {
     writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
@@ -1656,6 +1679,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reloadConstellation().catch(() => null);
       import('@/utils/xpFlash').then(m => m.fireXPFlash('Creative light brightens')).catch(() => {});
       loadSocialData();
+      publishLumiCreation(userId, 'story', story.id);
       return true;
     } catch {
       // Revert optimistic update so it doesn't linger
@@ -1678,12 +1702,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return updated;
         });
         apiFetch('/stories', { method: 'POST', body: storyPostBody })
-          .then(() => loadSocialData())
+          .then(() => {
+            publishLumiCreation(userId, 'story', story.id);
+            loadSocialData();
+          })
           .catch(() => showToastGlobal("Story still couldn't be published", 'error'));
       });
       return false;
     }
-  }, [fireToast, reloadRewards, reloadConstellation]);
+  }, [fireToast, reloadRewards, reloadConstellation, userId]);
 
   const updateStory = useCallback((id: string, updates: Partial<Omit<Story, 'id'>>) => {
     // M-4: Reset TTL so a second device opening within the window sees the edit.
@@ -1749,6 +1776,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     apiFetch('/outfits', { method: 'POST', body: outfitBody })
     .then(() => {
+      publishLumiCreation(userId, 'outfit', safeOutfit.id);
       reloadConstellation().catch(() => null);
       import('@/utils/xpFlash').then(m => m.fireXPFlash('Style memory recorded')).catch(() => {});
     })
@@ -1767,10 +1795,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           writeOutfitCache(JSON.stringify(restored));
           return restored;
         });
-        apiFetch('/outfits', { method: 'POST', body: outfitBody }).catch(() => null);
+        apiFetch('/outfits', { method: 'POST', body: outfitBody })
+          .then(() => { publishLumiCreation(userId, 'outfit', safeOutfit.id); })
+          .catch(() => null);
       });
     });
-  }, [reloadConstellation]);
+  }, [reloadConstellation, userId]);
 
   const updateOutfit = useCallback((id: string, updates: Partial<Omit<Outfit, 'id'>>) => {
     // Capture only the outfit being edited for targeted restore.
@@ -2130,7 +2160,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const contextValue = useMemo<AppContextValue>(() => ({
-    isLoading, apiOnline,
+    isLoading, apiOnline, creationDataReady,
     journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
     hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
     character, setCharacter,
@@ -2154,7 +2184,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     clearUserData,
     isRefreshing,
   }), [
-    isLoading, apiOnline,
+    isLoading, apiOnline, creationDataReady,
     journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
     hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
     character, setCharacter,
