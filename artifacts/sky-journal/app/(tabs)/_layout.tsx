@@ -1,4 +1,4 @@
-import { Redirect, Tabs } from 'expo-router';
+import { Redirect, Tabs, usePathname } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import React, { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -174,6 +174,7 @@ function ClassicTabLayout() {
   const { playSound } = useSound();
   const { dmUnread } = useApp();
 
+  const onHome = usePathname() === '/';
   const barMarginBottom = isWeb ? 0 : Math.max(insets.bottom, 10);
 
   return (
@@ -197,11 +198,11 @@ function ClassicTabLayout() {
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: colors.border,
-          elevation: isDark ? 28 : 8,
-          shadowColor: isDark ? '#5820A8' : colors.secondary,
+          borderColor: onHome ? 'rgba(168,124,255,0.55)' : colors.border,
+          elevation: isDark || onHome ? 28 : 8,
+          shadowColor: onHome ? '#8B5CF6' : isDark ? '#5820A8' : colors.secondary,
           shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: isDark ? 0.70 : 0.12,
+          shadowOpacity: onHome ? 0.55 : isDark ? 0.70 : 0.12,
           shadowRadius: isDark ? 30 : 14,
         },
 

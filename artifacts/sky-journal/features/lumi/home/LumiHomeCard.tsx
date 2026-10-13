@@ -125,6 +125,10 @@ export function LumiHomeCard(props: {
   inView: boolean;
   accent: string;
   compact?: boolean;
+  /** Transparent variant that sits directly on the Home hero scene. */
+  variant?: 'card' | 'hero';
+  /** Exact hero height computed by the Home layout budget. */
+  heroHeight?: number;
 }) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
@@ -222,7 +226,51 @@ export function LumiHomeCard(props: {
   }
 
   const size = Math.max(128, Math.min(props.compact ? 148 : 184, (screenWidth - 80) * 0.52));
-  const cardHeight = props.compact ? 218 : 246;
+  const hero = props.variant === 'hero';
+  // Keep the speech bubble and the touch target inside the allocated stage.
+  const cardHeight = hero ? Math.max(124, props.heroHeight ?? (props.compact ? 150 : 172)) : props.compact ? 218 : 246;
+  if (hero) {
+    const heroSize = Math.max(100, Math.min(158, (screenWidth - 40) * 0.4, cardHeight * 1.02));
+    const roomy = cardHeight >= 150;
+    return (
+      <View style={[s.heroWrap, { height: cardHeight }]} testID="lumi-fairy-scene">
+        <View style={StyleSheet.absoluteFill} pointerEvents="none">
+          {FAIRY_LIGHTS.map((light, index) => (
+            <FairyLight key={`${light.kind}-${index}`} {...light} index={index} active={ctx.visible} reducedMotion={ctx.reducedMotion} />
+          ))}
+        </View>
+        <View style={[s.heroAura]} pointerEvents="none" />
+        <Pressable onPress={onTap} style={[s.stage, { width: heroSize, height: heroSize, left: -6, bottom: -heroSize * 0.06 }]}
+          accessibilityRole="button" accessibilityLabel={t('lumiHome.a11yLumi', 'Lumi. Tap to play with her.')} testID="lumi-home-character">
+          <LumiRigView v={rig.values} size={heroSize} />
+        </Pressable>
+        <View style={[s.heroPanel, { left: heroSize - 14 }]}>
+          {roomy && <Text style={s.eyebrow}>{t('lumiHome.eyebrowShort', 'LUMI')}</Text>}
+          <Animated.View key={dialog?.key ?? 'idle'} entering={FadeIn.duration(220)} exiting={FadeOut.duration(160)} style={s.bubble}>
+            <View style={s.tail} />
+            <Text style={s.line} numberOfLines={roomy ? 3 : 2} testID="lumi-home-line">{line}</Text>
+            {dialog && (
+              <TouchableOpacity onPress={dismiss} hitSlop={12} style={s.close} accessibilityLabel={t('lumiHome.notNow', 'Not now')}>
+                <Icon name="x" size={12} color={INK.sub} />
+              </TouchableOpacity>
+            )}
+          </Animated.View>
+          <View style={s.heroActions}>
+            {action && (
+              <TouchableOpacity onPress={action.onPress} style={[s.actionBtn, { backgroundColor: INK.sprout }]} activeOpacity={0.8} testID="lumi-home-action">
+                <Text style={s.btnText} numberOfLines={1}>{action.label}</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => go('/(tabs)/drift')} style={s.heroChat} activeOpacity={0.8} testID="lumi-home-chat" accessibilityRole="button">
+              <Icon name="message-circle" size={15} color="#FFFFFF" />
+              <Text style={[s.btnText, { fontSize: 12.5, flex: 1 }]} numberOfLines={1}>{t('lumiHome.chat', 'Talk to Lumi')}</Text>
+              <Icon name="arrow-right" size={14} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
   const bg: readonly [string, string, string] = isDark ? ['#241058', '#37157A', '#180A42'] : ['#EBDDFF', '#F6ECFF', '#FFE9E4'];
 
   return (
@@ -306,6 +354,11 @@ export function LumiHomeCard(props: {
 }
 
 const s = StyleSheet.create({
+  heroWrap: { position: 'relative' },
+  heroAura: { position: 'absolute', left: 4, bottom: -10, width: 150, height: 60, borderRadius: 80, backgroundColor: '#FFD9A6', opacity: 0.16 },
+  heroPanel: { position: 'absolute', right: 0, top: 0, zIndex: 3, gap: 7, padding: 9, borderRadius: 20, backgroundColor: 'rgba(30,18,72,0.62)', borderWidth: 1, borderColor: 'rgba(196,164,255,0.38)' },
+  heroActions: { flexDirection: 'row', gap: 6, alignItems: 'center' },
+  heroChat: { flex: 1, minHeight: 44, borderRadius: 22, backgroundColor: '#8B5CF6', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6 },
   card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: '#16102C' },
   sceneImage: { borderRadius: 22 },
   avatarAura: { position: 'absolute', left: '17%', bottom: -46, width: 174, height: 108, borderRadius: 100, opacity: 0.24 },

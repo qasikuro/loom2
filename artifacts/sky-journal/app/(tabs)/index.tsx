@@ -1104,6 +1104,7 @@ export default function HomeScreen() {
       refetchOnReconnect: true,
     },
   });
+  // A missing/loading config must never reveal a button the admin has hidden.
   const shopEnabled = publicConfig?.features.shop === true && publicConfig.features.shop_button === true;
   const seasonEnabled = publicConfig?.features.season === true && publicConfig.features.season_button === true;
   const floatingMenuItems = useMemo<FloatingMenuItem[]>(() => {
@@ -1439,9 +1440,9 @@ export default function HomeScreen() {
     const next = bottom > viewportTop && top < viewportBottom;
     setLumiInView(prev => prev === next ? prev : next);
   };
-  const lumiCard = (
+  const renderLumi = (heroHeight?: number) => (
   <View onLayout={e => {
-    const top = e.nativeEvent.layout.y + (expandedHome ? 0 : topPad + 4);
+    const top = e.nativeEvent.layout.y + (expandedHome ? 0 : topPad + 56);
     lumiCardBoundsRef.current = { top, bottom: top + e.nativeEvent.layout.height };
     updateLumiVisibility();
   }}>
@@ -1457,6 +1458,8 @@ export default function HomeScreen() {
       inView={lumiInView}
       accent={accent}
       compact={isShortScreen}
+      variant={expandedHome ? 'card' : 'hero'}
+      heroHeight={heroHeight}
     />
   </View>
   );
@@ -1505,7 +1508,9 @@ export default function HomeScreen() {
         contentContainerStyle={[
           s.dashboard,
           screenWidth < 360 && s.dashboardNarrow,
-          { paddingTop: topPad + 4, paddingBottom: bottomPad + 12 },
+          expandedHome
+            ? { paddingTop: topPad + 4, paddingBottom: bottomPad + 12 }
+            : { paddingTop: 0, paddingHorizontal: 0, paddingBottom: bottomPad + 8 },
         ]}
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="never"
@@ -1609,7 +1614,7 @@ export default function HomeScreen() {
           })}
         </View>
 
-        {lumiCard}
+        {renderLumi()}
 
         {!isShortScreen && (
           <>
@@ -1727,9 +1732,22 @@ export default function HomeScreen() {
             accent={accent}
             hasNotifications={hasNotifs}
             onOpenNotifications={openNotificationsPanel}
-            friendStories={circleStories.slice(0, 5)}
+            onLongPressAvatar={() => setShowOutfits(true)}
+            friends={friends}
+            friendStories={circleStories}
             friendCount={friends.length}
-            companion={lumiCard}
+            topInset={topPad}
+            viewerId={clerkUserId}
+            // Only real admin-published events feed What's New; no sample news.
+            announcements={activeEvent ? [{
+              id: activeEvent.id,
+              category: 'Storigam',
+              title: activeEvent.title,
+              description: activeEvent.description,
+              actionLabel: 'Explore now',
+              onPress: () => setShowEventSheet(true),
+            }] : []}
+            renderCompanion={renderLumi}
           />
         )}
       </ScrollView>
