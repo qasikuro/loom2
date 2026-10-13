@@ -43,6 +43,16 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from '@/context/ThemeContext';
+import { useColors } from '@/hooks/useColors';
+import { ChatLumiCompanion } from '@/features/lumi/chat/ChatLumiCompanion';
+import { getChatEmote, type ChatEmoteId } from '@/features/lumi/chat/chatEmotes';
+import { useLumiActivity } from '@/features/lumi/home/useLumiActivity';
+import {
+  acceptSharedReaction, MAX_SHARED_REACTION_EVENTS, mergeConfirmedChatMessage, parseSharedReaction,
+  seedSharedReactionHistory, sharedReactionContent,
+  type SharedLumiEvent, type SharedReactionTracker,
+} from '@/features/lumi/chat/sharedChatReactions';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NIGHT   = '#080618';
@@ -131,8 +141,8 @@ const STARS = Array.from({ length: 28 }, (_, i) => ({
   key: `s${i}`,
   left: `${Math.random() * 98}%` as `${number}%`,
   top:  `${Math.random() * 90}%` as `${number}%`,
-  size: Math.random() < 0.3 ? 2.5 : 1.5,
-  opacity: 0.08 + Math.random() * 0.18,
+  size: Math.random() < 0.18 ? 2.2 : 1.2,
+  opacity: 0.12 + Math.random() * 0.3,
 }));
 
 // ── Sticker bubble (in chat history) ─────────────────────────────────────────
@@ -208,6 +218,22 @@ export default function MessagesScreen() {
     isGuide?:   string;
   }>();
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const c = useColors();
+  const th = {
+    bg: c.background,
+    header: (isDark ? [c.night, c.card, c.secondary] : [c.card, c.background, c.muted]) as [string, string, string],
+    star: c.lavender,
+    ink: c.foreground,
+    sub: c.mutedForeground,
+    other: isDark ? c.secondary : c.card,
+    otherBorder: c.border,
+    otherText: c.foreground,
+    own: isDark ? c.primary : c.secondary,
+    bar: c.card,
+    field: c.input,
+    border: c.border,
+  };
   const { width: windowWidth } = useWindowDimensions();
   const { markDmThreadRead, blockedIds, blockUser, unblockUser, dmThreads } = useApp();
   const { playStickerSound } = useSound();
@@ -220,6 +246,15 @@ export default function MessagesScreen() {
   const [messages,      setMessages]      = useState<Message[]>(initialMessages);
   const [loading,       setLoading]       = useState(initialMessages.length === 0);
   const [sending,       setSending]       = useState(false);
+  const [reactionEvents, setReactionEvents] = useState<SharedLumiEvent[]>([]);
+  const [reactionPlaybackEpoch, setReactionPlaybackEpoch] = useState(0);
+  const reactionTrackerRef = useRef<SharedReactionTracker>({ seen: initialMessages.map(m => m.id) });
+  const reactionHistoryReadyRef = useRef(false);
+  const reactionSendRef = useRef<AbortController | null>(null);
+  const recentReactionsRef = useRef(new Map<string, { message: Message; receivedAt: number }>());
+  const chatActivity = useLumiActivity();
+  const chatActiveRef = useRef(chatActivity.active);
+  chatActiveRef.current = chatActivity.active;
   const [input,         setInput]         = useState('');
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<string | null>(null);
@@ -230,13 +265,51 @@ export default function MessagesScreen() {
   photoIdentityRef.current = photoIdentity;
   useEffect(() => {
     photoIdentityRef.current = photoIdentity;
+    setMessages(initialMessages);
+    setLoading(initialMessages.length === 0);
+    lastMsgIdRef.current = initialMessages.at(-1)?.id ?? null;
+    setError(null);
     setPhotoUri(null);
     setViewingPhoto(null);
     setPickingPhoto(false);
     setSending(false);
+    reactionSendRef.current?.abort();
+    reactionSendRef.current = null;
+    reactionTrackerRef.current = { seen: initialMessages.map(m => m.id) };
+    reactionHistoryReadyRef.current = false;
+    recentReactionsRef.current.clear();
+    setReactionEvents([]);
     uploadedPhotoRef.current = null;
-    return () => { photoIdentityRef.current = ''; };
+    return () => {
+      photoIdentityRef.current = '';
+      reactionSendRef.current?.abort();
+      reactionSendRef.current = null;
+    };
   }, [photoIdentity]);
+
+  const recordSharedReaction = useCallback((message: Message) => {
+    if (!myUserId || !userId || photoIdentity !== photoIdentityRef.current) return;
+    const event = acceptSharedReaction(reactionTrackerRef.current, message, {
+      viewerId: myUserId, partnerId: userId, active: chatActiveRef.current, now: Date.now(),
+    });
+    if (!event) return;
+    recentReactionsRef.current.set(message.id, { message, receivedAt: Date.now() });
+    if (recentReactionsRef.current.size > 32) {
+      recentReactionsRef.current.delete(recentReactionsRef.current.keys().next().value!);
+    }
+    setReactionEvents(previous => [...previous, event].slice(-MAX_SHARED_REACTION_EVENTS));
+  }, [myUserId, userId, photoIdentity]);
+
+  const resetSharedPlayback = useCallback(() => {
+    if (reactionSendRef.current) {
+      reactionSendRef.current.abort();
+      reactionSendRef.current = null;
+      setSending(false);
+    }
+    recentReactionsRef.current.clear();
+    setReactionEvents([]);
+    setReactionPlaybackEpoch(previous => previous + 1);
+  }, []);
   const [error,         setError]         = useState<string | null>(null);
   const [headerH,       setHeaderH]       = useState(0);
   const [showPicker,    setShowPicker]    = useState(false);
@@ -346,6 +419,9 @@ export default function MessagesScreen() {
   }, [drainStickerQueue]);
 
   const load = useCallback(async () => {
+    const identity = photoIdentity;
+    if (identity !== photoIdentityRef.current) return;
+    const startedAt = Date.now();
     if (!userId) {
       setError(t('social.conversationMissing'));
       setLoading(false);
@@ -357,7 +433,24 @@ export default function MessagesScreen() {
         userId,
         () => apiFetch<Message[]>(`/messages/${userId}`),
       );
-      const msgs = data ?? [];
+      if (identity !== photoIdentityRef.current) return;
+      const msgs = [...(data ?? [])];
+      if (!reactionHistoryReadyRef.current) {
+        seedSharedReactionHistory(reactionTrackerRef.current, msgs);
+        reactionHistoryReadyRef.current = true;
+      } else {
+        msgs.forEach(recordSharedReaction);
+      }
+      // A request started before a confirmed reaction must not erase that live
+      // message when its older snapshot returns (SSE and POST can race a GET).
+      const fetchedIds = new Set(msgs.map(message => message.id));
+      const live = [...recentReactionsRef.current.values()]
+        .filter(item => item.receivedAt >= startedAt && !fetchedIds.has(item.message.id))
+        .map(item => item.message);
+      if (live.length) {
+        msgs.push(...live);
+        msgs.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+      }
       const isFirstLoad = lastMsgIdRef.current === null;
 
       if (!isFirstLoad && msgs.length > 0) {
@@ -387,13 +480,14 @@ export default function MessagesScreen() {
       markDmThreadRead(userId);
       markDmConversationOpened(myUserId, userId);
     } catch {
+      if (identity !== photoIdentityRef.current) return;
       if (getDmConversationCache(myUserId, userId).length === 0) {
         setError(t('social.loadMessagesError'));
       }
     } finally {
-      setLoading(false);
+      if (identity === photoIdentityRef.current) setLoading(false);
     }
-  }, [userId, myUserId, markDmThreadRead, queueSticker]);
+  }, [userId, myUserId, markDmThreadRead, queueSticker, photoIdentity, recordSharedReaction]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -405,6 +499,7 @@ export default function MessagesScreen() {
   const { connected: sseConnected } = useSSE(
     myUserId ? [`messages:${myUserId}`] : [],
     useCallback((_channel: string, data: unknown) => {
+      if (photoIdentity !== photoIdentityRef.current || !data || typeof data !== 'object') return;
       const ev = data as {
         type: string; id?: string; fromUserId?: string; toUserId?: string;
         content?: string | null; expression?: string | null; imageUri?: string | null;
@@ -412,15 +507,18 @@ export default function MessagesScreen() {
         messageId?: string; forEveryone?: boolean; partnerId?: string;
       };
 
-      if (ev?.type === 'new_message' && ev.fromUserId === userId && ev.id) {
+      const ownSharedReaction = ev?.fromUserId === myUserId && ev.toUserId === userId
+        && !!parseSharedReaction(ev.content) && !ev.imageUri && !ev.expression;
+      if (ev?.type === 'new_message' && (ev.fromUserId === userId || ownSharedReaction) && ev.id) {
+        const newMsg: Message = {
+          id: ev.id, fromUserId: ev.fromUserId!, toUserId: ev.toUserId ?? '',
+          content: ev.content ?? null, expression: ev.expression ?? null,
+          imageUri: ev.imageUri ?? null,
+          isRead: ev.isRead ?? false, createdAt: ev.createdAt!, isOwn: ev.fromUserId === myUserId,
+        };
+        recordSharedReaction(newMsg);
         setMessages(prev => {
           if (prev.find(m => m.id === ev.id)) return prev;
-          const newMsg: Message = {
-            id: ev.id!, fromUserId: ev.fromUserId!, toUserId: ev.toUserId ?? '',
-            content: ev.content ?? null, expression: ev.expression ?? null,
-            imageUri: ev.imageUri ?? null,
-            isRead: ev.isRead ?? false, createdAt: ev.createdAt!, isOwn: false,
-          };
           lastMsgIdRef.current = ev.id!;
           if (ev.expression) queueSticker(getSticker(ev.expression));
           markDmThreadRead(userId ?? '');
@@ -435,6 +533,7 @@ export default function MessagesScreen() {
       }
 
       if (ev?.type === 'conversation_cleared' && ev.partnerId === userId) {
+        resetSharedPlayback();
         forgetDmConversation(myUserId, userId);
         setMessages([]);
         return;
@@ -445,7 +544,7 @@ export default function MessagesScreen() {
         if (typingClearRef.current) clearTimeout(typingClearRef.current);
         typingClearRef.current = setTimeout(() => setPartnerTyping(false), 4000);
       }
-    }, [userId, myUserId, markDmThreadRead, queueSticker]),
+    }, [userId, myUserId, photoIdentity, markDmThreadRead, queueSticker, recordSharedReaction, resetSharedPlayback]),
   );
 
   // Gap-fill: when SSE reconnects, fetch to fill the gap
@@ -521,7 +620,7 @@ export default function MessagesScreen() {
       });
       if (!sent?.id) throw new Error('Message was not confirmed');
       if (identity !== photoIdentityRef.current) return;
-      setMessages(prev => prev.map(m => m.id === optimistic.id ? sent : m));
+      setMessages(prev => mergeConfirmedChatMessage(prev, sent, optimistic.id));
       setPhotoUri(null);
       uploadedPhotoRef.current = null;
       if (sent?.id) lastMsgIdRef.current = sent.id;
@@ -541,6 +640,41 @@ export default function MessagesScreen() {
       if (identity === photoIdentityRef.current) setSending(false);
     }
   }, [input, photoUri, sending, loading, pickingPhoto, userId, t]);
+
+  const handleSendLumiReaction = useCallback(async (id: ChatEmoteId): Promise<boolean> => {
+    if (!myUserId || !userId || !getChatEmote(id) || isBlocked || sending || loading || pickingPhoto
+      || reactionSendRef.current || !chatActiveRef.current
+      || photoIdentity !== photoIdentityRef.current) return false;
+    const controller = new AbortController();
+    reactionSendRef.current = controller;
+    setSending(true);
+    try {
+      const sent = await apiFetch<Message>(`/messages/${userId}`, {
+        method: 'POST', signal: controller.signal,
+        body: JSON.stringify({ content: sharedReactionContent(id) } satisfies ChatMessageInput),
+      });
+      if (controller.signal.aborted || photoIdentity !== photoIdentityRef.current) return false;
+      if (!sent?.id || sent.fromUserId !== myUserId || sent.toUserId !== userId
+        || parseSharedReaction(sent.content) !== id) throw new Error('Reaction was not confirmed');
+      // No optimistic performance: both clients animate the persisted message.
+      // SSE can arrive before this response; both paths deduplicate by message ID.
+      recordSharedReaction(sent);
+      setMessages(previous => mergeConfirmedChatMessage(previous, { ...sent, isOwn: true }));
+      lastMsgIdRef.current = sent.id;
+      return true;
+    } catch (err) {
+      if (controller.signal.aborted || photoIdentity !== photoIdentityRef.current) return false;
+      const retry = err instanceof ApiError && err.status === 429;
+      const suffix = retry && err.retryAfter ? ` Try again in ${err.retryAfter}s.` : '';
+      showToastGlobal(retry ? `${t('social.slowDown')}${suffix}` : 'Could not send the Lumi reaction. Please try again.', 'warning');
+      return false;
+    } finally {
+      if (reactionSendRef.current === controller) {
+        reactionSendRef.current = null;
+        if (photoIdentity === photoIdentityRef.current) setSending(false);
+      }
+    }
+  }, [myUserId, userId, isBlocked, sending, loading, pickingPhoto, photoIdentity, recordSharedReaction, t]);
 
   const handleDeleteMsg = useCallback(async (msg: Message) => {
     if (!msg.isOwn) return;
@@ -612,21 +746,21 @@ export default function MessagesScreen() {
   const partnerInitial = (name ?? 'G').charAt(0).toUpperCase();
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: th.bg }]}>
       {/* ── Static star background ─────────────────────────── */}
       <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
         {STARS.map(s => (
           <View key={s.key} style={{
             position: 'absolute', left: s.left, top: s.top,
             width: s.size, height: s.size, borderRadius: s.size / 2,
-            backgroundColor: '#C8B8E8', opacity: s.opacity,
+            backgroundColor: th.star, opacity: isDark ? s.opacity : s.opacity * 0.6,
           }} />
         ))}
       </View>
 
       {/* ── Header ──────────────────────────────────────────── */}
       <LinearGradient
-        colors={['#0B0820', '#100C30', '#160A42']}
+        colors={th.header}
         style={[styles.header, { paddingTop: topPad }]}
         onLayout={e => setHeaderH(e.nativeEvent.layout.height)}
       >
@@ -637,7 +771,7 @@ export default function MessagesScreen() {
         </View>
 
         <View style={[styles.headerRow, { width: contentWidth, alignSelf: 'center' }]}>
-          <BackButton color="rgba(210,200,255,0.85)" />
+          <BackButton color={th.ink} />
 
           <View style={styles.partnerInfo}>
             {/* Avatar with glow ring */}
@@ -653,9 +787,9 @@ export default function MessagesScreen() {
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={styles.partnerName} numberOfLines={1}>{name ?? t('social.guide')}</Text>
+              <Text style={[styles.partnerName, { color: th.ink }]} numberOfLines={1}>{name ?? t('social.guide')}</Text>
               {partnerSubtitle && (
-                <Text style={styles.partnerSubtitle} numberOfLines={1}>{partnerSubtitle}</Text>
+                <Text style={[styles.partnerSubtitle, { color: th.sub }]} numberOfLines={1}>{partnerSubtitle}</Text>
               )}
             </View>
           </View>
@@ -667,7 +801,7 @@ export default function MessagesScreen() {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={{ padding: 4 }}
             >
-              <Icon name="more-vertical" size={18} color="rgba(200,184,232,0.70)" />
+              <Icon name="more-vertical" size={18} color={th.sub} />
             </TouchableOpacity>
           )}
         </View>
@@ -785,6 +919,7 @@ export default function MessagesScreen() {
                     style={[
                       styles.bubble,
                       msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
+                      msg.isOwn ? { backgroundColor: th.own } : { backgroundColor: th.other, borderColor: th.otherBorder },
                     ]}
                     onLongPress={() => handleDeleteMsg(msg)}
                     onPress={() => { if (msg.imageUri) setViewingPhoto(msg.imageUri); }}
@@ -792,20 +927,13 @@ export default function MessagesScreen() {
                     activeOpacity={0.85}
                     delayLongPress={350}
                   >
-                    {msg.isOwn && (
-                      <LinearGradient
-                        colors={[PURPLE, PURPLE2]}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                        style={StyleSheet.absoluteFill}
-                      />
-                    )}
                     {msg.imageUri && (
                       <Image source={{ uri: msg.imageUri }} style={{ width: Math.min(contentWidth * 0.52, 270), height: 220, borderRadius: 12 }} contentFit="contain" accessibilityLabel="Shared photo" />
                     )}
-                    {!!msg.content && <Text style={[styles.bubbleText, { color: msg.isOwn ? 'rgba(255,255,255,0.95)' : 'rgba(220,210,255,0.90)' }]}>
+                    {!!msg.content && <Text style={[styles.bubbleText, { color: msg.isOwn ? '#FBF9FF' : th.otherText }]}>
                       {msg.content}
                     </Text>}
-                    <Text style={[styles.bubbleTime, { color: msg.isOwn ? 'rgba(255,255,255,0.40)' : 'rgba(200,184,232,0.40)' }]}>
+                    <Text style={[styles.bubbleTime, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : th.sub }]}>
                       {fmtTime(msg.createdAt)}
                     </Text>
                   </TouchableOpacity>
@@ -838,9 +966,21 @@ export default function MessagesScreen() {
             </View>
           )}
 
+          {/* ── Local-only Lumi companion (remounts per conversation) ── */}
+          <View style={{ width: contentWidth, alignSelf: 'center' }} pointerEvents="box-none">
+            <ChatLumiCompanion key={`${photoIdentity}:${reactionPlaybackEpoch}`}
+              enabled={!loading && !isBlocked && !viewingPhoto && !pickingPhoto}
+              busy={sending}
+              partnerName={name}
+              events={reactionEvents}
+              onSendReaction={handleSendLumiReaction}
+              externalPickerOpen={showPicker}
+              onOpenPalette={() => setShowPicker(false)} />
+          </View>
+
           {/* ── Input bar ─────────────────────────────────── */}
-          {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color="rgba(220,210,255,0.90)" onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
-           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: Math.max(bottomPad, 8) }]}>
+          {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color={th.ink} onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
+           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: Math.max(bottomPad, 8), backgroundColor: th.bar, borderColor: th.border }]}>
             <TouchableOpacity
               style={styles.stickerToggleBtn} onPress={pickPhoto}
               disabled={loading || sending || pickingPhoto} accessibilityLabel="Attach a photo"
@@ -861,9 +1001,9 @@ export default function MessagesScreen() {
               <Text style={[styles.stickerToggleIcon, { color: showPicker ? PURPLE : MUTED }]}>✦</Text>
             </TouchableOpacity>
 
-            <View style={styles.inputWrap}>
+            <View style={[styles.inputWrap, { backgroundColor: th.field, borderColor: th.border }]}>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: th.ink }]}
                 value={input}
                 editable={!loading && !sending}
                 onChangeText={t => {
@@ -877,7 +1017,7 @@ export default function MessagesScreen() {
                   }
                 }}
                 placeholder={t('social.sendWhisper')}
-                placeholderTextColor="rgba(200,184,232,0.30)"
+                placeholderTextColor={th.sub}
                 multiline
                 maxLength={2000}
                 returnKeyType="send"
@@ -926,7 +1066,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: NIGHT },
 
   // ── Header
-  header:          { paddingHorizontal: 16, paddingBottom: 16 },
+  header:          { paddingHorizontal: 16, paddingBottom: 10 },
   headerRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
   partnerInfo:     { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, minWidth: 0 },
 
@@ -985,10 +1125,10 @@ const styles = StyleSheet.create({
   bubbleAvatarSm:     { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 2, flexShrink: 0 },
   bubbleAvatarSmText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
-  bubble:      { maxWidth: '76%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, gap: 3, overflow: 'hidden' },
+  bubble:      { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18, gap: 3, overflow: 'hidden' },
   bubbleOwn:   { borderBottomRightRadius: 5 },
   bubbleOther: { borderBottomLeftRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: BORDER },
-  bubbleText:  { fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 21 },
+  bubbleText:  { fontSize: 15, fontFamily: 'Satoshi-Regular', lineHeight: 21 },
   bubbleTime:  { fontSize: 10, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end' },
 
   // ── Sticker row + card
