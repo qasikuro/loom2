@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  AccessibilityInfo, Animated, BackHandler, FlatList, Keyboard, Modal, PanResponder, Platform,
+  AccessibilityInfo, Animated, BackHandler, Easing, FlatList, Keyboard, PanResponder, Platform,
   Pressable, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -58,8 +58,11 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   const x = useRef(new Animated.Value(drawerW)).current;
   const pending = useRef<(() => void) | null>(null);
   const closing = useRef(false);
+  const [openingComplete, setOpeningComplete] = useState(false);
+  const navigationFrame = useRef<number | null>(null);
 
-  const data = useFriendsDrawerData(visible, scopeKey, query, tab === 'find');
+  // Cached rows are available immediately; revalidation starts after the entry animation.
+  const data = useFriendsDrawerData(visible && openingComplete, scopeKey, query, tab === 'find');
 
   useEffect(() => {
     let on = true;
@@ -68,24 +71,43 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
     return () => { on = false; sub2.remove(); };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    x.stopAnimation();
     if (visible) {
+      if (navigationFrame.current !== null) {
+        cancelAnimationFrame(navigationFrame.current);
+        navigationFrame.current = null;
+      }
+      pending.current = null;
       closing.current = false;
+      setOpeningComplete(reduce);
       setTab(initialTab); setQuery(''); setPicking(false);
       Keyboard.dismiss();
       x.setValue(reduce ? 0 : drawerW);
-      if (!reduce) Animated.timing(x, { toValue: 0, duration: 260, useNativeDriver: true }).start();
-    }
+      if (!reduce) Animated.timing(x, { toValue: 0, duration: 210, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+        .start(({ finished }) => { if (finished) setOpeningComplete(true); });
+    } else setOpeningComplete(false);
+    return () => x.stopAnimation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
 
-  const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (visible && reduce && !closing.current) {
+      x.stopAnimation(); x.setValue(0); setOpeningComplete(true);
+    }
+  }, [visible, reduce, x]);
+
   const runPending = useCallback(() => {
-    if (fallbackTimer.current) { clearTimeout(fallbackTimer.current); fallbackTimer.current = null; }
     const fn = pending.current; pending.current = null;
-    if (fn) setTimeout(fn, 0);
+    if (fn) navigationFrame.current = requestAnimationFrame(() => {
+      navigationFrame.current = null;
+      fn();
+    });
   }, []);
-  useEffect(() => () => { if (fallbackTimer.current) clearTimeout(fallbackTimer.current); }, []);
+  useEffect(() => () => {
+    pending.current = null;
+    if (navigationFrame.current !== null) cancelAnimationFrame(navigationFrame.current);
+  }, []);
 
   const dismiss = useCallback((after?: () => void) => {
     if (closing.current) return;
@@ -95,13 +117,11 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
     x.stopAnimation();
     const finish = () => {
       onClose();
-      if (Platform.OS === 'ios' && pending.current) {
-        // Modal.onDismiss normally runs the navigation; fall back if it never fires.
-        fallbackTimer.current = setTimeout(runPending, 700);
-      } else runPending();
+      runPending();
     };
-    if (after || reduce) { x.setValue(drawerW); finish(); }
-    else Animated.timing(x, { toValue: drawerW, duration: 200, useNativeDriver: true }).start(finish);
+    if (reduce) { x.setValue(drawerW); finish(); }
+    else Animated.timing(x, { toValue: drawerW, duration: after ? 140 : 180, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+      .start(({ finished }) => { if (finished) finish(); });
   }, [onClose, reduce, drawerW, runPending, x]);
 
   useEffect(() => {
@@ -111,14 +131,15 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   }, [visible, dismiss]);
 
   const pan = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => g.dx > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+    onMoveShouldSetPanResponder: (_, g) => openingComplete && !closing.current && g.dx > 18 && Math.abs(g.dx) > Math.abs(g.dy) * 2,
+    onPanResponderGrant: () => x.stopAnimation(),
     onPanResponderMove: (_, g) => { if (g.dx > 0) x.setValue(g.dx); },
     onPanResponderRelease: (_, g) => {
       if (g.dx > drawerW * 0.3 || g.vx > 0.8) { closing.current = false; dismiss(); }
       else Animated.timing(x, { toValue: 0, duration: 160, useNativeDriver: true }).start();
     },
     onPanResponderTerminate: () => Animated.timing(x, { toValue: 0, duration: 160, useNativeDriver: true }).start(),
-  }), [drawerW, dismiss, x]);
+  }), [drawerW, dismiss, x, openingComplete]);
 
   const dmRestricted = dmThreadsError === '401' || dmThreadsError === '403';
   const restricted = data.restricted || dmRestricted;
@@ -243,7 +264,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
           <FriendAvatar name={c.name} uri={c.avatar} online={c.online} size={44} borderColor={c.unread ? accent : undefined} />
           <View style={st.rowText}>
             <Text style={[st.name, { color: colors.foreground }, c.unread && { fontFamily: 'Satoshi-Black' }]} numberOfLines={1}>{c.name}</Text>
-            {!!c.preview
+            {c.preview
               ? <Text style={[st.detail, { color: c.unread ? colors.foreground : sub }]} numberOfLines={1}>{c.preview}</Text>
               : <Text style={[st.detail, { color: sub }]} numberOfLines={1}>{c.handle ? `@${c.handle}` : ''}{c.handle && status ? ' · ' : ''}{status ?? ''}</Text>}
             {!!c.preview && (c.handle || status) && (
@@ -294,10 +315,10 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   const banner = errText ?? (!data.restricted && !initialLoading && data.error && contacts.length ? t('social.loadFriendsError') : null)
     ?? (!restricted && !dmThreadsLoading && dmThreadsError ? t('social.conversationsLoadError') : null);
 
+  // No hidden native window and no native dismissal callback in the navigation path.
+  if (!visible) return null;
   return (
-    <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={() => dismiss()}
-      onDismiss={runPending}>
-      <View style={st.fill}>
+      <View style={[st.fill, st.overlay]}>
         <Animated.View style={[st.fill, { backgroundColor: colors.overlay, opacity: x.interpolate({ inputRange: [0, drawerW], outputRange: [1, 0], extrapolate: 'clamp' }) }]}>
           <Pressable style={st.fill} onPress={() => dismiss()} accessibilityLabel={t('social.closeDrawer')} accessibilityRole="button" />
         </Animated.View>
@@ -367,6 +388,9 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
             data={rows}
             keyExtractor={r => r.key}
             renderItem={renderItem}
+            initialNumToRender={6}
+            maxToRenderPerBatch={6}
+            windowSize={5}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             ListEmptyComponent={renderEmpty()}
@@ -381,12 +405,12 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
           </TouchableOpacity>
         </Animated.View>
       </View>
-    </Modal>
   );
 }
 
 const st = StyleSheet.create({
   fill: { ...StyleSheet.absoluteFillObject },
+  overlay: { zIndex: 100, elevation: 30 },
   drawer: { position: 'absolute', top: 0, bottom: 0, right: 0, borderLeftWidth: StyleSheet.hairlineWidth, borderTopLeftRadius: 24, borderBottomLeftRadius: 24, overflow: 'hidden' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 16, paddingRight: 8, paddingBottom: 4 },
   title: { flex: 1, fontSize: 22, fontFamily: 'Satoshi-Black', minWidth: 0 },

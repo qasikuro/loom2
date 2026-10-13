@@ -1,6 +1,7 @@
 import { useAuth } from '@clerk/expo';
 import { usePathname } from 'expo-router';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { View } from 'react-native';
 import { FriendsMessagesDrawer, type DrawerTab } from '@/components/FriendsMessagesDrawer';
 
 interface DrawerCtx { isOpen: boolean; open: (tab?: DrawerTab) => void; close: () => void }
@@ -22,8 +23,13 @@ export function FriendsDrawerProvider({ children }: { children: React.ReactNode 
   const value = useMemo(() => ({ isOpen: visible, open, close }), [visible, open, close]);
   return (
     <Ctx.Provider value={value}>
-      {children}
-      <FriendsMessagesDrawer key={userId ?? 'signed-out'} visible={visible} scopeKey={userId ?? null} initialTab={tab} onClose={close} />
+      <View style={{ flex: 1 }}>
+        <View style={{ flex: 1 }} pointerEvents={visible ? 'none' : 'auto'}
+          accessibilityElementsHidden={visible} importantForAccessibility={visible ? 'no-hide-descendants' : 'auto'}>
+          {children}
+        </View>
+        <FriendsMessagesDrawer key={userId ?? 'signed-out'} visible={visible} scopeKey={userId ?? null} initialTab={tab} onClose={close} />
+      </View>
     </Ctx.Provider>
   );
 }

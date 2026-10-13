@@ -2,7 +2,7 @@ import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
-import { ChatPhotoDraft, ChatPhotoViewer } from '@/components/ChatPhoto';
+import { ChatMessagePhoto, ChatPhotoDraft, ChatPhotoViewer } from '@/components/ChatPhoto';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
 import type { ChatMessageInput } from '@workspace/api-client-react';
@@ -311,7 +311,6 @@ export default function MessagesScreen() {
     setReactionPlaybackEpoch(previous => previous + 1);
   }, []);
   const [error,         setError]         = useState<string | null>(null);
-  const [headerH,       setHeaderH]       = useState(0);
   const [showPicker,    setShowPicker]    = useState(false);
   const [partnerTyping, setPartnerTyping] = useState(false);
 
@@ -328,7 +327,7 @@ export default function MessagesScreen() {
   const typingClearRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
-  const bottomPad = Platform.OS === 'web' ? 34 : Platform.OS === 'ios' ? insets.bottom : 8;
+  const bottomPad = Platform.OS === 'web' ? 34 : Math.max(insets.bottom, 8);
   const contentWidth = Math.min(windowWidth, 680);
 
   const partnerSubtitle = isGuide === 'true'
@@ -762,7 +761,6 @@ export default function MessagesScreen() {
       <LinearGradient
         colors={th.header}
         style={[styles.header, { paddingTop: topPad }]}
-        onLayout={e => setHeaderH(e.nativeEvent.layout.height)}
       >
         {/* Nebula glow orbs */}
         <View pointerEvents="none" style={{ ...StyleSheet.absoluteFillObject, overflow: 'hidden' }}>
@@ -798,10 +796,11 @@ export default function MessagesScreen() {
           {isGuide !== 'true' && (
             <TouchableOpacity
               onPress={handleMoreMenu}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              style={{ padding: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('social.moreOptions', { defaultValue: 'Conversation options' })}
+              style={styles.headerIconBtn}
             >
-              <Icon name="more-vertical" size={18} color={th.sub} />
+              <Icon name="more-vertical" size={20} color={th.sub} />
             </TouchableOpacity>
           )}
         </View>
@@ -815,8 +814,8 @@ export default function MessagesScreen() {
       ) : (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={headerH}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          keyboardVerticalOffset={0}
         >
           <FlatList<ListItem>
             ref={flatRef}
@@ -920,20 +919,27 @@ export default function MessagesScreen() {
                       styles.bubble,
                       msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
                       msg.isOwn ? { backgroundColor: th.own } : { backgroundColor: th.other, borderColor: th.otherBorder },
+                      msg.imageUri && styles.bubblePhoto,
                     ]}
                     onLongPress={() => handleDeleteMsg(msg)}
                     onPress={() => { if (msg.imageUri) setViewingPhoto(msg.imageUri); }}
-                    accessibilityLabel={msg.imageUri ? 'View photo; hold for message options' : undefined}
+                    accessibilityRole={msg.imageUri ? 'imagebutton' : undefined}
+                    accessible={!msg.imageUri}
+                    accessibilityLabel={msg.imageUri
+                      ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a photo${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
+                      : `${msg.isOwn ? 'You' : (name ?? 'Partner')}: ${msg.content ?? ''}, ${fmtTime(msg.createdAt)}`}
+                    accessibilityHint={msg.imageUri ? 'Opens the photo. Hold for message options.' : msg.isOwn ? 'Hold for message options.' : undefined}
                     activeOpacity={0.85}
                     delayLongPress={350}
                   >
                     {msg.imageUri && (
-                      <Image source={{ uri: msg.imageUri }} style={{ width: Math.min(contentWidth * 0.52, 270), height: 220, borderRadius: 12 }} contentFit="contain" accessibilityLabel="Shared photo" />
+                      <ChatMessagePhoto uri={msg.imageUri} width={Math.min(contentWidth * 0.62, 280)}
+                        onOpen={() => setViewingPhoto(msg.imageUri!)} onLongPress={() => handleDeleteMsg(msg)} />
                     )}
-                    {!!msg.content && <Text style={[styles.bubbleText, { color: msg.isOwn ? '#FBF9FF' : th.otherText }]}>
+                    {!!msg.content && <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : th.otherText }]}>
                       {msg.content}
                     </Text>}
-                    <Text style={[styles.bubbleTime, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : th.sub }]}>
+                    <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : th.sub }]}>
                       {fmtTime(msg.createdAt)}
                     </Text>
                   </TouchableOpacity>
@@ -955,6 +961,8 @@ export default function MessagesScreen() {
                       key={def.id}
                       style={[styles.pickerCell, { borderColor: `${def.color}35`, backgroundColor: `${def.color}12` }]}
                       onPress={() => handleSticker(def)}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(`social.sticker_${def.id}_label`)}
                       activeOpacity={0.70}
                     >
                       <Text style={styles.pickerEmoji}>{def.emoji}</Text>
@@ -966,8 +974,9 @@ export default function MessagesScreen() {
             </View>
           )}
 
-          {/* ── Local-only Lumi companion (remounts per conversation) ── */}
-          <View style={{ width: contentWidth, alignSelf: 'center' }} pointerEvents="box-none">
+          {/* ── Shared Lumi companions (remount per conversation) ── */}
+          <View style={[styles.dock, { backgroundColor: th.bar, borderColor: th.border }]} pointerEvents="box-none">
+          <View style={{ width: contentWidth, alignSelf: 'center', paddingTop: 4 }} pointerEvents="box-none">
             <ChatLumiCompanion key={`${photoIdentity}:${reactionPlaybackEpoch}`}
               enabled={!loading && !isBlocked && !viewingPhoto && !pickingPhoto}
               busy={sending}
@@ -980,10 +989,11 @@ export default function MessagesScreen() {
 
           {/* ── Input bar ─────────────────────────────────── */}
           {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color={th.ink} onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
-           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: Math.max(bottomPad, 8), backgroundColor: th.bar, borderColor: th.border }]}>
+           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: bottomPad }]}>
             <TouchableOpacity
               style={styles.stickerToggleBtn} onPress={pickPhoto}
-              disabled={loading || sending || pickingPhoto} accessibilityLabel="Attach a photo"
+              disabled={loading || sending || pickingPhoto} accessibilityRole="button" accessibilityLabel="Attach a photo"
+              accessibilityState={{ disabled: loading || sending || pickingPhoto, busy: pickingPhoto }}
               activeOpacity={0.75}
             >
               {pickingPhoto ? <SkyLoadingMark size={20} color={PURPLE} /> : <Icon name="image" size={21} color={PURPLE} />}
@@ -995,7 +1005,9 @@ export default function MessagesScreen() {
               ]}
               onPress={() => { Haptics.selectionAsync(); setShowPicker(v => !v); }}
               disabled={loading}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel={t('social.expressions')}
+              accessibilityState={{ expanded: showPicker, disabled: loading }}
               activeOpacity={0.75}
             >
               <Text style={[styles.stickerToggleIcon, { color: showPicker ? PURPLE : MUTED }]}>✦</Text>
@@ -1018,6 +1030,8 @@ export default function MessagesScreen() {
                 }}
                 placeholder={t('social.sendWhisper')}
                 placeholderTextColor={th.sub}
+                maxFontSizeMultiplier={1.3}
+                accessibilityLabel={t('social.sendWhisper')}
                 multiline
                 maxLength={2000}
                 returnKeyType="send"
@@ -1029,6 +1043,9 @@ export default function MessagesScreen() {
             <TouchableOpacity
               style={[styles.sendBtn, !input.trim() && !photoUri && styles.sendBtnDisabled]}
               onPress={handleSend}
+              accessibilityRole="button"
+              accessibilityLabel={sending ? 'Sending message' : 'Send message'}
+              accessibilityState={{ disabled: (!input.trim() && !photoUri) || sending || loading || pickingPhoto, busy: sending }}
               disabled={(!input.trim() && !photoUri) || sending || loading || pickingPhoto}
               activeOpacity={0.8}
             >
@@ -1041,8 +1058,9 @@ export default function MessagesScreen() {
                   />
                 )
               }
-              {!sending && <Icon name="send" size={15} color={input.trim() || photoUri ? '#fff' : 'rgba(255,255,255,0.30)'} />}
+              {!sending && <Icon name="send" size={17} color={input.trim() || photoUri ? '#fff' : 'rgba(255,255,255,0.30)'} />}
             </TouchableOpacity>
+          </View>
           </View>
         </KeyboardAvoidingView>
       )}
@@ -1066,28 +1084,29 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: NIGHT },
 
   // ── Header
-  header:          { paddingHorizontal: 16, paddingBottom: 10 },
-  headerRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 8 },
+  header:          { paddingHorizontal: 12, paddingBottom: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderColor: BORDER },
+  headerRow:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6, minHeight: 52 },
+  headerIconBtn:   { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   partnerInfo:     { flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, minWidth: 0 },
 
-  avatarWrap:    { position: 'relative', width: 46, height: 46 },
+  avatarWrap:    { position: 'relative', width: 40, height: 40 },
   avatarGlow:    {
     position: 'absolute', inset: -4,
-    borderRadius: 27, borderWidth: 1.5,
+    borderRadius: 24, borderWidth: 1.5,
     borderColor: 'rgba(107,78,232,0.45)',
   },
   partnerAvatar: {
-    width: 46, height: 46, borderRadius: 23,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(107,78,232,0.25)',
     alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
   },
   partnerInitial:  { fontSize: 20, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.95)' },
-  partnerName:     { fontSize: 15, fontFamily: 'Satoshi-Bold', color: 'rgba(225,215,255,0.97)', letterSpacing: -0.2 },
-  partnerSubtitle: { fontSize: 11, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', marginTop: 1 },
+  partnerName:     { fontSize: 16, fontFamily: 'Satoshi-Bold', color: 'rgba(225,215,255,0.97)', letterSpacing: -0.2 },
+  partnerSubtitle: { fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.50)', marginTop: 1 },
 
   // ── Messages list
   centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listPad:    { paddingHorizontal: 14, paddingTop: 14 },
+  listPad:    { paddingHorizontal: 12, paddingTop: 12, flexGrow: 1, justifyContent: 'flex-end' },
   openingConversation: { flex: 1, paddingTop: 18, paddingHorizontal: 4, gap: 12 },
   openingPreview: {
     alignSelf: 'center', maxWidth: '88%', paddingHorizontal: 14, paddingVertical: 10,
@@ -1109,7 +1128,7 @@ const styles = StyleSheet.create({
   emptyWrap:  { alignItems: 'center', paddingTop: 70, paddingHorizontal: 40 },
   emptyIcon:  { width: 76, height: 76, borderRadius: 38, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(107,78,232,0.20)' },
   emptyTitle: { fontSize: 18, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.90)', marginBottom: 10, textAlign: 'center', letterSpacing: -0.3 },
-  emptyBody:  { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center', lineHeight: 21, color: MUTED },
+  emptyBody:  { fontSize: 15, fontFamily: 'Satoshi-Regular', textAlign: 'center', lineHeight: 21, color: MUTED },
 
   // ── Date separator
   dateSep:  { flexDirection: 'row', alignItems: 'center', marginVertical: 14, gap: 8 },
@@ -1118,18 +1137,20 @@ const styles = StyleSheet.create({
   dateText: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.45)', letterSpacing: 0.5 },
 
   // ── Message bubbles
-  msgRow:      { flexDirection: 'row', marginBottom: 6, alignItems: 'flex-end', gap: 8 },
+  msgRow:      { flexDirection: 'row', marginBottom: 4, alignItems: 'flex-end', gap: 8 },
   msgRowOwn:   { justifyContent: 'flex-end' },
   msgRowOther: { justifyContent: 'flex-start' },
 
   bubbleAvatarSm:     { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 2, flexShrink: 0 },
   bubbleAvatarSmText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
-  bubble:      { maxWidth: '78%', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18, gap: 3, overflow: 'hidden' },
+  bubble:      { maxWidth: '80%', paddingHorizontal: 13, paddingTop: 8, paddingBottom: 6, borderRadius: 18, gap: 2, overflow: 'hidden' },
+  bubblePhoto: { padding: 4, paddingTop: 4, paddingBottom: 6, borderRadius: 18, gap: 4 },
+  photoCaption:{ paddingHorizontal: 8 },
   bubbleOwn:   { borderBottomRightRadius: 5 },
   bubbleOther: { borderBottomLeftRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: BORDER },
-  bubbleText:  { fontSize: 15, fontFamily: 'Satoshi-Regular', lineHeight: 21 },
-  bubbleTime:  { fontSize: 10, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end' },
+  bubbleText:  { fontSize: 15, fontFamily: 'Satoshi-Regular', lineHeight: 20 },
+  bubbleTime:  { fontSize: 11, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end' },
 
   // ── Sticker row + card
   exprRowOwn:   { flexDirection: 'row', justifyContent: 'flex-end',   marginBottom: 8, marginRight: 4 },
@@ -1179,15 +1200,14 @@ const styles = StyleSheet.create({
   pickerLabel:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4, textAlign: 'center', textTransform: 'uppercase' },
 
   // ── Input bar
+  dock: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: BORDER },
   inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 8,
-    paddingHorizontal: 12, paddingTop: 10,
-    backgroundColor: NIGHT2,
-    borderTopWidth: 1, borderColor: BORDER,
+    flexDirection: 'row', alignItems: 'flex-end', gap: 6,
+    paddingHorizontal: 10, paddingTop: 6,
     alignSelf: 'center',
   },
   stickerToggleBtn: {
-    width: 38, height: 38, borderRadius: 19,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(200,184,232,0.05)',
     borderWidth: 1, borderColor: BORDER,
@@ -1198,7 +1218,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 22, borderWidth: 1, borderColor: BORDER,
-    minHeight: 40, justifyContent: 'center',
+    minHeight: 44, justifyContent: 'center',
   },
   input: {
     paddingHorizontal: 14, paddingVertical: 10,
@@ -1206,7 +1226,7 @@ const styles = StyleSheet.create({
     color: 'rgba(220,210,255,0.92)', maxHeight: 120,
   },
   sendBtn: {
-    width: 42, height: 42, borderRadius: 21,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden', marginBottom: 2,
     backgroundColor: 'transparent',
