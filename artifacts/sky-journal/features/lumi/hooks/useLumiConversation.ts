@@ -15,6 +15,7 @@ import {
   makeId,
   sanitizeRecommendations,
 } from '../types';
+import { latestMood, sanitizeMeta, type LumiMeta } from '../logic';
 
 const localKey = (uid: string) => `lumi_chat_v1:${uid}`;
 
@@ -37,6 +38,7 @@ export function useLumiConversation(userId: string | null | undefined, locale: s
   const [hydrateError, setHydrateError] = useState(false);
   const [sending, setSending] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+  const [lastReply, setLastReply] = useState<{ n: number; meta: LumiMeta; error?: boolean } | null>(null);
 
   // epoch guards stale completions across account switches / unmount
   const epochRef = useRef(0);
@@ -52,6 +54,7 @@ export function useLumiConversation(userId: string | null | undefined, locale: s
     setRememberState(false);
     setPreferences({});
     setSending(false);
+    setLastReply(null);
     busyRef.current = false;
     setHydrateError(false);
     if (!userId) { setHydrating(false); return; }
@@ -96,6 +99,8 @@ export function useLumiConversation(userId: string | null | undefined, locale: s
       });
       if (epoch !== epochRef.current) return;
       const reply = typeof res?.reply === 'string' ? res.reply.trim() : '';
+      const meta = sanitizeMeta(res);
+      setLastReply(r => ({ n: (r?.n ?? 0) + 1, meta }));
       setMessages(ms => [
         ...ms.map(m => (m.id === userMsgId ? { ...m, status: 'ok' as const } : m)),
         {
@@ -104,12 +109,14 @@ export function useLumiConversation(userId: string | null | undefined, locale: s
           content: reply || '…',
           status: 'ok',
           fallback: !!res?.fallback,
-          recommendations: sanitizeRecommendations(res?.recommendations),
+          recommendations: meta.phase === 'check_in' ? [] : sanitizeRecommendations(res?.recommendations),
+          ...meta,
         },
       ]);
     } catch {
       if (epoch !== epochRef.current) return;
       setMessages(ms => ms.map(m => (m.id === userMsgId ? { ...m, status: 'failed' as const } : m)));
+      setLastReply(r => ({ n: (r?.n ?? 0) + 1, meta: {}, error: true }));
     } finally {
       if (epoch === epochRef.current) {
         busyRef.current = false;
@@ -183,7 +190,9 @@ export function useLumiConversation(userId: string | null | undefined, locale: s
     }
   }, [userId]);
 
+  const mood = latestMood(messages);
   return {
+    mood, lastReply,
     messages, remember, preferences, hydrating, hydrateError, sending, savingSettings,
     send, retry, addLocal, setFeedback, saveSettings, clearHistory, rehydrate: hydrate,
   };

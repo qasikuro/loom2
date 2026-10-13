@@ -1,3 +1,5 @@
+import type { LumiEmotion, LumiMood, LumiPhase, LumiIntent } from './logic';
+
 export const LUMI_REC_TYPES = ['music', 'guides', 'friends', 'campfire', 'outfit', 'manga', 'journal', 'session', 'chat'] as const;
 export type LumiRecType = typeof LUMI_REC_TYPES[number];
 
@@ -20,6 +22,11 @@ export interface LumiMessage {
   recommendations?: LumiRecommendation[];
   fallback?: boolean;
   feedback?: 'up' | 'down';
+  /** Transient conversation metadata; never persisted or used for profiling. */
+  mood?: LumiMood;
+  phase?: LumiPhase;
+  emotion?: LumiEmotion;
+  intent?: LumiIntent;
 }
 
 export interface LumiPreferences {
