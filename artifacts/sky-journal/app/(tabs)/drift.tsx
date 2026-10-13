@@ -22,7 +22,6 @@ import { useTranslation } from 'react-i18next';
 import i18n from '@/i18n';
 import { useAuth } from '@clerk/expo';
 import { LumiCompanion } from '@/features/lumi/components/LumiCompanion';
-import { LumiAvatar } from '@/features/lumi/home/LumiCharacter';
 
 // ─── Flow ────────────────────────────────────────────────────────────────────
 type FlowStep =
@@ -2238,6 +2237,7 @@ export default function DriftScreen() {
   const [confidence,      setConfidence]     = useState(75);
   const [driftPlan,       setDriftPlan]      = useState<DriftPlan | null>(null);
   const [sessionStart,    setSessionStart]   = useState<number | null>(null);
+  const [sessionOwner,    setSessionOwner]   = useState<string | null>(null);
   const [sessionDuration, setSessionDuration]= useState(900); // default 15 min
   const [result,          setResult]         = useState<SessionResult>({ elapsed: 0, questDone: 0, momentsFound: 0 });
 
@@ -2264,6 +2264,7 @@ export default function DriftScreen() {
   useEffect(() => {
     let alive = true;
     setMode(null); setAnswers({}); setSessionStart(null); setDriftPlan(null);
+    setSessionOwner(null);
     setStep('companion');
     // Legacy global key could belong to another account: discard it.
     AsyncStorage.removeItem('drift_session_v1').catch(() => {});
@@ -2276,6 +2277,7 @@ export default function DriftScreen() {
           setMode(d.mode);
           setAnswers(d.answers ?? {});
           setSessionStart(d.sessionStart);
+          setSessionOwner(userId ?? null);
           if (d.duration) setSessionDuration(d.duration);
         } else {
           AsyncStorage.removeItem(sessionKey).catch(() => {});
@@ -2333,13 +2335,32 @@ export default function DriftScreen() {
     go('session', () => {
       if (modeOverride) { setMode(modeOverride); setDriftPlan(null); setAnswers(a); }
       setSessionStart(start);
+      setSessionOwner(userId ?? null);
       setSessionDuration(durationSecs);
     });
   }
 
-  // Quick start without the six-question check-in: calm Flow mode, chosen duration.
+  // Inline guided session from the Lumi chat: reuses the same account-scoped
+  // saved session (no second timer) and keeps the companion visible.
   function handleQuickStart(minutes: 5 | 15 | 30) {
-    handleStartSession(minutes * 60, 'flow', {});
+    if (sessionStart && mode) return; // never restart over a running session
+    const start = Date.now();
+    const durationSecs = minutes * 60;
+    if (sessionKey) AsyncStorage.setItem(sessionKey, JSON.stringify({ mode: 'flow', answers: {}, sessionStart: start, duration: durationSecs })).catch(() => {});
+    setMode('flow'); setDriftPlan(null); setAnswers({});
+    setSessionStart(start);
+    setSessionOwner(userId ?? null);
+    setSessionDuration(durationSecs);
+  }
+
+  function handleCompanionFinish() {
+    if (sessionKey) AsyncStorage.removeItem(sessionKey).catch(() => {});
+    setSessionStart(null);
+    setSessionOwner(null);
+    setSessionDuration(900);
+    setMode(null);
+    setDriftPlan(null);
+    setAnswers({});
   }
 
   function handleEndSession(r: SessionResult) {
@@ -2354,6 +2375,7 @@ export default function DriftScreen() {
     setMode(null);
     setDriftPlan(null);
     setSessionStart(null);
+    setSessionOwner(null);
     setSessionDuration(900);
     setResult({ elapsed: 0, questDone: 0, momentsFound: 0 });
     if (sessionKey) AsyncStorage.removeItem(sessionKey).catch(() => {});
@@ -2380,13 +2402,12 @@ export default function DriftScreen() {
     <Animated.View style={[StyleSheet.absoluteFill, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
       {step === 'companion' && (
         <LumiCompanion
+          key={userId ?? 'signed-out'}
           userId={userId}
           name={character?.name && character.name !== 'Player' ? character.name : null}
-          renderCharacter={(size, emotion) => <LumiAvatar size={size} expression={emotion} />}
-          hasActiveSession={!!sessionStart && !!mode}
-          onResumeSession={() => go('session')}
-          onQuickStart={handleQuickStart}
-          onCheckIn={() => go('welcome', () => setQuestionIdx(0))}
+          activeSession={sessionOwner === userId && sessionStart && mode ? { start: sessionStart, duration: sessionDuration } : null}
+          onStartSession={handleQuickStart}
+          onFinishSession={handleCompanionFinish}
         />
       )}
       {step !== 'companion' && step !== 'analyzing' && step !== 'lumi_chat' && (
