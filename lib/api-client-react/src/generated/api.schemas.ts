@@ -691,6 +691,7 @@ export interface FeatureFlags {
   notifications: boolean;
   shop_button: boolean;
   season_button: boolean;
+  image_generation: boolean;
 }
 
 export interface AppConfig {

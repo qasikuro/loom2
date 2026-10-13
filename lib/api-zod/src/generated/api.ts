@@ -243,6 +243,7 @@ export const GetAppConfigResponse = zod.object({
     campfire: zod.boolean(),
     guides: zod.boolean(),
     notifications: zod.boolean(),
+    image_generation: zod.boolean(),
   }),
 });
 

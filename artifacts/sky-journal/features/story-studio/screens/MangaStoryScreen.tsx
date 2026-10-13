@@ -31,6 +31,7 @@ import { resolveMediaReadUrl } from '@/utils/mediaAccess';
 import { ReportSheet } from '@/components/ReportSheet';
 import { SkyLoadingMark } from '@/components/SkyLoading';
 import { useTranslation } from 'react-i18next';
+import { useAiFeatureAccess } from '@/features/ai/aiFeatureAccess';
 
 type MangaStyle = 'manga' | 'color' | 'chibi' | 'cinematic' | 'webtoon';
 type PendingAttempt = {
@@ -60,6 +61,7 @@ const STYLES: Array<{
 
 export default function MangaStoryScreen() {
   const { t } = useTranslation();
+  const aiAccess = useAiFeatureAccess();
   const { addStory, reloadData } = useApp();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -397,6 +399,53 @@ export default function MangaStoryScreen() {
     setSavedStoryId(null);
     setLifecycleBusy(null);
     setError(null);
+  }
+
+  if (!aiAccess.enabled) {
+    return (
+      <View style={[s.root, { justifyContent: 'center', paddingHorizontal: 28, paddingTop: topPad, paddingBottom: bottomPad }]}>
+        <LinearGradient colors={['#08051A', '#0A071C', '#05040F']} style={StyleSheet.absoluteFill} />
+        <View style={{ alignItems: 'center', gap: 14 }}>
+          {aiAccess.loading && !aiAccess.hasError ? (
+            <SkyLoadingMark size={42} color="#B55CFF" />
+          ) : (
+            <Icon name={aiAccess.hasError ? 'alert-circle' : 'star'} size={30} color="#B891FF" />
+          )}
+          <Text style={{ color: '#FFFFFF', fontFamily: 'Satoshi-Bold', fontSize: 22, textAlign: 'center' }}>
+            {aiAccess.hasError
+              ? 'AI availability couldn’t be checked'
+              : aiAccess.loading
+                ? 'Checking availability…'
+                : 'AI manga creation is turned off'}
+          </Text>
+          <Text style={{ color: 'rgba(225,216,246,0.78)', fontFamily: 'Satoshi-Regular', fontSize: 14, lineHeight: 21, textAlign: 'center' }}>
+            {aiAccess.hasError
+              ? 'Reconnect and try again, or return to the app.'
+              : aiAccess.loading
+                ? 'This creator will open if AI access is enabled.'
+                : 'This creator is unavailable while AI access is turned off.'}
+          </Text>
+          {aiAccess.hasError && (
+            <TouchableOpacity
+              onPress={() => { void aiAccess.retry(); }}
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 18, borderRadius: 22, backgroundColor: '#713DCA' }}
+            >
+              <Text style={{ color: '#FFFFFF', fontFamily: 'Satoshi-Bold', fontSize: 14 }}>Try again</Text>
+            </TouchableOpacity>
+          )}
+          {!aiAccess.loading && (
+            <TouchableOpacity
+              onPress={() => safeBack()}
+              accessibilityRole="button"
+              style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 18 }}
+            >
+              <Text style={{ color: '#C5A7FF', fontFamily: 'Satoshi-Bold', fontSize: 14 }}>Go back</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
   }
 
   return (

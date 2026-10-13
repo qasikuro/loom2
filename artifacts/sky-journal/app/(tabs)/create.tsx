@@ -21,6 +21,7 @@ import { Images } from '@/assets/images';
 import { useTranslation } from 'react-i18next';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
+import { useAiFeatureAccess } from '@/features/ai/aiFeatureAccess';
 
 const MODES = [
   {
@@ -94,6 +95,7 @@ export default function CreateScreen() {
   const { t } = useTranslation();
   const colors = useColors();
   const { isDark } = useTheme();
+  const aiAccess = useAiFeatureAccess();
   const insets  = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const sheetHeight = Math.min(windowHeight * 0.92, 820);
@@ -185,7 +187,20 @@ export default function CreateScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {MODES.map(mode => {
+          {aiAccess.hasError && (
+            <TouchableOpacity
+              onPress={() => { void aiAccess.retry(); }}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Retry checking AI creation availability"
+              style={[s.aiConfigNotice, { borderColor: colors.border, backgroundColor: colors.muted }]}
+            >
+              <Text style={[s.aiConfigNoticeText, { color: colors.mutedForeground }]}>
+                AI creation options couldn’t be checked. Tap to retry.
+              </Text>
+            </TouchableOpacity>
+          )}
+          {MODES.filter(mode => mode.id !== 'quick' || aiAccess.enabled).map(mode => {
             const accent = isDark ? mode.color : mode.lightColor;
             const tileBorder = isDark ? mode.border : mode.lightBorder;
             const tileGradient: [string, string, string] = isDark
@@ -317,6 +332,16 @@ const s = StyleSheet.create({
 
   tilesScroll: { flex: 1, minHeight: 0 },
   tiles: { gap: 10, paddingBottom: 4 },
+  aiConfigNotice: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  aiConfigNoticeText: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Medium',
+  },
 
   tile: {
     flexDirection:   'row',

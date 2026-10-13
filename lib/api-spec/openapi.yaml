@@ -1836,7 +1836,8 @@ components:
         campfire: { type: boolean }
         guides: { type: boolean }
         notifications: { type: boolean }
-      required: [ai, stories, music, shop, season, campfire, guides, notifications]
+        image_generation: { type: boolean }
+      required: [ai, stories, music, shop, season, campfire, guides, notifications, image_generation]
 
     AppConfig:
       type: object

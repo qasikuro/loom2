@@ -15,4 +15,5 @@ export interface FeatureFlags {
   campfire: boolean;
   guides: boolean;
   notifications: boolean;
+  image_generation: boolean;
 }

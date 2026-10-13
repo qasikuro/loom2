@@ -17,6 +17,7 @@ import { GuidedSession, SessionSummary } from './GuidedSession';
 import { LumiMoodSession, LumiSessionWelcome, MoodSessionResult } from './LumiMoodSession';
 import { LumiChatContext, LumiChatActions } from './LumiChatContext';
 import { ActiveSession, ChatCue, LumiMood, SessionMinutes, cueForReply, musicQueryForMood, readChatContext } from '../logic';
+import { useAiFeatureAccess } from '@/features/ai/aiFeatureAccess';
 
 const MOOD_CHIPS: LumiMood[] = ['happy', 'calm', 'sad', 'tired', 'stressed', 'lonely', 'excited'];
 
@@ -42,6 +43,7 @@ export function LumiCompanion({ userId, name, activeSession, onStartSession, onF
   const { isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
+  const aiAccess = useAiFeatureAccess();
   const locale = (i18n.resolvedLanguage ?? i18n.language ?? 'en').split('-')[0];
   const lumi = useLumiConversation(userId, locale);
   const [text, setText] = useState('');
@@ -292,7 +294,7 @@ export function LumiCompanion({ userId, name, activeSession, onStartSession, onF
               </View>
             ) : (showMoods && userSpoke ? <MoodChips /> : null)}</View>}
             renderItem={({ item }) => (
-              <MessageRow m={item} c={c} onRetry={lumi.retry} onFeedback={lumi.setFeedback} onSession={startSession} onCheckIn={openCheckIn} />
+              <MessageRow m={item} c={c} aiEnabled={aiAccess.enabled} onRetry={lumi.retry} onFeedback={lumi.setFeedback} onSession={startSession} onCheckIn={openCheckIn} />
             )}
           />
         )}
@@ -366,9 +368,10 @@ export function LumiCompanion({ userId, name, activeSession, onStartSession, onF
   );
 }
 
-function MessageRow({ m, c, onRetry, onFeedback, onSession, onCheckIn }: {
+function MessageRow({ m, c, aiEnabled, onRetry, onFeedback, onSession, onCheckIn }: {
   m: LumiMessage;
   c: ReturnType<typeof useColors>;
+  aiEnabled: boolean;
   onRetry: (id: string) => void;
   onFeedback: (id: string, fb: 'up' | 'down') => void;
   onSession: (minutes: 5 | 15 | 30) => void;
@@ -399,7 +402,7 @@ function MessageRow({ m, c, onRetry, onFeedback, onSession, onCheckIn }: {
       {m.role === 'assistant' && m.fallback && (
         <Text style={[s.meta, { color: c.mutedForeground, marginTop: 4 }]}>{t('lumi.fallback', 'Lumi is in simple mode right now, so replies may be shorter.')}</Text>
       )}
-      {m.recommendations?.map((r, i) => (
+      {m.recommendations?.filter(r => r.type !== 'manga' || aiEnabled).map((r, i) => (
         <RecommendationCard key={`${m.id}-${i}`} rec={r} onStartSession={onSession} onCheckIn={onCheckIn} />
       ))}
       {m.role === 'assistant' && !!m.recommendations?.length && (
