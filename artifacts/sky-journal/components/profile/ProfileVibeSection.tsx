@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ATTRIBUTE_SUGGESTIONS, MOOD_ORBS } from './profileConstants';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   character: Character;
@@ -14,6 +15,7 @@ interface Props {
 
 export function ProfileVibeSection({ character, setCharacter, onOpenMoodPicker }: Props) {
   const colors = useColors();
+  const { t } = useTranslation();
   const [newTrait, setNewTrait] = useState('');
   const [addingTrait, setAddingTrait] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -39,11 +41,11 @@ export function ProfileVibeSection({ character, setCharacter, onOpenMoodPicker }
   }
 
   return (
-    <View style={[s.card, { backgroundColor: colors.card, borderColor: `${moodAccent}55` }]}>
+      <View style={[s.card, { backgroundColor: colors.card, borderColor: `${moodAccent}42` }]}>
       <View style={s.head}>
         <View style={s.heading}>
           <Icon name="star" size={15} color={moodAccent} />
-          <Text style={[s.label, { color: colors.mutedForeground }]}>Vibe</Text>
+            <Text style={[s.label, { color: colors.foreground }]}>{t('profile.vibeTitle')}</Text>
         </View>
         <View style={s.controls}>
           <TouchableOpacity
@@ -65,7 +67,7 @@ export function ProfileVibeSection({ character, setCharacter, onOpenMoodPicker }
             accessibilityLabel="Add trait"
           >
             <Icon name="plus" size={13} color={colors.primary} />
-            <Text style={[s.addText, { color: colors.primary }]}>Trait</Text>
+            <Text style={[s.addText, { color: colors.primary }]}>Add</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -136,20 +138,20 @@ export function ProfileVibeSection({ character, setCharacter, onOpenMoodPicker }
 }
 
 const s = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 9, paddingVertical: 5, gap: 3, marginBottom: 5 },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 26 },
-  heading: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  label: { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
-  controls: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  moodButton: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 28, paddingHorizontal: 9, borderWidth: 1, borderRadius: 11 },
+  card: { borderWidth: 1, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 10, gap: 8, marginBottom: 8 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, minHeight: 32 },
+  heading: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  label: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  controls: { flexDirection: 'row', alignItems: 'center', gap: 7 },
+  moodButton: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 32, paddingHorizontal: 10, borderWidth: 1, borderRadius: 13 },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  moodText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  addButton: { flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 28, paddingHorizontal: 8, borderWidth: 1, borderRadius: 10 },
-  addText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  traits: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 21, paddingRight: 4 },
-  traitChip: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 21, paddingLeft: 8, paddingRight: 6, borderWidth: 1, borderRadius: 11, maxWidth: 140 },
-  traitText: { fontSize: 10, fontFamily: 'Satoshi-Medium', flexShrink: 1 },
-  emptyText: { fontSize: 10, fontFamily: 'Satoshi-Regular' },
+  moodText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  addButton: { flexDirection: 'row', alignItems: 'center', gap: 4, minHeight: 32, paddingHorizontal: 10, borderWidth: 1, borderRadius: 12 },
+  addText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  traits: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 29, paddingRight: 4 },
+  traitChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28, paddingLeft: 10, paddingRight: 8, borderWidth: 1, borderRadius: 14, maxWidth: 140 },
+  traitText: { fontSize: 11, fontFamily: 'Satoshi-Medium', flexShrink: 1 },
+  emptyText: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
   traitEditor: { flexDirection: 'row', alignItems: 'center', minHeight: 30, borderWidth: 1, borderRadius: 11, paddingHorizontal: 9, gap: 8 },
   input: { flex: 1, minWidth: 80, fontSize: 12, fontFamily: 'Satoshi-Regular', paddingVertical: 4 },
   suggestions: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingRight: 4 },

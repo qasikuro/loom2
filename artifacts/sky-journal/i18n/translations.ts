@@ -144,7 +144,7 @@ const en = {
     traitPlaceholder: 'e.g. Dreamer', myStories: 'My Stories', wardrobe: 'My Wardrobe',
     outfitLog: 'Outfit Log', publicProfile: 'Public profile', privateProfile: 'Private profile',
     signOut: 'Sign out', stories: 'Stories', outfits: 'Outfits',
-    journal: 'Journal', mood: 'Mood', galleryUsage: 'Gallery',
+    journal: 'Journal', mood: 'Mood', galleryUsage: 'Gallery', myGallery: 'My Gallery', addToGallery: 'Add to gallery', vibeTitle: 'Your vibe',
     emptyStories: 'Your stories will appear here',
     defineCharacter: 'About you',
     suggestions: 'SUGGESTIONS',
@@ -296,7 +296,7 @@ const ja = {
     traitPlaceholder: '例: 夢想家', myStories: 'マイストーリー', wardrobe: 'ワードローブ',
     outfitLog: 'コーデ記録', publicProfile: '公開プロフィール', privateProfile: '非公開プロフィール',
     signOut: 'サインアウト', stories: 'ストーリー', outfits: 'コーデ',
-    journal: '日記', mood: 'ムード', galleryUsage: 'ギャラリー',
+    journal: '日記', mood: 'ムード', galleryUsage: 'ギャラリー', myGallery: 'マイギャラリー', addToGallery: 'ギャラリーに追加', vibeTitle: 'あなたの雰囲気',
   },
   journal: {
     journalTitle: '日記', friendTitle: 'フレンドログ', momentTitle: 'クイックモーメント',
@@ -417,7 +417,7 @@ const es = {
     traitPlaceholder: 'ej. Soñador', myStories: 'Mis Historias', wardrobe: 'Guardarropa',
     outfitLog: 'Registro de Outfits', publicProfile: 'Perfil público', privateProfile: 'Perfil privado',
     signOut: 'Cerrar sesión', stories: 'Historias', outfits: 'Outfits',
-    journal: 'Diario', mood: 'Estado de ánimo', galleryUsage: 'Galería',
+    journal: 'Diario', mood: 'Estado de ánimo', galleryUsage: 'Galería', myGallery: 'Mi galería', addToGallery: 'Añadir a la galería', vibeTitle: 'Tu vibra',
   },
   journal: {
     journalTitle: 'Diario', friendTitle: 'Registro de Amigo', momentTitle: 'Momento Rápido',
@@ -533,7 +533,7 @@ const tr = {
     traitPlaceholder: 'örn. Hayalci', myStories: 'Hikayelerim', wardrobe: 'Dolap',
     outfitLog: 'Kıyafet Kaydı', publicProfile: 'Herkese açık profil', privateProfile: 'Gizli profil',
     signOut: 'Çıkış Yap', stories: 'Hikayeler', outfits: 'Kıyafetler',
-    journal: 'Günlük', mood: 'Ruh hali', galleryUsage: 'Galeri',
+    journal: 'Günlük', mood: 'Ruh hali', galleryUsage: 'Galeri', myGallery: 'Galerim', addToGallery: 'Galeriye ekle', vibeTitle: 'Ruh hâlin',
   },
   journal: {
     journalTitle: 'Günlük', friendTitle: 'Arkadaş Kaydı', momentTitle: 'Hızlı An',
@@ -624,7 +624,7 @@ const fr = {
     usernamePlaceholder: 'choisis_un_pseudo', usernameChecking: 'Vérification…',
     usernameAvailable: 'Disponible ✓', usernameTaken: 'Pseudo non disponible',
     traitPlaceholder: 'ex. Rêveur', stories: 'Histoires', outfits: 'Tenues',
-    journal: 'Journal', mood: 'Humeur', galleryUsage: 'Galerie',
+    journal: 'Journal', mood: 'Humeur', galleryUsage: 'Galerie', myGallery: 'Ma galerie', addToGallery: 'Ajouter à la galerie', vibeTitle: 'Ton ambiance',
   },
   log: {
     allFilter: 'Tout', diary: 'Journal', friends: 'Amis', moments: 'Moments',
@@ -734,7 +734,7 @@ const de = {
     usernamePlaceholder: 'wähle_einen_namen', usernameChecking: 'Prüfen…',
     usernameAvailable: 'Verfügbar ✓', usernameTaken: 'Benutzername vergeben',
     traitPlaceholder: 'z.B. Träumer', stories: 'Geschichten', outfits: 'Outfits',
-    journal: 'Tagebuch', mood: 'Stimmung', galleryUsage: 'Galerie',
+    journal: 'Tagebuch', mood: 'Stimmung', galleryUsage: 'Galerie', myGallery: 'Meine Galerie', addToGallery: 'Zur Galerie hinzufügen', vibeTitle: 'Dein Vibe',
   },
   log: {
     allFilter: 'Alle', diary: 'Tagebuch', friends: 'Freunde', moments: 'Momente',
@@ -841,7 +841,7 @@ const pt = {
     usernamePlaceholder: 'escolha_um_nome', usernameChecking: 'Verificando…',
     usernameAvailable: 'Disponível ✓', usernameTaken: 'Nome não disponível',
     traitPlaceholder: 'ex. Sonhador', stories: 'Histórias', outfits: 'Looks',
-    journal: 'Diário', mood: 'Humor', galleryUsage: 'Galeria',
+    journal: 'Diário', mood: 'Humor', galleryUsage: 'Galeria', myGallery: 'Minha galeria', addToGallery: 'Adicionar à galeria', vibeTitle: 'Sua vibe',
   },
   log: {
     allFilter: 'Tudo', diary: 'Diário', friends: 'Amigos', moments: 'Momentos',
@@ -952,7 +952,7 @@ const ko = {
     usernamePlaceholder: '핸들 선택', usernameChecking: '확인 중…',
     usernameAvailable: '사용 가능 ✓', usernameTaken: '이미 사용 중인 이름',
     traitPlaceholder: '예: 몽상가', stories: '이야기', outfits: '코디',
-    journal: '일기', mood: '기분', galleryUsage: '갤러리',
+    journal: '일기', mood: '기분', galleryUsage: '갤러리', myGallery: '내 갤러리', addToGallery: '갤러리에 추가', vibeTitle: '나의 분위기',
   },
   log: {
     allFilter: '전체', diary: '일기', friends: '친구', moments: '순간',
@@ -1056,7 +1056,7 @@ const zh = {
     usernamePlaceholder: '选择一个名称', usernameChecking: '检查中…',
     usernameAvailable: '可用 ✓', usernameTaken: '用户名已被占用',
     traitPlaceholder: '例如：梦想家', stories: '故事', outfits: '穿搭',
-    journal: '日记', mood: '心情', galleryUsage: '相册',
+    journal: '日记', mood: '心情', galleryUsage: '相册', myGallery: '我的相册', addToGallery: '添加到相册', vibeTitle: '你的氛围',
   },
   log: {
     allFilter: '全部', diary: '日记', friends: '朋友', moments: '瞬间',
@@ -1155,7 +1155,7 @@ const ru = {
     usernamePlaceholder: 'выберите_имя', usernameChecking: 'Проверка…',
     usernameAvailable: 'Доступно ✓', usernameTaken: 'Имя занято',
     traitPlaceholder: 'напр. Мечтатель', stories: 'Истории', outfits: 'Образы',
-    journal: 'Дневник', mood: 'Настроение', galleryUsage: 'Галерея',
+    journal: 'Дневник', mood: 'Настроение', galleryUsage: 'Галерея', myGallery: 'Моя галерея', addToGallery: 'Добавить в галерею', vibeTitle: 'Твоё настроение',
   },
   log: {
     allFilter: 'Все', diary: 'Дневник', friends: 'Друзья', moments: 'Моменты',
@@ -1258,7 +1258,7 @@ const ar = {
     usernamePlaceholder: 'اختر_اسماً', usernameChecking: 'جارٍ التحقق…',
     usernameAvailable: 'متاح ✓', usernameTaken: 'اسم المستخدم محجوز',
     traitPlaceholder: 'مثل: حالم', stories: 'القصص', outfits: 'الأزياء',
-    journal: 'المذكرات', mood: 'المزاج', galleryUsage: 'المعرض',
+    journal: 'المذكرات', mood: 'المزاج', galleryUsage: 'المعرض', myGallery: 'معرضي', addToGallery: 'أضف إلى المعرض', vibeTitle: 'أجواؤك',
   },
   log: {
     allFilter: 'الكل', diary: 'يوميات', friends: 'الأصدقاء', moments: 'اللحظات',
@@ -1358,7 +1358,7 @@ const it = {
     usernamePlaceholder: 'scegli_un_nome', usernameChecking: 'Verifica…',
     usernameAvailable: 'Disponibile ✓', usernameTaken: 'Nome utente non disponibile',
     traitPlaceholder: 'es. Sognatore', stories: 'Storie', outfits: 'Outfit',
-    journal: 'Diario', mood: 'Umore', galleryUsage: 'Galleria',
+    journal: 'Diario', mood: 'Umore', galleryUsage: 'Galleria', myGallery: 'La mia galleria', addToGallery: 'Aggiungi alla galleria', vibeTitle: 'La tua vibe',
   },
   log: {
     allFilter: 'Tutto', diary: 'Diario', friends: 'Amici', moments: 'Momenti',

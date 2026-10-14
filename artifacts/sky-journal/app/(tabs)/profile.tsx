@@ -73,7 +73,6 @@ export default function CharacterScreen() {
   const topPad       = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad    = Platform.OS === 'web' ? 100 : insets.bottom + 120;
 
-  const totalWitnessed  = stories.reduce((sum, s) => sum + s.witnessedCount, 0);
   const xpBase          = rewardBalance?.stars ?? 0;
   const profileLevel    = Math.max(1, Math.floor(xpBase / XP_PER_LEVEL) + 1);
   const profileXpPct    = (xpBase % XP_PER_LEVEL) / XP_PER_LEVEL;
@@ -92,7 +91,6 @@ export default function CharacterScreen() {
   const [savingTitle,     setSavingTitle]     = useState(false);
   const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
   const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
-  const [profileLikeCount, setProfileLikeCount] = useState(0);
 
   useFocusEffect(useCallback(() => {
     if (Platform.OS === 'web') return;
@@ -107,19 +105,6 @@ export default function CharacterScreen() {
       .catch(() => null);
     return () => { active = false; };
   }, [userId, stories.length, outfits.length, character.username]));
-
-  useFocusEffect(useCallback(() => {
-    if (!userId) return;
-    let active = true;
-    apiFetch<{ profileLikeCount?: number }>(`/users/${userId}`)
-      .then(profile => {
-        if (active) setProfileLikeCount(Math.max(0, profile.profileLikeCount ?? 0));
-      })
-      .catch(() => {
-        if (active) setProfileLikeCount(0);
-      });
-    return () => { active = false; };
-  }, [userId]));
 
   const saveTitle = useCallback(async (title: string) => {
     setSavingTitle(true);
@@ -250,40 +235,11 @@ export default function CharacterScreen() {
                 character={character}
                 setCharacter={setCharacter}
                 betweenAboutAndGuide={
-                  <>
-                    <View style={[s.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, screenW >= 760 && { maxWidth: 760, alignSelf: 'center' }]}>
-                      {([
-                        { icon: 'book-open', count: stories.length, label: t('components.profile.stats.stories') },
-                        { icon: 'user', count: outfits.length, label: t('components.profile.stats.outfits') },
-                        { icon: 'heart', count: totalWitnessed, label: t('components.profile.stats.likes') },
-                        { icon: 'heart', count: profileLikeCount, label: t('components.profile.stats.profileLikes') },
-                      ] as const).map((item, i) => (
-                        <React.Fragment key={item.label}>
-                          {i > 0 && <View style={[s.statDivider, { backgroundColor: colors.border }]} />}
-                          <View style={s.statCol}>
-                            <Text style={[s.statNum, { color: colors.foreground }]}>{item.count}</Text>
-                            <View style={s.statMeta}>
-                              {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                              <Icon name={item.icon as any} size={12} color={colors.mutedForeground} />
-                              <Text
-                                style={[s.statLabel, { color: colors.mutedForeground }]}
-                                numberOfLines={1}
-                                adjustsFontSizeToFit
-                                minimumFontScale={0.72}
-                              >
-                                {item.label}
-                              </Text>
-                            </View>
-                          </View>
-                        </React.Fragment>
-                      ))}
-                    </View>
-                    <ProfileVibeSection
-                      character={character}
-                      setCharacter={setCharacter}
-                      onOpenMoodPicker={() => setShowMoodPicker(true)}
-                    />
-                  </>
+                  <ProfileVibeSection
+                    character={character}
+                    setCharacter={setCharacter}
+                    onOpenMoodPicker={() => setShowMoodPicker(true)}
+                  />
                 }
               />
               <ProfileStyleSection
@@ -337,12 +293,6 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
-  statsCard:    { flexDirection: 'row', marginHorizontal: 0, marginTop: 4, marginBottom: 5, borderRadius: 14, borderWidth: 1, minWidth: 0 },
-  statCol:      { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 3, paddingVertical: 5, gap: 1 },
-  statNum:      { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
-  statMeta:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, minHeight: 12 },
-  statLabel:    { flexShrink: 1, fontSize: 8, lineHeight: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0, textAlign: 'center' },
-  statDivider:  { width: 1, marginVertical: 6 },
   setupCard: { minHeight: 48, borderRadius: 14, borderWidth: 1, padding: 9, marginBottom: 7, flexDirection: 'row', alignItems: 'center', gap: 8 },
   setupIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(181,140,255,0.14)' },
   setupTitle: { fontFamily: 'Satoshi-Bold', fontSize: 12 },

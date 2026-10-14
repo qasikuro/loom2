@@ -288,60 +288,120 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
 // ── Story card (horizontal scroll) ───────────────────────────────────────────
 
-const CARD_H = 66;
+type GalleryFilter = 'all' | 'stories' | 'outfits';
+type GalleryEntry =
+  | { kind: 'photo'; photo: GalleryPhoto }
+  | { kind: 'story'; story: Story }
+  | { kind: 'outfit'; outfit: Outfit };
 
-function StoryCard({ story, cardWidth, onMenu, onPlay }: { story: Story; cardWidth: number; onMenu: (s: Story) => void; onPlay: (s: Story) => void }) {
+function getEntryDate(entry: GalleryEntry): string {
+  if (entry.kind === 'photo') return entry.photo.createdAt;
+  if (entry.kind === 'story') return entry.story.date;
+  return entry.outfit.date;
+}
+
+function GalleryMediaCard({
+  entry,
+  width,
+  height,
+  isActiveOutfit,
+  onOpenPhoto,
+  onOpenStory,
+  onOpenOutfit,
+  onStoryMenu,
+}: {
+  entry: GalleryEntry;
+  width: number;
+  height: number;
+  isActiveOutfit: boolean;
+  onOpenPhoto: (photo: GalleryPhoto) => void;
+  onOpenStory: (story: Story) => void;
+  onOpenOutfit: (id: string) => void;
+  onStoryMenu: (story: Story) => void;
+}) {
+  const { t } = useTranslation();
   const colors = useColors();
-  const cover      = getStoryCover(story);
-  const moodColor  = MOOD_COLORS[story.mood] ?? '#9B7AB5';
-  const isVideo    = story.contentType === 'video';
+  const story = entry.kind === 'story' ? entry.story : null;
+  const imageSource = entry.kind === 'photo'
+    ? { uri: entry.photo.imageUri }
+    : entry.kind === 'outfit'
+      ? (entry.outfit.imageUri ? { uri: entry.outfit.imageUri } : null)
+      : getStoryCover(entry.story);
+  const fallbackColor = story ? (MOOD_COLORS[story.mood] ?? colors.lavender) : colors.secondary;
+  const title = entry.kind === 'photo'
+    ? (entry.photo.caption || t('profile.galleryUsage'))
+    : entry.kind === 'story'
+      ? entry.story.chapterTitle
+      : entry.outfit.name;
+  const kindIcon = entry.kind === 'photo'
+    ? 'image'
+    : entry.kind === 'outfit'
+      ? 'grid'
+      : story?.contentType === 'video'
+        ? 'video'
+        : 'book-open';
+  const label = entry.kind === 'story'
+    ? t('shell.myStories.openStory', { title: entry.story.chapterTitle })
+    : entry.kind === 'outfit'
+      ? `${t('profile.wardrobe')}: ${entry.outfit.name}`
+      : `${t('profile.galleryUsage')}: ${entry.photo.caption || t('common.addPhoto')}`;
+  const active = entry.kind === 'outfit' && isActiveOutfit;
+
+  function openEntry() {
+    Haptics.selectionAsync();
+    if (entry.kind === 'photo') onOpenPhoto(entry.photo);
+    else if (entry.kind === 'outfit') onOpenOutfit(entry.outfit.id);
+    else onOpenStory(entry.story);
+  }
 
   return (
     <TouchableOpacity
-      style={[sc.card, { width: cardWidth, borderColor: colors.border }]}
-      onPress={isVideo
-        ? () => { Haptics.selectionAsync(); onPlay(story); }
-        : () => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as never); }
-      }
+      style={[s.galleryMediaCard, { width, height, borderColor: colors.border, backgroundColor: colors.muted }]}
+      onPress={openEntry}
       activeOpacity={0.88}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
-      {cover ? (
-        <Image source={cover} style={StyleSheet.absoluteFill} contentFit="cover" />
+      {imageSource ? (
+        <Image source={imageSource} style={StyleSheet.absoluteFill} contentFit="cover" transition={160} />
       ) : (
-        <LinearGradient colors={[`${moodColor}55`, `${moodColor}20`, '#0F0D1E']} style={StyleSheet.absoluteFill} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }}>
-          <Icon name="star" size={14} color={`${moodColor}50`} style={{ position: 'absolute', top: 14, right: 14 }} />
+        <LinearGradient
+          colors={[`${fallbackColor}55`, `${fallbackColor}18`, colors.card]}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0.2, y: 0 }}
+          end={{ x: 0.8, y: 1 }}
+        >
+          <Icon name={kindIcon} size={20} color={`${fallbackColor}90`} style={s.galleryFallbackIcon} />
         </LinearGradient>
       )}
-        <LinearGradient colors={['transparent', 'rgba(8,6,22,0.58)', 'rgba(8,6,22,0.94)']} style={sc.grad} />
-
-      {/* Mood dot */}
-      <View style={[sc.moodDot, { backgroundColor: moodColor }]} />
-
-      {/* Video badge */}
-      {isVideo ? (
-        <View style={sc.videoBadge}>
-          <Icon name="video" size={8} color="rgba(240,200,255,0.95)" />
+      <LinearGradient
+        colors={['transparent', 'rgba(10,8,28,0.22)', 'rgba(8,6,22,0.88)']}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+      <View style={s.galleryKindBadge} pointerEvents="none">
+        <Icon name={kindIcon} size={11} color="#fff" />
+      </View>
+      {active && (
+        <View style={s.galleryWornBadge} pointerEvents="none">
+          <Text style={s.galleryWornText}>{t('components.profileSection.worn')}</Text>
         </View>
-      ) : story.isPublic ? (
-        <View style={sc.globeBadge}>
-          <Icon name="globe" size={8} color="rgba(200,232,200,0.9)" />
-        </View>
-      ) : null}
-
-      {/* ⋮ menu */}
-      <TouchableOpacity
-        style={sc.menuBtn}
-        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onMenu(story); }}
-        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        activeOpacity={0.7}
-      >
-        <Icon name="more-vertical" size={14} color="rgba(240,234,255,0.85)" />
-      </TouchableOpacity>
-
-      {/* Bottom info */}
-      <View style={sc.bottom}>
-        <Text style={sc.title} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>
-          {story.chapterTitle}
+      )}
+      {story && (
+        <TouchableOpacity
+          style={s.galleryMenuButton}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onStoryMenu(story); }}
+          hitSlop={{ top: 7, bottom: 7, left: 7, right: 7 }}
+          activeOpacity={0.75}
+          accessibilityRole="button"
+          accessibilityLabel={story.chapterTitle}
+        >
+          <Icon name="more-vertical" size={14} color="#fff" />
+        </TouchableOpacity>
+      )}
+      <View style={s.galleryMediaFooter} pointerEvents="none">
+        <Text style={s.galleryMediaTitle} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>
+          {title}
         </Text>
       </View>
     </TouchableOpacity>
@@ -375,164 +435,146 @@ export function ProfileStyleSection({
   const { width: screenWidth } = useWindowDimensions();
   const [activeStory,  setActiveStory]  = useState<Story | null>(null);
   const [playingVideo, setPlayingVideo] = useState<Story | null>(null);
+  const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>('all');
+  const [galleryExpanded, setGalleryExpanded] = useState(false);
 
-  const sorted = [...stories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  const activeOutfit = outfits.find(outfit => outfit.id === activeOutfitId) ?? null;
-  const cardWidth = Math.min(112, Math.max(92, (screenWidth - 44) / 3));
+  const allEntries: GalleryEntry[] = [
+    ...gallery.map(photo => ({ kind: 'photo' as const, photo })),
+    ...stories.map(story => ({ kind: 'story' as const, story })),
+    ...outfits.map(outfit => ({ kind: 'outfit' as const, outfit })),
+  ].sort((a, b) => (Date.parse(getEntryDate(b)) || 0) - (Date.parse(getEntryDate(a)) || 0));
+  const selectedKind = galleryFilter === 'stories' ? 'story' : galleryFilter === 'outfits' ? 'outfit' : null;
+  const filteredEntries = selectedKind
+    ? allEntries.filter(entry => entry.kind === selectedKind)
+    : allEntries;
+  const previewEntries = galleryExpanded ? filteredEntries : filteredEntries.slice(0, 3);
+  const previewCardWidth = Math.min(90, Math.max(72, (screenWidth - 58) / 4));
+  const previewCardHeight = Math.round(previewCardWidth * 1.78);
+  const gridCardWidth = Math.min(116, Math.max(90, (screenWidth - 52) / 3));
+  const gridCardHeight = Math.round(gridCardWidth * 1.5);
+  const totalCount = allEntries.length;
 
   return (
     <>
-      {/* ── My Stories ─── */}
+      {/* ── Unified profile gallery ─── */}
       <View style={s.section}>
-        <View style={s.sectionHeader}>
+        <View style={[s.galleryPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={s.galleryHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.myStories')}</Text>
-            {stories.length > 0 && (
+              <View style={[s.galleryHeadingIcon, { backgroundColor: `${colors.tint}16` }]}>
+                <Icon name="image" size={15} color={colors.tint} />
+              </View>
+              <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.myGallery')}</Text>
+              {totalCount > 0 && (
               <View style={[s.countPill, { backgroundColor: colors.muted }]}>
-                <Text style={[s.countPillText, { color: colors.foreground }]}>{stories.length}</Text>
+                  <Text style={[s.countPillText, { color: colors.foreground }]}>{totalCount}</Text>
               </View>
             )}
           </View>
           <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            onPress={() => { Haptics.selectionAsync(); router.push('/my-stories' as never); }}
+              style={[s.gallerySeeAll, { backgroundColor: `${colors.tint}12`, borderColor: `${colors.tint}30` }]}
+              onPress={() => { Haptics.selectionAsync(); setGalleryExpanded(value => !value); }}
             activeOpacity={0.75}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              accessibilityRole="button"
+              accessibilityLabel={galleryExpanded ? t('common.close') : t('components.profileSection.seeAll')}
           >
-            <Icon name="book-open" size={12} color="#B89AE8" />
-            <Text style={[s.addBtnText, { color: colors.foreground }]}>{t('components.profileSection.seeAll')}</Text>
+              <Text style={[s.gallerySeeAllText, { color: colors.tint }]}>
+                {galleryExpanded ? t('common.close') : t('components.profileSection.seeAll')}
+              </Text>
+              <Icon name={galleryExpanded ? 'chevron-up' : 'chevron-right'} size={13} color={colors.tint} />
           </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
-          {sorted.slice(0, 10).map(story => (
-            <StoryCard key={story.id} story={story} cardWidth={cardWidth} onMenu={setActiveStory} onPlay={setPlayingVideo} />
-          ))}
-          {/* Add Story Card Placeholder */}
-          <TouchableOpacity
-            style={[sc.card, s.newTile, { width: cardWidth, borderColor: `${colors.primary}35`, backgroundColor: colors.muted }]}
-            onPress={() => router.push('/(tabs)/create' as never)}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel={t('components.profileSection.newStory')}
-          >
-            <View style={[s.newTileIcon, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}25` }]}>
-              <Icon name="plus" size={15} color={colors.primary} />
-            </View>
-            <Text style={[s.newStoryText, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              {t('components.profileSection.newStory')}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      {/* ── My Wardrobe ─── */}
-      <View style={s.section}>
-        <View style={s.sectionHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.wardrobe')}</Text>
-            {outfits.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: colors.muted }]}>
-                <Text style={[s.countPillText, { color: colors.foreground }]}>{outfits.length}</Text>
-              </View>
-            )}
+          <View style={[s.galleryTabs, { backgroundColor: colors.muted }]}>
+            {([
+              { id: 'all', label: t('social.all') },
+              { id: 'stories', label: t('components.profile.stats.stories') },
+              { id: 'outfits', label: t('components.profile.stats.outfits') },
+            ] as const).map(tab => {
+              const isSelected = galleryFilter === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={[s.galleryTab, isSelected && { backgroundColor: colors.tint }]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setGalleryFilter(tab.id);
+                    setGalleryExpanded(false);
+                  }}
+                  activeOpacity={0.8}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <Text
+                    style={[s.galleryTabText, { color: isSelected ? colors.primaryForeground : colors.mutedForeground }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            onPress={() => activeOutfit ? openOutfit(activeOutfit.id) : router.push('/create-outfit' as never)}
-            activeOpacity={0.75}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            accessibilityRole="button"
-            accessibilityLabel={activeOutfit ? t('components.profileSection.changeOutfit') : t('components.profileSection.newOutfit')}
-          >
-            <Icon name={activeOutfit ? 'user' : 'plus'} size={12} color={colors.primary} />
-            <Text style={[s.addBtnText, { color: colors.foreground }]}>{activeOutfit ? t('components.profileSection.changeOutfit') : t('components.profileSection.newOutfit')}</Text>
-          </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
-          {outfits.slice(0, 8).map(outfit => {
-            const isActive = outfit.id === activeOutfitId;
-            return (
-              <TouchableOpacity
-                key={outfit.id}
-                style={[s.outfitCard, { width: cardWidth, borderColor: isActive ? colors.primary : colors.border }]}
-                onPress={() => openOutfit(outfit.id)}
-                activeOpacity={0.85}
-              >
-                {outfit.imageUri ? (
-                  <Image source={{ uri: outfit.imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" />
-                ) : (
-                  <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }]}>
-                    <Icon name="camera" size={22} color="rgba(255,255,255,0.3)" />
-                  </View>
-                )}
-                <LinearGradient colors={['transparent', 'rgba(8,6,22,0.92)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 6 }]} pointerEvents="none">
-                  <Text style={s.outfitName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>{outfit.name}</Text>
-                  {isActive && (
-                    <View style={[s.activePill, { backgroundColor: colors.primary }]}>
-                      <Text style={s.activePillText}>{t('components.profileSection.worn')}</Text>
-                    </View>
-                  )}
-                </LinearGradient>
-                {(outfit.tags ?? []).length > 0 && (
-                  <View style={[s.rarityPill, { backgroundColor: 'rgba(8,6,22,0.75)', top: 6, left: 6 }]}>
-                    <Text style={[s.rarityText, { color: 'rgba(220,200,255,0.9)' }]}>{outfit.tags[0]}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            );
-          })}
-          <TouchableOpacity
-            style={[s.outfitCard, s.newTile, { width: cardWidth, borderColor: `${colors.primary}35`, backgroundColor: colors.muted }]}
-            onPress={() => router.push('/create-outfit' as never)}
-            activeOpacity={0.78}
-            accessibilityRole="button"
-            accessibilityLabel={t('components.profileSection.newOutfit')}
-          >
-            <View style={[s.newTileIcon, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}25` }]}>
-              <Icon name="plus" size={15} color={colors.primary} />
-            </View>
-            <Text style={[s.newOutfitText, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
-              {t('components.profileSection.newOutfit')}
-            </Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
-
-      {/* ── Gallery ─── */}
-      <View style={s.section}>
-        <View style={s.sectionHeader}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={[s.sectionTitle, { color: colors.foreground }]}>{t('profile.galleryUsage')}</Text>
-            {gallery.length > 0 && (
-              <View style={[s.countPill, { backgroundColor: colors.muted }]}>
-                <Text style={[s.countPillText, { color: colors.foreground }]}>{gallery.length}</Text>
-              </View>
-            )}
+        {galleryExpanded ? (
+          <View style={s.galleryGrid}>
+            {filteredEntries.map(entry => (
+              <GalleryMediaCard
+                key={`${entry.kind}-${entry.kind === 'photo' ? entry.photo.id : entry.kind === 'story' ? entry.story.id : entry.outfit.id}`}
+                entry={entry}
+                width={gridCardWidth}
+                height={gridCardHeight}
+                isActiveOutfit={entry.kind === 'outfit' && entry.outfit.id === activeOutfitId}
+                onOpenPhoto={openPhoto}
+                onOpenStory={story => {
+                  if (story.contentType === 'video' && story.videoUri) setPlayingVideo(story);
+                  else router.push(`/story/${story.id}` as never);
+                }}
+                onOpenOutfit={openOutfit}
+                onStoryMenu={setActiveStory}
+              />
+            ))}
+            <GalleryAddCard
+              filter={galleryFilter}
+              width={gridCardWidth}
+              height={gridCardHeight}
+              uploading={galleryUploading}
+              colors={colors}
+              onAddPhoto={handleAddGalleryPhoto}
+            />
           </View>
-          <TouchableOpacity
-            style={[s.addBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            onPress={handleAddGalleryPhoto}
-            activeOpacity={0.75}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            {galleryUploading ? (
-              <ActivityIndicator size="small" color="#B89AE8" />
-            ) : (
-              <Icon name="plus" size={13} color="#B89AE8" />
-            )}
-            <Text style={[s.addBtnText, { color: colors.foreground }]}>{t('common.addPhoto')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {gallery.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
-          {gallery.slice(0, 8).map(photo => (
-            <TouchableOpacity key={photo.id} style={s.galleryThumb} onPress={() => openPhoto(photo)} activeOpacity={0.88}>
-              <Image source={{ uri: photo.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-            </TouchableOpacity>
-          ))}
-        </ScrollView>}
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galleryRow}>
+            {previewEntries.map(entry => (
+              <GalleryMediaCard
+                key={`${entry.kind}-${entry.kind === 'photo' ? entry.photo.id : entry.kind === 'story' ? entry.story.id : entry.outfit.id}`}
+                entry={entry}
+                width={previewCardWidth}
+                height={previewCardHeight}
+                isActiveOutfit={entry.kind === 'outfit' && entry.outfit.id === activeOutfitId}
+                onOpenPhoto={openPhoto}
+                onOpenStory={story => {
+                  if (story.contentType === 'video' && story.videoUri) setPlayingVideo(story);
+                  else router.push(`/story/${story.id}` as never);
+                }}
+                onOpenOutfit={openOutfit}
+                onStoryMenu={setActiveStory}
+              />
+            ))}
+            <GalleryAddCard
+              filter={galleryFilter}
+              width={previewCardWidth}
+              height={previewCardHeight}
+              uploading={galleryUploading}
+              colors={colors}
+              onAddPhoto={handleAddGalleryPhoto}
+            />
+          </ScrollView>
+        )}
 
         {galleryError && (
           <Text style={[s.galError, { color: colors.destructive, marginTop: 6 }]}>{galleryError}</Text>
@@ -553,42 +595,85 @@ export function ProfileStyleSection({
   );
 }
 
+function GalleryAddCard({
+  filter,
+  width,
+  height,
+  uploading,
+  colors,
+  onAddPhoto,
+}: {
+  filter: GalleryFilter;
+  width: number;
+  height: number;
+  uploading: boolean;
+  colors: ReturnType<typeof useColors>;
+  onAddPhoto: () => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const label = filter === 'all'
+    ? t('profile.addToGallery')
+    : filter === 'stories'
+      ? t('components.profileSection.newStory')
+      : t('components.profileSection.newOutfit');
+
+  return (
+    <TouchableOpacity
+      key={`add-${filter}`}
+      style={[s.galleryAddCard, { width, height, backgroundColor: `${colors.tint}0B`, borderColor: `${colors.tint}50` }]}
+      onPress={() => {
+        Haptics.selectionAsync();
+        if (filter === 'all') void onAddPhoto();
+        else if (filter === 'stories') router.push('/(tabs)/create' as never);
+        else router.push('/create-outfit' as never);
+      }}
+      activeOpacity={0.78}
+      accessibilityRole="button"
+      accessibilityLabel={filter === 'all' ? `${label}. ${t('common.addPhoto')}` : label}
+    >
+      <View style={[s.galleryAddIcon, { backgroundColor: `${colors.tint}16` }]}>
+        {filter === 'all' && uploading ? (
+          <ActivityIndicator size="small" color={colors.tint} />
+        ) : (
+          <Icon name="plus" size={20} color={colors.tint} />
+        )}
+      </View>
+      <Text style={[s.galleryAddText, { color: colors.foreground }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 // ── Section styles ────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  section:       { marginBottom: 8 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5, minHeight: 26 },
-  sectionTitle:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-  countPill:     { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
-  countPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 9, minHeight: 28, borderWidth: 1 },
-  addBtnText:    { fontSize: 10.5, fontFamily: 'Satoshi-Bold' },
-  scrollPad:     { paddingRight: 8, gap: 8 },
-  outfitCard:    { width: 112, height: CARD_H, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
-  newTile:       { alignItems: 'center', justifyContent: 'center', borderWidth: 1, gap: 5, borderRadius: 14 },
-  newTileIcon:   { width: 25, height: 25, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  newStoryText:  { maxWidth: '90%', fontSize: 10, lineHeight: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium' },
-  newOutfitText: { maxWidth: '90%', fontSize: 10, lineHeight: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium' },
-  outfitName:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 12 },
-  activePill:    { alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, marginTop: 2 },
-  activePillText:{ fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#fff' },
-  rarityPill:    { position: 'absolute', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.1)' },
-  rarityText:    { fontSize: 9, fontFamily: 'Satoshi-Medium' },
-  galleryThumb:  { width: 46, height: 46, borderRadius: 10, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' },
-  galError:      { fontSize: 12, fontFamily: 'Satoshi-Regular' },
-});
-
-// ── Story card styles ─────────────────────────────────────────────────────────
-
-const sc = StyleSheet.create({
-  card:      { width: 112, height: CARD_H, borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', position: 'relative', borderWidth: 1 },
-  grad:      { position: 'absolute', bottom: 0, left: 0, right: 0, height: '72%' },
-  moodDot:   { position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: 3.5 },
-  globeBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.10)', alignItems: 'center', justifyContent: 'center' },
-  videoBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center' },
-  menuBtn:   { position: 'absolute', top: 5, right: 3, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  bottom:    { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 7, paddingBottom: 6 },
-  title:     { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 12 },
+  section:           { marginBottom: 10 },
+  sectionTitle:      { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.35 },
+  countPill:         { borderRadius: 11, paddingHorizontal: 7, paddingVertical: 3 },
+  countPillText:     { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  galleryPanel:      { borderWidth: 1, borderRadius: 19, marginBottom: 8 },
+  galleryHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 11, paddingTop: 9, paddingBottom: 7, minHeight: 44 },
+  galleryHeadingIcon:{ width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  gallerySeeAll:     { flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 30, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9 },
+  gallerySeeAllText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  galleryTabs:       { flexDirection: 'row', alignItems: 'center', gap: 3, marginHorizontal: 9, marginBottom: 9, padding: 3, borderRadius: 14 },
+  galleryTab:        { flex: 1, minWidth: 0, minHeight: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingHorizontal: 5 },
+  galleryTabText:    { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  galleryRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingHorizontal: 2, paddingBottom: 6 },
+  galleryGrid:       { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
+  galleryMediaCard:  { borderWidth: 1, borderRadius: 16, overflow: 'hidden', position: 'relative' },
+  galleryFallbackIcon:{ position: 'absolute', top: '42%', alignSelf: 'center' },
+  galleryKindBadge:  { position: 'absolute', top: 7, left: 7, width: 23, height: 23, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.62)', alignItems: 'center', justifyContent: 'center' },
+  galleryWornBadge:  { position: 'absolute', top: 7, left: 34, minHeight: 23, paddingHorizontal: 7, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.68)', alignItems: 'center', justifyContent: 'center' },
+  galleryWornText:   { fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  galleryMenuButton: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.62)', alignItems: 'center', justifyContent: 'center' },
+  galleryMediaFooter:{ position: 'absolute', bottom: 0, left: 0, right: 0, minHeight: 42, justifyContent: 'flex-end', paddingHorizontal: 7, paddingBottom: 7 },
+  galleryMediaTitle: { color: '#fff', fontSize: 10, lineHeight: 12, fontFamily: 'Satoshi-Bold' },
+  galleryAddCard:    { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 16, paddingHorizontal: 6, gap: 9 },
+  galleryAddIcon:    { width: 36, height: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  galleryAddText:    { maxWidth: '94%', fontSize: 11, lineHeight: 13, textAlign: 'center', fontFamily: 'Satoshi-Bold' },
+  galError:          { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 });
 
 // ── Action sheet & video modal styles omitted for brevity but remain the same ──
