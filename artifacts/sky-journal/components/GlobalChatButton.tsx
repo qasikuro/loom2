@@ -10,6 +10,7 @@ import { useApp } from '@/context/AppContext';
 import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useColors } from '@/hooks/useColors';
 import { useChatAccent } from '@/hooks/useChatAccent';
+import { useGlobalChatButtonSettings } from '@/context/GlobalChatButtonSettingsContext';
 import { shouldShowGlobalChat } from '@/utils/chatButtonVisibility';
 import {
   clampChatButtonPoint, getChatButtonFractions, getDefaultChatButtonPoint,
@@ -19,7 +20,7 @@ import '@/i18n/drawerTranslations';
 
 const POSITION_KEY = 'storigam:global-chat-button-position:v1';
 const BUTTON_SIZE = 60;
-const DRAG_THRESHOLD = 6;
+const DRAG_THRESHOLD = 12;
 
 export function GlobalChatButton() {
   const { t } = useTranslation();
@@ -31,6 +32,7 @@ export function GlobalChatButton() {
   const { isSignedIn } = useAuth();
   const { dmUnread } = useApp();
   const { open, isOpen } = useFriendsDrawer();
+  const { enabled: buttonEnabled, isLoaded: buttonPreferenceLoaded } = useGlobalChatButtonSettings();
   const [kb, setKb] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const insetsValue = useMemo(
@@ -71,8 +73,6 @@ export function GlobalChatButton() {
 
   const pan = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (_, gesture) =>
-      !kb && !isOpen && Math.hypot(gesture.dx, gesture.dy) > DRAG_THRESHOLD,
     onMoveShouldSetPanResponderCapture: (_, gesture) =>
       !kb && !isOpen && Math.hypot(gesture.dx, gesture.dy) > DRAG_THRESHOLD,
     onPanResponderGrant: () => {
@@ -96,7 +96,7 @@ export function GlobalChatButton() {
       AsyncStorage.setItem(POSITION_KEY, JSON.stringify(fractions)).catch(() => null);
       if (!reduceMotion) {
         const target = clampChatButtonPoint(currentPoint.current, width, height, BUTTON_SIZE, insetsValue);
-        Animated.spring(position, { toValue: target, useNativeDriver: false, speed: 22, bounciness: 4 }).start();
+        Animated.spring(position, { toValue: target, useNativeDriver: true, speed: 22, bounciness: 4 }).start();
       }
     },
     onPanResponderTerminate: () => {
@@ -106,7 +106,7 @@ export function GlobalChatButton() {
     onPanResponderTerminationRequest: () => false,
   }), [height, insetsValue, isOpen, kb, position, reduceMotion, width]);
 
-  if (!shouldShowGlobalChat(segments as string[], !!isSignedIn) || kb || isOpen) return null;
+  if (!buttonPreferenceLoaded || !buttonEnabled || !shouldShowGlobalChat(segments as string[], !!isSignedIn) || kb || isOpen) return null;
   const label = dmUnread > 0 ? `${t('social.openMessages')}, ${t('social.unreadCount', { count: dmUnread })}` : t('social.openMessages');
 
   return (
@@ -118,6 +118,8 @@ export function GlobalChatButton() {
         accessibilityRole="button"
         accessibilityLabel={label}
         accessibilityHint={t('social.moveChatButtonHint', { defaultValue: 'Drag to move this button' })}
+        hitSlop={8}
+        pressRetentionOffset={12}
         testID="global-chat-button"
         onPress={() => { Keyboard.dismiss(); open('all'); }}
         activeOpacity={0.86}

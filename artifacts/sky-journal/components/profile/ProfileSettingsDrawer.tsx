@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import React from 'react';
 import { Animated, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useGlobalChatButtonSettings } from '@/context/GlobalChatButtonSettingsContext';
 
 // ── SoundToggle ────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,41 @@ function SoundToggle() {
         <View style={[s.soundKnob, {
           backgroundColor: soundEnabled ? colors.primary : colors.mutedForeground,
           transform: [{ translateX: soundEnabled ? 16 : 0 }],
+        }]} />
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function FloatingChatToggle() {
+  const { t } = useTranslation();
+  const colors = useColors();
+  const { enabled, isLoaded, setEnabled } = useGlobalChatButtonSettings();
+  return (
+    <TouchableOpacity
+      style={s.drawerItem}
+      accessibilityRole="switch"
+      accessibilityLabel={t('social.floatingChatButton')}
+      accessibilityHint={t('social.floatingChatButtonHint')}
+      accessibilityState={{ checked: enabled, disabled: !isLoaded }}
+      testID="floating-chat-button-setting"
+      disabled={!isLoaded}
+      onPress={() => { Haptics.selectionAsync(); setEnabled(!enabled); }}
+      activeOpacity={0.75}
+    >
+      <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}>
+        <Icon name="message-circle" size={15} color={colors.mutedForeground} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('social.floatingChatButton')}</Text>
+        <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
+          {t('social.floatingChatButtonHint')}
+        </Text>
+      </View>
+      <View style={[s.soundPill, enabled ? s.soundPillOn : s.soundPillOff, { borderColor: colors.border }]}>
+        <View style={[s.soundKnob, {
+          backgroundColor: enabled ? colors.primary : colors.mutedForeground,
+          transform: [{ translateX: enabled ? 16 : 0 }],
         }]} />
       </View>
     </TouchableOpacity>
@@ -162,6 +198,8 @@ export function ProfileSettingsDrawer({
               <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.messages')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
+            <View style={s.drawerDivider} />
+            <FloatingChatToggle />
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} onPress={toggleVisibility} activeOpacity={0.7}>
               <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="lock" size={15} color={colors.mutedForeground} /></View>

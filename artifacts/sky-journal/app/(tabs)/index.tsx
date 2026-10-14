@@ -1099,7 +1099,9 @@ export default function HomeScreen() {
   const { data: publicConfig } = useGetAppConfig({
     query: {
       queryKey: getGetAppConfigQueryKey(),
-      refetchInterval: 30_000,
+      staleTime: 0,
+      refetchOnMount: 'always',
+      refetchInterval: 15_000,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     },

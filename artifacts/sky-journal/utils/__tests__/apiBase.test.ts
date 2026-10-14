@@ -10,7 +10,7 @@ vi.mock('expo-constants', () => ({
   },
 }));
 
-import { getApiBase } from '../apiBase';
+import { getApiBase, getApiOrigin } from '../apiBase';
 
 describe('getApiBase phone tunnel override', () => {
   beforeEach(() => {
@@ -45,5 +45,15 @@ describe('getApiBase phone tunnel override', () => {
     expoConfig.legacyUrl = '';
     vi.stubEnv('EXPO_PUBLIC_DOMAIN', 'published.example');
     expect(getApiBase()).toBe('https://published.example/api');
+  });
+
+  it('gives generated API routes the origin root rather than a duplicate /api prefix', () => {
+    expect(getApiOrigin('https://published.example/api')).toBe('https://published.example');
+    expect(getApiOrigin('https://phone-tunnel.example/api/', 'unused.example')).toBe('https://phone-tunnel.example');
+  });
+
+  it('uses the configured app domain when the API base is relative', () => {
+    expect(getApiOrigin('/api', 'published.example')).toBe('https://published.example');
+    expect(getApiOrigin('/api', undefined)).toBeNull();
   });
 });

@@ -20,7 +20,7 @@ const KeyboardProviderWrapper: React.FC<{ children: React.ReactNode }> = ({ chil
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppSplashScreen } from '@/components/AppSplashScreen';
-import { getApiBase } from '@/utils/apiBase';
+import { getApiBase, getApiOrigin } from '@/utils/apiBase';
 import { XPFlash } from '@/components/XPFlash';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ToastProvider } from '@/components/Toast';
@@ -34,6 +34,10 @@ import { FriendsDrawerProvider } from '@/context/FriendsDrawerContext';
 import { LumiMusicProvider } from '@/features/lumi/music/LumiMusicProvider';
 import { GlobalChatButton } from '@/components/GlobalChatButton';
 import { setMediaAuthScope } from '@/utils/mediaAccess';
+import { GlobalChatButtonSettingsProvider } from '@/context/GlobalChatButtonSettingsContext';
+import { setBaseUrl } from '@workspace/api-client-react';
+
+setBaseUrl(getApiOrigin());
 
 // expo-notifications throws at import time in Expo Go SDK 53+ because Android push
 // notifications were removed. Lazy-require it so the error can't crash _layout.tsx
@@ -415,6 +419,7 @@ export default function RootLayout() {
                         <GestureHandlerRootView style={{ flex: 1 }}>
                         <KeyboardProviderWrapper>
                           <FriendsDrawerProvider>
+                          <GlobalChatButtonSettingsProvider>
                           <LumiMusicProvider>
                           <Stack screenOptions={{ headerShown: false }}>
                             <Stack.Screen name="(auth)" />
@@ -496,6 +501,7 @@ export default function RootLayout() {
                           </LumiMusicProvider>
                           <XPFlash />
                           <GlobalChatButton />
+                          </GlobalChatButtonSettingsProvider>
                           </FriendsDrawerProvider>
                         </KeyboardProviderWrapper>
                       </GestureHandlerRootView>

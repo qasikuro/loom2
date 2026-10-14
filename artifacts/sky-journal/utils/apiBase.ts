@@ -15,3 +15,13 @@ export function getApiBase(): string {
   const domain = process.env.EXPO_PUBLIC_DOMAIN;
   return domain ? `https://${domain}/api` : '/api';
 }
+
+export function getApiOrigin(
+  apiBase: string = getApiBase(),
+  publicDomain: string | undefined = process.env.EXPO_PUBLIC_DOMAIN,
+): string | null {
+  if (/^https?:\/\//.test(apiBase)) {
+    return apiBase.replace(/\/api\/?$/, '').replace(/\/$/, '');
+  }
+  return publicDomain ? `https://${publicDomain.replace(/^https?:\/\//, '').replace(/\/$/, '')}` : null;
+}

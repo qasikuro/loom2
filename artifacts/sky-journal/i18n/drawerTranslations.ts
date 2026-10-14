@@ -23,10 +23,28 @@ export const DRAWER_STRINGS: Record<string, Strings> = {
   zh: { openMessages: '打开消息与好友', closeDrawer: '关闭消息', newMessage: '新消息', chooseRecipient: '选择收件人', cancelNewMessage: '取消新消息', searchMessagesPlaceholder: '按名称或 @用户名搜索', received: '收到的', sent: '已发送', unavailable: '消息功能不可用', unavailableBody: '你的账号目前无法访问好友和消息。', conversationsLoadError: '无法加载最近的对话。', unreadCount: '{{count}} 条未读', unreadConversation: '未读对话', noContacts: '还没有好友或对话。点按“添加好友”。', noContactsMatch: '没有匹配的联系人。', offlineNotice: '你似乎已离线。', pickerEmpty: '请先添加好友。' },
 };
 
+const FLOATING_CHAT_BUTTON_STRINGS: Record<string, { floatingChatButton: string; floatingChatButtonHint: string }> = {
+  en: { floatingChatButton: 'Floating chat button', floatingChatButtonHint: 'Show the chat shortcut on app screens.' },
+  es: { floatingChatButton: 'Botón flotante de chat', floatingChatButtonHint: 'Muestra el acceso al chat en la aplicación.' },
+  fr: { floatingChatButton: 'Bouton de chat flottant', floatingChatButtonHint: 'Afficher le raccourci de chat dans l’application.' },
+  de: { floatingChatButton: 'Schwebender Chat-Button', floatingChatButtonHint: 'Chat-Verknüpfung in der App anzeigen.' },
+  it: { floatingChatButton: 'Pulsante chat mobile', floatingChatButtonHint: 'Mostra il collegamento alla chat nell’app.' },
+  pt: { floatingChatButton: 'Botão flutuante de chat', floatingChatButtonHint: 'Mostrar o atalho de chat no aplicativo.' },
+  tr: { floatingChatButton: 'Yüzen sohbet düğmesi', floatingChatButtonHint: 'Uygulamada sohbet kısayolunu göster.' },
+  ru: { floatingChatButton: 'Плавающая кнопка чата', floatingChatButtonHint: 'Показывать кнопку чата в приложении.' },
+  ar: { floatingChatButton: 'زر الدردشة العائم', floatingChatButtonHint: 'إظهار اختصار الدردشة في التطبيق.' },
+  ja: { floatingChatButton: 'フローティングチャットボタン', floatingChatButtonHint: 'アプリにチャットショートカットを表示します。' },
+  ko: { floatingChatButton: '플로팅 채팅 버튼', floatingChatButtonHint: '앱 화면에 채팅 바로가기를 표시해요.' },
+  zh: { floatingChatButton: '悬浮聊天按钮', floatingChatButtonHint: '在应用中显示聊天快捷入口。' },
+};
+
 export function registerDrawerTranslations(): void {
   const langs = Object.keys(i18n.options?.resources ?? { en: 1 });
   for (const lng of langs) {
-    const strings = DRAWER_STRINGS[lng] ?? DRAWER_STRINGS.en;
+    const strings = {
+      ...(DRAWER_STRINGS[lng] ?? DRAWER_STRINGS.en),
+      ...(FLOATING_CHAT_BUTTON_STRINGS[lng] ?? FLOATING_CHAT_BUTTON_STRINGS.en),
+    };
     i18n.addResourceBundle(lng, 'translation', { social: strings }, true, false);
   }
 }
