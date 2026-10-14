@@ -6,13 +6,12 @@ import { Images } from '@/assets/images';
 import type { ConstellationState } from '@/components/ConstellationMap';
 import { apiFetch, type Character, type Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
-import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import React, { useEffect, useState } from 'react';
 import {
-  ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Share, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
@@ -20,7 +19,7 @@ import {
   BreathingAvatarRing, FrameRing,
   FRAME_CONFIGS,
 } from './CharacterAuraHeader';
-import { ATTRIBUTE_SUGGESTIONS, USERNAME_REGEX, MOOD_ORBS } from './profileConstants';
+import { USERNAME_REGEX, MOOD_ORBS } from './profileConstants';
 
 interface Props {
   character: Character;
@@ -68,9 +67,6 @@ export function ProfileHeaderSection({
   const [avatarUploading,   setAvatarUploading]   = useState(false);
   const [pendingAvatarUri, setPendingAvatarUri] = useState<string | null>(null);
   const [avatarError,       setAvatarError]       = useState<string | null>(null);
-  const [newTrait,          setNewTrait]          = useState('');
-  const [addingTrait,       setAddingTrait]       = useState(false);
-  const [showSuggestions,   setShowSuggestions]   = useState(false);
 
   const avatarSource = character.avatarUri
     ? { uri: character.avatarUri }
@@ -82,10 +78,6 @@ export function ProfileHeaderSection({
   const heroMuted = heroHasArtwork ? `${colors.primaryForeground}D0` : colors.mutedForeground;
   const heroGlass = heroHasArtwork ? `${heroForeground}20` : colors.card;
   const heroGlassBorder = heroHasArtwork ? `${heroForeground}45` : colors.border;
-
-  const suggestions = ATTRIBUTE_SUGGESTIONS.filter(
-    s => !character.traits.includes(s) && s.toLowerCase().includes(newTrait.toLowerCase()),
-  );
 
   function saveName() {
     if (nameVal.trim()) setCharacter({ ...character, name: nameVal.trim() });
@@ -108,17 +100,6 @@ export function ProfileHeaderSection({
     } catch { /* ignore */ } finally { setUsernameChecking(false); }
     setCharacter({ ...character, username: val });
     setEditingUsername(false);
-  }
-  function addTrait(tr: string) {
-    const trimmed = tr.trim();
-    if (!trimmed || character.traits.includes(trimmed)) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setCharacter({ ...character, traits: [...character.traits, trimmed] });
-    setNewTrait(''); setAddingTrait(false); setShowSuggestions(false);
-  }
-  function removeTrait(tr: string) {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setCharacter({ ...character, traits: character.traits.filter(x => x !== tr) });
   }
   async function pickAvatar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -216,89 +197,83 @@ export function ProfileHeaderSection({
 
         {/* Info */}
         <View style={s.profileInfo}>
-          {/* Display name */}
-          {editingName ? (
-            <View style={[s.nameEditWrap, { borderBottomColor: colors.primary }]}>
-              <TextInput
-                style={[s.nameEditInput, { color: heroForeground }]}
-                value={nameVal} onChangeText={setNameVal}
-                autoFocus returnKeyType="done"
-                onSubmitEditing={saveName} onBlur={saveName}
-              />
-            </View>
-          ) : (
-            <TouchableOpacity style={s.nameRow} onPress={() => setEditingName(true)}>
-              <Text style={[s.profileName, { color: heroForeground }]}>{character.name}</Text>
-              <Icon name="edit-2" size={12} color={heroForeground} style={{ marginLeft: 6 }} />
-            </TouchableOpacity>
-          )}
-
-          {/* Username */}
-          {character.username ? (
-            <View style={s.usernameRow}>
-              <Text style={[s.profileHandle, { color: heroMuted }]}>@{character.username}</Text>
-              <Icon name="lock" size={10} color={heroMuted} style={{ marginLeft: 4 }} />
-            </View>
-          ) : editingUsername ? (
-            <View style={[s.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: colors.card }]}>
-              <Text style={[s.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
-              <TextInput
-                style={[s.usernameEditInput, { color: colors.foreground }]}
-                value={usernameVal}
-                onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
-                autoFocus autoCapitalize="none" autoCorrect={false}
-                returnKeyType="done" onSubmitEditing={saveUsername} onBlur={saveUsername}
-                placeholder="your_handle" placeholderTextColor={colors.mutedForeground}
-                maxLength={20}
-              />
-              {usernameChecking && <ActivityIndicator size="small" color={colors.primary} />}
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={s.usernameRow}
-              onPress={() => { setUsernameVal(''); setEditingUsername(true); setUsernameError(null); }}
-            >
-              <Text style={[s.profileHandle, { color: heroMuted, fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
-              <Icon name="edit-2" size={10} color={heroMuted} style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-          )}
+          <View style={s.identityLine}>
+            {editingName ? (
+              <View style={[s.nameEditWrap, { borderBottomColor: colors.primary }]}>
+                <TextInput
+                  style={[s.nameEditInput, { color: heroForeground }]}
+                  value={nameVal} onChangeText={setNameVal}
+                  autoFocus returnKeyType="done"
+                  onSubmitEditing={saveName} onBlur={saveName}
+                />
+              </View>
+            ) : (
+              <TouchableOpacity style={s.nameRow} onPress={() => setEditingName(true)}>
+                <Text style={[s.profileName, { color: heroForeground }]}>{character.name}</Text>
+                <Icon name="edit-2" size={11} color={heroForeground} style={{ marginLeft: 5 }} />
+              </TouchableOpacity>
+            )}
+            {character.username ? (
+              <View style={s.usernameRow}>
+                <Text style={[s.profileHandle, { color: heroMuted }]}>@{character.username}</Text>
+                <Icon name="lock" size={9} color={heroMuted} style={{ marginLeft: 3 }} />
+              </View>
+            ) : editingUsername ? (
+              <View style={[s.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: colors.card }]}>
+                <Text style={[s.usernameAt, { color: usernameError ? colors.destructive : colors.primary }]}>@</Text>
+                <TextInput
+                  style={[s.usernameEditInput, { color: colors.foreground }]}
+                  value={usernameVal}
+                  onChangeText={v => { setUsernameVal(v.toLowerCase().replace(/[^a-z0-9_]/g, '')); setUsernameError(null); }}
+                  autoFocus autoCapitalize="none" autoCorrect={false}
+                  returnKeyType="done" onSubmitEditing={saveUsername} onBlur={saveUsername}
+                  placeholder="your_handle" placeholderTextColor={colors.mutedForeground}
+                  maxLength={20}
+                />
+                {usernameChecking && <ActivityIndicator size="small" color={colors.primary} />}
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={s.usernameRow}
+                onPress={() => { setUsernameVal(''); setEditingUsername(true); setUsernameError(null); }}
+              >
+                <Text style={[s.profileHandle, { color: heroMuted, fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
+                <Icon name="edit-2" size={9} color={heroMuted} style={{ marginLeft: 3 }} />
+              </TouchableOpacity>
+            )}
+          </View>
           {usernameError && <Text style={[s.usernameError, { color: colors.destructive }]}>{usernameError}</Text>}
 
           {/* Role / Title row */}
           <View style={s.titleRow}>
-            {hasTitle ? (
-              <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[s.titleStar, { color: colors.gold }]}>✦</Text>
-                <Text style={[s.titleText, { color: colors.gold }]}>{currentTitle}</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titleAddBtn}>
-                <Icon name="plus" size={10} color={heroMuted} />
-                <Text style={[s.titleAddText, { color: heroMuted }]}>Add title</Text>
-              </TouchableOpacity>
-            )}
-            {hasTitle && (
-              <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titlePlusBtn}>
-                <Icon name="plus" size={10} color={heroMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Level / XP inline */}
-          <View style={s.levelXpRow}>
-             <View style={s.xpLevelBadge}>
-                 <Icon name="moon" size={10} color={colors.gold} />
-                 <Text style={[s.xpLevelText, { color: colors.gold }]}>Level {profileLevel}</Text>
-             </View>
-             <View style={s.xpContainer}>
-                  <Text style={[s.xpNumbers, { color: heroMuted }]}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              {hasTitle ? (
+                <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={[s.titleStar, { color: colors.gold }]}>✦</Text>
+                  <Text style={[s.titleText, { color: colors.gold }]}>{currentTitle}</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titleAddBtn}>
+                  <Icon name="plus" size={10} color={heroMuted} />
+                  <Text style={[s.titleAddText, { color: heroMuted }]}>Add title</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={s.levelXpRow}>
+              <View style={s.xpLevelBadge}>
+                <Icon name="moon" size={10} color={colors.gold} />
+                <Text style={[s.xpLevelText, { color: colors.gold }]}>Level {profileLevel}</Text>
+              </View>
+              <View style={s.xpContainer}>
+                <Text style={[s.xpNumbers, { color: heroMuted }]}>
                   {((rewardBalance?.stars ?? 0) % 300).toLocaleString()} / 300 XP
                 </Text>
-                 <View style={[s.xpBarTrack, { backgroundColor: colors.muted }]}>
-                   {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                    <View style={[s.xpBarFill, { width: `${Math.round(profileXpPct * 100)}%` as any, backgroundColor: colors.gold }]} />
+                <View style={[s.xpBarTrack, { backgroundColor: colors.muted }]}>
+                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                  <View style={[s.xpBarFill, { width: `${Math.round(profileXpPct * 100)}%` as any, backgroundColor: colors.gold }]} />
                 </View>
-             </View>
+              </View>
+            </View>
           </View>
 
           {/* Achievement badges */}
@@ -340,91 +315,6 @@ export function ProfileHeaderSection({
         )}
       </View>
 
-      {/* Vibe: full width */}
-      <View style={[s.vibeBox, { backgroundColor: colors.card, borderColor: `${currentMoodData.accent}66` }]}>
-        <View style={s.vibeHead}>
-          <Text style={[s.vibeLabel, { color: colors.mutedForeground }]}>VIBE</Text>
-          <View style={[s.vibeNow, { backgroundColor: `${currentMoodData.accent}26`, borderColor: `${currentMoodData.accent}80` }]}>
-            <View style={[s.vibeNowDot, { backgroundColor: currentMoodData.accent }]} />
-            <Text style={[s.vibeCurrentText, { color: colors.foreground }]}>{currentMood}</Text>
-          </View>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.orbContainer}>
-          {MOOD_ORBS.map((m) => {
-            const sel = m.key === currentMood;
-            return (
-              <TouchableOpacity
-                key={m.key}
-                style={[s.moodOption, { borderColor: sel ? m.accent : colors.border, backgroundColor: sel ? `${m.accent}2E` : colors.muted, borderWidth: sel ? 2 : 1 }]}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setCharacter({ ...character, mood: m.key }); }}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel={`Mood ${m.key}`}
-                accessibilityState={{ selected: sel }}
-              >
-                <View style={[s.vibeOrb, { backgroundColor: m.accent }]} />
-                <Text style={[s.moodOptionText, { color: colors.foreground, fontFamily: sel ? 'Satoshi-Bold' : 'Satoshi-Medium' }]} numberOfLines={1}>{m.key}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-        <TouchableOpacity style={[s.addTraitBtn, { backgroundColor: colors.muted, borderColor: colors.border }]} onPress={() => { setAddingTrait(true); setShowSuggestions(true); }} accessibilityRole="button" accessibilityLabel="Add trait">
-          <Icon name="plus" size={14} color={colors.foreground} />
-          <Text style={[s.addTraitBtnText, { color: colors.foreground }]}>Add trait</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Trait suggestions / input inline */}
-      {addingTrait && (
-        <View style={[s.traitAddWrap, { borderColor: colors.primary, backgroundColor: `${colors.primary}12`, marginTop: 8 }]}>
-          <TextInput
-            style={[s.traitInput, { color: colors.foreground }]}
-            value={newTrait}
-            onChangeText={v => { setNewTrait(v); setShowSuggestions(true); }}
-            placeholder={t('profile.traitPlaceholder')}
-            placeholderTextColor={colors.mutedForeground}
-            autoFocus returnKeyType="done"
-            onSubmitEditing={() => addTrait(newTrait)}
-            onBlur={() => setTimeout(() => { if (!newTrait.trim()) { setAddingTrait(false); setShowSuggestions(false); } }, 200)}
-          />
-          <TouchableOpacity onPress={() => { setAddingTrait(false); setNewTrait(''); setShowSuggestions(false); }}>
-            <Icon name="x" size={13} color={colors.mutedForeground} />
-          </TouchableOpacity>
-        </View>
-      )}
-      {showSuggestions && suggestions.length > 0 && (
-        <View style={s.suggRow}>
-          <Text style={[s.suggLabel, { color: colors.mutedForeground }]}>{t('profile.suggestions')}</Text>
-          <View style={s.suggChips}>
-            {suggestions.slice(0, 8).map(sg => (
-              <TouchableOpacity key={sg} style={[s.suggChip, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => addTrait(sg)}>
-                <Icon name="plus" size={10} color={colors.mutedForeground} />
-                <Text style={[s.suggText, { color: colors.mutedForeground }]}>{sg}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {/* Existing trait chips below bento if they exist */}
-      {character.traits.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.traitScroll} contentContainerStyle={s.traitRow}>
-          {character.traits.map(tr => (
-            <View key={tr} style={[s.traitChip, { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}30` }]}>
-              <Text style={[s.traitText, { color: colors.primary }]}>{tr}</Text>
-              <Text style={{ fontSize: 8, color: colors.mutedForeground, marginLeft: 1 }}>✦</Text>
-              <TouchableOpacity
-                onPress={() => removeTrait(tr)}
-                hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                style={[s.traitRemove, { backgroundColor: `${colors.primary}18` }]}
-              >
-                <Icon name="x" size={9} color={colors.primary} />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </ScrollView>
-      )}
-
       {avatarError && (
         <Text style={{ color: colors.destructive, fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 6 }}>
           {avatarError}
@@ -444,71 +334,47 @@ export function ProfileHeaderSection({
 }
 
 const s = StyleSheet.create({
-  headerTopRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  headerIconBtn:    { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  visPill:          { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, minHeight: 42, borderRadius: 22, borderWidth: 1 },
+  headerTopRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
+  headerIconBtn:    { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  visPill:          { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, minHeight: 28, borderRadius: 22, borderWidth: 1 },
   visPillText:      { fontSize: 10.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
-  profileRow:       { flexDirection: 'row', gap: 16, alignItems: 'center', marginBottom: 12 },
-  avatarWrap:       { width: 94, height: 94, position: 'relative', flexShrink: 0 },
-  avatarCircle:     { width: 94, height: 94, borderRadius: 47, borderWidth: 3, overflow: 'hidden' },
-  avatarEditBtn:    { position: 'absolute', bottom: -3, right: -3, width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  profileRow:       { flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 4 },
+  avatarWrap:       { width: 62, height: 62, position: 'relative', flexShrink: 0 },
+  avatarCircle:     { width: 62, height: 62, borderRadius: 31, borderWidth: 2, overflow: 'hidden' },
+  avatarEditBtn:    { position: 'absolute', bottom: -2, right: -2, width: 25, height: 25, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
-  profileInfo:      { flex: 1, gap: 4 },
-  nameRow:          { flexDirection: 'row', alignItems: 'center' },
-  profileName:      { fontSize: 24, fontFamily: 'Satoshi-Bold', letterSpacing: -0.6 },
+  profileInfo:      { flex: 1, gap: 1 },
+  identityLine:     { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, rowGap: 1 },
+  nameRow:          { flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 },
+  profileName:      { fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5, flexShrink: 1 },
   nameEditWrap:     { borderBottomWidth: 2, paddingBottom: 3 },
-  nameEditInput:    { fontSize: 24, fontFamily: 'Satoshi-Bold', letterSpacing: -0.6 },
-  usernameRow:      { flexDirection: 'row', alignItems: 'center', marginTop: -2 },
-  profileHandle:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
-  usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
-  usernameAt:       { fontSize: 14, fontFamily: 'Satoshi-Bold' },
-  usernameEditInput:{ flex: 1, fontSize: 14, fontFamily: 'Satoshi-Regular' },
+  nameEditInput:    { fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
+  usernameRow:      { flexDirection: 'row', alignItems: 'center' },
+  profileHandle:    { fontSize: 10.5, fontFamily: 'Satoshi-Medium' },
+  usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, minWidth: 110 },
+  usernameAt:       { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  usernameEditInput:{ flex: 1, fontSize: 12, fontFamily: 'Satoshi-Regular' },
   usernameError:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 
-  titleRow:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  titleRow:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
   titleStar:        { fontSize: 12, color: '#C8A84B' },
   titleText:        { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.2 },
-  titlePlusBtn:     { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(200,184,232,0.35)', backgroundColor: 'rgba(200,184,232,0.08)' },
-  titleAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 18, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(120,100,170,0.45)', backgroundColor: 'rgba(200,184,232,0.05)' },
-  titleAddText:     { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 0.1 },
+  titlePlusBtn:     { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(200,184,232,0.35)', backgroundColor: 'rgba(200,184,232,0.08)' },
+  titleAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, minHeight: 24, borderRadius: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(120,100,170,0.45)', backgroundColor: 'rgba(200,184,232,0.05)' },
+  titleAddText:     { fontSize: 10.5, fontFamily: 'Satoshi-Medium', letterSpacing: 0.1 },
 
-  levelXpRow:       { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 4 },
-  xpLevelBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 },
-  xpLevelText:      { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
+  levelXpRow:       { flex: 1.2, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 0 },
+  xpLevelBadge:     { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 11 },
+  xpLevelText:      { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
   xpContainer:      { flex: 1 },
   xpNumbers:        { fontSize: 10.5, fontFamily: 'Satoshi-Medium', textAlign: 'right', marginBottom: 3 },
   xpBarTrack:       { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
   xpBarFill:        { height: 4, borderRadius: 2, backgroundColor: '#C8A84B' },
 
-  bioCard:          { borderRadius: 17, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12, marginTop: 3 },
-  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 30 },
-  profileBio:       { fontSize: 14, lineHeight: 20, fontFamily: 'Satoshi-Medium' },
-  bioInput:         { fontSize: 14, lineHeight: 20, fontFamily: 'Satoshi-Regular', padding: 0, minHeight: 40 },
+  bioCard:          { borderRadius: 13, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 5, marginTop: 0 },
+  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 24 },
+  profileBio:       { fontSize: 12.5, lineHeight: 15, fontFamily: 'Satoshi-Medium' },
+  bioInput:         { fontSize: 12.5, lineHeight: 15, fontFamily: 'Satoshi-Regular', padding: 0, minHeight: 30 },
 
-  vibeBox:          { borderRadius: 18, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, marginTop: 9, alignSelf: 'stretch' },
-  vibeHead:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  vibeLabel:        { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 1.6 },
-  vibeNow:          { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
-  vibeNowDot:       { width: 8, height: 8, borderRadius: 4 },
-  orbContainer:     { flexDirection: 'row', gap: 6, marginTop: 9, paddingRight: 2 },
-  moodOption:       { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 38, width: 94, paddingHorizontal: 9, borderRadius: 13, flexShrink: 0, justifyContent: 'center' },
-  moodOptionText:   { fontSize: 11, flexShrink: 1 },
-  vibeOrb:          { width: 9, height: 9, borderRadius: 5 },
-  vibeCurrentText:  { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-  addTraitBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40, borderRadius: 13, borderWidth: 1, marginTop: 9 },
-  addTraitBtnText:  { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-
-  traitScroll:      { marginTop: 10 },
-  traitRow:         { flexDirection: 'row', gap: 6 },
-  traitChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 10, paddingRight: 4, paddingVertical: 5, borderRadius: 16, borderWidth: 1 },
-  traitText:        { fontSize: 11, fontFamily: 'Satoshi-Medium' },
-  traitRemove:      { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  traitAddWrap:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5 },
-  traitInput:       { fontSize: 12, fontFamily: 'Satoshi-Regular', minWidth: 80, maxWidth: 120 },
-  suggRow:          { marginTop: 14, gap: 8 },
-  suggLabel:        { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 1.2, textTransform: 'uppercase' },
-  suggChips:        { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  suggChip:         { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 12, borderWidth: 1 },
-  suggText:         { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 });

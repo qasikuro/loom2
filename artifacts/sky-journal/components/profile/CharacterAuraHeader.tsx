@@ -220,7 +220,7 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
 export { ACCENT_CONFIGS, FRAME_CONFIGS };
 
 const s = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingBottom: 12 },
-  coverImage: { position: 'absolute', top: 0, left: 0, right: 0, height: 278, opacity: 0.94 },
-  coverVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: 296 },
+  header: { paddingHorizontal: 16, paddingBottom: 6 },
+  coverImage: { position: 'absolute', top: 0, left: 0, right: 0, height: 190, opacity: 0.94 },
+  coverVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: 202 },
 });

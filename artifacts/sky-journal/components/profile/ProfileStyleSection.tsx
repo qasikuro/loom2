@@ -288,8 +288,8 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
 // ── Story card (horizontal scroll) ───────────────────────────────────────────
 
-const CARD_W = 146;
-const CARD_H = 150;
+const CARD_W = 118;
+const CARD_H = 72;
 
 function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story) => void; onPlay: (s: Story) => void }) {
   const cover      = getStoryCover(story);
@@ -380,6 +380,7 @@ export function ProfileStyleSection({
   const [playingVideo, setPlayingVideo] = useState<Story | null>(null);
 
   const sorted = [...stories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const activeOutfit = outfits.find(outfit => outfit.id === activeOutfitId) ?? null;
 
   return (
     <>
@@ -434,12 +435,14 @@ export function ProfileStyleSection({
           </View>
           <TouchableOpacity
             style={[s.addBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            onPress={() => router.push('/create-outfit' as never)}
+            onPress={() => activeOutfit ? openOutfit(activeOutfit.id) : router.push('/create-outfit' as never)}
             activeOpacity={0.75}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={activeOutfit ? t('components.profileSection.changeOutfit') : t('components.profileSection.newOutfit')}
           >
-            <Icon name="plus" size={13} color="#B89AE8" />
-            <Text style={[s.addBtnText, { color: colors.foreground }]}>{t('components.profileSection.newOutfit')}</Text>
+            <Icon name={activeOutfit ? 'user' : 'plus'} size={12} color={colors.primary} />
+            <Text style={[s.addBtnText, { color: colors.foreground }]}>{activeOutfit ? t('components.profileSection.changeOutfit') : t('components.profileSection.newOutfit')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -476,6 +479,16 @@ export function ProfileStyleSection({
               </TouchableOpacity>
             );
           })}
+          <TouchableOpacity
+            style={[s.outfitCard, s.newOutfitCard, { borderColor: colors.border, backgroundColor: colors.muted }]}
+            onPress={() => router.push('/create-outfit' as never)}
+            activeOpacity={0.78}
+            accessibilityRole="button"
+            accessibilityLabel={t('components.profileSection.newOutfit')}
+          >
+            <Icon name="plus" size={18} color={colors.primary} />
+            <Text style={[s.newOutfitText, { color: colors.foreground }]} numberOfLines={2}>{t('components.profileSection.newOutfit')}</Text>
+          </TouchableOpacity>
         </ScrollView>
       </View>
 
@@ -516,8 +529,8 @@ export function ProfileStyleSection({
             onPress={handleAddGalleryPhoto}
             activeOpacity={0.75}
           >
-            <Icon name="plus" size={20} color={colors.foreground} />
-            <Text style={{ color: colors.foreground, fontSize: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('common.addPhoto')}</Text>
+            <Icon name="plus" size={14} color={colors.foreground} />
+            <Text style={{ color: colors.foreground, fontSize: 8, lineHeight: 10, textAlign: 'center', fontFamily: 'Satoshi-Medium', marginTop: 2 }}>{t('common.addPhoto')}</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -543,35 +556,37 @@ export function ProfileStyleSection({
 // ── Section styles ────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  section:       { marginBottom: 23 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 },
-  sectionTitle:  { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  section:       { marginBottom: 4 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3, minHeight: 24 },
+  sectionTitle:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
   countPill:     { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   countPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 14, paddingHorizontal: 12, minHeight: 38, borderWidth: 1 },
-  addBtnText:    { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  scrollPad:     { paddingRight: 16, gap: 12 },
-  outfitCard:    { width: CARD_W, height: CARD_H, borderRadius: 17, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
-  outfitName:    { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)', lineHeight: 14 },
-  activePill:    { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4 },
-  activePillText:{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 11, paddingHorizontal: 8, minHeight: 26, borderWidth: 1 },
+  addBtnText:    { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  scrollPad:     { paddingRight: 12, gap: 8 },
+  outfitCard:    { width: CARD_W, height: CARD_H, borderRadius: 13, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
+  newOutfitCard: { alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', gap: 4 },
+  newOutfitText: { fontSize: 9, lineHeight: 11, textAlign: 'center', fontFamily: 'Satoshi-Medium' },
+  outfitName:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)', lineHeight: 12 },
+  activePill:    { alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, marginTop: 2 },
+  activePillText:{ fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#fff' },
   rarityPill:    { position: 'absolute', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.1)' },
   rarityText:    { fontSize: 9, fontFamily: 'Satoshi-Medium' },
-  galleryThumb:  { width: 82, height: 82, borderRadius: 15, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' },
+  galleryThumb:  { width: 46, height: 46, borderRadius: 10, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' },
   galError:      { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 });
 
 // ── Story card styles ─────────────────────────────────────────────────────────
 
 const sc = StyleSheet.create({
-  card:      { width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', position: 'relative' },
+  card:      { width: CARD_W, height: CARD_H, borderRadius: 13, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', position: 'relative' },
   grad:      { position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%' },
   moodDot:   { position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: 3.5 },
   globeBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.10)', alignItems: 'center', justifyContent: 'center' },
   videoBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center' },
   menuBtn:   { position: 'absolute', top: 5, right: 3, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  bottom:    { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 10, gap: 5 },
-  title:     { fontSize: 12, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 14 },
+  bottom:    { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 7, gap: 3 },
+  title:     { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 12 },
   metaRow:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
   metaText:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.75)', marginRight: 3 },
 });

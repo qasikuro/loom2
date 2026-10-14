@@ -18,9 +18,19 @@ import {
 interface Props {
   character: Character;
   setCharacter: (c: Character) => void;
+  betweenAboutAndGuide?: React.ReactNode;
 }
 
-export function ProfileAboutSection({ character, setCharacter }: Props) {
+const ROLE_ICONS: Record<string, string> = {
+  Collector: 'grid', Trader: 'users', Veteran: 'shield', Uber: 'star', Solo: 'moon',
+};
+const PLATFORM_ICONS: Record<string, string> = {
+  instagram: 'image', tiktok: 'play', twitter: 'share-2', youtube: 'play',
+  pinterest: 'image', twitch: 'gamepad-2', spotify: 'volume-2', snapchat: 'image',
+  discord: 'message-circle', bereal: 'image', other: 'globe',
+};
+
+export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGuide }: Props) {
   const { t } = useTranslation();
   const colors = useColors();
   const { isDark } = useTheme();
@@ -154,7 +164,9 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
                   style={[s.roleChip, sel ? { backgroundColor: r.color + '22', borderColor: r.color + '70' } : { borderColor: colors.border }]}
                   activeOpacity={0.75}
                 >
-                  <Text style={{ fontSize: 14 }}>{r.emoji}</Text>
+                  <View style={[s.roleMark, { backgroundColor: `${r.color}20` }]}>
+                    <Icon name={ROLE_ICONS[r.key] ?? 'user'} size={14} color={r.color} />
+                  </View>
                   <View style={{ gap: 1 }}>
                     <Text style={[s.roleChipLabel, { color: sel ? r.color : colors.foreground }]}>{r.key}</Text>
                     {sel && <Text style={[s.roleChipHint, { color: r.color + 'AA' }]}>{r.hint}</Text>}
@@ -183,7 +195,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           return (
             <View key={idx} style={[s.aboutLinkRow, { borderTopColor: colors.border }]}>
               <View style={[s.aboutLinkIcon, { backgroundColor: `${plat?.color ?? colors.primary}22` }]}>
-                <Text style={{ fontSize: 16 }}>{plat?.icon ?? '🔗'}</Text>
+                <Icon name={PLATFORM_ICONS[plat?.key ?? 'other'] ?? 'globe'} size={16} color={plat?.color ?? colors.primary} />
               </View>
               <TouchableOpacity style={{ flex: 1 }} onPress={() => openEditLink(idx)} activeOpacity={0.75}>
                 <Text style={[s.aboutLinkName, { color: colors.foreground }]}>{link.label}</Text>
@@ -202,7 +214,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
             {SOCIAL_PLATFORMS.map(p => (
               <TouchableOpacity key={p.key} style={[s.platformChip, { borderColor: colors.border, backgroundColor: `${colors.primary}08` }]} onPress={() => selectPlatform(p)}>
                 <View style={[s.platformChipIcon, { backgroundColor: p.color + '22' }]}>
-                  <Text style={s.socialIcon}>{p.icon}</Text>
+                  <Icon name={PLATFORM_ICONS[p.key] ?? 'globe'} size={14} color={p.color} />
                 </View>
                 <Text style={[s.platformChipLabel, { color: colors.foreground }]}>{p.label}</Text>
               </TouchableOpacity>
@@ -213,7 +225,7 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           <View style={[s.aboutRow, { borderTopColor: colors.border, flexDirection: 'column', alignItems: 'stretch', gap: 10 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={[s.socialBadge, { backgroundColor: linkPlatform.color + '22' }]}>
-                <Text style={s.socialIcon}>{linkPlatform.icon}</Text>
+                <Icon name={PLATFORM_ICONS[linkPlatform.key] ?? 'globe'} size={15} color={linkPlatform.color} />
               </View>
               <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Bold', color: colors.foreground }}>{linkPlatform.key === 'other' ? t('components.about.otherPlatform') : linkPlatform.label}</Text>
               <TouchableOpacity onPress={cancelLink} style={{ marginLeft: 'auto' }} hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}>
@@ -250,9 +262,9 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
               >
                 <View style={s.metadataLabelRow}>
                   <Icon name={item.icon} size={11} color={colors.primary} />
-                  <Text style={[s.metadataLabel, { color: colors.mutedForeground }]} numberOfLines={1}>{item.label}</Text>
+                  <Text style={[s.metadataLabel, { color: colors.mutedForeground }]} numberOfLines={2}>{item.label}</Text>
                 </View>
-                <Text style={[s.metadataValue, { color: colors.foreground }]} numberOfLines={1}>
+                <Text style={[s.metadataValue, { color: colors.foreground }]} numberOfLines={2}>
                   {item.value}
                 </Text>
               </TouchableOpacity>
@@ -260,6 +272,8 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           </View>
         )}
       </View>
+
+      {betweenAboutAndGuide}
 
       {/* ── Guide ─── */}
       <View style={[s.guideCard, SHADOW.sm, !isDark && { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -278,9 +292,9 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           <View pointerEvents="none" style={s.guideSparkleTwo} />
           <View style={s.guideHeroRow}>
             <View style={s.guideHeroTitleRow}>
-              <View style={[s.guideHeroIconWrap, !isDark && { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}24` }]}><Icon name="star" size={24} color={isDark ? '#D7BE65' : colors.secondary} /></View>
+                  <View style={[s.guideHeroIconWrap, !isDark && { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}24` }]}><Icon name="star" size={18} color={isDark ? '#D7BE65' : colors.secondary} /></View>
               <View style={s.guideHeroCopy}>
-                <Text style={[s.guideHeroTitle, !isDark && { color: colors.foreground }]} numberOfLines={2}>{t('social.guide')}</Text>
+                <Text style={[s.guideHeroTitle, !isDark && { color: colors.foreground }]}>{t('social.guide')}</Text>
                 <Text style={[s.guideHeroSub, !isDark && { color: colors.mutedForeground }]}>
                   {character.isGuide ? t('components.about.guideActive') : t('components.about.guideHelp')}
                 </Text>
@@ -461,19 +475,20 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
 }
 
 const s = StyleSheet.create({
-  aboutCard:        { borderRadius: 18, borderWidth: 1, marginBottom: 12, overflow: 'hidden' },
-  aboutCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11 },
-  aboutCardIcon:    { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  aboutCardTitle:   { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
-  aboutEditButton:  { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 6 },
-  aboutEditButtonText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  aboutSummary:     { borderTopWidth: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 11, flexDirection: 'row', gap: 6 },
+  aboutCard:        { borderRadius: 16, borderWidth: 1, marginBottom: 6, overflow: 'hidden' },
+  aboutCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 5 },
+  aboutCardIcon:    { width: 25, height: 25, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  aboutCardTitle:   { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
+  aboutEditButton:  { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4 },
+  aboutEditButtonText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  aboutSummary:     { borderTopWidth: 1, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 6, flexDirection: 'row', gap: 4 },
   aboutSummaryLine: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
   aboutSummaryMeta: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
-  metadataItem:     { flex: 1, minWidth: 0, minHeight: 53, borderWidth: 1, borderRadius: 12, paddingHorizontal: 7, paddingVertical: 7, justifyContent: 'center', gap: 3 },
+  metadataItem:     { flex: 1, minWidth: 0, minHeight: 48, borderWidth: 1, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 5, justifyContent: 'center', gap: 2 },
   metadataLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metadataLabel:    { flexShrink: 1, fontSize: 8, fontFamily: 'Satoshi-Bold', letterSpacing: 0.25, textTransform: 'uppercase' },
-  metadataValue:    { fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: -0.1 },
+  metadataLabel:    { flexShrink: 1, fontSize: 8.5, lineHeight: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0, textTransform: 'uppercase' },
+  metadataValue:    { fontSize: 9.5, lineHeight: 11, fontFamily: 'Satoshi-Medium', letterSpacing: -0.1 },
+  roleMark:         { width: 27, height: 27, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   aboutRow:         { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
   aboutRowLeft:     { flex: 1, gap: 3 },
   aboutRowLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, textTransform: 'uppercase' },
@@ -492,25 +507,24 @@ const s = StyleSheet.create({
   platformChip:     { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderRadius: 12, backgroundColor: 'rgba(155,120,255,0.06)', paddingHorizontal: 10, paddingVertical: 7, minWidth: '43%', flexGrow: 1 },
   platformChipIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   platformChipLabel:{ fontSize: 12, fontFamily: 'Satoshi-Medium' },
-  socialIcon:       { fontSize: 17, lineHeight: 20 },
   socialBadge:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   handleInput:      { fontSize: 13, fontFamily: 'Satoshi-Regular', backgroundColor: 'rgba(155,120,255,0.10)', borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   saveLinkBtn:      { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  guideCard:        { borderRadius: 18, overflow: 'hidden', marginBottom: 18, borderWidth: 1, borderColor: 'rgba(145,109,222,0.23)', backgroundColor: '#181428' },
-  guideHero:        { minHeight: 64, paddingHorizontal: 13, paddingVertical: 9, overflow: 'hidden', justifyContent: 'center' },
+  guideCard:        { borderRadius: 14, overflow: 'hidden', marginBottom: 6, borderWidth: 1, borderColor: 'rgba(145,109,222,0.23)', backgroundColor: '#181428' },
+  guideHero:        { minHeight: 47, paddingHorizontal: 10, paddingVertical: 4, overflow: 'hidden', justifyContent: 'center' },
   guideHeroOpen:    { borderBottomWidth: 1, borderBottomColor: 'rgba(145,109,222,0.2)' },
   guideOrbit:       { position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 1, borderColor: 'rgba(181,140,255,0.16)', right: -34, bottom: -124 },
   guidePlanet:      { position: 'absolute', width: 156, height: 156, borderRadius: 78, backgroundColor: 'rgba(139,88,224,0.12)', right: -22, bottom: -110 },
   guideSparkleOne:  { position: 'absolute', width: 4, height: 4, borderRadius: 2, backgroundColor: '#D7BE65', right: 121, top: 18 },
   guideSparkleTwo:  { position: 'absolute', width: 3, height: 3, borderRadius: 2, backgroundColor: '#BA9BEE', right: 102, top: 48 },
   guideHeroRow:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
-  guideHeroIconWrap:{ width: 40, height: 40, flexShrink: 0, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
+  guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 },
+  guideHeroIconWrap:{ width: 32, height: 32, flexShrink: 0, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
   guideHeroCopy:    { flex: 1, minWidth: 0 },
   guideHeroTitle:   { fontSize: 15, flexShrink: 1, fontFamily: 'Satoshi-Bold', color: '#F5F0FF', letterSpacing: -0.2 },
-  guideHeroSub:     { fontSize: 11, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 2 },
+  guideHeroSub:     { fontSize: 10, lineHeight: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 1 },
   guideHeroEnd:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 },
-  guideStatus:      { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 9, paddingVertical: 7 },
+  guideStatus:      { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 7, paddingVertical: 5 },
   guideStatusOn:    { borderColor: 'rgba(172,139,246,0.55)', backgroundColor: 'rgba(149,105,240,0.18)' },
   guideStatusDot:   { width: 7, height: 7, borderRadius: 4, backgroundColor: '#77718E' },
   guideStatusDotOn: { backgroundColor: '#B394FF' },
