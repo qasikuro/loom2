@@ -8,6 +8,7 @@ import {
 import { useTheme } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { ProfileEffect } from '@/components/ProfileEffect';
+import { SecureImage as Image } from '@/components/SecureImage';
 import {
   ACCENT_CONFIGS, DEFAULT_AURA, FRAME_CONFIGS, MOOD_AURA, MOOD_ORBS,
   PARTICLE_SIZES, PARTICLE_XS,
@@ -121,10 +122,11 @@ export function MoodOrbPicker({ currentMood, onSelect }: {
 
 // ── CharacterAuraHeader ────────────────────────────────────────────────────────
 
-export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }: {
+export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImageUri, children }: {
   mood: string;
   paddingTop: number;
   activeEffect?: string;
+  coverImageUri?: string | null;
   children: React.ReactNode;
 }) {
   const aura   = MOOD_AURA[mood] ?? DEFAULT_AURA;
@@ -184,6 +186,18 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }
   return (
     <View style={[s.header, { paddingTop, overflow: 'hidden', backgroundColor: colors.background }]}>
       <LinearGradient colors={heroColors} style={StyleSheet.absoluteFill} start={{ x: 0.1, y: 0 }} end={{ x: 0.9, y: 1 }} />
+      {coverImageUri ? (
+        <>
+          <Image source={{ uri: coverImageUri }} style={s.coverImage} contentFit="cover" />
+          <LinearGradient
+            colors={isDark
+              ? ['rgba(10,8,24,0.58)', 'rgba(10,8,24,0.76)', colors.background]
+              : ['rgba(24,20,38,0.48)', 'rgba(24,20,38,0.70)', colors.background]}
+            locations={[0, 0.68, 1]}
+            style={s.coverVeil}
+          />
+        </>
+      ) : null}
       {activeEffect && <ProfileEffect effectId={activeEffect} />}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.1, left: -screenW * 0.1, width: screenW * 1.2, height: screenW * 1.2, borderRadius: screenW * 0.6, backgroundColor: aura.accent, opacity: glow2Opacity, transform: [{ scale: glowScale }] }} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.4, left: screenW * 0.15, width: screenW * 0.70, height: screenW * 0.70, borderRadius: screenW * 0.35, backgroundColor: aura.accent, opacity: glowOpacity, transform: [{ scale: glowScale }] }} />
@@ -206,5 +220,7 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, children }
 export { ACCENT_CONFIGS, FRAME_CONFIGS };
 
 const s = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingBottom: 16 },
+  header: { paddingHorizontal: 20, paddingBottom: 12 },
+  coverImage: { position: 'absolute', top: 0, left: 0, right: 0, height: 278, opacity: 0.94 },
+  coverVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: 296 },
 });

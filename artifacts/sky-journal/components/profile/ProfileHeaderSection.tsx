@@ -77,6 +77,11 @@ export function ProfileHeaderSection({
     : activeOutfit?.imageUri
       ? { uri: activeOutfit.imageUri }
       : Images.character_default;
+  const heroHasArtwork = Boolean(activeOutfit?.imageUri || character.avatarUri);
+  const heroForeground = heroHasArtwork ? colors.primaryForeground : colors.foreground;
+  const heroMuted = heroHasArtwork ? `${colors.primaryForeground}D0` : colors.mutedForeground;
+  const heroGlass = heroHasArtwork ? `${heroForeground}20` : colors.card;
+  const heroGlassBorder = heroHasArtwork ? `${heroForeground}45` : colors.border;
 
   const suggestions = ATTRIBUTE_SUGGESTIONS.filter(
     s => !character.traits.includes(s) && s.toLowerCase().includes(newTrait.toLowerCase()),
@@ -153,23 +158,31 @@ export function ProfileHeaderSection({
       <View style={s.headerTopRow}>
         <TouchableOpacity
           style={[s.visPill, {
-            backgroundColor: character.isPublic ? `${colors.primary}18` : colors.muted,
-            borderColor: character.isPublic ? `${colors.primary}40` : colors.border,
+            backgroundColor: heroHasArtwork
+              ? heroGlass
+              : character.isPublic ? `${colors.primary}18` : colors.muted,
+            borderColor: heroHasArtwork
+              ? heroGlassBorder
+              : character.isPublic ? `${colors.primary}40` : colors.border,
           }]}
           onPress={toggleVisibility}
         >
-          <Icon name={character.isPublic ? 'globe' : 'lock'} size={11} color={character.isPublic ? colors.primary : colors.mutedForeground} />
-          <Text style={[s.visPillText, { color: character.isPublic ? colors.primary : colors.mutedForeground }]}>
+          <Icon
+            name={character.isPublic ? 'globe' : 'lock'}
+            size={11}
+            color={heroHasArtwork ? heroForeground : character.isPublic ? colors.primary : colors.mutedForeground}
+          />
+          <Text style={[s.visPillText, { color: heroHasArtwork ? heroForeground : character.isPublic ? colors.primary : colors.mutedForeground }]}>
             {character.isPublic ? 'Public' : 'Private'}
           </Text>
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={shareProfile} activeOpacity={0.75}>
-            <Icon name="share-2" size={14} color={colors.mutedForeground} />
+          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={shareProfile} activeOpacity={0.75}>
+            <Icon name="share-2" size={14} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={openDrawer} activeOpacity={0.75}>
-            <Icon name="settings" size={14} color={colors.mutedForeground} />
+          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={openDrawer} activeOpacity={0.75}>
+            <Icon name="settings" size={14} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
@@ -191,6 +204,8 @@ export function ProfileHeaderSection({
             style={[s.avatarEditBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={pickAvatar}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Change profile avatar"
           >
             {avatarUploading
               ? <ActivityIndicator size="small" color={colors.primary} />
@@ -204,8 +219,8 @@ export function ProfileHeaderSection({
           {/* Display name */}
           {editingName ? (
             <View style={[s.nameEditWrap, { borderBottomColor: colors.primary }]}>
-                <TextInput
-                style={[s.nameEditInput, { color: colors.foreground }]}
+              <TextInput
+                style={[s.nameEditInput, { color: heroForeground }]}
                 value={nameVal} onChangeText={setNameVal}
                 autoFocus returnKeyType="done"
                 onSubmitEditing={saveName} onBlur={saveName}
@@ -213,16 +228,16 @@ export function ProfileHeaderSection({
             </View>
           ) : (
             <TouchableOpacity style={s.nameRow} onPress={() => setEditingName(true)}>
-              <Text style={[s.profileName, { color: colors.foreground }]}>{character.name}</Text>
-              <Icon name="edit-2" size={12} color={colors.mutedForeground} style={{ marginLeft: 6 }} />
+              <Text style={[s.profileName, { color: heroForeground }]}>{character.name}</Text>
+              <Icon name="edit-2" size={12} color={heroForeground} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           )}
 
           {/* Username */}
           {character.username ? (
             <View style={s.usernameRow}>
-              <Text style={[s.profileHandle, { color: colors.mutedForeground }]}>@{character.username}</Text>
-              <Icon name="lock" size={10} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
+              <Text style={[s.profileHandle, { color: heroMuted }]}>@{character.username}</Text>
+              <Icon name="lock" size={10} color={heroMuted} style={{ marginLeft: 4 }} />
             </View>
           ) : editingUsername ? (
             <View style={[s.usernameEditWrap, { borderColor: usernameError ? colors.destructive : colors.primary, backgroundColor: colors.card }]}>
@@ -243,8 +258,8 @@ export function ProfileHeaderSection({
               style={s.usernameRow}
               onPress={() => { setUsernameVal(''); setEditingUsername(true); setUsernameError(null); }}
             >
-              <Text style={[s.profileHandle, { color: colors.mutedForeground, fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
-              <Icon name="edit-2" size={10} color={colors.mutedForeground} style={{ marginLeft: 4 }} />
+              <Text style={[s.profileHandle, { color: heroMuted, fontStyle: 'italic' }]}>{t('profile.setUsername')}</Text>
+              <Icon name="edit-2" size={10} color={heroMuted} style={{ marginLeft: 4 }} />
             </TouchableOpacity>
           )}
           {usernameError && <Text style={[s.usernameError, { color: colors.destructive }]}>{usernameError}</Text>}
@@ -258,13 +273,13 @@ export function ProfileHeaderSection({
               </TouchableOpacity>
             ) : (
               <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titleAddBtn}>
-                <Icon name="plus" size={10} color={colors.mutedForeground} />
-                <Text style={[s.titleAddText, { color: colors.mutedForeground }]}>Add title</Text>
+                <Icon name="plus" size={10} color={heroMuted} />
+                <Text style={[s.titleAddText, { color: heroMuted }]}>Add title</Text>
               </TouchableOpacity>
             )}
             {hasTitle && (
               <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titlePlusBtn}>
-                <Icon name="plus" size={10} color={colors.mutedForeground} />
+                <Icon name="plus" size={10} color={heroMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -276,7 +291,7 @@ export function ProfileHeaderSection({
                  <Text style={[s.xpLevelText, { color: colors.gold }]}>Level {profileLevel}</Text>
              </View>
              <View style={s.xpContainer}>
-                 <Text style={[s.xpNumbers, { color: colors.mutedForeground }]}>
+                  <Text style={[s.xpNumbers, { color: heroMuted }]}>
                   {((rewardBalance?.stars ?? 0) % 300).toLocaleString()} / 300 XP
                 </Text>
                  <View style={[s.xpBarTrack, { backgroundColor: colors.muted }]}>
@@ -334,7 +349,7 @@ export function ProfileHeaderSection({
             <Text style={[s.vibeCurrentText, { color: colors.foreground }]}>{currentMood}</Text>
           </View>
         </View>
-        <View style={s.orbContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.orbContainer}>
           {MOOD_ORBS.map((m) => {
             const sel = m.key === currentMood;
             return (
@@ -352,7 +367,7 @@ export function ProfileHeaderSection({
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
         <TouchableOpacity style={[s.addTraitBtn, { backgroundColor: colors.muted, borderColor: colors.border }]} onPress={() => { setAddingTrait(true); setShowSuggestions(true); }} accessibilityRole="button" accessibilityLabel="Add trait">
           <Icon name="plus" size={14} color={colors.foreground} />
           <Text style={[s.addTraitBtnText, { color: colors.foreground }]}>Add trait</Text>
@@ -429,21 +444,21 @@ export function ProfileHeaderSection({
 }
 
 const s = StyleSheet.create({
-  headerTopRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  headerIconBtn:    { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  visPill:          { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, minHeight: 44, borderRadius: 22, borderWidth: 1 },
+  headerTopRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  headerIconBtn:    { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  visPill:          { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 13, minHeight: 42, borderRadius: 22, borderWidth: 1 },
   visPillText:      { fontSize: 10.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
-  profileRow:       { flexDirection: 'row', gap: 13, alignItems: 'center', marginBottom: 10 },
-  avatarWrap:       { width: 84, height: 84, position: 'relative', flexShrink: 0 },
-  avatarCircle:     { width: 84, height: 84, borderRadius: 42, borderWidth: 2.5, overflow: 'hidden' },
-  avatarEditBtn:    { position: 'absolute', bottom: -4, right: -4, width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  profileRow:       { flexDirection: 'row', gap: 16, alignItems: 'center', marginBottom: 12 },
+  avatarWrap:       { width: 94, height: 94, position: 'relative', flexShrink: 0 },
+  avatarCircle:     { width: 94, height: 94, borderRadius: 47, borderWidth: 3, overflow: 'hidden' },
+  avatarEditBtn:    { position: 'absolute', bottom: -3, right: -3, width: 34, height: 34, borderRadius: 17, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
-  profileInfo:      { flex: 1, gap: 3 },
+  profileInfo:      { flex: 1, gap: 4 },
   nameRow:          { flexDirection: 'row', alignItems: 'center' },
-  profileName:      { fontSize: 21, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  profileName:      { fontSize: 24, fontFamily: 'Satoshi-Bold', letterSpacing: -0.6 },
   nameEditWrap:     { borderBottomWidth: 2, paddingBottom: 3 },
-  nameEditInput:    { fontSize: 21, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  nameEditInput:    { fontSize: 24, fontFamily: 'Satoshi-Bold', letterSpacing: -0.6 },
   usernameRow:      { flexDirection: 'row', alignItems: 'center', marginTop: -2 },
   profileHandle:    { fontSize: 11.5, fontFamily: 'Satoshi-Medium' },
   usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 },
@@ -458,7 +473,7 @@ const s = StyleSheet.create({
   titleAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, minHeight: 36, borderRadius: 18, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(120,100,170,0.45)', backgroundColor: 'rgba(200,184,232,0.05)' },
   titleAddText:     { fontSize: 12, fontFamily: 'Satoshi-Medium', letterSpacing: 0.1 },
 
-  levelXpRow:       { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 6 },
+  levelXpRow:       { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 4 },
   xpLevelBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12 },
   xpLevelText:      { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
   xpContainer:      { flex: 1 },
@@ -466,22 +481,22 @@ const s = StyleSheet.create({
   xpBarTrack:       { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
   xpBarFill:        { height: 4, borderRadius: 2, backgroundColor: '#C8A84B' },
 
-  bioCard:          { borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12, marginTop: 4 },
-  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 28 },
-  profileBio:       { fontSize: 14, lineHeight: 20, fontFamily: 'Satoshi-Regular' },
+  bioCard:          { borderRadius: 17, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 12, marginTop: 3 },
+  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 30 },
+  profileBio:       { fontSize: 14, lineHeight: 20, fontFamily: 'Satoshi-Medium' },
   bioInput:         { fontSize: 14, lineHeight: 20, fontFamily: 'Satoshi-Regular', padding: 0, minHeight: 40 },
 
-  vibeBox:          { borderRadius: 20, borderWidth: 1.5, padding: 14, marginTop: 10, alignSelf: 'stretch' },
+  vibeBox:          { borderRadius: 18, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, marginTop: 9, alignSelf: 'stretch' },
   vibeHead:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   vibeLabel:        { fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 1.6 },
   vibeNow:          { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1 },
   vibeNowDot:       { width: 8, height: 8, borderRadius: 4 },
-  orbContainer:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
-  moodOption:       { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 44, paddingHorizontal: 12, borderRadius: 14, flexGrow: 1, flexBasis: '46%', minWidth: 0, justifyContent: 'center' },
-  moodOptionText:   { fontSize: 12.5, flexShrink: 1 },
-  vibeOrb:          { width: 12, height: 12, borderRadius: 6 },
+  orbContainer:     { flexDirection: 'row', gap: 6, marginTop: 9, paddingRight: 2 },
+  moodOption:       { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 38, width: 94, paddingHorizontal: 9, borderRadius: 13, flexShrink: 0, justifyContent: 'center' },
+  moodOptionText:   { fontSize: 11, flexShrink: 1 },
+  vibeOrb:          { width: 9, height: 9, borderRadius: 5 },
   vibeCurrentText:  { fontSize: 13, fontFamily: 'Satoshi-Bold' },
-  addTraitBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: 14, borderWidth: 1, marginTop: 12 },
+  addTraitBtn:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40, borderRadius: 13, borderWidth: 1, marginTop: 9 },
   addTraitBtnText:  { fontSize: 13, fontFamily: 'Satoshi-Bold' },
 
   traitScroll:      { marginTop: 10 },

@@ -288,8 +288,8 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
 // ── Story card (horizontal scroll) ───────────────────────────────────────────
 
-const CARD_W = 104;
-const CARD_H = 130;
+const CARD_W = 146;
+const CARD_H = 150;
 
 function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story) => void; onPlay: (s: Story) => void }) {
   const cover      = getStoryCover(story);
@@ -543,21 +543,21 @@ export function ProfileStyleSection({
 // ── Section styles ────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  section:       { marginBottom: 28 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
-  sectionTitle:  { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  section:       { marginBottom: 23 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 11 },
+  sectionTitle:  { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
   countPill:     { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   countPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 10, paddingHorizontal: 12, minHeight: 36, borderWidth: 1 },
+  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 14, paddingHorizontal: 12, minHeight: 38, borderWidth: 1 },
   addBtnText:    { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   scrollPad:     { paddingRight: 16, gap: 12 },
-  outfitCard:    { width: CARD_W, height: CARD_H, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
+  outfitCard:    { width: CARD_W, height: CARD_H, borderRadius: 17, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
   outfitName:    { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)', lineHeight: 14 },
   activePill:    { alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginTop: 4 },
   activePillText:{ fontSize: 9, fontFamily: 'Satoshi-Bold', color: '#fff' },
   rarityPill:    { position: 'absolute', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.1)' },
   rarityText:    { fontSize: 9, fontFamily: 'Satoshi-Medium' },
-  galleryThumb:  { width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' },
+  galleryThumb:  { width: 82, height: 82, borderRadius: 15, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' },
   galError:      { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 });
 

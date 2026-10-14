@@ -29,7 +29,6 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
     ? ['#1A152E', '#1B1431', '#22143F']
     : [colors.card, colors.card, `${colors.secondary}12`];
   const socialCount = character.links?.length ?? 0;
-  const selectedRole = ROLES.find(role => role.key === character.role);
 
   const [editingBirthday,  setEditingBirthday]  = useState(false);
   const [aboutExpanded,    setAboutExpanded]    = useState(false);
@@ -234,20 +233,31 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
           </View>
         )}
         </>) : (
-          <TouchableOpacity
-            style={[s.aboutSummary, { borderTopColor: colors.border }]}
-            onPress={() => setAboutExpanded(true)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={t('components.about.openDetails')}
-          >
-            <Text style={[s.aboutSummaryLine, { color: colors.foreground }]} numberOfLines={1}>
-              {character.birthday || t('components.about.addBirthday')}  ·  {character.country || t('components.about.addCountry')}
-            </Text>
-            <Text style={[s.aboutSummaryMeta, { color: colors.mutedForeground }]} numberOfLines={1}>
-              {character.role ? `${selectedRole?.emoji ?? ''} ${character.role}` : t('components.about.chooseRole')}  ·  {socialCount > 0 ? t('components.about.socialLinks', { count: socialCount }) : t('components.about.addSocials')}
-            </Text>
-          </TouchableOpacity>
+          <View style={[s.aboutSummary, { borderTopColor: colors.border }]}>
+            {([
+              { icon: 'calendar', label: t('components.about.birthday'), value: character.birthday || t('components.about.addBirthday') },
+              { icon: 'map-pin', label: t('components.about.country'), value: character.country || t('components.about.addCountry') },
+              { icon: 'user', label: t('components.about.role'), value: character.role || t('components.about.chooseRole') },
+              { icon: 'link', label: t('components.about.socials'), value: socialCount > 0 ? t('components.about.socialLinks', { count: socialCount }) : t('components.about.addSocials') },
+            ] as const).map(item => (
+              <TouchableOpacity
+                key={item.label}
+                style={[s.metadataItem, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => setAboutExpanded(true)}
+                activeOpacity={0.76}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.label}: ${item.value}. ${t('components.about.openDetails')}`}
+              >
+                <View style={s.metadataLabelRow}>
+                  <Icon name={item.icon} size={11} color={colors.primary} />
+                  <Text style={[s.metadataLabel, { color: colors.mutedForeground }]} numberOfLines={1}>{item.label}</Text>
+                </View>
+                <Text style={[s.metadataValue, { color: colors.foreground }]} numberOfLines={1}>
+                  {item.value}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         )}
       </View>
 
@@ -451,15 +461,19 @@ export function ProfileAboutSection({ character, setCharacter }: Props) {
 }
 
 const s = StyleSheet.create({
-  aboutCard:        { borderRadius: 18, borderWidth: 1, marginBottom: 20, overflow: 'hidden' },
-  aboutCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 14 },
+  aboutCard:        { borderRadius: 18, borderWidth: 1, marginBottom: 12, overflow: 'hidden' },
+  aboutCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 11 },
   aboutCardIcon:    { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   aboutCardTitle:   { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
   aboutEditButton:  { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 6 },
   aboutEditButtonText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  aboutSummary:     { borderTopWidth: 1, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 13, gap: 4 },
+  aboutSummary:     { borderTopWidth: 1, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 11, flexDirection: 'row', gap: 6 },
   aboutSummaryLine: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
   aboutSummaryMeta: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
+  metadataItem:     { flex: 1, minWidth: 0, minHeight: 53, borderWidth: 1, borderRadius: 12, paddingHorizontal: 7, paddingVertical: 7, justifyContent: 'center', gap: 3 },
+  metadataLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metadataLabel:    { flexShrink: 1, fontSize: 8, fontFamily: 'Satoshi-Bold', letterSpacing: 0.25, textTransform: 'uppercase' },
+  metadataValue:    { fontSize: 10, fontFamily: 'Satoshi-Medium', letterSpacing: -0.1 },
   aboutRow:         { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
   aboutRowLeft:     { flex: 1, gap: 3 },
   aboutRowLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4, textTransform: 'uppercase' },
@@ -482,19 +496,19 @@ const s = StyleSheet.create({
   socialBadge:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   handleInput:      { fontSize: 13, fontFamily: 'Satoshi-Regular', backgroundColor: 'rgba(155,120,255,0.10)', borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   saveLinkBtn:      { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  guideCard:        { borderRadius: 18, overflow: 'hidden', marginBottom: 20, borderWidth: 1, borderColor: 'rgba(145,109,222,0.23)', backgroundColor: '#181428' },
-  guideHero:        { minHeight: 100, paddingHorizontal: 16, paddingVertical: 18, overflow: 'hidden', justifyContent: 'center' },
+  guideCard:        { borderRadius: 18, overflow: 'hidden', marginBottom: 18, borderWidth: 1, borderColor: 'rgba(145,109,222,0.23)', backgroundColor: '#181428' },
+  guideHero:        { minHeight: 64, paddingHorizontal: 13, paddingVertical: 9, overflow: 'hidden', justifyContent: 'center' },
   guideHeroOpen:    { borderBottomWidth: 1, borderBottomColor: 'rgba(145,109,222,0.2)' },
   guideOrbit:       { position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 1, borderColor: 'rgba(181,140,255,0.16)', right: -34, bottom: -124 },
   guidePlanet:      { position: 'absolute', width: 156, height: 156, borderRadius: 78, backgroundColor: 'rgba(139,88,224,0.12)', right: -22, bottom: -110 },
   guideSparkleOne:  { position: 'absolute', width: 4, height: 4, borderRadius: 2, backgroundColor: '#D7BE65', right: 121, top: 18 },
   guideSparkleTwo:  { position: 'absolute', width: 3, height: 3, borderRadius: 2, backgroundColor: '#BA9BEE', right: 102, top: 48 },
-  guideHeroRow:     { flexDirection: 'column', alignItems: 'stretch', gap: 12 },
-  guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 11, flex: 1, minWidth: 0 },
-  guideHeroIconWrap:{ width: 46, height: 46, flexShrink: 0, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
+  guideHeroRow:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 },
+  guideHeroIconWrap:{ width: 40, height: 40, flexShrink: 0, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
   guideHeroCopy:    { flex: 1, minWidth: 0 },
-  guideHeroTitle:   { fontSize: 18, flexShrink: 1, fontFamily: 'Satoshi-Bold', color: '#F5F0FF', letterSpacing: -0.3 },
-  guideHeroSub:     { fontSize: 12, lineHeight: 16, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 3 },
+  guideHeroTitle:   { fontSize: 15, flexShrink: 1, fontFamily: 'Satoshi-Bold', color: '#F5F0FF', letterSpacing: -0.2 },
+  guideHeroSub:     { fontSize: 11, lineHeight: 14, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 2 },
   guideHeroEnd:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 },
   guideStatus:      { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 9, paddingVertical: 7 },
   guideStatusOn:    { borderColor: 'rgba(172,139,246,0.55)', backgroundColor: 'rgba(149,105,240,0.18)' },

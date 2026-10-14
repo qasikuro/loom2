@@ -212,7 +212,12 @@ export default function CharacterScreen() {
       )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }} scrollEventThrottle={16}>
-        <CharacterAuraHeader mood={character.mood || 'Dreamy'} paddingTop={topPad + 4} activeEffect={activeEffect}>
+        <CharacterAuraHeader
+          mood={character.mood || 'Dreamy'}
+          paddingTop={topPad + 4}
+          activeEffect={activeEffect}
+          coverImageUri={activeOutfit?.imageUri ?? character.avatarUri ?? null}
+        >
           <ProfileHeaderSection
             character={character} setCharacter={setCharacter}
             constellation={constellation} availableTitles={availableTitles}
@@ -222,28 +227,6 @@ export default function CharacterScreen() {
             profileLevel={profileLevel} profileXpPct={profileXpPct}
           />
         </CharacterAuraHeader>
-
-        {/* Stats card */}
-        <View style={[s.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, screenW >= 760 && { maxWidth: 760, alignSelf: 'center' }]}>
-          {([
-            { icon: 'book-open', count: stories.length,  label: t('components.profile.stats.stories') },
-            { icon: 'user',      count: outfits.length,  label: t('components.profile.stats.outfits') },
-            { icon: 'heart',     count: totalWitnessed,  label: t('components.profile.stats.likes')   },
-            { icon: 'heart',     count: profileLikeCount, label: t('components.profile.stats.profileLikes') },
-          ] as const).map((item, i) => (
-            <React.Fragment key={item.label}>
-              {i > 0 && <View style={[s.statDivider, { backgroundColor: colors.border }]} />}
-              <View style={s.statCol}>
-                <Text style={[s.statNum, { color: colors.foreground }]}>{item.count}</Text>
-                <View style={s.statMeta}>
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  <Icon name={item.icon as any} size={11} color={colors.mutedForeground} />
-                  <Text style={[s.statLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
-                </View>
-              </View>
-            </React.Fragment>
-          ))}
-        </View>
 
         {/* Section content - completely un-tabbed */}
         <View style={[{ paddingHorizontal: 20, paddingTop: 18 }, screenW >= 760 && { maxWidth: 800, alignSelf: 'center', width: '100%' }]}>
@@ -265,6 +248,26 @@ export default function CharacterScreen() {
           {(!isLoading || character.name !== 'Player') && (
             <>
               <ProfileAboutSection character={character} setCharacter={setCharacter} />
+              <View style={[s.statsCard, { backgroundColor: colors.card, borderColor: colors.border }, screenW >= 760 && { maxWidth: 760, alignSelf: 'center' }]}>
+                {([
+                  { icon: 'book-open', count: stories.length, label: t('components.profile.stats.stories') },
+                  { icon: 'user', count: outfits.length, label: t('components.profile.stats.outfits') },
+                  { icon: 'heart', count: totalWitnessed, label: t('components.profile.stats.likes') },
+                  { icon: 'heart', count: profileLikeCount, label: t('components.profile.stats.profileLikes') },
+                ] as const).map((item, i) => (
+                  <React.Fragment key={item.label}>
+                    {i > 0 && <View style={[s.statDivider, { backgroundColor: colors.border }]} />}
+                    <View style={s.statCol}>
+                      <Text style={[s.statNum, { color: colors.foreground }]}>{item.count}</Text>
+                      <View style={s.statMeta}>
+                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                        <Icon name={item.icon as any} size={12} color={colors.mutedForeground} />
+                        <Text style={[s.statLabel, { color: colors.mutedForeground }]}>{item.label}</Text>
+                      </View>
+                    </View>
+                  </React.Fragment>
+                ))}
+              </View>
               <ProfileStyleSection
                 outfits={outfits} stories={stories} openOutfit={openOutfit} deleteStory={deleteStory}
                 gallery={gallery} openPhoto={openPhoto} handleAddGalleryPhoto={handleAddGalleryPhoto}
@@ -341,12 +344,12 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
-  statsCard:    { flexDirection: 'row', marginHorizontal: 20, marginTop: 14, borderRadius: 18, borderWidth: 1, minWidth: 0 },
-  statCol:      { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 4, paddingVertical: 14, gap: 4 },
-  statNum:      { fontSize: 21, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
+  statsCard:    { flexDirection: 'row', marginHorizontal: 0, marginTop: 2, marginBottom: 24, borderRadius: 18, borderWidth: 1, minWidth: 0 },
+  statCol:      { flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 3, paddingVertical: 13, gap: 5 },
+  statNum:      { fontSize: 22, fontFamily: 'Satoshi-Bold', letterSpacing: -0.6 },
   statMeta:     { flexDirection: 'column', alignItems: 'center', gap: 4 },
-  statLabel:    { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2, textAlign: 'center' },
-  statDivider:  { width: 1, marginVertical: 10 },
+  statLabel:    { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.15, textAlign: 'center' },
+  statDivider:  { width: 1, marginVertical: 11 },
   setupCard: { minHeight: 76, borderRadius: 18, borderWidth: 1, padding: 14, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 12 },
   setupIcon: { width: 38, height: 38, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(181,140,255,0.14)' },
   setupTitle: { fontFamily: 'Satoshi-Bold', fontSize: 14 },
