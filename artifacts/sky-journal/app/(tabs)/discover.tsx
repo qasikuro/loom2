@@ -132,6 +132,8 @@ export default function DiscoverScreen() {
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
   const contentMaxWidth = viewportWidth >= 760 ? 760 : undefined;
+  const guideIdsWithSessions = new Set(guideSessions.map(session => session.guideId));
+  const guidesWithSessions = guidesData.filter(guide => guideIdsWithSessions.has(guide.userId));
 
   function selectTab(tab: TabType) {
     setActiveTab(tab);
@@ -177,11 +179,12 @@ export default function DiscoverScreen() {
       if (availNow) qs += 'available_now=true&';
       const [data, sessions] = await Promise.all([
         apiFetch<GuideResult[]>(`/guides?${qs}`),
-        apiFetch<GuideSessionPreview[]>('/guide-sessions').catch(() => []),
+        apiFetch<GuideSessionPreview[]>('/guide-sessions'),
       ]);
       setGuidesData(data ?? []);
       setGuideSessions(sessions ?? []);
     } catch {
+      setGuideSessions([]);
       setGuidesError(t('discoverLog.loadGuidesError'));
     } finally {
       setGuidesLoading(false);
@@ -529,12 +532,12 @@ export default function DiscoverScreen() {
             <View style={{ paddingHorizontal: 16, paddingTop: 16, gap: 10 }}>
               {[0, 1, 2].map(i => <LoadingCard key={i} style={{ opacity: 1 - i * 0.18 }} />)}
             </View>
-          ) : guidesData.length === 0 ? (
+          ) : guidesWithSessions.length === 0 ? (
             <View style={styles.emptyWrap}>
             <View style={[styles.emptyIconBox, { backgroundColor: `${colors.tint}12` }]}>
               <Icon name="star" size={30} color={colors.tint} />
               </View>
-              {guideTopicFilter ? (
+              {guideTopicFilter && guidesData.length === 0 ? (
                 <>
                   <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discoverLog.noGuidesForTopic')}</Text>
                   <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
@@ -552,7 +555,7 @@ export default function DiscoverScreen() {
             </View>
           ) : (
             <View style={{ paddingHorizontal: 16, gap: 12, paddingTop: 8 }}>
-              {guidesData.map(g => {
+              {guidesWithSessions.map(g => {
                 const isFollowing = followingIds.includes(g.userId) || g.isFollowing;
                 const nextSession = guideSessions.find(session => session.guideId === g.userId);
                 return (
