@@ -5,7 +5,7 @@
  * events via useSharedChatLumis (parent schedules one at a time).
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Keyboard, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing, FadeIn, FadeOut, cancelAnimation, useAnimatedStyle, useSharedValue, withRepeat, withTiming, ZoomIn, ZoomOut,
 } from 'react-native-reanimated';
@@ -13,6 +13,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { LumiRigView } from '@/features/lumi/home/LumiCharacter';
+import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import { CHAT_EMOTES, type ChatEmote, type ChatEmoteId } from './chatEmotes';
@@ -97,7 +98,6 @@ export function ChatLumiCompanion({
   const { t } = useTranslation();
   const c = useColors();
   const { isDark } = useTheme();
-  const { height: winH } = useWindowDimensions();
   const [stageW, setStageW] = useState(0);
   const [kbOpen, setKbOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -120,11 +120,13 @@ export function ChatLumiCompanion({
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  const base = kbOpen ? 52 : winH < 700 ? 66 : 78;
+  // Keep the stage geometry steady while the native keyboard moves the screen.
+  // Resizing on keyboardDidShow caused a second, abrupt jump at the end.
+  const base = 60;
   // Three distinct spots (left, center, right) must fit: ~3.4 sizes + insets.
   const size = stageW > 0 ? Math.max(36, Math.min(base, Math.floor((stageW - 24) / 3.4))) : base;
   const { own, other, playing } = useSharedChatLumis({ width: stageW, size, enabled: enabled && stageW > 0, events });
-  const labelH = kbOpen ? 0 : 14;
+  const labelH = 14;
   const stageH = size + 6 + labelH;
 
   const label = (e: ChatEmote) => t(`lumiChat.emote_${e.id}`, { defaultValue: e.label });
@@ -149,6 +151,7 @@ export function ChatLumiCompanion({
 
   const ink = c.foreground;
   const sheetBg = c.card;
+  const accent = c.tint;
   const reduced = own.reducedMotion;
   const playingSide: LumiSide | null = playing ? (own.phase !== 'idle' && own.selected ? own : other.phase !== 'idle' && other.selected ? other : null) : null;
   const shown = playingSide && playingSide.phase === 'reacting' ? playingSide.selected : null;
@@ -172,14 +175,14 @@ export function ChatLumiCompanion({
             </View>
             <TouchableOpacity onPress={() => setPaletteOpen(false)} style={styles.closeBtn}
               accessibilityRole="button" accessibilityLabel={t('lumiChat.close', { defaultValue: 'Close Lumi reactions' })}>
-              <Text style={{ color: c.mutedForeground, fontSize: 20, lineHeight: 22 }}>×</Text>
+              <Icon name="x" size={18} color={c.mutedForeground} />
             </TouchableOpacity>
           </View>
           {(sending || busy || failed) && (
             <View style={styles.status} accessibilityLiveRegion="polite">
               {(sending || busy) ? (
                 <>
-                  <ActivityIndicator size="small" color={c.primary} />
+                  <ActivityIndicator size="small" color={accent} />
                   <Text style={[styles.statusText, { color: c.mutedForeground }]}>{t('lumiChat.sending', { defaultValue: 'Sending reaction…' })}</Text>
                 </>
               ) : (
@@ -198,8 +201,8 @@ export function ChatLumiCompanion({
                 accessibilityHint={desc(e)}
                 style={[styles.emoteBtn, {
                   opacity: blocked ? 0.5 : 1,
-                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(107,78,232,0.06)',
-                  borderColor: c.border,
+                   backgroundColor: isDark ? 'rgba(155,120,255,0.14)' : 'rgba(95,59,186,0.09)',
+                   borderColor: `${accent}55`,
                 }]}>
                 <Text style={styles.emoteEmoji}>{e.emoji}</Text>
                 <Text numberOfLines={1} style={[styles.emoteLabel, { color: c.mutedForeground }]}>{label(e)}</Text>
@@ -213,10 +216,10 @@ export function ChatLumiCompanion({
         onLayout={e => setStageW(e.nativeEvent.layout.width)}>
         <View pointerEvents="none" style={[styles.floor, { bottom: labelH + 2, backgroundColor: isDark ? 'rgba(155,120,255,0.10)' : 'rgba(107,78,232,0.08)' }]} />
 
-        {!kbOpen && stageW > 0 && (
+        {stageW > 0 && (
           <>
-            <Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { left: 8, maxWidth: Math.max(48, stageW / 3), color: c.mutedForeground }]}>{partner}</Text>
-            <Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { right: 8, textAlign: 'right', color: c.primary }]}>{t('lumiChat.you', { defaultValue: 'You' })}</Text>
+            <Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { left: 8, maxWidth: Math.max(48, stageW / 3), color: c.mutedForeground, opacity: kbOpen ? 0 : 1 }]}>{partner}</Text>
+            <Text pointerEvents="none" numberOfLines={1} style={[styles.nameTag, { right: 8, textAlign: 'right', color: accent, opacity: kbOpen ? 0 : 1 }]}>{t('lumiChat.you', { defaultValue: 'You' })}</Text>
           </>
         )}
 
@@ -249,8 +252,8 @@ export function ChatLumiCompanion({
                 <LumiRigView v={own.values} size={size} />
                 {renderDetail(own)}
                 {own.phase === 'idle' && !paletteOpen && (
-                  <View style={[styles.hint, { backgroundColor: isDark ? 'rgba(155,120,255,0.28)' : 'rgba(107,78,232,0.16)', borderColor: `${c.primary}55` }]}>
-                    <Text style={{ color: c.primary, fontSize: 9, lineHeight: 10, letterSpacing: 1 }}>•••</Text>
+                  <View style={[styles.hint, { backgroundColor: accent, borderColor: sheetBg }]}>
+                    <Icon name="star" size={9} color="#FFFFFF" />
                   </View>
                 )}
               </TouchableOpacity>
@@ -265,12 +268,12 @@ export function ChatLumiCompanion({
             accessibilityLiveRegion="polite"
             accessibilityLabel={`${shownFromOwn ? t('lumiChat.you', { defaultValue: 'You' }) : partner}: ${label(cardEmote)}`}
             style={[styles.card, {
-              top: -(kbOpen ? 26 : 34),
-              paddingVertical: kbOpen ? 2 : 3,
+              top: -34,
+              paddingVertical: 3,
               backgroundColor: isDark ? 'rgba(255,244,230,0.96)' : '#FFF6EC', borderColor: c.gold,
             }]}>
-            <Text style={[styles.cardEmoji, { fontSize: kbOpen ? 14 : 18, lineHeight: kbOpen ? 18 : 22 }]}>{cardEmote.emoji}</Text>
-            {!kbOpen && <Text style={styles.cardLabel} numberOfLines={1}>{label(cardEmote)}</Text>}
+            <Text style={styles.cardEmoji}>{cardEmote.emoji}</Text>
+            <Text style={styles.cardLabel} numberOfLines={1}>{label(cardEmote)}</Text>
           </Animated.View>
         )}
       </View>
@@ -286,7 +289,7 @@ const styles = StyleSheet.create({
   nameTag: { position: 'absolute', bottom: 0, fontSize: 10, lineHeight: 13, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
   status: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, marginBottom: 6 },
   statusText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
-  hint: { position: 'absolute', top: 2, right: -12, paddingHorizontal: 5, paddingVertical: 3, borderRadius: 10, borderWidth: 1 },
+  hint: { position: 'absolute', top: -2, right: -2, width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   card: {
     position: 'absolute', alignSelf: 'center', alignItems: 'center', flexDirection: 'row', gap: 4, paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: 12, borderWidth: 1, minWidth: 56, zIndex: 2,

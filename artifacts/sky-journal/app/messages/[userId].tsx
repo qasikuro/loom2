@@ -24,6 +24,7 @@ import { useAuth } from '@clerk/expo';
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
+import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -33,6 +34,7 @@ import {
   FlatList,
   Keyboard,
   Platform,
+  type ImageSourcePropType,
   ScrollView,
   StyleSheet,
   Text,
@@ -43,7 +45,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { KeyboardAvoidingViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
-import { hasScreenKeyboardController, ScreenKeyboardProvider } from '@/components/ScreenKeyboardProvider';
+import { ScreenKeyboardProvider } from '@/components/ScreenKeyboardProvider';
 import { restoreFailedChatDraft } from '@/utils/chatDraft';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
@@ -59,7 +61,6 @@ import {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const NIGHT   = '#080618';
-const NIGHT2  = '#0D0926';
 
 const PURPLE  = '#6B4EE8';
 const PURPLE2 = '#3B2A8C';
@@ -78,6 +79,7 @@ type ListItem =
 export interface StickerDef {
   id:         string;
   emoji:      string;
+  artwork:    ImageSourcePropType;
   label:      string;
   color:      string;
   anim:       StickerAnimType;
@@ -86,22 +88,25 @@ export interface StickerDef {
   otherLabel: string;
 }
 
+// Static requires let Metro package transparent PNGs into native builds and OTAs.
+/* eslint-disable @typescript-eslint/no-require-imports */
 export const STICKERS: StickerDef[] = [
-  { id: 'bomb',     emoji: '💣', label: 'BOOM!',    color: '#FF6B35', anim: 'explode',   haptic: 'heavy',  ownLabel: 'you threw a bomb',       otherLabel: 'threw a bomb 💥'       },
-  { id: 'stone',    emoji: '🪨', label: 'bonk!',    color: '#9A8462', anim: 'throw',     haptic: 'medium', ownLabel: 'you threw a stone',      otherLabel: 'threw a stone 🪨'      },
-  { id: 'mirror',   emoji: '🪞', label: 'shatter!', color: '#78B4DC', anim: 'shatter',   haptic: 'heavy',  ownLabel: 'you broke the mirror',   otherLabel: 'broke the mirror ✦'    },
-  { id: 'kiss',     emoji: '💋', label: 'mwah!',    color: '#FF6B9D', anim: 'hearts',    haptic: 'light',  ownLabel: 'you sent a kiss',        otherLabel: 'sent you a kiss 💕'    },
-  { id: 'stars',    emoji: '⭐', label: 'dazzled!', color: '#FFD700', anim: 'starburst', haptic: 'light',  ownLabel: 'you scattered stars',    otherLabel: 'scattered stars ✦'     },
-  { id: 'fire',     emoji: '🔥', label: 'fire!',    color: '#FF6B35', anim: 'fire',      haptic: 'medium', ownLabel: 'you lit a fire',         otherLabel: 'lit a fire 🔥'         },
-  { id: 'snow',     emoji: '❄️', label: 'brr~',     color: '#78C8DC', anim: 'snow',      haptic: 'light',  ownLabel: 'you cast a blizzard',    otherLabel: 'cast a blizzard ❄️'    },
-  { id: 'confetti', emoji: '🎉', label: 'yay!',     color: '#C8A84B', anim: 'confetti',  haptic: 'medium', ownLabel: 'you celebrated',         otherLabel: 'celebrated 🎉'         },
-  { id: 'candle',   emoji: '🕯️', label: 'candle',   color: '#C8A84B', anim: 'glow',      haptic: 'light',  ownLabel: 'you offered a candle',   otherLabel: 'offered a candle 🕯️'  },
-  { id: 'spark',    emoji: '✦',  label: 'spark',    color: '#B890FF', anim: 'sparkle',   haptic: 'light',  ownLabel: 'you sent a spark',       otherLabel: 'sent a spark ✦'        },
-  { id: 'lantern',  emoji: '🌙', label: 'lantern',  color: '#78B4DC', anim: 'float',     haptic: 'light',  ownLabel: 'you lit a lantern',      otherLabel: 'lit a lantern 🌙'      },
-  { id: 'hush',     emoji: '🤫', label: 'hush~',    color: '#C8B8E8', anim: 'fade',      haptic: 'light',  ownLabel: 'you fell silent',        otherLabel: 'fell silent 🤫'        },
-  { id: 'donkey',   emoji: '🫏', label: 'hee-haw!', color: '#D4A256', anim: 'donkey',    haptic: 'heavy',  ownLabel: 'you sent the donkey',    otherLabel: 'sent the donkey 🫏'    },
-  { id: 'wolf',     emoji: '🐺', label: 'awoo~',    color: '#7B68C8', anim: 'wolf',      haptic: 'medium', ownLabel: 'you howled at the moon', otherLabel: 'howled at the moon 🌕' },
+  { id: 'bomb',     emoji: '💥', artwork: require('../../assets/chat-stickers/01_boom.png'),      label: 'BOOM!',    color: '#FF7487', anim: 'explode',   haptic: 'heavy',  ownLabel: 'you threw a bomb',       otherLabel: 'threw a bomb 💥'       },
+  { id: 'stone',    emoji: '✦',  artwork: require('../../assets/chat-stickers/02_bonk.png'),      label: 'BONK!',    color: '#CE9668', anim: 'throw',     haptic: 'medium', ownLabel: 'you threw a stone',      otherLabel: 'threw a stone 🪨'      },
+  { id: 'mirror',   emoji: '✧',  artwork: require('../../assets/chat-stickers/03_shatter.png'),   label: 'SHATTER!', color: '#78B8EF', anim: 'shatter',   haptic: 'heavy',  ownLabel: 'you broke the mirror',   otherLabel: 'broke the mirror ✦'    },
+  { id: 'kiss',     emoji: '♥',  artwork: require('../../assets/chat-stickers/04_mwah.png'),      label: 'MWAH!',    color: '#F16FA4', anim: 'hearts',    haptic: 'light',  ownLabel: 'you sent a kiss',        otherLabel: 'sent you a kiss 💕'    },
+  { id: 'stars',    emoji: '✦',  artwork: require('../../assets/chat-stickers/05_dazzled.png'),   label: 'DAZZLED!', color: '#E6A839', anim: 'starburst', haptic: 'light',  ownLabel: 'you scattered stars',    otherLabel: 'scattered stars ✦'     },
+  { id: 'fire',     emoji: '✧',  artwork: require('../../assets/chat-stickers/06_fire.png'),      label: 'FIRE!',    color: '#F2764E', anim: 'fire',      haptic: 'medium', ownLabel: 'you lit a fire',         otherLabel: 'lit a fire 🔥'         },
+  { id: 'snow',     emoji: '❄',  artwork: require('../../assets/chat-stickers/07_brr.png'),       label: 'BRR~',     color: '#67AEE7', anim: 'snow',      haptic: 'light',  ownLabel: 'you cast a blizzard',    otherLabel: 'cast a blizzard ❄️'    },
+  { id: 'confetti', emoji: '✦',  artwork: require('../../assets/chat-stickers/08_yay.png'),       label: 'YAY!',     color: '#D573CE', anim: 'confetti',  haptic: 'medium', ownLabel: 'you celebrated',         otherLabel: 'celebrated 🎉'         },
+  { id: 'candle',   emoji: '✧',  artwork: require('../../assets/chat-stickers/09_candle.png'),    label: 'CANDLE',   color: '#DEA746', anim: 'glow',      haptic: 'light',  ownLabel: 'you offered a candle',   otherLabel: 'offered a candle 🕯️'  },
+  { id: 'spark',    emoji: '✦',  artwork: require('../../assets/chat-stickers/10_spark.png'),     label: 'SPARK',    color: '#A982EB', anim: 'sparkle',   haptic: 'light',  ownLabel: 'you sent a spark',       otherLabel: 'sent a spark ✦'        },
+  { id: 'lantern',  emoji: '✧',  artwork: require('../../assets/chat-stickers/11_lantern.png'),  label: 'LANTERN',  color: '#6EA9E0', anim: 'float',     haptic: 'light',  ownLabel: 'you lit a lantern',      otherLabel: 'lit a lantern 🌙'      },
+  { id: 'hush',     emoji: '·',  artwork: require('../../assets/chat-stickers/12_hush.png'),     label: 'HUSH~',    color: '#A48DD8', anim: 'fade',      haptic: 'light',  ownLabel: 'you fell silent',        otherLabel: 'fell silent 🤫'        },
+  { id: 'donkey',   emoji: '♫',  artwork: require('../../assets/chat-stickers/13_hee_haw.png'),  label: 'HEE-HAW!', color: '#C9956D', anim: 'donkey',    haptic: 'heavy',  ownLabel: 'you sent the donkey',    otherLabel: 'sent the donkey 🫏'    },
+  { id: 'wolf',     emoji: '✦',  artwork: require('../../assets/chat-stickers/14_awoo.png'),    label: 'AWOO~',    color: '#729ADB', anim: 'wolf',      haptic: 'medium', ownLabel: 'you howled at the moon', otherLabel: 'howled at the moon 🌕' },
 ];
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 export function getSticker(id: string): StickerDef {
   return STICKERS.find(s => s.id === id) ?? STICKERS[9];
@@ -149,8 +154,8 @@ const STARS = Array.from({ length: 28 }, (_, i) => ({
 }));
 
 // ── Sticker bubble (in chat history) ─────────────────────────────────────────
-function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPress }: {
-  msg: Message; partnerInitial: string; avatarUri?: string; primaryColor: string;
+function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, textColor, onLongPress }: {
+  msg: Message; partnerInitial: string; avatarUri?: string; primaryColor: string; textColor: string;
   onLongPress?: () => void;
 }) {
   const { t } = useTranslation();
@@ -169,12 +174,10 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPre
   const label = t(`social.sticker_${def.id}_${msg.isOwn ? 'own' : 'other'}`);
 
   const cardInner = (
-    <View style={[styles.stickerCard, { borderColor: `${def.color}40`, backgroundColor: `${def.color}18` }]}>
-      <Text style={styles.stickerCardEmoji}>{def.emoji}</Text>
-      <View style={styles.stickerCardBody}>
-        <Text style={[styles.stickerCardLabel, { color: `${def.color}E0` }]}>{t(`social.sticker_${def.id}_label`)}</Text>
-        <Text style={styles.stickerCardSubtitle}>{label}</Text>
-        <Text style={styles.stickerCardTime}>{fmtTime(msg.createdAt)}</Text>
+    <View style={[styles.stickerCard, { borderColor: `${def.color}68`, backgroundColor: `${def.color}12` }]}>
+      <Image source={def.artwork} style={styles.stickerArtwork} contentFit="contain" transition={140} />
+      <View style={styles.stickerTimestamp}>
+        <Text style={[styles.stickerCardTime, { color: textColor }]}>{fmtTime(msg.createdAt)}</Text>
       </View>
     </View>
   );
@@ -187,6 +190,9 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPre
             onLongPress={onLongPress}
             delayLongPress={350}
             activeOpacity={0.85}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`${t(`social.sticker_${def.id}_label`)}. ${label}, ${fmtTime(msg.createdAt)}`}
+            accessibilityHint={t('social.holdForOptions', { defaultValue: 'Hold for message options.' })}
           >
             {cardInner}
           </TouchableOpacity>
@@ -241,7 +247,7 @@ function MessagesScreenContent() {
     other: isDark ? c.secondary : c.card,
     otherBorder: c.border,
     otherText: c.foreground,
-    own: isDark ? c.primary : c.secondary,
+    own: isDark ? c.primary : PURPLE,
     bar: c.card,
     field: c.input,
     border: c.border,
@@ -326,7 +332,7 @@ function MessagesScreenContent() {
   const [showPicker,    setShowPicker]    = useState(false);
   const [partnerTyping, setPartnerTyping] = useState(false);
 
-  const [playingAnim, setPlayingAnim] = useState<{ type: StickerAnimType; emoji: string } | null>(null);
+  const [playingAnim, setPlayingAnim] = useState<{ type: StickerAnimType; emoji: string; artwork: ImageSourcePropType } | null>(null);
 
   const lastMsgIdRef    = useRef<string | null>(
     wasDmConversationOpened(myUserId, userId)
@@ -399,7 +405,7 @@ function MessagesScreenContent() {
   }
 
   const playSticker = useCallback((def: StickerDef) => {
-    setPlayingAnim({ type: def.anim, emoji: def.emoji });
+    setPlayingAnim({ type: def.anim, emoji: def.emoji, artwork: def.artwork });
     fireHaptic(def);
     playStickerSound(def.id);
   }, [playStickerSound]);
@@ -412,7 +418,7 @@ function MessagesScreenContent() {
     if (animBusyRef.current || stickerQueueRef.current.length === 0) return;
     const next = stickerQueueRef.current.shift()!;
     animBusyRef.current = true;
-    setPlayingAnim({ type: next.anim, emoji: next.emoji });
+    setPlayingAnim({ type: next.anim, emoji: next.emoji, artwork: next.artwork });
     fireHaptic(next);
     playStickerSound(next.id);
   }, [playStickerSound]);
@@ -772,6 +778,8 @@ function MessagesScreenContent() {
   listData.reverse();
 
   const partnerInitial = (name ?? 'G').charAt(0).toUpperCase();
+  const stickerCellWidth = Math.max(52, Math.min(72, Math.floor((contentWidth - 44) / 5)));
+  const pickerStickerSize = Math.min(54, stickerCellWidth - 8);
 
   return (
     <View style={[styles.root, { backgroundColor: th.bg }]}>
@@ -843,7 +851,7 @@ function MessagesScreenContent() {
       ) : (
         <KeyboardAvoidingViewCompat
           style={{ flex: 1 }}
-          behavior={hasScreenKeyboardController || Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior="padding"
           keyboardVerticalOffset={0}
         >
           <FlatList<ListItem>
@@ -930,6 +938,7 @@ function MessagesScreenContent() {
                     partnerInitial={partnerInitial}
                     avatarUri={avatarUri}
                     primaryColor={PURPLE}
+                    textColor={th.sub}
                     onLongPress={() => handleDeleteMsg(msg)}
                   />
                 );
@@ -980,33 +989,39 @@ function MessagesScreenContent() {
 
           {/* ── Sticker picker sheet ────────────────────────── */}
           {showPicker && (
-            <View style={styles.pickerSheet}>
+            <Reanimated.View
+              entering={FadeIn.duration(150)}
+              exiting={FadeOut.duration(110)}
+              style={[styles.pickerSheet, { backgroundColor: th.bar, borderColor: th.border }]}
+            >
               {/* Handle */}
-              <View style={styles.pickerHandle} />
-              <Text style={styles.pickerTitle}>{t('social.expressions')}</Text>
-              <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+              <View style={[styles.pickerHandle, { backgroundColor: th.sub }]} />
+              <Text style={[styles.pickerTitle, { color: th.ink }]}>{t('social.expressions')}</Text>
+              <ScrollView showsVerticalScrollIndicator={false} style={{ flexGrow: 0, maxHeight: 225 }} keyboardShouldPersistTaps="handled">
                 <View style={styles.pickerGrid}>
                   {STICKERS.map(def => (
                     <TouchableOpacity
                       key={def.id}
-                      style={[styles.pickerCell, { borderColor: `${def.color}35`, backgroundColor: `${def.color}12` }]}
+                      style={[
+                        styles.pickerCell,
+                        { width: stickerCellWidth, borderColor: `${def.color}55`, backgroundColor: `${def.color}12` },
+                      ]}
                       onPress={() => handleSticker(def)}
                       accessibilityRole="button"
-                      accessibilityLabel={t(`social.sticker_${def.id}_label`)}
+                      accessibilityLabel={t(`social.sticker_${def.id}_label`, { defaultValue: def.label })}
                       activeOpacity={0.70}
                     >
-                      <Text style={styles.pickerEmoji}>{def.emoji}</Text>
-                      <Text style={[styles.pickerLabel, { color: `${def.color}CC` }]}>{t(`social.sticker_${def.id}_label`)}</Text>
+                      <Image source={def.artwork} style={{ width: pickerStickerSize, height: pickerStickerSize }} contentFit="contain" />
                     </TouchableOpacity>
                   ))}
                 </View>
               </ScrollView>
-            </View>
+            </Reanimated.View>
           )}
 
           {/* ── Shared Lumi companions (remount per conversation) ── */}
           <View style={[styles.dock, { backgroundColor: th.bar, borderColor: th.border }]} pointerEvents="box-none">
-          <View style={{ width: contentWidth, alignSelf: 'center', paddingTop: kbOpen ? 2 : 4 }} pointerEvents="box-none">
+          <View style={{ width: contentWidth, alignSelf: 'center', paddingTop: 4 }} pointerEvents="box-none">
             <ChatLumiCompanion key={`${photoIdentity}:${reactionPlaybackEpoch}`}
               enabled={!loading && !isBlocked && !viewingPhoto && !pickingPhoto}
               busy={sending}
@@ -1021,7 +1036,7 @@ function MessagesScreenContent() {
           {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color={th.ink} onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
            <View style={[styles.inputBar, { width: contentWidth, paddingBottom: kbOpen && Platform.OS !== 'web' ? 6 : bottomPad }]}>
             <TouchableOpacity
-              style={styles.stickerToggleBtn} onPress={pickPhoto}
+              style={[styles.stickerToggleBtn, { backgroundColor: isDark ? 'rgba(155,120,255,0.17)' : 'rgba(107,78,232,0.10)', borderColor: th.border }]} onPress={pickPhoto}
               hitSlop={4}
               disabled={loading || sending || pickingPhoto} accessibilityRole="button" accessibilityLabel="Attach a photo"
               accessibilityState={{ disabled: loading || sending || pickingPhoto, busy: pickingPhoto }}
@@ -1032,7 +1047,8 @@ function MessagesScreenContent() {
             <TouchableOpacity
               style={[
                 styles.stickerToggleBtn,
-                showPicker && { backgroundColor: `${PURPLE}28`, borderColor: `${PURPLE}60` },
+                { backgroundColor: isDark ? 'rgba(155,120,255,0.17)' : 'rgba(107,78,232,0.10)', borderColor: th.border },
+                showPicker && { backgroundColor: PURPLE, borderColor: PURPLE },
               ]}
               onPress={() => { Haptics.selectionAsync(); setShowPicker(v => !v); }}
               hitSlop={4}
@@ -1042,7 +1058,7 @@ function MessagesScreenContent() {
               accessibilityState={{ expanded: showPicker, disabled: loading }}
               activeOpacity={0.75}
             >
-              <Text style={[styles.stickerToggleIcon, { color: showPicker ? PURPLE : MUTED }]}>✦</Text>
+              <Icon name="star" size={19} color={showPicker ? '#FFFFFF' : PURPLE} />
             </TouchableOpacity>
 
             <View style={[styles.inputWrap, { backgroundColor: th.field, borderColor: th.border }]}>
@@ -1089,12 +1105,12 @@ function MessagesScreenContent() {
                 ? <SkyLoadingMark size={19} color="rgba(255,255,255,0.9)" />
                 : (
                   <LinearGradient
-                    colors={input.trim() || photoUri ? [PURPLE, PURPLE2] : ['rgba(107,78,232,0.25)', 'rgba(59,42,140,0.25)']}
+                    colors={input.trim() || photoUri ? [PURPLE, PURPLE2] : ['#AA98E4', '#8976CF']}
                     style={StyleSheet.absoluteFill}
                   />
                 )
               }
-              {!sending && <Icon name="send" size={17} color={input.trim() || photoUri ? '#fff' : 'rgba(255,255,255,0.30)'} />}
+              {!sending && <Icon name="send" size={18} color="#FFFFFF" />}
             </TouchableOpacity>
           </View>
           </View>
@@ -1108,6 +1124,7 @@ function MessagesScreenContent() {
         <ChatStickerAnimation
           type={playingAnim.type}
           mainEmoji={playingAnim.emoji}
+          mainSticker={playingAnim.artwork}
           onComplete={handleAnimComplete}
         />
       )}
@@ -1175,19 +1192,19 @@ const styles = StyleSheet.create({
   dateText: { fontSize: 10, fontFamily: 'Satoshi-Medium', color: 'rgba(200,184,232,0.45)', letterSpacing: 0.5 },
 
   // ── Message bubbles
-  msgRow:      { flexDirection: 'row', marginBottom: 4, alignItems: 'flex-end', gap: 8 },
+  msgRow:      { flexDirection: 'row', marginBottom: 6, alignItems: 'flex-end', gap: 8 },
   msgRowOwn:   { justifyContent: 'flex-end' },
   msgRowOther: { justifyContent: 'flex-start' },
 
   bubbleAvatarSm:     { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 2, flexShrink: 0 },
   bubbleAvatarSmText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
-  bubble:      { maxWidth: '80%', paddingHorizontal: 13, paddingTop: 8, paddingBottom: 6, borderRadius: 18, gap: 2, overflow: 'hidden' },
+  bubble:      { maxWidth: '82%', paddingHorizontal: 14, paddingTop: 9, paddingBottom: 7, borderRadius: 20, gap: 3, overflow: 'hidden' },
   bubblePhoto: { padding: 4, paddingTop: 4, paddingBottom: 6, borderRadius: 18, gap: 4 },
   photoCaption:{ paddingHorizontal: 8 },
   bubbleOwn:   { borderBottomRightRadius: 5 },
   bubbleOther: { borderBottomLeftRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: BORDER },
-  bubbleText:  { fontSize: 15.5, fontFamily: 'Satoshi-Medium', lineHeight: 21.5, letterSpacing: 0.1 },
+  bubbleText:  { fontSize: 16, fontFamily: 'Satoshi-Medium', lineHeight: 23, letterSpacing: 0 },
   bubbleTime:  { fontSize: 11, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end' },
 
   // ── Sticker row + card
@@ -1195,80 +1212,74 @@ const styles = StyleSheet.create({
   exprRowOther: { flexDirection: 'row', justifyContent: 'flex-start', marginBottom: 8, marginLeft: 4, alignItems: 'flex-end', gap: 8 },
 
   stickerCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 11,
-    borderRadius: 18, borderWidth: 1.5,
-    maxWidth: 240,
+    flexDirection: 'column', alignItems: 'center', gap: 1,
+    paddingHorizontal: 4, paddingTop: 4, paddingBottom: 3,
+    borderRadius: 18, borderWidth: 1.25,
+    width: 100, maxWidth: 124,
   },
-  stickerCardEmoji:    { fontSize: 32 },
-  stickerCardBody:     { flexShrink: 1, gap: 1 },
-  stickerCardLabel:    { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: 0.3 },
-  stickerCardSubtitle: { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.55)' },
-  stickerCardTime:     { fontSize: 9, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.35)', marginTop: 2 },
+  stickerArtwork:      { width: 88, height: 88 },
+  stickerTimestamp:    { width: '100%', alignItems: 'flex-end', paddingHorizontal: 4 },
+  stickerCardSubtitle: { fontSize: 10, fontFamily: 'Satoshi-Medium' },
+  stickerCardTime:     { fontSize: 9, fontFamily: 'Satoshi-Medium', marginTop: 1 },
 
   // ── Sticker picker
   pickerSheet: {
-    backgroundColor: NIGHT2,
-    borderTopWidth: 1, borderColor: BORDER,
-    paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6,
-    maxHeight: 310,
+    borderTopWidth: 1,
+    borderTopLeftRadius: 22, borderTopRightRadius: 22,
+    paddingHorizontal: 10, paddingTop: 7, paddingBottom: 4,
+    maxHeight: 252,
     width: '100%',
     maxWidth: 680,
     alignSelf: 'center',
   },
   pickerHandle: {
-    width: 36, height: 3, borderRadius: 2,
-    backgroundColor: 'rgba(200,184,232,0.18)',
-    alignSelf: 'center', marginBottom: 10,
+    width: 34, height: 3, borderRadius: 2,
+    alignSelf: 'center', marginBottom: 7,
   },
   pickerTitle: {
-    fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 1.8,
+    fontSize: 11, fontFamily: 'Satoshi-Bold', letterSpacing: 1.4,
     textTransform: 'uppercase', textAlign: 'center',
-    marginBottom: 10, color: 'rgba(200,184,232,0.40)',
+    marginBottom: 7,
   },
   pickerGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 7,
-    justifyContent: 'center', paddingBottom: 4,
+    flexDirection: 'row', flexWrap: 'wrap', gap: 5,
+    justifyContent: 'center', paddingBottom: 3,
   },
   pickerCell: {
-    width: 70, alignItems: 'center', justifyContent: 'center', gap: 5,
-    paddingVertical: 10, borderRadius: 16, borderWidth: 1,
+    width: 70, height: 66, alignItems: 'center', justifyContent: 'center',
+    borderRadius: 17, borderWidth: 1,
   },
-  pickerEmoji:  { fontSize: 30, lineHeight: 36 },
-  pickerLabel:  { fontSize: 9, fontFamily: 'Satoshi-Bold', letterSpacing: 0.4, textAlign: 'center', textTransform: 'uppercase' },
-
   // ── Input bar
   dock: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: BORDER },
   inputBar: {
-    flexDirection: 'row', alignItems: 'flex-end', gap: 6,
-    paddingHorizontal: 8, paddingTop: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 9, paddingTop: 6,
     alignSelf: 'center',
   },
   stickerToggleBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(200,184,232,0.05)',
-    borderWidth: 1, borderColor: BORDER,
-    marginBottom: 2,
+    backgroundColor: 'rgba(107,78,232,0.10)',
+    borderWidth: 1,
   },
   stickerToggleIcon: { fontSize: 18, lineHeight: 22 },
   inputWrap: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 21, borderWidth: 1, borderColor: BORDER,
-    minHeight: 42, justifyContent: 'center',
+    minHeight: 48, justifyContent: 'center',
   },
   input: {
-    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10,
-    fontSize: 15, lineHeight: 20, fontFamily: 'Satoshi-Medium',
+    paddingHorizontal: 15, paddingTop: 10, paddingBottom: 10,
+    fontSize: 16, lineHeight: 22, fontFamily: 'Satoshi-Medium',
     color: 'rgba(220,210,255,0.92)', maxHeight: 120,
   },
   sendBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 46, height: 46, borderRadius: 23,
     alignItems: 'center', justifyContent: 'center',
     overflow: 'hidden', marginBottom: 1,
     backgroundColor: 'transparent',
     borderWidth: 1, borderColor: 'rgba(107,78,232,0.35)',
   },
-  sendBtnDisabled: { borderColor: 'rgba(107,78,232,0.15)' },
+  sendBtnDisabled: { borderColor: 'rgba(107,78,232,0.22)' },
 });
