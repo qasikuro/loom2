@@ -56,10 +56,8 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   const [query, setQuery] = useState('');
   const [reduce, setReduce] = useState(false);
   const x = useRef(new Animated.Value(drawerW)).current;
-  const pending = useRef<(() => void) | null>(null);
   const closing = useRef(false);
   const [openingComplete, setOpeningComplete] = useState(false);
-  const navigationFrame = useRef<number | null>(null);
 
   // Cached rows are available immediately; revalidation starts after the entry animation.
   const data = useFriendsDrawerData(visible && openingComplete, scopeKey, query, tab === 'find');
@@ -74,11 +72,6 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   useLayoutEffect(() => {
     x.stopAnimation();
     if (visible) {
-      if (navigationFrame.current !== null) {
-        cancelAnimationFrame(navigationFrame.current);
-        navigationFrame.current = null;
-      }
-      pending.current = null;
       closing.current = false;
       setOpeningComplete(reduce);
       setTab(initialTab); setQuery(''); setPicking(false);
@@ -97,32 +90,21 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
     }
   }, [visible, reduce, x]);
 
-  const runPending = useCallback(() => {
-    const fn = pending.current; pending.current = null;
-    if (fn) navigationFrame.current = requestAnimationFrame(() => {
-      navigationFrame.current = null;
-      fn();
-    });
-  }, []);
-  useEffect(() => () => {
-    pending.current = null;
-    if (navigationFrame.current !== null) cancelAnimationFrame(navigationFrame.current);
-  }, []);
-
   const dismiss = useCallback((after?: () => void) => {
     if (closing.current) return;
     closing.current = true;
     Keyboard.dismiss();
-    pending.current = after ?? null;
     x.stopAnimation();
     const finish = () => {
-      onClose();
-      runPending();
+      // Dispatch navigation before closing the overlay. Keeping both updates in
+      // this frame avoids a visible blank interval between drawer and chat.
+      if (after) after();
+      else onClose();
     };
     if (reduce) { x.setValue(drawerW); finish(); }
     else Animated.timing(x, { toValue: drawerW, duration: after ? 140 : 180, easing: Easing.out(Easing.cubic), useNativeDriver: true })
       .start(({ finished }) => { if (finished) finish(); });
-  }, [onClose, reduce, drawerW, runPending, x]);
+  }, [onClose, reduce, drawerW, x]);
 
   useEffect(() => {
     if (!visible) return;
