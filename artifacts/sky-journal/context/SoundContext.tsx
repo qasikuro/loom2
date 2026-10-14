@@ -236,13 +236,55 @@ const STICKER_NATIVE: Record<string, { name: SoundName; volume?: number }> = {
   hush:     { name: 'navigate', volume: 0.28 },
 };
 
-// Dedicated WAV assets for donkey + wolf
+// Dedicated chat sticker effects. Keep these short so they can be ready before
+// the first sticker animation starts, and use the shared registry for teardown.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const STICKER_NATIVE_ASSETS: Record<string, any> = {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  bomb:   require('../assets/sounds/chat_sticker_bomb.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  stone:  require('../assets/sounds/chat_sticker_bonk.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  mirror: require('../assets/sounds/chat_sticker_shatter.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  kiss:   require('../assets/sounds/chat_sticker_kiss.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  stars:  require('../assets/sounds/chat_sticker_dazzle.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  fire:   require('../assets/sounds/chat_sticker_fire.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  snow:   require('../assets/sounds/chat_sticker_snow.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  confetti: require('../assets/sounds/chat_sticker_confetti.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  candle: require('../assets/sounds/chat_sticker_candle.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  spark:  require('../assets/sounds/chat_sticker_spark.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  lantern: require('../assets/sounds/chat_sticker_lantern.mp3'),
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  hush:   require('../assets/sounds/chat_sticker_hush.mp3'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   donkey: require('../assets/sounds/sticker_donkey.wav'),
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   wolf:   require('../assets/sounds/sticker_wolf.wav'),
+};
+
+const STICKER_NATIVE_VOLUME: Record<string, number> = {
+  bomb: 0.50,
+  stone: 0.46,
+  mirror: 0.42,
+  kiss: 0.48,
+  stars: 0.40,
+  fire: 0.42,
+  snow: 0.38,
+  confetti: 0.44,
+  candle: 0.34,
+  spark: 0.40,
+  lantern: 0.36,
+  hush: 0.30,
+  donkey: 0.48,
+  wolf: 0.45,
 };
 
 // ── Provider ───────────────────────────────────────────────────────────────────
@@ -253,7 +295,9 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   const soundsRef = useRef<Partial<Record<SoundName, any>>>({});
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const stickerSoundsRef = useRef<Record<string, any>>({});
-  const loadedRef = useRef(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stickerSoundLoadsRef = useRef<Record<string, Promise<any> | undefined>>({});
+  const providerDisposedRef = useRef(false);
 
   useEffect(() => {
     AsyncStorage.getItem('sound_enabled_v1').then(v => {
@@ -264,6 +308,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let cancelled = false;
+    providerDisposedRef.current = false;
 
     async function load() {
       try {
@@ -280,16 +325,6 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
           } catch { /* skip silently */ }
         }
 
-        for (const [id, asset] of Object.entries(STICKER_NATIVE_ASSETS)) {
-          if (cancelled) break;
-          try {
-            const { sound } = await Audio.Sound.createAsync(asset, { volume: 0.50 });
-            stickerSoundsRef.current[id] = sound;
-            registerNativeSound(sound); // coordinated teardown via soundRegistry
-          } catch { /* skip silently */ }
-        }
-
-        loadedRef.current = true;
       } catch { /* expo-av unavailable */ }
     }
 
@@ -297,6 +332,7 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       cancelled = true;
+      providerDisposedRef.current = true;
       // Unload every registered sound (covers SoundContext + VibeStickerPicker
       // module-level cache) so AVManager.onHostDestroy finds nothing to release
       // on the ThreadPoolExecutor thread — preventing the ExoPlayer wrong-thread crash.
@@ -325,21 +361,59 @@ export function SoundProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Dedicated WAV for donkey/wolf
-    const dedicated = stickerSoundsRef.current[stickerId];
-    if (dedicated) {
-      dedicated.setPositionAsync(0).then(() => dedicated.playAsync()).catch(() => null);
-      return;
-    }
-
-    // Fallback to mapped general sound
-    const mapping = STICKER_NATIVE[stickerId];
-    if (mapping) {
+    const playFallback = () => {
+      const mapping = STICKER_NATIVE[stickerId];
+      if (!mapping) return;
       const sound = soundsRef.current[mapping.name];
       if (!sound) return;
       sound.setVolumeAsync(mapping.volume ?? 0.45).catch(() => null);
       sound.setPositionAsync(0).then(() => sound.playAsync()).catch(() => null);
+    };
+
+    const asset = STICKER_NATIVE_ASSETS[stickerId];
+    if (!asset) {
+      playFallback();
+      return;
     }
+
+    const playDedicated = async () => {
+      let sound = stickerSoundsRef.current[stickerId];
+      if (!sound) {
+        let pending = stickerSoundLoadsRef.current[stickerId];
+        if (!pending) {
+          pending = (async () => {
+            const { Audio } = await import('expo-av');
+            const created = await Audio.Sound.createAsync(asset, {
+              volume: STICKER_NATIVE_VOLUME[stickerId] ?? 0.45,
+            });
+            if (providerDisposedRef.current) {
+              await created.sound.unloadAsync().catch(() => null);
+              return null;
+            }
+            stickerSoundsRef.current[stickerId] = created.sound;
+            registerNativeSound(created.sound);
+            return created.sound;
+          })();
+          stickerSoundLoadsRef.current[stickerId] = pending;
+        }
+
+        try {
+          sound = await pending;
+        } finally {
+          delete stickerSoundLoadsRef.current[stickerId];
+        }
+      }
+
+      if (!sound) {
+        playFallback();
+        return;
+      }
+      await sound.setVolumeAsync(STICKER_NATIVE_VOLUME[stickerId] ?? 0.45);
+      await sound.setPositionAsync(0);
+      await sound.playAsync();
+    };
+
+    playDedicated().catch(() => playFallback());
   }, [soundEnabled]);
 
   return (
