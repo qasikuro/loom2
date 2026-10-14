@@ -247,24 +247,60 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
         </>) : (
           <View style={[s.aboutSummary, { borderTopColor: colors.border }]}>
             {([
-              { icon: 'calendar', label: t('components.about.birthday'), value: character.birthday || t('components.about.addBirthday') },
-              { icon: 'map-pin', label: t('components.about.country'), value: character.country || t('components.about.addCountry') },
-              { icon: 'user', label: t('components.about.role'), value: character.role || t('components.about.chooseRole') },
-              { icon: 'link', label: t('components.about.socials'), value: socialCount > 0 ? t('components.about.socialLinks', { count: socialCount }) : t('components.about.addSocials') },
+              {
+                icon: 'calendar',
+                label: t('components.about.birthday'),
+                value: character.birthday || t('common.add'),
+                fullValue: character.birthday || t('components.about.addBirthday'),
+                isEmpty: !character.birthday,
+              },
+              {
+                icon: 'map-pin',
+                label: t('components.about.country'),
+                value: character.country || t('common.add'),
+                fullValue: character.country || t('components.about.addCountry'),
+                isEmpty: !character.country,
+              },
+              {
+                icon: 'user',
+                label: t('components.about.role'),
+                value: character.role || t('common.add'),
+                fullValue: character.role || t('components.about.chooseRole'),
+                isEmpty: !character.role,
+              },
+              {
+                icon: 'link',
+                label: t('components.about.socials'),
+                value: socialCount > 0 ? t('components.about.socialLinks', { count: socialCount }) : t('common.add'),
+                fullValue: socialCount > 0 ? t('components.about.socialLinks', { count: socialCount }) : t('components.about.addSocials'),
+                isEmpty: socialCount === 0,
+              },
             ] as const).map(item => (
               <TouchableOpacity
                 key={item.label}
-                style={[s.metadataItem, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                style={[s.metadataItem, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}24` }]}
                 onPress={() => setAboutExpanded(true)}
                 activeOpacity={0.76}
                 accessibilityRole="button"
-                accessibilityLabel={`${item.label}: ${item.value}. ${t('components.about.openDetails')}`}
+                accessibilityLabel={`${item.label}: ${item.fullValue}. ${t('components.about.openDetails')}`}
               >
                 <View style={s.metadataLabelRow}>
                   <Icon name={item.icon} size={11} color={colors.primary} />
-                  <Text style={[s.metadataLabel, { color: colors.mutedForeground }]} numberOfLines={2}>{item.label}</Text>
+                  <Text
+                    style={[s.metadataLabel, { color: colors.mutedForeground }]}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.72}
+                  >
+                    {item.label}
+                  </Text>
                 </View>
-                <Text style={[s.metadataValue, { color: colors.foreground }]} numberOfLines={2}>
+                <Text
+                  style={[s.metadataValue, { color: item.isEmpty ? colors.primary : colors.foreground }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
+                >
                   {item.value}
                 </Text>
               </TouchableOpacity>
@@ -481,12 +517,12 @@ const s = StyleSheet.create({
   aboutCardTitle:   { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
   aboutEditButton:  { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4 },
   aboutEditButtonText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  aboutSummary:     { borderTopWidth: 1, paddingHorizontal: 7, paddingTop: 5, paddingBottom: 6, flexDirection: 'row', gap: 4 },
+  aboutSummary:     { borderTopWidth: 1, paddingHorizontal: 8, paddingTop: 7, paddingBottom: 8, flexDirection: 'row', gap: 5 },
   aboutSummaryLine: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
   aboutSummaryMeta: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
-  metadataItem:     { flex: 1, minWidth: 0, minHeight: 48, borderWidth: 1, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 5, justifyContent: 'center', gap: 2 },
-  metadataLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metadataLabel:    { flexShrink: 1, fontSize: 8.5, lineHeight: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0, textTransform: 'uppercase' },
+  metadataItem:     { flex: 1, minWidth: 0, minHeight: 44, borderWidth: 1, borderRadius: 10, paddingHorizontal: 5, paddingVertical: 5, justifyContent: 'center', gap: 2 },
+  metadataLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, minWidth: 0 },
+  metadataLabel:    { flexShrink: 1, minWidth: 0, fontSize: 8.5, lineHeight: 10, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
   metadataValue:    { fontSize: 9.5, lineHeight: 11, fontFamily: 'Satoshi-Medium', letterSpacing: -0.1 },
   roleMark:         { width: 27, height: 27, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   aboutRow:         { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 13, gap: 10 },

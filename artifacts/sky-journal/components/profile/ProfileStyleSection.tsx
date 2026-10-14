@@ -288,17 +288,17 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
 // ── Story card (horizontal scroll) ───────────────────────────────────────────
 
-const CARD_W = 118;
-const CARD_H = 72;
+const CARD_H = 66;
 
-function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story) => void; onPlay: (s: Story) => void }) {
+function StoryCard({ story, cardWidth, onMenu, onPlay }: { story: Story; cardWidth: number; onMenu: (s: Story) => void; onPlay: (s: Story) => void }) {
+  const colors = useColors();
   const cover      = getStoryCover(story);
   const moodColor  = MOOD_COLORS[story.mood] ?? '#9B7AB5';
   const isVideo    = story.contentType === 'video';
 
   return (
     <TouchableOpacity
-      style={sc.card}
+      style={[sc.card, { width: cardWidth, borderColor: colors.border }]}
       onPress={isVideo
         ? () => { Haptics.selectionAsync(); onPlay(story); }
         : () => { Haptics.selectionAsync(); router.push(`/story/${story.id}` as never); }
@@ -312,7 +312,7 @@ function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story)
           <Icon name="star" size={14} color={`${moodColor}50`} style={{ position: 'absolute', top: 14, right: 14 }} />
         </LinearGradient>
       )}
-      <LinearGradient colors={['transparent', 'rgba(8,6,22,0.55)', 'rgba(8,6,22,0.93)']} style={sc.grad} />
+        <LinearGradient colors={['transparent', 'rgba(8,6,22,0.58)', 'rgba(8,6,22,0.94)']} style={sc.grad} />
 
       {/* Mood dot */}
       <View style={[sc.moodDot, { backgroundColor: moodColor }]} />
@@ -340,13 +340,9 @@ function StoryCard({ story, onMenu, onPlay }: { story: Story; onMenu: (s: Story)
 
       {/* Bottom info */}
       <View style={sc.bottom}>
-        <Text style={sc.title} numberOfLines={2}>{story.chapterTitle}</Text>
-        <View style={sc.metaRow}>
-          <Icon name="eye"      size={10} color="rgba(255,210,100,0.85)" />
-          <Text style={sc.metaText}>{story.witnessedCount}</Text>
-          <Icon name="bookmark" size={10} color="rgba(200,184,232,0.65)" />
-          <Text style={sc.metaText}>{story.savedCount}</Text>
-        </View>
+        <Text style={sc.title} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>
+          {story.chapterTitle}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -376,11 +372,13 @@ export function ProfileStyleSection({
   const { t } = useTranslation();
   const colors = useColors();
   const { updateStory } = useApp();
+  const { width: screenWidth } = useWindowDimensions();
   const [activeStory,  setActiveStory]  = useState<Story | null>(null);
   const [playingVideo, setPlayingVideo] = useState<Story | null>(null);
 
   const sorted = [...stories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const activeOutfit = outfits.find(outfit => outfit.id === activeOutfitId) ?? null;
+  const cardWidth = Math.min(112, Math.max(92, (screenWidth - 44) / 3));
 
   return (
     <>
@@ -408,16 +406,22 @@ export function ProfileStyleSection({
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
           {sorted.slice(0, 10).map(story => (
-            <StoryCard key={story.id} story={story} onMenu={setActiveStory} onPlay={setPlayingVideo} />
+            <StoryCard key={story.id} story={story} cardWidth={cardWidth} onMenu={setActiveStory} onPlay={setPlayingVideo} />
           ))}
           {/* Add Story Card Placeholder */}
           <TouchableOpacity
-            style={[sc.card, { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed', backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}
+            style={[sc.card, s.newTile, { width: cardWidth, borderColor: `${colors.primary}35`, backgroundColor: colors.muted }]}
             onPress={() => router.push('/(tabs)/create' as never)}
             activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={t('components.profileSection.newStory')}
           >
-            <Icon name="plus" size={20} color={colors.foreground} />
-            <Text style={{ color: colors.foreground, fontSize: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium', marginTop: 8 }}>{t('components.profileSection.newStory')}</Text>
+            <View style={[s.newTileIcon, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}25` }]}>
+              <Icon name="plus" size={15} color={colors.primary} />
+            </View>
+            <Text style={[s.newStoryText, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              {t('components.profileSection.newStory')}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -452,7 +456,7 @@ export function ProfileStyleSection({
             return (
               <TouchableOpacity
                 key={outfit.id}
-                style={[s.outfitCard, { borderColor: isActive ? colors.primary : colors.border }]}
+                style={[s.outfitCard, { width: cardWidth, borderColor: isActive ? colors.primary : colors.border }]}
                 onPress={() => openOutfit(outfit.id)}
                 activeOpacity={0.85}
               >
@@ -463,8 +467,8 @@ export function ProfileStyleSection({
                     <Icon name="camera" size={22} color="rgba(255,255,255,0.3)" />
                   </View>
                 )}
-                <LinearGradient colors={['transparent', 'rgba(8,6,22,0.90)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]} pointerEvents="none">
-                  <Text style={s.outfitName} numberOfLines={2}>{outfit.name}</Text>
+                <LinearGradient colors={['transparent', 'rgba(8,6,22,0.92)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 6 }]} pointerEvents="none">
+                  <Text style={s.outfitName} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>{outfit.name}</Text>
                   {isActive && (
                     <View style={[s.activePill, { backgroundColor: colors.primary }]}>
                       <Text style={s.activePillText}>{t('components.profileSection.worn')}</Text>
@@ -480,14 +484,18 @@ export function ProfileStyleSection({
             );
           })}
           <TouchableOpacity
-            style={[s.outfitCard, s.newOutfitCard, { borderColor: colors.border, backgroundColor: colors.muted }]}
+            style={[s.outfitCard, s.newTile, { width: cardWidth, borderColor: `${colors.primary}35`, backgroundColor: colors.muted }]}
             onPress={() => router.push('/create-outfit' as never)}
             activeOpacity={0.78}
             accessibilityRole="button"
             accessibilityLabel={t('components.profileSection.newOutfit')}
           >
-            <Icon name="plus" size={18} color={colors.primary} />
-            <Text style={[s.newOutfitText, { color: colors.foreground }]} numberOfLines={2}>{t('components.profileSection.newOutfit')}</Text>
+            <View style={[s.newTileIcon, { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}25` }]}>
+              <Icon name="plus" size={15} color={colors.primary} />
+            </View>
+            <Text style={[s.newOutfitText, { color: colors.foreground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+              {t('components.profileSection.newOutfit')}
+            </Text>
           </TouchableOpacity>
         </ScrollView>
       </View>
@@ -518,21 +526,13 @@ export function ProfileStyleSection({
           </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
+        {gallery.length > 0 && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.scrollPad}>
           {gallery.slice(0, 8).map(photo => (
             <TouchableOpacity key={photo.id} style={s.galleryThumb} onPress={() => openPhoto(photo)} activeOpacity={0.88}>
               <Image source={{ uri: photo.imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
             </TouchableOpacity>
           ))}
-          <TouchableOpacity
-            style={[s.galleryThumb, { borderWidth: 1.5, borderColor: colors.primary, borderStyle: 'dashed', backgroundColor: colors.muted, alignItems: 'center', justifyContent: 'center' }]}
-            onPress={handleAddGalleryPhoto}
-            activeOpacity={0.75}
-          >
-            <Icon name="plus" size={14} color={colors.foreground} />
-            <Text style={{ color: colors.foreground, fontSize: 8, lineHeight: 10, textAlign: 'center', fontFamily: 'Satoshi-Medium', marginTop: 2 }}>{t('common.addPhoto')}</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        </ScrollView>}
 
         {galleryError && (
           <Text style={[s.galError, { color: colors.destructive, marginTop: 6 }]}>{galleryError}</Text>
@@ -556,18 +556,20 @@ export function ProfileStyleSection({
 // ── Section styles ────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  section:       { marginBottom: 4 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3, minHeight: 24 },
+  section:       { marginBottom: 8 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5, minHeight: 26 },
   sectionTitle:  { fontSize: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
   countPill:     { borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   countPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 11, paddingHorizontal: 8, minHeight: 26, borderWidth: 1 },
-  addBtnText:    { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  scrollPad:     { paddingRight: 12, gap: 8 },
-  outfitCard:    { width: CARD_W, height: CARD_H, borderRadius: 13, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
-  newOutfitCard: { alignItems: 'center', justifyContent: 'center', borderStyle: 'dashed', gap: 4 },
-  newOutfitText: { fontSize: 9, lineHeight: 11, textAlign: 'center', fontFamily: 'Satoshi-Medium' },
-  outfitName:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.95)', lineHeight: 12 },
+  addBtn:        { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 12, paddingHorizontal: 9, minHeight: 28, borderWidth: 1 },
+  addBtnText:    { fontSize: 10.5, fontFamily: 'Satoshi-Bold' },
+  scrollPad:     { paddingRight: 8, gap: 8 },
+  outfitCard:    { width: 112, height: CARD_H, borderRadius: 14, overflow: 'hidden', borderWidth: 1, position: 'relative', backgroundColor: 'rgba(255,255,255,0.03)' },
+  newTile:       { alignItems: 'center', justifyContent: 'center', borderWidth: 1, gap: 5, borderRadius: 14 },
+  newTileIcon:   { width: 25, height: 25, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  newStoryText:  { maxWidth: '90%', fontSize: 10, lineHeight: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium' },
+  newOutfitText: { maxWidth: '90%', fontSize: 10, lineHeight: 12, textAlign: 'center', fontFamily: 'Satoshi-Medium' },
+  outfitName:    { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 12 },
   activePill:    { alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 5, marginTop: 2 },
   activePillText:{ fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#fff' },
   rarityPill:    { position: 'absolute', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.1)' },
@@ -579,16 +581,14 @@ const s = StyleSheet.create({
 // ── Story card styles ─────────────────────────────────────────────────────────
 
 const sc = StyleSheet.create({
-  card:      { width: CARD_W, height: CARD_H, borderRadius: 13, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', position: 'relative' },
-  grad:      { position: 'absolute', bottom: 0, left: 0, right: 0, height: '65%' },
+  card:      { width: 112, height: CARD_H, borderRadius: 14, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', position: 'relative', borderWidth: 1 },
+  grad:      { position: 'absolute', bottom: 0, left: 0, right: 0, height: '72%' },
   moodDot:   { position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: 3.5 },
   globeBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.10)', alignItems: 'center', justifyContent: 'center' },
   videoBadge:{ position: 'absolute', top: 9, left: 9, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(107,91,149,0.55)', alignItems: 'center', justifyContent: 'center' },
   menuBtn:   { position: 'absolute', top: 5, right: 3, width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  bottom:    { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 7, gap: 3 },
+  bottom:    { position: 'absolute', bottom: 0, left: 0, right: 0, paddingHorizontal: 7, paddingBottom: 6 },
   title:     { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(240,234,255,0.97)', lineHeight: 12 },
-  metaRow:   { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metaText:  { fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.75)', marginRight: 3 },
 });
 
 // ── Action sheet & video modal styles omitted for brevity but remain the same ──

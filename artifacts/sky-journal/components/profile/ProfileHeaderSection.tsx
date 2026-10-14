@@ -265,7 +265,7 @@ export function ProfileHeaderSection({
                 <Text style={[s.xpLevelText, { color: colors.gold }]}>Level {profileLevel}</Text>
               </View>
               <View style={s.xpContainer}>
-                <Text style={[s.xpNumbers, { color: heroMuted }]}>
+                <Text style={[s.xpNumbers, { color: heroMuted }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
                   {((rewardBalance?.stars ?? 0) % 300).toLocaleString()} / 300 XP
                 </Text>
                 <View style={[s.xpBarTrack, { backgroundColor: colors.muted }]}>

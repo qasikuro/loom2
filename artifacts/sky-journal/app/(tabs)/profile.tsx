@@ -265,7 +265,14 @@ export default function CharacterScreen() {
                             <View style={s.statMeta}>
                               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                               <Icon name={item.icon as any} size={12} color={colors.mutedForeground} />
-                              <Text style={[s.statLabel, { color: colors.mutedForeground }]} numberOfLines={2}>{item.label}</Text>
+                              <Text
+                                style={[s.statLabel, { color: colors.mutedForeground }]}
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.72}
+                              >
+                                {item.label}
+                              </Text>
                             </View>
                           </View>
                         </React.Fragment>
