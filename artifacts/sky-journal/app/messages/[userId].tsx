@@ -31,7 +31,7 @@ import {
   Animated,
   Easing,
   FlatList,
-  KeyboardAvoidingView,
+  Keyboard,
   Platform,
   ScrollView,
   StyleSheet,
@@ -42,6 +42,9 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAvoidingViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
+import { hasScreenKeyboardController, ScreenKeyboardProvider } from '@/components/ScreenKeyboardProvider';
+import { restoreFailedChatDraft } from '@/utils/chatDraft';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
@@ -209,6 +212,15 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, onLongPre
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function MessagesScreen() {
+  // Keyboard-controller provider scoped to this screen's content only.
+  return (
+    <ScreenKeyboardProvider>
+      <MessagesScreenContent />
+    </ScreenKeyboardProvider>
+  );
+}
+
+function MessagesScreenContent() {
   const { t } = useTranslation();
   const { userId, name, handle, avatarUri, isGuide } = useLocalSearchParams<{
     userId:     string;
@@ -563,8 +575,17 @@ export default function MessagesScreen() {
     return () => clearInterval(interval);
   }, [load, sseConnected]));
 
-  const scrollToBottom = useCallback(() => {
-    flatRef.current?.scrollToEnd({ animated: false });
+  // Inverted list: offset 0 is the newest message, so the keyboard resizing the
+  // list never needs a scrollToEnd — the bottom anchor holds by construction.
+  const inputRef = useRef<TextInput>(null);
+  const [kbOpen, setKbOpen] = useState(false);
+  useEffect(() => {
+    const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKbOpen(true));
+    const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKbOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+  const jumpToNewest = useCallback(() => {
+    flatRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
 
   const pickPhoto = useCallback(async () => {
@@ -595,6 +616,8 @@ export default function MessagesScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInput('');
     setSending(true);
+    const sentPhoto = photoUri;
+    jumpToNewest();
     const optimistic: Message = {
       id: `temp-${Date.now()}`, fromUserId: 'me', toUserId: userId,
       content: content || null, imageUri: photoUri, expression: null, isRead: false, createdAt: new Date().toISOString(), isOwn: true,
@@ -620,13 +643,15 @@ export default function MessagesScreen() {
       if (!sent?.id) throw new Error('Message was not confirmed');
       if (identity !== photoIdentityRef.current) return;
       setMessages(prev => mergeConfirmedChatMessage(prev, sent, optimistic.id));
-      setPhotoUri(null);
-      uploadedPhotoRef.current = null;
+      // Only clear the draft photo if it is still the one that was sent.
+      setPhotoUri(current => (current === sentPhoto ? null : current));
+      if (uploadedPhotoRef.current?.uri === sentPhoto) uploadedPhotoRef.current = null;
       if (sent?.id) lastMsgIdRef.current = sent.id;
     } catch (err) {
       if (identity !== photoIdentityRef.current) return;
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-      setInput(content);
+      // Restore the failed text without clobbering a draft typed meanwhile.
+      setInput(current => restoreFailedChatDraft(current, content));
       if (err instanceof ApiError && err.status === 429) {
         const suffix = (err.retryAfter != null && err.retryAfter >= 5)
           ? ` Try again in ${err.retryAfter}s.`
@@ -638,7 +663,7 @@ export default function MessagesScreen() {
     } finally {
       if (identity === photoIdentityRef.current) setSending(false);
     }
-  }, [input, photoUri, sending, loading, pickingPhoto, userId, t]);
+  }, [input, photoUri, sending, loading, pickingPhoto, userId, t, jumpToNewest]);
 
   const handleSendLumiReaction = useCallback(async (id: ChatEmoteId): Promise<boolean> => {
     if (!myUserId || !userId || !getChatEmote(id) || isBlocked || sending || loading || pickingPhoto
@@ -742,6 +767,10 @@ export default function MessagesScreen() {
     listData.push({ type: 'msg', msg, key: msg.id });
   }
 
+  // Newest-first for the inverted list; each date row follows its group so it
+  // renders visually above that day's messages.
+  listData.reverse();
+
   const partnerInitial = (name ?? 'G').charAt(0).toUpperCase();
 
   return (
@@ -812,21 +841,22 @@ export default function MessagesScreen() {
           <Text style={{ color: MUTED, fontFamily: 'Satoshi-Regular' }}>{error}</Text>
         </View>
       ) : (
-        <KeyboardAvoidingView
+        <KeyboardAvoidingViewCompat
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={hasScreenKeyboardController || Platform.OS === 'ios' ? 'padding' : undefined}
           keyboardVerticalOffset={0}
         >
           <FlatList<ListItem>
             ref={flatRef}
+            inverted
+            maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 60 }}
             data={listData}
             keyExtractor={item => item.key}
-             contentContainerStyle={[styles.listPad, { width: contentWidth, alignSelf: 'center', paddingBottom: 14 }]}
+             contentContainerStyle={[styles.listPad, { width: contentWidth, alignSelf: 'center', paddingTop: 14, paddingBottom: 12 }]}
             showsVerticalScrollIndicator={false}
-             keyboardShouldPersistTaps="handled"
-            onContentSizeChange={scrollToBottom}
-            onLayout={scrollToBottom}
-            ListFooterComponent={partnerTyping ? (
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            ListHeaderComponent={partnerTyping ? (
               <View style={[styles.msgRow, styles.msgRowOther]}>
                 <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
                   {avatarUri
@@ -839,7 +869,7 @@ export default function MessagesScreen() {
                 </View>
               </View>
             ) : null}
-            ListEmptyComponent={
+            ListEmptyComponent={<View style={styles.invertedEmpty}>{
               loading ? (
                 <View style={styles.openingConversation}>
                   {!!inboxPreview && (
@@ -879,7 +909,7 @@ export default function MessagesScreen() {
                   </Text>
                 </View>
               )
-            }
+            }</View>}
             renderItem={({ item }: { item: ListItem }) => {
               if (item.type === 'date') {
                 return (
@@ -976,7 +1006,7 @@ export default function MessagesScreen() {
 
           {/* ── Shared Lumi companions (remount per conversation) ── */}
           <View style={[styles.dock, { backgroundColor: th.bar, borderColor: th.border }]} pointerEvents="box-none">
-          <View style={{ width: contentWidth, alignSelf: 'center', paddingTop: 4 }} pointerEvents="box-none">
+          <View style={{ width: contentWidth, alignSelf: 'center', paddingTop: kbOpen ? 2 : 4 }} pointerEvents="box-none">
             <ChatLumiCompanion key={`${photoIdentity}:${reactionPlaybackEpoch}`}
               enabled={!loading && !isBlocked && !viewingPhoto && !pickingPhoto}
               busy={sending}
@@ -989,9 +1019,10 @@ export default function MessagesScreen() {
 
           {/* ── Input bar ─────────────────────────────────── */}
           {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color={th.ink} onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
-           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: bottomPad }]}>
+           <View style={[styles.inputBar, { width: contentWidth, paddingBottom: kbOpen && Platform.OS !== 'web' ? 6 : bottomPad }]}>
             <TouchableOpacity
               style={styles.stickerToggleBtn} onPress={pickPhoto}
+              hitSlop={4}
               disabled={loading || sending || pickingPhoto} accessibilityRole="button" accessibilityLabel="Attach a photo"
               accessibilityState={{ disabled: loading || sending || pickingPhoto, busy: pickingPhoto }}
               activeOpacity={0.75}
@@ -1004,6 +1035,7 @@ export default function MessagesScreen() {
                 showPicker && { backgroundColor: `${PURPLE}28`, borderColor: `${PURPLE}60` },
               ]}
               onPress={() => { Haptics.selectionAsync(); setShowPicker(v => !v); }}
+              hitSlop={4}
               disabled={loading}
               accessibilityRole="button"
               accessibilityLabel={t('social.expressions')}
@@ -1015,9 +1047,11 @@ export default function MessagesScreen() {
 
             <View style={[styles.inputWrap, { backgroundColor: th.field, borderColor: th.border }]}>
               <TextInput
+                ref={inputRef}
+                testID="chat-message-input"
                 style={[styles.input, { color: th.ink }]}
                 value={input}
-                editable={!loading && !sending}
+                editable={!loading}
                 onChangeText={t => {
                   setInput(t);
                   if (showPicker) setShowPicker(false);
@@ -1035,14 +1069,16 @@ export default function MessagesScreen() {
                 multiline
                 maxLength={2000}
                 returnKeyType="send"
-                blurOnSubmit={Platform.OS !== 'ios'}
+                blurOnSubmit={false}
+                submitBehavior={Platform.OS === 'ios' ? 'newline' : 'submit'}
                 onSubmitEditing={Platform.OS !== 'ios' ? handleSend : undefined}
               />
             </View>
 
             <TouchableOpacity
               style={[styles.sendBtn, !input.trim() && !photoUri && styles.sendBtnDisabled]}
-              onPress={handleSend}
+              hitSlop={4}
+              onPress={() => { const keep = inputRef.current?.isFocused() ?? false; void handleSend(); if (keep) inputRef.current?.focus(); }}
               accessibilityRole="button"
               accessibilityLabel={sending ? 'Sending message' : 'Send message'}
               accessibilityState={{ disabled: (!input.trim() && !photoUri) || sending || loading || pickingPhoto, busy: sending }}
@@ -1062,7 +1098,7 @@ export default function MessagesScreen() {
             </TouchableOpacity>
           </View>
           </View>
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingViewCompat>
       )}
 
       {viewingPhoto && <ChatPhotoViewer uri={viewingPhoto} onClose={() => setViewingPhoto(null)} background={NIGHT} color="rgba(220,210,255,0.90)" />}
@@ -1106,7 +1142,9 @@ const styles = StyleSheet.create({
 
   // ── Messages list
   centerWrap: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  listPad:    { paddingHorizontal: 12, paddingTop: 12, flexGrow: 1, justifyContent: 'flex-end' },
+  listPad:    { paddingHorizontal: 12, flexGrow: 1, justifyContent: 'flex-start' },
+  // FlatList already corrects the empty component's inversion.
+  invertedEmpty: { flexGrow: 1, justifyContent: 'flex-end' },
   openingConversation: { flex: 1, paddingTop: 18, paddingHorizontal: 4, gap: 12 },
   openingPreview: {
     alignSelf: 'center', maxWidth: '88%', paddingHorizontal: 14, paddingVertical: 10,
@@ -1149,7 +1187,7 @@ const styles = StyleSheet.create({
   photoCaption:{ paddingHorizontal: 8 },
   bubbleOwn:   { borderBottomRightRadius: 5 },
   bubbleOther: { borderBottomLeftRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: BORDER },
-  bubbleText:  { fontSize: 15, fontFamily: 'Satoshi-Regular', lineHeight: 20 },
+  bubbleText:  { fontSize: 15.5, fontFamily: 'Satoshi-Medium', lineHeight: 21.5, letterSpacing: 0.1 },
   bubbleTime:  { fontSize: 11, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end' },
 
   // ── Sticker row + card
@@ -1203,11 +1241,11 @@ const styles = StyleSheet.create({
   dock: { borderTopWidth: StyleSheet.hairlineWidth, borderColor: BORDER },
   inputBar: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 6,
-    paddingHorizontal: 10, paddingTop: 6,
+    paddingHorizontal: 8, paddingTop: 5,
     alignSelf: 'center',
   },
   stickerToggleBtn: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(200,184,232,0.05)',
     borderWidth: 1, borderColor: BORDER,
@@ -1217,18 +1255,18 @@ const styles = StyleSheet.create({
   inputWrap: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 22, borderWidth: 1, borderColor: BORDER,
-    minHeight: 44, justifyContent: 'center',
+    borderRadius: 21, borderWidth: 1, borderColor: BORDER,
+    minHeight: 42, justifyContent: 'center',
   },
   input: {
-    paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 14, fontFamily: 'Satoshi-Regular',
+    paddingHorizontal: 14, paddingTop: 10, paddingBottom: 10,
+    fontSize: 15, lineHeight: 20, fontFamily: 'Satoshi-Medium',
     color: 'rgba(220,210,255,0.92)', maxHeight: 120,
   },
   sendBtn: {
-    width: 44, height: 44, borderRadius: 22,
+    width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden', marginBottom: 2,
+    overflow: 'hidden', marginBottom: 1,
     backgroundColor: 'transparent',
     borderWidth: 1, borderColor: 'rgba(107,78,232,0.35)',
   },

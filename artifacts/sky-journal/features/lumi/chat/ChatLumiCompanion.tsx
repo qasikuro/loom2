@@ -120,7 +120,7 @@ export function ChatLumiCompanion({
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  const base = kbOpen ? 52 : winH < 700 ? 66 : 78;
+  const base = kbOpen ? 40 : winH < 700 ? 66 : 78;
   // Three distinct spots (left, center, right) must fit: ~3.4 sizes + insets.
   const size = stageW > 0 ? Math.max(36, Math.min(base, Math.floor((stageW - 24) / 3.4))) : base;
   const { own, other, playing } = useSharedChatLumis({ width: stageW, size, enabled: enabled && stageW > 0, events });
@@ -138,7 +138,7 @@ export function ChatLumiCompanion({
     setSending(true);
     setFailed(false);
     Haptics.selectionAsync().catch(() => null);
-    let ok = false;
+    let ok: boolean;
     try { ok = await onSendReaction(id); } catch { ok = false; }
     sendingRef.current = false;
     if (!mountedRef.current) return;

@@ -24,6 +24,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { ScreenKeyboardProvider } from '@/components/ScreenKeyboardProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CompletionMoment } from '@/components/CompletionMoment';
@@ -305,6 +306,7 @@ export default function CreateJournalEntryScreen() {
       : formatFull(entryDate, i18n.resolvedLanguage);
 
   return (
+    <ScreenKeyboardProvider>
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <LinearGradient
         colors={[colors.background, colors.background]}
@@ -337,8 +339,10 @@ export default function CreateJournalEntryScreen() {
       </View>
 
       <KeyboardAwareScrollView
-        bottomOffset={20}
+        style={{ flex: 1 }}
+        bottomOffset={32}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         showsVerticalScrollIndicator={false}
          contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad, width: contentWidth, maxWidth: '100%', alignSelf: 'center' }]}
       >
@@ -582,6 +586,7 @@ export default function CreateJournalEntryScreen() {
       </KeyboardAwareScrollView>
       <CompletionMoment visible={showCompletion} variant="journal" onFinish={() => { markSaved(); safeBack(); }} />
     </View>
+    </ScreenKeyboardProvider>
   );
 }
 
