@@ -10,7 +10,13 @@ import { getApiBase } from '@/utils/apiBase';
 
 // Generated endpoints include /api. Preserve the same production/Expo Go host
 // selection and resilient Clerk token registry as the app's existing requests.
-setBaseUrl(getApiBase().replace(/\/api\/?$/, 'async function ensureLumiAuthReady() {
+setBaseUrl(getApiBase().replace(/\/api\/?$/, '') || null);
+let accountId: string | null = null;
+export function setLumiRequestAccount(userId: string | null | undefined) {
+  accountId = userId ?? null;
+}
+
+async function ensureLumiAuthReady() {
   const requestAccount = accountId;
   if (!requestAccount) throw new Error('Lumi requires sign-in.');
   for (let attempt = 0; attempt < 40; attempt++) {
@@ -34,10 +40,4 @@ function withLumiAuth<TArgs extends unknown[], TResult>(
 export const converseWithLumi = withLumiAuth(converseWithLumiRequest);
 export const getLumiState = withLumiAuth(getLumiStateRequest);
 export const updateLumiState = withLumiAuth(updateLumiStateRequest);
-export const clearLumiState = withLumiAuth(clearLumiStateRequest);(token) return token;
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  throw new Error('Your sign-in is not ready. Please try again.');
-});
-
-export { converseWithLumi, getLumiState, updateLumiState, clearLumiState } from '@workspace/api-client-react';
+export const clearLumiState = withLumiAuth(clearLumiStateRequest);
