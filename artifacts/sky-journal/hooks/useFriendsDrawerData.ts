@@ -101,9 +101,10 @@ export function useFriendsDrawerData(visible: boolean, scopeKey: string | null, 
     const seq = ++searchSeq.current;
     if (!visible || !findActive || q.length < 2) { setResults([]); setSearching(false); setSearchError(false); return; }
     setSearching(true);
+    const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const people = await apiFetch<SearchResult[]>(`/users/search?q=${encodeURIComponent(q)}`);
+        const people = await apiFetch<SearchResult[]>(`/users/search?q=${encodeURIComponent(q)}`, { signal: controller.signal });
         if (g === gen.current && seq === searchSeq.current) { setResults(people ?? []); setSearchError(false); }
       } catch (e) {
         if (g === gen.current && seq === searchSeq.current) {
@@ -113,8 +114,11 @@ export function useFriendsDrawerData(visible: boolean, scopeKey: string | null, 
       } finally {
         if (g === gen.current && seq === searchSeq.current) setSearching(false);
       }
-    }, 350);
-    return () => clearTimeout(timer);
+    }, 220);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, visible, findActive]);
 
   const mutate = useCallback(async (key: string, path: string, method: 'POST' | 'DELETE', fail: ActionError) => {

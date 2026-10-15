@@ -92,7 +92,7 @@ function Mascot({ side, size, children }: { side: LumiSide; size: number; childr
   return <Animated.View style={[styles.character, { width: size, height: size }, xStyle]}>{children}</Animated.View>;
 }
 
-export function ChatLumiCompanion({
+function ChatLumiCompanionView({
   enabled = true, externalPickerOpen = false, onOpenPalette, busy = false, partnerName, events, onSendReaction,
 }: Props) {
   const { t } = useTranslation();
@@ -308,4 +308,5 @@ const styles = StyleSheet.create({
   emoteLabel: { fontSize: 9, fontFamily: 'Satoshi-Bold', marginTop: 2, maxWidth: 64 },
 });
 
+export const ChatLumiCompanion = React.memo(ChatLumiCompanionView);
 export default ChatLumiCompanion;

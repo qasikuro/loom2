@@ -238,7 +238,7 @@ function MessagesScreenContent() {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const c = useColors();
-  const th = {
+  const th = useMemo(() => ({
     bg: c.background,
     header: (isDark ? [c.night, c.card, c.secondary] : [c.card, c.background, c.muted]) as [string, string, string],
     star: c.lavender,
@@ -251,7 +251,10 @@ function MessagesScreenContent() {
     bar: c.card,
     field: c.input,
     border: c.border,
-  };
+  }), [
+    isDark, c.background, c.night, c.card, c.secondary, c.muted,
+    c.lavender, c.foreground, c.mutedForeground, c.primary, c.input, c.border,
+  ]);
   const { width: windowWidth } = useWindowDimensions();
   const { markDmThreadRead, blockedIds, blockUser, unblockUser, dmThreads } = useApp();
   const { playStickerSound } = useSound();
@@ -493,7 +496,23 @@ function MessagesScreenContent() {
 
       if (msgs.length > 0) lastMsgIdRef.current = msgs[msgs.length - 1].id;
 
-      setMessages(msgs);
+      setMessages(previous => {
+        const unchanged = previous.length === msgs.length
+          && previous.every((message, index) => {
+            const next = msgs[index];
+            return next
+              && message.id === next.id
+              && message.fromUserId === next.fromUserId
+              && message.toUserId === next.toUserId
+              && message.content === next.content
+              && message.imageUri === next.imageUri
+              && message.expression === next.expression
+              && message.isRead === next.isRead
+              && message.createdAt === next.createdAt
+              && message.isOwn === next.isOwn;
+          });
+        return unchanged ? previous : msgs;
+      });
       markDmThreadRead(userId);
       markDmConversationOpened(myUserId, userId);
     } catch {
@@ -762,22 +781,92 @@ function MessagesScreenContent() {
   }, [sending, loading, userId, playSticker]);
 
   // Build flat list with date separators
-  const listData: ListItem[] = [];
-  let lastDate = '';
-  for (const msg of messages) {
-    const d = fmtDate(msg.createdAt, t);
-    if (d !== lastDate) {
-      listData.push({ type: 'date', date: d, key: `date-${d}-${msg.id}` });
-      lastDate = d;
+  const listData = useMemo(() => {
+    const items: ListItem[] = [];
+    let lastDate = '';
+    for (const msg of messages) {
+      const date = fmtDate(msg.createdAt, t);
+      if (date !== lastDate) {
+        items.push({ type: 'date', date, key: `date-${date}-${msg.id}` });
+        lastDate = date;
+      }
+      items.push({ type: 'msg', msg, key: msg.id });
     }
-    listData.push({ type: 'msg', msg, key: msg.id });
-  }
-
-  // Newest-first for the inverted list; each date row follows its group so it
-  // renders visually above that day's messages.
-  listData.reverse();
-
+    // Newest-first for the inverted list; each date row follows its group so it
+    // renders visually above that day's messages.
+    return items.reverse();
+  }, [messages, t]);
   const partnerInitial = (name ?? 'G').charAt(0).toUpperCase();
+  const renderMessageItem = useCallback(({ item }: { item: ListItem }) => {
+    if (item.type === 'date') {
+      return (
+        <View style={styles.dateSep}>
+          <View style={styles.dateLine} />
+          <View style={styles.datePill}>
+            <Text style={styles.dateText}>{item.date}</Text>
+          </View>
+          <View style={styles.dateLine} />
+        </View>
+      );
+    }
+    const msg = item.msg;
+    if (msg.expression) {
+      return (
+        <StickerBubble
+          msg={msg}
+          partnerInitial={partnerInitial}
+          avatarUri={avatarUri}
+          primaryColor={PURPLE}
+          textColor={th.sub}
+          onLongPress={() => handleDeleteMsg(msg)}
+        />
+      );
+    }
+    return (
+      <View style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
+        {!msg.isOwn && (
+          <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
+            {avatarUri
+              ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+              : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>}
+          </View>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.bubble,
+            msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
+            msg.isOwn ? { backgroundColor: th.own } : { backgroundColor: th.other, borderColor: th.otherBorder },
+            msg.imageUri && styles.bubblePhoto,
+          ]}
+          onLongPress={() => handleDeleteMsg(msg)}
+          onPress={() => { if (msg.imageUri) setViewingPhoto(msg.imageUri); }}
+          accessibilityRole={msg.imageUri ? 'imagebutton' : undefined}
+          accessible={!msg.imageUri}
+          accessibilityLabel={msg.imageUri
+            ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a photo${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
+            : `${msg.isOwn ? 'You' : (name ?? 'Partner')}: ${msg.content ?? ''}, ${fmtTime(msg.createdAt)}`}
+          accessibilityHint={msg.imageUri ? 'Opens the photo. Hold for message options.' : msg.isOwn ? 'Hold for message options.' : undefined}
+          activeOpacity={0.85}
+          delayLongPress={350}
+        >
+          {msg.imageUri && (
+            <ChatMessagePhoto uri={msg.imageUri} width={Math.min(contentWidth * 0.62, 280)}
+              onOpen={() => setViewingPhoto(msg.imageUri!)} onLongPress={() => handleDeleteMsg(msg)} />
+          )}
+          {!!msg.content && (
+            <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : th.otherText }]}>
+              {msg.content}
+            </Text>
+          )}
+          <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : th.sub }]}>
+            {fmtTime(msg.createdAt)}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }, [avatarUri, contentWidth, handleDeleteMsg, name, partnerInitial, th, t]);
+  const handleOpenLumiPalette = useCallback(() => setShowPicker(false), []);
+
   const stickerCellWidth = Math.max(52, Math.min(72, Math.floor((contentWidth - 44) / 5)));
   const pickerStickerSize = Math.min(54, stickerCellWidth - 8);
 
@@ -918,73 +1007,7 @@ function MessagesScreenContent() {
                 </View>
               )
             }</View>}
-            renderItem={({ item }: { item: ListItem }) => {
-              if (item.type === 'date') {
-                return (
-                  <View style={styles.dateSep}>
-                    <View style={styles.dateLine} />
-                    <View style={styles.datePill}>
-                      <Text style={styles.dateText}>{item.date}</Text>
-                    </View>
-                    <View style={styles.dateLine} />
-                  </View>
-                );
-              }
-              const msg = item.msg;
-              if (msg.expression) {
-                return (
-                  <StickerBubble
-                    msg={msg}
-                    partnerInitial={partnerInitial}
-                    avatarUri={avatarUri}
-                    primaryColor={PURPLE}
-                    textColor={th.sub}
-                    onLongPress={() => handleDeleteMsg(msg)}
-                  />
-                );
-              }
-              return (
-                <View style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
-                  {!msg.isOwn && (
-                    <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
-                      {avatarUri
-                        ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-                        : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>
-                      }
-                    </View>
-                  )}
-                  <TouchableOpacity
-                    style={[
-                      styles.bubble,
-                      msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
-                      msg.isOwn ? { backgroundColor: th.own } : { backgroundColor: th.other, borderColor: th.otherBorder },
-                      msg.imageUri && styles.bubblePhoto,
-                    ]}
-                    onLongPress={() => handleDeleteMsg(msg)}
-                    onPress={() => { if (msg.imageUri) setViewingPhoto(msg.imageUri); }}
-                    accessibilityRole={msg.imageUri ? 'imagebutton' : undefined}
-                    accessible={!msg.imageUri}
-                    accessibilityLabel={msg.imageUri
-                      ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a photo${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
-                      : `${msg.isOwn ? 'You' : (name ?? 'Partner')}: ${msg.content ?? ''}, ${fmtTime(msg.createdAt)}`}
-                    accessibilityHint={msg.imageUri ? 'Opens the photo. Hold for message options.' : msg.isOwn ? 'Hold for message options.' : undefined}
-                    activeOpacity={0.85}
-                    delayLongPress={350}
-                  >
-                    {msg.imageUri && (
-                      <ChatMessagePhoto uri={msg.imageUri} width={Math.min(contentWidth * 0.62, 280)}
-                        onOpen={() => setViewingPhoto(msg.imageUri!)} onLongPress={() => handleDeleteMsg(msg)} />
-                    )}
-                    {!!msg.content && <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : th.otherText }]}>
-                      {msg.content}
-                    </Text>}
-                    <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : th.sub }]}>
-                      {fmtTime(msg.createdAt)}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              );
-            }}
+            renderItem={renderMessageItem}
           />
 
           {/* ── Sticker picker sheet ────────────────────────── */}
@@ -1029,7 +1052,7 @@ function MessagesScreenContent() {
               events={reactionEvents}
               onSendReaction={handleSendLumiReaction}
               externalPickerOpen={showPicker}
-              onOpenPalette={() => setShowPicker(false)} />
+              onOpenPalette={handleOpenLumiPalette} />
           </View>
 
           {/* ── Input bar ─────────────────────────────────── */}

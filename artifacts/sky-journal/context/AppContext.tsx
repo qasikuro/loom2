@@ -603,6 +603,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [dmThreads, setDmThreads] = useState<DmThread[]>([]);
   const [dmThreadsLoading, setDmThreadsLoading] = useState(false);
   const [dmThreadsError, setDmThreadsError] = useState<string | null>(null);
+  const dmThreadsLoadedRef = useRef(false);
   const dmRequestRef = useRef<Promise<void> | null>(null);
   const dmEpochRef = useRef(0);
   const dmReadDuringRefreshRef = useRef(new Set<string>());
@@ -746,6 +747,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     dmEpochRef.current += 1;
     dmRequestRef.current = null;
     dmReadDuringRefreshRef.current = new Set();
+    dmThreadsLoadedRef.current = false;
     setDmThreads([]);
     setDmThreadsError(null);
     setDmThreadsLoading(false);
@@ -1283,7 +1285,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const epoch = dmEpochRef.current;
     const readDuringRefresh = new Set<string>();
     dmReadDuringRefreshRef.current = readDuringRefresh;
-    setDmThreadsLoading(true);
+    if (!dmThreadsLoadedRef.current) setDmThreadsLoading(true);
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     const request = (async () => {
@@ -1294,14 +1296,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const threads = rows.map(thread => readDuringRefresh.has(thread.partnerId)
           ? { ...thread, unread: false } : thread)
           .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
-        setDmThreads(threads);
+        setDmThreads(previous => {
+          const unchanged = previous.length === threads.length && previous.every((thread, index) => {
+            const next = threads[index];
+            return next
+              && thread.partnerId === next.partnerId
+              && thread.partnerName === next.partnerName
+              && thread.partnerHandle === next.partnerHandle
+              && thread.partnerAvatar === next.partnerAvatar
+              && thread.lastMessage === next.lastMessage
+              && thread.lastAt === next.lastAt
+              && thread.unread === next.unread;
+          });
+          return unchanged ? previous : threads;
+        });
+        dmThreadsLoadedRef.current = true;
         setDmThreadsError(null);
         const unreadThreads = threads.filter(thread => thread.unread).map(thread => ({
           partnerId: thread.partnerId, partnerName: thread.partnerName,
           partnerHandle: thread.partnerHandle, lastAt: thread.lastAt,
         }));
-        setUnreadDmThreads(unreadThreads);
-        setDmUnread(unreadThreads.length);
+        setUnreadDmThreads(previous => {
+          const unchanged = previous.length === unreadThreads.length && previous.every((thread, index) => {
+            const next = unreadThreads[index];
+            return next
+              && thread.partnerId === next.partnerId
+              && thread.partnerName === next.partnerName
+              && thread.partnerHandle === next.partnerHandle
+              && thread.lastAt === next.lastAt;
+          });
+          return unchanged ? previous : unreadThreads;
+        });
+        setDmUnread(previous => previous === unreadThreads.length ? previous : unreadThreads.length);
       } catch (error) {
         if (epoch !== dmEpochRef.current) return;
         setDmThreadsError(error instanceof ApiError ? String(error.status) : 'network');
@@ -1309,6 +1335,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setDmThreads([]);
           setUnreadDmThreads([]);
           setDmUnread(0);
+          dmThreadsLoadedRef.current = true;
         }
       } finally {
         clearTimeout(timeout);
@@ -1324,11 +1351,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const markDmThreadRead = useCallback((partnerId: string) => {
     dmReadDuringRefreshRef.current.add(partnerId);
-    setDmThreads(prev => prev.map(thread => thread.partnerId === partnerId
-      ? { ...thread, unread: false } : thread));
+    setDmThreads(prev => {
+      const target = prev.find(thread => thread.partnerId === partnerId && thread.unread);
+      if (!target) return prev;
+      return prev.map(thread => thread === target ? { ...thread, unread: false } : thread);
+    });
     setUnreadDmThreads(prev => {
       const next = prev.filter(t => t.partnerId !== partnerId);
-      setDmUnread(next.length);
+      if (next.length === prev.length) return prev;
+      setDmUnread(count => count === next.length ? count : next.length);
       return next;
     });
   }, []);
