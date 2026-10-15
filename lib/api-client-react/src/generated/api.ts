@@ -52,6 +52,9 @@ import type {
   GetAdminModerationRecordsParams,
   GetAdminModerationReportsParams,
   GuideSession,
+  GuideSessionActivity,
+  GuideSessionActivityInput,
+  GuideSessionActivityResponseInput,
   GuideSessionAnswerInput,
   GuideSessionEngagement,
   GuideSessionParticipant,
@@ -60,6 +63,7 @@ import type {
   GuideSessionPollVoteInput,
   GuideSessionQuestion,
   GuideSessionQuestionInput,
+  GuideSessionQuestionVoteInput,
   GuideSessionRecap,
   GuideSessionRecapInput,
   GuideTutorial,
@@ -3433,6 +3437,428 @@ export const useAnswerGuideSessionQuestion = <
   TContext
 > => {
   return useMutation(getAnswerGuideSessionQuestionMutationOptions(options));
+};
+
+/**
+ * @summary Upvote or remove an upvote from a live session question
+ */
+export const getVoteGuideSessionQuestionUrl = (
+  sessionId: string,
+  questionId: string,
+) => {
+  return `/api/guide-sessions/${sessionId}/questions/${questionId}/vote`;
+};
+
+export const voteGuideSessionQuestion = async (
+  sessionId: string,
+  questionId: string,
+  guideSessionQuestionVoteInput: GuideSessionQuestionVoteInput,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(
+    getVoteGuideSessionQuestionUrl(sessionId, questionId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(guideSessionQuestionVoteInput),
+    },
+  );
+};
+
+export const getVoteGuideSessionQuestionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof voteGuideSessionQuestion>>,
+    TError,
+    {
+      sessionId: string;
+      questionId: string;
+      data: BodyType<GuideSessionQuestionVoteInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof voteGuideSessionQuestion>>,
+  TError,
+  {
+    sessionId: string;
+    questionId: string;
+    data: BodyType<GuideSessionQuestionVoteInput>;
+  },
+  TContext
+> => {
+  const mutationKey = ["voteGuideSessionQuestion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof voteGuideSessionQuestion>>,
+    {
+      sessionId: string;
+      questionId: string;
+      data: BodyType<GuideSessionQuestionVoteInput>;
+    }
+  > = (props) => {
+    const { sessionId, questionId, data } = props ?? {};
+
+    return voteGuideSessionQuestion(
+      sessionId,
+      questionId,
+      data,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VoteGuideSessionQuestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof voteGuideSessionQuestion>>
+>;
+export type VoteGuideSessionQuestionMutationBody =
+  BodyType<GuideSessionQuestionVoteInput>;
+export type VoteGuideSessionQuestionMutationError = ErrorType<void>;
+
+/**
+ * @summary Upvote or remove an upvote from a live session question
+ */
+export const useVoteGuideSessionQuestion = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof voteGuideSessionQuestion>>,
+    TError,
+    {
+      sessionId: string;
+      questionId: string;
+      data: BodyType<GuideSessionQuestionVoteInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof voteGuideSessionQuestion>>,
+  TError,
+  {
+    sessionId: string;
+    questionId: string;
+    data: BodyType<GuideSessionQuestionVoteInput>;
+  },
+  TContext
+> => {
+  return useMutation(getVoteGuideSessionQuestionMutationOptions(options));
+};
+
+/**
+ * @summary Launch a live exercise, reflection, or resource as the session guide
+ */
+export const getCreateGuideSessionActivityUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/activities`;
+};
+
+export const createGuideSessionActivity = async (
+  sessionId: string,
+  guideSessionActivityInput: GuideSessionActivityInput,
+  options?: RequestInit,
+): Promise<GuideSessionActivity> => {
+  return customFetch<GuideSessionActivity>(
+    getCreateGuideSessionActivityUrl(sessionId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(guideSessionActivityInput),
+    },
+  );
+};
+
+export const getCreateGuideSessionActivityMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideSessionActivity>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionActivityInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGuideSessionActivity>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionActivityInput> },
+  TContext
+> => {
+  const mutationKey = ["createGuideSessionActivity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGuideSessionActivity>>,
+    { sessionId: string; data: BodyType<GuideSessionActivityInput> }
+  > = (props) => {
+    const { sessionId, data } = props ?? {};
+
+    return createGuideSessionActivity(sessionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateGuideSessionActivityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGuideSessionActivity>>
+>;
+export type CreateGuideSessionActivityMutationBody =
+  BodyType<GuideSessionActivityInput>;
+export type CreateGuideSessionActivityMutationError = ErrorType<void>;
+
+/**
+ * @summary Launch a live exercise, reflection, or resource as the session guide
+ */
+export const useCreateGuideSessionActivity = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideSessionActivity>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionActivityInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createGuideSessionActivity>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionActivityInput> },
+  TContext
+> => {
+  return useMutation(getCreateGuideSessionActivityMutationOptions(options));
+};
+
+/**
+ * @summary Submit or update a response to the active session activity
+ */
+export const getRespondToGuideSessionActivityUrl = (
+  sessionId: string,
+  activityId: string,
+) => {
+  return `/api/guide-sessions/${sessionId}/activities/${activityId}/responses`;
+};
+
+export const respondToGuideSessionActivity = async (
+  sessionId: string,
+  activityId: string,
+  guideSessionActivityResponseInput: GuideSessionActivityResponseInput,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(
+    getRespondToGuideSessionActivityUrl(sessionId, activityId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(guideSessionActivityResponseInput),
+    },
+  );
+};
+
+export const getRespondToGuideSessionActivityMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof respondToGuideSessionActivity>>,
+    TError,
+    {
+      sessionId: string;
+      activityId: string;
+      data: BodyType<GuideSessionActivityResponseInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof respondToGuideSessionActivity>>,
+  TError,
+  {
+    sessionId: string;
+    activityId: string;
+    data: BodyType<GuideSessionActivityResponseInput>;
+  },
+  TContext
+> => {
+  const mutationKey = ["respondToGuideSessionActivity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof respondToGuideSessionActivity>>,
+    {
+      sessionId: string;
+      activityId: string;
+      data: BodyType<GuideSessionActivityResponseInput>;
+    }
+  > = (props) => {
+    const { sessionId, activityId, data } = props ?? {};
+
+    return respondToGuideSessionActivity(
+      sessionId,
+      activityId,
+      data,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RespondToGuideSessionActivityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof respondToGuideSessionActivity>>
+>;
+export type RespondToGuideSessionActivityMutationBody =
+  BodyType<GuideSessionActivityResponseInput>;
+export type RespondToGuideSessionActivityMutationError = ErrorType<void>;
+
+/**
+ * @summary Submit or update a response to the active session activity
+ */
+export const useRespondToGuideSessionActivity = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof respondToGuideSessionActivity>>,
+    TError,
+    {
+      sessionId: string;
+      activityId: string;
+      data: BodyType<GuideSessionActivityResponseInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof respondToGuideSessionActivity>>,
+  TError,
+  {
+    sessionId: string;
+    activityId: string;
+    data: BodyType<GuideSessionActivityResponseInput>;
+  },
+  TContext
+> => {
+  return useMutation(getRespondToGuideSessionActivityMutationOptions(options));
+};
+
+/**
+ * @summary Complete the active activity as the session guide
+ */
+export const getCloseGuideSessionActivityUrl = (
+  sessionId: string,
+  activityId: string,
+) => {
+  return `/api/guide-sessions/${sessionId}/activities/${activityId}/close`;
+};
+
+export const closeGuideSessionActivity = async (
+  sessionId: string,
+  activityId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(
+    getCloseGuideSessionActivityUrl(sessionId, activityId),
+    {
+      ...options,
+      method: "PATCH",
+    },
+  );
+};
+
+export const getCloseGuideSessionActivityMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeGuideSessionActivity>>,
+    TError,
+    { sessionId: string; activityId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeGuideSessionActivity>>,
+  TError,
+  { sessionId: string; activityId: string },
+  TContext
+> => {
+  const mutationKey = ["closeGuideSessionActivity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeGuideSessionActivity>>,
+    { sessionId: string; activityId: string }
+  > = (props) => {
+    const { sessionId, activityId } = props ?? {};
+
+    return closeGuideSessionActivity(sessionId, activityId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseGuideSessionActivityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeGuideSessionActivity>>
+>;
+
+export type CloseGuideSessionActivityMutationError = ErrorType<void>;
+
+/**
+ * @summary Complete the active activity as the session guide
+ */
+export const useCloseGuideSessionActivity = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeGuideSessionActivity>>,
+    TError,
+    { sessionId: string; activityId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof closeGuideSessionActivity>>,
+  TError,
+  { sessionId: string; activityId: string },
+  TContext
+> => {
+  return useMutation(getCloseGuideSessionActivityMutationOptions(options));
 };
 
 /**

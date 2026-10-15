@@ -1327,6 +1327,86 @@ export interface GuideSessionQuestion {
   createdAt: string;
   answeredAt: string | null;
   askerName: string;
+  upvoteCount?: number;
+  myUpvoted?: boolean;
+  isMine?: boolean;
+}
+
+export interface GuideSessionQuestionVoteInput {
+  voted: boolean;
+}
+
+export type GuideSessionActivityInputKind =
+  (typeof GuideSessionActivityInputKind)[keyof typeof GuideSessionActivityInputKind];
+
+export const GuideSessionActivityInputKind = {
+  challenge: "challenge",
+  reflection: "reflection",
+  resource: "resource",
+} as const;
+
+export interface GuideSessionActivityInput {
+  /**
+   * @minLength 3
+   * @maxLength 100
+   */
+  title: string;
+  /**
+   * @minLength 5
+   * @maxLength 1000
+   */
+  prompt: string;
+  kind: GuideSessionActivityInputKind;
+  /** @maxLength 2048 */
+  resourceUrl?: string | null;
+}
+
+export interface GuideSessionActivityResponseInput {
+  /**
+   * @minLength 2
+   * @maxLength 1000
+   */
+  response: string;
+}
+
+export interface GuideSessionActivityResponse {
+  userId: string;
+  displayName: string | null;
+  response: string;
+  submittedAt: string;
+}
+
+export type GuideSessionActivityKind =
+  (typeof GuideSessionActivityKind)[keyof typeof GuideSessionActivityKind];
+
+export const GuideSessionActivityKind = {
+  challenge: "challenge",
+  reflection: "reflection",
+  resource: "resource",
+} as const;
+
+export type GuideSessionActivityStatus =
+  (typeof GuideSessionActivityStatus)[keyof typeof GuideSessionActivityStatus];
+
+export const GuideSessionActivityStatus = {
+  active: "active",
+  completed: "completed",
+} as const;
+
+export interface GuideSessionActivity {
+  id: string;
+  sessionId: string;
+  guideId: string;
+  title: string;
+  prompt: string;
+  kind: GuideSessionActivityKind;
+  resourceUrl: string | null;
+  status: GuideSessionActivityStatus;
+  createdAt: string;
+  closedAt: string | null;
+  responseCount: number;
+  myResponse: string | null;
+  responses: GuideSessionActivityResponse[];
 }
 
 export interface GuideSessionAnswerInput {
@@ -1358,6 +1438,9 @@ export interface GuideSessionRecap {
 export interface GuideSessionEngagement {
   polls: GuideSessionPoll[];
   questions: GuideSessionQuestion[];
+  activities: GuideSessionActivity[];
+  activitiesReady: boolean;
+  questionVotingReady: boolean;
   recap: GuideSessionRecap | null;
 }
 

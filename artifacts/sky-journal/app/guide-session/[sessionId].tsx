@@ -8,7 +8,7 @@ import { useAuth } from '@clerk/expo';
 import { ResizeMode, Video } from 'expo-av';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Linking, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +21,10 @@ import {
   useGetGuideSessionEngagement,
   useSaveGuideSessionRecap,
   useVoteGuideSessionPoll,
+  useCloseGuideSessionActivity,
+  useCreateGuideSessionActivity,
+  useRespondToGuideSessionActivity,
+  useVoteGuideSessionQuestion,
 } from '@workspace/api-client-react';
 import { TextInput } from 'react-native';
 
@@ -60,6 +64,11 @@ export default function GuideSessionScreen() {
   const [answerDrafts, setAnswerDrafts] = useState<Record<string, string>>({});
   const [recapDraft, setRecapDraft] = useState('');
   const [recapHighlight, setRecapHighlight] = useState('');
+  const [activityKind, setActivityKind] = useState<'challenge' | 'reflection' | 'resource'>('challenge');
+  const [activityTitle, setActivityTitle] = useState('');
+  const [activityPrompt, setActivityPrompt] = useState('');
+  const [activityResourceUrl, setActivityResourceUrl] = useState('');
+  const [activityResponseDrafts, setActivityResponseDrafts] = useState<Record<string, string>>({});
   const engagementQuery = useGetGuideSessionEngagement(sessionId ?? '', {
     query: {
       queryKey: getGetGuideSessionEngagementQueryKey(sessionId ?? ''),
@@ -81,6 +90,10 @@ export default function GuideSessionScreen() {
   } } });
   const answerQuestionMutation = useAnswerGuideSessionQuestion({ mutation: { onSuccess: refreshEngagement } });
   const saveRecapMutation = useSaveGuideSessionRecap({ mutation: { onSuccess: refreshEngagement } });
+  const createActivityMutation = useCreateGuideSessionActivity({ mutation: { onSuccess: refreshEngagement } });
+  const respondToActivityMutation = useRespondToGuideSessionActivity({ mutation: { onSuccess: refreshEngagement } });
+  const closeActivityMutation = useCloseGuideSessionActivity({ mutation: { onSuccess: refreshEngagement } });
+  const voteQuestionMutation = useVoteGuideSessionQuestion({ mutation: { onSuccess: refreshEngagement } });
   const load = useCallback(() => {
     if (!sessionId) return;
     setLoading(true);
@@ -406,6 +419,241 @@ export default function GuideSessionScreen() {
                   })}
                 </View>
               )}
+              <View style={s.engagementSection}>
+                <View style={s.activitySectionHeading}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.formLabel, { color: colors.foreground }]}>Activities & resources</Text>
+                    <Text style={[s.activitySectionCopy, { color: colors.mutedForeground }]}>
+                      Short prompts, reflections, and useful links for the group
+                    </Text>
+                  </View>
+                  <View style={[s.activityCountPill, { backgroundColor: `${colors.primary}12` }]}>
+                    <Icon name="layers" size={12} color={colors.primary} />
+                    <Text style={[s.activityCountText, { color: colors.primary }]}>{engagement?.activities.length ?? 0}</Text>
+                  </View>
+                </View>
+                {!engagement?.activitiesReady ? (
+                  <View style={[s.schemaNotice, { backgroundColor: `${colors.primary}0A`, borderColor: `${colors.primary}26` }]}>
+                    <Icon name="clock" size={15} color={colors.primary} />
+                    <Text style={[s.schemaNoticeText, { color: colors.mutedForeground }]}>
+                      Live activities and question upvotes become available after the session data update is published. Polls, chat, and Q&A remain available.
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {live && isOwner && (
+                      <View style={[s.engagementForm, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <Text style={[s.formLabel, { color: colors.foreground }]}>Launch the next activity</Text>
+                        <View style={s.activityKindRow}>
+                          {([
+                            ['challenge', 'Challenge', 'zap'],
+                            ['reflection', 'Reflection', 'feather'],
+                            ['resource', 'Resource', 'link'],
+                          ] as const).map(([kind, label, icon]) => {
+                            const selected = activityKind === kind;
+                            return (
+                              <TouchableOpacity
+                                key={kind}
+                                onPress={() => setActivityKind(kind)}
+                                style={[s.activityKindButton, {
+                                  backgroundColor: selected ? `${colors.primary}14` : colors.card,
+                                  borderColor: selected ? colors.primary : colors.border,
+                                }]}
+                              >
+                                <Icon name={icon} size={13} color={selected ? colors.primary : colors.mutedForeground} />
+                                <Text style={[s.activityKindText, { color: selected ? colors.primary : colors.mutedForeground }]}>{label}</Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                        <TextInput
+                          value={activityTitle}
+                          onChangeText={setActivityTitle}
+                          placeholder={activityKind === 'resource' ? 'Resource title' : activityKind === 'reflection' ? 'Reflection title' : 'Activity title'}
+                          placeholderTextColor={colors.mutedForeground}
+                          style={[s.engagementInput, { color: colors.foreground, borderColor: colors.border }]}
+                          maxLength={100}
+                        />
+                        <TextInput
+                          value={activityPrompt}
+                          onChangeText={setActivityPrompt}
+                          placeholder={activityKind === 'resource' ? 'Explain what participants will find in this link…' : 'What should participants do or think about?'}
+                          placeholderTextColor={colors.mutedForeground}
+                          style={[s.engagementInput, s.multilineInput, { color: colors.foreground, borderColor: colors.border }]}
+                          multiline
+                          maxLength={1000}
+                        />
+                        {activityKind === 'resource' && (
+                          <TextInput
+                            value={activityResourceUrl}
+                            onChangeText={setActivityResourceUrl}
+                            placeholder="https://example.com/resource"
+                            placeholderTextColor={colors.mutedForeground}
+                            autoCapitalize="none"
+                            keyboardType="url"
+                            style={[s.engagementInput, { color: colors.foreground, borderColor: colors.border }]}
+                            maxLength={2048}
+                          />
+                        )}
+                        <TouchableOpacity
+                          disabled={
+                            createActivityMutation.isPending
+                            || activityTitle.trim().length < 3
+                            || activityPrompt.trim().length < 5
+                            || (activityKind === 'resource' && !/^https?:\/\/\S+/i.test(activityResourceUrl.trim()))
+                          }
+                          onPress={() => createActivityMutation.mutate({
+                            sessionId: session.id,
+                            data: {
+                              title: activityTitle.trim(),
+                              prompt: activityPrompt.trim(),
+                              kind: activityKind,
+                              ...(activityKind === 'resource' ? { resourceUrl: activityResourceUrl.trim() } : {}),
+                            },
+                          }, {
+                            onSuccess: () => {
+                              setActivityTitle('');
+                              setActivityPrompt('');
+                              setActivityResourceUrl('');
+                            },
+                            onError: error => Alert.alert('Could not launch activity', error.message),
+                          })}
+                          style={[s.formSubmit, s.activityLaunch, {
+                            backgroundColor: colors.primary,
+                            opacity: createActivityMutation.isPending ? 0.6 : 1,
+                          }]}
+                        >
+                          <Icon name="play" size={13} color={colors.primaryForeground} />
+                          <Text style={[s.formSubmitText, { color: colors.primaryForeground }]}>
+                            {createActivityMutation.isPending ? 'Launching…' : 'Launch for everyone'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    {(engagement?.activities.length ?? 0) === 0 ? (
+                      <View style={[s.activityEmptyCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                        <View style={[s.activityEmptyIcon, { backgroundColor: `${colors.primary}12` }]}>
+                          <Icon name="layers" size={17} color={colors.primary} />
+                        </View>
+                        <Text style={[s.activityEmptyText, { color: colors.mutedForeground }]}>
+                          {isOwner ? 'Launch a prompt or share a resource to guide the next part of the session.' : 'The guide has not launched an activity yet.'}
+                        </Text>
+                      </View>
+                    ) : engagement?.activities.map(activity => {
+                      const isActiveActivity = activity.status === 'active' && live;
+                      const responseDraft = activityResponseDrafts[activity.id] ?? activity.myResponse ?? '';
+                      return (
+                        <View key={activity.id} style={[s.activityCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                          <View style={s.activityTopline}>
+                            <View style={[s.activityTypePill, { backgroundColor: `${colors.primary}12` }]}>
+                              <Icon
+                                name={activity.kind === 'resource' ? 'link' : activity.kind === 'reflection' ? 'feather' : 'zap'}
+                                size={12}
+                                color={colors.primary}
+                              />
+                              <Text style={[s.activityTypeText, { color: colors.primary }]}>
+                                {activity.kind === 'resource' ? 'RESOURCE' : activity.kind === 'reflection' ? 'REFLECTION' : 'ACTIVITY'}
+                              </Text>
+                            </View>
+                            <View style={[s.activityStatusPill, { backgroundColor: isActiveActivity ? `${colors.tint}18` : `${colors.mutedForeground}14` }]}>
+                              <View style={[s.activityStatusDot, { backgroundColor: isActiveActivity ? colors.tint : colors.mutedForeground }]} />
+                              <Text style={[s.activityStatusText, { color: isActiveActivity ? colors.tint : colors.mutedForeground }]}>
+                                {isActiveActivity ? 'LIVE' : 'DONE'}
+                              </Text>
+                            </View>
+                          </View>
+                          <Text style={[s.activityTitle, { color: colors.foreground }]}>{activity.title}</Text>
+                          <Text style={[s.activityPrompt, { color: colors.mutedForeground }]}>{activity.prompt}</Text>
+                          {!!activity.resourceUrl && (
+                            <TouchableOpacity
+                              onPress={() => void Linking.openURL(activity.resourceUrl!).catch(() => Alert.alert('Could not open link', 'Check the link and try again.'))}
+                              style={[s.activityResourceButton, { borderColor: colors.border }]}
+                            >
+                              <Icon name="link" size={13} color={colors.primary} />
+                              <Text style={[s.activityResourceText, { color: colors.primary }]} numberOfLines={1}>Open resource</Text>
+                              <Icon name="arrow-right" size={13} color={colors.primary} />
+                            </TouchableOpacity>
+                          )}
+                          {isOwner ? (
+                            <>
+                              <View style={[s.activityResponseSummary, { borderTopColor: colors.border }]}>
+                                <Icon name="users" size={13} color={colors.primary} />
+                                <Text style={[s.activityResponseSummaryText, { color: colors.mutedForeground }]}>
+                                  {activity.responseCount} {activity.responseCount === 1 ? 'response' : 'responses'}
+                                </Text>
+                                {isActiveActivity && (
+                                  <TouchableOpacity
+                                    disabled={closeActivityMutation.isPending}
+                                    onPress={() => closeActivityMutation.mutate(
+                                      { sessionId: session.id, activityId: activity.id },
+                                      { onError: error => Alert.alert('Could not finish activity', error.message) },
+                                    )}
+                                    style={[s.activityCloseButton, { borderColor: colors.border }]}
+                                  >
+                                    <Text style={[s.activityCloseText, { color: colors.primary }]}>Finish</Text>
+                                  </TouchableOpacity>
+                                )}
+                              </View>
+                              {activity.responses.map((response, index) => (
+                                <View key={`${activity.id}-${response.userId}`} style={[s.activityResponseRow, { borderTopColor: colors.border }]}>
+                                  <View style={[s.activityResponseIndex, { backgroundColor: `${colors.primary}12` }]}>
+                                    <Text style={[s.activityResponseIndexText, { color: colors.primary }]}>{index + 1}</Text>
+                                  </View>
+                                  <View style={{ flex: 1 }}>
+                                    <Text style={[s.activityResponseName, { color: colors.foreground }]}>{response.displayName ?? 'Participant'}</Text>
+                                    <Text style={[s.activityResponseText, { color: colors.mutedForeground }]}>{response.response}</Text>
+                                  </View>
+                                </View>
+                              ))}
+                            </>
+                          ) : session.isJoined && activity.myResponse && !isActiveActivity ? (
+                            <View style={[s.myActivityResponse, { backgroundColor: `${colors.tint}12` }]}>
+                              <Icon name="check-circle" size={14} color={colors.tint} />
+                              <Text style={[s.myActivityResponseText, { color: colors.foreground }]}>{activity.myResponse}</Text>
+                            </View>
+                          ) : null}
+                          {isActiveActivity && session.isJoined && !isOwner && (
+                            <View style={s.activityReply}>
+                              <TextInput
+                                value={responseDraft}
+                                onChangeText={value => setActivityResponseDrafts(current => ({ ...current, [activity.id]: value }))}
+                                placeholder={activity.kind === 'reflection' ? 'Share a thought with the guide…' : 'Write your response…'}
+                                placeholderTextColor={colors.mutedForeground}
+                                style={[s.engagementInput, s.activityReplyInput, { color: colors.foreground, borderColor: colors.border }]}
+                                multiline
+                                maxLength={1000}
+                              />
+                              <TouchableOpacity
+                                disabled={respondToActivityMutation.isPending || responseDraft.trim().length < 2}
+                                onPress={() => respondToActivityMutation.mutate({
+                                  sessionId: session.id,
+                                  activityId: activity.id,
+                                  data: { response: responseDraft.trim() },
+                                }, {
+                                  onSuccess: () => {
+                                    setActivityResponseDrafts(current => {
+                                      const next = { ...current };
+                                      delete next[activity.id];
+                                      return next;
+                                    });
+                                  },
+                                  onError: error => Alert.alert('Could not send response', error.message),
+                                })}
+                                style={[s.activitySendButton, { backgroundColor: colors.primary, opacity: respondToActivityMutation.isPending ? 0.6 : 1 }]}
+                              >
+                                <Icon name="send" size={13} color={colors.primaryForeground} />
+                                <Text style={[s.activitySendText, { color: colors.primaryForeground }]}>
+                                  {respondToActivityMutation.isPending ? 'Sending…' : activity.myResponse ? 'Update' : 'Send'}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </>
+                )}
+              </View>
               {live && session.isJoined && !isOwner && (
                 <View style={[s.engagementForm, { backgroundColor: colors.background, borderColor: colors.border }]}>
                   <Text style={[s.formLabel, { color: colors.foreground }]}>Ask the guide</Text>
@@ -460,6 +708,25 @@ export default function GuideSessionScreen() {
                         </View>
                       ) : (
                         <Text style={[s.pollFootnote, { color: colors.mutedForeground }]}>Waiting for the guide’s answer</Text>
+                      )}
+                      {live && session.isJoined && !isOwner && !question.isMine && engagement?.questionVotingReady && (
+                        <TouchableOpacity
+                          disabled={voteQuestionMutation.isPending}
+                          onPress={() => voteQuestionMutation.mutate({
+                            sessionId: session.id,
+                            questionId: question.id,
+                            data: { voted: !question.myUpvoted },
+                          }, { onError: error => Alert.alert('Could not update vote', error.message) })}
+                          style={[s.questionVoteButton, {
+                            backgroundColor: question.myUpvoted ? `${colors.primary}16` : colors.card,
+                            borderColor: question.myUpvoted ? colors.primary : colors.border,
+                          }]}
+                        >
+                          <Icon name="arrow-up" size={13} color={colors.primary} />
+                          <Text style={[s.questionVoteText, { color: colors.primary }]}>
+                            Helpful · {question.upvoteCount ?? 0}
+                          </Text>
+                        </TouchableOpacity>
                       )}
                     </View>
                   ))}
@@ -668,6 +935,12 @@ const s = StyleSheet.create({
   liveDot: { width: 6, height: 6, borderRadius: 3 },
   liveBadgeText: { fontFamily: 'Satoshi-Bold', fontSize: 9, letterSpacing: 0.6 },
   engagementSection: { marginTop: 15 },
+  activitySectionHeading: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 9 },
+  activitySectionCopy: { fontFamily: 'Satoshi-Regular', fontSize: 10, lineHeight: 14, marginTop: 3 },
+  activityCountPill: { minWidth: 27, height: 25, borderRadius: 13, paddingHorizontal: 7, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
+  activityCountText: { fontFamily: 'Satoshi-Bold', fontSize: 10 },
+  schemaNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderWidth: 1, borderRadius: 12, padding: 10, marginTop: 7 },
+  schemaNoticeText: { flex: 1, fontFamily: 'Satoshi-Regular', fontSize: 10, lineHeight: 15 },
   engagementForm: { marginTop: 11, borderWidth: 1, borderRadius: 13, padding: 11, gap: 8 },
   formLabel: { fontFamily: 'Satoshi-Bold', fontSize: 12 },
   engagementInput: { minHeight: 40, borderWidth: 1, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 8, fontFamily: 'Satoshi-Regular', fontSize: 12 },
@@ -685,9 +958,44 @@ const s = StyleSheet.create({
   pollOptionText: { flex: 1, fontFamily: 'Satoshi-Medium', fontSize: 11 },
   pollCount: { fontFamily: 'Satoshi-Bold', fontSize: 10 },
   pollFootnote: { fontFamily: 'Satoshi-Regular', fontSize: 10, marginTop: 7 },
+  activityKindRow: { flexDirection: 'row', gap: 6 },
+  activityKindButton: { minHeight: 34, flex: 1, borderWidth: 1, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingHorizontal: 5 },
+  activityKindText: { fontFamily: 'Satoshi-Bold', fontSize: 9 },
+  activityLaunch: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  activityEmptyCard: { minHeight: 62, borderWidth: 1, borderRadius: 13, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
+  activityEmptyIcon: { width: 34, height: 34, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  activityEmptyText: { flex: 1, fontFamily: 'Satoshi-Regular', fontSize: 10, lineHeight: 15 },
+  activityCard: { borderWidth: 1, borderRadius: 14, padding: 11, marginTop: 8 },
+  activityTopline: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  activityTypePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10 },
+  activityTypeText: { fontFamily: 'Satoshi-Bold', fontSize: 8, letterSpacing: 0.6 },
+  activityStatusPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 10 },
+  activityStatusDot: { width: 5, height: 5, borderRadius: 3 },
+  activityStatusText: { fontFamily: 'Satoshi-Bold', fontSize: 8, letterSpacing: 0.4 },
+  activityTitle: { fontFamily: 'Satoshi-Bold', fontSize: 14, lineHeight: 19, marginTop: 8 },
+  activityPrompt: { fontFamily: 'Satoshi-Regular', fontSize: 11, lineHeight: 16, marginTop: 4 },
+  activityResourceButton: { alignSelf: 'flex-start', minHeight: 32, maxWidth: '100%', borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, marginTop: 9, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  activityResourceText: { flexShrink: 1, fontFamily: 'Satoshi-Bold', fontSize: 10 },
+  activityResponseSummary: { flexDirection: 'row', alignItems: 'center', gap: 6, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 9, marginTop: 10 },
+  activityResponseSummaryText: { flex: 1, fontFamily: 'Satoshi-Medium', fontSize: 10 },
+  activityCloseButton: { minHeight: 28, borderWidth: 1, borderRadius: 9, justifyContent: 'center', paddingHorizontal: 9 },
+  activityCloseText: { fontFamily: 'Satoshi-Bold', fontSize: 9 },
+  activityResponseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 8, marginTop: 8 },
+  activityResponseIndex: { width: 21, height: 21, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  activityResponseIndexText: { fontFamily: 'Satoshi-Bold', fontSize: 9 },
+  activityResponseName: { fontFamily: 'Satoshi-Bold', fontSize: 10 },
+  activityResponseText: { fontFamily: 'Satoshi-Regular', fontSize: 10, lineHeight: 15, marginTop: 2 },
+  myActivityResponse: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, borderRadius: 10, padding: 9, marginTop: 9 },
+  myActivityResponseText: { flex: 1, fontFamily: 'Satoshi-Medium', fontSize: 10, lineHeight: 15 },
+  activityReply: { marginTop: 9, gap: 7 },
+  activityReplyInput: { minHeight: 56 },
+  activitySendButton: { alignSelf: 'flex-end', minHeight: 33, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 11 },
+  activitySendText: { fontFamily: 'Satoshi-Bold', fontSize: 10 },
   engagementEmptyCard: { borderRadius: 12, padding: 10 },
   engagementEmpty: { fontFamily: 'Satoshi-Regular', fontSize: 11, lineHeight: 16, paddingVertical: 6 },
   questionCard: { borderWidth: 1, borderRadius: 13, padding: 11, marginTop: 8 },
+  questionVoteButton: { alignSelf: 'flex-start', minHeight: 29, flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 9, paddingHorizontal: 9, marginTop: 9 },
+  questionVoteText: { fontFamily: 'Satoshi-Bold', fontSize: 9 },
   questionByline: { fontFamily: 'Satoshi-Bold', fontSize: 10, marginBottom: 4 },
   questionContent: { fontFamily: 'Satoshi-Medium', fontSize: 12, lineHeight: 18 },
   answerCard: { borderRadius: 10, padding: 9, marginTop: 9 },
