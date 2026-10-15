@@ -3,6 +3,11 @@
  * the app translation resource when integrating this module.
  */
 const en = {
+  sessionCover: 'Session artwork', sessionCoverHint: 'Set the scene before players arrive',
+  addCover: 'Add a cover image', changeCover: 'Change image', removeCover: 'Remove image', coverOptional: 'Optional · shown on your public session card',
+  coverPermission: 'Allow photo library access to choose a cover image.', coverPickError: 'Could not open your photo library. Try again.',
+  coverSaveError: 'Could not save the session cover. Your details are still here.',
+  upcomingSession: 'Upcoming session', attendingCount: '{{count}} interested',
   updating: 'Updating', tabGuides: 'Guides', tabBooks: 'Books', tabPeople: 'People',
   libraryTitle: 'Storigam Library', librarySubtitle: 'Explore serialised stories from writers in the community',
   noBooks: 'No books yet', firstBook: 'Be the first to publish a book series in Storigam',
@@ -44,6 +49,11 @@ const en = {
 };
 
 const ja = {
+  sessionCover: 'セッション画像', sessionCoverHint: '参加者を迎える場面を設定',
+  addCover: 'カバー画像を追加', changeCover: '画像を変更', removeCover: '画像を削除', coverOptional: '任意・公開セッションカードに表示',
+  coverPermission: 'カバー画像を選ぶには写真ライブラリへのアクセスを許可してください。', coverPickError: '写真ライブラリを開けませんでした。もう一度お試しください。',
+  coverSaveError: 'カバー画像を保存できませんでした。入力内容は保持されています。',
+  upcomingSession: '開催予定のセッション', attendingCount: '{{count}}人が関心あり',
   updating: '更新中', tabGuides: 'ガイド', tabBooks: '本', tabPeople: '人々',
   libraryTitle: 'Storigamライブラリ', librarySubtitle: 'コミュニティの作家による連載ストーリーを見つけよう',
   noBooks: '本はまだありません', firstBook: '最初のシリーズをStorigamで公開しましょう',
@@ -83,6 +93,11 @@ const ja = {
 };
 
 const es = {
+  sessionCover: 'Imagen de la sesión', sessionCoverHint: 'Prepara el ambiente para quienes llegan',
+  addCover: 'Añadir imagen de portada', changeCover: 'Cambiar imagen', removeCover: 'Quitar imagen', coverOptional: 'Opcional · visible en la sesión pública',
+  coverPermission: 'Permite el acceso a tus fotos para elegir una portada.', coverPickError: 'No se pudo abrir la biblioteca de fotos. Inténtalo de nuevo.',
+  coverSaveError: 'No se pudo guardar la portada. Tus datos siguen aquí.',
+  upcomingSession: 'Próxima sesión', attendingCount: '{{count}} personas interesadas',
   updating: 'Actualizando', tabGuides: 'Guías', tabBooks: 'Libros', tabPeople: 'Personas',
   libraryTitle: 'Biblioteca Storigam', librarySubtitle: 'Explora historias por entregas de escritores de la comunidad',
   noBooks: 'Aún no hay libros', firstBook: 'Sé la primera persona en publicar una serie en Storigam',
@@ -123,6 +138,11 @@ const es = {
 };
 
 const tr = {
+  sessionCover: 'Oturum görseli', sessionCoverHint: 'Katılımcılar gelmeden ortamı hazırla',
+  addCover: 'Kapak görseli ekle', changeCover: 'Görseli değiştir', removeCover: 'Görseli kaldır', coverOptional: 'İsteğe bağlı · herkese açık oturum kartında görünür',
+  coverPermission: 'Kapak seçmek için fotoğraf kitaplığı erişimine izin ver.', coverPickError: 'Fotoğraf kitaplığı açılamadı. Yeniden dene.',
+  coverSaveError: 'Oturum kapağı kaydedilemedi. Bilgilerin burada duruyor.',
+  upcomingSession: 'Yaklaşan oturum', attendingCount: '{{count}} kişi ilgileniyor',
   updating: 'Güncelleniyor', tabGuides: 'Rehberler', tabBooks: 'Kitaplar', tabPeople: 'Kişiler',
   libraryTitle: 'Storigam Kütüphanesi', noBooks: 'Henüz kitap yok', firstBook: 'Storigam’da ilk kitap serisini yayımlayan sen ol',
   guidesTitle: 'Oyun Rehberleri', allTopics: 'Tüm konular', availableNow: 'Şu an uygun', allGuides: 'Tüm rehberler',
@@ -165,6 +185,11 @@ const tr = {
   topic8: 'Hayaller ve Hedefler', topic9: 'Yas', topic10: 'Sosyal Beceriler', topic11: 'Farkındalık',
 };
 const fr = {
+  sessionCover: 'Visuel de la session', sessionCoverHint: 'Donnez le ton avant l’arrivée des joueurs',
+  addCover: 'Ajouter une image de couverture', changeCover: 'Changer l’image', removeCover: 'Retirer l’image', coverOptional: 'Facultatif · visible sur la session publique',
+  coverPermission: 'Autorisez l’accès à vos photos pour choisir une couverture.', coverPickError: 'Impossible d’ouvrir la photothèque. Réessayez.',
+  coverSaveError: 'Impossible d’enregistrer la couverture. Vos informations sont conservées.',
+  upcomingSession: 'Session à venir', attendingCount: '{{count}} personnes intéressées',
   updating: 'Mise à jour', tabGuides: 'Accompagnants', tabBooks: 'Livres', tabPeople: 'Personnes',
   libraryTitle: 'Bibliothèque Storigam', noBooks: 'Pas encore de livres', firstBook: 'Soyez la première personne à publier une série sur Storigam',
   guidesTitle: 'Guides de jeu', allTopics: 'Tous les thèmes', availableNow: 'Disponible maintenant', allGuides: 'Tous les guides',
@@ -208,6 +233,11 @@ const fr = {
   topic8: 'Rêves et objectifs', topic9: 'Deuil', topic10: 'Compétences sociales', topic11: 'Pleine conscience',
 };
 const de = {
+  sessionCover: 'Sessionbild', sessionCoverHint: 'Schaffe die passende Stimmung für deine Gäste',
+  addCover: 'Titelbild hinzufügen', changeCover: 'Bild ändern', removeCover: 'Bild entfernen', coverOptional: 'Optional · auf deiner öffentlichen Session sichtbar',
+  coverPermission: 'Erlaube den Zugriff auf deine Fotomediathek, um ein Titelbild auszuwählen.', coverPickError: 'Die Fotomediathek ließ sich nicht öffnen. Bitte erneut versuchen.',
+  coverSaveError: 'Das Sessionbild konnte nicht gespeichert werden. Deine Angaben sind weiterhin vorhanden.',
+  upcomingSession: 'Bevorstehende Session', attendingCount: '{{count}} Interessierte',
   updating: 'Wird aktualisiert', tabGuides: 'Begleiter', tabBooks: 'Bücher', tabPeople: 'Personen',
   libraryTitle: 'Storigam-Bibliothek', noBooks: 'Noch keine Bücher', firstBook: 'Veröffentliche als Erste:r eine Buchreihe auf Storigam',
   guidesTitle: 'Spiele-Guides', allTopics: 'Alle Themen', availableNow: 'Jetzt verfügbar', allGuides: 'Alle Guides',
@@ -251,6 +281,11 @@ const de = {
   topic8: 'Träume & Ziele', topic9: 'Trauer', topic10: 'Soziale Fähigkeiten', topic11: 'Achtsamkeit',
 };
 const pt = {
+  sessionCover: 'Imagem da sessão', sessionCoverHint: 'Prepare o cenário para quem está chegando',
+  addCover: 'Adicionar imagem de capa', changeCover: 'Trocar imagem', removeCover: 'Remover imagem', coverOptional: 'Opcional · aparece na sessão pública',
+  coverPermission: 'Permita o acesso à biblioteca de fotos para escolher uma capa.', coverPickError: 'Não foi possível abrir a biblioteca de fotos. Tente novamente.',
+  coverSaveError: 'Não foi possível salvar a capa. Seus dados continuam aqui.',
+  upcomingSession: 'Próxima sessão', attendingCount: '{{count}} pessoas interessadas',
   updating: 'Atualizando', tabGuides: 'Guias', tabBooks: 'Livros', tabPeople: 'Pessoas',
   libraryTitle: 'Biblioteca Storigam', noBooks: 'Ainda não há livros', firstBook: 'Seja a primeira pessoa a publicar uma série no Storigam',
   guidesTitle: 'Guias de jogo', allTopics: 'Todos os temas', availableNow: 'Disponível agora', allGuides: 'Todos os guias',
@@ -294,6 +329,11 @@ const pt = {
   topic8: 'Sonhos e objetivos', topic9: 'Luto', topic10: 'Habilidades sociais', topic11: 'Atenção plena',
 };
 const ko = {
+  sessionCover: '세션 이미지', sessionCoverHint: '플레이어를 맞이할 분위기를 설정해 보세요',
+  addCover: '커버 이미지 추가', changeCover: '이미지 변경', removeCover: '이미지 삭제', coverOptional: '선택 사항 · 공개 세션 카드에 표시됩니다',
+  coverPermission: '커버 이미지를 선택하려면 사진 보관함 접근을 허용해 주세요.', coverPickError: '사진 보관함을 열지 못했어요. 다시 시도해 주세요.',
+  coverSaveError: '세션 커버를 저장하지 못했어요. 입력한 내용은 그대로 유지됩니다.',
+  upcomingSession: '예정된 세션', attendingCount: '{{count}}명 관심',
   updating: '업데이트 중', tabGuides: '가이드', tabBooks: '책', tabPeople: '사람',
   libraryTitle: 'Storigam 라이브러리', noBooks: '아직 책이 없습니다', firstBook: 'Storigam에서 첫 번째 시리즈를 출간해 보세요',
   guidesTitle: '게임 가이드', allTopics: '모든 주제', availableNow: '지금 이용 가능', allGuides: '모든 가이드',
@@ -336,6 +376,11 @@ const ko = {
   topic8: '꿈과 목표', topic9: '슬픔', topic10: '사회성', topic11: '마음챙김',
 };
 const zh = {
+  sessionCover: '活动封面', sessionCoverHint: '为即将到来的玩家营造氛围',
+  addCover: '添加封面图片', changeCover: '更换图片', removeCover: '移除图片', coverOptional: '可选 · 显示在公开活动卡片上',
+  coverPermission: '请允许访问照片图库以选择封面。', coverPickError: '无法打开照片图库，请重试。',
+  coverSaveError: '无法保存活动封面。你填写的内容仍然保留。',
+  upcomingSession: '即将开始', attendingCount: '{{count}} 人感兴趣',
   updating: '正在更新', tabGuides: '向导', tabBooks: '书籍', tabPeople: '人物',
   libraryTitle: 'Storigam 图书馆', noBooks: '暂无书籍', firstBook: '成为第一个在 Storigam 发布系列作品的人',
   guidesTitle: '游戏向导', allTopics: '所有主题', availableNow: '现在有空', allGuides: '所有向导',
@@ -378,6 +423,11 @@ const zh = {
   topic8: '梦想与目标', topic9: '悲伤', topic10: '社交技能', topic11: '正念',
 };
 const ru = {
+  sessionCover: 'Обложка встречи', sessionCoverHint: 'Создайте настроение для гостей',
+  addCover: 'Добавить обложку', changeCover: 'Изменить изображение', removeCover: 'Удалить изображение', coverOptional: 'Необязательно · видно в открытой встрече',
+  coverPermission: 'Разрешите доступ к фото, чтобы выбрать обложку.', coverPickError: 'Не удалось открыть фототеку. Попробуйте ещё раз.',
+  coverSaveError: 'Не удалось сохранить обложку. Данные формы сохранены.',
+  upcomingSession: 'Предстоящая встреча', attendingCount: '{{count}} заинтересованы',
   updating: 'Обновление', tabGuides: 'Гиды', tabBooks: 'Книги', tabPeople: 'Люди',
   libraryTitle: 'Библиотека Storigam', noBooks: 'Книг пока нет', firstBook: 'Станьте первым автором серии в Storigam',
   guidesTitle: 'Игровые проводники', allTopics: 'Все темы', availableNow: 'Сейчас доступны', allGuides: 'Все гиды',
@@ -421,6 +471,11 @@ const ru = {
   topic8: 'Мечты и цели', topic9: 'Горе', topic10: 'Навыки общения', topic11: 'Осознанность',
 };
 const ar = {
+  sessionCover: 'صورة الجلسة', sessionCoverHint: 'هيّئ الأجواء قبل وصول اللاعبين',
+  addCover: 'إضافة صورة غلاف', changeCover: 'تغيير الصورة', removeCover: 'إزالة الصورة', coverOptional: 'اختياري · تظهر في بطاقة الجلسة العامة',
+  coverPermission: 'اسمح بالوصول إلى مكتبة الصور لاختيار غلاف.', coverPickError: 'تعذر فتح مكتبة الصور. حاول مرة أخرى.',
+  coverSaveError: 'تعذر حفظ غلاف الجلسة. ما أدخلته ما زال محفوظًا.',
+  upcomingSession: 'جلسة قادمة', attendingCount: '{{count}} مهتم',
   updating: 'جارٍ التحديث', tabGuides: 'المرشدون', tabBooks: 'الكتب', tabPeople: 'الأشخاص',
   libraryTitle: 'مكتبة Storigam', noBooks: 'لا توجد كتب بعد', firstBook: 'كن أول من ينشر سلسلة كتب في Storigam',
   guidesTitle: 'مرشدو الألعاب', allTopics: 'كل المواضيع', availableNow: 'متاح الآن', allGuides: 'كل المرشدين',
@@ -464,6 +519,11 @@ const ar = {
   topic8: 'الأحلام والأهداف', topic9: 'الحزن', topic10: 'المهارات الاجتماعية', topic11: 'اليقظة الذهنية',
 };
 const it = {
+  sessionCover: 'Immagine della sessione', sessionCoverHint: 'Crea l’atmosfera prima dell’arrivo dei giocatori',
+  addCover: 'Aggiungi immagine di copertina', changeCover: 'Cambia immagine', removeCover: 'Rimuovi immagine', coverOptional: 'Facoltativa · visibile nella sessione pubblica',
+  coverPermission: 'Consenti l’accesso alle foto per scegliere una copertina.', coverPickError: 'Impossibile aprire la libreria foto. Riprova.',
+  coverSaveError: 'Impossibile salvare la copertina. I dati inseriti sono ancora disponibili.',
+  upcomingSession: 'Prossima sessione', attendingCount: '{{count}} persone interessate',
   updating: 'Aggiornamento', tabGuides: 'Guide', tabBooks: 'Libri', tabPeople: 'Persone',
   libraryTitle: 'Biblioteca Storigam', noBooks: 'Ancora nessun libro', firstBook: 'Pubblica per primo una serie su Storigam',
   guidesTitle: 'Guide di gioco', allTopics: 'Tutti gli argomenti', availableNow: 'Disponibile ora', allGuides: 'Tutte le guide',

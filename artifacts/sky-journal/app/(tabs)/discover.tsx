@@ -5,6 +5,7 @@ import { useColors } from '@/hooks/useColors';
 import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
+import { UI } from '@/constants/uiTokens';
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,9 +29,9 @@ const TABS = ['Guides', 'Books', 'People'] as const;
 type TabType = (typeof TABS)[number];
 
 const TAB_ICONS: Record<TabType, string> = {
-  Guides:  '★',
-  Books:   '◎',
-  People:  '◉',
+  Guides:  'star',
+  Books:   'book-open',
+  People:  'users',
 };
 
 const GUIDE_TOPICS = [
@@ -102,6 +103,10 @@ interface GuideSessionPreview {
   title: string;
   description: string;
   startsAt: string;
+  endsAt: string;
+  coverImageUri: string | null;
+  attendeeCount: number;
+  isJoined: boolean;
 }
 
 export default function DiscoverScreen() {
@@ -132,7 +137,10 @@ export default function DiscoverScreen() {
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
   const contentMaxWidth = viewportWidth >= 760 ? 760 : undefined;
-  const guideIdsWithSessions = new Set(guideSessions.map(session => session.guideId));
+  const upcomingSessions = guideSessions
+    .filter(session => new Date(session.endsAt).getTime() > Date.now())
+    .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
+  const guideIdsWithSessions = new Set(upcomingSessions.map(session => session.guideId));
   const guidesWithSessions = guidesData.filter(guide => guideIdsWithSessions.has(guide.userId));
 
   function selectTab(tab: TabType) {
@@ -302,9 +310,11 @@ export default function DiscoverScreen() {
                 ]}
                 activeOpacity={0.75}
               >
-                <Text style={[styles.tabIcon, { color: active ? '#C8B0FF' : 'rgba(200,184,232,0.40)' }]}>
-                  {TAB_ICONS[tab]}
-                </Text>
+                <Icon
+                  name={TAB_ICONS[tab]}
+                  size={16}
+                  color={active ? '#C8B0FF' : 'rgba(200,184,232,0.55)'}
+                />
                 <Text style={[
                   styles.tabText,
                   { color: active ? '#F2ECFF' : 'rgba(237,232,255,0.82)' },
@@ -453,6 +463,14 @@ export default function DiscoverScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[{ paddingBottom: bottomPad }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={guidesLoading && guidesData.length > 0}
+              onRefresh={() => { guidesLoaded.current = true; loadGuides(); }}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
           {/* Header banner */}
           <LinearGradient
@@ -522,8 +540,11 @@ export default function DiscoverScreen() {
 
           {/* Error */}
           {!!guidesError && (
-            <View style={{ marginHorizontal: 16, marginBottom: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(180,60,60,0.12)', borderWidth: 1, borderColor: 'rgba(180,60,60,0.25)' }}>
+            <View style={{ marginHorizontal: 16, marginBottom: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(180,60,60,0.12)', borderWidth: 1, borderColor: 'rgba(180,60,60,0.25)', alignItems: 'center', gap: 8 }}>
               <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#E06C75', textAlign: 'center' }}>{guidesError}</Text>
+              <TouchableOpacity onPress={() => loadGuides()} style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
+                <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Bold', color: colors.tint }}>{t('discoverLog.retry')}</Text>
+              </TouchableOpacity>
             </View>
           )}
 
@@ -557,30 +578,29 @@ export default function DiscoverScreen() {
             <View style={{ paddingHorizontal: 16, gap: 12, paddingTop: 8 }}>
               {guidesWithSessions.map(g => {
                 const isFollowing = followingIds.includes(g.userId) || g.isFollowing;
-                const nextSession = guideSessions.find(session => session.guideId === g.userId);
+                const nextSession = upcomingSessions.find(session => session.guideId === g.userId);
                 return (
-                  <TouchableOpacity
+                  <View
                     key={g.userId}
                     style={[styles.guideCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: g.userId } } as any)}
-                    activeOpacity={0.88}
                   >
-                    {/* Avatar */}
-                    <View style={styles.guideCardAvatar}>
-                      {g.avatarUri ? (
-                        <Image source={{ uri: g.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
-                      ) : (
-                        <LinearGradient colors={['rgba(120,70,255,0.55)', 'rgba(60,140,240,0.40)']} style={StyleSheet.absoluteFill} />
-                      )}
-                      {!g.avatarUri && (
-                        <Text style={styles.guideCardInitial}>{g.name.charAt(0).toUpperCase()}</Text>
-                      )}
-                      <View style={[styles.guideCardAvailDot, { backgroundColor: g.isAvailableNow ? '#60D890' : '#808090', borderColor: colors.card }]} />
-                    </View>
-
-                    {/* Info */}
-                     <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                    <View style={styles.guideCardTop}>
+                      <TouchableOpacity
+                        style={styles.guideProfileArea}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        onPress={() => router.push({ pathname: '/guide/[userId]', params: { userId: g.userId } } as any)}
+                        activeOpacity={0.82}
+                      >
+                        <View style={styles.guideCardAvatar}>
+                          {g.avatarUri ? (
+                            <Image source={{ uri: g.avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                          ) : (
+                            <LinearGradient colors={['rgba(120,70,255,0.55)', 'rgba(60,140,240,0.40)']} style={StyleSheet.absoluteFill} />
+                          )}
+                          {!g.avatarUri && <Text style={styles.guideCardInitial}>{g.name.charAt(0).toUpperCase()}</Text>}
+                          <View style={[styles.guideCardAvailDot, { backgroundColor: g.isAvailableNow ? '#60D890' : '#808090', borderColor: colors.card }]} />
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 }}>
                         <Text style={[styles.guideCardName, { color: colors.foreground }]} numberOfLines={1}>{g.name}</Text>
                         {g.isAvailableNow && (
@@ -595,18 +615,6 @@ export default function DiscoverScreen() {
                       {!!g.guideBio && (
                         <Text style={[styles.guideCardBio, { color: colors.mutedForeground }]} numberOfLines={2}>{g.guideBio}</Text>
                       )}
-                       {nextSession && (
-                          <View style={[styles.guideSessionPreview, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                            <Text style={[styles.guideSessionTitle, { color: colors.foreground }]} numberOfLines={1}>{nextSession.title}</Text>
-                            <Text style={[styles.guideSessionDescription, { color: colors.mutedForeground }]} numberOfLines={2}>{nextSession.description}</Text>
-                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <Icon name="clock" size={11} color={colors.tint} />
-                              <Text style={[styles.guideSessionTime, { color: colors.tint }]}>
-                                {new Date(nextSession.startsAt).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}
-                             </Text>
-                           </View>
-                         </View>
-                       )}
                       {g.guideTopics.length > 0 && (
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 2 }}>
                           {g.guideTopics.slice(0, 3).map(topic => {
@@ -622,25 +630,52 @@ export default function DiscoverScreen() {
                           )}
                         </View>
                       )}
-                    </View>
+                        </View>
+                      </TouchableOpacity>
 
-                    {/* Follow button */}
-                    <TouchableOpacity
-                      style={[
-                        styles.followBtn,
-                        isFollowing
+                      <TouchableOpacity
+                        style={[
+                          styles.followBtn,
+                          isFollowing
                             ? { backgroundColor: `${colors.tint}18`, borderColor: `${colors.tint}55` }
                             : { backgroundColor: colors.tint, borderColor: colors.tint },
-                      ]}
-                      onPress={() => handleGuideFollow(g)}
-                      activeOpacity={0.8}
-                    >
-                      <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={13} color={isFollowing ? colors.tint : colors.primaryForeground} />
-                      <Text style={[styles.followBtnText, { color: isFollowing ? colors.tint : colors.primaryForeground }]}>
-                        {isFollowing ? t('discoverLog.following') : t('discoverLog.follow')}
-                      </Text>
-                    </TouchableOpacity>
-                  </TouchableOpacity>
+                        ]}
+                        onPress={() => handleGuideFollow(g)}
+                        activeOpacity={0.8}
+                      >
+                        <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={13} color={isFollowing ? colors.tint : colors.primaryForeground} />
+                        <Text style={[styles.followBtnText, { color: isFollowing ? colors.tint : colors.primaryForeground }]}>
+                          {isFollowing ? t('discoverLog.following') : t('discoverLog.follow')}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                    {nextSession && (
+                      <TouchableOpacity
+                        style={styles.sessionCoverCard}
+                        activeOpacity={0.9}
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        onPress={() => router.push({ pathname: '/guide-session/[sessionId]', params: { sessionId: nextSession.id } } as any)}
+                      >
+                        {nextSession.coverImageUri ? (
+                          <Image source={{ uri: nextSession.coverImageUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                        ) : (
+                          <LinearGradient colors={['#4a3978', '#8a6caa', '#d8a88d']} style={StyleSheet.absoluteFill} />
+                        )}
+                        <LinearGradient colors={['rgba(24,17,42,0.82)', 'rgba(24,17,42,0.36)', 'rgba(24,17,42,0.2)']} style={StyleSheet.absoluteFill} />
+                        <View style={styles.sessionCoverContent}>
+                          <View style={styles.sessionEyebrow}><Icon name="radio" size={11} color="#F0D59B" /><Text style={styles.sessionEyebrowText}>{t('discoverLog.upcomingSession')}</Text></View>
+                          <Text style={styles.sessionCoverTitle} numberOfLines={2}>{nextSession.title}</Text>
+                          <Text style={styles.sessionCoverDescription} numberOfLines={2}>{nextSession.description}</Text>
+                          <View style={styles.sessionCoverMeta}>
+                            <Icon name="calendar" size={13} color="#F5D99D" />
+                            <Text style={styles.sessionCoverMetaText}>{new Date(nextSession.startsAt).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</Text>
+                            <View style={styles.sessionAttendees}><Icon name="users" size={13} color="#F5D99D" /><Text style={styles.sessionCoverMetaText}>{t('discoverLog.attendingCount', { count: nextSession.attendeeCount })}</Text></View>
+                          </View>
+                        </View>
+                        <View style={styles.sessionArrow}><Icon name="chevron-right" size={19} color="#2E2140" /></View>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 );
               })}
             </View>
@@ -825,15 +860,15 @@ const styles = StyleSheet.create({
   },
   headerText:  { flex: 1, minWidth: 0, gap: 3 },
   headerTitle: {
-    fontSize: 22, fontFamily: 'Satoshi-Bold',
+    fontSize: UI.type.screenTitle, fontFamily: 'Satoshi-Bold',
     letterSpacing: -0.6, color: '#EDE8FF',
   },
   headerSub: {
-    fontSize: 12, fontFamily: 'Satoshi-Regular',
-    color: 'rgba(210,196,240,0.55)', fontStyle: 'italic',
+    fontSize: UI.type.supporting, fontFamily: 'Satoshi-Regular',
+    color: 'rgba(210,196,240,0.72)', lineHeight: 19,
   },
   usersBtn: {
-    width: 40, height: 40, borderRadius: 13,
+    width: UI.minTapTarget, height: UI.minTapTarget, borderRadius: UI.radius.control,
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(155,120,255,0.14)',
     borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)',
@@ -846,19 +881,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingBottom: 12,
     paddingRight: 12,
-    gap: 6,
+    gap: UI.space.sm,
     alignItems: 'center',
   },
   tabPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 11, paddingVertical: 6,
-    borderRadius: 18, borderWidth: 1,
+    gap: UI.space.sm,
+    minHeight: UI.minTapTarget,
+    paddingHorizontal: 14,
+    borderRadius: UI.radius.pill, borderWidth: 1,
     flexShrink: 1,
   },
   tabIcon: { fontSize: 9, fontFamily: 'Satoshi-Bold' },
-  tabText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
+  tabText: { fontSize: UI.type.supporting, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
 
   sep: { height: StyleSheet.hairlineWidth },
 
@@ -881,8 +917,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 12,
     width: '100%', maxWidth: 760, alignSelf: 'center',
     backgroundColor: 'rgba(30,20,60,0.65)',
-    borderRadius: 18, borderWidth: 1,
-    borderColor: 'rgba(155,120,232,0.18)', padding: 14,
+    borderRadius: UI.radius.card, borderWidth: 1,
+    borderColor: 'rgba(155,120,232,0.18)', padding: UI.space.md,
   },
   bookCardCover: {
     width: 80, height: 112,
@@ -976,14 +1012,14 @@ const styles = StyleSheet.create({
   availDot: { width: 8, height: 8, borderRadius: 4 },
   guideAvailText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   guideCard: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
     gap: 12,
     width: '100%', maxWidth: 760, alignSelf: 'center',
-    borderRadius: 18,
+    borderRadius: UI.radius.card,
     borderWidth: 1,
     padding: 14,
   },
+  guideCardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  guideProfileArea: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, flex: 1, minWidth: 0 },
   guideCardAvatar: {
     width: 52,
     height: 52,
@@ -1011,7 +1047,7 @@ const styles = StyleSheet.create({
   },
   guideCardName:   { fontSize: 16, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
   guideCardHandle: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
-  guideCardBio:    { fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 19 },
+  guideCardBio:    { fontSize: UI.type.supporting, fontFamily: 'Satoshi-Regular', lineHeight: 20 },
   guideSessionPreview: {
     marginTop: 5,
     padding: 9,
@@ -1022,6 +1058,16 @@ const styles = StyleSheet.create({
   guideSessionTitle: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
   guideSessionDescription: { fontSize: 11, lineHeight: 15, fontFamily: 'Satoshi-Regular' },
   guideSessionTime: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  sessionCoverCard: { height: 156, borderRadius: 15, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: '#5a4d73' },
+  sessionCoverContent: { paddingHorizontal: 14, paddingVertical: 12, gap: 4, maxWidth: '88%' },
+  sessionEyebrow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 },
+  sessionEyebrowText: { color: '#F0D59B', fontFamily: 'Satoshi-Bold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sessionCoverTitle: { color: '#FFF9F0', fontFamily: 'Satoshi-Bold', fontSize: 17, lineHeight: 21 },
+  sessionCoverDescription: { color: 'rgba(255,249,240,0.88)', fontFamily: 'Satoshi-Regular', fontSize: 12, lineHeight: 16 },
+  sessionCoverMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  sessionCoverMetaText: { color: '#FFF7E8', fontFamily: 'Satoshi-Medium', fontSize: 11 },
+  sessionAttendees: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 8 },
+  sessionArrow: { position: 'absolute', right: 12, top: '43%', width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,249,240,0.92)', alignItems: 'center', justifyContent: 'center' },
   guideNowBadge: {
     paddingHorizontal: 7, paddingVertical: 2,
     borderRadius: 8, backgroundColor: 'rgba(80,200,130,0.18)',
@@ -1067,11 +1113,11 @@ const styles = StyleSheet.create({
   personBio:      { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 16 },
   followBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-    paddingHorizontal: 14, height: 36,
-    borderRadius: 18, borderWidth: 1.5,
+    paddingHorizontal: 14, minHeight: UI.minTapTarget,
+    borderRadius: UI.radius.pill, borderWidth: 1.5,
     flexShrink: 0, minWidth: 88,
   },
-  followBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  followBtnText: { fontSize: UI.type.supporting, fontFamily: 'Satoshi-Bold' },
 
   // Empty states
   emptyWrap: {
@@ -1089,8 +1135,8 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
   emptyBody:  {
-    fontSize: 13, fontFamily: 'Satoshi-Regular',
-    fontStyle: 'italic', textAlign: 'center', lineHeight: 21,
+    fontSize: UI.type.supporting, fontFamily: 'Satoshi-Regular',
+    textAlign: 'center', lineHeight: 21,
   },
   searchHint: {
     flexDirection: 'row', alignItems: 'center', gap: 7,
