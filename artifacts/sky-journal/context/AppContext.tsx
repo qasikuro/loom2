@@ -20,6 +20,7 @@ import {
   ApiFriendsSchema,
   ApiFollowingSchema,
 } from '@workspace/api-zod';
+import { setAuthTokenGetter as setApiClientAuthTokenGetter } from '@workspace/api-client-react';
 import { getApiBase } from '@/utils/apiBase';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
@@ -140,6 +141,7 @@ if (!(globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY]) {
 
 export function setAuthTokenGetter(fn: TokenGetter) {
   (globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY] = fn;
+  setApiClientAuthTokenGetter(fn);
 }
 
 function _getToken(): Promise<string | null> {
