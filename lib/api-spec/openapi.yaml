@@ -871,8 +871,99 @@ paths:
               schema:
                 $ref: "#/components/schemas/InterestCampaign"
 
+  /guide-sessions:
+    get:
+      operationId: listGuideSessionManagementSessions
+      tags: [social]
+      summary: List guide sessions for a guide
+      parameters:
+        - in: query
+          name: guideId
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Sessions visible to the authenticated viewer
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GuideSessionManagementEntry"
+  /guide-sessions/{sessionId}:
+    patch:
+      operationId: rescheduleGuideSessionManagementSession
+      tags: [social]
+      summary: Reschedule an upcoming guide session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescheduleGuideSessionManagementInput"
+      responses:
+        "200":
+          description: Rescheduled guide session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuideSessionManagementEntry"
+        "400":
+          description: Invalid new start time
+        "404":
+          description: Session not found or no longer upcoming
+        "409":
+          description: Session changed concurrently
+    delete:
+      operationId: cancelGuideSessionManagementSession
+      tags: [social]
+      summary: Cancel an upcoming guide session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session cancelled
+        "404":
+          description: Session not found or no longer upcoming
+
 components:
   schemas:
+    GuideSessionManagementEntry:
+      type: object
+      required: [id, title, startsAt, endsAt, status, attendeeCount]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        attendeeCount:
+          type: integer
+    RescheduleGuideSessionManagementInput:
+      type: object
+      required: [startsAt]
+      properties:
+        startsAt:
+          type: string
+          format: date-time
     LumiMessage:
       type: object
       required: [role, content]

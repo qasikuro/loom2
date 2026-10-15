@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useUser } from '@clerk/expo';
+import { GuideSessionsManagementSection } from './GuideSessionsManagementSection';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SHADOW } from '@/constants/colors';
@@ -57,6 +58,7 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
   const [guideTimeTo,      setGuideTimeTo]      = useState(character.guideAvailability?.timeTo ?? '23:00');
   const [editingGuideTime, setEditingGuideTime] = useState(false);
   const [guideExpanded, setGuideExpanded] = useState(false);
+  const [guideProfileDetailsExpanded, setGuideProfileDetailsExpanded] = useState(false);
 
   function saveBirthday() { setCharacter({ ...character, birthday: birthdayVal.trim() || undefined }); setEditingBirthday(false); }
   function saveCountry()  { setCharacter({ ...character, country: countryVal.trim() || undefined }); setEditingCountry(false); }
@@ -347,6 +349,18 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
         {guideExpanded && <View style={[s.guideBody, { backgroundColor: colors.card }]}>
           {character.isGuide ? (
             <>
+              <GuideSessionsManagementSection guideId={user?.id ?? null} />
+              <TouchableOpacity
+                onPress={() => setGuideProfileDetailsExpanded(open => !open)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: guideProfileDetailsExpanded }}
+                style={{ marginHorizontal: 14, marginTop: 6, marginBottom: guideProfileDetailsExpanded ? 12 : 14, minHeight: 42, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: `${colors.primary}06`, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                <Icon name="edit-2" size={14} color={colors.primary} />
+                <Text style={{ flex: 1, color: colors.foreground, fontFamily: 'Satoshi-Bold', fontSize: 12 }}>Edit guide profile details</Text>
+                <Icon name={guideProfileDetailsExpanded ? 'chevron-down' : 'chevron-right'} size={15} color={colors.mutedForeground} />
+              </TouchableOpacity>
+              {guideProfileDetailsExpanded && <>
               {(() => {
                 const items = [!!character.guideBio, (character.guideTopics ?? []).length > 0, !!character.guideAvailability, character.isPublic];
                 const pct   = items.filter(Boolean).length * 25;
@@ -516,6 +530,7 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
               >
                 <Text style={s.guideDisableText}>{t('components.about.turnOffGuide')}</Text>
               </TouchableOpacity>
+              </>}
             </>
           ) : (
             <View style={s.guideInviteBody}>

@@ -322,7 +322,7 @@ export interface ServerNotification {
   id:        string;
   actorId:   string;
   actorName: string;
-  type:      'new_story' | 'new_chapter' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'message' | 'resonate' | 'badge_granted' | 'badge_removed';
+  type:      'new_story' | 'new_chapter' | 'new_outfit' | 'witness' | 'save' | 'follow' | 'message' | 'resonate' | 'badge_granted' | 'badge_removed' | 'guide_session_rescheduled' | 'guide_session_cancelled';
   refId:     string;
   title:     string;
   isRead:    boolean;
