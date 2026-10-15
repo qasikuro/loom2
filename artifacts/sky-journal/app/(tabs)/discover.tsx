@@ -107,6 +107,9 @@ interface GuideSessionPreview {
   coverImageUri: string | null;
   attendeeCount: number;
   isJoined: boolean;
+  status: string;
+  topic: string | null;
+  tutorial: { id: string; title: string; steps: { id: string }[] } | null;
 }
 
 export default function DiscoverScreen() {
@@ -138,7 +141,7 @@ export default function DiscoverScreen() {
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
   const contentMaxWidth = viewportWidth >= 760 ? 760 : undefined;
   const upcomingSessions = guideSessions
-    .filter(session => new Date(session.endsAt).getTime() > Date.now())
+    .filter(session => session.status === 'scheduled' && new Date(session.endsAt).getTime() > Date.now())
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   const guideIdsWithSessions = new Set(upcomingSessions.map(session => session.guideId));
   const guidesWithSessions = guidesData.filter(guide => guideIdsWithSessions.has(guide.userId));
@@ -666,6 +669,14 @@ export default function DiscoverScreen() {
                           <View style={styles.sessionEyebrow}><Icon name="radio" size={11} color="#F0D59B" /><Text style={styles.sessionEyebrowText}>{t('discoverLog.upcomingSession')}</Text></View>
                           <Text style={styles.sessionCoverTitle} numberOfLines={2}>{nextSession.title}</Text>
                           <Text style={styles.sessionCoverDescription} numberOfLines={2}>{nextSession.description}</Text>
+                          {nextSession.tutorial && (
+                            <View style={styles.sessionTutorialBadge}>
+                              <Icon name="book-open" size={11} color="#F5D99D" />
+                              <Text style={styles.sessionTutorialText} numberOfLines={1}>
+                                {nextSession.tutorial.title} · {nextSession.tutorial.steps.length} steps
+                              </Text>
+                            </View>
+                          )}
                           <View style={styles.sessionCoverMeta}>
                             <Icon name="calendar" size={13} color="#F5D99D" />
                             <Text style={styles.sessionCoverMetaText}>{new Date(nextSession.startsAt).toLocaleString(i18n.language, { dateStyle: 'medium', timeStyle: 'short' })}</Text>
@@ -1064,6 +1075,8 @@ const styles = StyleSheet.create({
   sessionEyebrowText: { color: '#F0D59B', fontFamily: 'Satoshi-Bold', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   sessionCoverTitle: { color: '#FFF9F0', fontFamily: 'Satoshi-Bold', fontSize: 17, lineHeight: 21 },
   sessionCoverDescription: { color: 'rgba(255,249,240,0.88)', fontFamily: 'Satoshi-Regular', fontSize: 12, lineHeight: 16 },
+  sessionTutorialBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: '100%', borderRadius: 10, backgroundColor: 'rgba(23,17,38,0.60)', paddingHorizontal: 8, paddingVertical: 5, marginTop: 2 },
+  sessionTutorialText: { color: '#FFF5DD', fontFamily: 'Satoshi-Bold', fontSize: 10, flexShrink: 1 },
   sessionCoverMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
   sessionCoverMetaText: { color: '#FFF7E8', fontFamily: 'Satoshi-Medium', fontSize: 11 },
   sessionAttendees: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 8 },

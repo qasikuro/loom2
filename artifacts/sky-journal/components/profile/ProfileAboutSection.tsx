@@ -365,6 +365,35 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
                   </View>
                 );
               })()}
+              <View style={[s.guideStudio, { backgroundColor: `${colors.primary}07`, borderColor: `${colors.primary}20` }]}>
+                <View style={s.guideStudioHeading}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.guideStudioTitle, { color: colors.foreground }]}>Guide journey</Text>
+                    <Text style={[s.guideStudioSub, { color: colors.mutedForeground }]}>Create a tutorial, then host a session around it.</Text>
+                  </View>
+                  <Icon name="sparkles" size={17} color={colors.primary} />
+                </View>
+                <View style={s.guideStudioActions}>
+                  <TouchableOpacity onPress={() => router.push('/create-guide-tutorial')} style={[s.guideStudioAction, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={[s.guideStudioActionIcon, { backgroundColor: `${colors.primary}14` }]}><Icon name="book-open" size={16} color={colors.primary} /></View>
+                    <Text style={[s.guideStudioActionTitle, { color: colors.foreground }]}>Build tutorial</Text>
+                    <Text style={[s.guideStudioActionSub, { color: colors.mutedForeground }]}>Add steps and media</Text>
+                    <Icon name="arrow-right" size={13} color={colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push('/create-guide-session')} style={[s.guideStudioAction, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={[s.guideStudioActionIcon, { backgroundColor: `${colors.secondary}18` }]}><Icon name="calendar" size={16} color={colors.secondary} /></View>
+                    <Text style={[s.guideStudioActionTitle, { color: colors.foreground }]}>Host session</Text>
+                    <Text style={[s.guideStudioActionSub, { color: colors.mutedForeground }]}>With or without a tutorial</Text>
+                    <Icon name="arrow-right" size={13} color={colors.secondary} />
+                  </TouchableOpacity>
+                </View>
+                {user?.id && <TouchableOpacity onPress={() => router.push(`/guide/${user.id}`)} style={[s.guideStudioLink, { borderTopColor: colors.border }]}>
+                  <Icon name="users" size={13} color={colors.primary} />
+                  <Text style={[s.guideStudioLinkText, { color: colors.primary }]}>View your guide sessions</Text>
+                  <Icon name="chevron-right" size={14} color={colors.primary} />
+                </TouchableOpacity>}
+              </View>
+              <View style={[s.guideDivider, { backgroundColor: colors.border }]} />
               <View style={[s.guideDivider, { backgroundColor: colors.border }]} />
 
               {/* Guide bio */}
@@ -573,6 +602,17 @@ const s = StyleSheet.create({
   guideProgressBg:  { height: 4, borderRadius: 2, overflow: 'hidden' },
   guideProgressFill:{ height: 4, borderRadius: 2 },
   guideCompletionHint:{ fontSize: 10, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
+  guideStudio:      { borderWidth: 1, borderRadius: 15, padding: 12, marginHorizontal: 14, marginTop: 12, marginBottom: 2 },
+  guideStudioHeading:{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  guideStudioTitle: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  guideStudioSub:   { fontSize: 10, fontFamily: 'Satoshi-Regular', marginTop: 2 },
+  guideStudioActions:{ flexDirection: 'row', gap: 8 },
+  guideStudioAction:{ flex: 1, minHeight: 91, borderWidth: 1, borderRadius: 13, padding: 9, alignItems: 'flex-start', justifyContent: 'space-between' },
+  guideStudioActionIcon:{ width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  guideStudioActionTitle:{ fontSize: 11, fontFamily: 'Satoshi-Bold', marginTop: 7 },
+  guideStudioActionSub:{ fontSize: 9, fontFamily: 'Satoshi-Regular', marginTop: 2, marginBottom: 4 },
+  guideStudioLink:  { minHeight: 37, borderTopWidth: 1, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 10, paddingTop: 8 },
+  guideStudioLinkText:{ flex: 1, fontSize: 10, fontFamily: 'Satoshi-Bold' },
   guideDivider:     { height: 1 },
   guideSection:     { paddingHorizontal: 16, paddingVertical: 14, gap: 10 },
   guideSectionLabel:{ fontSize: 12, fontFamily: 'Satoshi-Medium' },

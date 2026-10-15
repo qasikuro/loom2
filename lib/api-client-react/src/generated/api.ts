@@ -17,27 +17,64 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AdminAnalytics,
+  AdminApiStatus,
   AdminEmailInput,
   AdminEmailResponse,
+  AdminModerationActionInput,
+  AdminModerationActionResult,
+  AdminModerationQueueResponse,
+  AdminModerationRecordsResponse,
+  AdminModerationReportStatusInput,
+  AdminModerationReportsResponse,
   AppConfig,
   Character,
   CharacterInput,
+  ChatMessage,
+  ChatMessageInput,
+  ChatPhotoInput,
   ComposeVideoRequest,
   ComposeVideoResponse,
   ConfirmStorigamUnsubscribeParams,
   ConstellationState,
+  CreateGuideSessionInput,
   DiscoverPost,
+  FeatureUsageControlInput,
+  FeatureUsageOverview,
+  FeatureUsagePolicy,
   FriendRequest,
   FriendSummary,
   GalleryPhoto,
   GalleryUsage,
+  GetAdminAnalyticsParams,
+  GetAdminFeatureUsageParams,
+  GetAdminModerationQueueParams,
+  GetAdminModerationRecordsParams,
+  GetAdminModerationReportsParams,
+  GuideSession,
+  GuideSessionAnswerInput,
+  GuideSessionEngagement,
+  GuideSessionParticipant,
+  GuideSessionPoll,
+  GuideSessionPollInput,
+  GuideSessionPollVoteInput,
+  GuideSessionQuestion,
+  GuideSessionQuestionInput,
+  GuideSessionRecap,
+  GuideSessionRecapInput,
+  GuideTutorial,
+  GuideTutorialInput,
+  GuideTutorialProgressInput,
   HealthStatus,
+  HideAdminUser200,
   InterestCampaign,
   InterestCampaignInput,
   InterestCampaignsResponse,
   InterestSubscribersResponse,
   JournalEntry,
   JournalEntryInput,
+  ListGuideSessionsParams,
+  ListGuideTutorialsParams,
   LumiClearResult,
   LumiConversationInput,
   LumiConversationResult,
@@ -52,6 +89,7 @@ import type {
   OutfitInput,
   ProfileLikeState,
   PublicUserProfile,
+  RestoreAdminUserVisibility200,
   RewardBalance,
   ShopResponse,
   StorigamInterestInput,
@@ -2178,6 +2216,1760 @@ export function useListDiscoverFeed<
 }
 
 /**
+ * @summary List upcoming or active guide sessions
+ */
+export const getListGuideSessionsUrl = (params?: ListGuideSessionsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/guide-sessions?${stringifiedParams}`
+    : `/api/guide-sessions`;
+};
+
+export const listGuideSessions = async (
+  params?: ListGuideSessionsParams,
+  options?: RequestInit,
+): Promise<GuideSession[]> => {
+  return customFetch<GuideSession[]>(getListGuideSessionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGuideSessionsQueryKey = (
+  params?: ListGuideSessionsParams,
+) => {
+  return [`/api/guide-sessions`, ...(params ? [params] : [])] as const;
+};
+
+export const getListGuideSessionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGuideSessions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListGuideSessionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGuideSessions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListGuideSessionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listGuideSessions>>
+  > = ({ signal }) => listGuideSessions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGuideSessions>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGuideSessionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGuideSessions>>
+>;
+export type ListGuideSessionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List upcoming or active guide sessions
+ */
+
+export function useListGuideSessions<
+  TData = Awaited<ReturnType<typeof listGuideSessions>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListGuideSessionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGuideSessions>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGuideSessionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Schedule a public guide session with an optional cover image
+ */
+export const getCreateGuideSessionUrl = () => {
+  return `/api/guide-sessions`;
+};
+
+export const createGuideSession = async (
+  createGuideSessionInput: CreateGuideSessionInput,
+  options?: RequestInit,
+): Promise<GuideSession> => {
+  return customFetch<GuideSession>(getCreateGuideSessionUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createGuideSessionInput),
+  });
+};
+
+export const getCreateGuideSessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideSession>>,
+    TError,
+    { data: BodyType<CreateGuideSessionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGuideSession>>,
+  TError,
+  { data: BodyType<CreateGuideSessionInput> },
+  TContext
+> => {
+  const mutationKey = ["createGuideSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGuideSession>>,
+    { data: BodyType<CreateGuideSessionInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createGuideSession(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateGuideSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGuideSession>>
+>;
+export type CreateGuideSessionMutationBody = BodyType<CreateGuideSessionInput>;
+export type CreateGuideSessionMutationError = ErrorType<void>;
+
+/**
+ * @summary Schedule a public guide session with an optional cover image
+ */
+export const useCreateGuideSession = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideSession>>,
+    TError,
+    { data: BodyType<CreateGuideSessionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createGuideSession>>,
+  TError,
+  { data: BodyType<CreateGuideSessionInput> },
+  TContext
+> => {
+  return useMutation(getCreateGuideSessionMutationOptions(options));
+};
+
+/**
+ * @summary Get a guide session and its attached tutorial
+ */
+export const getGetGuideSessionUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}`;
+};
+
+export const getGuideSession = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<GuideSession> => {
+  return customFetch<GuideSession>(getGetGuideSessionUrl(sessionId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGuideSessionQueryKey = (sessionId: string) => {
+  return [`/api/guide-sessions/${sessionId}`] as const;
+};
+
+export const getGetGuideSessionQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGuideSession>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuideSession>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetGuideSessionQueryKey(sessionId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGuideSession>>> = ({
+    signal,
+  }) => getGuideSession(sessionId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!sessionId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGuideSession>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGuideSessionQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGuideSession>>
+>;
+export type GetGuideSessionQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a guide session and its attached tutorial
+ */
+
+export function useGetGuideSession<
+  TData = Awaited<ReturnType<typeof getGuideSession>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuideSession>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGuideSessionQueryOptions(sessionId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Cancel a guide's own session
+ */
+export const getCancelGuideSessionUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}`;
+};
+
+export const cancelGuideSession = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getCancelGuideSessionUrl(sessionId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getCancelGuideSessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelGuideSession>>,
+    TError,
+    { sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelGuideSession>>,
+  TError,
+  { sessionId: string },
+  TContext
+> => {
+  const mutationKey = ["cancelGuideSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelGuideSession>>,
+    { sessionId: string }
+  > = (props) => {
+    const { sessionId } = props ?? {};
+
+    return cancelGuideSession(sessionId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelGuideSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelGuideSession>>
+>;
+
+export type CancelGuideSessionMutationError = ErrorType<void>;
+
+/**
+ * @summary Cancel a guide's own session
+ */
+export const useCancelGuideSession = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelGuideSession>>,
+    TError,
+    { sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof cancelGuideSession>>,
+  TError,
+  { sessionId: string },
+  TContext
+> => {
+  return useMutation(getCancelGuideSessionMutationOptions(options));
+};
+
+/**
+ * @summary Join a scheduled guide session and its shared chat
+ */
+export const getJoinGuideSessionUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/join`;
+};
+
+export const joinGuideSession = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<GuideSession> => {
+  return customFetch<GuideSession>(getJoinGuideSessionUrl(sessionId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getJoinGuideSessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinGuideSession>>,
+    TError,
+    { sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof joinGuideSession>>,
+  TError,
+  { sessionId: string },
+  TContext
+> => {
+  const mutationKey = ["joinGuideSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof joinGuideSession>>,
+    { sessionId: string }
+  > = (props) => {
+    const { sessionId } = props ?? {};
+
+    return joinGuideSession(sessionId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type JoinGuideSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof joinGuideSession>>
+>;
+
+export type JoinGuideSessionMutationError = ErrorType<void>;
+
+/**
+ * @summary Join a scheduled guide session and its shared chat
+ */
+export const useJoinGuideSession = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof joinGuideSession>>,
+    TError,
+    { sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof joinGuideSession>>,
+  TError,
+  { sessionId: string },
+  TContext
+> => {
+  return useMutation(getJoinGuideSessionMutationOptions(options));
+};
+
+/**
+ * @summary Save the authenticated attendee's completed tutorial steps
+ */
+export const getSaveGuideTutorialProgressUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/progress`;
+};
+
+export const saveGuideTutorialProgress = async (
+  sessionId: string,
+  guideTutorialProgressInput: GuideTutorialProgressInput,
+  options?: RequestInit,
+): Promise<GuideSession> => {
+  return customFetch<GuideSession>(getSaveGuideTutorialProgressUrl(sessionId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(guideTutorialProgressInput),
+  });
+};
+
+export const getSaveGuideTutorialProgressMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveGuideTutorialProgress>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideTutorialProgressInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveGuideTutorialProgress>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideTutorialProgressInput> },
+  TContext
+> => {
+  const mutationKey = ["saveGuideTutorialProgress"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveGuideTutorialProgress>>,
+    { sessionId: string; data: BodyType<GuideTutorialProgressInput> }
+  > = (props) => {
+    const { sessionId, data } = props ?? {};
+
+    return saveGuideTutorialProgress(sessionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveGuideTutorialProgressMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveGuideTutorialProgress>>
+>;
+export type SaveGuideTutorialProgressMutationBody =
+  BodyType<GuideTutorialProgressInput>;
+export type SaveGuideTutorialProgressMutationError = ErrorType<void>;
+
+/**
+ * @summary Save the authenticated attendee's completed tutorial steps
+ */
+export const useSaveGuideTutorialProgress = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveGuideTutorialProgress>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideTutorialProgressInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveGuideTutorialProgress>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideTutorialProgressInput> },
+  TContext
+> => {
+  return useMutation(getSaveGuideTutorialProgressMutationOptions(options));
+};
+
+/**
+ * @summary List visible attendees for the guide who owns the session
+ */
+export const getListGuideSessionParticipantsUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/participants`;
+};
+
+export const listGuideSessionParticipants = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<GuideSessionParticipant[]> => {
+  return customFetch<GuideSessionParticipant[]>(
+    getListGuideSessionParticipantsUrl(sessionId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListGuideSessionParticipantsQueryKey = (sessionId: string) => {
+  return [`/api/guide-sessions/${sessionId}/participants`] as const;
+};
+
+export const getListGuideSessionParticipantsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGuideSessionParticipants>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGuideSessionParticipants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ??
+    getListGuideSessionParticipantsQueryKey(sessionId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listGuideSessionParticipants>>
+  > = ({ signal }) =>
+    listGuideSessionParticipants(sessionId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!sessionId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGuideSessionParticipants>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGuideSessionParticipantsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGuideSessionParticipants>>
+>;
+export type ListGuideSessionParticipantsQueryError = ErrorType<void>;
+
+/**
+ * @summary List visible attendees for the guide who owns the session
+ */
+
+export function useListGuideSessionParticipants<
+  TData = Awaited<ReturnType<typeof listGuideSessionParticipants>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGuideSessionParticipants>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGuideSessionParticipantsQueryOptions(
+    sessionId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get polls, participant questions, and the recap for a joined session
+ */
+export const getGetGuideSessionEngagementUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/engagement`;
+};
+
+export const getGuideSessionEngagement = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<GuideSessionEngagement> => {
+  return customFetch<GuideSessionEngagement>(
+    getGetGuideSessionEngagementUrl(sessionId),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetGuideSessionEngagementQueryKey = (sessionId: string) => {
+  return [`/api/guide-sessions/${sessionId}/engagement`] as const;
+};
+
+export const getGetGuideSessionEngagementQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGuideSessionEngagement>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuideSessionEngagement>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetGuideSessionEngagementQueryKey(sessionId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGuideSessionEngagement>>
+  > = ({ signal }) =>
+    getGuideSessionEngagement(sessionId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!sessionId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGuideSessionEngagement>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGuideSessionEngagementQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGuideSessionEngagement>>
+>;
+export type GetGuideSessionEngagementQueryError = ErrorType<void>;
+
+/**
+ * @summary Get polls, participant questions, and the recap for a joined session
+ */
+
+export function useGetGuideSessionEngagement<
+  TData = Awaited<ReturnType<typeof getGuideSessionEngagement>>,
+  TError = ErrorType<void>,
+>(
+  sessionId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuideSessionEngagement>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGuideSessionEngagementQueryOptions(
+    sessionId,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a live poll as the session guide
+ */
+export const getCreateGuideSessionPollUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/polls`;
+};
+
+export const createGuideSessionPoll = async (
+  sessionId: string,
+  guideSessionPollInput: GuideSessionPollInput,
+  options?: RequestInit,
+): Promise<GuideSessionPoll> => {
+  return customFetch<GuideSessionPoll>(
+    getCreateGuideSessionPollUrl(sessionId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(guideSessionPollInput),
+    },
+  );
+};
+
+export const getCreateGuideSessionPollMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideSessionPoll>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionPollInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGuideSessionPoll>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionPollInput> },
+  TContext
+> => {
+  const mutationKey = ["createGuideSessionPoll"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGuideSessionPoll>>,
+    { sessionId: string; data: BodyType<GuideSessionPollInput> }
+  > = (props) => {
+    const { sessionId, data } = props ?? {};
+
+    return createGuideSessionPoll(sessionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateGuideSessionPollMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGuideSessionPoll>>
+>;
+export type CreateGuideSessionPollMutationBody =
+  BodyType<GuideSessionPollInput>;
+export type CreateGuideSessionPollMutationError = ErrorType<void>;
+
+/**
+ * @summary Create a live poll as the session guide
+ */
+export const useCreateGuideSessionPoll = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideSessionPoll>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionPollInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createGuideSessionPoll>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionPollInput> },
+  TContext
+> => {
+  return useMutation(getCreateGuideSessionPollMutationOptions(options));
+};
+
+/**
+ * @summary Vote or change a vote in a live session poll
+ */
+export const getVoteGuideSessionPollUrl = (
+  sessionId: string,
+  pollId: string,
+) => {
+  return `/api/guide-sessions/${sessionId}/polls/${pollId}/vote`;
+};
+
+export const voteGuideSessionPoll = async (
+  sessionId: string,
+  pollId: string,
+  guideSessionPollVoteInput: GuideSessionPollVoteInput,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getVoteGuideSessionPollUrl(sessionId, pollId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(guideSessionPollVoteInput),
+  });
+};
+
+export const getVoteGuideSessionPollMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof voteGuideSessionPoll>>,
+    TError,
+    {
+      sessionId: string;
+      pollId: string;
+      data: BodyType<GuideSessionPollVoteInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof voteGuideSessionPoll>>,
+  TError,
+  {
+    sessionId: string;
+    pollId: string;
+    data: BodyType<GuideSessionPollVoteInput>;
+  },
+  TContext
+> => {
+  const mutationKey = ["voteGuideSessionPoll"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof voteGuideSessionPoll>>,
+    {
+      sessionId: string;
+      pollId: string;
+      data: BodyType<GuideSessionPollVoteInput>;
+    }
+  > = (props) => {
+    const { sessionId, pollId, data } = props ?? {};
+
+    return voteGuideSessionPoll(sessionId, pollId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type VoteGuideSessionPollMutationResult = NonNullable<
+  Awaited<ReturnType<typeof voteGuideSessionPoll>>
+>;
+export type VoteGuideSessionPollMutationBody =
+  BodyType<GuideSessionPollVoteInput>;
+export type VoteGuideSessionPollMutationError = ErrorType<void>;
+
+/**
+ * @summary Vote or change a vote in a live session poll
+ */
+export const useVoteGuideSessionPoll = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof voteGuideSessionPoll>>,
+    TError,
+    {
+      sessionId: string;
+      pollId: string;
+      data: BodyType<GuideSessionPollVoteInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof voteGuideSessionPoll>>,
+  TError,
+  {
+    sessionId: string;
+    pollId: string;
+    data: BodyType<GuideSessionPollVoteInput>;
+  },
+  TContext
+> => {
+  return useMutation(getVoteGuideSessionPollMutationOptions(options));
+};
+
+/**
+ * @summary Close a session poll as its guide
+ */
+export const getCloseGuideSessionPollUrl = (
+  sessionId: string,
+  pollId: string,
+) => {
+  return `/api/guide-sessions/${sessionId}/polls/${pollId}/close`;
+};
+
+export const closeGuideSessionPoll = async (
+  sessionId: string,
+  pollId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getCloseGuideSessionPollUrl(sessionId, pollId), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getCloseGuideSessionPollMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeGuideSessionPoll>>,
+    TError,
+    { sessionId: string; pollId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof closeGuideSessionPoll>>,
+  TError,
+  { sessionId: string; pollId: string },
+  TContext
+> => {
+  const mutationKey = ["closeGuideSessionPoll"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof closeGuideSessionPoll>>,
+    { sessionId: string; pollId: string }
+  > = (props) => {
+    const { sessionId, pollId } = props ?? {};
+
+    return closeGuideSessionPoll(sessionId, pollId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CloseGuideSessionPollMutationResult = NonNullable<
+  Awaited<ReturnType<typeof closeGuideSessionPoll>>
+>;
+
+export type CloseGuideSessionPollMutationError = ErrorType<void>;
+
+/**
+ * @summary Close a session poll as its guide
+ */
+export const useCloseGuideSessionPoll = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof closeGuideSessionPoll>>,
+    TError,
+    { sessionId: string; pollId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof closeGuideSessionPoll>>,
+  TError,
+  { sessionId: string; pollId: string },
+  TContext
+> => {
+  return useMutation(getCloseGuideSessionPollMutationOptions(options));
+};
+
+/**
+ * @summary Ask the guide a question during a live session
+ */
+export const getAskGuideSessionQuestionUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/questions`;
+};
+
+export const askGuideSessionQuestion = async (
+  sessionId: string,
+  guideSessionQuestionInput: GuideSessionQuestionInput,
+  options?: RequestInit,
+): Promise<GuideSessionQuestion> => {
+  return customFetch<GuideSessionQuestion>(
+    getAskGuideSessionQuestionUrl(sessionId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(guideSessionQuestionInput),
+    },
+  );
+};
+
+export const getAskGuideSessionQuestionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof askGuideSessionQuestion>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionQuestionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof askGuideSessionQuestion>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionQuestionInput> },
+  TContext
+> => {
+  const mutationKey = ["askGuideSessionQuestion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof askGuideSessionQuestion>>,
+    { sessionId: string; data: BodyType<GuideSessionQuestionInput> }
+  > = (props) => {
+    const { sessionId, data } = props ?? {};
+
+    return askGuideSessionQuestion(sessionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AskGuideSessionQuestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof askGuideSessionQuestion>>
+>;
+export type AskGuideSessionQuestionMutationBody =
+  BodyType<GuideSessionQuestionInput>;
+export type AskGuideSessionQuestionMutationError = ErrorType<void>;
+
+/**
+ * @summary Ask the guide a question during a live session
+ */
+export const useAskGuideSessionQuestion = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof askGuideSessionQuestion>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionQuestionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof askGuideSessionQuestion>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionQuestionInput> },
+  TContext
+> => {
+  return useMutation(getAskGuideSessionQuestionMutationOptions(options));
+};
+
+/**
+ * @summary Answer a participant question as the session guide
+ */
+export const getAnswerGuideSessionQuestionUrl = (
+  sessionId: string,
+  questionId: string,
+) => {
+  return `/api/guide-sessions/${sessionId}/questions/${questionId}`;
+};
+
+export const answerGuideSessionQuestion = async (
+  sessionId: string,
+  questionId: string,
+  guideSessionAnswerInput: GuideSessionAnswerInput,
+  options?: RequestInit,
+): Promise<GuideSessionQuestion> => {
+  return customFetch<GuideSessionQuestion>(
+    getAnswerGuideSessionQuestionUrl(sessionId, questionId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(guideSessionAnswerInput),
+    },
+  );
+};
+
+export const getAnswerGuideSessionQuestionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof answerGuideSessionQuestion>>,
+    TError,
+    {
+      sessionId: string;
+      questionId: string;
+      data: BodyType<GuideSessionAnswerInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof answerGuideSessionQuestion>>,
+  TError,
+  {
+    sessionId: string;
+    questionId: string;
+    data: BodyType<GuideSessionAnswerInput>;
+  },
+  TContext
+> => {
+  const mutationKey = ["answerGuideSessionQuestion"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof answerGuideSessionQuestion>>,
+    {
+      sessionId: string;
+      questionId: string;
+      data: BodyType<GuideSessionAnswerInput>;
+    }
+  > = (props) => {
+    const { sessionId, questionId, data } = props ?? {};
+
+    return answerGuideSessionQuestion(
+      sessionId,
+      questionId,
+      data,
+      requestOptions,
+    );
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnswerGuideSessionQuestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof answerGuideSessionQuestion>>
+>;
+export type AnswerGuideSessionQuestionMutationBody =
+  BodyType<GuideSessionAnswerInput>;
+export type AnswerGuideSessionQuestionMutationError = ErrorType<void>;
+
+/**
+ * @summary Answer a participant question as the session guide
+ */
+export const useAnswerGuideSessionQuestion = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof answerGuideSessionQuestion>>,
+    TError,
+    {
+      sessionId: string;
+      questionId: string;
+      data: BodyType<GuideSessionAnswerInput>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof answerGuideSessionQuestion>>,
+  TError,
+  {
+    sessionId: string;
+    questionId: string;
+    data: BodyType<GuideSessionAnswerInput>;
+  },
+  TContext
+> => {
+  return useMutation(getAnswerGuideSessionQuestionMutationOptions(options));
+};
+
+/**
+ * @summary Publish or update the post-session recap as its guide
+ */
+export const getSaveGuideSessionRecapUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/recap`;
+};
+
+export const saveGuideSessionRecap = async (
+  sessionId: string,
+  guideSessionRecapInput: GuideSessionRecapInput,
+  options?: RequestInit,
+): Promise<GuideSessionRecap> => {
+  return customFetch<GuideSessionRecap>(
+    getSaveGuideSessionRecapUrl(sessionId),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(guideSessionRecapInput),
+    },
+  );
+};
+
+export const getSaveGuideSessionRecapMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveGuideSessionRecap>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionRecapInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveGuideSessionRecap>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionRecapInput> },
+  TContext
+> => {
+  const mutationKey = ["saveGuideSessionRecap"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveGuideSessionRecap>>,
+    { sessionId: string; data: BodyType<GuideSessionRecapInput> }
+  > = (props) => {
+    const { sessionId, data } = props ?? {};
+
+    return saveGuideSessionRecap(sessionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveGuideSessionRecapMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveGuideSessionRecap>>
+>;
+export type SaveGuideSessionRecapMutationBody =
+  BodyType<GuideSessionRecapInput>;
+export type SaveGuideSessionRecapMutationError = ErrorType<void>;
+
+/**
+ * @summary Publish or update the post-session recap as its guide
+ */
+export const useSaveGuideSessionRecap = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveGuideSessionRecap>>,
+    TError,
+    { sessionId: string; data: BodyType<GuideSessionRecapInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveGuideSessionRecap>>,
+  TError,
+  { sessionId: string; data: BodyType<GuideSessionRecapInput> },
+  TContext
+> => {
+  return useMutation(getSaveGuideSessionRecapMutationOptions(options));
+};
+
+/**
+ * @summary End a scheduled guide session as its owner
+ */
+export const getEndGuideSessionUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}/end`;
+};
+
+export const endGuideSession = async (
+  sessionId: string,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getEndGuideSessionUrl(sessionId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getEndGuideSessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof endGuideSession>>,
+    TError,
+    { sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof endGuideSession>>,
+  TError,
+  { sessionId: string },
+  TContext
+> => {
+  const mutationKey = ["endGuideSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof endGuideSession>>,
+    { sessionId: string }
+  > = (props) => {
+    const { sessionId } = props ?? {};
+
+    return endGuideSession(sessionId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type EndGuideSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof endGuideSession>>
+>;
+
+export type EndGuideSessionMutationError = ErrorType<void>;
+
+/**
+ * @summary End a scheduled guide session as its owner
+ */
+export const useEndGuideSession = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof endGuideSession>>,
+    TError,
+    { sessionId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof endGuideSession>>,
+  TError,
+  { sessionId: string },
+  TContext
+> => {
+  return useMutation(getEndGuideSessionMutationOptions(options));
+};
+
+/**
+ * @summary List discoverable tutorials or the authenticated guide's own tutorials
+ */
+export const getListGuideTutorialsUrl = (params?: ListGuideTutorialsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/guide-tutorials?${stringifiedParams}`
+    : `/api/guide-tutorials`;
+};
+
+export const listGuideTutorials = async (
+  params?: ListGuideTutorialsParams,
+  options?: RequestInit,
+): Promise<GuideTutorial[]> => {
+  return customFetch<GuideTutorial[]>(getListGuideTutorialsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGuideTutorialsQueryKey = (
+  params?: ListGuideTutorialsParams,
+) => {
+  return [`/api/guide-tutorials`, ...(params ? [params] : [])] as const;
+};
+
+export const getListGuideTutorialsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGuideTutorials>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListGuideTutorialsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGuideTutorials>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListGuideTutorialsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listGuideTutorials>>
+  > = ({ signal }) => listGuideTutorials(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGuideTutorials>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGuideTutorialsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGuideTutorials>>
+>;
+export type ListGuideTutorialsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List discoverable tutorials or the authenticated guide's own tutorials
+ */
+
+export function useListGuideTutorials<
+  TData = Awaited<ReturnType<typeof listGuideTutorials>>,
+  TError = ErrorType<unknown>,
+>(
+  params?: ListGuideTutorialsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGuideTutorials>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGuideTutorialsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Save a tutorial draft or publish it
+ */
+export const getCreateGuideTutorialUrl = () => {
+  return `/api/guide-tutorials`;
+};
+
+export const createGuideTutorial = async (
+  guideTutorialInput: GuideTutorialInput,
+  options?: RequestInit,
+): Promise<GuideTutorial> => {
+  return customFetch<GuideTutorial>(getCreateGuideTutorialUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(guideTutorialInput),
+  });
+};
+
+export const getCreateGuideTutorialMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideTutorial>>,
+    TError,
+    { data: BodyType<GuideTutorialInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createGuideTutorial>>,
+  TError,
+  { data: BodyType<GuideTutorialInput> },
+  TContext
+> => {
+  const mutationKey = ["createGuideTutorial"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createGuideTutorial>>,
+    { data: BodyType<GuideTutorialInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createGuideTutorial(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateGuideTutorialMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGuideTutorial>>
+>;
+export type CreateGuideTutorialMutationBody = BodyType<GuideTutorialInput>;
+export type CreateGuideTutorialMutationError = ErrorType<void>;
+
+/**
+ * @summary Save a tutorial draft or publish it
+ */
+export const useCreateGuideTutorial = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createGuideTutorial>>,
+    TError,
+    { data: BodyType<GuideTutorialInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createGuideTutorial>>,
+  TError,
+  { data: BodyType<GuideTutorialInput> },
+  TContext
+> => {
+  return useMutation(getCreateGuideTutorialMutationOptions(options));
+};
+
+/**
+ * @summary Get a published or owned guide tutorial
+ */
+export const getGetGuideTutorialUrl = (tutorialId: string) => {
+  return `/api/guide-tutorials/${tutorialId}`;
+};
+
+export const getGuideTutorial = async (
+  tutorialId: string,
+  options?: RequestInit,
+): Promise<GuideTutorial> => {
+  return customFetch<GuideTutorial>(getGetGuideTutorialUrl(tutorialId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGuideTutorialQueryKey = (tutorialId: string) => {
+  return [`/api/guide-tutorials/${tutorialId}`] as const;
+};
+
+export const getGetGuideTutorialQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGuideTutorial>>,
+  TError = ErrorType<void>,
+>(
+  tutorialId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuideTutorial>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetGuideTutorialQueryKey(tutorialId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGuideTutorial>>
+  > = ({ signal }) =>
+    getGuideTutorial(tutorialId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!tutorialId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGuideTutorial>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGuideTutorialQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGuideTutorial>>
+>;
+export type GetGuideTutorialQueryError = ErrorType<void>;
+
+/**
+ * @summary Get a published or owned guide tutorial
+ */
+
+export function useGetGuideTutorial<
+  TData = Awaited<ReturnType<typeof getGuideTutorial>>,
+  TError = ErrorType<void>,
+>(
+  tutorialId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGuideTutorial>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGuideTutorialQueryOptions(tutorialId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a guide's own tutorial
+ */
+export const getUpdateGuideTutorialUrl = (tutorialId: string) => {
+  return `/api/guide-tutorials/${tutorialId}`;
+};
+
+export const updateGuideTutorial = async (
+  tutorialId: string,
+  guideTutorialInput: GuideTutorialInput,
+  options?: RequestInit,
+): Promise<GuideTutorial> => {
+  return customFetch<GuideTutorial>(getUpdateGuideTutorialUrl(tutorialId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(guideTutorialInput),
+  });
+};
+
+export const getUpdateGuideTutorialMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGuideTutorial>>,
+    TError,
+    { tutorialId: string; data: BodyType<GuideTutorialInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateGuideTutorial>>,
+  TError,
+  { tutorialId: string; data: BodyType<GuideTutorialInput> },
+  TContext
+> => {
+  const mutationKey = ["updateGuideTutorial"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateGuideTutorial>>,
+    { tutorialId: string; data: BodyType<GuideTutorialInput> }
+  > = (props) => {
+    const { tutorialId, data } = props ?? {};
+
+    return updateGuideTutorial(tutorialId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateGuideTutorialMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateGuideTutorial>>
+>;
+export type UpdateGuideTutorialMutationBody = BodyType<GuideTutorialInput>;
+export type UpdateGuideTutorialMutationError = ErrorType<void>;
+
+/**
+ * @summary Update a guide's own tutorial
+ */
+export const useUpdateGuideTutorial = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateGuideTutorial>>,
+    TError,
+    { tutorialId: string; data: BodyType<GuideTutorialInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateGuideTutorial>>,
+  TError,
+  { tutorialId: string; data: BodyType<GuideTutorialInput> },
+  TContext
+> => {
+  return useMutation(getUpdateGuideTutorialMutationOptions(options));
+};
+
+/**
  * @summary Get a public user profile and viewer profile-like state
  */
 export const getGetPublicUserProfileUrl = (userId: string) => {
@@ -4170,4 +5962,1311 @@ export const useDispatchInterestCampaign = <
   TContext
 > => {
   return useMutation(getDispatchInterestCampaignMutationOptions(options));
+};
+
+/**
+ * Requires an authenticated administrator. Costs are app-side estimates, not Replit workspace billing.
+ * @summary Read app feature activity, cost estimates, and limits
+ */
+export const getGetAdminFeatureUsageUrl = (
+  params?: GetAdminFeatureUsageParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/feature-usage?${stringifiedParams}`
+    : `/api/admin/feature-usage`;
+};
+
+export const getAdminFeatureUsage = async (
+  params?: GetAdminFeatureUsageParams,
+  options?: RequestInit,
+): Promise<FeatureUsageOverview> => {
+  return customFetch<FeatureUsageOverview>(getGetAdminFeatureUsageUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminFeatureUsageQueryKey = (
+  params?: GetAdminFeatureUsageParams,
+) => {
+  return [`/api/admin/feature-usage`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAdminFeatureUsageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminFeatureUsage>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminFeatureUsageParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminFeatureUsage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminFeatureUsageQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminFeatureUsage>>
+  > = ({ signal }) =>
+    getAdminFeatureUsage(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminFeatureUsage>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminFeatureUsageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminFeatureUsage>>
+>;
+export type GetAdminFeatureUsageQueryError = ErrorType<void>;
+
+/**
+ * @summary Read app feature activity, cost estimates, and limits
+ */
+
+export function useGetAdminFeatureUsage<
+  TData = Awaited<ReturnType<typeof getAdminFeatureUsage>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminFeatureUsageParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminFeatureUsage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminFeatureUsageQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Returns only aggregate counts from existing database records. Metrics without reliable source data are null.
+ * @summary Read aggregate product analytics for an administrator
+ */
+export const getGetAdminAnalyticsUrl = (params?: GetAdminAnalyticsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/analytics?${stringifiedParams}`
+    : `/api/admin/analytics`;
+};
+
+export const getAdminAnalytics = async (
+  params?: GetAdminAnalyticsParams,
+  options?: RequestInit,
+): Promise<AdminAnalytics> => {
+  return customFetch<AdminAnalytics>(getGetAdminAnalyticsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminAnalyticsQueryKey = (
+  params?: GetAdminAnalyticsParams,
+) => {
+  return [`/api/admin/analytics`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAdminAnalyticsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminAnalytics>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminAnalyticsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminAnalytics>>
+  > = ({ signal }) => getAdminAnalytics(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminAnalytics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminAnalyticsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminAnalytics>>
+>;
+export type GetAdminAnalyticsQueryError = ErrorType<void>;
+
+/**
+ * @summary Read aggregate product analytics for an administrator
+ */
+
+export function useGetAdminAnalytics<
+  TData = Awaited<ReturnType<typeof getAdminAnalytics>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminAnalyticsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminAnalytics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminAnalyticsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Runs a live database probe without exposing provider details or configuration values.
+ * @summary Check API and database status for an administrator
+ */
+export const getGetAdminApiStatusUrl = () => {
+  return `/api/admin/api-status`;
+};
+
+export const getAdminApiStatus = async (
+  options?: RequestInit,
+): Promise<AdminApiStatus> => {
+  return customFetch<AdminApiStatus>(getGetAdminApiStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAdminApiStatusQueryKey = () => {
+  return [`/api/admin/api-status`] as const;
+};
+
+export const getGetAdminApiStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminApiStatus>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminApiStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetAdminApiStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminApiStatus>>
+  > = ({ signal }) => getAdminApiStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminApiStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminApiStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminApiStatus>>
+>;
+export type GetAdminApiStatusQueryError = ErrorType<void>;
+
+/**
+ * @summary Check API and database status for an administrator
+ */
+
+export function useGetAdminApiStatus<
+  TData = Awaited<ReturnType<typeof getAdminApiStatus>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminApiStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminApiStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Temporarily hide a user and their published activity
+ */
+export const getHideAdminUserUrl = (id: string) => {
+  return `/api/admin/users/${id}/hide`;
+};
+
+export const hideAdminUser = async (
+  id: string,
+  options?: RequestInit,
+): Promise<HideAdminUser200> => {
+  return customFetch<HideAdminUser200>(getHideAdminUserUrl(id), {
+    ...options,
+    method: "PUT",
+  });
+};
+
+export const getHideAdminUserMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof hideAdminUser>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof hideAdminUser>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["hideAdminUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof hideAdminUser>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return hideAdminUser(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HideAdminUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof hideAdminUser>>
+>;
+
+export type HideAdminUserMutationError = ErrorType<void>;
+
+/**
+ * @summary Temporarily hide a user and their published activity
+ */
+export const useHideAdminUser = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof hideAdminUser>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof hideAdminUser>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getHideAdminUserMutationOptions(options));
+};
+
+/**
+ * @summary Restore a temporarily hidden user's visibility
+ */
+export const getRestoreAdminUserVisibilityUrl = (id: string) => {
+  return `/api/admin/users/${id}/unhide`;
+};
+
+export const restoreAdminUserVisibility = async (
+  id: string,
+  options?: RequestInit,
+): Promise<RestoreAdminUserVisibility200> => {
+  return customFetch<RestoreAdminUserVisibility200>(
+    getRestoreAdminUserVisibilityUrl(id),
+    {
+      ...options,
+      method: "PUT",
+    },
+  );
+};
+
+export const getRestoreAdminUserVisibilityMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restoreAdminUserVisibility>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof restoreAdminUserVisibility>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["restoreAdminUserVisibility"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof restoreAdminUserVisibility>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return restoreAdminUserVisibility(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RestoreAdminUserVisibilityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof restoreAdminUserVisibility>>
+>;
+
+export type RestoreAdminUserVisibilityMutationError = ErrorType<void>;
+
+/**
+ * @summary Restore a temporarily hidden user's visibility
+ */
+export const useRestoreAdminUserVisibility = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof restoreAdminUserVisibility>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof restoreAdminUserVisibility>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getRestoreAdminUserVisibilityMutationOptions(options));
+};
+
+/**
+ * Groups open user reports by target. High priority means three or more reports. AI flags are returned only when recorded by an existing moderation source.
+ * @summary List active moderation items
+ */
+export const getGetAdminModerationQueueUrl = (
+  params?: GetAdminModerationQueueParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/moderation/queue?${stringifiedParams}`
+    : `/api/admin/moderation/queue`;
+};
+
+export const getAdminModerationQueue = async (
+  params?: GetAdminModerationQueueParams,
+  options?: RequestInit,
+): Promise<AdminModerationQueueResponse> => {
+  return customFetch<AdminModerationQueueResponse>(
+    getGetAdminModerationQueueUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAdminModerationQueueQueryKey = (
+  params?: GetAdminModerationQueueParams,
+) => {
+  return [`/api/admin/moderation/queue`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetAdminModerationQueueQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminModerationQueue>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminModerationQueueParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminModerationQueue>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminModerationQueueQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminModerationQueue>>
+  > = ({ signal }) =>
+    getAdminModerationQueue(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminModerationQueue>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminModerationQueueQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminModerationQueue>>
+>;
+export type GetAdminModerationQueueQueryError = ErrorType<void>;
+
+/**
+ * @summary List active moderation items
+ */
+
+export function useGetAdminModerationQueue<
+  TData = Awaited<ReturnType<typeof getAdminModerationQueue>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminModerationQueueParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminModerationQueue>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminModerationQueueQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List user-submitted moderation reports
+ */
+export const getGetAdminModerationReportsUrl = (
+  params?: GetAdminModerationReportsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/moderation/reports?${stringifiedParams}`
+    : `/api/admin/moderation/reports`;
+};
+
+export const getAdminModerationReports = async (
+  params?: GetAdminModerationReportsParams,
+  options?: RequestInit,
+): Promise<AdminModerationReportsResponse> => {
+  return customFetch<AdminModerationReportsResponse>(
+    getGetAdminModerationReportsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAdminModerationReportsQueryKey = (
+  params?: GetAdminModerationReportsParams,
+) => {
+  return [
+    `/api/admin/moderation/reports`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetAdminModerationReportsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminModerationReports>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminModerationReportsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminModerationReports>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminModerationReportsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminModerationReports>>
+  > = ({ signal }) =>
+    getAdminModerationReports(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminModerationReports>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminModerationReportsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminModerationReports>>
+>;
+export type GetAdminModerationReportsQueryError = ErrorType<void>;
+
+/**
+ * @summary List user-submitted moderation reports
+ */
+
+export function useGetAdminModerationReports<
+  TData = Awaited<ReturnType<typeof getAdminModerationReports>>,
+  TError = ErrorType<void>,
+>(
+  params?: GetAdminModerationReportsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminModerationReports>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminModerationReportsQueryOptions(
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Move a report into review or close it
+ */
+export const getUpdateAdminModerationReportStatusUrl = (id: string) => {
+  return `/api/admin/moderation/reports/${id}/status`;
+};
+
+export const updateAdminModerationReportStatus = async (
+  id: string,
+  adminModerationReportStatusInput: AdminModerationReportStatusInput,
+  options?: RequestInit,
+): Promise<AdminModerationActionResult> => {
+  return customFetch<AdminModerationActionResult>(
+    getUpdateAdminModerationReportStatusUrl(id),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(adminModerationReportStatusInput),
+    },
+  );
+};
+
+export const getUpdateAdminModerationReportStatusMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminModerationReportStatus>>,
+    TError,
+    { id: string; data: BodyType<AdminModerationReportStatusInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminModerationReportStatus>>,
+  TError,
+  { id: string; data: BodyType<AdminModerationReportStatusInput> },
+  TContext
+> => {
+  const mutationKey = ["updateAdminModerationReportStatus"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminModerationReportStatus>>,
+    { id: string; data: BodyType<AdminModerationReportStatusInput> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateAdminModerationReportStatus(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminModerationReportStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminModerationReportStatus>>
+>;
+export type UpdateAdminModerationReportStatusMutationBody =
+  BodyType<AdminModerationReportStatusInput>;
+export type UpdateAdminModerationReportStatusMutationError = ErrorType<void>;
+
+/**
+ * @summary Move a report into review or close it
+ */
+export const useUpdateAdminModerationReportStatus = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminModerationReportStatus>>,
+    TError,
+    { id: string; data: BodyType<AdminModerationReportStatusInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminModerationReportStatus>>,
+  TError,
+  { id: string; data: BodyType<AdminModerationReportStatusInput> },
+  TContext
+> => {
+  return useMutation(
+    getUpdateAdminModerationReportStatusMutationOptions(options),
+  );
+};
+
+/**
+ * AI flags require a human action; an AI flag never automatically bans a user.
+ * @summary Apply and audit a moderation action
+ */
+export const getCreateAdminModerationActionUrl = () => {
+  return `/api/admin/moderation/actions`;
+};
+
+export const createAdminModerationAction = async (
+  adminModerationActionInput: AdminModerationActionInput,
+  options?: RequestInit,
+): Promise<AdminModerationActionResult> => {
+  return customFetch<AdminModerationActionResult>(
+    getCreateAdminModerationActionUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(adminModerationActionInput),
+    },
+  );
+};
+
+export const getCreateAdminModerationActionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminModerationAction>>,
+    TError,
+    { data: BodyType<AdminModerationActionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createAdminModerationAction>>,
+  TError,
+  { data: BodyType<AdminModerationActionInput> },
+  TContext
+> => {
+  const mutationKey = ["createAdminModerationAction"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createAdminModerationAction>>,
+    { data: BodyType<AdminModerationActionInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createAdminModerationAction(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateAdminModerationActionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createAdminModerationAction>>
+>;
+export type CreateAdminModerationActionMutationBody =
+  BodyType<AdminModerationActionInput>;
+export type CreateAdminModerationActionMutationError = ErrorType<void>;
+
+/**
+ * @summary Apply and audit a moderation action
+ */
+export const useCreateAdminModerationAction = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createAdminModerationAction>>,
+    TError,
+    { data: BodyType<AdminModerationActionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createAdminModerationAction>>,
+  TError,
+  { data: BodyType<AdminModerationActionInput> },
+  TContext
+> => {
+  return useMutation(getCreateAdminModerationActionMutationOptions(options));
+};
+
+/**
+ * @summary List hidden content, removals, AI flags, or moderation history
+ */
+export const getGetAdminModerationRecordsUrl = (
+  params: GetAdminModerationRecordsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/moderation/records?${stringifiedParams}`
+    : `/api/admin/moderation/records`;
+};
+
+export const getAdminModerationRecords = async (
+  params: GetAdminModerationRecordsParams,
+  options?: RequestInit,
+): Promise<AdminModerationRecordsResponse> => {
+  return customFetch<AdminModerationRecordsResponse>(
+    getGetAdminModerationRecordsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetAdminModerationRecordsQueryKey = (
+  params?: GetAdminModerationRecordsParams,
+) => {
+  return [
+    `/api/admin/moderation/records`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetAdminModerationRecordsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAdminModerationRecords>>,
+  TError = ErrorType<void>,
+>(
+  params: GetAdminModerationRecordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminModerationRecords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAdminModerationRecordsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAdminModerationRecords>>
+  > = ({ signal }) =>
+    getAdminModerationRecords(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAdminModerationRecords>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAdminModerationRecordsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAdminModerationRecords>>
+>;
+export type GetAdminModerationRecordsQueryError = ErrorType<void>;
+
+/**
+ * @summary List hidden content, removals, AI flags, or moderation history
+ */
+
+export function useGetAdminModerationRecords<
+  TData = Awaited<ReturnType<typeof getAdminModerationRecords>>,
+  TError = ErrorType<void>,
+>(
+  params: GetAdminModerationRecordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAdminModerationRecords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAdminModerationRecordsQueryOptions(
+    params,
+    options,
+  );
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Requires an authenticated administrator. Cost values are optional estimates per tracked request.
+ * @summary Update a feature's server-side limit, estimate, or availability
+ */
+export const getUpdateAdminFeatureUsageUrl = (featureKey: string) => {
+  return `/api/admin/feature-usage/${featureKey}`;
+};
+
+export const updateAdminFeatureUsage = async (
+  featureKey: string,
+  featureUsageControlInput: FeatureUsageControlInput,
+  options?: RequestInit,
+): Promise<FeatureUsagePolicy> => {
+  return customFetch<FeatureUsagePolicy>(
+    getUpdateAdminFeatureUsageUrl(featureKey),
+    {
+      ...options,
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(featureUsageControlInput),
+    },
+  );
+};
+
+export const getUpdateAdminFeatureUsageMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminFeatureUsage>>,
+    TError,
+    { featureKey: string; data: BodyType<FeatureUsageControlInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAdminFeatureUsage>>,
+  TError,
+  { featureKey: string; data: BodyType<FeatureUsageControlInput> },
+  TContext
+> => {
+  const mutationKey = ["updateAdminFeatureUsage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAdminFeatureUsage>>,
+    { featureKey: string; data: BodyType<FeatureUsageControlInput> }
+  > = (props) => {
+    const { featureKey, data } = props ?? {};
+
+    return updateAdminFeatureUsage(featureKey, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAdminFeatureUsageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAdminFeatureUsage>>
+>;
+export type UpdateAdminFeatureUsageMutationBody =
+  BodyType<FeatureUsageControlInput>;
+export type UpdateAdminFeatureUsageMutationError = ErrorType<void>;
+
+/**
+ * @summary Update a feature's server-side limit, estimate, or availability
+ */
+export const useUpdateAdminFeatureUsage = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAdminFeatureUsage>>,
+    TError,
+    { featureKey: string; data: BodyType<FeatureUsageControlInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAdminFeatureUsage>>,
+  TError,
+  { featureKey: string; data: BodyType<FeatureUsageControlInput> },
+  TContext
+> => {
+  return useMutation(getUpdateAdminFeatureUsageMutationOptions(options));
+};
+
+/**
+ * @summary Send a photo without silently dropping it on older servers
+ */
+export const getSendChatPhotoUrl = (userId: string) => {
+  return `/api/messages/${userId}/photos`;
+};
+
+export const sendChatPhoto = async (
+  userId: string,
+  chatPhotoInput: ChatPhotoInput,
+  options?: RequestInit,
+): Promise<ChatMessage> => {
+  return customFetch<ChatMessage>(getSendChatPhotoUrl(userId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(chatPhotoInput),
+  });
+};
+
+export const getSendChatPhotoMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatPhoto>>,
+    TError,
+    { userId: string; data: BodyType<ChatPhotoInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendChatPhoto>>,
+  TError,
+  { userId: string; data: BodyType<ChatPhotoInput> },
+  TContext
+> => {
+  const mutationKey = ["sendChatPhoto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendChatPhoto>>,
+    { userId: string; data: BodyType<ChatPhotoInput> }
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return sendChatPhoto(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendChatPhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendChatPhoto>>
+>;
+export type SendChatPhotoMutationBody = BodyType<ChatPhotoInput>;
+export type SendChatPhotoMutationError = ErrorType<void>;
+
+/**
+ * @summary Send a photo without silently dropping it on older servers
+ */
+export const useSendChatPhoto = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatPhoto>>,
+    TError,
+    { userId: string; data: BodyType<ChatPhotoInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendChatPhoto>>,
+  TError,
+  { userId: string; data: BodyType<ChatPhotoInput> },
+  TContext
+> => {
+  return useMutation(getSendChatPhotoMutationOptions(options));
+};
+
+/**
+ * @summary Read a private direct-message conversation
+ */
+export const getGetChatConversationUrl = (userId: string) => {
+  return `/api/messages/${userId}`;
+};
+
+export const getChatConversation = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<ChatMessage[]> => {
+  return customFetch<ChatMessage[]>(getGetChatConversationUrl(userId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetChatConversationQueryKey = (userId: string) => {
+  return [`/api/messages/${userId}`] as const;
+};
+
+export const getGetChatConversationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getChatConversation>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getChatConversation>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetChatConversationQueryKey(userId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getChatConversation>>
+  > = ({ signal }) =>
+    getChatConversation(userId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!userId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getChatConversation>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetChatConversationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getChatConversation>>
+>;
+export type GetChatConversationQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Read a private direct-message conversation
+ */
+
+export function useGetChatConversation<
+  TData = Awaited<ReturnType<typeof getChatConversation>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getChatConversation>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetChatConversationQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Send text, an expression, or an owned uploaded photo
+ */
+export const getSendChatMessageUrl = (userId: string) => {
+  return `/api/messages/${userId}`;
+};
+
+export const sendChatMessage = async (
+  userId: string,
+  chatMessageInput: ChatMessageInput,
+  options?: RequestInit,
+): Promise<ChatMessage> => {
+  return customFetch<ChatMessage>(getSendChatMessageUrl(userId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(chatMessageInput),
+  });
+};
+
+export const getSendChatMessageMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatMessage>>,
+    TError,
+    { userId: string; data: BodyType<ChatMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendChatMessage>>,
+  TError,
+  { userId: string; data: BodyType<ChatMessageInput> },
+  TContext
+> => {
+  const mutationKey = ["sendChatMessage"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendChatMessage>>,
+    { userId: string; data: BodyType<ChatMessageInput> }
+  > = (props) => {
+    const { userId, data } = props ?? {};
+
+    return sendChatMessage(userId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendChatMessageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendChatMessage>>
+>;
+export type SendChatMessageMutationBody = BodyType<ChatMessageInput>;
+export type SendChatMessageMutationError = ErrorType<void>;
+
+/**
+ * @summary Send text, an expression, or an owned uploaded photo
+ */
+export const useSendChatMessage = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendChatMessage>>,
+    TError,
+    { userId: string; data: BodyType<ChatMessageInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof sendChatMessage>>,
+  TError,
+  { userId: string; data: BodyType<ChatMessageInput> },
+  TContext
+> => {
+  return useMutation(getSendChatMessageMutationOptions(options));
 };

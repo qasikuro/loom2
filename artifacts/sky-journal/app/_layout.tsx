@@ -490,6 +490,10 @@ export default function RootLayout() {
                               options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
                             />
                             <Stack.Screen
+                              name="create-guide-tutorial"
+                              options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+                            />
+                            <Stack.Screen
                               name="guide-session/[sessionId]"
                               options={{ presentation: 'card', animation: 'slide_from_right' }}
                             />

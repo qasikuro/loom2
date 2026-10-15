@@ -73,12 +73,74 @@ export interface LumiRecommendation {
   duration?: LumiRecommendationDuration;
 }
 
+/**
+ * Temporary user-stated mood for this conversation, never a diagnosis or permanent profile.
+ */
+export type LumiConversationResultMood =
+  (typeof LumiConversationResultMood)[keyof typeof LumiConversationResultMood];
+
+export const LumiConversationResultMood = {
+  unknown: "unknown",
+  neutral: "neutral",
+  sad: "sad",
+  lonely: "lonely",
+  stressed: "stressed",
+  tired: "tired",
+  happy: "happy",
+  calm: "calm",
+  excited: "excited",
+} as const;
+
+export type LumiConversationResultPhase =
+  (typeof LumiConversationResultPhase)[keyof typeof LumiConversationResultPhase];
+
+export const LumiConversationResultPhase = {
+  check_in: "check_in",
+  conversation: "conversation",
+  suggest: "suggest",
+  support: "support",
+} as const;
+
+/**
+ * Allow-listed companion expression, not a psychological assessment.
+ */
+export type LumiConversationResultEmotion =
+  (typeof LumiConversationResultEmotion)[keyof typeof LumiConversationResultEmotion];
+
+export const LumiConversationResultEmotion = {
+  thoughtful: "thoughtful",
+  affectionate: "affectionate",
+  excited: "excited",
+  calm: "calm",
+} as const;
+
+/**
+ * Temporary stated activity preference, interpreted in the player's language.
+ */
+export type LumiConversationResultIntent =
+  (typeof LumiConversationResultIntent)[keyof typeof LumiConversationResultIntent];
+
+export const LumiConversationResultIntent = {
+  unspecified: "unspecified",
+  company: "company",
+  quiet: "quiet",
+  creative: "creative",
+  focus: "focus",
+} as const;
+
 export interface LumiConversationResult {
   /** @maxLength 1600 */
   reply: string;
   /** @maxItems 3 */
   recommendations: LumiRecommendation[];
   fallback: boolean;
+  /** Temporary user-stated mood for this conversation, never a diagnosis or permanent profile. */
+  mood?: LumiConversationResultMood;
+  phase?: LumiConversationResultPhase;
+  /** Allow-listed companion expression, not a psychological assessment. */
+  emotion?: LumiConversationResultEmotion;
+  /** Temporary stated activity preference, interpreted in the player's language. */
+  intent?: LumiConversationResultIntent;
 }
 
 export type LumiPreferencesDuration =
@@ -112,6 +174,90 @@ export interface LumiState {
 
 export interface LumiClearResult {
   success: boolean;
+}
+
+export interface ChatPhotoInput {
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  content?: string;
+  /**
+   * @maxLength 2048
+   * @pattern ^/api/images/[\w.-]+$
+   */
+  imageUri: string;
+}
+
+export type ChatMessageInputExpression =
+  (typeof ChatMessageInputExpression)[keyof typeof ChatMessageInputExpression];
+
+export const ChatMessageInputExpression = {
+  bomb: "bomb",
+  stone: "stone",
+  mirror: "mirror",
+  kiss: "kiss",
+  stars: "stars",
+  fire: "fire",
+  snow: "snow",
+  confetti: "confetti",
+  candle: "candle",
+  spark: "spark",
+  lantern: "lantern",
+  hush: "hush",
+  donkey: "donkey",
+  wolf: "wolf",
+} as const;
+
+export interface ChatMessageInput {
+  /**
+   * @minLength 1
+   * @maxLength 2000
+   */
+  content?: string;
+  expression?: ChatMessageInputExpression;
+  /**
+   * Canonical uploaded image path owned by the sender; never a temporary read URL.
+   * @pattern ^/api/images/[\w.-]+$
+   */
+  imageUri?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  fromUserId: string;
+  toUserId: string;
+  /** @nullable */
+  content: string | null;
+  /** @nullable */
+  expression: string | null;
+  /** @nullable */
+  imageUri?: string | null;
+  isRead: boolean;
+  createdAt: string;
+  isOwn: boolean;
+}
+
+export type AdminApiStatusApi =
+  (typeof AdminApiStatusApi)[keyof typeof AdminApiStatusApi];
+
+export const AdminApiStatusApi = {
+  ok: "ok",
+} as const;
+
+export type AdminApiStatusDatabase =
+  (typeof AdminApiStatusDatabase)[keyof typeof AdminApiStatusDatabase];
+
+export const AdminApiStatusDatabase = {
+  ok: "ok",
+  unavailable: "unavailable",
+} as const;
+
+export interface AdminApiStatus {
+  api: AdminApiStatusApi;
+  database: AdminApiStatusDatabase;
+  databaseLatencyMs: number | null;
+  checkedAt: string;
 }
 
 export interface MediaReadUrlsInput {
@@ -686,11 +832,11 @@ export interface FeatureFlags {
   music: boolean;
   shop: boolean;
   season: boolean;
+  shop_button: boolean;
+  season_button: boolean;
   campfire: boolean;
   guides: boolean;
   notifications: boolean;
-  shop_button: boolean;
-  season_button: boolean;
   image_generation: boolean;
 }
 
@@ -700,6 +846,594 @@ export interface AppConfig {
   features: FeatureFlags;
 }
 
+export interface FeatureUsagePolicy {
+  enabled: boolean;
+  /** @minimum 1 */
+  hourlyLimit: number | null;
+  /** @minimum 1 */
+  dailyLimit: number | null;
+  /** @minimum 1 */
+  dailyBudgetMicros: number | null;
+  /** @minimum 0 */
+  costPerActionMicros: number | null;
+}
+
+export type FeatureUsageControlInput = FeatureUsagePolicy;
+
+export type FeatureUsageOverviewTotals = {
+  actions: number;
+  activeUsers: number;
+  estimatedCostMicros: number;
+  pricedActions: number;
+  unpricedActions: number;
+  projectedMonthlyCostMicros: number;
+};
+
+export type FeatureUsageOverviewDailyItem = {
+  date: string;
+  actions: number;
+  activeUsers: number;
+  estimatedCostMicros: number;
+  pricedActions: number;
+  unpricedActions: number;
+};
+
+export type FeatureUsageOverviewFeaturesItemCostSource =
+  (typeof FeatureUsageOverviewFeaturesItemCostSource)[keyof typeof FeatureUsageOverviewFeaturesItemCostSource];
+
+export const FeatureUsageOverviewFeaturesItemCostSource = {
+  configurable: "configurable",
+  recorded: "recorded",
+} as const;
+
+export type FeatureUsageOverviewFeaturesItem = {
+  featureKey: string;
+  label: string;
+  costSource: FeatureUsageOverviewFeaturesItemCostSource;
+  actions: number;
+  activeUsers: number;
+  estimatedCostMicros: number;
+  pricedActions: number;
+  unpricedActions: number;
+  providerUsageCostMicros: number;
+  providerPricedActions: number;
+  providerUnpricedActions: number;
+  currentDailySpendMicros: number;
+  currentDailyProviderUsageCostMicros: number;
+  policy: FeatureUsagePolicy;
+};
+
+export type FeatureUsageOverviewTopUsersItem = {
+  userId: string;
+  name: string;
+  actions: number;
+};
+
+export type FeatureUsageOverviewMangaGenerationUsersItem = {
+  userId: string;
+  name: string;
+  attempts: number;
+  successful: number;
+  failed: number;
+  pending: number;
+  estimatedCostMicros: number;
+  usagePricedAttempts: number;
+  usageUnpricedSuccesses: number;
+  /** @nullable */
+  providerUsageCostMicros: number | null;
+};
+
+export interface FeatureUsageOverview {
+  periodDays: number;
+  totals: FeatureUsageOverviewTotals;
+  daily: FeatureUsageOverviewDailyItem[];
+  features: FeatureUsageOverviewFeaturesItem[];
+  topUsers: FeatureUsageOverviewTopUsersItem[];
+  /** Lifetime counts and provider-usage pricing of retained manga generation records. */
+  mangaGenerationUsers: FeatureUsageOverviewMangaGenerationUsersItem[];
+}
+
+export type AdminAnalyticsMetrics = {
+  totalUsers: number;
+  newUsers: number | null;
+  activeUsers: number;
+  averageDailyActiveUsers: number;
+  storiesCreated: number;
+  storiesPublished: number;
+  aiGenerations: number;
+  messages: number;
+  reports: number;
+  storiesViewed: number;
+  likes: number;
+  comments: number;
+  shares: number | null;
+  mangaCreated: number;
+  imagesUploaded: number;
+  videoUploads: number | null;
+};
+
+export type AdminAnalyticsDailyItem = {
+  date: string;
+  activeUsers: number;
+  storiesCreated: number;
+};
+
+export type AdminAnalyticsFeatures = {
+  discover: number;
+  storyCreator: number;
+  aiGeneration: number;
+  friends: number | null;
+  chat: number;
+  search: number | null;
+};
+
+export type AdminAnalyticsTopContentItemContentType =
+  (typeof AdminAnalyticsTopContentItemContentType)[keyof typeof AdminAnalyticsTopContentItemContentType];
+
+export const AdminAnalyticsTopContentItemContentType = {
+  story: "story",
+  book: "book",
+} as const;
+
+export type AdminAnalyticsTopContentItem = {
+  id: string;
+  contentType: AdminAnalyticsTopContentItemContentType;
+  title: string;
+  views: number;
+};
+
+export interface AdminAnalytics {
+  periodDays: number;
+  metrics: AdminAnalyticsMetrics;
+  daily: AdminAnalyticsDailyItem[];
+  features: AdminAnalyticsFeatures;
+  topContent: AdminAnalyticsTopContentItem[];
+}
+
+export type AdminModerationTargetType =
+  (typeof AdminModerationTargetType)[keyof typeof AdminModerationTargetType];
+
+export const AdminModerationTargetType = {
+  story: "story",
+  image: "image",
+  video: "video",
+  outfit: "outfit",
+  sticker: "sticker",
+  comment: "comment",
+  message: "message",
+  campfire_message: "campfire_message",
+  manga_generation: "manga_generation",
+  user: "user",
+} as const;
+
+export type AdminModerationQueueItemPriority =
+  (typeof AdminModerationQueueItemPriority)[keyof typeof AdminModerationQueueItemPriority];
+
+export const AdminModerationQueueItemPriority = {
+  normal: "normal",
+  high: "high",
+} as const;
+
+export type AdminModerationQueueItemStatus =
+  (typeof AdminModerationQueueItemStatus)[keyof typeof AdminModerationQueueItemStatus];
+
+export const AdminModerationQueueItemStatus = {
+  open: "open",
+  reviewing: "reviewing",
+} as const;
+
+export type AdminModerationQueueItemSource =
+  (typeof AdminModerationQueueItemSource)[keyof typeof AdminModerationQueueItemSource];
+
+export const AdminModerationQueueItemSource = {
+  report: "report",
+  ai: "ai",
+} as const;
+
+export interface AdminModerationQueueItem {
+  id: string;
+  targetType: AdminModerationTargetType;
+  targetId: string;
+  contentType: string;
+  title: string;
+  preview: string;
+  targetUserId: string | null;
+  userName: string | null;
+  username: string | null;
+  reportCount: number;
+  reportReasons: string[];
+  priority: AdminModerationQueueItemPriority;
+  status: AdminModerationQueueItemStatus;
+  source: AdminModerationQueueItemSource;
+  aiCategory: string | null;
+  aiConfidence: number | null;
+  createdAt: string;
+}
+
+export interface AdminModerationQueueResponse {
+  items: AdminModerationQueueItem[];
+  total: number;
+  aiAvailable: boolean;
+}
+
+export type AdminModerationReportStatus =
+  (typeof AdminModerationReportStatus)[keyof typeof AdminModerationReportStatus];
+
+export const AdminModerationReportStatus = {
+  open: "open",
+  reviewing: "reviewing",
+  resolved: "resolved",
+  dismissed: "dismissed",
+} as const;
+
+export interface AdminModerationReport {
+  id: string;
+  reporterId: string;
+  reporterName: string | null;
+  targetType: AdminModerationTargetType;
+  targetId: string;
+  contentType: string;
+  title: string;
+  preview: string;
+  targetUserId: string | null;
+  userName: string | null;
+  username: string | null;
+  reason: string;
+  details: string;
+  status: AdminModerationReportStatus;
+  resolvedById: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+export interface AdminModerationReportsResponse {
+  reports: AdminModerationReport[];
+  total: number;
+}
+
+export type AdminModerationReportStatusInputStatus =
+  (typeof AdminModerationReportStatusInputStatus)[keyof typeof AdminModerationReportStatusInputStatus];
+
+export const AdminModerationReportStatusInputStatus = {
+  reviewing: "reviewing",
+  resolved: "resolved",
+  dismissed: "dismissed",
+} as const;
+
+export interface AdminModerationReportStatusInput {
+  status: AdminModerationReportStatusInputStatus;
+  /** @maxLength 500 */
+  reason?: string;
+}
+
+export type AdminModerationActionInputAction =
+  (typeof AdminModerationActionInputAction)[keyof typeof AdminModerationActionInputAction];
+
+export const AdminModerationActionInputAction = {
+  review: "review",
+  keep: "keep",
+  hide: "hide",
+  remove: "remove",
+  restore: "restore",
+  warn_user: "warn_user",
+  suspend_user: "suspend_user",
+  ban_user: "ban_user",
+  ai_override_keep: "ai_override_keep",
+  ai_override_remove: "ai_override_remove",
+} as const;
+
+export interface AdminModerationActionInput {
+  targetType: AdminModerationTargetType;
+  /**
+   * @minLength 1
+   * @maxLength 2048
+   */
+  targetId: string;
+  targetUserId?: string | null;
+  action: AdminModerationActionInputAction;
+  /**
+   * @minLength 3
+   * @maxLength 500
+   */
+  reason: string;
+  /**
+   * @minimum 1
+   * @maximum 30
+   */
+  suspensionDays?: number | null;
+}
+
+export interface AdminModerationActionResult {
+  ok: boolean;
+  actionId: string;
+}
+
+export interface AdminModerationRecord {
+  id: string;
+  adminId: string;
+  adminName: string | null;
+  action: string;
+  targetType: AdminModerationTargetType;
+  targetId: string;
+  targetUserId: string | null;
+  contentType: string;
+  title: string;
+  preview: string;
+  reason: string;
+  aiCategory: string | null;
+  aiConfidence: number | null;
+  createdAt: string;
+}
+
+export type AdminModerationRecordsResponseKind =
+  (typeof AdminModerationRecordsResponseKind)[keyof typeof AdminModerationRecordsResponseKind];
+
+export const AdminModerationRecordsResponseKind = {
+  hidden: "hidden",
+  removed: "removed",
+  ai: "ai",
+  history: "history",
+} as const;
+
+export interface AdminModerationRecordsResponse {
+  kind: AdminModerationRecordsResponseKind;
+  records: AdminModerationRecord[];
+  total: number;
+  sourceAvailable: boolean;
+}
+
+export interface CreateGuideSessionInput {
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  title: string;
+  /**
+   * @minLength 10
+   * @maxLength 1200
+   */
+  description: string;
+  /** @maxLength 80 */
+  topic?: string | null;
+  startsAt: string;
+  /**
+   * @minimum 15
+   * @maximum 240
+   */
+  durationMinutes: number;
+  /**
+   * @minimum 2
+   * @maximum 100
+   */
+  capacity?: number;
+  /** @maxLength 2048 */
+  coverImageUri?: string | null;
+  tutorialId?: string | null;
+}
+
+export type GuideTutorialStepType =
+  (typeof GuideTutorialStepType)[keyof typeof GuideTutorialStepType];
+
+export const GuideTutorialStepType = {
+  text: "text",
+  image: "image",
+  video: "video",
+  tip: "tip",
+  question: "question",
+} as const;
+
+export interface GuideTutorialStep {
+  id: string;
+  type: GuideTutorialStepType;
+  /** @maxLength 100 */
+  title: string;
+  /** @maxLength 1200 */
+  body: string;
+  mediaUri: string | null;
+}
+
+export type GuideTutorialInputVisibility =
+  (typeof GuideTutorialInputVisibility)[keyof typeof GuideTutorialInputVisibility];
+
+export const GuideTutorialInputVisibility = {
+  public: "public",
+  followers: "followers",
+  unlisted: "unlisted",
+} as const;
+
+export type GuideTutorialInputStatus =
+  (typeof GuideTutorialInputStatus)[keyof typeof GuideTutorialInputStatus];
+
+export const GuideTutorialInputStatus = {
+  draft: "draft",
+  published: "published",
+} as const;
+
+export interface GuideTutorialInput {
+  /**
+   * @minLength 3
+   * @maxLength 80
+   */
+  title: string;
+  /**
+   * @minLength 10
+   * @maxLength 1200
+   */
+  description: string;
+  /** @maxLength 80 */
+  topic?: string | null;
+  visibility: GuideTutorialInputVisibility;
+  status: GuideTutorialInputStatus;
+  /**
+   * @minItems 1
+   * @maxItems 24
+   */
+  steps: GuideTutorialStep[];
+}
+
+export interface GuideTutorialProgressInput {
+  /**
+   * @minimum 0
+   * @maximum 24
+   */
+  completedSteps: number;
+}
+
+export interface GuideSessionPollInput {
+  /**
+   * @minLength 5
+   * @maxLength 180
+   */
+  question: string;
+  /**
+   * @minItems 2
+   * @maxItems 6
+   */
+  options: string[];
+}
+
+export interface GuideSessionPollVoteInput {
+  /**
+   * @minimum 0
+   * @maximum 5
+   */
+  optionIndex: number;
+}
+
+export interface GuideSessionPoll {
+  id: string;
+  sessionId: string;
+  createdBy: string;
+  question: string;
+  options: string[];
+  voteCounts: number[];
+  myVote: number | null;
+  createdAt: string;
+  closedAt: string | null;
+}
+
+export interface GuideSessionQuestionInput {
+  /**
+   * @minLength 4
+   * @maxLength 500
+   */
+  question: string;
+}
+
+export interface GuideSessionQuestion {
+  id: string;
+  question: string;
+  answer: string | null;
+  createdAt: string;
+  answeredAt: string | null;
+  askerName: string;
+}
+
+export interface GuideSessionAnswerInput {
+  /**
+   * @minLength 2
+   * @maxLength 1000
+   */
+  answer: string;
+}
+
+export interface GuideSessionRecapInput {
+  /**
+   * @minLength 20
+   * @maxLength 1200
+   */
+  summary: string;
+  /** @maxItems 6 */
+  highlights?: string[];
+}
+
+export interface GuideSessionRecap {
+  sessionId: string;
+  guideId: string;
+  summary: string;
+  highlights: string[];
+  updatedAt: string;
+}
+
+export interface GuideSessionEngagement {
+  polls: GuideSessionPoll[];
+  questions: GuideSessionQuestion[];
+  recap: GuideSessionRecap | null;
+}
+
+export interface GuideSessionParticipant {
+  userId: string;
+  name: string | null;
+  username: string | null;
+  avatarUri: string | null;
+  joinedAt: string;
+  tutorialProgress: number;
+  tutorialCompletedAt: string | null;
+}
+
+export type GuideTutorialVisibility =
+  (typeof GuideTutorialVisibility)[keyof typeof GuideTutorialVisibility];
+
+export const GuideTutorialVisibility = {
+  public: "public",
+  followers: "followers",
+  unlisted: "unlisted",
+} as const;
+
+export type GuideTutorialStatus =
+  (typeof GuideTutorialStatus)[keyof typeof GuideTutorialStatus];
+
+export const GuideTutorialStatus = {
+  draft: "draft",
+  published: "published",
+} as const;
+
+export interface GuideTutorial {
+  id: string;
+  guideId: string;
+  guideName: string;
+  guideUsername: string | null;
+  guideAvatarUri: string | null;
+  title: string;
+  description: string;
+  topic: string | null;
+  visibility: GuideTutorialVisibility;
+  status: GuideTutorialStatus;
+  steps: GuideTutorialStep[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GuideSession {
+  id: string;
+  guideId: string;
+  roomId: string;
+  title: string;
+  description: string;
+  coverImageUri: string | null;
+  topic: string | null;
+  startsAt: string;
+  endsAt: string;
+  capacity: number;
+  status: string;
+  reminderSentAt: string | null;
+  createdAt: string;
+  attendeeCount: number;
+  isJoined: boolean;
+  tutorialId: string | null;
+  tutorial: GuideTutorial | null;
+  tutorialProgress: number;
+  tutorialCompletedAt: string | null;
+}
+
+export type ListGuideSessionsParams = {
+  guideId?: string;
+};
+
+export type ListGuideTutorialsParams = {
+  mine?: boolean;
+};
+
 export type ViewStorigamUnsubscribeParams = {
   token: string;
 };
@@ -707,3 +1441,112 @@ export type ViewStorigamUnsubscribeParams = {
 export type ConfirmStorigamUnsubscribeParams = {
   token: string;
 };
+
+export type GetAdminFeatureUsageParams = {
+  /**
+   * @minimum 1
+   * @maximum 90
+   */
+  days?: number;
+};
+
+export type GetAdminAnalyticsParams = {
+  /**
+   * @minimum 1
+   * @maximum 90
+   */
+  days?: number;
+};
+
+export type HideAdminUser200 = {
+  ok: boolean;
+  isHidden: boolean;
+};
+
+export type RestoreAdminUserVisibility200 = {
+  ok: boolean;
+  isHidden: boolean;
+};
+
+export type GetAdminModerationQueueParams = {
+  filter?: GetAdminModerationQueueFilter;
+  /**
+   * @maxLength 120
+   */
+  q?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * @minimum 0
+   */
+  offset?: number;
+};
+
+export type GetAdminModerationQueueFilter =
+  (typeof GetAdminModerationQueueFilter)[keyof typeof GetAdminModerationQueueFilter];
+
+export const GetAdminModerationQueueFilter = {
+  all: "all",
+  high: "high",
+  new: "new",
+  reported: "reported",
+  ai_flagged: "ai_flagged",
+} as const;
+
+export type GetAdminModerationReportsParams = {
+  status?: GetAdminModerationReportsStatus;
+  /**
+   * @maxLength 120
+   */
+  q?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * @minimum 0
+   */
+  offset?: number;
+};
+
+export type GetAdminModerationReportsStatus =
+  (typeof GetAdminModerationReportsStatus)[keyof typeof GetAdminModerationReportsStatus];
+
+export const GetAdminModerationReportsStatus = {
+  all: "all",
+  open: "open",
+  reviewing: "reviewing",
+  resolved: "resolved",
+  dismissed: "dismissed",
+} as const;
+
+export type GetAdminModerationRecordsParams = {
+  kind: GetAdminModerationRecordsKind;
+  /**
+   * @maxLength 120
+   */
+  q?: string;
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * @minimum 0
+   */
+  offset?: number;
+};
+
+export type GetAdminModerationRecordsKind =
+  (typeof GetAdminModerationRecordsKind)[keyof typeof GetAdminModerationRecordsKind];
+
+export const GetAdminModerationRecordsKind = {
+  hidden: "hidden",
+  removed: "removed",
+  ai: "ai",
+  history: "history",
+} as const;
