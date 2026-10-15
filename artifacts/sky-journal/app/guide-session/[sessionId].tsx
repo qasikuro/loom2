@@ -48,6 +48,7 @@ export default function GuideSessionScreen() {
   const { followingIds, followUser } = useApp();
   const [session, setSession] = useState<GuideSession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
   const [activeStep, setActiveStep] = useState(0);
   const [savingProgress, setSavingProgress] = useState(false);
   const [participants, setParticipants] = useState<GuideSessionParticipant[]>([]);
@@ -91,6 +92,20 @@ export default function GuideSessionScreen() {
       .finally(() => setLoading(false));
   }, [sessionId, t]);
   useEffect(load, [load]);
+  useEffect(() => {
+    if (!session) return;
+    const startsAt = new Date(session.startsAt).getTime();
+    const currentTime = Date.now();
+    setNow(currentTime);
+    if (!Number.isFinite(startsAt) || startsAt <= currentTime) return;
+
+    const timer = setInterval(() => {
+      const tick = Date.now();
+      setNow(tick);
+      if (tick >= startsAt) clearInterval(timer);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [session]);
 
   async function join() {
     if (!session) return;
@@ -154,10 +169,12 @@ export default function GuideSessionScreen() {
   const top = Platform.OS === 'web' ? 67 : insets.top;
   if (loading || !session) return <View style={[s.root, { backgroundColor: colors.background, paddingTop: top }]}><BackButton /><SkyLoadingOverlay message={t('social.loadingSession')} /></View>;
   const start = new Date(session.startsAt);
-  const started = Date.now() >= start.getTime();
-  const ended = session.status === 'completed' || Date.now() >= new Date(session.endsAt).getTime();
+  const started = now >= start.getTime();
+  const ended = session.status === 'completed' || now >= new Date(session.endsAt).getTime();
   const isOwner = userId === session.guideId;
   const live = started && !ended && session.status === 'scheduled';
+  const waitingRoomVisible = (session.isJoined || isOwner) && !started && !ended;
+  const countdown = formatSessionCountdown(start.getTime() - now);
   const isFollowing = followingIds.includes(session.guideId);
   const activeTutorialStep = session.tutorial?.steps[activeStep];
   const progressComplete = !!session.tutorial && session.tutorialProgress >= session.tutorial.steps.length;
@@ -180,6 +197,45 @@ export default function GuideSessionScreen() {
         <View><Text style={[s.time, { color: colors.foreground }]}>{start.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</Text>
           <Text style={[s.meta, { color: colors.mutedForeground }]}>{session.attendeeCount} of {session.capacity} joined</Text></View>
       </View>
+      {waitingRoomVisible && (
+        <View style={[s.waitingRoom, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={s.waitingRoomHeading}>
+            <View style={[s.waitingRoomIcon, { backgroundColor: `${colors.primary}15` }]}>
+              <Icon name="clock" size={17} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.waitingRoomEyebrow, { color: colors.primary }]}>WAITING ROOM</Text>
+              <Text style={[s.waitingRoomTitle, { color: colors.foreground }]}>
+                {isOwner ? 'Your session is getting ready' : 'You’re all set'}
+              </Text>
+            </View>
+            <View style={[s.waitingRoomReady, { backgroundColor: `${colors.tint}18` }]}>
+              <View style={[s.waitingRoomDot, { backgroundColor: colors.tint }]} />
+              <Text style={[s.waitingRoomReadyText, { color: colors.tint }]}>READY</Text>
+            </View>
+          </View>
+          <View style={[s.countdownPanel, { backgroundColor: colors.background }]}>
+            <Text style={[s.countdownCaption, { color: colors.mutedForeground }]}>SESSION STARTS IN</Text>
+            <Text style={[s.countdownValue, { color: colors.foreground }]}>{countdown}</Text>
+          </View>
+          <View style={s.waitingRoomMeta}>
+            <Icon name="users" size={14} color={colors.primary} />
+            <Text style={[s.waitingRoomMetaText, { color: colors.mutedForeground }]}>
+              {session.attendeeCount} {session.attendeeCount === 1 ? 'participant' : 'participants'} joined
+            </Text>
+            {session.tutorial && (
+              <>
+                <View style={[s.waitingRoomSeparator, { backgroundColor: colors.border }]} />
+                <Icon name="book-open" size={14} color={colors.primary} />
+                <Text style={[s.waitingRoomMetaText, { color: colors.mutedForeground }]}>Tutorial ready</Text>
+              </>
+            )}
+          </View>
+          <Text style={[s.waitingRoomCopy, { color: colors.mutedForeground }]}>
+            The shared room is open while you wait. Live polls and questions appear when the session starts.
+          </Text>
+        </View>
+      )}
       <Text style={[s.section, { color: colors.foreground }]}>{t('social.sessionAbout')}</Text>
       <Text style={[s.body, { color: colors.mutedForeground }]}>{session.description}</Text>
       {session.tutorial && (
@@ -466,7 +522,7 @@ export default function GuideSessionScreen() {
           )}
         </View>
       )}
-      {!session.isJoined && !ended ? (
+      {!session.isJoined && !isOwner && !ended ? (
         <TouchableOpacity style={[s.primary, { backgroundColor: colors.primary }]} onPress={join}>
           <Icon name="user-plus" size={17} color={colors.primaryForeground} />
           <Text style={[s.primaryText, { color: colors.primaryForeground }]}>{t('social.joinSession')}</Text>
@@ -474,7 +530,7 @@ export default function GuideSessionScreen() {
       ) : (
         <TouchableOpacity style={[s.primary, { backgroundColor: colors.primary }]} onPress={() => router.push(`/campfire/${session.roomId}`)}>
           <Icon name="message-circle" size={17} color={colors.primaryForeground} />
-          <Text style={[s.primaryText, { color: colors.primaryForeground }]}>{live ? 'Enter live group chat' : session.status === 'completed' ? 'Open session chat' : t('social.joinedRemind')}</Text>
+          <Text style={[s.primaryText, { color: colors.primaryForeground }]}>{live ? 'Enter live group chat' : ended ? 'Open session chat' : 'Open waiting room'}</Text>
         </TouchableOpacity>
       )}
       {!session.isJoined && ended && (
@@ -530,12 +586,37 @@ export default function GuideSessionScreen() {
     </ScrollView>
   </View>;
 }
+function formatSessionCountdown(milliseconds: number): string {
+  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3_600);
+  const minutes = Math.floor((totalSeconds % 3_600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return `${days}d ${String(hours).padStart(2, '0')}h`;
+  return [hours, minutes, seconds].map(value => String(value).padStart(2, '0')).join(':');
+}
+
 const s = StyleSheet.create({
   root: { flex: 1 }, header: { flexDirection: 'row', gap: 14, alignItems: 'center', padding: 18 },
   heading: { fontFamily: 'Satoshi-Bold', fontSize: 18 }, topic: { fontFamily: 'Satoshi-Bold', fontSize: 13, marginBottom: 8 },
   title: { fontFamily: 'Satoshi-Black', fontSize: 30, lineHeight: 36, marginBottom: 20 },
   timeCard: { flexDirection: 'row', gap: 12, alignItems: 'center', padding: 16, borderRadius: 16, borderWidth: 1 },
   time: { fontFamily: 'Satoshi-Bold', fontSize: 15 }, meta: { fontFamily: 'Satoshi-Regular', fontSize: 12, marginTop: 3 },
+  waitingRoom: { borderWidth: 1, borderRadius: 17, padding: 13, marginTop: 12 },
+  waitingRoomHeading: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  waitingRoomIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  waitingRoomEyebrow: { fontFamily: 'Satoshi-Bold', fontSize: 9, letterSpacing: 1 },
+  waitingRoomTitle: { fontFamily: 'Satoshi-Bold', fontSize: 14, marginTop: 2 },
+  waitingRoomReady: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 5, borderRadius: 12 },
+  waitingRoomDot: { width: 6, height: 6, borderRadius: 3 },
+  waitingRoomReadyText: { fontFamily: 'Satoshi-Bold', fontSize: 8, letterSpacing: 0.5 },
+  countdownPanel: { alignItems: 'center', borderRadius: 13, paddingVertical: 11, marginTop: 12 },
+  countdownCaption: { fontFamily: 'Satoshi-Bold', fontSize: 8, letterSpacing: 1 },
+  countdownValue: { fontFamily: 'Satoshi-Black', fontSize: 28, fontVariant: ['tabular-nums'], marginTop: 2 },
+  waitingRoomMeta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 11 },
+  waitingRoomMetaText: { fontFamily: 'Satoshi-Medium', fontSize: 10 },
+  waitingRoomSeparator: { width: 1, height: 13, marginHorizontal: 3 },
+  waitingRoomCopy: { fontFamily: 'Satoshi-Regular', fontSize: 11, lineHeight: 16, marginTop: 8 },
   cover: { height: 180, borderRadius: 19, overflow: 'hidden', marginBottom: 19 },
   coverShade: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(20,16,35,0.22)' },
   coverPill: { position: 'absolute', left: 12, bottom: 12, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 20, backgroundColor: 'rgba(22,17,36,0.76)' },
