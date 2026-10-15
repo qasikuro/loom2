@@ -95,14 +95,15 @@ export default function GuideSessionScreen() {
   useEffect(() => {
     if (!session) return;
     const startsAt = new Date(session.startsAt).getTime();
+    const endsAt = new Date(session.endsAt).getTime();
     const currentTime = Date.now();
     setNow(currentTime);
-    if (!Number.isFinite(startsAt) || startsAt <= currentTime) return;
+    if (session.status === 'completed' || !Number.isFinite(startsAt) || !Number.isFinite(endsAt) || endsAt <= currentTime) return;
 
     const timer = setInterval(() => {
       const tick = Date.now();
       setNow(tick);
-      if (tick >= startsAt) clearInterval(timer);
+      if (tick >= endsAt) clearInterval(timer);
     }, 1000);
     return () => clearInterval(timer);
   }, [session]);
