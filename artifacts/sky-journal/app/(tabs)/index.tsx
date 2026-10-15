@@ -1,4 +1,5 @@
 import { StarField } from '@/components/StarField';
+import { useAmbientAnimationActive } from '@/hooks/useAmbientAnimationActive';
 import { Icon } from '@/components/Icon';
 import { FloatingMenu, type FloatingMenuItem } from '@/components/FloatingMenu';
 import { Images } from '@/assets/images';
@@ -220,14 +221,15 @@ function lumiAwareness(
 // ─── Breathing ring ──────────────────────────────────────────────────────────
 function BreathRing({ accent, r = 46 }: { accent: string; r?: number }) {
   const a = useRef(new Animated.Value(0)).current;
+  const active = useAmbientAnimationActive();
   useEffect(() => {
+    if (!active) return;
     const loop = Animated.loop(Animated.sequence([
-      Animated.timing(a, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(a, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      Animated.timing(a, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
+      Animated.timing(a, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: true, isInteraction: false }),
     ]));
     loop.start(); return () => loop.stop();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only glow animation loop; Animated.Value ref is stable
-  }, []);
+  }, [a, active]);
   return (
     <Animated.View pointerEvents="none" style={{
       position: 'absolute', top: -5, left: -5, right: -5, bottom: -5, borderRadius: r,
@@ -463,6 +465,7 @@ const sp = StyleSheet.create({
 function WitnessSummaryCard({
   count, storyTitle, onPress,
 }: { count: number; storyTitle: string; onPress: () => void }) {
+  const active = useAmbientAnimationActive();
   const stars = useRef(
     Array.from({ length: 6 }, () => ({
       x:   new Animated.Value(0),
@@ -473,25 +476,46 @@ function WitnessSummaryCard({
   ).current;
 
   useEffect(() => {
+    if (!active) return;
+    let disposed = false;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    const animations = new Set<Animated.CompositeAnimation>();
+    function schedule(i: number, delay: number) {
+      const timer = setTimeout(() => {
+        timers.delete(timer);
+        if (!disposed) launch(i);
+      }, delay);
+      timers.add(timer);
+    }
     function launch(i: number) {
+      if (disposed) return;
       const s = stars[i]!;
       s.x.setValue(0); s.y.setValue(0); s.op.setValue(0); s.sc.setValue(0.4);
       const angle = (i / stars.length) * Math.PI * 2 + Math.random() * 0.6;
       const dist  = 28 + Math.random() * 18;
-      Animated.sequence([
+      const animation = Animated.sequence([
         Animated.delay(i * 180 + Math.random() * 120),
         Animated.parallel([
-          Animated.timing(s.op, { toValue: 1,    duration: 220, useNativeDriver: true }),
-          Animated.spring(s.sc, { toValue: 1,    tension: 80, friction: 7, useNativeDriver: true }),
-          Animated.timing(s.x,  { toValue: Math.cos(angle) * dist, duration: 900, useNativeDriver: true }),
-          Animated.timing(s.y,  { toValue: Math.sin(angle) * dist, duration: 900, useNativeDriver: true }),
+          Animated.timing(s.op, { toValue: 1,    duration: 220, useNativeDriver: true, isInteraction: false }),
+          Animated.spring(s.sc, { toValue: 1,    tension: 80, friction: 7, useNativeDriver: true, isInteraction: false }),
+          Animated.timing(s.x,  { toValue: Math.cos(angle) * dist, duration: 900, useNativeDriver: true, isInteraction: false }),
+          Animated.timing(s.y,  { toValue: Math.sin(angle) * dist, duration: 900, useNativeDriver: true, isInteraction: false }),
         ]),
-        Animated.timing(s.op, { toValue: 0, duration: 500, useNativeDriver: true }),
-      ]).start(() => setTimeout(() => launch(i), 1400 + Math.random() * 800));
+        Animated.timing(s.op, { toValue: 0, duration: 500, useNativeDriver: true, isInteraction: false }),
+      ]);
+      animations.add(animation);
+      animation.start(({ finished }) => {
+        animations.delete(animation);
+        if (finished && !disposed) schedule(i, 1400 + Math.random() * 800);
+      });
     }
-    stars.forEach((_, i) => setTimeout(() => launch(i), i * 200));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only star animation; Animated.Value refs and launch callback are stable
-  }, []);
+    stars.forEach((_, i) => schedule(i, i * 200));
+    return () => {
+      disposed = true;
+      timers.forEach(clearTimeout);
+      animations.forEach(animation => animation.stop());
+    };
+  }, [active, stars]);
 
   const ICONS = ['✦', '◈', '◇', '⬡', '◐', '△'];
   const label = count === 1

@@ -18,6 +18,7 @@ import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 import { useSound } from '@/context/SoundContext';
 import { useApp } from '@/context/AppContext';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
+import { useAmbientAnimationActive } from '@/hooks/useAmbientAnimationActive';
 
 const BAR_HEIGHT = 66;
 const BTN_SIZE   = 56;
@@ -46,7 +47,7 @@ function TabIcon({
     Animated.timing(glow, {
       toValue: focused ? 1 : 0,
       duration: 220,
-      useNativeDriver: false,
+      useNativeDriver: true,
       easing: Easing.out(Easing.quad),
     }).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: Animated.Value refs (glow, scale) are stable; only `focused` should re-trigger
@@ -79,22 +80,26 @@ function TabIcon({
 
 function CreateIcon() {
   const colors = useColors();
+  const active = useAmbientAnimationActive();
   const scale  = useRef(new Animated.Value(1)).current;
   const aura   = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
+    if (!active) return;
     const breathe = Animated.loop(
       Animated.sequence([
         Animated.timing(scale, {
           toValue: 1.10,
           duration: 2000,
           useNativeDriver: true,
+          isInteraction: false,
           easing: Easing.inOut(Easing.sin),
         }),
         Animated.timing(scale, {
           toValue: 0.94,
           duration: 2000,
           useNativeDriver: true,
+          isInteraction: false,
           easing: Easing.inOut(Easing.sin),
         }),
       ])
@@ -105,12 +110,14 @@ function CreateIcon() {
           toValue: 1,
           duration: 1600,
           useNativeDriver: true,
+          isInteraction: false,
           easing: Easing.inOut(Easing.sin),
         }),
         Animated.timing(aura, {
           toValue: 0.4,
           duration: 1600,
           useNativeDriver: true,
+          isInteraction: false,
           easing: Easing.inOut(Easing.sin),
         }),
       ])
@@ -118,8 +125,7 @@ function CreateIcon() {
     breathe.start();
     pulse.start();
     return () => { breathe.stop(); pulse.stop(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only animation loop; Animated values are stable refs
-  }, []);
+  }, [active, aura, scale]);
 
   return (
     <Animated.View style={[styles.createOuter, { transform: [{ scale }] }]}>

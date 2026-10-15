@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { useAmbientAnimationActive } from '@/hooks/useAmbientAnimationActive';
 
 interface StarDef {
   left:  string;
@@ -37,9 +38,10 @@ function mkStar(i: number): StarDef {
 
 const STAR_DATA: StarDef[] = Array.from({ length: 54 }, (_, i) => mkStar(i));
 
-function Twinkle({ s }: { s: StarDef }) {
+function Twinkle({ s, active }: { s: StarDef; active: boolean }) {
   const op = useRef(new Animated.Value(s.minOp)).current;
   useEffect(() => {
+    if (!active) return;
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(s.delay * 0.4),
@@ -48,19 +50,20 @@ function Twinkle({ s }: { s: StarDef }) {
           duration: s.dur * 0.5,
           easing:   Easing.inOut(Easing.sin),
           useNativeDriver: true,
+          isInteraction: false,
         }),
         Animated.timing(op, {
           toValue:  s.minOp,
           duration: s.dur * 0.5,
           easing:   Easing.inOut(Easing.sin),
           useNativeDriver: true,
+          isInteraction: false,
         }),
       ])
     );
     loop.start();
     return () => loop.stop();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [active, op, s]);
 
   return (
     <Animated.View
@@ -87,6 +90,7 @@ interface StarFieldProps {
 }
 
 export function StarField({ density = 'medium', style }: StarFieldProps) {
+  const active = useAmbientAnimationActive();
   // Native dev builds already spend extra time on Metro/Hermes and Fast
   // Refresh. Keep the ambient effect, but avoid dozens of independent
   // animation loops competing with interactive screens during development.
@@ -95,7 +99,7 @@ export function StarField({ density = 'medium', style }: StarFieldProps) {
     : density === 'low' ? 22 : density === 'high' ? 54 : 38;
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.root, style]}>
-      {STAR_DATA.slice(0, count).map((s, i) => <Twinkle key={i} s={s} />)}
+      {STAR_DATA.slice(0, count).map((s, i) => <Twinkle key={i} s={s} active={active} />)}
     </View>
   );
 }
