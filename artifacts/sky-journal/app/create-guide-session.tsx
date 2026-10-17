@@ -5,7 +5,7 @@ import { useColors } from '@/hooks/useColors';
 import { persistImageUri } from '@/utils/persistImage';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +23,7 @@ interface GuideTutorialChoice {
 
 export default function CreateGuideSessionScreen() {
   const { t } = useTranslation();
+  const params = useLocalSearchParams<{ tutorialId?: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState('');
@@ -34,18 +35,34 @@ export default function CreateGuideSessionScreen() {
   const [capacity, setCapacity] = useState('30');
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [tutorials, setTutorials] = useState<GuideTutorialChoice[]>([]);
-  const [tutorialId, setTutorialId] = useState<string | null>(null);
+  const [tutorialId, setTutorialId] = useState<string | null>(typeof params.tutorialId === 'string' ? params.tutorialId : null);
+  const [tutorialsState, setTutorialsState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const startsAt = useMemo(() => new Date(`${date}T${time}:00`), [date, time]);
 
   useEffect(() => {
     let live = true;
+    setTutorialsState('loading');
     apiFetch<GuideTutorialChoice[]>('/guide-tutorials?mine=true')
-      .then(rows => { if (live) setTutorials(rows.filter(row => row.status === 'published')); })
-      .catch(() => { if (live) setTutorials([]); });
+      .then(rows => {
+        if (!live) return;
+        const published = rows.filter(row => row.status === 'published');
+        setTutorials(published);
+        setTutorialsState('ready');
+        const preset = typeof params.tutorialId === 'string' ? published.find(row => row.id === params.tutorialId) : undefined;
+        if (preset) {
+          setTitle(cur => cur || preset.title);
+          setDescription(cur => cur || preset.description);
+          setTopic(cur => cur || (preset.topic ?? ''));
+        } else if (typeof params.tutorialId === 'string') {
+          setTutorialId(cur => cur === params.tutorialId ? null : cur);
+        }
+      })
+      .catch(() => { if (live) { setTutorials([]); setTutorialsState('error'); } });
     return () => { live = false; };
-  }, []);
+  }, [params.tutorialId, reloadKey]);
 
   async function chooseCover() {
     setFormError(null);
@@ -89,9 +106,8 @@ export default function CreateGuideSessionScreen() {
           tutorialId,
         }),
       });
-      Alert.alert(t('social.sessionScheduled'), t('social.sessionScheduledBody'), [
-        { text: t('social.viewSession'), onPress: () => router.replace(`/guide-session/${session.id}`) },
-      ]);
+      Alert.alert(t('social.sessionScheduled'), t('social.sessionScheduledBody'));
+      router.replace(`/guide-session/${session.id}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : t('social.tryAgain');
       setFormError(message || t('discoverLog.coverSaveError'));
@@ -170,7 +186,14 @@ export default function CreateGuideSessionScreen() {
               </View>
             </TouchableOpacity>
           ))}
-          {tutorials.length === 0 && (
+          {tutorialsState === 'loading' && <Text style={[s.tutorialOptionHint, { color: colors.mutedForeground, marginTop: 8 }]}>Loading your published tutorials…</Text>}
+          {tutorialsState === 'error' && (
+            <TouchableOpacity testID="tutorials-retry" onPress={() => setReloadKey(k => k + 1)} style={[s.tutorialEmpty, { borderColor: colors.destructive }]}>
+              <Icon name="refresh-cw" size={14} color={colors.destructive} />
+              <Text style={[s.tutorialEmptyText, { color: colors.destructive }]}>Tutorials could not load. Tap to retry.</Text>
+            </TouchableOpacity>
+          )}
+          {tutorialsState === 'ready' && tutorials.length === 0 && (
             <TouchableOpacity onPress={() => router.push('/create-guide-tutorial')} style={[s.tutorialEmpty, { backgroundColor: `${colors.primary}08`, borderColor: `${colors.primary}28` }]}>
               <Icon name="plus" size={15} color={colors.primary} />
               <Text style={[s.tutorialEmptyText, { color: colors.primary }]}>Create and publish a tutorial first</Text>
@@ -188,13 +211,30 @@ export default function CreateGuideSessionScreen() {
           <View style={{ flex: 1 }}><Field label={t('social.minutes')} value={duration} onChangeText={setDuration} placeholder="60" colors={colors} numeric /></View>
           <View style={{ flex: 1 }}><Field label={t('social.maximumPeople')} value={capacity} onChangeText={setCapacity} placeholder="30" colors={colors} numeric /></View>
         </View>
+        <View testID="session-review" style={[s.tutorialPanel, { borderColor: colors.border, backgroundColor: colors.card }]}>
+          <Text style={[s.label, { color: colors.foreground }]}>Review before scheduling</Text>
+          {([
+            ['type', title.trim() || 'Add a title', !!title.trim()],
+            ['align-left', description.trim().length >= 10 ? 'Description ready' : 'Description needs at least 10 characters', description.trim().length >= 10],
+            ['calendar', Number.isNaN(startsAt.getTime()) ? 'Date or time is not valid' : startsAt.toLocaleString([], { dateStyle: 'full', timeStyle: 'short' }), !Number.isNaN(startsAt.getTime()) && startsAt.getTime() > Date.now()],
+            ['clock', `${duration || '?'} minutes · up to ${capacity || '?'} people`, Number(duration) > 0 && Number(capacity) > 0],
+            ['book-open', tutorialId ? `Tutorial: ${tutorials.find(row => row.id === tutorialId)?.title ?? 'selected'}` : 'No tutorial attached', true],
+            ['image', coverUri ? 'Cover image added' : 'No cover image', true],
+          ] as [string, string, boolean][]).map(([icon, text, ok]) => (
+            <View key={icon} style={{ flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 7 }}>
+              <Icon name={ok ? icon : 'alert-circle'} size={14} color={ok ? colors.primary : colors.destructive} />
+              <Text style={[s.tutorialOptionTitle, { flex: 1, color: ok ? colors.foreground : colors.destructive }]}>{text}</Text>
+            </View>
+          ))}
+          <Text style={[s.tutorialOptionHint, { color: colors.mutedForeground, marginTop: 10 }]}>After scheduling you get a waiting room with a shared Campfire chat, and can prepare polls before it starts. Reschedule or cancel later from Upcoming sessions in your profile.</Text>
+        </View>
         {formError ? (
           <View style={[s.errorBox, { borderColor: colors.destructive ?? '#C85555', backgroundColor: `${colors.destructive ?? '#C85555'}12` }]}>
             <Icon name="alert-circle" size={16} color={colors.destructive ?? '#C85555'} />
             <Text style={[s.errorText, { color: colors.destructive ?? '#C85555' }]}>{formError}</Text>
           </View>
         ) : null}
-        <TouchableOpacity style={[s.create, { backgroundColor: colors.primary, opacity: saving ? 0.65 : 1 }]} disabled={saving} onPress={createSession}>
+        <TouchableOpacity testID="session-schedule" style={[s.create, { backgroundColor: colors.primary, opacity: saving ? 0.65 : 1 }]} disabled={saving} onPress={createSession}>
           <Icon name={saving ? 'clock' : 'calendar'} size={17} color={colors.primaryForeground} />
           <Text style={[s.createText, { color: colors.primaryForeground }]}>{saving ? t('social.scheduling') : t('social.scheduleSession')}</Text>
         </TouchableOpacity>

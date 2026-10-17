@@ -1,13 +1,14 @@
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import {
-  getListGuideSessionManagementSessionsQueryKey,
-  useCancelGuideSessionManagementSession,
-  useListGuideSessionManagementSessions,
-  useRescheduleGuideSessionManagementSession,
-  type GuideSessionManagementEntry as GuideSession,
+  getListGuideSessionsQueryKey,
+  useCancelGuideSession,
+  useListGuideSessions,
+  useRescheduleGuideSession,
+  type GuideSession,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
@@ -48,8 +49,8 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
   const [validationMessage, setValidationMessage] = useState('');
   const [mutationMessage, setMutationMessage] = useState('');
 
-  const queryKey = getListGuideSessionManagementSessionsQueryKey({ guideId: guideId ?? undefined });
-  const { data, isLoading, isFetching, isError, refetch } = useListGuideSessionManagementSessions(
+  const queryKey = getListGuideSessionsQueryKey({ guideId: guideId ?? undefined });
+  const { data, isLoading, isFetching, isError, refetch } = useListGuideSessions(
     { guideId: guideId ?? undefined },
     { query: { queryKey, enabled: !!guideId, staleTime: 30_000 } },
   );
@@ -65,7 +66,7 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
     await queryClient.invalidateQueries({ queryKey });
   };
 
-  const cancelMutation = useCancelGuideSessionManagementSession({
+  const cancelMutation = useCancelGuideSession({
     mutation: {
       onSuccess: async () => {
         setCancelId(null);
@@ -76,7 +77,7 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
     },
   });
 
-  const rescheduleMutation = useRescheduleGuideSessionManagementSession({
+  const rescheduleMutation = useRescheduleGuideSession({
     mutation: {
       onSuccess: async () => {
         setRescheduleId(null);
@@ -191,6 +192,12 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
                       </Text>
                     </View>
                   </View>
+                  <TouchableOpacity testID={`manage-open-${session.id}`} accessibilityRole="button" accessibilityLabel="Open session room"
+                    onPress={() => router.push(`/guide-session/${session.id}`)}
+                    style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: `${colors.primary}12`, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={{ color: colors.primary, fontFamily: 'Satoshi-Bold', fontSize: 11 }}>Open</Text>
+                    <Icon name="arrow-right" size={12} color={colors.primary} />
+                  </TouchableOpacity>
                 </View>
 
                 {isRescheduling && (
@@ -238,7 +245,7 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
                       <TouchableOpacity onPress={() => setCancelId(null)} disabled={isBusy} style={{ paddingHorizontal: 11, paddingVertical: 7, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
                         <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Bold', fontSize: 11 }}>Keep session</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity onPress={() => cancelMutation.mutate({ sessionId: session.id })} disabled={isBusy} style={{ paddingHorizontal: 11, paddingVertical: 7, borderRadius: 10, backgroundColor: colors.destructive, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <TouchableOpacity testID={`manage-cancel-confirm-${session.id}`} onPress={() => cancelMutation.mutate({ sessionId: session.id })} disabled={isBusy} style={{ paddingHorizontal: 11, paddingVertical: 7, borderRadius: 10, backgroundColor: colors.destructive, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         {cancelMutation.isPending && <ActivityIndicator size="small" color="#fff" />}
                         <Text style={{ color: '#fff', fontFamily: 'Satoshi-Bold', fontSize: 11 }}>Confirm cancel</Text>
                       </TouchableOpacity>
@@ -249,7 +256,7 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
                 {!isRescheduling && !isConfirmingCancel && (
                   <View style={{ flexDirection: 'row', gap: 7, marginTop: 9, paddingLeft: 47 }}>
                     <TouchableOpacity
-                      onPress={() => beginReschedule(session)}
+                      testID={`manage-reschedule-${session.id}`} onPress={() => beginReschedule(session)}
                       disabled={isBusy}
                       accessibilityRole="button"
                       style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 7, borderRadius: 10, backgroundColor: `${colors.primary}12` }}

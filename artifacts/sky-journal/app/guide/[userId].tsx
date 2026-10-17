@@ -8,7 +8,7 @@ import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
@@ -59,6 +59,7 @@ interface GuideSession {
   capacity: number;
   attendeeCount: number;
   isJoined: boolean;
+  status: string;
 }
 
 
@@ -133,7 +134,7 @@ export default function GuideProfileScreen() {
     ])
       .then(([g, upcoming]) => {
         setGuide(g);
-        setSessions(upcoming);
+        setSessions(upcoming.filter(item => item.status !== 'cancelled' && item.status !== 'completed' && new Date(item.endsAt).getTime() > Date.now()));
         setIsFollowing(followingIds.includes(g.userId) || g.isFollowing);
         Animated.parallel([
           Animated.timing(fadeIn,  { toValue: 1, duration: 440, useNativeDriver: true }),
@@ -332,6 +333,35 @@ export default function GuideProfileScreen() {
               <Text style={[styles.timeText, { color: colors.mutedForeground }]}>
                 {avail.timeFrom} – {avail.timeTo}
               </Text>
+            </View>
+          )}
+
+          {isOwnProfile && (
+            <View testID="guide-workspace" style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}>
+              <View style={styles.cardHeader}>
+                <View style={[styles.cardIcon, { backgroundColor: `${colors.primary}14` }]}>
+                  <Icon name="compass" size={14} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cardTitle, { color: colors.foreground }]}>Guide workspace</Text>
+                  <Text style={[styles.sessionMetaText, { color: colors.mutedForeground }]}>Write a tutorial, then host a session with it</Text>
+                </View>
+              </View>
+              {([
+                ['1', 'edit-3', 'Tutorial studio', 'Draft, reorder, preview and publish steps', '/create-guide-tutorial', 'workspace-tutorial-studio'],
+                ['2', 'calendar', 'Schedule a session', 'Pick a tutorial, cover and time, then review', '/create-guide-session', 'workspace-schedule'],
+                ['3', 'book', 'Tutorial library', 'Explore, your tutorials and saved ones', '/guide-tutorials', 'workspace-library'],
+              ] as const).map(([n, icon, title, sub, href, id]) => (
+                <TouchableOpacity key={id} testID={id} onPress={() => router.push(href as Href)} activeOpacity={0.82}
+                  style={[styles.sessionCard, { borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 11 }]}>
+                  <View style={[styles.cardIcon, { backgroundColor: `${colors.primary}12` }]}><Icon name={icon} size={14} color={colors.primary} /></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sessionTitle, { color: colors.foreground }]}>{n}. {title}</Text>
+                    <Text style={[styles.sessionMetaText, { color: colors.mutedForeground, marginTop: 2 }]}>{sub}</Text>
+                  </View>
+                  <Icon name="chevron-right" size={15} color={colors.primary} />
+                </TouchableOpacity>
+              ))}
             </View>
           )}
 

@@ -6,6 +6,7 @@ import { persistImageUri, persistVideoUri } from '@/utils/persistImage';
 import { Image } from 'expo-image';
 import { ResizeMode, Video } from 'expo-av';
 import * as ImagePicker from 'expo-image-picker';
+import { type Href, router, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,7 @@ function makeStep(type: StepType = 'text'): TutorialStep {
 
 export default function CreateGuideTutorialScreen() {
   const colors = useColors();
+  const params = useLocalSearchParams<{ tutorialId?: string }>();
   const insets = useSafeAreaInsets();
   const [tutorials, setTutorials] = useState<GuideTutorial[]>([]);
   const [tutorialId, setTutorialId] = useState<string | null>(null);
@@ -53,6 +55,20 @@ export default function CreateGuideTutorialScreen() {
     }
   }, []);
   useEffect(() => { void loadTutorials(); }, [loadTutorials]);
+  useEffect(() => {
+    if (typeof params.tutorialId === 'string' && params.tutorialId) void editTutorial({ id: params.tutorialId } as GuideTutorial);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.tutorialId]);
+
+  function moveStep(index: number, delta: -1 | 1) {
+    setSteps(current => {
+      const target = index + delta;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
 
   function startNew() {
     setTutorialId(null);
@@ -129,7 +145,11 @@ export default function CreateGuideTutorialScreen() {
       setTutorialId(saved.id);
       await loadTutorials();
       if (status === 'published') {
-        Alert.alert('Tutorial published', 'It can now be selected when you schedule a guide session.');
+        Alert.alert('Tutorial published', 'Readers can find it in the tutorial library, and you can host a session with it.', [
+          { text: 'Done', style: 'cancel' },
+          { text: 'Open reader', onPress: () => router.push(`/guide-tutorial/${saved.id}` as Href) },
+          { text: 'Host a session', onPress: () => router.push({ pathname: '/create-guide-session', params: { tutorialId: saved.id } } as Href) },
+        ]);
       } else {
         Alert.alert('Draft saved', 'You can come back and publish it when it is ready.');
       }
@@ -262,6 +282,14 @@ export default function CreateGuideTutorialScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[s.stepLabel, { color: colors.mutedForeground }]}>STEP {String(index + 1).padStart(2, '0')} · {typeInfo.label.toUpperCase()}</Text>
                 </View>
+                <TouchableOpacity testID={`step-up-${index}`} disabled={index === 0} onPress={() => moveStep(index, -1)}
+                  accessibilityRole="button" accessibilityLabel={`Move step ${index + 1} up`} style={s.iconButton}>
+                  <Icon name="arrow-up" size={15} color={index === 0 ? colors.border : colors.mutedForeground} />
+                </TouchableOpacity>
+                <TouchableOpacity testID={`step-down-${index}`} disabled={index === steps.length - 1} onPress={() => moveStep(index, 1)}
+                  accessibilityRole="button" accessibilityLabel={`Move step ${index + 1} down`} style={s.iconButton}>
+                  <Icon name="arrow-down" size={15} color={index === steps.length - 1 ? colors.border : colors.mutedForeground} />
+                </TouchableOpacity>
                 <TouchableOpacity disabled={steps.length <= 1} onPress={() => setSteps(current => current.filter((_, i) => i !== index))}
                   accessibilityRole="button" accessibilityLabel={`Remove step ${index + 1}`} style={s.iconButton}>
                   <Icon name="trash-2" size={15} color={steps.length <= 1 ? colors.border : colors.mutedForeground} />
@@ -303,13 +331,23 @@ export default function CreateGuideTutorialScreen() {
           <Icon name="alert-circle" size={15} color={colors.destructive ?? colors.primary} />
           <Text style={[s.errorText, { color: colors.destructive ?? colors.primary }]}>{error}</Text>
         </View>}
+        {tutorialId && (
+          <View style={[s.footerActions, { marginTop: 12 }]}>
+            <TouchableOpacity onPress={() => router.push(`/guide-tutorial/${tutorialId}` as Href)} style={[s.secondaryAction, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Icon name="eye" size={15} color={colors.primary} /><Text style={[s.secondaryActionText, { color: colors.foreground }]}>Open saved version</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/guide-tutorials' as Href)} style={[s.secondaryAction, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Icon name="book" size={15} color={colors.primary} /><Text style={[s.secondaryActionText, { color: colors.foreground }]}>Library</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={s.footerActions}>
-          <TouchableOpacity disabled={busy} onPress={() => void saveTutorial('draft')}
+          <TouchableOpacity testID="tutorial-save-draft" disabled={busy} onPress={() => void saveTutorial('draft')}
             style={[s.secondaryAction, { borderColor: colors.border, backgroundColor: colors.card, opacity: busy ? 0.6 : 1 }]}>
             <Icon name="save" size={16} color={colors.primary} />
             <Text style={[s.secondaryActionText, { color: colors.foreground }]}>{busy ? 'Saving…' : 'Save draft'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity disabled={busy} onPress={() => void saveTutorial('published')}
+          <TouchableOpacity testID="tutorial-publish" disabled={busy} onPress={() => void saveTutorial('published')}
             style={[s.primaryAction, { backgroundColor: colors.primary, opacity: busy ? 0.6 : 1 }]}>
             <Icon name="send" size={16} color={colors.primaryForeground} />
             <Text style={[s.primaryActionText, { color: colors.primaryForeground }]}>{busy ? 'Saving…' : 'Publish'}</Text>
