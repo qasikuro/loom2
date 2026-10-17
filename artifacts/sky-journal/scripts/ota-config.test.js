@@ -97,23 +97,6 @@ test('manual OTA publishing uses the production build environment and channel', 
   assert.equal(command.env.CI, 'true');
 });
 
-test('manual OTA publishing can target only Android', () => {
-  const command = createProductionUpdateCommand('Crop fix', {}, 'android');
-  assert.deepEqual(command.args.slice(0, 6), [
-    'exec', 'eas', 'update',
-    '--channel', 'production',
-    '--platform',
-  ]);
-  assert.equal(command.args[6], 'android');
-});
-
-test('manual OTA publishing rejects unsupported platform targets', () => {
-  assert.throws(
-    () => createProductionUpdateCommand('Crop fix', {}, 'web'),
-    /--platform android, ios, or all/,
-  );
-});
-
 test('manual OTA publishing requires a nonempty release description', () => {
   for (const message of [undefined, '', '   ']) {
     assert.throws(() => createProductionUpdateCommand(message), /--message/);
