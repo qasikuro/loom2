@@ -13,9 +13,10 @@ const TYPE_LABEL: Record<StepLike['type'], { label: string; icon: string }> = {
 };
 
 /** Renders one tutorial step with media and a segmented progress track. */
-export function TutorialStepper({ steps, index, completed, colors, onIndex, onNext, nextLabel, nextBusy, nextDisabled, questionHint }: {
+export function TutorialStepper({ steps, index, completed, colors, onIndex, onNext, nextLabel, nextBusy, nextDisabled, questionHint, active = true }: {
   steps: StepLike[]; index: number; completed: number; colors: Colors; onIndex: (i: number) => void;
   onNext?: () => void; nextLabel?: string; nextBusy?: boolean; nextDisabled?: boolean; questionHint?: string;
+  active?: boolean;
 }) {
   const step = steps[index];
   if (!step) return null;
@@ -42,7 +43,7 @@ export function TutorialStepper({ steps, index, completed, colors, onIndex, onNe
       {step.mediaUri && step.type === 'image' && (
         <View style={ss.media}><SecureImage source={{ uri: step.mediaUri }} style={StyleSheet.absoluteFill} contentFit="cover" /></View>
       )}
-      {step.mediaUri && step.type === 'video' && (
+      {active && step.mediaUri && step.type === 'video' && (
         <Video source={{ uri: step.mediaUri }} style={ss.media} useNativeControls resizeMode={ResizeMode.CONTAIN} shouldPlay={false} />
       )}
       {step.type === 'question' && !!questionHint && (
