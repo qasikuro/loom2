@@ -1,9 +1,41 @@
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
 const config = require('../app.json').expo;
 const profiles = require('../eas.json').build;
 const manifest = require('../package.json');
 const { createProductionUpdateCommand } = require('./update-production');
+
+test('guide screens ship with every API client export they import', () => {
+  const root = path.resolve(__dirname, '../../..');
+  const client = [
+    'lib/api-client-react/src/generated/api.ts',
+    'lib/api-client-react/src/generated/api.schemas.ts',
+  ].map(file => fs.readFileSync(path.join(root, file), 'utf8')).join('\n');
+  const exported = new Set([...client.matchAll(/export\s+(?:async\s+)?(?:const|function|type|interface|class|enum)\s+(\w+)/g)].map(match => match[1]));
+  const sources = [
+    'app/guide', 'app/guide-session', 'app/guide-tutorial',
+    'app/create-guide-session.tsx', 'app/create-guide-tutorial.tsx',
+    'app/guide-tutorials.tsx', 'components/guide-session',
+    'components/profile/GuideSessionsManagementSection.tsx',
+  ];
+  function check(file) {
+    if (fs.statSync(file).isDirectory()) {
+      for (const name of fs.readdirSync(file)) check(path.join(file, name));
+      return;
+    }
+    if (!/\.[jt]sx?$/.test(file)) return;
+    const source = fs.readFileSync(file, 'utf8');
+    for (const match of source.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]@workspace\/api-client-react['"]/g)) {
+      for (const item of match[1].split(',')) {
+        const name = item.trim().replace(/^type\s+/, '').split(/\s+as\s+/)[0];
+        if (name) assert.ok(exported.has(name), `${path.relative(root, file)} imports missing API export ${name}`);
+      }
+    }
+  }
+  for (const source of sources) check(path.resolve(__dirname, '..', source));
+});
 
 test('OTA is enabled for the existing Expo project', () => {
   assert.equal(config.updates.enabled, true);
@@ -63,6 +95,23 @@ test('manual OTA publishing uses the production build environment and channel', 
     assert.equal(command.env[key], value);
   }
   assert.equal(command.env.CI, 'true');
+});
+
+test('manual OTA publishing can target only Android', () => {
+  const command = createProductionUpdateCommand('Crop fix', {}, 'android');
+  assert.deepEqual(command.args.slice(0, 6), [
+    'exec', 'eas', 'update',
+    '--channel', 'production',
+    '--platform',
+  ]);
+  assert.equal(command.args[6], 'android');
+});
+
+test('manual OTA publishing rejects unsupported platform targets', () => {
+  assert.throws(
+    () => createProductionUpdateCommand('Crop fix', {}, 'web'),
+    /--platform android, ios, or all/,
+  );
 });
 
 test('manual OTA publishing requires a nonempty release description', () => {

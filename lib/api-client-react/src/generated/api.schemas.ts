@@ -1211,6 +1211,10 @@ export interface CreateGuideSessionInput {
   tutorialId?: string | null;
 }
 
+export interface RescheduleGuideSessionInput {
+  startsAt: string;
+}
+
 export type GuideTutorialStepType =
   (typeof GuideTutorialStepType)[keyof typeof GuideTutorialStepType];
 

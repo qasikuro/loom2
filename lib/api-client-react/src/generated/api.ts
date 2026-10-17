@@ -93,6 +93,7 @@ import type {
   OutfitInput,
   ProfileLikeState,
   PublicUserProfile,
+  RescheduleGuideSessionInput,
   RestoreAdminUserVisibility200,
   RewardBalance,
   ShopResponse,
@@ -2491,7 +2492,95 @@ export function useGetGuideSession<
 }
 
 /**
- * @summary Cancel a guide's own session
+ * @summary Reschedule a guide's upcoming session and notify joined participants
+ */
+export const getRescheduleGuideSessionUrl = (sessionId: string) => {
+  return `/api/guide-sessions/${sessionId}`;
+};
+
+export const rescheduleGuideSession = async (
+  sessionId: string,
+  rescheduleGuideSessionInput: RescheduleGuideSessionInput,
+  options?: RequestInit,
+): Promise<GuideSession> => {
+  return customFetch<GuideSession>(getRescheduleGuideSessionUrl(sessionId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(rescheduleGuideSessionInput),
+  });
+};
+
+export const getRescheduleGuideSessionMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rescheduleGuideSession>>,
+    TError,
+    { sessionId: string; data: BodyType<RescheduleGuideSessionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rescheduleGuideSession>>,
+  TError,
+  { sessionId: string; data: BodyType<RescheduleGuideSessionInput> },
+  TContext
+> => {
+  const mutationKey = ["rescheduleGuideSession"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rescheduleGuideSession>>,
+    { sessionId: string; data: BodyType<RescheduleGuideSessionInput> }
+  > = (props) => {
+    const { sessionId, data } = props ?? {};
+
+    return rescheduleGuideSession(sessionId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RescheduleGuideSessionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rescheduleGuideSession>>
+>;
+export type RescheduleGuideSessionMutationBody =
+  BodyType<RescheduleGuideSessionInput>;
+export type RescheduleGuideSessionMutationError = ErrorType<void>;
+
+/**
+ * @summary Reschedule a guide's upcoming session and notify joined participants
+ */
+export const useRescheduleGuideSession = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rescheduleGuideSession>>,
+    TError,
+    { sessionId: string; data: BodyType<RescheduleGuideSessionInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof rescheduleGuideSession>>,
+  TError,
+  { sessionId: string; data: BodyType<RescheduleGuideSessionInput> },
+  TContext
+> => {
+  return useMutation(getRescheduleGuideSessionMutationOptions(options));
+};
+
+/**
+ * @summary Cancel a guide's upcoming session and notify joined participants
  */
 export const getCancelGuideSessionUrl = (sessionId: string) => {
   return `/api/guide-sessions/${sessionId}`;
@@ -2552,7 +2641,7 @@ export type CancelGuideSessionMutationResult = NonNullable<
 export type CancelGuideSessionMutationError = ErrorType<void>;
 
 /**
- * @summary Cancel a guide's own session
+ * @summary Cancel a guide's upcoming session and notify joined participants
  */
 export const useCancelGuideSession = <
   TError = ErrorType<void>,
