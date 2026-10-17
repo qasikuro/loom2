@@ -102,3 +102,16 @@ test('manual OTA publishing requires a nonempty release description', () => {
     assert.throws(() => createProductionUpdateCommand(message), /--message/);
   }
 });
+
+test('the Guide journey stays visible before session management and profile settings', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../components/profile/ProfileAboutSection.tsx'), 'utf8');
+  const journey = source.indexOf('>Guide journey<');
+  const upcoming = source.indexOf('<GuideSessionsManagementSection');
+  const profileDetails = source.indexOf('{guideProfileDetailsExpanded &&');
+  assert.ok(journey > -1 && journey < upcoming, 'Show the Guide journey before upcoming sessions');
+  assert.ok(upcoming < profileDetails, 'Do not hide the Guide journey inside profile details');
+  const visibleJourney = source.slice(journey, upcoming);
+  for (const route of ["router.push('/create-guide-tutorial')", "router.push('/create-guide-session')", 'router.push(`/guide/${user.id}`)']) {
+    assert.ok(visibleJourney.includes(route), `Keep ${route} accessible in the Guide journey`);
+  }
+});

@@ -130,14 +130,14 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
 
   return (
     <View style={{ paddingHorizontal: 14, paddingTop: 14, paddingBottom: 4 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={{ width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: `${colors.primary}15` }}>
             <Icon name="calendar" size={15} color={colors.primary} />
           </View>
-          <View>
+          <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={{ color: colors.foreground, fontFamily: 'Satoshi-Bold', fontSize: 15 }}>Upcoming sessions</Text>
-            <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 11, marginTop: 1 }}>
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 11, lineHeight: 16, marginTop: 1 }}>
               Reschedule or cancel · participants are notified
             </Text>
           </View>

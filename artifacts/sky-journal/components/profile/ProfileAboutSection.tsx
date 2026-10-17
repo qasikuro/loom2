@@ -6,11 +6,11 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useUser } from '@clerk/expo';
-import { GuideSessionsManagementSection } from './GuideSessionsManagementSection';
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SHADOW } from '@/constants/colors';
 import { useTranslation } from 'react-i18next';
+import { GuideSessionsManagementSection } from './GuideSessionsManagementSection';
 import {
   DAY_LABELS_G, GUIDE_TOPIC_COLORS, GUIDE_TOPICS, ROLES,
   SOCIAL_PLATFORMS, extractHandle, getPlatform, type SocialPlatform,
@@ -349,36 +349,6 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
         {guideExpanded && <View style={[s.guideBody, { backgroundColor: colors.card }]}>
           {character.isGuide ? (
             <>
-              <GuideSessionsManagementSection guideId={user?.id ?? null} />
-              <TouchableOpacity
-                onPress={() => setGuideProfileDetailsExpanded(open => !open)}
-                accessibilityRole="button"
-                accessibilityState={{ expanded: guideProfileDetailsExpanded }}
-                style={{ marginHorizontal: 14, marginTop: 6, marginBottom: guideProfileDetailsExpanded ? 12 : 14, minHeight: 42, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: `${colors.primary}06`, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-              >
-                <Icon name="edit-2" size={14} color={colors.primary} />
-                <Text style={{ flex: 1, color: colors.foreground, fontFamily: 'Satoshi-Bold', fontSize: 12 }}>Edit guide profile details</Text>
-                <Icon name={guideProfileDetailsExpanded ? 'chevron-down' : 'chevron-right'} size={15} color={colors.mutedForeground} />
-              </TouchableOpacity>
-              {guideProfileDetailsExpanded && <>
-              {(() => {
-                const items = [!!character.guideBio, (character.guideTopics ?? []).length > 0, !!character.guideAvailability, character.isPublic];
-                const pct   = items.filter(Boolean).length * 25;
-                const missing = [t('components.about.introduction'), t('social.topics'), t('components.about.availability'), t('profile.publicProfile')].filter((_, i) => !items[i]);
-                return (
-                  <View style={s.guideCompletion}>
-                    <View style={s.guideCompletionRow}>
-                      <Text style={[s.guideCompletionLabel, { color: colors.mutedForeground }]}>{t('components.about.profileStrength')}</Text>
-                      <Text style={[s.guideCompletionPct, { color: pct === 100 ? '#60D890' : colors.primary }]}>{pct}%</Text>
-                    </View>
-                    <View style={[s.guideProgressBg, { backgroundColor: `${colors.border}90` }]}>
-                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                      <View style={[s.guideProgressFill, { width: `${pct}%` as any, backgroundColor: pct === 100 ? '#60D890' : colors.primary }]} />
-                    </View>
-                    {pct < 100 && <Text style={[s.guideCompletionHint, { color: colors.mutedForeground }]}>{t('components.about.addMissing', { items: missing.join(' · ') })}</Text>}
-                  </View>
-                );
-              })()}
               <View style={[s.guideStudio, { backgroundColor: `${colors.primary}07`, borderColor: `${colors.primary}20` }]}>
                 <View style={s.guideStudioHeading}>
                   <View style={{ flex: 1 }}>
@@ -407,9 +377,38 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
                   <Icon name="chevron-right" size={14} color={colors.primary} />
                 </TouchableOpacity>}
               </View>
+              <GuideSessionsManagementSection guideId={user?.id ?? null} />
               <View style={[s.guideDivider, { backgroundColor: colors.border }]} />
-              <View style={[s.guideDivider, { backgroundColor: colors.border }]} />
+              <TouchableOpacity
+                onPress={() => setGuideProfileDetailsExpanded(open => !open)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: guideProfileDetailsExpanded }}
+                style={{ marginHorizontal: 14, marginTop: 6, marginBottom: guideProfileDetailsExpanded ? 12 : 14, minHeight: 42, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: `${colors.primary}06`, flexDirection: 'row', alignItems: 'center', gap: 8 }}
+              >
+                <Icon name="edit-2" size={14} color={colors.primary} />
+                <Text style={{ flex: 1, color: colors.foreground, fontFamily: 'Satoshi-Bold', fontSize: 12 }}>Edit guide profile details</Text>
+                <Icon name={guideProfileDetailsExpanded ? 'chevron-down' : 'chevron-right'} size={15} color={colors.mutedForeground} />
+              </TouchableOpacity>
 
+              {guideProfileDetailsExpanded && <>
+              {(() => {
+                const items = [!!character.guideBio, (character.guideTopics ?? []).length > 0, !!character.guideAvailability, character.isPublic];
+                const pct   = items.filter(Boolean).length * 25;
+                const missing = [t('components.about.introduction'), t('social.topics'), t('components.about.availability'), t('profile.publicProfile')].filter((_, i) => !items[i]);
+                return (
+                  <View style={s.guideCompletion}>
+                    <View style={s.guideCompletionRow}>
+                      <Text style={[s.guideCompletionLabel, { color: colors.mutedForeground }]}>{t('components.about.profileStrength')}</Text>
+                      <Text style={[s.guideCompletionPct, { color: pct === 100 ? '#60D890' : colors.primary }]}>{pct}%</Text>
+                    </View>
+                    <View style={[s.guideProgressBg, { backgroundColor: `${colors.border}90` }]}>
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                      <View style={[s.guideProgressFill, { width: `${pct}%` as any, backgroundColor: pct === 100 ? '#60D890' : colors.primary }]} />
+                    </View>
+                    {pct < 100 && <Text style={[s.guideCompletionHint, { color: colors.mutedForeground }]}>{t('components.about.addMissing', { items: missing.join(' · ') })}</Text>}
+                  </View>
+                );
+              })()}
               {/* Guide bio */}
               <View style={s.guideSection}>
                 <Text style={[s.guideSectionLabel, { color: colors.mutedForeground }]}>✦ {t('components.about.introduction')}</Text>
@@ -510,15 +509,7 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
                 <Text style={[s.guidePreviewBtnText, { color: colors.primary }]}>{t('components.about.previewGuide')}</Text>
                 <Icon name="arrow-right" size={14} color={`${colors.primary}60`} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.guidePreviewBtn, { borderColor: `${colors.primary}30`, backgroundColor: colors.primary, marginTop: 8 }]}
-                onPress={() => router.push('/create-guide-session')}
-                activeOpacity={0.8}
-              >
-                <Icon name="calendar" size={14} color="#fff" />
-                <Text style={[s.guidePreviewBtnText, { color: '#fff' }]}>{t('components.about.createGroupSession')}</Text>
-                <Icon name="arrow-right" size={14} color="rgba(255,255,255,0.7)" />
-              </TouchableOpacity>
+              </>}
               <TouchableOpacity
                 style={s.guideDisableBtn}
                 onPress={() => {
@@ -530,7 +521,6 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
               >
                 <Text style={s.guideDisableText}>{t('components.about.turnOffGuide')}</Text>
               </TouchableOpacity>
-              </>}
             </>
           ) : (
             <View style={s.guideInviteBody}>
