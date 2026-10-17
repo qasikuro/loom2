@@ -173,7 +173,9 @@ export const REACTION_MS: Record<LumiReaction, number> = Object.fromEntries(
   Object.entries(PLANS).map(([k, p]) => [k, p.ms]),
 ) as Record<LumiReaction, number>;
 
-export function useLumiRig({ active, reducedMotion }: { active: boolean; reducedMotion: boolean }) {
+export function useLumiRig({ active, reducedMotion, idleMotion = 'full' }: {
+  active: boolean; reducedMotion: boolean; idleMotion?: 'full' | 'subtle';
+}) {
   // Fixed hook count: one shared value per key, created once.
   const sv = {} as RigValues;
   for (const k of [...REACT_KEYS, ...IDLE_KEYS]) {
@@ -240,15 +242,19 @@ export function useLumiRig({ active, reducedMotion }: { active: boolean; reduced
       return;
     }
     if (!reducedMotion) {
+      const subtle = idleMotion === 'subtle';
       values.float.value = withRepeat(withSequence(
-        withTiming(-7, { duration: 1700, easing: ease }), withTiming(0, { duration: 1700, easing: ease }),
+        withTiming(subtle ? -3 : -7, { duration: subtle ? 2400 : 1700, easing: ease }),
+        withTiming(0, { duration: subtle ? 2400 : 1700, easing: ease }),
       ), -1, false);
-      values.breathe.value = withRepeat(withSequence(
-        withTiming(1, { duration: 1500, easing: ease }), withTiming(0, { duration: 1900, easing: ease }),
-      ), -1, false);
-      values.sway.value = withRepeat(withSequence(
-        withTiming(1, { duration: 2100, easing: ease }), withTiming(-1, { duration: 2100, easing: ease }),
-      ), -1, true);
+      if (!subtle) {
+        values.breathe.value = withRepeat(withSequence(
+          withTiming(1, { duration: 1500, easing: ease }), withTiming(0, { duration: 1900, easing: ease }),
+        ), -1, false);
+        values.sway.value = withRepeat(withSequence(
+          withTiming(1, { duration: 2100, easing: ease }), withTiming(-1, { duration: 2100, easing: ease }),
+        ), -1, true);
+      }
     }
     let n = 0;
     const blink = () => {
@@ -256,7 +262,7 @@ export function useLumiRig({ active, reducedMotion }: { active: boolean; reduced
       later(blink, 2600 + ((n++ * 1373) % 2900));
     };
     later(blink, 1400);
-    if (!reducedMotion) {
+    if (!reducedMotion && idleMotion === 'full') {
       let g = 0;
       const glance = () => {
         if (!playing.current) {
@@ -272,7 +278,7 @@ export function useLumiRig({ active, reducedMotion }: { active: boolean; reduced
       timers.forEach(clearTimeout);
       for (const k of IDLE_KEYS) { cancelAnimation(values[k]); values[k].value = withTiming(0, { duration: 250 }); }
     };
-  }, [active, reducedMotion, values]);
+  }, [active, reducedMotion, idleMotion, values]);
 
   // Unmount: nothing survives.
   useEffect(() => () => {

@@ -40,7 +40,7 @@ function scaleAbout(px: number, py: number, sx: number, sy: number, k: number) {
   ];
 }
 
-export function LumiRigView({ v, size }: { v: RigValues; size: number }) {
+export const LumiRigView = memo(function LumiRigView({ v, size }: { v: RigValues; size: number }) {
   const k = size / 512;
 
   const shadow = useAnimatedStyle(() => {
@@ -190,7 +190,7 @@ export function LumiRigView({ v, size }: { v: RigValues; size: number }) {
       {L(sp3, PROP_ART.sparkle)}
     </View>
   );
-}
+});
 
 /**
  * Self-contained Lumi with idle motion and a static expression — used outside

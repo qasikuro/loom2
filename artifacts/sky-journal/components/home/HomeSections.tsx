@@ -5,6 +5,7 @@ import { useColors } from '@/hooks/useColors';
 import { useTheme } from '@/context/ThemeContext';
 import type { FriendOutfit } from '@/hooks/useFriendOutfits';
 import { SecureImage as Image } from '@/components/SecureImage';
+import { SkeletonBox } from '@/components/Skeleton';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -33,6 +34,11 @@ export function useHomeInk() {
     tint: isDark ? 'rgba(160,120,255,0.25)' : `${c.secondary}1F`,
     cta: c.secondary, ctaFg: c.secondaryForeground,
     bg: c.background,
+    skeletonBase: isDark ? c.secondary : c.muted,
+    skeletonImage: c.card,
+    skeletonMeta: isDark ? c.background : `${c.secondary}12`,
+    skeletonDetail: `${c.tint}24`,
+    skeletonPulse: c.tint,
     gradA: isDark ? 'rgba(64,38,140,0.9)' : `${c.secondary}26`,
     gradB: isDark ? 'rgba(32,20,78,0.9)' : c.card,
     heart: '#FF6F92',
@@ -169,8 +175,61 @@ export function FriendsRow({ friends, activityByUser, onAdd, onOpen, avatarSize 
 }
 
 /* ── New outfits from friends ──────────────────────────────────────── */
-export function FriendOutfitsRow({ items, loading, error, onRetry, onOpen, onFind, hasFriends, cardHeight }: {
+function FriendOutfitSkeletonCard({ width, height, index, animate, ink, s }: {
+  width: number; height: number; index: number; animate: boolean; ink: Ink; s: ReturnType<typeof makeStyles>;
+}) {
+  const pulse = useSharedValue(0.5);
+
+  useEffect(() => {
+    cancelAnimation(pulse);
+    if (!animate) {
+      pulse.value = 0.5;
+      return;
+    }
+    pulse.value = withDelay(index * 150, withRepeat(
+      withTiming(1, { duration: 2300, easing: Easing.inOut(Easing.sin) }),
+      -1,
+      true,
+    ));
+    return () => cancelAnimation(pulse);
+  }, [animate, index, pulse]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.02, 0.1]),
+  }));
+
+  return (
+    <View
+      style={[s.creation, { width, height, backgroundColor: ink.skeletonBase }]}
+      accessible
+      accessibilityLabel="Loading outfit"
+      testID={`home-outfit-skeleton-${index}`}
+    >
+      <LinearGradient
+        colors={[ink.skeletonImage, ink.skeletonBase, ink.skeletonMeta]}
+        locations={[0, 0.66, 1]}
+        start={{ x: 0.2, y: 0 }}
+        end={{ x: 0.8, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View pointerEvents="none" style={s.outfitSkeletonMeta}>
+        <SkeletonBox width="72%" height={9} borderRadius={5} baseColor={ink.skeletonDetail} shimmer={false} />
+        <View style={s.outfitSkeletonAuthorRow}>
+          <SkeletonBox width={15} height={15} borderRadius={8} baseColor={ink.skeletonDetail} shimmer={false} />
+          <SkeletonBox width="46%" height={6} borderRadius={4} baseColor={ink.skeletonDetail} shimmer={false} />
+        </View>
+      </View>
+      <Animated.View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: ink.skeletonPulse }, pulseStyle]}
+      />
+    </View>
+  );
+}
+
+export function FriendOutfitsRow({ items, loading, error, onRetry, onOpen, onFind, hasFriends, cardHeight, animate = true }: {
   cardHeight?: number;
+  animate?: boolean;
   items: FriendOutfit[]; loading: boolean; error: boolean; hasFriends: boolean;
   onRetry: () => void; onOpen: (item: FriendOutfit) => void; onFind: () => void;
 }) {
@@ -178,14 +237,23 @@ export function FriendOutfitsRow({ items, loading, error, onRetry, onOpen, onFin
   const { width } = useWindowDimensions();
   const h = cardHeight ?? Math.max(96, Math.min(116, (width - 40) / 3.3)) * 1.28;
   const w = Math.round(h / 1.25);
-  if (loading) {
+  if (loading && items.length === 0) {
     return (
-      <View style={s.creationRow} accessibilityLabel="Loading outfits">
-        {[0, 1, 2, 3].map(i => <View key={i} style={[s.creation, { width: w, height: h, backgroundColor: ink.tint }]} />)}
-      </View>
+      <ScrollView
+        horizontal
+        style={{ height: h }}
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={s.creationRow}
+        accessibilityLabel="Loading outfits"
+        testID="home-outfits-loading"
+      >
+        {[0, 1, 2].map(i => (
+          <FriendOutfitSkeletonCard key={i} index={i} width={w} height={h} animate={animate} ink={ink} s={s} />
+        ))}
+      </ScrollView>
     );
   }
-  if (error || items.length === 0) {
+  if (items.length === 0) {
     const title = error ? 'Could not load outfits' : hasFriends ? 'No public outfits from friends yet' : 'Add friends to see their outfits';
     const text = error ? 'Check your connection and try again.' : hasFriends ? 'When friends share outfits publicly, they will appear here.' : 'Their newest public outfits will show up here.';
     return (
@@ -200,13 +268,13 @@ export function FriendOutfitsRow({ items, loading, error, onRetry, onOpen, onFin
     );
   }
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.creationRow}>
+    <ScrollView horizontal style={{ height: h }} showsHorizontalScrollIndicator={false} contentContainerStyle={s.creationRow}>
       {items.map((it, i) => {
         const uri = it.outfit.imageUri ? resolveUri(it.outfit.imageUri) ?? it.outfit.imageUri : undefined;
         const av = it.author.avatarUri ? resolveUri(it.author.avatarUri) ?? it.author.avatarUri : null;
         const name = it.author.username || it.author.name;
         return (
-          <Animated.View key={it.outfit.id} entering={FadeIn.delay(i * 70).duration(300)}>
+          <Animated.View key={it.outfit.id} entering={animate ? FadeIn.delay(Math.min(i, 2) * 50).duration(220) : undefined}>
             <TouchableOpacity onPress={() => { tap(); onOpen(it); }} style={[s.creation, { width: w, height: h }]} activeOpacity={0.85}
               accessibilityRole="button" accessibilityLabel={`${it.outfit.name || 'Outfit'} by ${name}`} testID={`home-friend-outfit-${it.outfit.id}`}>
               {uri
@@ -368,9 +436,11 @@ return StyleSheet.create({
   friendName: { color: ink.title, fontFamily: 'Satoshi-Bold', fontSize: 11.5, marginTop: 4, maxWidth: '100%' },
   friendMeta: { color: ink.sub, fontFamily: 'Satoshi-Medium', fontSize: 10 },
   friendEmpty: { justifyContent: 'center', paddingLeft: 6, maxWidth: 220 },
-  creationRow: { gap: 8, paddingRight: 16 },
+  creationRow: { flexDirection: 'row', flexWrap: 'nowrap', alignItems: 'flex-start', gap: 8, paddingRight: 16 },
   creation: { borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: ink.border, justifyContent: 'flex-end' },
   creationMeta: { padding: 7, gap: 3 },
+  outfitSkeletonMeta: { position: 'absolute', left: 7, right: 7, bottom: 7, gap: 6 },
+  outfitSkeletonAuthorRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   creationTitle: { color: '#FFFFFF', fontFamily: 'Satoshi-Bold', fontSize: 11.5 },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   miniAvatar: { width: 16, height: 16, borderRadius: 8, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },

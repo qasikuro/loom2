@@ -3,9 +3,13 @@ import { Animated, Easing, StyleSheet, View, type ViewStyle } from 'react-native
 import { LinearGradient } from 'expo-linear-gradient';
 import { useColors } from '@/hooks/useColors';
 
-function useShimmer() {
+function useShimmer(enabled: boolean) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
+    if (!enabled) {
+      anim.setValue(0);
+      return;
+    }
     const loop = Animated.loop(
       Animated.timing(anim, {
         toValue: 1, duration: 1500,
@@ -14,8 +18,7 @@ function useShimmer() {
     );
     loop.start();
     return () => loop.stop();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [anim, enabled]);
   return anim;
 }
 
@@ -24,26 +27,30 @@ interface SkeletonBoxProps {
   height?:       number;
   borderRadius?: number;
   style?:        ViewStyle;
+  baseColor?:    string;
+  shimmer?:      boolean;
 }
 
 export function SkeletonBox({
-  width = '100%', height = 16, borderRadius = 8, style,
+  width = '100%', height = 16, borderRadius = 8, style, baseColor, shimmer = true,
 }: SkeletonBoxProps) {
   const colors  = useColors();
-  const shimmer = useShimmer();
-  const tx = shimmer.interpolate({ inputRange: [0, 1], outputRange: [-300, 300] });
+  const shimmerAnim = useShimmer(shimmer);
+  const tx = shimmerAnim.interpolate({ inputRange: [0, 1], outputRange: [-300, 300] });
 
   return (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    <View style={[{ width: width as any, height, borderRadius, overflow: 'hidden', backgroundColor: colors.muted }, style]}>
-      <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: tx }] }]}>
-        <LinearGradient
-          colors={['transparent', 'rgba(255,255,255,0.07)', 'rgba(255,255,255,0.13)', 'rgba(255,255,255,0.07)', 'transparent']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
+    <View style={[{ width: width as any, height, borderRadius, overflow: 'hidden', backgroundColor: baseColor ?? colors.muted }, style]}>
+      {shimmer && (
+        <Animated.View style={[StyleSheet.absoluteFill, { transform: [{ translateX: tx }] }]}>
+          <LinearGradient
+            colors={['transparent', 'rgba(255,255,255,0.07)', 'rgba(255,255,255,0.13)', 'rgba(255,255,255,0.07)', 'transparent']}
+            start={{ x: 0, y: 0.5 }}
+            end={{ x: 1, y: 0.5 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+      )}
     </View>
   );
 }

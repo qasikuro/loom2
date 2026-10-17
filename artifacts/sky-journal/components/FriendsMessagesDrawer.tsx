@@ -95,14 +95,19 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
     closing.current = true;
     Keyboard.dismiss();
     x.stopAnimation();
+    if (after) {
+      // Contact selection is one navigation action, not a drawer-close
+      // animation followed by a second screen transition. Close explicitly
+      // even if pushing the already-open conversation leaves pathname unchanged.
+      onClose();
+      after();
+      return;
+    }
     const finish = () => {
-      // Dispatch navigation before closing the overlay. Keeping both updates in
-      // this frame avoids a visible blank interval between drawer and chat.
-      if (after) after();
-      else onClose();
+      onClose();
     };
     if (reduce) { x.setValue(drawerW); finish(); }
-    else Animated.timing(x, { toValue: drawerW, duration: after ? 140 : 180, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+    else Animated.timing(x, { toValue: drawerW, duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: true })
       .start(({ finished }) => { if (finished) finish(); });
   }, [onClose, reduce, drawerW, x]);
 
@@ -158,6 +163,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   }, [restricted, data.friends, data.requests, data.results, picking, tab, contacts, matches, incoming, outgoing, blockedIds, t]);
 
   function openChat(c: { userId: string; name: string; handle: string | null; avatar: string | null }) {
+    if (closing.current) return;
     if (accountId) {
       void fetchDmConversation(
         accountId,

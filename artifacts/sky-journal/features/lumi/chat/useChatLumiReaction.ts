@@ -18,7 +18,7 @@ export function useChatLumiReaction({ width, size, enabled, side = 'left', onCom
 }) {
   const activity = useLumiActivity();
   const active = activity.active && enabled;
-  const rig = useLumiRig({ active, reducedMotion: activity.reducedMotion });
+  const rig = useLumiRig({ active, reducedMotion: activity.reducedMotion, idleMotion: 'subtle' });
   const { values, stop } = rig;
   const x = useSharedValue(chatPosition(width, size, side));
   const [phase, setPhase] = useState<ChatLumiPhase>('idle');
