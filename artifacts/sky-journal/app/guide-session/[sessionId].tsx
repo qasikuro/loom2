@@ -606,8 +606,9 @@ export default function GuideSessionScreen() {
     <KeyboardAvoidingView style={[s.root, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       <View style={{ paddingTop: top, backgroundColor: colors.background }}>{header}</View>
       <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={inChat ? 'none' : 'on-drag'} style={{ flex: 1 }}
-        contentContainerStyle={[s.content, { paddingBottom: bottom + (showBar ? 96 : 24) }]}>
-        <Animated.View style={{ opacity: fade }}>
+        scrollEnabled={!inChat}
+        contentContainerStyle={[s.content, { paddingBottom: bottom + (showBar ? 96 : 24) }, inChat && { flex: 1, paddingBottom: bottom + 8 }]}>
+        <Animated.View style={[{ opacity: fade }, inChat && { flex: 1, minHeight: 0 }]}>
           {showRoom ? (
             <>
               {refreshBanner}
@@ -618,7 +619,7 @@ export default function GuideSessionScreen() {
                 </View>
               ))}
               {/* Kept mounted so unsent drafts survive tab switches; disabled (no requests) while hidden. */}
-              <View testID="session-discussion-container" pointerEvents={inChat ? 'auto' : 'none'} style={inChat ? undefined : s.hidden}>
+              <View testID="session-discussion-container" pointerEvents={inChat ? 'auto' : 'none'} style={inChat ? { flex: 1, minHeight: 0 } : s.hidden}>
                 <SessionDiscussionPanel roomId={session.roomId} sessionId={session.id} guideId={session.guideId} phase={phase} colors={colors}
                   enabled={inChat && showRoom} />
               </View>

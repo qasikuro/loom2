@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
-import { mergeSessionDiscussion, reconcileSessionDiscussion, type SessionDiscussionMessage } from '../sessionDiscussion';
+import { mergeSessionDiscussion, reconcileSessionDiscussion, reuseSessionDiscussionMessages, type SessionDiscussionMessage } from '../sessionDiscussion';
 
 const message = (id: string, patch: Partial<SessionDiscussionMessage> = {}): SessionDiscussionMessage => ({
   id, userId: 'participant', authorName: 'Participant', content: `Message ${id}`,
@@ -23,6 +23,26 @@ describe('session workspace navigation contracts', () => {
 });
 
 describe('session discussion synchronization', () => {
+  it('keeps an unchanged snapshot and row identities for memoized rendering', () => {
+    const previous = [message('1'), message('2')];
+    const snapshot = previous.map(row => ({ ...row }));
+    expect(reuseSessionDiscussionMessages(previous, snapshot)).toBe(previous);
+  });
+  it('only replaces a row when its visible fields change', () => {
+    const previous = [message('1'), message('2')];
+    const result = reuseSessionDiscussionMessages(previous, [message('1'), message('2', { content: 'Updated' })]);
+    expect(result[0]).toBe(previous[0]);
+    expect(result[1]).not.toBe(previous[1]);
+    expect(result[1].content).toBe('Updated');
+  });
+  it('does not redraw history when a live message is acknowledged twice', () => {
+    const previous = [message('1')];
+    expect(mergeSessionDiscussion(previous, [message('1')], [])).toBe(previous);
+  });
+  it('does not preserve an old row removed by an authoritative snapshot', () => {
+    const previous = [message('1'), message('2')];
+    expect(reuseSessionDiscussionMessages(previous, [message('2')])).toEqual([message('2')]);
+  });
   it('deduplicates live delivery and send acknowledgements', () => {
     expect(mergeSessionDiscussion([message('1')], [message('1')], [])).toHaveLength(1);
   });

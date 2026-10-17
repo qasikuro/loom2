@@ -1,11 +1,12 @@
 import { Icon } from '@/components/Icon';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useSSE } from '@/hooks/useSSE';
-import { mergeSessionDiscussion, reconcileSessionDiscussion, type SessionDiscussionMessage } from '@/utils/sessionDiscussion';
+import { mergeSessionDiscussion, reconcileSessionDiscussion, reuseSessionDiscussionMessages, type SessionDiscussionMessage } from '@/utils/sessionDiscussion';
 import { useAuth } from '@clerk/expo';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AppState, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { DiscussionHistory } from './DiscussionHistory';
 import { type Colors, type SessionPhase, Notice, PillButton, errorMessage, gs } from './shared';
 
 export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel({ roomId, sessionId, guideId, phase, colors, enabled }: {
@@ -29,8 +30,7 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
   const sendLock = useRef(false);
   const version = useRef(0);
   const changes = useRef(new Map<string, { version: number; message: SessionDiscussionMessage | null }>());
-  const list = useRef<ScrollView>(null);
-  const atBottom = useRef(true);
+  const loadController = useRef<AbortController | null>(null);
   const messages = useMemo(() => history.scope === scope ? mergeSessionDiscussion(history.messages, [], blockedIds) : [], [history, scope, blockedIds]);
   const text = draft.scope === scope ? draft.text : '';
   const canSend = active && loaded && phase !== 'ended';
@@ -40,7 +40,8 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
     setDraft({ scope, text: '' });
     setLoaded(false); setError(null); setFeedback(null); setSending(false);
     fetching.current = false; sendLock.current = false;
-    changes.current.clear(); version.current = 0; atBottom.current = true;
+    changes.current.clear(); version.current = 0;
+    return () => { loadController.current?.abort(); };
   }, [scope]);
 
   const record = useCallback((messageId: string, message: SessionDiscussionMessage | null) => {
@@ -57,16 +58,26 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
     if (!activeRef.current || fetching.current) return;
     fetching.current = true;
     const started = version.current;
+    const controller = new AbortController();
+    loadController.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 12_000);
     try {
-      const result = await apiFetch<{ messages: SessionDiscussionMessage[] }>(`/campfire/${encodeURIComponent(roomId)}`);
+      const result = await apiFetch<{ messages: SessionDiscussionMessage[] }>(`/campfire/${encodeURIComponent(roomId)}`, { signal: controller.signal });
       if (scopeRef.current !== scope || !activeRef.current) return;
       const liveChanges = [...changes.current].filter(([, value]) => value.version > started)
         .map(([messageId, value]) => ({ messageId, message: value.message }));
-      setHistory({ scope, messages: reconcileSessionDiscussion(result.messages, liveChanges, blockedIds) });
+      const next = reconcileSessionDiscussion(result.messages, liveChanges, blockedIds);
+      setHistory(current => {
+        const stable = reuseSessionDiscussionMessages(current.scope === scope ? current.messages : [], next);
+        return current.scope === scope && stable === current.messages ? current : { scope, messages: stable };
+      });
       setLoaded(true); setError(null);
     } catch (cause) {
-      if (scopeRef.current === scope && activeRef.current) setError(errorMessage(cause, 'Discussion could not be loaded. Try again.'));
+      if (scopeRef.current === scope && activeRef.current) setError(controller.signal.aborted
+        ? 'Discussion is taking longer than expected. Check your connection and retry.'
+        : errorMessage(cause, 'Discussion could not be loaded. Try again.'));
     } finally {
+      clearTimeout(timeout);
       if (scopeRef.current === scope) fetching.current = false;
     }
   }, [scope, roomId, blockedIds]);
@@ -76,7 +87,7 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
     const event = raw as { type?: string; message?: SessionDiscussionMessage; messageId?: string };
     if (event.type === 'new_message' && event.message?.id) record(event.message.id, event.message);
     if (event.type === 'deleted_message' && event.messageId) record(event.messageId, null);
-  }, [record]), active);
+  }, [record]), active, true);
 
   useFocusEffect(useCallback(() => {
     if (!active) return;
@@ -106,7 +117,6 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
       setHistory(current => ({ scope, messages: mergeSessionDiscussion(current.scope === scope ? current.messages : [], [message], blockedIds) }));
       changes.current.set(message.id, { version: ++version.current, message });
       setDraft(current => current.scope === scope && current.text === submitted ? { scope, text: '' } : current);
-      atBottom.current = true;
     } catch (cause) {
       if (scopeRef.current === scope) setFeedback(errorMessage(cause, 'Message not sent. Your draft is kept; try again.'));
     } finally {
@@ -114,7 +124,7 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
     }
   }
 
-  async function report(messageId: string) {
+  const report = useCallback(async (messageId: string) => {
     try {
       await apiFetch(`/campfire/${encodeURIComponent(roomId)}/messages/${encodeURIComponent(messageId)}/report`, {
         method: 'POST', body: JSON.stringify({ reason: 'Inappropriate message in session discussion' }),
@@ -123,7 +133,7 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
     } catch (cause) {
       if (scopeRef.current === scope) setFeedback(errorMessage(cause, 'Could not send the report. Try again.'));
     }
-  }
+  }, [roomId, scope]);
 
   return (
     <View testID="session-discussion" style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -135,27 +145,8 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
         <Icon name="message-circle" size={20} color={colors.primary} />
       </View>
       {error && <View style={{ marginBottom: 8 }}><Notice colors={colors} icon="cloud-off" text={error} /><PillButton colors={colors} label="Retry discussion" variant="secondary" onPress={() => void load()} /></View>}
-      <ScrollView ref={list} nestedScrollEnabled keyboardShouldPersistTaps="handled" style={s.messages}
-        contentContainerStyle={{ gap: 12, paddingVertical: 8 }}
-        onScroll={event => { const e = event.nativeEvent; atBottom.current = e.contentSize.height - e.contentOffset.y - e.layoutMeasurement.height < 70; }}
-        scrollEventThrottle={100}
-        onContentSizeChange={() => { if (atBottom.current) list.current?.scrollToEnd({ animated: false }); }}>
-        {!loaded && !error ? [0, 1, 2].map(i => <View key={i} style={[s.placeholder, { width: i === 1 ? '64%' : '82%', alignSelf: i === 1 ? 'flex-end' : 'flex-start', backgroundColor: colors.muted }]} />) : null}
-        {loaded && !messages.length && <View style={s.empty}><Icon name="message-circle" size={28} color={colors.primary} /><Text style={[gs.cardTitle, { color: colors.foreground, textAlign: 'center' }]}>A place to learn together</Text><Text style={[gs.body, { color: colors.mutedForeground, textAlign: 'center' }]}>{phase === 'ended' ? 'There are no recent messages to show.' : 'Say hello, share a thought, or discuss the current activity. Use Q&A for questions you want the guide to answer.'}</Text></View>}
-        {messages.map(message => {
-          const own = message.userId === userId;
-          return <View key={message.id} style={{ alignItems: own ? 'flex-end' : 'flex-start' }}>
-            <View style={[s.bubble, { backgroundColor: own ? colors.primary : colors.muted }]}>
-              <View style={[gs.row, { justifyContent: 'space-between', marginBottom: 4 }]}>
-                <Text numberOfLines={1} style={[s.author, { flex: 1, color: own ? colors.primaryForeground : colors.primary }]}>{own ? 'You' : message.authorName}{message.userId === guideId ? ' · Guide' : ''}</Text>
-                {!own && <TouchableOpacity accessibilityRole="button" accessibilityLabel={`Report message by ${message.authorName}`} hitSlop={10} onPress={() => void report(message.id)}><Icon name="flag" size={13} color={colors.mutedForeground} /></TouchableOpacity>}
-              </View>
-              <Text selectable style={[s.body, { color: own ? colors.primaryForeground : colors.foreground }]}>{message.content || `Reaction: ${message.expression ?? 'expression'}`}</Text>
-              <Text style={[s.time, { color: own ? colors.primaryForeground : colors.mutedForeground }]}>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-            </View>
-          </View>;
-        })}
-      </ScrollView>
+      <DiscussionHistory messages={messages} userId={userId} guideId={guideId} colors={colors}
+        loaded={loaded} failed={!!error} ended={phase === 'ended'} scope={scope} onReport={report} />
       {!!feedback && <Text accessibilityLiveRegion="polite" style={[gs.meta, { marginVertical: 8, color: colors.mutedForeground }]}>{feedback}</Text>}
       {phase === 'ended' ? <Notice colors={colors} icon="check-circle" text="This session has ended. Discussion is read-only; find the recap in Activity." /> : (
         <View style={[s.composer, { borderTopColor: colors.border }]}>
@@ -175,14 +166,7 @@ export const SessionDiscussionPanel = React.memo(function SessionDiscussionPanel
 });
 
 const s = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: 22, padding: 16 },
-  messages: { height: 350, flexGrow: 0 },
-  placeholder: { height: 48, borderRadius: 16, marginBottom: 8 },
-  empty: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 44 },
-  bubble: { maxWidth: '90%', borderRadius: 17, padding: 12, minWidth: 90 },
-  author: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  body: { fontSize: 14, lineHeight: 21, fontFamily: 'Satoshi-Medium' },
-  time: { fontSize: 10, marginTop: 5, textAlign: 'right', opacity: 0.75, fontFamily: 'Satoshi-Medium' },
+  card: { flex: 1, minHeight: 0, borderWidth: 1, borderRadius: 22, padding: 16 },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, borderTopWidth: 1, paddingTop: 12, marginTop: 8 },
   input: { flex: 1, minHeight: 46, maxHeight: 110, borderRadius: 16, borderWidth: 1, padding: 12, fontSize: 14, fontFamily: 'Satoshi-Medium' },
   send: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },

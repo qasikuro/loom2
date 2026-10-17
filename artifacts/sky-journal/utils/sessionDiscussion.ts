@@ -7,6 +7,22 @@ export interface SessionDiscussionMessage {
   createdAt: string;
 }
 
+/** Reuse unchanged rows/snapshots so refreshes and acknowledgements don't redraw chat. */
+export function reuseSessionDiscussionMessages(
+  previous: SessionDiscussionMessage[],
+  next: SessionDiscussionMessage[],
+): SessionDiscussionMessage[] {
+  const existing = new Map(previous.map(message => [message.id, message]));
+  const result = next.map(message => {
+    const old = existing.get(message.id);
+    return old && old.userId === message.userId && old.authorName === message.authorName
+      && old.content === message.content && old.expression === message.expression
+      && old.createdAt === message.createdAt ? old : message;
+  });
+  return result.length === previous.length && result.every((message, index) => message === previous[index])
+    ? previous : result;
+}
+
 /** Bound history and deduplicate POST acknowledgements against live delivery. */
 export function mergeSessionDiscussion(
   history: SessionDiscussionMessage[],
@@ -18,9 +34,9 @@ export function mergeSessionDiscussion(
   for (const message of [...history, ...updates]) {
     if (message.id && !blocked.has(message.userId)) rows.set(message.id, message);
   }
-  return [...rows.values()]
+  return reuseSessionDiscussionMessages(history, [...rows.values()]
     .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.id.localeCompare(b.id))
-    .slice(-100);
+    .slice(-100));
 }
 
 /** Snapshot refreshes must not lose messages/deletions arriving while fetching. */

@@ -23,6 +23,7 @@ import { AppState, AppStateStatus, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { getAuthToken } from '@/context/AppContext';
 import { getApiBase } from '@/utils/apiBase';
+import { fetch as expoFetch } from 'expo/fetch';
 
 const API_BASE = getApiBase();
 
@@ -61,12 +62,15 @@ export function useSSE(
   channels: string[],
   onEvent: OnEventFn,
   enabled = true,
+  nativeStreaming = false,
 ): { connected: boolean } {
   const abortRef    = useRef<AbortController | null>(null);
   const backoffRef  = useRef(BASE_BACKOFF_MS);
   const retryRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onEventRef  = useRef(onEvent);
   const channelsRef = useRef(channels);
+  const channelKey = JSON.stringify(channels);
+  const generation = useRef(0);
   const [connected, setConnected] = useState(false);
 
   // Keep refs in sync so the reconnect loop always uses fresh values
@@ -74,6 +78,7 @@ export function useSSE(
   channelsRef.current = channels;
 
   const disconnect = useCallback(() => {
+    generation.current += 1;
     if (retryRef.current)  { clearTimeout(retryRef.current); retryRef.current = null; }
     if (abortRef.current)  { abortRef.current.abort(); abortRef.current = null; }
     setConnected(false);
@@ -82,9 +87,10 @@ export function useSSE(
   const connect = useCallback(async () => {
     disconnect();
     setConnected(false);
+    const attempt = generation.current;
 
     const token = await getAuthToken();
-    if (!token) return;
+    if (!token || generation.current !== attempt) return;
 
     const chans = channelsRef.current.filter(Boolean);
     if (chans.length === 0) return;
@@ -94,13 +100,17 @@ export function useSSE(
     abortRef.current = ctrl;
 
     try {
-      const res = await fetch(url, {
+      // RN's global fetch can buffer responses or have no streaming body.
+      // Opt-in for session discussion; other existing callers keep their transport.
+      const streamFetch = nativeStreaming && Platform.OS !== 'web' ? expoFetch : fetch;
+      const res = await streamFetch(url, {
         signal: ctrl.signal,
         headers: { Authorization: `Bearer ${token}` },
         // React Native needs these hints to avoid buffering
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(Platform.OS !== 'web' && { reactNative: { textStreaming: true } } as any),
       });
+      if (ctrl.signal.aborted || generation.current !== attempt) return;
 
       if (!res.ok || !res.body) {
         throw new Error(`SSE ${res.status}`);
@@ -121,6 +131,7 @@ export function useSSE(
 
       while (true) {
         const { done, value } = await reader.read();
+        if (ctrl.signal.aborted || generation.current !== attempt) return;
         if (done) break;
         buf += decoder.decode(value, { stream: true });
         if (buf.length > SSE_BUF_MAX) {
@@ -139,20 +150,21 @@ export function useSSE(
       if (err?.name === 'AbortError') return;
     }
 
+    if (ctrl.signal.aborted || generation.current !== attempt) return;
     setConnected(false);
 
     // Connection closed or errored — schedule reconnect
     const delay = backoffRef.current;
     backoffRef.current = Math.min(backoffRef.current * 2, MAX_BACKOFF_MS);
     retryRef.current = setTimeout(() => { connect(); }, delay);
-  }, [disconnect]);
+  }, [disconnect, nativeStreaming]);
 
   useFocusEffect(
     useCallback(() => {
-      if (!enabled) return;
+      if (!enabled || channelKey === '[]') return;
       connect();
       return disconnect;
-    }, [enabled, connect, disconnect]),
+    }, [enabled, channelKey, connect, disconnect]),
   );
 
   // Reconnect when the app returns from background (OS-level, not just tab focus).
