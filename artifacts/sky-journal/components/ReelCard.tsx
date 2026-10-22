@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon';
+import { ShareButton } from '@/components/ShareButton';
 import { BadgeTray } from '@/components/profile/BadgeTray';
 import type { DiscoverPost } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
@@ -124,7 +125,25 @@ export function ReelCard({
 
       <View style={styles.actions}>
         <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={onLike} />
-        <ReelAction name="share-2" label={t('reels.share')} onPress={onShare} />
+        <ShareButton
+          style={[styles.action, {
+            flexDirection: 'column',
+            gap: 0,
+            minWidth: 0,
+            minHeight: 0,
+            paddingHorizontal: 0,
+            borderWidth: 0,
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+          }]}
+          iconContainerStyle={styles.actionIcon}
+          iconColor="#FFFFFF"
+          iconSize={23}
+          label={t('reels.share')}
+          labelStyle={styles.actionText}
+          accessibilityLabel={t('reels.share')}
+          onPress={() => { void Haptics.selectionAsync(); onShare(); }}
+        />
         <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={onSave} />
         <ReelAction name="flag" label={t('reels.report')} onPress={onReport} />
       </View>

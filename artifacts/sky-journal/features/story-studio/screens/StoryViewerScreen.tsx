@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SecureImage as Image } from '@/components/SecureImage';
 import {
+  Alert,
   Animated,
   Easing,
   PanResponder,
@@ -596,7 +597,29 @@ export default function StoryScreen() {
 
   function handleShare() {
     const panels = story?.panels ?? post?.panels ?? [];
-    shareStory({ id, title, mood, authorName, panels }).catch(() => null);
+    const isPublic = story ? !!story.isPublic : !!post;
+    const share = () => {
+      void shareStory({
+        id: isPublic ? id : undefined,
+        isPublic,
+        title,
+        mood,
+        authorName,
+        panels,
+      });
+    };
+    if (!isPublic) {
+      Alert.alert(
+        'Share this private story?',
+        'This shares the title, mood, and a short text excerpt outside Storigam. It will not make the story public.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Share', onPress: share },
+        ],
+      );
+      return;
+    }
+    share();
   }
 
   function handleWitness() {

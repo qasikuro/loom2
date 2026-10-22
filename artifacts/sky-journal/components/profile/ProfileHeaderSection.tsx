@@ -9,9 +9,11 @@ import { useColors } from '@/hooks/useColors';
 import * as ImagePicker from 'expo-image-picker';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
+import { ShareButton } from '@/components/ShareButton';
+import { shareContent } from '@/utils/shareContent';
 import React, { useEffect, useState } from 'react';
 import {
-  Share, StyleSheet, Text, TextInput, TouchableOpacity, View,
+  Alert, StyleSheet, Text, TextInput, TouchableOpacity, View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { persistImageUri, ImageUploadError } from '@/utils/persistImage';
@@ -121,11 +123,28 @@ export function ProfileHeaderSection({
       setAvatarError(msg);
     } finally { setAvatarUploading(false); }
   }
-  async function shareProfile() {
-    await Share.share({
-      title: `${character.name} on Storigam`,
-      message: `Meet ${character.name} on Storigam${currentTitle ? ` — ${currentTitle}` : ''}.`,
-    });
+  function shareProfile() {
+    const username = character.username?.trim();
+    const description = `Meet ${character.name}${username ? ` (@${username})` : ''} on Storigam${currentTitle ? ` — ${currentTitle}` : ''}.`;
+    const share = () => {
+      void shareContent({
+        title: `${character.name} on Storigam`,
+        description,
+      });
+    };
+
+    if (!character.isPublic) {
+      Alert.alert(
+        'Share private profile details?',
+        `This shares ${character.name}${username ? ` and @${username}` : ''} as text, without making the profile public.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Share', onPress: share },
+        ],
+      );
+      return;
+    }
+    share();
   }
 
   const hasTitle = !!(character.activeTitle || constellation?.activeTitle);
@@ -160,9 +179,12 @@ export function ProfileHeaderSection({
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={shareProfile} activeOpacity={0.75} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Share profile">
-            <Icon name="share-2" size={16} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
-          </TouchableOpacity>
+          <ShareButton
+            style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]}
+            onPress={shareProfile}
+            iconColor={heroHasArtwork ? heroForeground : colors.mutedForeground}
+            accessibilityLabel="Share profile"
+          />
           <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={openDrawer} activeOpacity={0.75} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Settings">
             <Icon name="settings" size={16} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
           </TouchableOpacity>

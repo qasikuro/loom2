@@ -15,17 +15,16 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
-  Alert,
   AppState,
   Platform,
   RefreshControl,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { shareContent } from '@/utils/shareContent';
 
 type ReelFilter = 'All' | 'Stories' | 'Videos';
 
@@ -124,21 +123,13 @@ export default function ReelsScreen() {
 
   async function sharePost(post: DiscoverPost) {
     const path = post.bookId
-      ? `book-public?bookId=${encodeURIComponent(post.bookId)}`
-      : `story/${encodeURIComponent(post.id)}`;
-    const appLink = `storigam:///${path}`;
-    const mediaLink = post.contentType === 'video' && post.videoUri?.startsWith('https://')
-      ? post.videoUri
-      : null;
-    try {
-      await Share.share({
-        title: post.chapterTitle,
-        message: `${t('reels.byAuthor', { title: post.chapterTitle, name: post.authorName })}\n${mediaLink ?? appLink}${mediaLink ? `\n${t('reels.openInApp')}: ${appLink}` : ''}`,
-        ...(Platform.OS === 'ios' ? { url: mediaLink ?? appLink } : {}),
-      });
-    } catch {
-      Alert.alert(t('reels.shareFailed'), t('reels.shareRetry'));
-    }
+      ? `/book-public?bookId=${encodeURIComponent(post.bookId)}`
+      : `/story/${encodeURIComponent(post.id)}`;
+    await shareContent({
+      title: post.chapterTitle,
+      description: t('reels.byAuthor', { title: post.chapterTitle, name: post.authorName }),
+      path,
+    });
   }
 
   return (

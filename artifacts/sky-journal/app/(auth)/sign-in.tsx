@@ -11,7 +11,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Updates from 'expo-updates';
 import { createOAuthRedirectUrl } from '../../utils/oauthRedirect';
 import { ensureOAuthUpdateIsCurrent } from '../../utils/ensureOAuthUpdate';
-import { type Href, useRouter, Link } from 'expo-router';
+import { type Href, useLocalSearchParams, useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SecureImage as Image } from '@/components/SecureImage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -56,6 +56,12 @@ export default function SignInScreen() {
   const updateStatusRef = useRef(updateStatus);
   updateStatusRef.current = updateStatus;
   const router = useRouter();
+  const { returnTo: requestedReturnTo } = useLocalSearchParams<{ returnTo?: string | string[] }>();
+  const returnToValue = Array.isArray(requestedReturnTo) ? requestedReturnTo[0] : requestedReturnTo;
+  const postSignInHref: Href = returnToValue?.startsWith('/guide-tutorial/') &&
+    !returnToValue.startsWith('//') && !returnToValue.includes('\\')
+    ? returnToValue as Href
+    : '/(tabs)/reels';
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const topInset = Platform.OS === 'web' ? 67 : insets.top;
@@ -104,7 +110,7 @@ export default function SignInScreen() {
         // because Clerk may call it with a session that has currentTask set,
         // which would prevent navigation from ever firing.
         await setActive({ session: createdSessionId });
-        router.replace('/(tabs)/reels' as Href);
+        router.replace(postSignInHref);
       } else if (ssoSignIn?.status === 'needs_first_factor' || signUp?.status === 'missing_requirements') {
         setCatchError(t('auth.additionalVerification'));
       } else if (!createdSessionId) {
@@ -116,7 +122,7 @@ export default function SignInScreen() {
     } finally {
       setGoogleLoading(false);
     }
-  }, [startSSOFlow, router]);
+  }, [startSSOFlow, router, setActive, t, postSignInHref]);
 
   async function handleSignIn() {
     if (!isLoaded || !signIn) { setCatchError(t('auth.clerkNotReady')); return; }
@@ -129,7 +135,7 @@ export default function SignInScreen() {
       const result = await signIn.create({ identifier: email.trim(), password });
       if (result.status === 'complete' && result.createdSessionId) {
         await setActive({ session: result.createdSessionId });
-        router.replace('/(tabs)/reels' as Href);
+        router.replace(postSignInHref);
       } else {
         setCatchError(t('auth.signInFailed'));
       }

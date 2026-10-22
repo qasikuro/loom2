@@ -1,5 +1,6 @@
 import { BackButton } from '@/components/BackButton';
 import { Icon } from '@/components/Icon';
+import { ShareButton } from '@/components/ShareButton';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { SecureImage } from '@/components/SecureImage';
 import { TutorialStepper } from '@/components/guide-session/TutorialStepper';
@@ -7,6 +8,7 @@ import { Initials, Notice, PillButton, SectionCard, gs } from '@/components/guid
 import { useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useGuideTutorialBookmarks } from '@/hooks/useGuideTutorialBookmarks';
+import { shareContent } from '@/utils/shareContent';
 import { useAuth } from '@clerk/expo';
 import { getGetGuideTutorialQueryKey, useGetGuideTutorial } from '@workspace/api-client-react';
 import { type Href, Redirect, router, useLocalSearchParams } from 'expo-router';
@@ -27,7 +29,10 @@ export default function GuideTutorialReaderScreen() {
   const top = Platform.OS === 'web' ? 67 : insets.top;
   const bottom = Platform.OS === 'web' ? 34 : insets.bottom;
   if (!isLoaded) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
-  if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+  if (!isSignedIn) {
+    const returnTo = `/guide-tutorial/${encodeURIComponent(tutorialId ?? '')}`;
+    return <Redirect href={{ pathname: '/(auth)/sign-in', params: { returnTo } }} />;
+  }
 
   if (query.isLoading) {
     return <View style={[s.root, { backgroundColor: colors.background, paddingTop: top }]}><View style={s.header}><BackButton /></View><SkyLoadingOverlay message="Opening tutorial…" /></View>;
@@ -49,6 +54,7 @@ export default function GuideTutorialReaderScreen() {
   }
 
   const isOwner = userId === tut.guideId;
+  const canShare = tut.status === 'published' && (tut.visibility === 'public' || tut.visibility === 'unlisted');
   const isSaved = bookmarks.ids.includes(tut.id);
   const isFollowing = followingIds.includes(tut.guideId);
   const cover = tut.steps.find(st => st.type === 'image' && st.mediaUri)?.mediaUri;
@@ -60,6 +66,21 @@ export default function GuideTutorialReaderScreen() {
       <View style={s.header}>
         <BackButton />
         <View style={{ flex: 1 }} />
+        {canShare && (
+          <ShareButton
+            testID="tutorial-share"
+            onPress={() => {
+              void shareContent({
+                title: tut.title,
+                description: `${tut.description}\nBy ${tut.guideName} · Storigam`,
+                path: `/guide-tutorial/${encodeURIComponent(tut.id)}`,
+              });
+            }}
+            accessibilityLabel="Share tutorial"
+            style={{ width: 40, height: 40, minWidth: 40, minHeight: 40, paddingHorizontal: 0, marginRight: 8 }}
+            iconColor={colors.primary}
+          />
+        )}
         <TouchableOpacity testID="reader-bookmark" disabled={bookmarks.isLoading || bookmarks.isSaving} onPress={() => { void bookmarks.toggle(tut.id).catch(() => {}); }}
           style={[s.saveBtn, { backgroundColor: isSaved ? `${colors.primary}16` : colors.card, borderColor: isSaved ? colors.primary : colors.border }]}>
           <Icon name="bookmark" size={14} color={isSaved ? colors.primary : colors.mutedForeground} />

@@ -12,7 +12,6 @@ import {
   Animated,
   FlatList,
   Platform,
-  Share,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,6 +21,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SecureImage as Image } from '@/components/SecureImage';
+import { shareContent } from '@/utils/shareContent';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -251,12 +251,13 @@ export default function ChapterReaderScreen() {
 
   async function handleShare() {
     if (!chapter) return;
-    try {
-      await Share.share({
-        message: t('studioReader.shareChapterMessage', { title: chapter.title }),
-        title: chapter.title,
-      });
-    } catch { /* user dismissed */ }
+    await shareContent({
+      title: chapter.title,
+      description: t('studioReader.shareChapterMessage', { title: chapter.title }),
+      path: chapterId && bookId
+        ? `/chapter-reader?chapterId=${encodeURIComponent(chapterId)}&bookId=${encodeURIComponent(bookId)}`
+        : undefined,
+    });
   }
 
   async function toggleBookmark() {

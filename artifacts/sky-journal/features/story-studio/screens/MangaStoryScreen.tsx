@@ -13,11 +13,11 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { SecureImage as Image } from '@/components/SecureImage';
+import { shareContent } from '@/utils/shareContent';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import * as Sharing from 'expo-sharing';
 import * as Crypto from 'expo-crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { safeBack } from '@/utils/navigation';
@@ -238,29 +238,12 @@ export default function MangaStoryScreen() {
     setSharing(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
-      if (Platform.OS === 'web') {
-        await import('react-native').then(({ Share }) =>
-          Share.share({ title: 'My Storigam manga', message: `My manga story — Made by Storigam\n${generatedImageUri}` }),
-        );
-        return;
-      }
-      const available = await Sharing.isAvailableAsync();
-      if (!available) throw new Error('Sharing unavailable');
-      let shareUri = generatedImageUri;
-      if (!shareUri.startsWith('file:')) {
-        const localUri = `${FileSystem.cacheDirectory}ximo-manga-${generationId ?? 'page'}.png`;
-        shareUri = await resolveMediaReadUrl(shareUri);
-        const download = await FileSystem.downloadAsync(shareUri, localUri);
-        if (download.status !== 200) throw new Error('Download failed');
-        shareUri = download.uri;
-      }
-      await Sharing.shareAsync(shareUri, {
-        dialogTitle: 'Share your Storigam manga',
-        mimeType: 'image/png',
-        UTI: 'public.png',
+      await shareContent({
+        title: 'My Storigam manga',
+        description: prompt.trim() || 'A manga page made with Storigam.',
+        imageUri: generatedImageUri,
+        imageMimeType: 'image/png',
       });
-    } catch {
-      setError(t('studioReader.couldNotShare'));
     } finally {
       setSharing(false);
     }

@@ -1,4 +1,6 @@
 import { BackButton } from '@/components/BackButton';
+import { ShareButton } from '@/components/ShareButton';
+import { shareContent } from '@/utils/shareContent';
 import { Icon } from '@/components/Icon';
 import { MoodBadge } from '@/components/MoodBadge';
 import { SHADOW } from '@/constants/colors';
@@ -10,6 +12,7 @@ import { useLocalSearchParams } from 'expo-router';
 import React from 'react';
 import { SecureImage as Image } from '@/components/SecureImage';
 import {
+  Alert,
   Platform,
   ScrollView,
   StyleSheet,
@@ -80,6 +83,34 @@ export default function JournalEntryScreen() {
     );
   }
 
+  const currentEntry = entry;
+  function requestPrivateEntryShare() {
+    const entryTitle = `${currentEntry.type === 'diary' ? t('journal.journalTitle') : currentEntry.type === 'friend' ? t('journal.friendTitle') : t('journal.momentTitle')} · ${formatFullDate(currentEntry.date, i18n.language)}`;
+    const description = [
+      currentEntry.friendName ? `A moment with ${currentEntry.friendName}.` : '',
+      currentEntry.text?.trim() ?? '',
+      'Shared from a private Storigam journal.',
+    ].filter(Boolean).join('\n\n');
+
+    Alert.alert(
+      'Share this private entry?',
+      `This will send the entry text${currentEntry.imageUri ? ' and attached photo' : ''} outside Storigam. It will not make the journal public.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Share',
+          onPress: () => {
+            void shareContent({
+              title: entryTitle,
+              description,
+              imageUri: currentEntry.imageUri,
+            });
+          },
+        },
+      ],
+    );
+  }
+
   const cfg     = TYPE_CFG[entry.type];
   const initial = entry.type === 'friend' ? (entry.friendName?.[0] ?? '?').toUpperCase() : null;
 
@@ -98,6 +129,24 @@ export default function JournalEntryScreen() {
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
       >
         <BackButton style={s.backBtn} color="rgba(220,210,255,0.9)" size={20} />
+        <ShareButton
+          testID="journal-entry-share"
+          onPress={requestPrivateEntryShare}
+          accessibilityLabel="Share private journal entry"
+          iconColor="rgba(255,255,255,0.9)"
+          style={{
+            position: 'absolute',
+            top: topPad + 8,
+            right: 16,
+            width: 40,
+            height: 40,
+            minWidth: 40,
+            minHeight: 40,
+            paddingHorizontal: 0,
+            backgroundColor: 'rgba(255,255,255,0.12)',
+            borderColor: 'rgba(255,255,255,0.22)',
+          }}
+        />
 
         <View style={s.headerCenter}>
           {/* Type badge */}

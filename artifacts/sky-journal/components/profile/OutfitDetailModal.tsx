@@ -4,6 +4,7 @@ import { VibeMotion, VibeOverlay } from '@/components/VibeOverlay';
 
 import type { Character, Outfit } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { ShareButton } from '@/components/ShareButton';
 import { useUser } from '@clerk/expo';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { router } from 'expo-router';
@@ -244,12 +245,16 @@ export function OutfitDetailModal({
                     </View>
                   )}
 
-                  <TouchableOpacity
+                  <ShareButton
                     style={[s.actionBtn, {
                       backgroundColor: `${colors.primary}08`,
                       borderColor: `${colors.primary}40`,
                       marginBottom: 4,
                     }]}
+                    iconColor={colors.primary}
+                    iconSize={14}
+                    label={t('outfitJournal.shareOutfit')}
+                    labelStyle={[s.actionBtnText, { color: colors.primary }]}
                     onPress={() => {
                       shareOutfit({
                         name:        outfit.name,
@@ -258,12 +263,8 @@ export function OutfitDetailModal({
                         imageUri:    outfit.imageUri,
                       }).catch(() => null);
                     }}
-                    accessibilityRole="button"
                     accessibilityLabel={t('outfitJournal.shareOutfit')}
-                  >
-                    <Icon name="share-2" size={14} color={colors.primary} />
-                    <Text style={[s.actionBtnText, { color: colors.primary }]}>{t('outfitJournal.shareOutfit')}</Text>
-                  </TouchableOpacity>
+                  />
 
                   <TouchableOpacity
                     style={[s.actionBtn, {
