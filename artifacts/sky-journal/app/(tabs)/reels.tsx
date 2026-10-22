@@ -42,6 +42,7 @@ export default function ReelsScreen() {
     refreshFeed,
     isLoading,
     apiOnline,
+    hasCheckedApi,
     discoverLoadError,
     hasCorruptedDiscover,
     dmUnread,
@@ -286,7 +287,7 @@ export default function ReelsScreen() {
         </View>
       </LinearGradient>
 
-      {(!apiOnline || discoverLoadError) && !isLoading && (
+      {((hasCheckedApi && !apiOnline) || discoverLoadError) && !isLoading && (
         <View style={[styles.statusBanner, { top: topPad + 111 }]}>
           <View style={styles.statusDot} />
           <Text style={styles.statusText}>

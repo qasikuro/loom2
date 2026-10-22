@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth, useUser } from '@clerk/expo';
+import { accountCacheKey } from '@/utils/accountCache';
 import { LumiHomeCard } from '@/features/lumi/home/LumiHomeCard';
 import {
   useApp, apiFetch, type GuideAvailability, type GuideProfile, type DiscoverPost,
@@ -1112,7 +1113,7 @@ export default function HomeScreen() {
   const {
     character, journalEntries, stories, outfits,
     activeOutfitId, setActiveOutfitId,
-    friends, discoverPosts,
+    friends, blockedIds, discoverPosts,
     rewards, serverNotifications,
     markServerNotificationsRead, deleteServerNotification, dismissReward,
     reloadData, myGuides, rewardBalance, constellation,
@@ -1123,9 +1124,9 @@ export default function HomeScreen() {
   const { data: publicConfig } = useGetAppConfig({
     query: {
       queryKey: getGetAppConfigQueryKey(),
-      staleTime: 0,
-      refetchOnMount: 'always',
-      refetchInterval: 15_000,
+      staleTime: 60_000,
+      refetchOnMount: true,
+      refetchInterval: 5 * 60_000,
       refetchOnWindowFocus: true,
       refetchOnReconnect: true,
     },
@@ -1185,8 +1186,8 @@ export default function HomeScreen() {
   // ── Witness delta card: only shown when witness counts increased since last open ──
   const [newWitnessData, setNewWitnessData] = useState<{ count: number; title: string } | null>(null);
   useEffect(() => {
-    if (!stories.length) return;
-    const SNAP_KEY = 'witness_snapshot_v1';
+    if (!stories.length || !clerkUserId) return;
+    const SNAP_KEY = accountCacheKey(clerkUserId, 'witness_snapshot_v1');
     AsyncStorage.getItem(SNAP_KEY).then(raw => {
       const snapshot: Record<string, number> = raw ? (JSON.parse(raw) as Record<string, number>) : {};
       let totalNew = 0;
@@ -1207,7 +1208,7 @@ export default function HomeScreen() {
       stories.forEach(s => { next[s.id] = s.witnessedCount ?? 0; });
       return AsyncStorage.setItem(SNAP_KEY, JSON.stringify(next));
     }).catch(() => null);
-  }, [stories]);
+  }, [stories, clerkUserId]);
 
   // ── Banner anti-stack gate (#13) ───────────────────────────────────────────
   const [bannerGate,    setBannerGate]    = useState(false);
@@ -1760,6 +1761,7 @@ export default function HomeScreen() {
             onOpenNotifications={openNotificationsPanel}
             onLongPressAvatar={() => setShowOutfits(true)}
             friends={friends}
+            blockedIds={blockedIds}
             friendStories={circleStories}
             friendCount={friends.length}
             topInset={topPad}

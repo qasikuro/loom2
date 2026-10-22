@@ -62,7 +62,7 @@ export default function CharacterScreen() {
     character, setCharacter, outfits, stories,
     activeOutfitId, setActiveOutfitId, deleteOutfit, deleteStory,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
-    isLoading, apiOnline, storiesLoadError, outfitsLoadError, hasCorruptedStories, reloadData,
+    isLoading, apiOnline, hasCheckedApi, storiesLoadError, outfitsLoadError, hasCorruptedStories, reloadData,
     constellation, rewardBalance, reloadConstellation,
     activeCosmetics,
   } = useApp();
@@ -181,7 +181,7 @@ export default function CharacterScreen() {
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      {(!apiOnline || storiesLoadError || outfitsLoadError) && !isLoading && (
+      {((hasCheckedApi && !apiOnline) || storiesLoadError || outfitsLoadError) && !isLoading && (
         <View style={[offlineS.row, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={offlineS.dot} />
           <Text style={[offlineS.msg, { color: colors.mutedForeground }]}>{(storiesLoadError || outfitsLoadError) && apiOnline ? t('components.profileSection.loadSomeError') : t('components.profileSection.offlineSaved')}</Text>

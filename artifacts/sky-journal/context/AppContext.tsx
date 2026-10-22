@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@clerk/expo';
+import { accountCacheKey } from '@/utils/accountCache';
 import { clearLumiCreations, publishLumiCreation } from '@/features/lumi/home/events';
 import { enqueueMutation, drainMutationQueue, clearMutation } from '@/utils/mutationQueue';
 import { registerCustomEffects, type EffectDef } from '@/components/ProfileEffect';
@@ -22,7 +23,7 @@ import {
 } from '@workspace/api-zod';
 import { setAuthTokenGetter as setApiClientAuthTokenGetter } from '@workspace/api-client-react';
 import { getApiBase } from '@/utils/apiBase';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 // ── Pure mapper functions (no RN/Expo deps — testable in plain Node.js) ──────
@@ -104,17 +105,17 @@ const RESOURCE_TTL_MS: Record<string, number> = {
   following:         5 * 60_000,
 };
 
-async function readFetchTimestamps(): Promise<Record<string, number>> {
+async function readFetchTimestamps(userId: string): Promise<Record<string, number>> {
   try {
-    const raw = await AsyncStorage.getItem(FETCH_TIMESTAMPS_KEY);
+    const raw = await AsyncStorage.getItem(accountCacheKey(userId, FETCH_TIMESTAMPS_KEY));
     return raw ? (JSON.parse(raw) as Record<string, number>) : {};
   } catch { return {}; }
 }
 
-async function writeFetchTimestamps(updates: Record<string, number>): Promise<void> {
+async function writeFetchTimestamps(userId: string, updates: Record<string, number>): Promise<void> {
   try {
-    const existing = await readFetchTimestamps();
-    await AsyncStorage.setItem(FETCH_TIMESTAMPS_KEY, JSON.stringify({ ...existing, ...updates }));
+    const existing = await readFetchTimestamps(userId);
+    await AsyncStorage.setItem(accountCacheKey(userId, FETCH_TIMESTAMPS_KEY), JSON.stringify({ ...existing, ...updates }));
   } catch { /* silent */ }
 }
 
@@ -398,6 +399,7 @@ interface RawShopResponse {
 interface AppContextValue {
   isLoading: boolean;
   apiOnline: boolean;
+  hasCheckedApi: boolean;
   creationDataReady: boolean;
 
   character:    Character;
@@ -550,7 +552,9 @@ function parseOrDefault<F>(schema: SafeSchema, raw: unknown, fallback: F, endpoi
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const { userId } = useAuth();
+  const { userId, isLoaded: authLoaded, isSignedIn } = useAuth();
+  const cacheUserIdRef = useRef<string | null>(null);
+  cacheUserIdRef.current = authLoaded && isSignedIn ? userId : null;
   const lumiUserIdRef = useRef(userId);
   lumiUserIdRef.current = userId;
   const [creationDataAccountId, setCreationDataAccountId] = useState<string | null>(null);
@@ -561,6 +565,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiOnline, setApiOnline] = useState(false);
+  const [hasCheckedApi, setHasCheckedApi] = useState(false);
 
   const [character, setCharacterState]      = useState<Character>(DEFAULT_CHARACTER);
   const [stories, setStories]               = useState<Story[]>([]);
@@ -629,23 +634,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Guards against concurrent loads and ensures skeletons only flash on true cold start
   const isLoadingRef = useRef(false);
   const dataReadyRef = useRef(false);
+  const hasCachedContentRef = useRef(false);
+  const loadEpochRef = useRef(0);
+  const cacheHydrationRef = useRef<{ userId: string; promise: Promise<void> } | null>(null);
+  const previousCacheIdentityRef = useRef<string | null | undefined>(undefined);
 
   // Tracks previously known unlocked stars so we can diff on each constellation reload.
   // null = no baseline yet (initial load) → never fire toasts until we have a baseline.
   const prevUnlockedStarsRef = useRef<string[] | null>(null);
 
-  // ── Load active outfit id from AsyncStorage ────────────────────────────────
-
-  useEffect(() => {
-    AsyncStorage.getItem('active_outfit_v1').then(v => {
-      if (v) setActiveOutfitIdState(v);
-    }).catch(() => null);
-  }, []);
-
-  // ── Load data ──────────────────────────────────────────────────────────────
-
-  // On mount: restore from cache immediately so the UI isn't blank
-  useEffect(() => { loadFromCache(); }, []);
+  function getCacheItem(key: string, ownerId = cacheUserIdRef.current): Promise<string | null> {
+    return ownerId ? AsyncStorage.getItem(accountCacheKey(ownerId, key)) : Promise.resolve(null);
+  }
+  function setCacheItem(key: string, value: string, ownerId = cacheUserIdRef.current): Promise<void> {
+    return ownerId ? AsyncStorage.setItem(accountCacheKey(ownerId, key), value) : Promise.resolve();
+  }
+  function removeCacheItem(key: string, ownerId = cacheUserIdRef.current): Promise<void> {
+    return ownerId ? AsyncStorage.removeItem(accountCacheKey(ownerId, key)) : Promise.resolve();
+  }
+  function writeAccountTimestamps(updates: Record<string, number>): Promise<void> {
+    const ownerId = cacheUserIdRef.current;
+    return ownerId ? writeFetchTimestamps(ownerId, updates) : Promise.resolve();
+  }
 
   // Polls until Clerk returns a non-null token, up to maxMs.
   // Uses exponential backoff (0 → 50 → 150 → 350 → 500ms) so the common
@@ -667,41 +677,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // order, so the _bak write is always committed before the main key write
   // begins. If the process is killed mid-write on the main key, _bak holds
   // the complete, valid latest value that readCacheSafe can recover from.
-  async function readCacheSafe(key: string): Promise<string | null> {
-    const value = await AsyncStorage.getItem(key);
+  async function readCacheSafe(key: string, ownerId = cacheUserIdRef.current): Promise<string | null> {
+    const value = await getCacheItem(key, ownerId);
     if (value === null) return null;
     try { JSON.parse(value); return value; } catch {
-      return AsyncStorage.getItem(`${key}_bak`);
+      return getCacheItem(`${key}_bak`, ownerId);
     }
   }
   function writeStoryCache(json: string): void {
-    AsyncStorage.setItem('stories_v1_bak', json).catch(() => null);
-    AsyncStorage.setItem('stories_v1',     json).catch(() => null);
+    void setCacheItem('stories_v1_bak', json).catch(() => null);
+    void setCacheItem('stories_v1', json).catch(() => null);
   }
   function writeJournalCache(json: string): void {
-    AsyncStorage.setItem('journal_v2_bak', json).catch(() => null);
-    AsyncStorage.setItem('journal_v2',     json).catch(() => null);
+    void setCacheItem('journal_v2_bak', json).catch(() => null);
+    void setCacheItem('journal_v2', json).catch(() => null);
   }
   function writeOutfitCache(json: string): void {
-    AsyncStorage.setItem('outfits_v1_bak', json).catch(() => null);
-    AsyncStorage.setItem('outfits_v1',     json).catch(() => null);
+    void setCacheItem('outfits_v1_bak', json).catch(() => null);
+    void setCacheItem('outfits_v1', json).catch(() => null);
   }
 
-  async function loadFromCache() {
+  async function loadFromCache(ownerId: string) {
     try {
-      const [c, j, s, o, d, f, sv, ac, rb, cfSeen, dmSeen] = await Promise.all([
-        AsyncStorage.getItem('character_v2'),
-        readCacheSafe('journal_v2'),         // M-5: falls back to _bak on corrupt
-        readCacheSafe('stories_v1'),         // M-5: falls back to _bak on corrupt
-        readCacheSafe('outfits_v1'),         // M-5: falls back to _bak on corrupt
-        AsyncStorage.getItem('discover_v1'),
-        AsyncStorage.getItem('following_v1'),
-        AsyncStorage.getItem('saved_stories_v1'),
-        AsyncStorage.getItem('active_cosmetics_v1'),
-        AsyncStorage.getItem('reward_balance_v1'),
-        AsyncStorage.getItem('campfire_badge_seen_at'),
-        AsyncStorage.getItem('dm_badge_seen_at'),
+      const [c, j, s, o, d, f, sv, ac, rb, cfSeen, dmSeen, galleryRaw, galleryUsageRaw, friendsRaw, notificationsRaw, guidesRaw, shopRaw, activeOutfitId, blockedRaw] = await Promise.all([
+        getCacheItem('character_v2', ownerId),
+        readCacheSafe('journal_v2', ownerId),         // M-5: falls back to _bak on corrupt
+        readCacheSafe('stories_v1', ownerId),         // M-5: falls back to _bak on corrupt
+        readCacheSafe('outfits_v1', ownerId),         // M-5: falls back to _bak on corrupt
+        getCacheItem('discover_v1', ownerId),
+        getCacheItem('following_v1', ownerId),
+        getCacheItem('saved_stories_v1', ownerId),
+        getCacheItem('active_cosmetics_v1', ownerId),
+        getCacheItem('reward_balance_v1', ownerId),
+        getCacheItem('campfire_badge_seen_at', ownerId),
+        getCacheItem('dm_badge_seen_at', ownerId),
+        getCacheItem('gallery_v1', ownerId),
+        getCacheItem('gallery_usage_v1', ownerId),
+        getCacheItem('friends_v1', ownerId),
+        getCacheItem('notifications_v1', ownerId),
+        getCacheItem('my_guides_v1', ownerId),
+        getCacheItem('shop_catalog_v1', ownerId),
+        getCacheItem('active_outfit_v1', ownerId),
+        getCacheItem('blocked_users_v1', ownerId),
       ]);
+      if (ownerId !== cacheUserIdRef.current) return;
       // M-5: Wrap each parse individually — one corrupted key must not
       // silently prevent all remaining cache entries from being restored.
       try { if (c) setCharacterState(JSON.parse(c)); } catch { /* use default */ }
@@ -715,27 +734,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (rb) { try { setRewardBalance(JSON.parse(rb)); } catch { /* ignore */ } }
       if (cfSeen) setCampfireBadgeSeenAt(cfSeen);
       if (dmSeen) setDmBadgeSeenAt(dmSeen);
-    } catch { /* use defaults */ } finally {
-      dataReadyRef.current = true;
-      setIsLoading(false);
+      if (galleryRaw) { try { setGallery(JSON.parse(galleryRaw)); } catch { /* ignore */ } }
+      if (galleryUsageRaw) { try { setGalleryUsage(JSON.parse(galleryUsageRaw)); } catch { /* ignore */ } }
+      if (friendsRaw) { try { setFriends(JSON.parse(friendsRaw)); } catch { /* ignore */ } }
+      if (notificationsRaw) { try { setServerNotifications(JSON.parse(notificationsRaw)); } catch { /* ignore */ } }
+      if (guidesRaw) { try { setMyGuides(JSON.parse(guidesRaw)); } catch { /* ignore */ } }
+      if (shopRaw) { try {
+        const shop = JSON.parse(shopRaw) as { catalog?: ShopItem[]; purchasedIds?: string[] };
+        if (Array.isArray(shop.catalog)) setShopCatalog(shop.catalog);
+        if (Array.isArray(shop.purchasedIds)) setPurchasedIds(shop.purchasedIds);
+      } catch { /* ignore */ } }
+      if (activeOutfitId) setActiveOutfitIdState(activeOutfitId);
+      if (blockedRaw) { try { setBlockedIds(JSON.parse(blockedRaw)); } catch { /* ignore */ } }
+      hasCachedContentRef.current = [c, j, s, o, d, f, sv, ac, rb, galleryRaw, friendsRaw, notificationsRaw, guidesRaw, shopRaw, activeOutfitId, blockedRaw].some(Boolean);
+    } catch {
+      hasCachedContentRef.current = false;
+    } finally {
+      if (ownerId === cacheUserIdRef.current) {
+        dataReadyRef.current = true;
+        if (hasCachedContentRef.current) setIsLoading(false);
+      }
     }
   }
 
-  // ── Clear all user data (call on sign-out) ────────────────────────────────
+  function ensureCacheLoaded(ownerId: string): Promise<void> {
+    if (cacheHydrationRef.current?.userId === ownerId) return cacheHydrationRef.current.promise;
+    const promise = loadFromCache(ownerId).finally(() => {
+      if (cacheHydrationRef.current?.userId === ownerId) cacheHydrationRef.current = null;
+    });
+    cacheHydrationRef.current = { userId: ownerId, promise };
+    return promise;
+  }
 
-  const ALL_CACHE_KEYS = [
+  useEffect(() => {
+    if (!authLoaded) return;
+    const ownerId = isSignedIn ? userId : null;
+    if (!ownerId) {
+      setIsLoading(false);
+      return;
+    }
+    void ensureCacheLoaded(ownerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ensureCacheLoaded is a local ref-backed helper; identity is the only trigger.
+  }, [authLoaded, isSignedIn, userId]);
+
+  // Older builds used global cache keys. They are never hydrated; remove them
+  // when the user signs out so they cannot be mistaken for a current account.
+  const LEGACY_UNSCOPED_CACHE_KEYS = [
     'character_v2', 'journal_v2', 'stories_v1', 'outfits_v1',
     'journal_v2_bak', 'stories_v1_bak', 'outfits_v1_bak', // M-5: backup keys
     'discover_v1', 'following_v1', 'saved_stories_v1', 'collection_v1',
-    'shop_catalog_v1', 'reward_balance_v1',
-    FETCH_TIMESTAMPS_KEY,
-    // active_outfit_v1 is intentionally NOT cleared on logout so the outfit
-    // preference survives a logout/login cycle. loadData() validates the saved
-    // ID against the freshly loaded outfit list before applying it.
+    'shop_catalog_v1', 'reward_balance_v1', 'active_outfit_v1',
+    'active_cosmetics_v1', 'gallery_v1', 'gallery_usage_v1', 'friends_v1',
+    'notifications_v1', 'my_guides_v1', 'campfire_badge_seen_at',
+    'dm_badge_seen_at', FETCH_TIMESTAMPS_KEY,
   ];
 
   const clearUserData = useCallback(async () => {
-    // Reset in-memory state immediately so the UI goes blank on sign-out.
+    // Clear the outgoing account's in-memory and on-device private data. The
+    // new account must never inherit the previous account's offline content.
+    const outgoingUserId = previousCacheIdentityRef.current;
+    if (outgoingUserId) {
+      const prefix = accountCacheKey(outgoingUserId, '');
+      void AsyncStorage.getAllKeys().then(keys => {
+        const accountKeys = keys.filter(key => key.startsWith(prefix));
+        return accountKeys.length ? AsyncStorage.multiRemove(accountKeys) : undefined;
+      }).catch(() => null);
+    }
     setCharacterState(DEFAULT_CHARACTER);
     setJournalEntries([]);
     setStories([]);
@@ -760,34 +824,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setServerNotifications([]);
     setSavedStoryIds(new Set());
     setRewardBalance(null);
+    setRewards([]);
     setConstellation(null);
     setPurchasedIds([]);
+    setShopCatalog([]);
+    setMyGuides([]);
     setActiveCosmeticsState({});
+    setCampfireUnread(0);
+    setUnreadCampfireRooms([]);
+    setCampfireBadgeSeenAt(null);
     setApiOnline(false);
-    // Purge all user-specific caches so a different user signing in on the same
-    // device cannot see a previous user's balance, purchases, or social data.
-    // active_outfit_v1 is intentionally NOT cleared — the preference is non-sensitive
-    // and is validated against the freshly loaded outfit list on next sign-in.
-    AsyncStorage.multiRemove(ALL_CACHE_KEYS).catch(() => null);
-    AsyncStorage.removeItem('active_cosmetics_v1').catch(() => null);
-    // Reset load guards so the next sign-in triggers a full reload
-    dataReadyRef.current = false;
+    setHasCheckedApi(false);
+    // Drop old unscoped values. New caches are namespaced by Clerk user ID.
+    AsyncStorage.multiRemove(LEGACY_UNSCOPED_CACHE_KEYS).catch(() => null);
+    loadEpochRef.current += 1;
+    cacheHydrationRef.current = null;
+    hasCachedContentRef.current = false;
+    dataReadyRef.current = !cacheUserIdRef.current;
     isLoadingRef.current = false;
+    setIsLoading(!!cacheUserIdRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: mount-only; deps would trigger sign-out on unrelated re-renders
   }, []);
+
+  useLayoutEffect(() => {
+    if (!authLoaded) return;
+    const nextIdentity = cacheUserIdRef.current;
+    if (
+      previousCacheIdentityRef.current !== undefined
+      && previousCacheIdentityRef.current !== nextIdentity
+    ) {
+      void clearUserData();
+    }
+    previousCacheIdentityRef.current = nextIdentity;
+  }, [authLoaded, isSignedIn, userId, clearUserData]);
 
   // Called by AuthTokenBridge once a valid Clerk token is available.
   // Uses waitForToken() to avoid the old "fire all → 401 ×6 → wait 1500ms → retry" race.
   async function loadData(retry = true) {
     // Prevent two concurrent loads (e.g. rapid sign-out / sign-in)
     if (isLoadingRef.current) return;
+    const requestAccountId = cacheUserIdRef.current;
+    if (!requestAccountId) {
+      setIsLoading(false);
+      return;
+    }
+    const requestEpoch = loadEpochRef.current;
     isLoadingRef.current = true;
-    const creationRequestAccount = lumiUserIdRef.current;
+    const creationRequestAccount = requestAccountId;
     setCreationDataAccountId(null);
 
-    // Only show the skeleton spinner on a true cold start (no cache data yet).
-    // Returning users see their cached content while the API refreshes silently.
-    if (!dataReadyRef.current) setIsLoading(true);
+    await ensureCacheLoaded(requestAccountId);
+    if (
+      requestEpoch !== loadEpochRef.current
+      || requestAccountId !== cacheUserIdRef.current
+    ) return;
+
+    // Cached screens stay mounted while the refresh runs. A first-time account
+    // keeps the app's compact loading state until its essential data arrives.
+    if (!hasCachedContentRef.current) setIsLoading(true);
 
     try {
       // Block until Clerk has a valid token — avoids all the wasted 401 round trips.
@@ -799,36 +893,95 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // automatic retry in 3 s; the second attempt is passed retry=false so it
         // cannot loop further.
         console.warn(`[AppContext] waitForToken timed out after 6 s (retry=${retry}). No Clerk token available.`);
-        if (!dataReadyRef.current) await loadFromCache();
+        if (requestEpoch !== loadEpochRef.current || requestAccountId !== cacheUserIdRef.current) return;
         setApiOnline(false);
         if (retry) setTimeout(() => loadData(false), 3000);
         return;
       }
-      // Fire EVERYTHING in one parallel batch: core + social + notifications.
-      // Previously social was a second sequential wave, doubling the wait for Discover.
+      let apiResponded = false;
+      async function fetchOptional<T>(path: string): Promise<T | null> {
+        try {
+          const value = await apiFetch<T>(path);
+          apiResponded = true;
+          return value;
+        } catch (error) {
+          // HTTP errors (including expired auth) still prove the server replied;
+          // only transport failures should produce the offline state.
+          if (error instanceof ApiError) apiResponded = true;
+          return null;
+        }
+      }
+      // Core content is awaited separately so a slow social/config endpoint
+      // cannot hold the first usable screen. Everything still runs in parallel.
+      const coreFetchPromise = Promise.all([
+        fetchOptional<unknown>('/character'),
+        fetchOptional<unknown>('/journal-entries'),
+        fetchOptional<unknown>('/stories'),
+        fetchOptional<unknown>('/outfits'),
+      ]);
+      const secondaryFetchPromise = Promise.all([
+        fetchOptional<unknown>('/gallery'),
+        fetchOptional<unknown>('/gallery/usage'),
+        fetchOptional<unknown>('/discover'),
+        fetchOptional<unknown>('/follows/following'),
+        fetchOptional<unknown>('/notifications'),
+        fetchOptional<unknown>('/friends'),
+        fetchOptional<GuideProfile[]>('/guides?following=true'),
+        fetchOptional<unknown>('/rewards'),
+        fetchOptional<unknown>('/constellation'),
+        fetchOptional<unknown>('/rewards/shop'),
+        fetchOptional<string[]>('/stories/saved/ids'),
+        fetchOptional<{ effects: Array<{ id: string; config: EffectDef }> }>('/effects/catalog'),
+        fetchOptional<{ blockedId: string }[]>('/users/blocked'),
+      ]);
+      const [_charFetch, _entriesFetch, _storiesFetch, _outfitsFetch] = await coreFetchPromise;
+      if (
+        requestEpoch !== loadEpochRef.current
+        || requestAccountId !== cacheUserIdRef.current
+      ) return;
+
+      const earlyCharRaw = parseOrDefault(ApiCharacterSchema, _charFetch, null, '/character') as RawCharacterResponse | null;
+      const earlyEntriesRaw = parseOrDefault(ApiJournalEntriesSchema, _entriesFetch, null, '/journal-entries') as RawJournalEntryResponse[] | null;
+      const earlyStoriesRaw = parseOrDefault(ApiStoriesSchema, _storiesFetch, null, '/stories') as RawStoryResponse[] | null;
+      const earlyOutfitsRaw = parseOrDefault(ApiOutfitsSchema, _outfitsFetch, null, '/outfits') as RawOutfitResponse[] | null;
+      if (earlyCharRaw !== null) {
+        setCharacterState(toAppCharacter(earlyCharRaw, API_BASE));
+        void setCacheItem('character_v2', JSON.stringify(toAppCharacter(earlyCharRaw, API_BASE)), requestAccountId).catch(() => null);
+      }
+      if (earlyEntriesRaw !== null) {
+        const earlyEntries = earlyEntriesRaw.filter(isValidJournalRecord).map(r => toAppJournalEntry(r, API_BASE));
+        setJournalEntries(earlyEntries);
+        void setCacheItem('journal_v2', JSON.stringify(earlyEntries), requestAccountId).catch(() => null);
+      }
+      if (earlyStoriesRaw !== null) {
+        const earlyStories = earlyStoriesRaw.filter(isValidStoryRecord).map(r => toAppStory(r, API_BASE));
+        setStories(earlyStories);
+        void setCacheItem('stories_v1', JSON.stringify(earlyStories), requestAccountId).catch(() => null);
+      }
+      if (earlyOutfitsRaw !== null) {
+        const earlyOutfits = earlyOutfitsRaw.map(r => toAppOutfit(r, API_BASE));
+        setOutfits(earlyOutfits);
+        void setCacheItem('outfits_v1', JSON.stringify(earlyOutfits), requestAccountId).catch(() => null);
+      }
+      setJournalLoadError(earlyEntriesRaw === null);
+      setStoriesLoadError(earlyStoriesRaw === null);
+      setOutfitsLoadError(earlyOutfitsRaw === null);
+      hasCachedContentRef.current = hasCachedContentRef.current
+        || earlyCharRaw !== null
+        || earlyEntriesRaw !== null
+        || earlyStoriesRaw !== null
+        || earlyOutfitsRaw !== null;
+      dataReadyRef.current = true;
+      setIsLoading(false);
+
       const [
-        _charFetch, _entriesFetch, _storiesFetch, _outfitsFetch,
         _galleryFetch, _usageFetch, _discoverFetch, _followingFetch, _notifFetch, _friendsFetch, guidesRaw,
         _rewardsFetch, _constellationFetch, _shopFetch, savedIdsRaw, effectsCatalogRaw, _blockedFetch,
-      ] = await Promise.all([
-        apiFetch<unknown>('/character').catch(() => null),
-        apiFetch<unknown>('/journal-entries').catch(() => null),
-        apiFetch<unknown>('/stories').catch(() => null),
-        apiFetch<unknown>('/outfits').catch(() => null),
-        apiFetch<unknown>('/gallery').catch(() => null),
-        apiFetch<unknown>('/gallery/usage').catch(() => null),
-        apiFetch<unknown>('/discover').catch(() => null),
-        apiFetch<unknown>('/follows/following').catch(() => null),
-        apiFetch<unknown>('/notifications').catch(() => null),
-        apiFetch<unknown>('/friends').catch(() => null),
-        apiFetch<GuideProfile[]>('/guides?following=true').catch(() => []),
-        apiFetch<unknown>('/rewards').catch(() => null),
-        apiFetch<unknown>('/constellation').catch(() => null),
-        apiFetch<unknown>('/rewards/shop').catch(() => null),
-        apiFetch<string[]>('/stories/saved/ids').catch(() => null),
-        apiFetch<{ effects: Array<{ id: string; config: EffectDef }> }>('/effects/catalog').catch(() => null),
-        apiFetch<{ blockedId: string }[]>('/users/blocked').catch(() => null),
-      ]);
+      ] = await secondaryFetchPromise;
+      if (
+        requestEpoch !== loadEpochRef.current
+        || requestAccountId !== cacheUserIdRef.current
+      ) return;
 
       // Validate all endpoints against generated Zod schemas.
       // Returns the original raw value on success (preserving server-side extras),
@@ -915,7 +1068,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setBlockedIds((_blockedFetch as { blockedId: string }[]).map(r => r.blockedId));
       }
       if (notifRaw     !== null) setServerNotifications(notifs);
-      setMyGuides(guides); // guidesRaw falls back to [] so always safe
+      if (guidesRaw !== null) setMyGuides(guides);
       if (rewardBalanceRaw) setRewardBalance(rewardBalanceRaw);
       if (constellationRaw) {
         setConstellation(constellationRaw);
@@ -933,7 +1086,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             if (ids.includes(itemId)) sanitised[cat] = itemId;
           }
           setActiveCosmeticsState(sanitised);
-          AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(sanitised)).catch(() => null);
+          void setCacheItem('active_cosmetics_v1', JSON.stringify(sanitised), requestAccountId).catch(() => null);
         }
       }
       if (shopRaw?.catalog && Array.isArray(shopRaw.catalog)) {
@@ -949,10 +1102,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (Object.keys(customMap).length > 0) registerCustomEffects(customMap);
       }
 
-      // Detect systematic auth failure: if ALL core endpoints returned null the
-      // most likely explanation is that every API call got a 401 (token missing
-      // or rejected).  Log it clearly so adb logcat shows the failure in APK
-      // builds (setApiOnline(true) still fires so cached data remains visible).
+      // Transport errors are the only signal that the API is offline. HTTP
+      // responses, including auth errors, still mean the server is reachable.
       const allCoreFailed = charRaw === null && entriesRaw === null && storiesRaw === null && outfitsRaw === null && discoverRaw === null;
       if (allCoreFailed) {
         console.warn('[AppContext] loadData: ALL core API calls returned null. Token was present but server may have rejected it (401) or network failed. Check adb logcat for [apiFetch] token=NULL lines above.');
@@ -961,7 +1112,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (retry) setTimeout(() => loadData(false), 3000);
       }
 
-      setApiOnline(true);
+      setApiOnline(apiResponded);
+      setHasCheckedApi(true);
       setJournalLoadError(entriesRaw === null);
       setStoriesLoadError(storiesRaw === null);
       setOutfitsLoadError(outfitsRaw === null);
@@ -972,20 +1124,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       // Restore active outfit across sessions.
       if (outs.length > 0) {
-        const savedId = await AsyncStorage.getItem('active_outfit_v1');
+        const savedId = await getCacheItem('active_outfit_v1', requestAccountId);
         const validId = savedId && outs.some(o => o.id === savedId) ? savedId : outs[0].id;
         setActiveOutfitIdState(validId);
-        AsyncStorage.setItem('active_outfit_v1', validId).catch(() => null);
+        void setCacheItem('active_outfit_v1', validId, requestAccountId).catch(() => null);
       }
 
       // Sync saved-story IDs from server (authoritative); fall back to AsyncStorage cache.
       if (Array.isArray(savedIdsRaw)) {
         const ids = new Set<string>(savedIdsRaw);
         setSavedStoryIds(ids);
-        AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...ids])).catch(() => null);
+        void setCacheItem('saved_stories_v1', JSON.stringify([...ids]), requestAccountId).catch(() => null);
       } else {
-        AsyncStorage.getItem('saved_stories_v1').then(raw => {
-          if (raw) { try { setSavedStoryIds(new Set(JSON.parse(raw))); } catch { /* ignore */ } }
+        getCacheItem('saved_stories_v1', requestAccountId).then(raw => {
+          if (raw && requestAccountId === cacheUserIdRef.current) {
+            try { setSavedStoryIds(new Set(JSON.parse(raw))); } catch { /* ignore */ }
+          }
         }).catch(() => null);
       }
 
@@ -995,30 +1149,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // data with DEFAULT_CHARACTER + empty arrays, permanently blanking the screen
       // until the user force-killed and reopened the app.
       const cacheWrites: Promise<void>[] = [];
-      if (charRaw    !== null) cacheWrites.push(AsyncStorage.setItem('character_v2',   JSON.stringify(char)));
+      if (charRaw    !== null) cacheWrites.push(setCacheItem('character_v2', JSON.stringify(char), requestAccountId));
       if (entriesRaw !== null) {
-        cacheWrites.push(AsyncStorage.setItem('journal_v2_bak', JSON.stringify(entries)));  // M-5
-        cacheWrites.push(AsyncStorage.setItem('journal_v2',     JSON.stringify(entries)));
+        cacheWrites.push(setCacheItem('journal_v2_bak', JSON.stringify(entries), requestAccountId));  // M-5
+        cacheWrites.push(setCacheItem('journal_v2', JSON.stringify(entries), requestAccountId));
       }
       if (storiesRaw !== null) {
-        cacheWrites.push(AsyncStorage.setItem('stories_v1_bak', JSON.stringify(stors)));   // M-5
-        cacheWrites.push(AsyncStorage.setItem('stories_v1',     JSON.stringify(stors)));
+        cacheWrites.push(setCacheItem('stories_v1_bak', JSON.stringify(stors), requestAccountId));   // M-5
+        cacheWrites.push(setCacheItem('stories_v1', JSON.stringify(stors), requestAccountId));
       }
       if (outfitsRaw !== null) {
-        cacheWrites.push(AsyncStorage.setItem('outfits_v1_bak', JSON.stringify(outs)));   // M-5
-        cacheWrites.push(AsyncStorage.setItem('outfits_v1',     JSON.stringify(outs)));
+        cacheWrites.push(setCacheItem('outfits_v1_bak', JSON.stringify(outs), requestAccountId));   // M-5
+        cacheWrites.push(setCacheItem('outfits_v1', JSON.stringify(outs), requestAccountId));
       }
-      if (discoverRaw  !== null) cacheWrites.push(AsyncStorage.setItem('discover_v1',   JSON.stringify(feed)));
-      if (followingRaw !== null) cacheWrites.push(AsyncStorage.setItem('following_v1',  JSON.stringify(follows)));
+      if (galleryRaw !== null) {
+        cacheWrites.push(setCacheItem('gallery_v1', JSON.stringify(gal), requestAccountId));
+        cacheWrites.push(setCacheItem('gallery_usage_v1', JSON.stringify({
+          count: usageRaw?.count ?? gal.length,
+          limit: usageRaw?.limit ?? 200,
+        }), requestAccountId));
+      }
+      if (discoverRaw !== null) cacheWrites.push(setCacheItem('discover_v1', JSON.stringify(feed), requestAccountId));
+      if (followingRaw !== null) cacheWrites.push(setCacheItem('following_v1', JSON.stringify(follows), requestAccountId));
+      if (friendsRaw !== null) cacheWrites.push(setCacheItem('friends_v1', JSON.stringify(friendsRaw), requestAccountId));
+      if (notifRaw !== null) cacheWrites.push(setCacheItem('notifications_v1', JSON.stringify(notifs), requestAccountId));
+      if (guidesRaw !== null) cacheWrites.push(setCacheItem('my_guides_v1', JSON.stringify(guides), requestAccountId));
+      if (Array.isArray(_blockedFetch)) {
+        cacheWrites.push(setCacheItem(
+          'blocked_users_v1',
+          JSON.stringify((_blockedFetch as { blockedId: string }[]).map(r => r.blockedId)),
+          requestAccountId,
+        ));
+      }
       if (rewardBalanceRaw) {
-        cacheWrites.push(AsyncStorage.setItem('reward_balance_v1', JSON.stringify(rewardBalanceRaw)));
+        cacheWrites.push(setCacheItem('reward_balance_v1', JSON.stringify(rewardBalanceRaw), requestAccountId));
       }
       if (shopRaw?.catalog && Array.isArray(shopRaw.catalog)) {
         cacheWrites.push(
-          AsyncStorage.setItem('shop_catalog_v1', JSON.stringify({
+          setCacheItem('shop_catalog_v1', JSON.stringify({
             catalog:         shopRaw.catalog,
             seasonalPreview: shopRaw.seasonalPreview ?? [],
-          })),
+            purchasedIds: shopRaw.purchasedIds ?? [],
+          }), requestAccountId),
         );
       }
       await Promise.allSettled(cacheWrites);
@@ -1036,40 +1208,74 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (discoverRaw !== null) tsUpdates.discover           = now;
       if (followingRaw !== null) tsUpdates.following         = now;
       if (Object.keys(tsUpdates).length > 0) {
-        writeFetchTimestamps(tsUpdates).catch(() => null);
+        writeFetchTimestamps(requestAccountId, tsUpdates).catch(() => null);
       }
     } catch {
       // Unexpected error — restore from cache rather than leaving a blank screen.
-      if (!dataReadyRef.current) await loadFromCache();
+      if (
+        requestEpoch !== loadEpochRef.current
+        || requestAccountId !== cacheUserIdRef.current
+      ) return;
       setApiOnline(false);
+      setHasCheckedApi(true);
       setJournalLoadError(true);
       setStoriesLoadError(true);
       setOutfitsLoadError(true);
       setDiscoverLoadError(true);
     } finally {
-      dataReadyRef.current  = true;
-      isLoadingRef.current  = false;
-      setIsLoading(false);
+      if (
+        requestEpoch === loadEpochRef.current
+        && requestAccountId === cacheUserIdRef.current
+      ) {
+        dataReadyRef.current = true;
+        isLoadingRef.current = false;
+        setIsLoading(false);
+      }
     }
   }
 
   const fetchFriends = useCallback(async () => {
+    const requestAccountId = cacheUserIdRef.current;
+    if (!requestAccountId) return;
     try {
       const data = await apiFetch<FriendSummary[]>('/friends');
-      if (data) setFriends(data);
+      if (data && requestAccountId === cacheUserIdRef.current) {
+        setFriends(data);
+        void AsyncStorage.setItem(accountCacheKey(requestAccountId, 'friends_v1'), JSON.stringify(data)).catch(() => null);
+      }
     } catch { /* silently skip */ }
   }, []);
 
   async function loadSocialData() {
+    const requestAccountId = cacheUserIdRef.current;
+    if (!requestAccountId) return;
+    const requestEpoch = loadEpochRef.current;
+    let apiResponded = false;
+    async function fetchSocial<T>(path: string): Promise<T | null> {
+      try {
+        const value = await apiFetch<T>(path);
+        apiResponded = true;
+        return value;
+      } catch (error) {
+        if (error instanceof ApiError) apiResponded = true;
+        return null;
+      }
+    }
     try {
       const [discoverRaw, followingRaw, friendsRaw] = await Promise.all([
-        apiFetch<RawDiscoverApiItem[]>('/discover').catch(() => null),
+        fetchSocial<RawDiscoverApiItem[]>('/discover'),
         // catch(() => null) so a failed fetch is distinguishable from a genuine
         // empty following list — only a non-null result advances the timestamp.
-        apiFetch<string[]>('/follows/following').catch(() => null),
-        apiFetch<FriendSummary[]>('/friends').catch(() => null),
+        fetchSocial<string[]>('/follows/following'),
+        fetchSocial<FriendSummary[]>('/friends'),
       ]);
+      if (
+        requestEpoch !== loadEpochRef.current
+        || requestAccountId !== cacheUserIdRef.current
+      ) return;
 
+      setApiOnline(apiResponded);
+      setHasCheckedApi(true);
       setDiscoverLoadError(discoverRaw === null);
 
       const discoverValid = (discoverRaw ?? []).filter(isValidDiscoverPost);
@@ -1089,16 +1295,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const tsUpdates: Record<string, number> = {};
 
       if (discoverRaw !== null) {
-        cacheWrites.push(AsyncStorage.setItem('discover_v1', JSON.stringify(feed)));
+        cacheWrites.push(setCacheItem('discover_v1', JSON.stringify(feed)));
         tsUpdates.discover = now;
       }
       if (followingRaw !== null) {
-        cacheWrites.push(AsyncStorage.setItem('following_v1', JSON.stringify(follows)));
+        cacheWrites.push(setCacheItem('following_v1', JSON.stringify(follows)));
         tsUpdates.following = now;
       }
+      if (friendsRaw !== null) cacheWrites.push(setCacheItem('friends_v1', JSON.stringify(friendsRaw)));
 
       if (cacheWrites.length > 0) await Promise.allSettled(cacheWrites);
-      if (Object.keys(tsUpdates).length > 0) writeFetchTimestamps(tsUpdates).catch(() => null);
+      if (Object.keys(tsUpdates).length > 0) writeFetchTimestamps(requestAccountId, tsUpdates).catch(() => null);
     } catch { /* silently skip */ }
   }
 
@@ -1113,12 +1320,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Forced refresh paths (pull-to-refresh, explicit reloadData()) call
   // loadData() directly and always bypass these checks.
   async function softLoadData() {
+    const requestAccountId = cacheUserIdRef.current;
+    if (!requestAccountId) return;
+    const requestEpoch = loadEpochRef.current;
     const token = await _getToken();
     if (!token) return;
 
     setIsRefreshing(true);
     try {
-      const timestamps = await readFetchTimestamps();
+      const timestamps = await readFetchTimestamps(requestAccountId);
 
       const needsChar    = isFetchStale(timestamps, 'character');
       const needsJournal = isFetchStale(timestamps, 'journal-entries');
@@ -1131,14 +1341,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Nothing is stale — skip all network calls entirely
       if (!needsChar && !needsJournal && !needsStories && !needsOutfits && !needsGallery && !needsSocial) return;
 
+      let apiResponded = false;
+      async function fetchRefresh<T>(path: string): Promise<T | null> {
+        try {
+          const value = await apiFetch<T>(path);
+          apiResponded = true;
+          return value;
+        } catch (error) {
+          if (error instanceof ApiError) apiResponded = true;
+          return null;
+        }
+      }
       const [_charFetch, _entriesFetch, _storiesFetch, _outfitsFetch, _galleryFetch, _usageFetch] = await Promise.all([
-        needsChar    ? apiFetch<unknown>('/character')                       : Promise.resolve(null),
-        needsJournal ? apiFetch<unknown>('/journal-entries')                 : Promise.resolve(null),
-        needsStories ? apiFetch<unknown>('/stories')                         : Promise.resolve(null),
-        needsOutfits ? apiFetch<unknown>('/outfits')                         : Promise.resolve(null),
-        needsGallery ? apiFetch<unknown>('/gallery').catch(() => null)       : Promise.resolve(null),
-        needsGallery ? apiFetch<unknown>('/gallery/usage').catch(() => null) : Promise.resolve(null),
+        needsChar    ? fetchRefresh<unknown>('/character')          : Promise.resolve(null),
+        needsJournal ? fetchRefresh<unknown>('/journal-entries')    : Promise.resolve(null),
+        needsStories ? fetchRefresh<unknown>('/stories')            : Promise.resolve(null),
+        needsOutfits ? fetchRefresh<unknown>('/outfits')            : Promise.resolve(null),
+        needsGallery ? fetchRefresh<unknown>('/gallery')            : Promise.resolve(null),
+        needsGallery ? fetchRefresh<unknown>('/gallery/usage')      : Promise.resolve(null),
       ]);
+      if (
+        requestEpoch !== loadEpochRef.current
+        || requestAccountId !== cacheUserIdRef.current
+      ) return;
+      setApiOnline(apiResponded);
+      setHasCheckedApi(true);
 
       const now = Date.now();
       const tsUpdates: Record<string, number> = {};
@@ -1149,7 +1376,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (charRaw !== null) {
           const char = toAppCharacter(charRaw, API_BASE);
           setCharacterState(char);
-          cacheWrites.push(AsyncStorage.setItem('character_v2', JSON.stringify(char)));
+          cacheWrites.push(setCacheItem('character_v2', JSON.stringify(char), requestAccountId));
           tsUpdates.character = now;
         }
       }
@@ -1164,8 +1391,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           const entries = validRecs.map(r => toAppJournalEntry(r, API_BASE));
           setJournalEntries(entries);
-          cacheWrites.push(AsyncStorage.setItem('journal_v2_bak', JSON.stringify(entries)));  // M-5
-          cacheWrites.push(AsyncStorage.setItem('journal_v2', JSON.stringify(entries)));
+          cacheWrites.push(setCacheItem('journal_v2_bak', JSON.stringify(entries), requestAccountId));  // M-5
+          cacheWrites.push(setCacheItem('journal_v2', JSON.stringify(entries), requestAccountId));
           tsUpdates['journal-entries'] = now;
         }
       }
@@ -1180,8 +1407,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           }
           const stors = validRecs.map(r => toAppStory(r, API_BASE));
           setStories(stors);
-          cacheWrites.push(AsyncStorage.setItem('stories_v1_bak', JSON.stringify(stors)));  // M-5
-          cacheWrites.push(AsyncStorage.setItem('stories_v1', JSON.stringify(stors)));
+          cacheWrites.push(setCacheItem('stories_v1_bak', JSON.stringify(stors), requestAccountId));  // M-5
+          cacheWrites.push(setCacheItem('stories_v1', JSON.stringify(stors), requestAccountId));
           tsUpdates.stories = now;
         }
       }
@@ -1191,8 +1418,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (outfitsRaw !== null) {
           const outs = outfitsRaw.map(r => toAppOutfit(r, API_BASE));
           setOutfits(outs);
-          cacheWrites.push(AsyncStorage.setItem('outfits_v1_bak', JSON.stringify(outs)));  // M-5
-          cacheWrites.push(AsyncStorage.setItem('outfits_v1', JSON.stringify(outs)));
+          cacheWrites.push(setCacheItem('outfits_v1_bak', JSON.stringify(outs), requestAccountId));  // M-5
+          cacheWrites.push(setCacheItem('outfits_v1', JSON.stringify(outs), requestAccountId));
           tsUpdates.outfits = now;
         }
       }
@@ -1218,7 +1445,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (Object.keys(tsUpdates).length > 0) {
-        writeFetchTimestamps(tsUpdates).catch(() => null);
+        writeFetchTimestamps(requestAccountId, tsUpdates).catch(() => null);
       }
 
       setApiOnline(true);
@@ -1245,7 +1472,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const newUnread: { id: string; name: string; mood: string; lastAt: string }[] = [];
       for (const room of rooms) {
         if (!room.lastMessage) continue;
-        const seenRaw = await AsyncStorage.getItem(`campfire_seen_${room.id}`);
+        const seenRaw = await getCacheItem(`campfire_seen_${room.id}`);
         if (!seenRaw) continue; // never visited → don't count as unread
         const lastSeen = new Date(seenRaw).getTime();
         const lastMsg  = new Date(room.lastMessage.createdAt).getTime();
@@ -1269,7 +1496,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const markCampfireRoomRead = useCallback(async (roomId: string) => {
-    await AsyncStorage.setItem(`campfire_seen_${roomId}`, new Date().toISOString());
+    await setCacheItem(`campfire_seen_${roomId}`, new Date().toISOString());
     campfireToastShownRef.current.delete(roomId);
     setUnreadCampfireRooms(prev => {
       const next = prev.filter(r => r.id !== roomId);
@@ -1373,9 +1600,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const markAllUnreadSeen = useCallback(() => {
     const now = new Date().toISOString();
     setCampfireBadgeSeenAt(now);
-    void AsyncStorage.setItem('campfire_badge_seen_at', now);
+    void setCacheItem('campfire_badge_seen_at', now);
     setDmBadgeSeenAt(now);
-    void AsyncStorage.setItem('dm_badge_seen_at', now);
+    void setCacheItem('dm_badge_seen_at', now);
   }, []);
 
   // Re-fetch from the API every time the app comes to the foreground so that
@@ -1418,11 +1645,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const setCharacter = useCallback((c: Character) => {
     setCharacterState(c);
-    AsyncStorage.setItem('character_v2', JSON.stringify(c));
+    void setCacheItem('character_v2', JSON.stringify(c));
     // Stamp TTL as now so softLoadData treats local state as fresh and does NOT
     // immediately re-fetch — which would race the in-flight PUT and overwrite the
     // edit with stale DB data. Other devices will naturally re-fetch after 5 min.
-    writeFetchTimestamps({ character: Date.now() }).catch(() => null);
+    writeAccountTimestamps({ character: Date.now() }).catch(() => null);
     const characterBody = JSON.stringify({
       name:              c.name,
       bio:               c.bio,
@@ -1546,7 +1773,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiFetch<RewardBalance>('/rewards');
       setRewardBalance(data);
-      AsyncStorage.setItem('reward_balance_v1', JSON.stringify(data)).catch(() => null);
+      setCacheItem('reward_balance_v1', JSON.stringify(data)).catch(() => null);
     } catch { /* silently skip */ }
   }, []);
 
@@ -1587,7 +1814,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       writeJournalCache(JSON.stringify(updated));
       return updated;
     });
-    writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
+    writeAccountTimestamps({ 'journal-entries': 0 }).catch(() => null);
     try {
       const res = await apiFetch<{ rewardGranted: boolean; rewardAmounts?: { stars?: number; aura?: number; shards?: number } }>(
         '/journal-entries', {
@@ -1644,7 +1871,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [fireToast, reloadRewards, reloadConstellation, userId]);
 
   const deleteJournalEntry = useCallback((id: string) => {
-    writeFetchTimestamps({ 'journal-entries': 0 }).catch(() => null);
+    writeAccountTimestamps({ 'journal-entries': 0 }).catch(() => null);
     handleDeleteJournalEntry(
       id,
       stateRef.current.journalEntries,
@@ -1689,7 +1916,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Optimistic local update
-    writeFetchTimestamps({ stories: 0 }).catch(() => null);
+    writeAccountTimestamps({ stories: 0 }).catch(() => null);
     setStories(prev => {
       const updated = [story, ...prev.filter(s => s.id !== story.id)];
       const slim = updated.map(s => ({
@@ -1747,7 +1974,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const updateStory = useCallback((id: string, updates: Partial<Omit<Story, 'id'>>) => {
     // M-4: Reset TTL so a second device opening within the window sees the edit.
-    writeFetchTimestamps({ stories: 0 }).catch(() => null);
+    writeAccountTimestamps({ stories: 0 }).catch(() => null);
     const storyPatchBody = JSON.stringify({
       chapterTitle:  updates.chapterTitle,
       description:   updates.description ?? '',
@@ -1772,7 +1999,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteStory = useCallback((id: string) => {
-    writeFetchTimestamps({ stories: 0 }).catch(() => null);
+    writeAccountTimestamps({ stories: 0 }).catch(() => null);
     handleDeleteStory(
       id,
       stateRef.current.stories,
@@ -1790,7 +2017,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const safeImageUri = outfit.imageUri?.startsWith('file://') ? null : (outfit.imageUri ?? null);
     const safeOutfit   = { ...outfit, imageUri: safeImageUri ?? undefined };
 
-    writeFetchTimestamps({ outfits: 0 }).catch(() => null);
+    writeAccountTimestamps({ outfits: 0 }).catch(() => null);
     setOutfits(prev => {
       const updated = [safeOutfit, ...prev.filter(o => o.id !== outfit.id)];
       writeOutfitCache(JSON.stringify(updated));
@@ -1877,7 +2104,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const deleteOutfit = useCallback((id: string) => {
-    writeFetchTimestamps({ outfits: 0 }).catch(() => null);
+    writeAccountTimestamps({ outfits: 0 }).catch(() => null);
     handleDeleteOutfit(
       id,
       stateRef.current.outfits,
@@ -1885,8 +2112,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOutfits,
       (fn) => setActiveOutfitIdState(prev => {
         const next = fn(prev);
-        if (next === null && prev !== null) AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
-        if (next !== null && next !== prev)  AsyncStorage.setItem('active_outfit_v1', next).catch(() => null);
+        if (next === null && prev !== null) removeCacheItem('active_outfit_v1').catch(() => null);
+        if (next !== null && next !== prev)  setCacheItem('active_outfit_v1', next).catch(() => null);
         return next;
       }),
       (json) => writeOutfitCache(json),
@@ -1903,7 +2130,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setActiveCosmeticsState(prev => {
       if (prev[category]) return prev; // already have an active item in this category
       const next = { ...prev, [category]: itemId };
-      AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
+      setCacheItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
       // Persist to server (fire-and-forget)
       const cosmeticsBody = JSON.stringify({ activeCosmetics: next });
       apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsBody })
@@ -1930,7 +2157,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         next[category] = itemId;
       }
-      AsyncStorage.setItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
+      setCacheItem('active_cosmetics_v1', JSON.stringify(next)).catch(() => null);
       // Persist to server (fire-and-forget)
       const cosmeticsToggleBody = JSON.stringify({ activeCosmetics: next });
       apiFetch('/rewards/active-cosmetics', { method: 'PUT', body: cosmeticsToggleBody })
@@ -1950,9 +2177,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setActiveOutfitId = useCallback((id: string | null) => {
     setActiveOutfitIdState(id);
     if (id) {
-      AsyncStorage.setItem('active_outfit_v1', id).catch(() => null);
+      setCacheItem('active_outfit_v1', id).catch(() => null);
     } else {
-      AsyncStorage.removeItem('active_outfit_v1').catch(() => null);
+      removeCacheItem('active_outfit_v1').catch(() => null);
     }
     // Sync to server so other users can see the selected outfit
     const outfitSyncBody = JSON.stringify({ activeOutfitId: id });
@@ -2037,7 +2264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const next     = new Set(prev);
       const wasSaved = next.has(id);
       if (wasSaved) next.delete(id); else next.add(id);
-      AsyncStorage.setItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
+      setCacheItem('saved_stories_v1', JSON.stringify([...next])).catch(() => null);
       const saveMethod = wasSaved ? 'DELETE' : 'POST';
       apiFetch(`/stories/${id}/save`, { method: saveMethod }).catch(() => {
         showToastGlobal("Couldn't save story", 'warning', () => {
@@ -2193,7 +2420,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const contextValue = useMemo<AppContextValue>(() => ({
-    isLoading, apiOnline, creationDataReady,
+    isLoading, apiOnline, hasCheckedApi, creationDataReady,
     journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
     hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
     character, setCharacter,
@@ -2217,7 +2444,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     clearUserData,
     isRefreshing,
   }), [
-    isLoading, apiOnline, creationDataReady,
+    isLoading, apiOnline, hasCheckedApi, creationDataReady,
     journalLoadError, storiesLoadError, outfitsLoadError, discoverLoadError,
     hasCorruptedJournals, hasCorruptedStories, hasCorruptedDiscover,
     character, setCharacter,

@@ -524,7 +524,7 @@ export default function JournalScreen() {
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
-  const { journalEntries, deleteJournalEntry, isLoading, apiOnline, journalLoadError, hasCorruptedJournals, reloadData, constellation, activeCosmetics, isRefreshing } = useApp();
+  const { journalEntries, deleteJournalEntry, isLoading, apiOnline, hasCheckedApi, journalLoadError, hasCorruptedJournals, reloadData, constellation, activeCosmetics, isRefreshing } = useApp();
   const activeTheme = activeCosmetics['theme'] as string | undefined;
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   // FAB sits at bottom: insets.bottom + 96, height 56 → need insets.bottom + 172 clearance
@@ -674,7 +674,7 @@ export default function JournalScreen() {
       </LinearGradient>
 
       {/* ── Offline / error banner ─────────────────────────────────── */}
-      {(!apiOnline || journalLoadError || hasCorruptedJournals) && !isLoading && (
+      {((hasCheckedApi && !apiOnline) || journalLoadError || hasCorruptedJournals) && !isLoading && (
         <View style={offlineBanner.row}>
           <View style={offlineBanner.dot} />
           <Text style={offlineBanner.msg}>

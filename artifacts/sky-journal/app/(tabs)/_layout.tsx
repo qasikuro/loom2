@@ -17,6 +17,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { SkyIcon, type SkyIconName } from '@/components/SkyIcon';
 import { useSound } from '@/context/SoundContext';
 import { useApp } from '@/context/AppContext';
+import { shouldShowOfflinePill } from '@/utils/accountCache';
 import { SkyLoadingOverlay } from '@/components/SkyLoading';
 import { useAmbientAnimationActive } from '@/hooks/useAmbientAnimationActive';
 
@@ -153,11 +154,11 @@ function CreateIcon() {
 }
 
 function OfflinePill() {
-  const { apiOnline, isLoading } = useApp();
+  const { apiOnline, hasCheckedApi, isLoading } = useApp();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  if (isLoading || apiOnline) return null;
+  if (!shouldShowOfflinePill(isLoading, hasCheckedApi, apiOnline)) return null;
 
   const topOffset = Platform.OS === 'web' ? 56 : insets.top + 6;
 

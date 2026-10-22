@@ -23,6 +23,7 @@ type FocusedHomeContentProps = {
   onOpenNotifications: () => void;
   onLongPressAvatar?: () => void;
   friends: FriendSummary[];
+  blockedIds: string[];
   friendStories: DiscoverPost[];
   friendCount: number;
   /** Signed-in user id: scopes the outfit cache to this account. */
@@ -100,7 +101,7 @@ export function FocusedHomeContent(p: FocusedHomeContentProps) {
     return { activityByUser: map, orderedFriends: ordered };
   }, [p.friendStories, p.friends]);
 
-  const outfitsQ = useFriendOutfits(p.viewerId, orderedFriends);
+  const outfitsQ = useFriendOutfits(p.viewerId, orderedFriends, p.blockedIds);
 
   const openOutfit = (it: FriendOutfit) => {
     const all = it.authorOutfits.map(o => ({ id: o.id, name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date }));
@@ -182,12 +183,13 @@ export function FocusedHomeContent(p: FocusedHomeContentProps) {
           <FriendOutfitsRow
             items={outfitsQ.data ?? []}
             loading={!!p.viewerId && orderedFriends.length > 0 && outfitsQ.isLoading}
-            error={outfitsQ.isError}
+            error={outfitsQ.isError && !(outfitsQ.data?.length)}
             hasFriends={orderedFriends.length > 0}
             onRetry={() => { outfitsQ.refetch(); }}
             onOpen={openOutfit}
             onFind={() => go('/friends')}
             cardHeight={layout.outfit}
+            animate={focused && foreground && !reduced}
           />
         </View>
 

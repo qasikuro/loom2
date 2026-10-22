@@ -143,7 +143,7 @@ export default function ChapterEditorScreen() {
   const insets    = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { t: tr } = useTranslation();
-  const { addStory, updateStory, stories, storiesLoadError, apiOnline, isLoading, reloadData } = useApp();
+  const { addStory, updateStory, stories, storiesLoadError, apiOnline, hasCheckedApi, isLoading, reloadData } = useApp();
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 120;
   const contentWidth = Math.min(windowWidth, 760);
@@ -515,7 +515,7 @@ export default function ChapterEditorScreen() {
       />
 
       {/* ── Stories load error banner ───────────────────────────── */}
-      {(storiesLoadError || (!apiOnline && !isLoading)) && (
+      {(storiesLoadError || (hasCheckedApi && !apiOnline && !isLoading)) && (
         <View style={[c.offlineBar, { top: topPad + 4 }]}>
           <Text style={c.offlineBarText} numberOfLines={1}>
             {storiesLoadError && apiOnline
