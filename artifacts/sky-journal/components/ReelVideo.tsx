@@ -19,7 +19,6 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
   const source = useMemo(() => uri ? { uri } : undefined, [uri]);
   const [attempt, setAttempt] = useState(0);
   const [firstFrame, setFirstFrame] = useState(false);
-  const [buffering, setBuffering] = useState(false);
   const [failed, setFailed] = useState(false);
   const [showLoading, setShowLoading] = useState(false);
   const identity = `${uri ?? originalUri}:${attempt}`;
@@ -28,14 +27,15 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
 
   useEffect(() => {
     setFirstFrame(false);
-    setBuffering(false);
     setFailed(false);
   }, [identity]);
   useEffect(() => {
     if (playing && firstFrame && !failed) onPrepared();
   }, [playing, firstFrame, failed, onPrepared]);
 
-  const waiting = playing && (!firstFrame || buffering) && !failed;
+  // A mid-playback buffer should not cover the reel with a reconnect message.
+  // Keep feedback only until the first actual video frame is available.
+  const waiting = playing && !firstFrame && !failed;
   useEffect(() => {
     setShowLoading(false);
     if (!waiting) return;
@@ -49,7 +49,6 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
   function retry() {
     setFailed(false);
     setFirstFrame(false);
-    setBuffering(false);
     setAttempt(value => value + 1);
   }
 
@@ -63,7 +62,7 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
           shouldPlay={playing}
           isMuted={muted || !playing}
           isLooping
-          resizeMode={ResizeMode.CONTAIN}
+          resizeMode={ResizeMode.COVER}
           useNativeControls={false}
           progressUpdateIntervalMillis={500}
           style={[StyleSheet.absoluteFill, { opacity: firstFrame ? 1 : 0 }]}
@@ -72,7 +71,6 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
           onPlaybackStatusUpdate={status => {
             if (currentIdentity.current !== identity) return;
             if (status.isLoaded) {
-              setBuffering(status.isBuffering);
               if (status.isPlaying && status.positionMillis > 0) setFirstFrame(true);
             } else if (status.error) setFailed(true);
           }}
@@ -89,14 +87,10 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
             </TouchableOpacity>
           ) : (
             <View style={styles.loadingPill} accessibilityRole="progressbar"
-              accessibilityLabel={t(firstFrame ? 'reels.reconnecting' : 'reels.loadingVideo', {
-                defaultValue: firstFrame ? 'Reconnecting video' : 'Loading video',
-              })}>
-              <Icon name={firstFrame ? 'refresh-cw' : 'video'} size={14} color="#F4EEFF" />
+              accessibilityLabel={t('reels.loadingVideo', { defaultValue: 'Loading video' })}>
+              <Icon name="video" size={14} color="#F4EEFF" />
               <Text style={styles.loadingText}>
-                {t(firstFrame ? 'reels.reconnecting' : 'reels.loadingVideo', {
-                  defaultValue: firstFrame ? 'Reconnecting video' : 'Loading video',
-                })}
+                {t('reels.loadingVideo', { defaultValue: 'Loading video' })}
               </Text>
             </View>
           )}

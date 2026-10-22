@@ -62,7 +62,12 @@ export function ReelCard({
         <>
           <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={24} />
           <View style={styles.backdropTint} />
-          <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="contain" cachePolicy="memory-disk" />
+          <Image
+            source={{ uri: imageUri }}
+            style={StyleSheet.absoluteFill}
+            contentFit={isVideo ? 'cover' : 'contain'}
+            cachePolicy="memory-disk"
+          />
         </>
       ) : (
         <LinearGradient colors={['#1D1442', '#27194C', '#100B22']} style={StyleSheet.absoluteFill} />
