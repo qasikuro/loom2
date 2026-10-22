@@ -15,18 +15,31 @@ describe('loading treatment', () => {
     expect(sky).toMatch(/backgroundColor: colors\.background/);
     expect(sky).toMatch(/return <CompactWaiting/);
   });
-  it('travel mark only translates and stops on unmount', () => {
-    expect(sky).toMatch(/translateX/);
-    expect(sky).not.toMatch(/rotate/);
-    expect(sky).toMatch(/movement\.stop\(\)/);
-    expect(sky).toMatch(/position\.stopAnimation\(\)/);
-    expect(sky).toMatch(/if \(reduceMotion\)/);
-    expect(sky).toMatch(/position\.setValue\(0\.5\)/);
+  it('uses the supplied red S/play animation without side-to-side travel', () => {
+    const mark = read('components/StorigamAnimatedMark.tsx');
+    expect(mark).toMatch(/stroke="#ff2a2a"/);
+    expect(mark).toMatch(/Animated\.loop/);
+    expect(mark).toMatch(/CIRCLE_PATH/);
+    expect(mark).toMatch(/PLAY_PATH/);
+    expect(mark).toMatch(/useBrandReducedMotion/);
+    expect(sky).not.toMatch(/translateX/);
+    expect(sky).toMatch(/StorigamAnimatedMark/);
   });
-  it('splash keeps the full brand and releases touches', () => {
+  it('keeps the original splash and shows the responsive animated mark after it', () => {
     const splash = read('components/AppSplashScreen.tsx');
-    expect(splash).toMatch(/StorigamFluidBackdrop/);
+    expect(splash).toMatch(/useWindowDimensions/);
+    expect(splash).toMatch(/StorigamFluidBackdrop dark/);
     expect(splash).toMatch(/variant="lockup"/);
+    expect(splash).toMatch(/StorigamAnimatedMark/);
+    expect(splash).toMatch(/setTimeout\(\(\) => setShowLoadingMark\(true\), 450\)/);
     expect(splash).toMatch(/pointerEvents="none"/);
+    const config = JSON.parse(read('app.json'));
+    expect(config.expo.splash.image).toBe('./assets/images/storigam-mark.png');
+    expect(config.expo.splash.backgroundColor).toBe('#030014');
+    const splashPlugin = config.expo.plugins.find(
+      (plugin: string | [string, { image?: string }]) =>
+        Array.isArray(plugin) && plugin[0] === 'expo-splash-screen',
+    );
+    expect(splashPlugin[1].image).toBe('./assets/images/storigam-mark.png');
   });
 });

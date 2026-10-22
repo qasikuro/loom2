@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { StorigamAnimatedMark } from './StorigamAnimatedMark';
 import { StorigamFluidBackdrop, StorigamLogo } from './StorigamBrand';
 import { STORIGAM_BRAND } from '@/constants/brand';
 
@@ -11,8 +12,10 @@ interface Props {
 export function AppSplashScreen({ onReady, ready = true }: Props) {
   const { width, height } = useWindowDimensions();
   const [artLoaded, setArtLoaded] = useState(false);
+  const [showLoadingMark, setShowLoadingMark] = useState(false);
   const fade = useRef(new Animated.Value(1)).current;
   const artLoadedAt = useRef<number | null>(null);
+  const loaderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dismissed = useRef(false);
   const finished = useRef(false);
   const onReadyRef = useRef(onReady);
@@ -34,7 +37,12 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
     const maximum = setTimeout(dismiss, 6000);
     // Guarantee unmount even if native animation callbacks are delayed.
     const fallback = setTimeout(finish, 6500);
-    return () => { clearTimeout(maximum); clearTimeout(fallback); fade.stopAnimation(); };
+    return () => {
+      clearTimeout(maximum);
+      clearTimeout(fallback);
+      if (loaderTimer.current) clearTimeout(loaderTimer.current);
+      fade.stopAnimation();
+    };
   }, [dismiss, finish, fade]);
 
   useEffect(() => {
@@ -53,17 +61,26 @@ export function AppSplashScreen({ onReady, ready = true }: Props) {
       accessibilityState={{ busy: true }}
     >
       <StorigamFluidBackdrop dark />
-      <View style={{ marginBottom: height * 0.09 }}>
+      <View style={{ alignItems: 'center', marginBottom: height * 0.09 }}>
         <StorigamLogo
-        variant="lockup"
-        size={Math.min(width * 0.7, height * 0.45, 400)}
-        dark
-        accessible={false}
+          variant="lockup"
+          size={Math.min(width * 0.7, height * 0.45, 400)}
+          dark
+          accessible={false}
           onLoad={() => {
             artLoadedAt.current ??= Date.now();
             setArtLoaded(true);
+            loaderTimer.current ??= setTimeout(() => setShowLoadingMark(true), 450);
           }}
         />
+        <View style={styles.loaderSlot}>
+          {showLoadingMark && (
+            <StorigamAnimatedMark
+              size={Math.min(width * 0.12, height * 0.055, 48)}
+              accessible={false}
+            />
+          )}
+        </View>
       </View>
     </Animated.View>
   );
@@ -77,4 +94,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: STORIGAM_BRAND.background,
   },
+  loaderSlot: { height: 56, marginTop: 12, alignItems: 'center', justifyContent: 'center' },
 });
