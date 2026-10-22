@@ -6,11 +6,12 @@ import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
+import { getListGuideTutorialsQueryKey, useListGuideTutorials, type GuideTutorial } from '@workspace/api-client-react';
 import { Images } from '@/assets/images/index';
 import { Video, ResizeMode } from 'expo-av';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -288,16 +289,25 @@ function StoryActionSheet({ story, onClose, onDelete, onTogglePublic }: StoryAct
 
 // ── Story card (horizontal scroll) ───────────────────────────────────────────
 
-type GalleryFilter = 'all' | 'stories' | 'outfits';
+type GalleryFilter = 'all' | 'stories' | 'outfits' | 'tutorials';
 type GalleryEntry =
   | { kind: 'photo'; photo: GalleryPhoto }
   | { kind: 'story'; story: Story }
-  | { kind: 'outfit'; outfit: Outfit };
+  | { kind: 'outfit'; outfit: Outfit }
+  | { kind: 'tutorial'; tutorial: GuideTutorial };
 
 function getEntryDate(entry: GalleryEntry): string {
   if (entry.kind === 'photo') return entry.photo.createdAt;
   if (entry.kind === 'story') return entry.story.date;
+  if (entry.kind === 'tutorial') return entry.tutorial.updatedAt;
   return entry.outfit.date;
+}
+
+function getEntryKey(entry: GalleryEntry) {
+  if (entry.kind === 'photo') return `photo-${entry.photo.id}`;
+  if (entry.kind === 'story') return `story-${entry.story.id}`;
+  if (entry.kind === 'tutorial') return `tutorial-${entry.tutorial.id}`;
+  return `outfit-${entry.outfit.id}`;
 }
 
 function GalleryMediaCard({
@@ -322,21 +332,26 @@ function GalleryMediaCard({
   const { t } = useTranslation();
   const colors = useColors();
   const story = entry.kind === 'story' ? entry.story : null;
+  const tutorial = entry.kind === 'tutorial' ? entry.tutorial : null;
+  const tutorialCover = tutorial?.steps.find(step => step.type === 'image' && step.mediaUri)?.mediaUri;
   const imageSource = entry.kind === 'photo'
     ? { uri: entry.photo.imageUri }
     : entry.kind === 'outfit'
       ? (entry.outfit.imageUri ? { uri: entry.outfit.imageUri } : null)
-      : getStoryCover(entry.story);
+      : entry.kind === 'tutorial'
+        ? (tutorialCover ? { uri: tutorialCover } : null)
+        : getStoryCover(entry.story);
   const fallbackColor = story ? (MOOD_COLORS[story.mood] ?? colors.lavender) : colors.secondary;
   const title = entry.kind === 'photo'
     ? (entry.photo.caption || t('profile.galleryUsage'))
     : entry.kind === 'story'
       ? entry.story.chapterTitle
-      : entry.outfit.name;
+      : entry.kind === 'tutorial' ? entry.tutorial.title : entry.outfit.name;
   const kindIcon = entry.kind === 'photo'
     ? 'image'
     : entry.kind === 'outfit'
       ? 'grid'
+      : entry.kind === 'tutorial' ? 'book'
       : story?.contentType === 'video'
         ? 'video'
         : 'book-open';
@@ -344,13 +359,16 @@ function GalleryMediaCard({
     ? t('shell.myStories.openStory', { title: entry.story.chapterTitle })
     : entry.kind === 'outfit'
       ? `${t('profile.wardrobe')}: ${entry.outfit.name}`
-      : `${t('profile.galleryUsage')}: ${entry.photo.caption || t('common.addPhoto')}`;
+      : entry.kind === 'tutorial'
+        ? `Open tutorial: ${entry.tutorial.title}`
+        : `${t('profile.galleryUsage')}: ${entry.photo.caption || t('common.addPhoto')}`;
   const active = entry.kind === 'outfit' && isActiveOutfit;
 
   function openEntry() {
     Haptics.selectionAsync();
     if (entry.kind === 'photo') onOpenPhoto(entry.photo);
     else if (entry.kind === 'outfit') onOpenOutfit(entry.outfit.id);
+    else if (entry.kind === 'tutorial') router.push(`/guide-tutorial/${entry.tutorial.id}` as never);
     else onOpenStory(entry.story);
   }
 
@@ -387,6 +405,11 @@ function GalleryMediaCard({
           <Text style={s.galleryWornText}>{t('components.profileSection.worn')}</Text>
         </View>
       )}
+      {tutorial?.status === 'draft' && (
+        <View style={[s.galleryWornBadge, { top: 35, left: 7 }]} pointerEvents="none">
+          <Text style={s.galleryWornText}>Draft</Text>
+        </View>
+      )}
       {story && (
         <TouchableOpacity
           style={s.galleryMenuButton}
@@ -411,6 +434,7 @@ function GalleryMediaCard({
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface Props {
+  userId:              string | null | undefined;
   outfits:             Outfit[];
   stories:             Story[];
   openOutfit:          (id: string) => void;
@@ -424,6 +448,7 @@ interface Props {
 }
 
 export function ProfileStyleSection({
+  userId,
   outfits, stories, openOutfit, deleteStory,
   gallery, openPhoto,
   handleAddGalleryPhoto, galleryUploading, galleryError,
@@ -437,13 +462,25 @@ export function ProfileStyleSection({
   const [playingVideo, setPlayingVideo] = useState<Story | null>(null);
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>('all');
   const [galleryExpanded, setGalleryExpanded] = useState(false);
+  const myTutorialsQuery = useListGuideTutorials({ mine: true }, {
+    query: {
+      queryKey: [...getListGuideTutorialsQueryKey({ mine: true }), userId],
+      enabled: !!userId,
+      staleTime: 30_000,
+    },
+  });
+  const refetchTutorials = myTutorialsQuery.refetch;
+  useFocusEffect(useCallback(() => {
+    if (userId) void refetchTutorials();
+  }, [userId, refetchTutorials]));
 
   const allEntries: GalleryEntry[] = [
     ...gallery.map(photo => ({ kind: 'photo' as const, photo })),
     ...stories.map(story => ({ kind: 'story' as const, story })),
     ...outfits.map(outfit => ({ kind: 'outfit' as const, outfit })),
+    ...(myTutorialsQuery.data ?? []).map(tutorial => ({ kind: 'tutorial' as const, tutorial })),
   ].sort((a, b) => (Date.parse(getEntryDate(b)) || 0) - (Date.parse(getEntryDate(a)) || 0));
-  const selectedKind = galleryFilter === 'stories' ? 'story' : galleryFilter === 'outfits' ? 'outfit' : null;
+  const selectedKind = galleryFilter === 'stories' ? 'story' : galleryFilter === 'outfits' ? 'outfit' : galleryFilter === 'tutorials' ? 'tutorial' : null;
   const filteredEntries = selectedKind
     ? allEntries.filter(entry => entry.kind === selectedKind)
     : allEntries;
@@ -497,6 +534,7 @@ export function ProfileStyleSection({
               { id: 'all', label: t('social.all') },
               { id: 'stories', label: t('components.profile.stats.stories') },
               { id: 'outfits', label: t('components.profile.stats.outfits') },
+              { id: 'tutorials', label: 'Tutorials' },
             ] as const).map(tab => {
               const isSelected = galleryFilter === tab.id;
               return (
@@ -527,11 +565,34 @@ export function ProfileStyleSection({
           </View>
         </View>
 
-        {galleryExpanded ? (
+        {galleryFilter === 'tutorials' && (
+          <View style={s.tutorialHeading}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.foreground, fontFamily: 'Satoshi-Bold', fontSize: 13 }}>My tutorials</Text>
+              <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Regular', fontSize: 11, marginTop: 2 }}>Your drafts and published guides</Text>
+            </View>
+            <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/guide-tutorials')} style={{ padding: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ color: colors.primary, fontFamily: 'Satoshi-Bold', fontSize: 12 }}>Manage</Text>
+              <Icon name="chevron-right" size={13} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {galleryFilter === 'tutorials' && myTutorialsQuery.isLoading ? (
+          <View style={[s.tutorialState, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 12 }}>Loading your tutorials…</Text>
+          </View>
+        ) : galleryFilter === 'tutorials' && myTutorialsQuery.isError && !myTutorialsQuery.data ? (
+          <TouchableOpacity onPress={() => { void refetchTutorials(); }} style={[s.tutorialState, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Icon name="refresh-cw" size={16} color={colors.primary} />
+            <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 12 }}>Could not load your tutorials · Tap to retry</Text>
+          </TouchableOpacity>
+        ) : galleryExpanded ? (
           <View style={s.galleryGrid}>
             {filteredEntries.map(entry => (
               <GalleryMediaCard
-                key={`${entry.kind}-${entry.kind === 'photo' ? entry.photo.id : entry.kind === 'story' ? entry.story.id : entry.outfit.id}`}
+                key={getEntryKey(entry)}
                 entry={entry}
                 width={gridCardWidth}
                 height={gridCardHeight}
@@ -558,7 +619,7 @@ export function ProfileStyleSection({
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galleryRow}>
             {previewEntries.map(entry => (
               <GalleryMediaCard
-                key={`${entry.kind}-${entry.kind === 'photo' ? entry.photo.id : entry.kind === 'story' ? entry.story.id : entry.outfit.id}`}
+                key={getEntryKey(entry)}
                 entry={entry}
                 width={previewCardWidth}
                 height={previewCardHeight}
@@ -622,7 +683,7 @@ function GalleryAddCard({
     ? t('profile.addToGallery')
     : filter === 'stories'
       ? t('components.profileSection.newStory')
-      : t('components.profileSection.newOutfit');
+      : filter === 'tutorials' ? 'New tutorial' : t('components.profileSection.newOutfit');
 
   return (
     <TouchableOpacity
@@ -632,6 +693,7 @@ function GalleryAddCard({
         Haptics.selectionAsync();
         if (filter === 'all') void onAddPhoto();
         else if (filter === 'stories') router.push('/(tabs)/create' as never);
+        else if (filter === 'tutorials') router.push('/create-guide-tutorial');
         else router.push('/create-outfit' as never);
       }}
       activeOpacity={0.78}
@@ -667,6 +729,8 @@ const s = StyleSheet.create({
   galleryTabs:       { flexDirection: 'row', alignItems: 'center', gap: 3, marginHorizontal: 10, marginBottom: 10, padding: 4, borderRadius: 16 },
   galleryTab:        { flex: 1, minWidth: 0, minHeight: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 5 },
   galleryTabText:    { fontSize: 12.5, fontFamily: 'Satoshi-Bold' },
+  tutorialHeading:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, marginBottom: 10 },
+  tutorialState:    { minHeight: 100, borderRadius: 16, borderWidth: 1, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   galleryRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
   galleryGrid:       { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
   galleryMediaCard:  { borderWidth: 1, borderRadius: 16, overflow: 'hidden', position: 'relative' },

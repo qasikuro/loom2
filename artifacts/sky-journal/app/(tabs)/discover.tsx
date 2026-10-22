@@ -15,9 +15,10 @@ import {
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, type Href } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { router, type Href, useFocusEffect } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  AppState,
   Platform,
   RefreshControl,
   ScrollView,
@@ -128,6 +129,8 @@ export default function DiscoverScreen() {
   const [booksLoading, setBooksLoading] = useState(false);
   const [booksError,   setBooksError]   = useState<string | null>(null);
   const guidesLoaded     = useRef(false);
+  const guidesInFlight = useRef(false);
+  const refreshVisibleGuides = useRef<() => void>(() => {});
   const booksLoaded      = useRef(false);
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 100 : insets.bottom + 130;
@@ -161,9 +164,10 @@ export default function DiscoverScreen() {
     Haptics.selectionAsync();
   }
 
-  async function loadGuides(topic: string | null = guideTopicFilter, availNow: boolean = guideAvailNow) {
-    setGuidesLoading(true);
-    setGuidesError(null);
+  async function loadGuides(topic: string | null = guideTopicFilter, availNow: boolean = guideAvailNow, silent = false) {
+    if (silent && guidesInFlight.current) return;
+    guidesInFlight.current = true;
+    if (!silent) { setGuidesLoading(true); setGuidesError(null); }
     try {
       let qs = '';
       if (topic)    qs += `topic=${encodeURIComponent(topic)}&`;
@@ -174,11 +178,15 @@ export default function DiscoverScreen() {
       ]);
       setGuidesData(data ?? []);
       setGuideSessions(sessions ?? []);
+      setGuidesError(null);
     } catch {
-      setGuideSessions([]);
-      setGuidesError(t('discoverLog.loadGuidesError'));
+      if (!silent) {
+        setGuideSessions([]);
+        setGuidesError(t('discoverLog.loadGuidesError'));
+      }
     } finally {
-      setGuidesLoading(false);
+      guidesInFlight.current = false;
+      if (!silent) setGuidesLoading(false);
     }
   }
 
@@ -190,6 +198,19 @@ export default function DiscoverScreen() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only activeTab should trigger this check
   }, [activeTab]);
+
+  refreshVisibleGuides.current = () => { void loadGuides(guideTopicFilter, guideAvailNow, true); };
+  useFocusEffect(useCallback(() => {
+    if (!isSignedIn || activeTab !== 'Guides') return;
+    if (guidesLoaded.current) refreshVisibleGuides.current();
+    const timer = setInterval(() => {
+      if (AppState.currentState === 'active') refreshVisibleGuides.current();
+    }, 15_000);
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') refreshVisibleGuides.current();
+    });
+    return () => { clearInterval(timer); subscription.remove(); };
+  }, [activeTab, isSignedIn]));
 
   async function loadBooks() {
     setBooksLoading(true);
@@ -745,20 +766,20 @@ export default function DiscoverScreen() {
               <Icon name="layers" size={20} color={colors.primary} />
             </View>
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.tutorialsBannerTitle, { color: colors.foreground }]}>Learn step by step</Text>
+              <Text style={[styles.tutorialsBannerTitle, { color: colors.foreground }]}>My tutorials</Text>
               <Text style={[styles.tutorialsBannerSubtitle, { color: colors.mutedForeground }]}>
-                Practical tutorials shared by the community.
+                Find and manage the tutorials you have created.
               </Text>
             </View>
             <TouchableOpacity
               style={[styles.tutorialsLibraryButton, { backgroundColor: `${colors.primary}15` }]}
               onPress={() => router.push('/guide-tutorials')}
               accessibilityRole="button"
-              accessibilityLabel="Open the tutorial library"
+              accessibilityLabel="Open my tutorials"
               activeOpacity={0.8}
             >
               <Icon name="book-open" size={15} color={colors.primary} />
-              <Text style={[styles.tutorialsLibraryText, { color: colors.primary }]}>Library</Text>
+              <Text style={[styles.tutorialsLibraryText, { color: colors.primary }]}>Open</Text>
             </TouchableOpacity>
           </View>
 

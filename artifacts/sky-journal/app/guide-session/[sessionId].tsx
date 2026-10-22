@@ -11,9 +11,9 @@ import {
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useAuth } from '@clerk/expo';
-import { getGetGuideSessionEngagementQueryKey, useGetGuideSessionEngagement } from '@workspace/api-client-react';
+import { getGetGuideSessionEngagementQueryKey, getListGuideSessionParticipantsQueryKey, useGetGuideSessionEngagement, useListGuideSessionParticipants } from '@workspace/api-client-react';
 import { Image } from 'expo-image';
-import { type Href, router, useLocalSearchParams } from 'expo-router';
+import { type Href, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert, Animated, AppState, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View,
@@ -31,10 +31,6 @@ interface GuideSession {
   } | null;
   tutorialProgress: number; tutorialCompletedAt: string | null;
 }
-interface GuideSessionParticipant {
-  userId: string; name: string | null; username: string | null; avatarUri: string | null;
-  joinedAt: string; tutorialProgress: number; tutorialCompletedAt: string | null;
-}
 type Tab = 'activity' | 'polls' | 'qa' | 'chat' | 'people';
 const TABS: { key: Tab; label: string; icon: string }[] = [
   { key: 'activity', label: 'Activity', icon: 'book-open' },
@@ -45,7 +41,8 @@ const TABS: { key: Tab; label: string; icon: string }[] = [
 ];
 
 export default function GuideSessionScreen() {
-  const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
+  const { sessionId, tab: requestedTab } = useLocalSearchParams<{ sessionId: string; tab?: string }>();
+  const initialTab = TABS.find(item => item.key === requestedTab)?.key ?? 'activity';
   const { t } = useTranslation();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -56,19 +53,14 @@ export default function GuideSessionScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [statusRefreshError, setStatusRefreshError] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const [tab, setTab] = useState<Tab>('activity');
-  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(() => new Set(['activity']));
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [visitedTabs, setVisitedTabs] = useState<Set<Tab>>(() => new Set(['activity', initialTab]));
   const [activeStep, setActiveStep] = useState(0);
   const [savingProgress, setSavingProgress] = useState(false);
   const [joining, setJoining] = useState(false);
   const [ending, setEnding] = useState(false);
-  const [participants, setParticipants] = useState<GuideSessionParticipant[] | null>(null);
-  const [participantsLoading, setParticipantsLoading] = useState(false);
-  const [participantsError, setParticipantsError] = useState<string | null>(null);
   const fade = useRef(new Animated.Value(1)).current;
   const loadController = useRef<AbortController | null>(null);
-  const identityRef = useRef('');
-  identityRef.current = JSON.stringify([userId, sessionId]);
 
   const isOwner = !!session && userId === session.guideId;
   const phase = session ? getSessionPhase(session.status, session.startsAt, session.endsAt, now) : 'upcoming';
@@ -87,6 +79,30 @@ export default function GuideSessionScreen() {
   const refetchRef = useRef(engagementQuery.refetch);
   refetchRef.current = engagementQuery.refetch;
   const refreshEngagement = useCallback(() => { void refetchRef.current(); }, []);
+  const rosterEnabled = tab === 'people' && isOwner && phase !== 'cancelled';
+  const rosterActive = rosterEnabled && (phase === 'live' || phase === 'upcoming');
+  const participantsQuery = useListGuideSessionParticipants(sessionId ?? '', {
+    query: {
+      queryKey: [...getListGuideSessionParticipantsQueryKey(sessionId ?? ''), userId],
+      enabled: rosterEnabled,
+      staleTime: 0,
+      retry: false,
+      refetchInterval: rosterActive ? 8_000 : false,
+      refetchIntervalInBackground: false,
+    },
+  });
+  const participants = participantsQuery.data ?? null;
+  const participantsLoading = participantsQuery.isFetching;
+  const participantsError = participantsQuery.isError ? errorMessage(participantsQuery.error, 'Could not load participants.') : null;
+  const refetchParticipants = participantsQuery.refetch;
+  useFocusEffect(useCallback(() => {
+    if (!rosterEnabled) return;
+    void refetchParticipants();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active') void refetchParticipants();
+    });
+    return () => subscription.remove();
+  }, [rosterEnabled, refetchParticipants]));
 
   const switchTab = useCallback((next: Tab) => {
     setTab(next);
@@ -97,12 +113,11 @@ export default function GuideSessionScreen() {
 
   useEffect(() => {
     setSession(null);
-    setParticipants(null);
-    setParticipantsLoading(false);
-    setParticipantsError(null);
-    setTab('activity');
-    setVisitedTabs(new Set(['activity']));
   }, [sessionId, userId]);
+  useEffect(() => {
+    setTab(initialTab);
+    setVisitedTabs(new Set<Tab>(['activity', initialTab]));
+  }, [sessionId, userId, initialTab]);
 
   const load = useCallback(() => {
     if (!sessionId || !userId) return;
@@ -154,32 +169,6 @@ export default function GuideSessionScreen() {
     }, 1000);
     return () => clearInterval(timer);
   }, [session]);
-
-  const loadParticipants = useCallback(async (id: string, silent = false) => {
-    const identity = identityRef.current;
-    if (!silent) { setParticipantsLoading(true); setParticipantsError(null); }
-    try {
-      const people = await apiFetch<GuideSessionParticipant[]>(`/guide-sessions/${id}/participants`);
-      if (identityRef.current !== identity) return;
-      setParticipants(people);
-      setParticipantsError(null);
-    } catch (error) {
-      if (!silent && identityRef.current === identity) setParticipantsError(errorMessage(error, 'Could not load participants.'));
-    } finally { if (!silent && identityRef.current === identity) setParticipantsLoading(false); }
-  }, []);
-  useEffect(() => {
-    if (tab === 'people' && isOwner && session && participants === null && !participantsLoading && !participantsError) void loadParticipants(session.id);
-  }, [tab, isOwner, session, participants, participantsLoading, participantsError, loadParticipants]);
-  // Quiet roster refresh while the host watches People in an active session.
-  const sessionIdLoaded = session?.id;
-  const rosterActive = tab === 'people' && isOwner && (phase === 'live' || phase === 'upcoming');
-  useEffect(() => {
-    if (!rosterActive || !sessionIdLoaded) return;
-    const timer = setInterval(() => {
-      if (AppState.currentState === 'active') void loadParticipants(sessionIdLoaded, true);
-    }, 12_000);
-    return () => clearInterval(timer);
-  }, [rosterActive, sessionIdLoaded, loadParticipants]);
 
   async function join() {
     if (!session) return;
@@ -271,7 +260,7 @@ export default function GuideSessionScreen() {
     polls: phase !== 'ended' && openPolls ? openPolls : null,
     qa: isOwner && unanswered ? unanswered : null,
     chat: null,
-    people: null,
+    people: isOwner ? Math.max(0, session.attendeeCount - 1) : null,
   };
   const roleLabel = isOwner ? 'Host' : session.isJoined ? 'Participant' : 'Guest';
   const timeLine = `${start.toLocaleDateString([], { month: 'short', day: 'numeric' })} · ${start.toLocaleTimeString([], { timeStyle: 'short' })}–${end.toLocaleTimeString([], { timeStyle: 'short' })}`;
@@ -316,10 +305,11 @@ export default function GuideSessionScreen() {
           </View>
           <Text style={[s.title, { color: colors.foreground }]} numberOfLines={1}>{session.title}</Text>
         </View>
-        <View testID="session-attendance" style={[s.attendance, { backgroundColor: `${colors.primary}10` }]}>
+        <TouchableOpacity testID="session-attendance" disabled={!member} accessibilityRole={member ? 'button' : undefined} accessibilityLabel="View joined participants"
+          onPress={() => switchTab('people')} style={[s.attendance, { backgroundColor: `${colors.primary}10` }]}>
           <Icon name="users" size={12} color={colors.primary} />
           <Text style={[s.attendanceText, { color: colors.primary }]}>{session.attendeeCount}/{session.capacity}</Text>
-        </View>
+        </TouchableOpacity>
       </View>
       {showRoom && (
         <View style={[s.tabs, { backgroundColor: `${colors.primary}0B`, borderColor: `${colors.primary}1F` }]} accessibilityRole="tablist">
@@ -527,8 +517,9 @@ export default function GuideSessionScreen() {
     </>
   );
 
+  const joinedParticipants = (participants ?? []).filter(person => person.userId !== session.guideId);
   const peopleTab = (
-    <SectionCard testID="session-participants" colors={colors} icon="users" eyebrow={isOwner ? 'ROSTER' : 'PEOPLE'} title={`${session.attendeeCount} of ${session.capacity} seats taken`}
+    <SectionCard testID="session-participants" colors={colors} icon="users" eyebrow={isOwner ? 'ROSTER' : 'PEOPLE'} title={isOwner ? `${participants ? joinedParticipants.length : Math.max(0, session.attendeeCount - 1)} participants joined` : `${session.attendeeCount} of ${session.capacity} seats taken`}
       right={isOwner && rosterActive ? <Text style={[gs.meta, { color: colors.mutedForeground }]}>auto-refresh</Text> : undefined}>
       {!isOwner ? (
         <View style={{ gap: 10 }}>
@@ -551,16 +542,16 @@ export default function GuideSessionScreen() {
       ) : participantsError && participants === null ? (
         <View style={{ gap: 8 }}>
           <Text style={[gs.body, { color: colors.destructive }]}>{participantsError}</Text>
-          <PillButton colors={colors} variant="secondary" icon="refresh-cw" label="Retry" onPress={() => void loadParticipants(session.id)} />
+          <PillButton colors={colors} variant="secondary" icon="refresh-cw" label="Retry" onPress={() => void refetchParticipants()} />
         </View>
-      ) : (participants ?? []).length === 0 ? (
+      ) : joinedParticipants.length === 0 ? (
         <View style={{ alignItems: 'center', paddingVertical: 14, gap: 6 }}>
           <Icon name="user-plus" size={20} color={colors.mutedForeground} />
           <Text style={[gs.body, { color: colors.mutedForeground, textAlign: 'center' }]}>No one has joined yet. Share the session from your guide profile.</Text>
         </View>
       ) : (
         <View>
-          {(participants ?? []).map(p => {
+          {joinedParticipants.map(p => {
             const name = p.name ?? p.username ?? 'Player';
             const pct = stepCount ? Math.min(1, p.tutorialProgress / stepCount) : 0;
             return (
@@ -581,11 +572,12 @@ export default function GuideSessionScreen() {
               </View>
             );
           })}
-          <TouchableOpacity onPress={() => void loadParticipants(session.id)} disabled={participantsLoading} style={[gs.row, { marginTop: 10, opacity: participantsLoading ? 0.5 : 1 }]}>
+          <TouchableOpacity onPress={() => void refetchParticipants()} disabled={participantsLoading} style={[gs.row, { marginTop: 10, opacity: participantsLoading ? 0.5 : 1 }]}>
             <Icon name="refresh-cw" size={12} color={colors.primary} /><Text style={[gs.meta, { color: colors.primary }]}>{participantsLoading ? 'Refreshing…' : 'Refresh list'}</Text>
           </TouchableOpacity>
         </View>
       )}
+      {isOwner && participantsError && participants !== null && <Notice colors={colors} icon="cloud-off" text="Could not refresh the roster. Showing the last update and retrying automatically." />}
     </SectionCard>
   );
 

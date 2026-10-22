@@ -12,22 +12,25 @@ import {
   useListGuideTutorials,
   type GuideTutorial,
 } from '@workspace/api-client-react';
-import { type Href, Redirect, router } from 'expo-router';
-import React, { useState } from 'react';
+import { type Href, Redirect, router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type Tab = 'explore' | 'mine' | 'saved';
+type Tab = 'mine' | 'saved';
 
 export default function GuideTutorialsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<Tab>('explore');
+  const [tab, setTab] = useState<Tab>('mine');
   const bookmarks = useGuideTutorialBookmarks();
   const { userId, isLoaded, isSignedIn } = useAuth();
 
-  const explore = useListGuideTutorials({ mine: false }, { query: { queryKey: [...getListGuideTutorialsQueryKey({ mine: false }), userId], enabled: !!isSignedIn && tab === 'explore' } });
   const mine = useListGuideTutorials({ mine: true }, { query: { queryKey: [...getListGuideTutorialsQueryKey({ mine: true }), userId], enabled: !!isSignedIn && tab === 'mine' } });
+  const refetchMine = mine.refetch;
+  useFocusEffect(useCallback(() => {
+    if (isSignedIn && tab === 'mine') void refetchMine();
+  }, [isSignedIn, tab, refetchMine]));
   const saved = useQueries({
     queries: isSignedIn && tab === 'saved' ? bookmarks.ids.map(id => {
       const options = getGetGuideTutorialQueryOptions(id);
@@ -40,7 +43,7 @@ export default function GuideTutorialsScreen() {
   if (!isLoaded) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
   if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
 
-  const listQuery = tab === 'explore' ? explore : tab === 'mine' ? mine : null;
+  const listQuery = tab === 'mine' ? mine : null;
   const rows: { id: string; tutorial: GuideTutorial | null; failed: boolean; loading: boolean }[] = tab === 'saved'
     ? bookmarks.ids.map((id, i) => ({ id, tutorial: saved[i]?.data ?? null, failed: !!saved[i]?.isError, loading: !!saved[i]?.isLoading }))
     : (listQuery?.data ?? []).map(item => ({ id: item.id, tutorial: item, failed: false, loading: false }));
@@ -52,8 +55,8 @@ export default function GuideTutorialsScreen() {
       <View style={s.header}>
         <BackButton />
         <View style={{ flex: 1 }}>
-          <Text style={[s.title, { color: colors.foreground }]}>Tutorials</Text>
-          <Text style={[gs.meta, { color: colors.mutedForeground }]}>Step-by-step guides written by Sky guides</Text>
+          <Text style={[s.title, { color: colors.foreground }]}>My tutorials</Text>
+          <Text style={[gs.meta, { color: colors.mutedForeground }]}>Your creations and tutorials saved on this device</Text>
         </View>
         <TouchableOpacity testID="library-new-tutorial" accessibilityLabel="Write a tutorial" onPress={() => router.push('/create-guide-tutorial')}
           style={[s.iconBtn, { backgroundColor: `${colors.primary}14` }]}>
@@ -61,7 +64,7 @@ export default function GuideTutorialsScreen() {
         </TouchableOpacity>
       </View>
       <View style={[s.tabs, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        {([['explore', 'Explore', 'compass'], ['mine', 'My tutorials', 'edit-3'], ['saved', 'Saved on this device', 'bookmark']] as const).map(([key, label, icon]) => {
+        {([['mine', 'My tutorials', 'edit-3'], ['saved', 'Saved on this device', 'bookmark']] as const).map(([key, label, icon]) => {
           const on = tab === key;
           return (
             <TouchableOpacity key={key} testID={`library-tab-${key}`} onPress={() => setTab(key)} style={[s.tab, on && { backgroundColor: colors.primary }]}>
@@ -85,15 +88,17 @@ export default function GuideTutorialsScreen() {
           data={rows}
           keyExtractor={item => item.id}
           scrollEnabled={rows.length > 0}
+          refreshing={tab === 'mine' && mine.isFetching && !mine.isLoading}
+          onRefresh={tab === 'mine' ? () => { void mine.refetch(); } : undefined}
           contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: bottom + 30, flexGrow: 1 }}
           ListEmptyComponent={
             <View style={s.center}>
               <Icon name={tab === 'saved' ? 'bookmark' : 'book-open'} size={26} color={colors.primary} />
               <Text style={[s.emptyTitle, { color: colors.foreground }]}>
-                {tab === 'saved' ? 'Nothing saved on this device' : tab === 'mine' ? 'You have not written a tutorial yet' : 'No tutorials yet'}
+                {tab === 'saved' ? 'Nothing saved on this device' : 'You have not written a tutorial yet'}
               </Text>
               <Text style={[gs.body, { color: colors.mutedForeground, textAlign: 'center' }]}>
-                {tab === 'saved' ? 'Open a tutorial and tap Save on this device to keep it here.' : tab === 'mine' ? 'Share what you know in steps, with images, videos and tips.' : 'Check back soon, or write the first one.'}
+                {tab === 'saved' ? 'Open a tutorial and tap Save on this device to keep it here.' : 'Share what you know in steps, with images, videos and tips.'}
               </Text>
               {tab !== 'saved' && <PillButton colors={colors} icon="edit-3" label="Write a tutorial" onPress={() => router.push('/create-guide-tutorial')} />}
             </View>

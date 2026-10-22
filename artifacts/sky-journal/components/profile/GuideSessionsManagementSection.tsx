@@ -8,9 +8,9 @@ import {
   type GuideSession,
 } from '@workspace/api-client-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, AppState, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Props {
   guideId: string | null;
@@ -48,12 +48,26 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
   const [timeValue, setTimeValue] = useState('');
   const [validationMessage, setValidationMessage] = useState('');
   const [mutationMessage, setMutationMessage] = useState('');
+  const [screenFocused, setScreenFocused] = useState(false);
 
   const queryKey = getListGuideSessionsQueryKey({ guideId: guideId ?? undefined });
   const { data, isLoading, isFetching, isError, refetch } = useListGuideSessions(
     { guideId: guideId ?? undefined },
-    { query: { queryKey, enabled: !!guideId, staleTime: 30_000 } },
+    { query: {
+      queryKey, enabled: !!guideId, staleTime: 0,
+      refetchInterval: screenFocused ? 10_000 : false,
+      refetchIntervalInBackground: false,
+    } },
   );
+
+  useFocusEffect(useCallback(() => {
+    setScreenFocused(true);
+    if (guideId) void refetch();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active' && guideId) void refetch();
+    });
+    return () => { setScreenFocused(false); subscription.remove(); };
+  }, [guideId, refetch]));
 
   const upcomingSessions = useMemo(
     () => (data ?? [])
@@ -149,7 +163,7 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
           <ActivityIndicator size="small" color={colors.primary} />
           <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 12 }}>Loading your sessions…</Text>
         </View>
-      ) : isError ? (
+      ) : isError && !data ? (
         <View style={{ padding: 12, borderRadius: 14, borderWidth: 1, borderColor: `${colors.destructive}35`, backgroundColor: `${colors.destructive}08`, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
           <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 12, flex: 1 }}>Your upcoming sessions could not be loaded.</Text>
           <TouchableOpacity onPress={() => { void refetch(); }} style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10, backgroundColor: `${colors.primary}14` }}>
@@ -185,12 +199,19 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
                     <Text style={{ color: colors.secondary, fontFamily: 'Satoshi-Bold', fontSize: 11, marginTop: 3 }}>
                       {date.date} · {date.time}
                     </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                    <TouchableOpacity
+                      testID={`manage-participants-${session.id}`}
+                      accessibilityRole="button"
+                      accessibilityLabel={`View ${participants} joined participants`}
+                      onPress={() => router.push(`/guide-session/${session.id}?tab=people`)}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, minHeight: 26 }}
+                    >
                       <Icon name="users" size={12} color={colors.mutedForeground} />
-                      <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 11 }}>
+                      <Text style={{ color: colors.primary, fontFamily: 'Satoshi-Medium', fontSize: 11 }}>
                         {participants} {participants === 1 ? 'participant' : 'participants'} joined
                       </Text>
-                    </View>
+                      <Icon name="chevron-right" size={12} color={colors.primary} />
+                    </TouchableOpacity>
                   </View>
                   <TouchableOpacity testID={`manage-open-${session.id}`} accessibilityRole="button" accessibilityLabel="Open session room"
                     onPress={() => router.push(`/guide-session/${session.id}`)}
@@ -287,10 +308,12 @@ export function GuideSessionsManagementSection({ guideId }: Props) {
         </View>
       )}
 
-      {isFetching && !isLoading && (
-        <View style={{ alignItems: 'center', marginTop: 6 }}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
+      {isError && !!data && (
+        <TouchableOpacity onPress={() => { void refetch(); }} style={{ marginTop: 8, paddingVertical: 6 }}>
+          <Text style={{ color: colors.mutedForeground, fontFamily: 'Satoshi-Medium', fontSize: 11 }}>
+            Could not refresh participants. Showing the last update · {isFetching ? 'Retrying…' : 'Tap to retry'}
+          </Text>
+        </TouchableOpacity>
       )}
     </View>
   );

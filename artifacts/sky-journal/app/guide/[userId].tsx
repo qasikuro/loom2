@@ -8,10 +8,12 @@ import { SHADOW } from '@/constants/colors';
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type Href, router, useLocalSearchParams } from 'expo-router';
+import { type Href, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { getListGuideSessionsQueryKey, useListGuideSessions } from '@workspace/api-client-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  AppState,
   Platform,
   ScrollView,
   StyleSheet,
@@ -47,19 +49,6 @@ interface GuideProfile {
   country:           string | null;
   isFollowing:       boolean;
   isAvailableNow:    boolean;
-}
-
-interface GuideSession {
-  id: string;
-  title: string;
-  description: string;
-  topic: string | null;
-  startsAt: string;
-  endsAt: string;
-  capacity: number;
-  attendeeCount: number;
-  isJoined: boolean;
-  status: string;
 }
 
 
@@ -113,7 +102,26 @@ export default function GuideProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [sessions, setSessions] = useState<GuideSession[]>([]);
+  const [screenFocused, setScreenFocused] = useState(false);
+  const sessionsQuery = useListGuideSessions({ guideId: userId }, {
+    query: {
+      queryKey: [...getListGuideSessionsQueryKey({ guideId: userId }), myUserId],
+      enabled: !!userId && !!myUserId,
+      staleTime: 0,
+      refetchInterval: screenFocused ? 10_000 : false,
+      refetchIntervalInBackground: false,
+    },
+  });
+  const sessions = (sessionsQuery.data ?? []).filter(item => item.status === 'scheduled' && new Date(item.endsAt).getTime() > Date.now());
+  const refetchSessions = sessionsQuery.refetch;
+  useFocusEffect(useCallback(() => {
+    setScreenFocused(true);
+    if (userId && myUserId) void refetchSessions();
+    const subscription = AppState.addEventListener('change', state => {
+      if (state === 'active' && userId && myUserId) void refetchSessions();
+    });
+    return () => { setScreenFocused(false); subscription.remove(); };
+  }, [userId, myUserId, refetchSessions]));
 
   const fadeIn  = useRef(new Animated.Value(0)).current;
   const slideUp = useRef(new Animated.Value(28)).current;
@@ -128,13 +136,9 @@ export default function GuideProfileScreen() {
       return;
     }
     setLoading(true);
-    Promise.all([
-      apiFetch<GuideProfile>(`/guides/${userId}`),
-      apiFetch<GuideSession[]>(`/guide-sessions?guideId=${encodeURIComponent(userId)}`).catch(() => []),
-    ])
-      .then(([g, upcoming]) => {
+    apiFetch<GuideProfile>(`/guides/${userId}`)
+      .then(g => {
         setGuide(g);
-        setSessions(upcoming.filter(item => item.status !== 'cancelled' && item.status !== 'completed' && new Date(item.endsAt).getTime() > Date.now()));
         setIsFollowing(followingIds.includes(g.userId) || g.isFollowing);
         Animated.parallel([
           Animated.timing(fadeIn,  { toValue: 1, duration: 440, useNativeDriver: true }),
@@ -350,7 +354,7 @@ export default function GuideProfileScreen() {
               {([
                 ['1', 'edit-3', 'Tutorial studio', 'Draft, reorder, preview and publish steps', '/create-guide-tutorial', 'workspace-tutorial-studio'],
                 ['2', 'calendar', 'Schedule a session', 'Pick a tutorial, cover and time, then review', '/create-guide-session', 'workspace-schedule'],
-                ['3', 'book', 'Tutorial library', 'Explore, your tutorials and saved ones', '/guide-tutorials', 'workspace-library'],
+                ['3', 'book', 'My tutorials', 'Your creations and saved tutorials', '/guide-tutorials', 'workspace-library'],
               ] as const).map(([n, icon, title, sub, href, id]) => (
                 <TouchableOpacity key={id} testID={id} onPress={() => router.push(href as Href)} activeOpacity={0.82}
                   style={[styles.sessionCard, { borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 11 }]}>
@@ -373,7 +377,13 @@ export default function GuideProfileScreen() {
               </View>
               <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t('social.upcomingSessions')}</Text>
             </View>
-            {sessions.length === 0 ? (
+            {sessionsQuery.isLoading ? (
+              <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>Loading sessions…</Text>
+            ) : sessionsQuery.isError && !sessionsQuery.data ? (
+              <TouchableOpacity onPress={() => { void refetchSessions(); }}>
+                <Text style={[styles.cardBody, { color: colors.primary }]}>Could not load sessions · Tap to retry</Text>
+              </TouchableOpacity>
+            ) : sessions.length === 0 ? (
               <Text style={[styles.cardBody, { color: colors.mutedForeground }]}>
                 {isOwnProfile ? 'You have no sessions scheduled yet.' : 'This guide has no upcoming sessions.'}
               </Text>
@@ -394,8 +404,19 @@ export default function GuideProfileScreen() {
                   <Text style={[styles.sessionMetaText, { color: colors.primary }]}>
                     {new Date(session.startsAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                   </Text>
-                  <Text style={[styles.sessionMetaText, { color: colors.mutedForeground }]}>· {session.attendeeCount} joined</Text>
+                  <Text style={[styles.sessionMetaText, { color: colors.mutedForeground }]}>· {Math.max(0, session.attendeeCount - 1)} participants joined</Text>
                 </View>
+                {isOwnProfile && (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={event => { event.stopPropagation(); router.push(`/guide-session/${session.id}?tab=people`); }}
+                    style={{ paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                  >
+                    <Icon name="users" size={13} color={colors.primary} />
+                    <Text style={[styles.sessionMetaText, { color: colors.primary }]}>View participants</Text>
+                    <Icon name="chevron-right" size={13} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
               </TouchableOpacity>
             ))}
             {isOwnProfile && (
