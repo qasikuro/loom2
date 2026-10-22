@@ -6,15 +6,17 @@ import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { getReelPlaybackWindow } from '@/utils/reelPlayback';
 import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
   Alert,
+  AppState,
   Platform,
   RefreshControl,
   Share,
@@ -50,10 +52,12 @@ export default function ReelsScreen() {
   const [filter, setFilter] = useState<ReelFilter>('All');
   const [refreshing, setRefreshing] = useState(false);
   const [visiblePostId, setVisiblePostId] = useState<string | null>(null);
+  const [readyPostId, setReadyPostId] = useState<string | null>(null);
   const [videosMuted, setVideosMuted] = useState(true);
   const [selectedVideoPost, setSelectedVideoPost] = useState<DiscoverPost | null>(null);
   const [reportTargetId, setReportTargetId] = useState<string | null>(null);
   const [feedHeight, setFeedHeight] = useState(0);
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   const listRef = useRef<FlatList<DiscoverPost>>(null);
   const lastFetchRef = useRef(0);
 
@@ -69,18 +73,25 @@ export default function ReelsScreen() {
     }
     return discoverPosts;
   }, [discoverPosts, filter]);
+  const playbackEnabled = isFocused && appActive && !selectedVideoPost;
+  const { activePostId, preparedIndices } = getReelPlaybackWindow(reels, visiblePostId, readyPostId, playbackEnabled);
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', state => setAppActive(state === 'active'));
+    return () => subscription.remove();
+  }, []);
 
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 60,
-    minimumViewTime: 300,
+    minimumViewTime: 80,
   });
   const onViewableItemsChanged = useRef(({
     viewableItems,
   }: {
     viewableItems: { item: DiscoverPost }[];
   }) => {
-    const videoItem = viewableItems.find(item => item.item.contentType === 'video');
-    setVisiblePostId(videoItem?.item.id ?? null);
+    // Keep the current reel during the brief gap between two 60%-visible pages.
+    const visible = viewableItems[0];
+    if (visible) setVisiblePostId(visible.item.id);
   });
 
   useFocusEffect(useCallback(() => {
@@ -142,7 +153,7 @@ export default function ReelsScreen() {
         ref={listRef}
         data={reels}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
+        renderItem={({ item, index }) => (
           <ReelCard
             post={item}
             height={reelHeight}
@@ -152,7 +163,9 @@ export default function ReelsScreen() {
               pathname: '/user/[userId]',
               params: { userId: item.authorUserId },
             } as never)}
-            playing={isFocused && !selectedVideoPost && item.id === visiblePostId && item.contentType === 'video'}
+            playing={playbackEnabled && item.id === activePostId && item.contentType === 'video'}
+            prepareVideo={preparedIndices.includes(index)}
+            onVideoReady={setReadyPostId}
             muted={videosMuted}
             onMuteToggle={() => setVideosMuted(muted => !muted)}
             onShare={() => { void sharePost(item); }}
@@ -196,11 +209,11 @@ export default function ReelsScreen() {
         }
         viewabilityConfig={viewabilityConfig.current}
         onViewableItemsChanged={onViewableItemsChanged.current}
-        initialNumToRender={1}
+        initialNumToRender={2}
         maxToRenderPerBatch={2}
         updateCellsBatchingPeriod={80}
         windowSize={3}
-        removeClippedSubviews={Platform.OS === 'android'}
+        removeClippedSubviews={false}
         getItemLayout={(_, index) => ({
           length: reelHeight,
           offset: reelHeight * index,
@@ -262,6 +275,8 @@ export default function ReelsScreen() {
                   style={[styles.filterChip, active && styles.filterChipActive]}
                   onPress={() => {
                     setFilter(item);
+                    setVisiblePostId(null);
+                    setReadyPostId(null);
                     listRef.current?.scrollToOffset({ offset: 0, animated: false });
                     Haptics.selectionAsync();
                   }}

@@ -2,11 +2,10 @@ import { Icon } from '@/components/Icon';
 import { BadgeTray } from '@/components/profile/BadgeTray';
 import type { DiscoverPost } from '@/context/AppContext';
 import * as Haptics from 'expo-haptics';
-import { Video, ResizeMode } from 'expo-av';
+import { ReelVideo } from '@/components/ReelVideo';
 import { SecureImage as Image } from '@/components/SecureImage';
-import { useSecureMediaUri } from '@/hooks/useSecureMediaUri';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -15,6 +14,8 @@ interface Props {
   height: number;
   topInset: number;
   playing: boolean;
+  prepareVideo: boolean;
+  onVideoReady: (id: string) => void;
   muted: boolean;
   onOpen: () => void;
   onAuthorPress: () => void;
@@ -46,12 +47,13 @@ function ReelAction({ name, label, active, count, onPress }: {
 }
 
 export function ReelCard({
-  post, height, topInset, playing, muted, onOpen, onAuthorPress,
+  post, height, topInset, playing, prepareVideo, onVideoReady, muted, onOpen, onAuthorPress,
   onMuteToggle, onShare, onLike, onSave, onReport,
 }: Props) {
   const { t } = useTranslation();
   const isVideo = post.contentType === 'video' && !!post.videoUri;
-  const { uri: videoUri, renew: renewVideoUri } = useSecureMediaUri(post.videoUri);
+  const [paused, setPaused] = useState(false);
+  useEffect(() => { if (!playing) setPaused(false); }, [playing]);
   const imageUri = isVideo ? post.thumbnailUri : (post.panels?.[0]?.imageUri ?? post.imageUri);
   return (
     <View style={[styles.card, { height }]}>
@@ -64,25 +66,21 @@ export function ReelCard({
       ) : (
         <LinearGradient colors={['#1D1442', '#27194C', '#100B22']} style={StyleSheet.absoluteFill} />
       )}
-      {isVideo && playing && (
-        <Video
-          source={{ uri: videoUri ?? post.videoUri! }}
-          onError={renewVideoUri}
-          shouldPlay
-          isLooping
-          isMuted={muted}
-          resizeMode={ResizeMode.CONTAIN}
-          style={StyleSheet.absoluteFill}
-          useNativeControls={false}
-        />
-      )}
       <TouchableOpacity
         style={StyleSheet.absoluteFill}
-        onPress={onOpen}
+        onPress={() => { if (isVideo) setPaused(value => !value); else onOpen(); }}
         activeOpacity={1}
         accessibilityRole="button"
-        accessibilityLabel={t(isVideo ? 'reels.watchNamed' : 'reels.readNamed', { title: post.chapterTitle })}
+        accessibilityLabel={isVideo
+          ? t(paused ? 'reels.resumeVideo' : 'reels.pauseVideo', { defaultValue: paused ? 'Resume video' : 'Pause video' })
+          : t('reels.readNamed', { title: post.chapterTitle })}
       />
+      {isVideo && prepareVideo && <ReelVideo uri={post.videoUri!} playing={playing && !paused} muted={muted} onPrepared={() => onVideoReady(post.id)} />}
+      {isVideo && playing && paused && (
+        <View pointerEvents="none" style={styles.pauseIndicator}>
+          <Icon name="play" size={35} color="white" />
+        </View>
+      )}
       <LinearGradient
         colors={['rgba(6,4,18,0.80)', 'rgba(6,4,18,0.12)', 'transparent']}
         locations={[0, 0.55, 1]}
@@ -144,7 +142,7 @@ export function ReelCard({
         {!!post.authorBadges?.length && <BadgeTray badges={post.authorBadges} />}
         {!!post.bookTitle && <Text style={styles.bookTitle} numberOfLines={1}>{post.bookTitle}</Text>}
         <TouchableOpacity style={styles.openLink} onPress={onOpen} accessibilityRole="button" accessibilityLabel={t(isVideo ? 'reels.watchFull' : 'reels.readFull')}>
-          <Text style={styles.openText}>{t(isVideo ? 'reels.watchVideo' : 'reels.readStory')}</Text>
+          <Text style={styles.openText}>{t(isVideo ? 'reels.watchFull' : 'reels.readStory')}</Text>
           <Icon name="arrow-right" size={15} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
@@ -155,6 +153,7 @@ export function ReelCard({
 
 const styles = StyleSheet.create({
   card: { width: '100%', overflow: 'hidden', backgroundColor: '#100B22' },
+  pauseIndicator: { position: 'absolute', top: '45%', alignSelf: 'center', padding: 18, borderRadius: 40, backgroundColor: 'rgba(8,6,24,0.58)' },
   backdropTint: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(8,6,24,0.34)' },
   topShade: { position: 'absolute', left: 0, right: 0, top: 0, height: 260 },
   bottomShade: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 355 },
