@@ -1,18 +1,23 @@
 import { Icon } from '@/components/Icon';
 import { LoadingCard, SkyLoadingMark } from '@/components/SkyLoading';
+import { Images } from '@/assets/images/index';
 import { apiFetch, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
 import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useTranslation } from 'react-i18next';
 import { SHADOW } from '@/constants/colors';
 import { UI } from '@/constants/uiTokens';
+import { useAuth } from '@clerk/expo';
+import {
+  getListGuideTutorialsQueryKey,
+  useListGuideTutorials,
+} from '@workspace/api-client-react';
 import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  FlatList,
   Platform,
   RefreshControl,
   ScrollView,
@@ -25,13 +30,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const TABS = ['Guides', 'Books', 'People'] as const;
+const TABS = ['Guides', 'Books', 'Tutorials'] as const;
 type TabType = (typeof TABS)[number];
 
 const TAB_ICONS: Record<TabType, string> = {
   Guides:  'star',
   Books:   'book-open',
-  People:  'users',
+  Tutorials: 'layers',
 };
 
 const GUIDE_TOPICS = [
@@ -68,16 +73,6 @@ interface DiscoverBook {
   authorName:      string | null;
   authorUsername:  string | null;
   authorAvatarUri: string | null;
-}
-
-interface UserSearchResult {
-  userId:      string;
-  username:    string | null;
-  name:        string;
-  bio:         string;
-  traits:      string[];
-  avatarUri:   string | null;
-  isFollowing: boolean;
 }
 
 interface GuideResult {
@@ -119,22 +114,19 @@ export default function DiscoverScreen() {
   const { width: viewportWidth } = useWindowDimensions();
   const { t, i18n } = useTranslation();
   const { followingIds, followUser, unfollowUser, isRefreshing } = useApp();
+  const { userId, isLoaded: authLoaded, isSignedIn } = useAuth();
 
   const [activeTab,     setActiveTab]     = useState<TabType>('Guides');
-  const [peopleQuery,   setPeopleQuery]   = useState('');
-  const [peopleResults, setPeopleResults] = useState<UserSearchResult[]>([]);
-  const [peopleLoading, setPeopleLoading] = useState(false);
-  const [peopleError,   setPeopleError]   = useState<string | null>(null);
   const [guidesData,    setGuidesData]    = useState<GuideResult[]>([]);
   const [guideSessions, setGuideSessions] = useState<GuideSessionPreview[]>([]);
   const [guidesLoading, setGuidesLoading] = useState(false);
   const [guidesError,   setGuidesError]   = useState<string | null>(null);
   const [guideTopicFilter, setGuideTopicFilter] = useState<string | null>(null);
+  const [guideTopicSearch, setGuideTopicSearch] = useState('');
   const [guideAvailNow,    setGuideAvailNow]    = useState(false);
   const [booksData,    setBooksData]    = useState<DiscoverBook[]>([]);
   const [booksLoading, setBooksLoading] = useState(false);
   const [booksError,   setBooksError]   = useState<string | null>(null);
-  const searchTimer      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const guidesLoaded     = useRef(false);
   const booksLoaded      = useRef(false);
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
@@ -145,40 +137,28 @@ export default function DiscoverScreen() {
     .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
   const guideIdsWithSessions = new Set(upcomingSessions.map(session => session.guideId));
   const guidesWithSessions = guidesData.filter(guide => guideIdsWithSessions.has(guide.userId));
+  const matchingGuideTopics = guideTopicSearch.trim() && !guideTopicFilter
+    ? GUIDE_TOPICS
+      .map((topic, index) => ({ topic, label: t(`discoverLog.topic${index}`) }))
+      .filter(({ topic, label }) =>
+        `${label} ${topic}`.toLocaleLowerCase(i18n.language).includes(guideTopicSearch.trim().toLocaleLowerCase(i18n.language)),
+      )
+      .slice(0, 6)
+    : [];
+  const tutorialQuery = useListGuideTutorials(
+    { mine: false },
+    {
+      query: {
+        queryKey: [...getListGuideTutorialsQueryKey({ mine: false }), userId],
+        enabled: !!isSignedIn && activeTab === 'Tutorials',
+        staleTime: 60_000,
+      },
+    },
+  );
 
   function selectTab(tab: TabType) {
     setActiveTab(tab);
     Haptics.selectionAsync();
-  }
-
-  function handlePeopleSearch(q: string) {
-    setPeopleQuery(q);
-    setPeopleError(null);
-    if (searchTimer.current) clearTimeout(searchTimer.current);
-    if (q.trim().length < 2) { setPeopleResults([]); return; }
-    setPeopleLoading(true);
-    searchTimer.current = setTimeout(async () => {
-      try {
-        const res = await apiFetch<UserSearchResult[]>(`/users/search?q=${encodeURIComponent(q.trim())}`);
-        setPeopleResults(res ?? []);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        setPeopleResults([]);
-        setPeopleError(err?.message ?? t('discoverLog.searchFailed'));
-      } finally {
-        setPeopleLoading(false);
-      }
-    }, 400);
-  }
-
-  function handleToggleFollow(item: UserSearchResult) {
-    Haptics.selectionAsync();
-    const nowFollowing = followingIds.includes(item.userId) || item.isFollowing;
-    setPeopleResults(prev =>
-      prev.map(r => r.userId === item.userId ? { ...r, isFollowing: !nowFollowing } : r),
-    );
-    if (nowFollowing) unfollowUser(item.userId);
-    else followUser(item.userId);
   }
 
   async function loadGuides(topic: string | null = guideTopicFilter, availNow: boolean = guideAvailNow) {
@@ -243,25 +223,59 @@ export default function DiscoverScreen() {
     else followUser(g.userId);
   }
 
+  function selectGuideTopic(topic: string, label: string) {
+    setGuideTopicFilter(topic);
+    setGuideTopicSearch(label);
+    void loadGuides(topic, guideAvailNow);
+    Haptics.selectionAsync();
+  }
+
+  function clearGuideTopic() {
+    const hadTopicFilter = guideTopicFilter !== null;
+    setGuideTopicSearch('');
+    setGuideTopicFilter(null);
+    if (hadTopicFilter) void loadGuides(null, guideAvailNow);
+    Haptics.selectionAsync();
+  }
+
+  function updateGuideTopicSearch(value: string) {
+    setGuideTopicSearch(value);
+    if (guideTopicFilter) {
+      setGuideTopicFilter(null);
+      void loadGuides(null, guideAvailNow);
+    }
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.background }]}>
 
       {/* ── Vivid gradient header (in-flow, not absolute) ─────────── */}
       <LinearGradient
         colors={['#0A0818', '#140934', '#1E0A50']}
-        style={{ paddingTop: topPad }}
+        style={{ paddingTop: topPad, overflow: 'hidden' }}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(120,70,255,0.20)', top: -50, right: -20, pointerEvents: 'none' }} />
-        <View style={{ position: 'absolute', width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(60,140,240,0.14)', top: 20, left: -28, pointerEvents: 'none' }} />
-        <View style={{ position: 'absolute', width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(244,168,200,0.14)', bottom: 8, right: 80, pointerEvents: 'none' }} />
+        <Image
+          source={Images.story_bg1}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          accessibilityIgnoresInvertColors
+        />
+        <LinearGradient
+          colors={['rgba(10,7,25,0.40)', 'rgba(14,8,36,0.58)', 'rgba(16,8,38,0.96)']}
+          locations={[0, 0.58, 1]}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
 
         {/* Title row */}
         <View style={[styles.headerRow, contentMaxWidth != null && { maxWidth: contentMaxWidth }]}>
           <View style={styles.headerText}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
               <Text style={styles.headerTitle}>{t('discover.title')}</Text>
+              <Icon name="star" size={20} color="#F6C968" />
               {isRefreshing && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,184,232,0.12)', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
                   <SkyLoadingMark size={14} color="rgba(200,184,232,0.7)" />
@@ -308,7 +322,7 @@ export default function DiscoverScreen() {
                 style={[
                   styles.tabPill,
                   active
-                    ? { backgroundColor: 'rgba(155,120,232,0.22)', borderColor: 'rgba(155,120,232,0.60)' }
+                    ? { backgroundColor: colors.primary, borderColor: `${colors.primary}CC` }
                     : { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(200,184,232,0.14)' },
                 ]}
                 activeOpacity={0.75}
@@ -320,7 +334,7 @@ export default function DiscoverScreen() {
                 />
                 <Text style={[
                   styles.tabText,
-                  { color: active ? '#F2ECFF' : 'rgba(237,232,255,0.82)' },
+                  { color: active ? colors.primaryForeground : 'rgba(237,232,255,0.82)' },
                 ]}>
                   {t(`discoverLog.tab${tab}`)}
                 </Text>
@@ -475,54 +489,72 @@ export default function DiscoverScreen() {
             />
           }
         >
-          {/* Header banner */}
-          <LinearGradient
-            colors={['rgba(80,40,180,0.28)', 'rgba(60,120,240,0.14)', 'transparent']}
-             style={[styles.guideBanner, contentMaxWidth != null && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
-          >
-            <View style={{ position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(100,60,220,0.18)', top: -40, right: -20, pointerEvents: 'none' }} />
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-              <Icon name="star" size={16} color="#C8A84B" />
+          <View style={[styles.guideBanner, contentMaxWidth != null && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+            <View style={styles.guideBannerHeading}>
+              <Icon name="compass" size={18} color={colors.primary} />
               <Text style={[styles.guideBannerTitle, { color: colors.foreground }]}>{t('discoverLog.guidesTitle')}</Text>
             </View>
             <Text style={[styles.guideBannerSub, { color: colors.mutedForeground }]}>
               {t('discoverLog.guidesSubtitle')}
             </Text>
-          </LinearGradient>
+          </View>
 
-          {/* Topic filter chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.guideTopicRow}>
-            <TouchableOpacity
-              style={[
-                styles.guideTopicChip,
-                guideTopicFilter
-                  ? { backgroundColor: colors.card, borderColor: colors.border }
-                  : { backgroundColor: `${colors.tint}18`, borderColor: `${colors.tint}70` },
-              ]}
-              onPress={() => { setGuideTopicFilter(null); loadGuides(null, guideAvailNow); Haptics.selectionAsync(); }}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.guideTopicText, { color: guideTopicFilter ? colors.mutedForeground : colors.tint }]}>{t('discoverLog.allTopics')}</Text>
-            </TouchableOpacity>
-            {GUIDE_TOPICS.map(topic => {
-              const active = guideTopicFilter === topic;
-              return (
+          <View style={{ marginHorizontal: 16, marginBottom: 12 }}>
+            <View style={[styles.guideTopicSearch, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Icon name="search" size={17} color={colors.mutedForeground} />
+              <TextInput
+                value={guideTopicSearch}
+                onChangeText={updateGuideTopicSearch}
+                placeholder={t('discoverLog.searchGuideTopics')}
+                placeholderTextColor={colors.mutedForeground}
+                style={[styles.guideTopicSearchInput, { color: colors.foreground }]}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+                onSubmitEditing={() => {
+                  if (matchingGuideTopics.length === 1) {
+                    const [match] = matchingGuideTopics;
+                    selectGuideTopic(match.topic, match.label);
+                  }
+                }}
+                accessibilityLabel={t('discoverLog.searchGuideTopics')}
+                testID="discover-guide-topic-search"
+              />
+              {!!guideTopicSearch && (
                 <TouchableOpacity
-                  key={topic}
-                  style={[
-                    styles.guideTopicChip,
-                    active
-                      ? { backgroundColor: `${colors.tint}18`, borderColor: `${colors.tint}70` }
-                      : { backgroundColor: colors.card, borderColor: colors.border },
-                  ]}
-                  onPress={() => { const next = active ? null : topic; setGuideTopicFilter(next); loadGuides(next, guideAvailNow); Haptics.selectionAsync(); }}
-                  activeOpacity={0.8}
+                  onPress={clearGuideTopic}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('discoverLog.clearTopicSearch')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Text style={[styles.guideTopicText, { color: active ? colors.tint : colors.mutedForeground }]}>{t(`discoverLog.topic${GUIDE_TOPICS.indexOf(topic)}`)}</Text>
+                  <Icon name="x-circle" size={17} color={colors.mutedForeground} />
                 </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+              )}
+            </View>
+            {guideTopicSearch.trim().length > 0 && !guideTopicFilter && (
+              matchingGuideTopics.length > 0 ? (
+                <View style={styles.guideTopicSuggestions}>
+                  {matchingGuideTopics.map(({ topic, label }) => (
+                    <TouchableOpacity
+                      key={topic}
+                      style={[styles.guideTopicSuggestion, { backgroundColor: `${colors.primary}13`, borderColor: `${colors.primary}35` }]}
+                      onPress={() => selectGuideTopic(topic, label)}
+                      accessibilityRole="button"
+                      accessibilityLabel={label}
+                      activeOpacity={0.8}
+                    >
+                      <View style={[styles.guideTopicDot, { backgroundColor: TOPIC_COLORS[topic] }]} />
+                      <Text style={[styles.guideTopicSuggestionText, { color: colors.primary }]}>{label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : (
+                <Text style={[styles.guideTopicNoMatch, { color: colors.mutedForeground }]}>
+                  {t('discoverLog.noMatchingTopics')}
+                </Text>
+              )
+            )}
+          </View>
 
           {/* Available now toggle */}
           <TouchableOpacity
@@ -694,164 +726,161 @@ export default function DiscoverScreen() {
         </ScrollView>
       )}
 
-      {/* ── People ─────────────────────────────────────────── */}
-      {activeTab === 'People' && (
-        <View style={styles.peopleRoot}>
-          {/* Search bar */}
-          <View style={[styles.searchBar, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-            <Icon name="search" size={15} color={colors.mutedForeground} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.foreground }]}
-              value={peopleQuery}
-              onChangeText={handlePeopleSearch}
-              placeholder={t('discoverLog.searchPeoplePlaceholder')}
-              placeholderTextColor={colors.mutedForeground}
-              autoCorrect={false}
-              autoCapitalize="none"
-              returnKeyType="search"
+      {/* ── Tutorials ──────────────────────────────────────── */}
+      {activeTab === 'Tutorials' && (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.tutorialsContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={tutorialQuery.isRefetching}
+              onRefresh={() => { void tutorialQuery.refetch(); }}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
             />
-            {peopleLoading && (
-              <SkyLoadingMark size={16} color={colors.primary} />
-            )}
-            {!peopleLoading && peopleQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => { setPeopleQuery(''); setPeopleResults([]); }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Icon name="x" size={14} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            )}
+          }
+        >
+          <View style={[styles.tutorialsBanner, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.tutorialsBannerIcon, { backgroundColor: `${colors.primary}16` }]}>
+              <Icon name="layers" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={[styles.tutorialsBannerTitle, { color: colors.foreground }]}>Learn step by step</Text>
+              <Text style={[styles.tutorialsBannerSubtitle, { color: colors.mutedForeground }]}>
+                Practical tutorials shared by the community.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.tutorialsLibraryButton, { backgroundColor: `${colors.primary}15` }]}
+              onPress={() => router.push('/guide-tutorials')}
+              accessibilityRole="button"
+              accessibilityLabel="Open the tutorial library"
+              activeOpacity={0.8}
+            >
+              <Icon name="book-open" size={15} color={colors.primary} />
+              <Text style={[styles.tutorialsLibraryText, { color: colors.primary }]}>Library</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Error banner */}
-          {!!peopleError && (
-            <View style={{ marginHorizontal: 16, marginTop: -4, marginBottom: 10, padding: 10, borderRadius: 12, backgroundColor: 'rgba(180,60,60,0.12)', borderWidth: 1, borderColor: 'rgba(180,60,60,0.25)' }}>
-              <Text style={{ fontSize: 13, fontFamily: 'Satoshi-Regular', color: '#E06C75', textAlign: 'center' }}>{peopleError}</Text>
+          <View style={styles.tutorialsHeading}>
+            <View>
+              <Text style={[styles.tutorialsHeadingTitle, { color: colors.foreground }]}>Explore tutorials</Text>
+              <Text style={[styles.tutorialsHeadingSubtitle, { color: colors.mutedForeground }]}>
+                Open a guide to follow its steps.
+              </Text>
             </View>
-          )}
+          </View>
 
-          {/* Results / empty states */}
-          {peopleQuery.length < 2 ? (
-            <PeopleEmptyStart colors={colors} />
-          ) : peopleResults.length === 0 && !peopleLoading ? (
-            <PeopleNoResults colors={colors} />
+          {!authLoaded || (isSignedIn && tutorialQuery.isLoading) ? (
+            <View style={{ gap: 10 }}>
+              {[0, 1, 2].map(index => (
+                <LoadingCard key={index} style={{ opacity: 1 - index * 0.16, marginHorizontal: 16 }} />
+              ))}
+            </View>
+          ) : !isSignedIn ? (
+            <View style={[styles.tutorialsState, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Icon name="lock" size={24} color={colors.primary} />
+              <Text style={[styles.tutorialsStateTitle, { color: colors.foreground }]}>Sign in to explore tutorials</Text>
+              <TouchableOpacity
+                style={[styles.tutorialsStateButton, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/(auth)/sign-in')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.tutorialsStateButtonText, { color: colors.primaryForeground }]}>Sign in</Text>
+              </TouchableOpacity>
+            </View>
+          ) : tutorialQuery.isError ? (
+            <View style={[styles.tutorialsState, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Icon name="cloud-off" size={24} color={colors.mutedForeground} />
+              <Text style={[styles.tutorialsStateTitle, { color: colors.foreground }]}>Tutorials could not be loaded</Text>
+              <Text style={[styles.tutorialsStateBody, { color: colors.mutedForeground }]}>Check your connection and try again.</Text>
+              <TouchableOpacity
+                style={[styles.tutorialsStateButton, { backgroundColor: colors.primary }]}
+                onPress={() => { void tutorialQuery.refetch(); }}
+                activeOpacity={0.8}
+              >
+                <Icon name="refresh-cw" size={14} color={colors.primaryForeground} />
+                <Text style={[styles.tutorialsStateButtonText, { color: colors.primaryForeground }]}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (tutorialQuery.data ?? []).length === 0 ? (
+            <View style={[styles.tutorialsState, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Icon name="book-open" size={26} color={colors.primary} />
+              <Text style={[styles.tutorialsStateTitle, { color: colors.foreground }]}>No tutorials yet</Text>
+              <Text style={[styles.tutorialsStateBody, { color: colors.mutedForeground }]}>
+                Visit the tutorial library to write one or check your saved guides.
+              </Text>
+              <TouchableOpacity
+                style={[styles.tutorialsStateButton, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/guide-tutorials')}
+                activeOpacity={0.8}
+              >
+                <Icon name="book-open" size={14} color={colors.primaryForeground} />
+                <Text style={[styles.tutorialsStateButtonText, { color: colors.primaryForeground }]}>Open library</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
-            <FlatList
-              data={peopleResults}
-              keyExtractor={r => r.userId}
-              contentContainerStyle={[styles.peopleList, { paddingBottom: bottomPad }]}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => {
-                const isFollowing = followingIds.includes(item.userId) || item.isFollowing;
+            <View style={{ gap: 10, paddingHorizontal: 16 }}>
+              {(tutorialQuery.data ?? []).map(tutorial => {
+                const coverUri = tutorial.steps.find(step =>
+                  (step.type === 'image' || step.type === 'video') && !!step.mediaUri,
+                )?.mediaUri;
                 return (
                   <TouchableOpacity
-                    style={[styles.personCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onPress={() => router.push({ pathname: '/user/[userId]', params: { userId: item.userId } } as any)}
-                    activeOpacity={0.88}
+                    key={tutorial.id}
+                    style={[styles.tutorialCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.xs]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      router.push(`/guide-tutorial/${tutorial.id}` as Href);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${tutorial.title}, ${tutorial.steps.length} steps, by ${tutorial.guideName}`}
+                    activeOpacity={0.86}
                   >
-                    <View style={[styles.personAvatar, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}35`, overflow: 'hidden' }]}>
-                      {item.avatarUri ? (
-                        <Image
-                          source={{ uri: item.avatarUri }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                        />
+                    <View style={[styles.tutorialCover, { backgroundColor: `${colors.primary}14` }]}>
+                      {coverUri ? (
+                        <Image source={{ uri: coverUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
                       ) : (
-                        <Text style={[styles.personInitial, { color: colors.primary }]}>
-                          {item.name.charAt(0).toUpperCase()}
-                        </Text>
+                        <LinearGradient colors={[`${colors.primary}30`, `${colors.tint}22`]} style={StyleSheet.absoluteFill} />
                       )}
+                      <View style={styles.tutorialStepBadge}>
+                        <Icon name="list" size={11} color="#FFF" />
+                        <Text style={styles.tutorialStepBadgeText}>{tutorial.steps.length} steps</Text>
+                      </View>
                     </View>
-
-                    <View style={styles.personInfo}>
-                      <Text style={[styles.personName, { color: colors.foreground }]} numberOfLines={1}>
-                        {item.name}
-                      </Text>
-                      {item.username ? (
-                        <Text style={[styles.personHandle, { color: colors.primary }]}>
-                          @{item.username}
-                        </Text>
+                    <View style={styles.tutorialCardInfo}>
+                      {tutorial.topic ? (
+                        <View style={[styles.tutorialTopic, { backgroundColor: `${colors.primary}15` }]}>
+                          <Text style={[styles.tutorialTopicText, { color: colors.primary }]} numberOfLines={1}>{tutorial.topic}</Text>
+                        </View>
                       ) : null}
-                      {item.bio ? (
-                        <Text style={[styles.personBio, { color: colors.mutedForeground }]} numberOfLines={2}>
-                          {item.bio}
-                        </Text>
-                      ) : null}
+                      <Text style={[styles.tutorialCardTitle, { color: colors.foreground }]} numberOfLines={2}>{tutorial.title}</Text>
+                      <Text style={[styles.tutorialCardDescription, { color: colors.mutedForeground }]} numberOfLines={2}>{tutorial.description}</Text>
+                      <View style={styles.tutorialGuideRow}>
+                        <View style={[styles.tutorialGuideAvatar, { backgroundColor: `${colors.primary}18` }]}>
+                          {tutorial.guideAvatarUri ? (
+                            <Image source={{ uri: tutorial.guideAvatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="memory-disk" />
+                          ) : (
+                            <Icon name="user" size={12} color={colors.primary} />
+                          )}
+                        </View>
+                        <Text style={[styles.tutorialGuideName, { color: colors.mutedForeground }]} numberOfLines={1}>{tutorial.guideName}</Text>
+                        <View style={{ flex: 1 }} />
+                        <Icon name="chevron-right" size={16} color={colors.mutedForeground} />
+                      </View>
                     </View>
-
-                    <TouchableOpacity
-                      style={[
-                        styles.followBtn,
-                        isFollowing
-                          ? { backgroundColor: `${colors.primary}14`, borderColor: `${colors.primary}35` }
-                          : { backgroundColor: colors.primary, borderColor: colors.primary },
-                      ]}
-                      onPress={() => handleToggleFollow(item)}
-                      activeOpacity={0.8}
-                    >
-                      <Icon
-                        name={isFollowing ? 'user-check' : 'user-plus'}
-                        size={13}
-                        color={isFollowing ? colors.primary : '#fff'}
-                      />
-                      <Text style={[styles.followBtnText, { color: isFollowing ? colors.primary : '#fff' }]}>
-                        {isFollowing ? t('discoverLog.following') : t('discoverLog.follow')}
-                      </Text>
-                    </TouchableOpacity>
                   </TouchableOpacity>
                 );
-              }}
-            />
+              })}
+            </View>
           )}
-        </View>
+        </ScrollView>
       )}
     </View>
   );
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function PeopleEmptyStart({ colors }: { colors: any }) {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.emptyWrap}>
-      <View style={[styles.emptyStarRing, { borderColor: `${colors.primary}28` }]}>
-        <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}14` }]}>
-          <Icon name="users" size={30} color={`${colors.primary}70`} />
-        </View>
-      </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discoverLog.findFriends')}</Text>
-      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        {t('discoverLog.findFriendsBody')}
-      </Text>
-      <View style={[styles.searchHint, { borderColor: `${colors.primary}22`, backgroundColor: `${colors.primary}08` }]}>
-        <Icon name="search" size={12} color={`${colors.primary}70`} />
-        <Text style={[styles.searchHintText, { color: `${colors.primary}90` }]}>
-          {t('discoverLog.searchHint')}
-        </Text>
-      </View>
-    </View>
-  );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function PeopleNoResults({ colors }: { colors: any }) {
-  const { t } = useTranslation();
-  return (
-    <View style={styles.emptyWrap}>
-      <View style={[styles.emptyIconBox, { backgroundColor: `${colors.primary}12` }]}>
-        <Icon name="search" size={30} color={`${colors.primary}70`} />
-      </View>
-      <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t('discoverLog.noPeopleResults')}</Text>
-      <Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>
-        {t('discoverLog.tryDifferentPeople')}
-      </Text>
-    </View>
-  );
-}
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -973,41 +1002,62 @@ const styles = StyleSheet.create({
 
   // Guides
   guideBanner: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 18,
-    marginBottom: 4,
-    overflow: 'hidden',
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 10,
+    marginBottom: 2,
     width: '100%',
   },
+  guideBannerHeading: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 4 },
   guideBannerTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontFamily: 'Satoshi-Bold',
-    letterSpacing: -0.3,
+    letterSpacing: -0.35,
   },
   guideBannerSub: {
-    fontSize: 14,
+    fontSize: 12,
     fontFamily: 'Satoshi-Medium',
-    marginTop: 4,
-    lineHeight: 20,
+    lineHeight: 17,
   },
-  guideTopicRow: {
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    gap: 7,
+  guideTopicSearch: {
+    minHeight: 50,
     flexDirection: 'row',
-  },
-  guideTopicChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    borderRadius: 16,
     borderWidth: 1,
   },
-  guideTopicText: {
+  guideTopicSearchInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: 48,
+    paddingVertical: 0,
     fontSize: 13,
-    fontFamily: 'Satoshi-Bold',
-    letterSpacing: 0.1,
+    fontFamily: 'Satoshi-Medium',
   },
+  guideTopicSuggestions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 9,
+  },
+  guideTopicSuggestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    minHeight: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+  },
+  guideTopicDot: { width: 7, height: 7, borderRadius: 4 },
+  guideTopicSuggestionText: {
+    fontSize: 12,
+    fontFamily: 'Satoshi-Bold',
+  },
+  guideTopicNoMatch: { marginTop: 9, fontSize: 12, fontFamily: 'Satoshi-Regular' },
   guideAvailToggle: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1091,39 +1141,102 @@ const styles = StyleSheet.create({
   guideTagText:  { fontSize: 10, fontFamily: 'Satoshi-Medium' },
   guideTagMore:  { fontSize: 11, fontFamily: 'Satoshi-Regular', alignSelf: 'center' },
 
-  // People
-  peopleRoot: { flex: 1 },
-  searchBar: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    margin: 16, borderRadius: 16, borderWidth: 1,
-    paddingHorizontal: 14, paddingVertical: 13,
-  },
-  searchInput: {
-    flex: 1, fontSize: 13, fontFamily: 'Satoshi-Regular',
-    paddingVertical: 0,
-  },
-  peopleList: { paddingHorizontal: 16, gap: 10 },
-  personCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    width: '100%', maxWidth: 760, alignSelf: 'center',
-    borderRadius: 18, borderWidth: 1,
+  // Tutorial discovery
+  tutorialsContent: { paddingTop: 14, paddingBottom: 130 },
+  tutorialsBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    marginHorizontal: 16,
+    marginBottom: 18,
     padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 3,
+    borderRadius: 18,
+    borderWidth: 1,
   },
-  personAvatar: {
-    width: 46, height: 46, borderRadius: 23,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, flexShrink: 0,
+  tutorialsBannerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  personInitial:  { fontSize: 17, fontFamily: 'Satoshi-Bold' },
-  personInfo:     { flex: 1, gap: 3 },
-  personName:     { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
-  personHandle:   { fontSize: 12, fontFamily: 'Satoshi-Medium' },
-  personBio:      { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', lineHeight: 16 },
+  tutorialsBannerTitle: { fontSize: 14, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  tutorialsBannerSubtitle: { fontSize: 11, fontFamily: 'Satoshi-Regular', lineHeight: 15, marginTop: 2 },
+  tutorialsLibraryButton: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+  tutorialsLibraryText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
+  tutorialsHeading: { marginHorizontal: 18, marginBottom: 12 },
+  tutorialsHeadingTitle: { fontSize: 17, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  tutorialsHeadingSubtitle: { fontSize: 12, fontFamily: 'Satoshi-Regular', marginTop: 2 },
+  tutorialCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderRadius: UI.radius.card,
+    borderWidth: 1,
+    padding: 11,
+  },
+  tutorialCover: {
+    width: 76,
+    height: 98,
+    borderRadius: 12,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  tutorialStepBadge: {
+    position: 'absolute',
+    bottom: 5,
+    left: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(12,8,32,0.82)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  tutorialStepBadgeText: { color: '#FFF', fontSize: 9, fontFamily: 'Satoshi-Bold' },
+  tutorialCardInfo: { flex: 1, minWidth: 0, gap: 5 },
+  tutorialTopic: { alignSelf: 'flex-start', maxWidth: '100%', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 9 },
+  tutorialTopicText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
+  tutorialCardTitle: { fontSize: 14, lineHeight: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  tutorialCardDescription: { fontSize: 11, lineHeight: 15, fontFamily: 'Satoshi-Regular' },
+  tutorialGuideRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  tutorialGuideAvatar: { width: 20, height: 20, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  tutorialGuideName: { fontSize: 10, fontFamily: 'Satoshi-Medium', flexShrink: 1 },
+  tutorialsState: {
+    minHeight: 196,
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 22,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 9,
+  },
+  tutorialsStateTitle: { fontSize: 15, textAlign: 'center', fontFamily: 'Satoshi-Bold' },
+  tutorialsStateBody: { maxWidth: 280, fontSize: 12, lineHeight: 17, textAlign: 'center', fontFamily: 'Satoshi-Regular' },
+  tutorialsStateButton: {
+    minHeight: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    marginTop: 4,
+    paddingHorizontal: 15,
+    borderRadius: 13,
+  },
+  tutorialsStateButtonText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
   followBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
     paddingHorizontal: 14, minHeight: UI.minTapTarget,
@@ -1151,11 +1264,4 @@ const styles = StyleSheet.create({
     fontSize: UI.type.supporting, fontFamily: 'Satoshi-Regular',
     textAlign: 'center', lineHeight: 21,
   },
-  searchHint: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 14, borderWidth: 1, marginTop: 4,
-  },
-  searchHintText: { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
-
 });
