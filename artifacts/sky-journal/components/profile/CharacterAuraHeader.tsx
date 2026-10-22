@@ -1,10 +1,11 @@
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Animated, Easing, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
+  AccessibilityInfo, Animated, Easing, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { useTheme } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { ProfileEffect } from '@/components/ProfileEffect';
@@ -14,15 +15,33 @@ import {
   PARTICLE_SIZES, PARTICLE_XS,
 } from './profileConstants';
 
+// ── Motion gate: reduced-motion preference + tab focus ─────────────────────
+
+export function useDecorativeMotion() {
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [focused, setFocused] = useState(true);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => null);
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => sub.remove();
+  }, []);
+  useFocusEffect(React.useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
+  return { reduceMotion, animate: focused && !reduceMotion };
+}
+
 // ── FrameRing ──────────────────────────────────────────────────────────────────
 
 export function FrameRing({ frameId }: { frameId: string }) {
   const cfg     = FRAME_CONFIGS[frameId];
   const pulse   = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
+  const { animate } = useDecorativeMotion();
 
   useEffect(() => {
-    if (!cfg) return;
+    if (!cfg || !animate) { pulse.setValue(0.5); shimmer.setValue(0); return; }
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(pulse,   { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       Animated.timing(pulse,   { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
@@ -35,7 +54,7 @@ export function FrameRing({ frameId }: { frameId: string }) {
     shimLoop.start();
     return () => { loop.stop(); shimLoop.stop(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameId]);
+  }, [frameId, animate]);
 
   if (!cfg) return null;
 
@@ -63,14 +82,16 @@ export function FrameRing({ frameId }: { frameId: string }) {
 export function BreathingAvatarRing({ mood }: { mood: string }) {
   const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const breathe = useRef(new Animated.Value(0)).current;
+  const { animate } = useDecorativeMotion();
   useEffect(() => {
+    if (!animate) { breathe.setValue(0.5); return; }
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(breathe, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       Animated.timing(breathe, { toValue: 0, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
     loop.start();
     return () => loop.stop();
-  }, [breathe]);
+  }, [breathe, animate]);
   const scale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] });
   const opacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.18, 0.80, 0.18] });
   return (
@@ -136,21 +157,24 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
     ? aura.gradient
     : [colors.background, colors.card, `${aura.accent}25`];
   const { width: screenW } = useWindowDimensions();
+  const { reduceMotion, animate } = useDecorativeMotion();
   const breatheAnim   = useRef(new Animated.Value(0)).current;
   const particleAnims = useRef(
     PARTICLE_XS.map(() => ({ y: new Animated.Value(0), op: new Animated.Value(0) }))
   ).current;
 
   useEffect(() => {
+    if (!animate) return;
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(breatheAnim, { toValue: 1, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       Animated.timing(breatheAnim, { toValue: 0, duration: 3000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
     ]));
     loop.start();
     return () => loop.stop();
-  }, [breatheAnim]);
+  }, [breatheAnim, animate]);
 
   useEffect(() => {
+    if (!animate) return;
     const H = 280;
     const loops = particleAnims.slice(0, aura.count).map((p, i) => {
       p.y.setValue(-(i * (H / aura.count)));
@@ -175,7 +199,7 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
     });
     return () => loops.forEach(l => l.stop());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mood]);
+  }, [mood, animate]);
 
   const glowOpacity    = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] });
   const glowScale      = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0.80, 1.18] });
@@ -198,12 +222,12 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
           />
         </>
       ) : null}
-      {activeEffect && <ProfileEffect effectId={activeEffect} />}
+      {activeEffect && animate && <ProfileEffect effectId={activeEffect} />}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.1, left: -screenW * 0.1, width: screenW * 1.2, height: screenW * 1.2, borderRadius: screenW * 0.6, backgroundColor: aura.accent, opacity: glow2Opacity, transform: [{ scale: glowScale }] }} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.4, left: screenW * 0.15, width: screenW * 0.70, height: screenW * 0.70, borderRadius: screenW * 0.35, backgroundColor: aura.accent, opacity: glowOpacity, transform: [{ scale: glowScale }] }} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: 90, backgroundColor: aura.accent, opacity: cornerOpacity }} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', bottom: -30, left: -30, width: 130, height: 130, borderRadius: 65, backgroundColor: aura.accent, opacity: corner2Opacity }} />
-      {particleAnims.slice(0, aura.count).map((p, i) => (
+      {!reduceMotion && particleAnims.slice(0, aura.count).map((p, i) => (
         <Animated.Text
           key={i}
           pointerEvents="none"
@@ -220,7 +244,7 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
 export { ACCENT_CONFIGS, FRAME_CONFIGS };
 
 const s = StyleSheet.create({
-  header: { paddingHorizontal: 16, paddingBottom: 6 },
-  coverImage: { position: 'absolute', top: 0, left: 0, right: 0, height: 190, opacity: 0.94 },
-  coverVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: 202 },
+  header: { paddingHorizontal: 16, paddingBottom: 12 },
+  coverImage: { position: 'absolute', top: 0, left: 0, right: 0, height: 230, opacity: 0.94 },
+  coverVeil: { position: 'absolute', top: 0, left: 0, right: 0, height: 242 },
 });

@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import React, { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { SHADOW } from '@/constants/colors';
 import { useTranslation } from 'react-i18next';
 import { GuideSessionsManagementSection } from './GuideSessionsManagementSection';
@@ -40,6 +40,8 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
     ? ['#1A152E', '#1B1431', '#22143F']
     : [colors.card, colors.card, `${colors.secondary}12`];
   const socialCount = character.links?.length ?? 0;
+  const { width: screenW } = useWindowDimensions();
+  const narrow = screenW < 380;
 
   const [editingBirthday,  setEditingBirthday]  = useState(false);
   const [aboutExpanded,    setAboutExpanded]    = useState(false);
@@ -275,7 +277,7 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
             ] as const).map(item => (
               <TouchableOpacity
                 key={item.label}
-                style={[s.metadataItem, { backgroundColor: `${item.accent}14`, borderColor: `${item.accent}30` }]}
+                style={[s.metadataItem, narrow && s.metadataItemNarrow, { backgroundColor: `${item.accent}14`, borderColor: `${item.accent}30` }]}
                 onPress={() => setAboutExpanded(true)}
                 activeOpacity={0.76}
                 accessibilityRole="button"
@@ -302,7 +304,7 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
                     {item.value}
                   </Text>
                 </View>
-                <Icon name="chevron-right" size={12} color={`${item.accent}CC`} />
+                {!narrow && <Icon name="chevron-right" size={12} color={`${item.accent}CC`} />}
               </TouchableOpacity>
             ))}
           </View>
@@ -331,7 +333,7 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
                   <View style={[s.guideHeroIconWrap, !isDark && { backgroundColor: `${colors.primary}12`, borderColor: `${colors.primary}24` }]}><Icon name="star" size={18} color={isDark ? '#D7BE65' : colors.secondary} /></View>
               <View style={s.guideHeroCopy}>
                 <Text style={[s.guideHeroTitle, !isDark && { color: colors.foreground }]}>{t('social.guide')}</Text>
-                <Text style={[s.guideHeroSub, !isDark && { color: colors.mutedForeground }]}>
+                <Text numberOfLines={2} style={[s.guideHeroSub, !isDark && { color: colors.mutedForeground }]}>
                   {character.isGuide ? t('components.about.guideActive') : t('components.about.guideHelp')}
                 </Text>
               </View>
@@ -543,20 +545,21 @@ export function ProfileAboutSection({ character, setCharacter, betweenAboutAndGu
 }
 
 const s = StyleSheet.create({
-  aboutCard:        { borderRadius: 18, borderWidth: 1, marginBottom: 8, overflow: 'hidden' },
+  aboutCard:        { borderRadius: 20, borderWidth: 1, marginBottom: 10, overflow: 'hidden' },
   aboutCardHeader:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 10, paddingVertical: 5 },
   aboutCardIcon:    { width: 25, height: 25, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   aboutCardTitle:   { fontSize: 13, fontFamily: 'Satoshi-Bold', letterSpacing: -0.1 },
   aboutEditButton:  { flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderRadius: 9, paddingHorizontal: 8, paddingVertical: 4 },
   aboutEditButtonText: { fontSize: 10, fontFamily: 'Satoshi-Bold' },
-  aboutSummary:     { paddingHorizontal: 7, paddingVertical: 7, flexDirection: 'row', gap: 6 },
+  aboutSummary:     { padding: 8, flexDirection: 'row', gap: 7 },
   aboutSummaryLine: { fontSize: 13, fontFamily: 'Satoshi-Medium' },
   aboutSummaryMeta: { fontSize: 11, fontFamily: 'Satoshi-Regular' },
-  metadataItem:     { flex: 1, minWidth: 0, minHeight: 62, borderWidth: 1, borderRadius: 14, paddingHorizontal: 6, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 5 },
-  metadataIcon:     { width: 25, height: 25, flexShrink: 0, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  metadataItem:     { flex: 1, minWidth: 0, minHeight: 64, borderWidth: 1, borderRadius: 16, paddingHorizontal: 8, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 },
+  metadataItemNarrow:{ paddingHorizontal: 6, gap: 4, minHeight: 58 },
+  metadataIcon:     { width: 28, height: 28, flexShrink: 0, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   metadataCopy:     { flex: 1, minWidth: 0, gap: 2 },
-  metadataLabel:    { flexShrink: 1, minWidth: 0, fontSize: 9, lineHeight: 11, fontFamily: 'Satoshi-Medium' },
-  metadataValue:    { flexShrink: 1, minWidth: 0, fontSize: 10, lineHeight: 12, fontFamily: 'Satoshi-Bold', letterSpacing: -0.15 },
+  metadataLabel:    { flexShrink: 1, minWidth: 0, fontSize: 10, lineHeight: 13, fontFamily: 'Satoshi-Medium' },
+  metadataValue:    { flexShrink: 1, minWidth: 0, fontSize: 12, lineHeight: 15, fontFamily: 'Satoshi-Bold', letterSpacing: -0.15 },
   roleMark:         { width: 27, height: 27, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   aboutRow:         { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, paddingHorizontal: 16, paddingVertical: 13, gap: 10 },
   aboutRowLeft:     { flex: 1, gap: 3 },
@@ -579,8 +582,8 @@ const s = StyleSheet.create({
   socialBadge:      { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   handleInput:      { fontSize: 13, fontFamily: 'Satoshi-Regular', backgroundColor: 'rgba(155,120,255,0.10)', borderWidth: 1, borderColor: 'rgba(155,120,255,0.28)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8 },
   saveLinkBtn:      { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  guideCard:        { borderRadius: 14, overflow: 'hidden', marginBottom: 6, borderWidth: 1, borderColor: 'rgba(145,109,222,0.23)', backgroundColor: '#181428' },
-  guideHero:        { minHeight: 47, paddingHorizontal: 10, paddingVertical: 4, overflow: 'hidden', justifyContent: 'center' },
+  guideCard:        { borderRadius: 20, overflow: 'hidden', marginBottom: 10, borderWidth: 1, borderColor: 'rgba(145,109,222,0.23)', backgroundColor: '#181428' },
+  guideHero:        { minHeight: 68, paddingHorizontal: 14, paddingVertical: 10, overflow: 'hidden', justifyContent: 'center' },
   guideHeroOpen:    { borderBottomWidth: 1, borderBottomColor: 'rgba(145,109,222,0.2)' },
   guideOrbit:       { position: 'absolute', width: 190, height: 190, borderRadius: 95, borderWidth: 1, borderColor: 'rgba(181,140,255,0.16)', right: -34, bottom: -124 },
   guidePlanet:      { position: 'absolute', width: 156, height: 156, borderRadius: 78, backgroundColor: 'rgba(139,88,224,0.12)', right: -22, bottom: -110 },
@@ -588,16 +591,16 @@ const s = StyleSheet.create({
   guideSparkleTwo:  { position: 'absolute', width: 3, height: 3, borderRadius: 2, backgroundColor: '#BA9BEE', right: 102, top: 48 },
   guideHeroRow:     { flexDirection: 'row', alignItems: 'center', gap: 8 },
   guideHeroTitleRow:{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 },
-  guideHeroIconWrap:{ width: 32, height: 32, flexShrink: 0, borderRadius: 11, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
+  guideHeroIconWrap:{ width: 40, height: 40, flexShrink: 0, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(163,129,237,0.15)', borderWidth: 1, borderColor: 'rgba(192,165,255,0.10)' },
   guideHeroCopy:    { flex: 1, minWidth: 0 },
   guideHeroTitle:   { fontSize: 15, flexShrink: 1, fontFamily: 'Satoshi-Bold', color: '#F5F0FF', letterSpacing: -0.2 },
-  guideHeroSub:     { fontSize: 10, lineHeight: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 1 },
+  guideHeroSub:     { fontSize: 11.5, lineHeight: 15, fontFamily: 'Satoshi-Regular', color: 'rgba(218,205,248,0.70)', marginTop: 1 },
   guideHeroEnd:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8, flexShrink: 0 },
-  guideStatus:      { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 7, paddingVertical: 5 },
+  guideStatus:      { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 30, borderRadius: 20, borderWidth: 1, borderColor: 'rgba(200,184,232,0.22)', backgroundColor: 'rgba(255,255,255,0.05)', paddingHorizontal: 10, paddingVertical: 6 },
   guideStatusOn:    { borderColor: 'rgba(172,139,246,0.55)', backgroundColor: 'rgba(149,105,240,0.18)' },
   guideStatusDot:   { width: 7, height: 7, borderRadius: 4, backgroundColor: '#77718E' },
   guideStatusDotOn: { backgroundColor: '#B394FF' },
-  guideStatusText:  { fontSize: 10, fontFamily: 'Satoshi-Bold', color: 'rgba(214,204,234,0.58)', letterSpacing: 0.6 },
+  guideStatusText:  { fontSize: 11, fontFamily: 'Satoshi-Bold', color: 'rgba(214,204,234,0.58)', letterSpacing: 0.6 },
   guideStatusTextOn:{ color: '#D4C3FF' },
   guideBody:        {},
   guideCompletion:  { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4, gap: 6 },

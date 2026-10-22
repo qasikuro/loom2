@@ -147,6 +147,7 @@ export function ProfileHeaderSection({
               : character.isPublic ? `${colors.primary}40` : colors.border,
           }]}
           onPress={toggleVisibility}
+          hitSlop={{ top: 5, bottom: 5, left: 4, right: 4 }}
         >
           <Icon
             name={character.isPublic ? 'globe' : 'lock'}
@@ -159,11 +160,11 @@ export function ProfileHeaderSection({
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={shareProfile} activeOpacity={0.75}>
-            <Icon name="share-2" size={14} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
+          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={shareProfile} activeOpacity={0.75} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Share profile">
+            <Icon name="share-2" size={16} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={openDrawer} activeOpacity={0.75}>
-            <Icon name="settings" size={14} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
+          <TouchableOpacity style={[s.headerIconBtn, { backgroundColor: heroGlass, borderColor: heroGlassBorder }]} onPress={openDrawer} activeOpacity={0.75} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }} accessibilityRole="button" accessibilityLabel="Settings">
+            <Icon name="settings" size={16} color={heroHasArtwork ? heroForeground : colors.mutedForeground} />
           </TouchableOpacity>
         </View>
       </View>
@@ -184,6 +185,7 @@ export function ProfileHeaderSection({
           <TouchableOpacity
             style={[s.avatarEditBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={pickAvatar}
+            hitSlop={{ top: 7, bottom: 7, left: 7, right: 7 }}
             activeOpacity={0.75}
             accessibilityRole="button"
             accessibilityLabel="Change profile avatar"
@@ -209,7 +211,7 @@ export function ProfileHeaderSection({
               </View>
             ) : (
               <TouchableOpacity style={s.nameRow} onPress={() => setEditingName(true)}>
-                <Text style={[s.profileName, { color: heroForeground }]}>{character.name}</Text>
+                <Text style={[s.profileName, { color: heroForeground }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{character.name}</Text>
                 <Icon name="edit-2" size={11} color={heroForeground} style={{ marginLeft: 5 }} />
               </TouchableOpacity>
             )}
@@ -246,11 +248,11 @@ export function ProfileHeaderSection({
 
           {/* Role / Title row */}
           <View style={s.titleRow}>
-            <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexShrink: 1, minWidth: 0 }}>
               {hasTitle ? (
                 <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Text style={[s.titleStar, { color: colors.gold }]}>✦</Text>
-                  <Text style={[s.titleText, { color: colors.gold }]}>{currentTitle}</Text>
+                  <Text style={[s.titleText, { color: colors.gold }]} numberOfLines={1}>{currentTitle}</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.titleAddBtn}>
@@ -310,7 +312,7 @@ export function ProfileHeaderSection({
             <Text style={[s.profileBio, { flex: 1, color: character.bio ? colors.foreground : colors.mutedForeground }]}>
               {character.bio || 'Tap to add a bio...'}
             </Text>
-            <Icon name="edit-2" size={14} color={colors.mutedForeground} />
+            <Icon name="edit-2" size={15} color={colors.tint} />
           </TouchableOpacity>
         )}
       </View>
@@ -334,47 +336,47 @@ export function ProfileHeaderSection({
 }
 
 const s = StyleSheet.create({
-  headerTopRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  headerIconBtn:    { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  visPill:          { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, minHeight: 28, borderRadius: 22, borderWidth: 1 },
-  visPillText:      { fontSize: 10.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
+  headerTopRow:     { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  headerIconBtn:    { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  visPill:          { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, minHeight: 34, borderRadius: 22, borderWidth: 1 },
+  visPillText:      { fontSize: 12.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },
 
-  profileRow:       { flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 4 },
-  avatarWrap:       { width: 62, height: 62, position: 'relative', flexShrink: 0 },
-  avatarCircle:     { width: 62, height: 62, borderRadius: 31, borderWidth: 2, overflow: 'hidden' },
-  avatarEditBtn:    { position: 'absolute', bottom: -2, right: -2, width: 25, height: 25, borderRadius: 13, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  profileRow:       { flexDirection: 'row', gap: 14, alignItems: 'center', marginBottom: 12 },
+  avatarWrap:       { width: 76, height: 76, position: 'relative', flexShrink: 0 },
+  avatarCircle:     { width: 76, height: 76, borderRadius: 38, borderWidth: 2.5, overflow: 'hidden' },
+  avatarEditBtn:    { position: 'absolute', bottom: -2, right: -2, width: 30, height: 30, borderRadius: 15, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
 
-  profileInfo:      { flex: 1, gap: 1 },
+  profileInfo:      { flex: 1, minWidth: 0, gap: 4 },
   identityLine:     { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, rowGap: 1 },
   nameRow:          { flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0 },
-  profileName:      { fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5, flexShrink: 1 },
+  profileName:      { fontSize: 26, lineHeight: 31, fontFamily: 'Satoshi-Black', letterSpacing: -0.8, flexShrink: 1 },
   nameEditWrap:     { borderBottomWidth: 2, paddingBottom: 3 },
   nameEditInput:    { fontSize: 20, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5 },
   usernameRow:      { flexDirection: 'row', alignItems: 'center' },
-  profileHandle:    { fontSize: 10.5, fontFamily: 'Satoshi-Medium' },
+  profileHandle:    { fontSize: 13, fontFamily: 'Satoshi-Medium' },
   usernameEditWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1.5, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3, minWidth: 110 },
   usernameAt:       { fontSize: 12, fontFamily: 'Satoshi-Bold' },
   usernameEditInput:{ flex: 1, fontSize: 12, fontFamily: 'Satoshi-Regular' },
   usernameError:    { fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 
-  titleRow:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 1 },
+  titleRow:         { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 8, rowGap: 6, marginTop: 2 },
   titleStar:        { fontSize: 12, color: '#C8A84B' },
   titleText:        { fontSize: 12, fontFamily: 'Satoshi-Bold', color: '#C8A84B', letterSpacing: 0.2 },
   titlePlusBtn:     { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(200,184,232,0.35)', backgroundColor: 'rgba(200,184,232,0.08)' },
-  titleAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, minHeight: 24, borderRadius: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(120,100,170,0.45)', backgroundColor: 'rgba(200,184,232,0.05)' },
-  titleAddText:     { fontSize: 10.5, fontFamily: 'Satoshi-Medium', letterSpacing: 0.1 },
+  titleAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, minHeight: 28, borderRadius: 15, borderWidth: 1, borderStyle: 'dashed', borderColor: 'rgba(120,100,170,0.45)', backgroundColor: 'rgba(200,184,232,0.05)' },
+  titleAddText:     { fontSize: 11.5, fontFamily: 'Satoshi-Medium', letterSpacing: 0.1 },
 
-  levelXpRow:       { flex: 1.2, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 0 },
-  xpLevelBadge:     { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(200,168,75,0.18)', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 11 },
-  xpLevelText:      { fontSize: 10, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  levelXpRow:       { flexGrow: 1, flexBasis: 150, minWidth: 140, flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 0 },
+  xpLevelBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(200,168,75,0.20)', borderWidth: 1, borderColor: 'rgba(200,168,75,0.45)', paddingHorizontal: 9, paddingVertical: 4, borderRadius: 13 },
+  xpLevelText:      { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
   xpContainer:      { flex: 1 },
-  xpNumbers:        { fontSize: 10.5, fontFamily: 'Satoshi-Medium', textAlign: 'right', marginBottom: 3 },
+  xpNumbers:        { fontSize: 11, fontFamily: 'Satoshi-Medium', textAlign: 'right', marginBottom: 3 },
   xpBarTrack:       { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' },
   xpBarFill:        { height: 4, borderRadius: 2, backgroundColor: '#C8A84B' },
 
-  bioCard:          { borderRadius: 13, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 5, marginTop: 0 },
-  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 24 },
-  profileBio:       { fontSize: 12.5, lineHeight: 15, fontFamily: 'Satoshi-Medium' },
-  bioInput:         { fontSize: 12.5, lineHeight: 15, fontFamily: 'Satoshi-Regular', padding: 0, minHeight: 30 },
+  bioCard:          { borderRadius: 18, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 11, marginTop: 0, marginBottom: 10 },
+  bioRow:           { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 28 },
+  profileBio:       { fontSize: 14, lineHeight: 19, fontFamily: 'Satoshi-Medium' },
+  bioInput:         { fontSize: 14, lineHeight: 19, fontFamily: 'Satoshi-Regular', padding: 0, minHeight: 30 },
 
 });

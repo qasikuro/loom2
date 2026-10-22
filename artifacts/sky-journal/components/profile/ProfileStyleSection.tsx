@@ -391,7 +391,7 @@ function GalleryMediaCard({
         <TouchableOpacity
           style={s.galleryMenuButton}
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onStoryMenu(story); }}
-          hitSlop={{ top: 7, bottom: 7, left: 7, right: 7 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           activeOpacity={0.75}
           accessibilityRole="button"
           accessibilityLabel={story.chapterTitle}
@@ -448,16 +448,22 @@ export function ProfileStyleSection({
     ? allEntries.filter(entry => entry.kind === selectedKind)
     : allEntries;
   const previewEntries = galleryExpanded ? filteredEntries : filteredEntries.slice(0, 3);
-  const previewCardWidth = Math.min(90, Math.max(72, (screenWidth - 58) / 4));
+  const [galleryWidth, setGalleryWidth] = useState(0);
+  // Content width: measured container, else screen minus the profile column padding (14*2).
+  const contentWidth = Math.max(0, (galleryWidth || Math.min(screenWidth, 800) - 28) - 4);
+  const PREVIEW_GAP = 8;
+  const GRID_GAP = 8;
+  const previewCardWidth = Math.floor(Math.min(124, (contentWidth - PREVIEW_GAP * 3) / 4));
   const previewCardHeight = Math.round(previewCardWidth * 1.78);
-  const gridCardWidth = Math.min(116, Math.max(90, (screenWidth - 52) / 3));
+  const gridColumns = contentWidth >= 620 ? 5 : contentWidth >= 460 ? 4 : 3;
+  const gridCardWidth = Math.floor((contentWidth - GRID_GAP * (gridColumns - 1)) / gridColumns);
   const gridCardHeight = Math.round(gridCardWidth * 1.5);
   const totalCount = allEntries.length;
 
   return (
     <>
       {/* ── Unified profile gallery ─── */}
-      <View style={s.section}>
+      <View style={s.section} onLayout={e => { const w = Math.round(e.nativeEvent.layout.width); if (w !== galleryWidth) setGalleryWidth(w); }}>
         <View style={[s.galleryPanel, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={s.galleryHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -475,7 +481,7 @@ export function ProfileStyleSection({
               style={[s.gallerySeeAll, { backgroundColor: `${colors.tint}12`, borderColor: `${colors.tint}30` }]}
               onPress={() => { Haptics.selectionAsync(); setGalleryExpanded(value => !value); }}
             activeOpacity={0.75}
-              hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               accessibilityRole="button"
               accessibilityLabel={galleryExpanded ? t('common.close') : t('components.profileSection.seeAll')}
           >
@@ -503,6 +509,7 @@ export function ProfileStyleSection({
                     setGalleryExpanded(false);
                   }}
                   activeOpacity={0.8}
+                  hitSlop={{ top: 4, bottom: 4 }}
                   accessibilityRole="tab"
                   accessibilityState={{ selected: isSelected }}
                 >
@@ -649,30 +656,30 @@ function GalleryAddCard({
 
 const s = StyleSheet.create({
   section:           { marginBottom: 10 },
-  sectionTitle:      { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.35 },
+  sectionTitle:      { fontSize: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.35 },
   countPill:         { borderRadius: 11, paddingHorizontal: 7, paddingVertical: 3 },
   countPillText:     { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  galleryPanel:      { borderWidth: 1, borderRadius: 19, marginBottom: 8 },
-  galleryHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 11, paddingTop: 9, paddingBottom: 7, minHeight: 44 },
-  galleryHeadingIcon:{ width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  gallerySeeAll:     { flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 30, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9 },
-  gallerySeeAllText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  galleryTabs:       { flexDirection: 'row', alignItems: 'center', gap: 3, marginHorizontal: 9, marginBottom: 9, padding: 3, borderRadius: 14 },
-  galleryTab:        { flex: 1, minWidth: 0, minHeight: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 11, paddingHorizontal: 5 },
-  galleryTabText:    { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  galleryRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingHorizontal: 2, paddingBottom: 6 },
+  galleryPanel:      { borderWidth: 1, borderRadius: 20, marginBottom: 10 },
+  galleryHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10, minHeight: 54 },
+  galleryHeadingIcon:{ width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  gallerySeeAll:     { flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 34, borderWidth: 1, borderRadius: 17, paddingHorizontal: 12 },
+  gallerySeeAllText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
+  galleryTabs:       { flexDirection: 'row', alignItems: 'center', gap: 3, marginHorizontal: 10, marginBottom: 10, padding: 4, borderRadius: 16 },
+  galleryTab:        { flex: 1, minWidth: 0, minHeight: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 5 },
+  galleryTabText:    { fontSize: 12.5, fontFamily: 'Satoshi-Bold' },
+  galleryRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
   galleryGrid:       { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
   galleryMediaCard:  { borderWidth: 1, borderRadius: 16, overflow: 'hidden', position: 'relative' },
   galleryFallbackIcon:{ position: 'absolute', top: '42%', alignSelf: 'center' },
   galleryKindBadge:  { position: 'absolute', top: 7, left: 7, width: 23, height: 23, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.62)', alignItems: 'center', justifyContent: 'center' },
   galleryWornBadge:  { position: 'absolute', top: 7, left: 34, minHeight: 23, paddingHorizontal: 7, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.68)', alignItems: 'center', justifyContent: 'center' },
-  galleryWornText:   { fontSize: 8, fontFamily: 'Satoshi-Bold', color: '#fff' },
-  galleryMenuButton: { position: 'absolute', top: 6, right: 6, width: 24, height: 24, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.62)', alignItems: 'center', justifyContent: 'center' },
+  galleryWornText:   { fontSize: 9.5, fontFamily: 'Satoshi-Bold', color: '#fff' },
+  galleryMenuButton: { position: 'absolute', top: 5, right: 5, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(8,6,22,0.62)', alignItems: 'center', justifyContent: 'center' },
   galleryMediaFooter:{ position: 'absolute', bottom: 0, left: 0, right: 0, minHeight: 42, justifyContent: 'flex-end', paddingHorizontal: 7, paddingBottom: 7 },
-  galleryMediaTitle: { color: '#fff', fontSize: 10, lineHeight: 12, fontFamily: 'Satoshi-Bold' },
+  galleryMediaTitle: { color: '#fff', fontSize: 12, lineHeight: 15, fontFamily: 'Satoshi-Bold' },
   galleryAddCard:    { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 16, paddingHorizontal: 6, gap: 9 },
   galleryAddIcon:    { width: 36, height: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  galleryAddText:    { maxWidth: '94%', fontSize: 11, lineHeight: 13, textAlign: 'center', fontFamily: 'Satoshi-Bold' },
+  galleryAddText:    { maxWidth: '94%', fontSize: 12, lineHeight: 15, textAlign: 'center', fontFamily: 'Satoshi-Bold' },
   galError:          { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 });
 

@@ -293,18 +293,18 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
-  setupCard: { minHeight: 48, borderRadius: 14, borderWidth: 1, padding: 9, marginBottom: 7, flexDirection: 'row', alignItems: 'center', gap: 8 },
+  setupCard: { minHeight: 52, borderRadius: 18, borderWidth: 1, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   setupIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(181,140,255,0.14)' },
-  setupTitle: { fontFamily: 'Satoshi-Bold', fontSize: 12 },
-  setupSubtitle: { fontFamily: 'Satoshi-Regular', fontSize: 10, marginTop: 1 },
-  setupButton: { paddingHorizontal: 10, minHeight: 30, justifyContent: 'center', borderRadius: 9, backgroundColor: '#8C68D8' },
-  setupButtonText: { fontFamily: 'Satoshi-Bold', fontSize: 10 },
+  setupTitle: { fontFamily: 'Satoshi-Bold', fontSize: 13.5 },
+  setupSubtitle: { fontFamily: 'Satoshi-Regular', fontSize: 11.5, marginTop: 1 },
+  setupButton: { paddingHorizontal: 12, minHeight: 34, justifyContent: 'center', borderRadius: 9, backgroundColor: '#8C68D8' },
+  setupButtonText: { fontFamily: 'Satoshi-Bold', fontSize: 12 },
 });
 
 const offlineS = StyleSheet.create({
   row:     { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginHorizontal: 14, marginTop: 8, marginBottom: 2, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 12, borderWidth: 1, backgroundColor: 'rgba(14,10,32,0.88)', borderColor: 'rgba(200,168,75,0.35)', zIndex: 10 },
   dot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: '#C8A84B', flexShrink: 0 },
   msg:     { flex: 1, fontSize: 12, fontFamily: 'Satoshi-Medium', color: 'rgba(220,210,240,0.78)' },
-  btn:     { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)' },
+  btn:     { paddingHorizontal: 12, minHeight: 32, justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'rgba(107,91,149,0.40)' },
   btnText: { fontSize: 11, fontFamily: 'Satoshi-Bold', color: '#9B78E8' },
 });

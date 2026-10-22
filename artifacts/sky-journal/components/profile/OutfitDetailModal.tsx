@@ -63,14 +63,14 @@ export function OutfitDetailModal({
                 <View style={[s.imageWrap, { backgroundColor: `${colors.primary}14` }]}>
                   {outfit.imageUri ? (
                     <View style={s.photoFrame}>
-                      <VibeMotion key={outfit.id + ':' + vibe} vibe={vibe}>
+                      <VibeMotion key={`${outfit.id}:${vibe}`} vibe={vibe}>
                         <Image
                           source={{ uri: outfit.imageUri }}
                           style={StyleSheet.absoluteFill}
                           contentFit={imageFit}
                         />
                       </VibeMotion>
-                      {vibe ? <VibeOverlay key={outfit.id + ':' + vibe} vibe={vibe} /> : null}
+                      {vibe ? <VibeOverlay key={`${outfit.id}:${vibe}`} vibe={vibe} /> : null}
                     </View>
                   ) : (
                     <View style={[s.image, { backgroundColor: `${colors.primary}14`, alignItems: 'center', justifyContent: 'center', gap: 10 }]}>
@@ -174,6 +174,7 @@ export function OutfitDetailModal({
                         pathname: '/user-outfit',
                         params: {
                           outfitName:   outfit.name,
+                          outfitId:     outfit.id,
                           outfitDesc:   outfit.description ?? '',
                           // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           outfitStory:  (outfit as any).story ?? '',
@@ -185,6 +186,8 @@ export function OutfitDetailModal({
                           authorName:   character.name ?? '',
                           authorHandle: character.username ?? '',
                           authorBio:    character.bio ?? '',
+                          authorAvatarUri: character.avatarUri ?? '',
+                          authorIsSelf: 'true',
                           authorMood:   character.mood ?? '',
                           authorTraits: JSON.stringify(character.traits ?? []),
                         },

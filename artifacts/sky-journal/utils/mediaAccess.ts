@@ -52,8 +52,9 @@ function mediaPath(uri: string): string | null {
     return null;
   }
 
-  // Root-relative API paths are local media references. Absolute URLs are only
-  // managed when they point at this app's API origin; foreign URLs stay intact.
+  // Root-relative API paths are local media references. Older uploads can carry
+  // a Replit development hostname; route those through the current API so the
+  // server can re-check ownership/public access and issue a current read URL.
   const expectedOrigin = baseUrl
     ? new URL(baseUrl).origin
     : typeof window !== 'undefined'
@@ -61,7 +62,14 @@ function mediaPath(uri: string): string | null {
       : process.env.EXPO_PUBLIC_DOMAIN
         ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
         : undefined;
-  if (isAbsoluteUrl && (!expectedOrigin || parsed.origin !== expectedOrigin)) return null;
+  const isLegacyReplitMediaOrigin = isAbsoluteUrl
+    && parsed.protocol === 'https:'
+    && parsed.hostname.toLowerCase().endsWith('.replit.dev');
+  if (
+    isAbsoluteUrl
+    && !isLegacyReplitMediaOrigin
+    && (!expectedOrigin || parsed.origin !== expectedOrigin)
+  ) return null;
   if (!isAbsoluteUrl && !uri.startsWith('/') && (!expectedOrigin || parsed.origin !== expectedOrigin)) return null;
 
   const match = parsed.pathname.match(/^\/api\/(images|videos)\/([^/]+)\/?$/i);
