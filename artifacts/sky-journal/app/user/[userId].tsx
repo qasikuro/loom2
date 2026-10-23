@@ -34,6 +34,7 @@ import { ReportSheet } from '@/components/ReportSheet';
 import { WeatherWidget } from '@/components/WeatherWidget';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
+import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
 
 // ── Mood aura data ────────────────────────────────────────────────────────────
 type AuraData = {
@@ -1297,6 +1298,7 @@ export default function UserProfileScreen() {
               />
             </View>
           )}
+          {isFounder && <FounderAuroraCardFrame />}
         </Animated.View>
 
         {/* ── BODY ─────────────────────────────────────────────────── */}
