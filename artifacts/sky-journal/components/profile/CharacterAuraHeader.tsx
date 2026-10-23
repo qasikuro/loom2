@@ -128,6 +128,19 @@ export function FrameRing({
     marginTop: -diameter / 2,
     borderRadius: diameter / 2,
   });
+  // Frame artwork uses coordinates relative to a compact square centered on the
+  // avatar. Filling the whole parent banner shifts the wing artwork away from
+  // the avatar because its feather positions are intentionally size-relative.
+  const frameLayerStyle = {
+    position: 'absolute' as const,
+    width: size,
+    height: size,
+    left: '50%' as const,
+    top: '50%' as const,
+    marginLeft: -size / 2,
+    marginTop: -size / 2,
+    overflow: 'visible' as const,
+  };
 
   if (isCelestialWings) {
     const wingLift = wingFlap.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -1.6, 0] });
@@ -259,13 +272,13 @@ export function FrameRing({
     );
 
     if (layer === 'wings') {
-      return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>{wingArtwork}</View>;
+      return <View pointerEvents="none" style={frameLayerStyle}>{wingArtwork}</View>;
     }
     if (layer === 'ornament') {
-      return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>{wingOrnaments}</View>;
+      return <View pointerEvents="none" style={frameLayerStyle}>{wingOrnaments}</View>;
     }
     return (
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>
+      <View pointerEvents="none" style={frameLayerStyle}>
         {wingArtwork}
         {wingOrnaments}
       </View>
@@ -303,7 +316,7 @@ export function FrameRing({
         ];
 
     return (
-      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>
+      <View pointerEvents="none" style={frameLayerStyle}>
         <Animated.View
           style={[
             ringStyle(haloSize),
