@@ -45,6 +45,14 @@ export const SHOP_CATALOG: ShopItem[] = [
     category:    "frame",
     cost:        { stars: 180 },
   },
+  {
+    id:          "frame_celestial_wings",
+    name:        "Celestial Wings",
+    description: "Pearl-white wings with gold filigree, softly moving in a celestial breeze.",
+    icon:        "✦",
+    category:    "frame",
+    cost:        { stars: 360 },
+  },
   // ── Profile Effects ───────────────────────────────────────────────────────
   {
     id:          "effect_butterfly",

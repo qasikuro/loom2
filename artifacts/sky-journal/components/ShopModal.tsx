@@ -46,6 +46,7 @@ const ITEM_ICON_MAP: Record<string, string> = {
   frame_moonveil:     '◑',
   frame_moonlight:    '☾',
   frame_fire:         '✦',
+  frame_celestial_wings: '✦',
   accent_aura:        '◈',
   theme_locket:       '◇',
   theme_aurora:       '⋆',
@@ -69,6 +70,7 @@ const ITEM_ICON_MAP: Record<string, string> = {
 const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'frame_moonlight', name: 'Moonlight', description: 'A silver-lilac orbit, a quiet crescent, and tiny stars circling your profile picture.', icon: '☾', category: 'frame', cost: { stars: 180 } },
   { id: 'frame_fire', name: 'Fire', description: 'A living ember ring with warm sparks that flicker around your profile picture.', icon: '✦', category: 'frame', cost: { stars: 180 } },
+  { id: 'frame_celestial_wings', name: 'Celestial Wings', description: 'Pearl-white wings with gold filigree, softly moving in a celestial breeze.', icon: '✦', category: 'frame', cost: { stars: 360 } },
   { id: 'effect_butterfly', name: 'Ethereal Butterflies', description: 'Luminous butterflies drift across your profile, wings catching the light of distant stars.', icon: '🦋', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_fireflies', name: 'Firefly Glow',         description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',         icon: '✨', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
@@ -170,12 +172,13 @@ function ItemPreview({ category, icon, color, itemId }: { category: string; colo
   return (
     <View style={[pv.wrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
       {category === 'frame' && (
-        itemId === 'frame_moonlight' || itemId === 'frame_fire' ? (
+        itemId === 'frame_moonlight' || itemId === 'frame_fire' || itemId === 'frame_celestial_wings' ? (
           <View style={pv.premiumFramePreview}>
+            <FrameRing frameId={itemId} size={itemId === 'frame_celestial_wings' ? 30 : 58} layer="wings" />
             <View style={[pv.previewAvatar, { backgroundColor: `${color}20`, borderColor: `${color}65` }]}>
-              <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : '◉'}</Text>
+              <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : itemId === 'frame_celestial_wings' ? '✦' : '◉'}</Text>
             </View>
-            <FrameRing frameId={itemId} size={58} />
+            <FrameRing frameId={itemId} size={itemId === 'frame_celestial_wings' ? 30 : 58} layer="ornament" />
           </View>
         ) : (
           <View style={[pv.frameOuter, { borderColor: `${color}60` }]}>

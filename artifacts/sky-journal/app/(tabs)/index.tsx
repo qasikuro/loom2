@@ -615,6 +615,7 @@ const COSMETIC_META: Record<string, { icon: string; category: 'frame' | 'accent'
   frame_moonveil:      { icon: '◑', category: 'frame',  catLabel: 'Profile Frame', desc: 'Silver moonlit crescent' },
   frame_moonlight:     { icon: '☾', category: 'frame',  catLabel: 'Profile Frame', desc: 'A crescent moon and starlit orbit' },
   frame_fire:          { icon: '✦', category: 'frame',  catLabel: 'Profile Frame', desc: 'Ember light and glowing sparks' },
+  frame_celestial_wings: { icon: '✦', category: 'frame', catLabel: 'Profile Frame', desc: 'Pearl wings and golden filigree' },
   accent_aura:         { icon: '◈', category: 'accent', catLabel: 'Bio Accent',    desc: 'Soft purple luminescence' },
   theme_locket:        { icon: '◇', category: 'theme',  catLabel: 'Journal Theme', desc: 'Vintage memory locket' },
   theme_aurora:        { icon: '⋆', category: 'theme',  catLabel: 'Journal Theme', desc: 'Northern lights colours' },

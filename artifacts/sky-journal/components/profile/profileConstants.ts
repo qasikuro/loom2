@@ -133,6 +133,7 @@ export const FRAME_CONFIGS: Record<string, { color: string; glow: string; dashOp
   frame_moonveil:  { color: '#B8C8DC', glow: 'rgba(184,200,220,0.35)', dashOpacity: 0.82 },
   frame_moonlight: { color: '#D9B8FF', glow: 'rgba(190,137,255,0.46)', dashOpacity: 0.96 },
   frame_fire:      { color: '#FF7048', glow: 'rgba(255,80,42,0.42)',   dashOpacity: 0.94 },
+  frame_celestial_wings: { color: '#E9C879', glow: 'rgba(245,211,142,0.46)', dashOpacity: 0.94 },
   frame_blossom:   { color: '#F0A8C0', glow: 'rgba(240,168,192,0.38)', dashOpacity: 0.88 },
   frame_solstice:  { color: '#F0B840', glow: 'rgba(240,184,64,0.42)',  dashOpacity: 0.88 },
   frame_harvest:   { color: '#D47830', glow: 'rgba(212,120,48,0.40)',  dashOpacity: 0.86 },

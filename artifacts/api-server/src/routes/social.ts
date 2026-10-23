@@ -10,7 +10,7 @@ import * as cache from "../lib/cache";
 import { isBlocked } from "./blocks";
 
 const router: IRouter = Router();
-const PUBLIC_PROFILE_FRAME_IDS = ["frame_moonlight", "frame_fire"] as const;
+const PUBLIC_PROFILE_FRAME_IDS = ["frame_moonlight", "frame_fire", "frame_celestial_wings"] as const;
 
 function safeDiscoverUri(uri: string | null | undefined): string | null {
   if (!uri) return null;

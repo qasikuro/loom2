@@ -384,6 +384,7 @@ function AnimatedAvatarRing({
           transform: [{ scale: pulseScale }],
           opacity: pulseOp,
         }} />
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="wings" />}
         {/* Avatar circle */}
         <View style={[styles.avatarCircle, { borderColor: founderGold, borderWidth: 3, backgroundColor: '#1A1408' }]}>
           {avatarSource ? (
@@ -392,7 +393,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: founderGold }]}>{initial}</Text>
           )}
         </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="ornament" />}
       </View>
     );
   }
@@ -442,6 +443,7 @@ function AnimatedAvatarRing({
           transform: [{ scale: pulseScale }],
           opacity: pulseOp,
         }} />
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="wings" />}
         {/* Avatar circle */}
         <View style={[styles.avatarCircle, { borderColor: betaPurple, borderWidth: 3, backgroundColor: '#120A20' }]}>
           {avatarSource ? (
@@ -450,7 +452,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: betaPurple }]}>{initial}</Text>
           )}
         </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="ornament" />}
       </View>
     );
   }
@@ -493,6 +495,7 @@ function AnimatedAvatarRing({
           opacity: ringOpacity,
         }}
       />
+      {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="wings" />}
       {/* Avatar circle */}
       <View style={[styles.avatarCircle, { borderColor: aura.accent + '80' }]}>
         {avatarSource ? (
@@ -506,7 +509,7 @@ function AnimatedAvatarRing({
           <Text style={[styles.avatarInitial, { color: aura.accent }]}>{initial}</Text>
         )}
       </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="ornament" />}
     </View>
   );
 }

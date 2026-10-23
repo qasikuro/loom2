@@ -273,6 +273,7 @@ export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' 
   'frame_moonveil':     'frame',
   'frame_moonlight':    'frame',
   'frame_fire':         'frame',
+  'frame_celestial_wings': 'frame',
   'accent_aura':        'accent',
   'theme_locket':       'theme',
   'theme_aurora':       'theme',

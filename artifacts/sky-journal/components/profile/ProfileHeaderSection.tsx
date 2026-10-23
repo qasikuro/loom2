@@ -195,6 +195,7 @@ export function ProfileHeaderSection({
       <View style={s.profileRow}>
         {/* Avatar */}
         <View style={s.avatarWrap}>
+          {activeFrame && <FrameRing frameId={activeFrame} layer="wings" />}
           <View style={[s.avatarCircle, {
             borderColor: (activeFrame && FRAME_CONFIGS[activeFrame])
               ? FRAME_CONFIGS[activeFrame].color
@@ -203,7 +204,7 @@ export function ProfileHeaderSection({
             <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit={character.avatarUri ? 'contain' : 'cover'} />
           </View>
           <BreathingAvatarRing mood={currentMood} />
-          {activeFrame && <FrameRing frameId={activeFrame} />}
+          {activeFrame && <FrameRing frameId={activeFrame} layer="ornament" />}
           <TouchableOpacity
             style={[s.avatarEditBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
             onPress={pickAvatar}

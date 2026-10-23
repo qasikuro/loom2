@@ -34,17 +34,31 @@ export function useDecorativeMotion() {
 
 // ── FrameRing ──────────────────────────────────────────────────────────────────
 
-export function FrameRing({ frameId, size = 76 }: { frameId: string; size?: number }) {
+export function FrameRing({
+  frameId,
+  size = 76,
+  layer = 'all',
+}: {
+  frameId: string;
+  size?: number;
+  layer?: 'wings' | 'ornament' | 'all';
+}) {
   const cfg     = FRAME_CONFIGS[frameId];
   const pulse   = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
   const orbit   = useRef(new Animated.Value(0)).current;
+  const wingFlap = useRef(new Animated.Value(0)).current;
   const { animate } = useDecorativeMotion();
   const isMoonlight = frameId === 'frame_moonlight';
   const isFire = frameId === 'frame_fire';
+  const isCelestialWings = frameId === 'frame_celestial_wings';
 
   useEffect(() => {
-    if (!cfg || !animate) { pulse.setValue(0.5); shimmer.setValue(0); return; }
+    if (!cfg || !animate || (isCelestialWings && layer === 'wings')) {
+      pulse.setValue(0.5);
+      shimmer.setValue(0);
+      return;
+    }
     const loop = Animated.loop(Animated.sequence([
       Animated.timing(pulse,   { toValue: 1, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       Animated.timing(pulse,   { toValue: 0, duration: 1800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
@@ -57,7 +71,7 @@ export function FrameRing({ frameId, size = 76 }: { frameId: string; size?: numb
     shimLoop.start();
     return () => { loop.stop(); shimLoop.stop(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [frameId, animate]);
+  }, [frameId, animate, isCelestialWings, layer]);
 
   useEffect(() => {
     if ((!isMoonlight && !isFire) || !animate) {
@@ -74,6 +88,29 @@ export function FrameRing({ frameId, size = 76 }: { frameId: string; size?: numb
     return () => loop.stop();
   }, [animate, isFire, isMoonlight, orbit]);
 
+  useEffect(() => {
+    if (!isCelestialWings || layer === 'ornament' || !animate) {
+      wingFlap.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(wingFlap, {
+        toValue: 1,
+        duration: 1900,
+        easing: Easing.inOut(Easing.sin),
+        useNativeDriver: true,
+      }),
+      Animated.timing(wingFlap, {
+        toValue: 0,
+        duration: 2300,
+        easing: Easing.inOut(Easing.sin),
+        useNativeDriver: true,
+      }),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [animate, isCelestialWings, layer, wingFlap]);
+
   if (!cfg) return null;
 
   const outerScale   = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
@@ -81,6 +118,161 @@ export function FrameRing({ frameId, size = 76 }: { frameId: string; size?: numb
   const glowOpacity  = shimmer.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.40, 0.12] });
   const glowScale    = shimmer.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.20] });
   const orbitRotation = orbit.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const centeredRingStyle = (diameter: number) => ({
+    position: 'absolute' as const,
+    width: diameter,
+    height: diameter,
+    left: '50%' as const,
+    top: '50%' as const,
+    marginLeft: -diameter / 2,
+    marginTop: -diameter / 2,
+    borderRadius: diameter / 2,
+  });
+
+  if (isCelestialWings) {
+    const wingLift = wingFlap.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, -1.6, 0] });
+    const rightWingRotation = wingFlap.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['-1.5deg', '2.4deg', '-1.5deg'] });
+    const leftWingRotation = wingFlap.interpolate({ inputRange: [0, 0.5, 1], outputRange: ['1.5deg', '-2.4deg', '1.5deg'] });
+    const wingSize = size * 1.1;
+    // Keep this as a static Metro asset reference so it is bundled for native builds and OTA updates.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const wingImage = require('../../assets/angel_wing_right.png');
+
+    const wingArtwork = (
+      <>
+        <Animated.View
+          style={{
+            position: 'absolute',
+            width: wingSize,
+            height: wingSize,
+            top: -size * 0.4,
+            left: -size * 0.42,
+            transform: [{ translateY: wingLift }, { rotate: leftWingRotation }],
+          }}
+        >
+          <Image
+            source={wingImage}
+            style={{ width: '100%', height: '100%', transform: [{ scaleX: -1 }] }}
+            contentFit="contain"
+          />
+        </Animated.View>
+        <Animated.View
+          style={{
+            position: 'absolute',
+            width: wingSize,
+            height: wingSize,
+            top: -size * 0.4,
+            left: size * 0.42,
+            transform: [{ translateY: wingLift }, { rotate: rightWingRotation }],
+          }}
+        >
+          <Image source={wingImage} style={{ width: '100%', height: '100%' }} contentFit="contain" />
+        </Animated.View>
+      </>
+    );
+    const wingOrnaments = (
+      <>
+        <Animated.View
+          style={[
+            centeredRingStyle(size * 1.04),
+            {
+              borderWidth: Math.max(3, size * 0.06),
+              borderColor: cfg.glow,
+              opacity: glowOpacity,
+              transform: [{ scale: glowScale }],
+              shadowColor: cfg.color,
+              shadowOpacity: 0.72,
+              shadowRadius: size * 0.16,
+              elevation: 7,
+            },
+          ]}
+        />
+        <View
+          style={[
+            centeredRingStyle(size * 0.94),
+            {
+              borderWidth: Math.max(2, size * 0.03),
+              borderColor: '#F3D89A',
+              shadowColor: '#E2AC47',
+              shadowOpacity: 0.9,
+              shadowRadius: size * 0.08,
+              elevation: 6,
+            },
+          ]}
+        />
+        <View
+          style={[
+            centeredRingStyle(size * 0.85),
+            { borderWidth: Math.max(1, size * 0.012), borderColor: 'rgba(255,237,195,0.88)' },
+          ]}
+        />
+        <View
+          style={[
+            centeredRingStyle(size * 0.98),
+            { borderWidth: Math.max(1, size * 0.012), borderColor: 'rgba(170,111,37,0.86)' },
+          ]}
+        />
+        <Animated.Text
+          style={{
+            position: 'absolute',
+            top: -size * 0.15,
+            left: '50%',
+            width: size * 0.34,
+            marginLeft: -size * 0.17,
+            textAlign: 'center',
+            fontSize: size * 0.27,
+            lineHeight: size * 0.32,
+            color: '#FFE8A9',
+            textShadowColor: '#D8952D',
+            textShadowRadius: size * 0.14,
+            opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.78, 1] }),
+          }}
+        >
+          ✦
+        </Animated.Text>
+        {[
+          { glyph: '✧', top: size * 0.12, left: size * 0.10 },
+          { glyph: '·', top: size * 0.76, left: size * 0.18 },
+          { glyph: '✧', top: size * 0.75, left: size * 0.80 },
+          { glyph: '·', top: size * 0.20, left: size * 0.82 },
+        ].map((sparkle, index) => (
+          <Animated.Text
+            key={`${sparkle.glyph}-${index}`}
+            style={{
+              position: 'absolute',
+              top: sparkle.top,
+              left: sparkle.left,
+              color: index % 2 ? '#FFF6DA' : '#EAC678',
+              fontSize: size * (index % 2 ? 0.13 : 0.18),
+              textShadowColor: '#E2AC47',
+              textShadowRadius: size * 0.09,
+              opacity: shimmer.interpolate({
+                inputRange: [0, 0.5, 1],
+                outputRange: [0.35, index % 2 ? 0.95 : 0.68, 0.35],
+              }),
+            }}
+          >
+            {sparkle.glyph}
+          </Animated.Text>
+        ))}
+      </>
+    );
+
+    if (layer === 'wings') {
+      return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>{wingArtwork}</View>;
+    }
+    if (layer === 'ornament') {
+      return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>{wingOrnaments}</View>;
+    }
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>
+        {wingArtwork}
+        {wingOrnaments}
+      </View>
+    );
+  }
+
+  if (layer === 'wings') return null;
 
   if (isMoonlight || isFire) {
     const color = cfg.color;
