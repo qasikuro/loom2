@@ -28,6 +28,23 @@ function isItemAvailable(item: ShopItem, month: number): boolean {
 }
 
 export const SHOP_CATALOG: ShopItem[] = [
+  // ── Animated profile-picture frames ───────────────────────────────────────
+  {
+    id:          "frame_moonlight",
+    name:        "Moonlight",
+    description: "A silver-lilac orbit, a quiet crescent, and tiny stars circling your profile picture.",
+    icon:        "☾",
+    category:    "frame",
+    cost:        { stars: 180 },
+  },
+  {
+    id:          "frame_fire",
+    name:        "Fire",
+    description: "A living ember ring with warm sparks that flicker around your profile picture.",
+    icon:        "✦",
+    category:    "frame",
+    cost:        { stars: 180 },
+  },
   // ── Profile Effects ───────────────────────────────────────────────────────
   {
     id:          "effect_butterfly",

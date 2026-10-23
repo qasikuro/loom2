@@ -18,6 +18,7 @@ import { apiFetch, useApp, COSMETIC_CATEGORY_MAP, type ShopItem } from '@/contex
 import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
+import { FrameRing } from '@/components/profile/CharacterAuraHeader';
 import { useTranslation } from 'react-i18next';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
@@ -43,6 +44,8 @@ const SEASON_ICONS: Record<string, string> = {
 const ITEM_ICON_MAP: Record<string, string> = {
   frame_starlight:    '✦',
   frame_moonveil:     '◑',
+  frame_moonlight:    '☾',
+  frame_fire:         '✦',
   accent_aura:        '◈',
   theme_locket:       '◇',
   theme_aurora:       '⋆',
@@ -64,6 +67,8 @@ const ITEM_ICON_MAP: Record<string, string> = {
 
 // Static fallback — effects only, shown instantly before API responds
 const FALLBACK_CATALOG: ShopItem[] = [
+  { id: 'frame_moonlight', name: 'Moonlight', description: 'A silver-lilac orbit, a quiet crescent, and tiny stars circling your profile picture.', icon: '☾', category: 'frame', cost: { stars: 180 } },
+  { id: 'frame_fire', name: 'Fire', description: 'A living ember ring with warm sparks that flicker around your profile picture.', icon: '✦', category: 'frame', cost: { stars: 180 } },
   { id: 'effect_butterfly', name: 'Ethereal Butterflies', description: 'Luminous butterflies drift across your profile, wings catching the light of distant stars.', icon: '🦋', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_fireflies', name: 'Firefly Glow',         description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',         icon: '✨', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
@@ -161,17 +166,26 @@ function SeasonalBadge({ label }: { label: string }) {
 // Shows a miniature visual of what each category looks like when equipped.
 // Frames → concentric border rings. Accents → glow band. Themes → page lines.
 
-function ItemPreview({ category, icon, color }: { category: string; color: string; icon: string }) {
+function ItemPreview({ category, icon, color, itemId }: { category: string; color: string; icon: string; itemId: string }) {
   return (
     <View style={[pv.wrap, { backgroundColor: `${color}0C`, borderColor: `${color}28` }]}>
       {category === 'frame' && (
-        <View style={[pv.frameOuter, { borderColor: `${color}60` }]}>
-          <View style={[pv.frameMid, { borderColor: `${color}40` }]}>
-            <View style={[pv.frameInner, { borderColor: `${color}28`, backgroundColor: `${color}12` }]}>
-              <Text style={pv.icon}>{icon}</Text>
+        itemId === 'frame_moonlight' || itemId === 'frame_fire' ? (
+          <View style={pv.premiumFramePreview}>
+            <View style={[pv.previewAvatar, { backgroundColor: `${color}20`, borderColor: `${color}65` }]}>
+              <Text style={[pv.icon, { color }]}>{itemId === 'frame_moonlight' ? '✧' : '◉'}</Text>
+            </View>
+            <FrameRing frameId={itemId} size={58} />
+          </View>
+        ) : (
+          <View style={[pv.frameOuter, { borderColor: `${color}60` }]}>
+            <View style={[pv.frameMid, { borderColor: `${color}40` }]}>
+              <View style={[pv.frameInner, { borderColor: `${color}28`, backgroundColor: `${color}12` }]}>
+                <Text style={pv.icon}>{icon}</Text>
+              </View>
             </View>
           </View>
-        </View>
+        )
       )}
 
       {category === 'accent' && (
@@ -292,7 +306,7 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
           isUnavailable && { opacity: 0.72 },
         ]}>
           {/* Visual preview */}
-          <ItemPreview category={item.category} icon={item.icon} color={catColor} />
+          <ItemPreview category={item.category} icon={item.icon} color={catColor} itemId={item.id} />
 
           {/* Info */}
           <View style={styles.cardInfo}>
@@ -943,6 +957,20 @@ const pv = StyleSheet.create({
     flexShrink: 0,
   },
   icon: { fontSize: 18 },
+  premiumFramePreview: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  previewAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Frame: concentric border rings
   frameOuter: {

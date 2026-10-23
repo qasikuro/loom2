@@ -29,6 +29,7 @@ interface Purchase {
 
 const ITEM_EMOJI: Record<string, string> = {
   frame_starlight:     '✦',  frame_moonveil:      '◑',
+  frame_moonlight:     '☾',  frame_fire:          '✦',
   accent_aura:         '◈',  theme_locket:        '◇',
   theme_aurora:        '⋆',  frame_blossom:       '🌸',
   accent_petal:        '✿',  frame_solstice:      '☀',

@@ -32,6 +32,7 @@ import { useColors } from '@/hooks/useColors';
 import { SHADOW } from '@/constants/colors';
 import { ReportSheet } from '@/components/ReportSheet';
 import { WeatherWidget } from '@/components/WeatherWidget';
+import { FrameRing } from '@/components/profile/CharacterAuraHeader';
 
 // ── Mood aura data ────────────────────────────────────────────────────────────
 type AuraData = {
@@ -283,11 +284,13 @@ function AnimatedAvatarRing({
   profile,
   isFounder,
   isBeta,
+  activeFrame,
 }: {
   mood: string;
   profile: PublicProfile;
   isFounder: boolean;
   isBeta:    boolean;
+  activeFrame?: string | null;
 }) {
   const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const breathe = useRef(new Animated.Value(0)).current;
@@ -389,6 +392,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: founderGold }]}>{initial}</Text>
           )}
         </View>
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} />}
       </View>
     );
   }
@@ -446,6 +450,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: betaPurple }]}>{initial}</Text>
           )}
         </View>
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} />}
       </View>
     );
   }
@@ -501,6 +506,7 @@ function AnimatedAvatarRing({
           <Text style={[styles.avatarInitial, { color: aura.accent }]}>{initial}</Text>
         )}
       </View>
+        {activeFrame && <FrameRing frameId={activeFrame} size={158} />}
     </View>
   );
 }
@@ -573,6 +579,7 @@ interface PublicProfile {
   avatarUri:        string | null;
   activeOutfitId:   string | null;
   activeOutfit:     ActiveOutfit | null;
+  activeFrame?:     string | null;
   isFollowing:      boolean;
   profileLiked:     boolean;
   profileLikeCount: number;
@@ -922,7 +929,13 @@ export default function UserProfileScreen() {
           </View>
 
           {/* Avatar with animated aura rings */}
-          <AnimatedAvatarRing mood={mood} profile={profile} isFounder={isFounder} isBeta={isBeta} />
+          <AnimatedAvatarRing
+            mood={mood}
+            profile={profile}
+            isFounder={isFounder}
+            isBeta={isBeta}
+            activeFrame={profile.activeFrame}
+          />
         </AuraBanner>
 
         {/* ── FLOATING PROFILE CARD ───────────────────────────────── */}

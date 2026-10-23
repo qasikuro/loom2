@@ -1,4 +1,4 @@
-import { db, characterTable, storiesTable, storyLikesTable, profileLikesTable, chapterLikesTable, followsTable, friendRequestsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, badgesTable, characterBadgesTable, booksTable, chaptersTable } from "@workspace/db";
+import { db, characterTable, storiesTable, storyLikesTable, profileLikesTable, chapterLikesTable, followsTable, friendRequestsTable, outfitsTable, notificationsTable, stickerReactionsTable, constellationProgressTable, userRewardsTable, userPurchasesTable, badgesTable, characterBadgesTable, booksTable, chaptersTable } from "@workspace/db";
 import type { BookChapterPage } from "@workspace/db";
 import { and, asc, count, desc, eq, ilike, inArray, ne, notInArray, or, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
@@ -10,6 +10,7 @@ import * as cache from "../lib/cache";
 import { isBlocked } from "./blocks";
 
 const router: IRouter = Router();
+const PUBLIC_PROFILE_FRAME_IDS = ["frame_moonlight", "frame_fire"] as const;
 
 function safeDiscoverUri(uri: string | null | undefined): string | null {
   if (!uri) return null;
@@ -279,7 +280,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "This profile is unavailable." });
     }
 
-    const [charRows, followingRows, profileLikeCounts, viewerProfileLike] = await Promise.all([
+    const [charRows, followingRows, profileLikeCounts, viewerProfileLike, ownedFrameRows] = await Promise.all([
       db.select({
         userId:           characterTable.userId,
         name:             characterTable.name,
@@ -300,6 +301,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         intentionDate:    characterTable.intentionDate,
         activeTitle:      constellationProgressTable.activeTitle,
         lifetimeStars:    userRewardsTable.lifetimeStars,
+        activeCosmetics:  userRewardsTable.activeCosmetics,
         isFounder:        characterTable.isFounder,
         isBetaTester:     characterTable.isBetaTester,
         showOnlineStatus: characterTable.showOnlineStatus,
@@ -322,7 +324,13 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         .where(and(
           eq(profileLikesTable.profileUserId, targetId),
           eq(profileLikesTable.likerId, viewerId),
-        ))
+        )),
+      db.select({ itemId: userPurchasesTable.itemId })
+        .from(userPurchasesTable)
+        .where(and(
+          eq(userPurchasesTable.userId, targetId),
+          inArray(userPurchasesTable.itemId, [...PUBLIC_PROFILE_FRAME_IDS]),
+        )),
     ]);
 
     if (!charRows.length || !charRows[0].isPublic || charRows[0].isBanned) {
@@ -331,6 +339,16 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
 
     const char = charRows[0];
     const followingSet = new Set(followingRows.map(r => r.followingId));
+    const ownedFrameIds = new Set(ownedFrameRows.map(row => row.itemId));
+    const savedCosmetics = char.activeCosmetics && typeof char.activeCosmetics === "object"
+      ? char.activeCosmetics as Record<string, unknown>
+      : {};
+    const savedFrame = savedCosmetics.frame;
+    const activeFrame = typeof savedFrame === "string"
+      && PUBLIC_PROFILE_FRAME_IDS.includes(savedFrame as typeof PUBLIC_PROFILE_FRAME_IDS[number])
+      && ownedFrameIds.has(savedFrame)
+      ? savedFrame
+      : null;
 
     // Fetch active outfit data if one is set
     let activeOutfit: null | {
@@ -399,6 +417,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       avatarUri:     safeDiscoverUri(char.avatarUri),
       activeOutfitId: char.activeOutfitId ?? null,
       activeOutfit,
+      activeFrame,
       birthday:      char.birthday  ?? null,
       country:       char.country   ?? null,
       role:          char.role      ?? null,

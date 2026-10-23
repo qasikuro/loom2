@@ -34,11 +34,14 @@ export function useDecorativeMotion() {
 
 // ── FrameRing ──────────────────────────────────────────────────────────────────
 
-export function FrameRing({ frameId }: { frameId: string }) {
+export function FrameRing({ frameId, size = 76 }: { frameId: string; size?: number }) {
   const cfg     = FRAME_CONFIGS[frameId];
   const pulse   = useRef(new Animated.Value(0)).current;
   const shimmer = useRef(new Animated.Value(0)).current;
+  const orbit   = useRef(new Animated.Value(0)).current;
   const { animate } = useDecorativeMotion();
+  const isMoonlight = frameId === 'frame_moonlight';
+  const isFire = frameId === 'frame_fire';
 
   useEffect(() => {
     if (!cfg || !animate) { pulse.setValue(0.5); shimmer.setValue(0); return; }
@@ -56,12 +59,153 @@ export function FrameRing({ frameId }: { frameId: string }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frameId, animate]);
 
+  useEffect(() => {
+    if ((!isMoonlight && !isFire) || !animate) {
+      orbit.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(Animated.timing(orbit, {
+      toValue: 1,
+      duration: isMoonlight ? 18000 : 9500,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }));
+    loop.start();
+    return () => loop.stop();
+  }, [animate, isFire, isMoonlight, orbit]);
+
   if (!cfg) return null;
 
   const outerScale   = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] });
   const outerOpacity = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.50, cfg.dashOpacity, 0.50] });
   const glowOpacity  = shimmer.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.40, 0.12] });
   const glowScale    = shimmer.interpolate({ inputRange: [0, 1], outputRange: [1.0, 1.20] });
+  const orbitRotation = orbit.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
+  if (isMoonlight || isFire) {
+    const color = cfg.color;
+    const haloSize = size * 1.08;
+    const ringStyle = (diameter: number) => ({
+      position: 'absolute' as const,
+      width: diameter,
+      height: diameter,
+      left: '50%' as const,
+      top: '50%' as const,
+      marginLeft: -diameter / 2,
+      marginTop: -diameter / 2,
+      borderRadius: diameter / 2,
+    });
+    const accents = isMoonlight
+      ? [
+          { glyph: '✦', top: size * 0.10, left: size * 0.20, scale: 0.15 },
+          { glyph: '✧', top: size * 0.28, left: size * 0.82, scale: 0.12 },
+          { glyph: '✦', top: size * 0.78, left: size * 0.70, scale: 0.13 },
+          { glyph: '·', top: size * 0.68, left: size * 0.05, scale: 0.11 },
+        ]
+      : [
+          { glyph: '✦', top: size * 0.08, left: size * 0.22, scale: 0.17 },
+          { glyph: '✧', top: size * 0.30, left: size * 0.84, scale: 0.12 },
+          { glyph: '✦', top: size * 0.78, left: size * 0.72, scale: 0.15 },
+          { glyph: '·', top: size * 0.70, left: size * 0.04, scale: 0.13 },
+          { glyph: '✧', top: size * 0.56, left: size * 0.10, scale: 0.10 },
+        ];
+
+    return (
+      <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'visible' }]}>
+        <Animated.View
+          style={[
+            ringStyle(haloSize),
+            {
+              borderWidth: Math.max(3, size * 0.05),
+              borderColor: cfg.glow,
+              opacity: glowOpacity,
+              transform: [{ scale: glowScale }],
+              shadowColor: color,
+              shadowOpacity: 0.7,
+              shadowRadius: size * 0.16,
+              elevation: 8,
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            ringStyle(size),
+            {
+              borderWidth: Math.max(1.5, size * 0.018),
+              borderColor: color,
+              opacity: outerOpacity,
+              transform: [{ scale: outerScale }],
+              shadowColor: color,
+              shadowOpacity: 0.85,
+              shadowRadius: size * 0.08,
+              elevation: 5,
+            },
+          ]}
+        />
+        <Animated.View
+          style={[
+            ringStyle(size * 0.86),
+            {
+              borderWidth: Math.max(1, size * 0.012),
+              borderColor: isMoonlight ? 'rgba(235,218,255,0.72)' : 'rgba(255,177,95,0.82)',
+              borderStyle: 'dashed',
+              opacity: shimmer.interpolate({ inputRange: [0, 1], outputRange: [0.46, 0.94] }),
+              transform: [{ rotate: orbitRotation }],
+            },
+          ]}
+        />
+        {isMoonlight && (
+          <Animated.View
+            style={[
+              ringStyle(size * 0.84),
+              { transform: [{ rotate: orbitRotation }] },
+            ]}
+          >
+            <Text
+              style={{
+                position: 'absolute',
+                top: -size * 0.12,
+                left: '50%',
+                marginLeft: -size * 0.12,
+                width: size * 0.24,
+                textAlign: 'center',
+                fontSize: size * 0.22,
+                lineHeight: size * 0.27,
+                color: '#F2D7FF',
+                textShadowColor: '#C778FF',
+                textShadowRadius: size * 0.13,
+              }}
+            >
+              ☾
+            </Text>
+          </Animated.View>
+        )}
+        {accents.map((accent, index) => (
+          <Animated.Text
+            key={`${accent.glyph}-${index}`}
+            style={[
+              {
+                position: 'absolute',
+                top: accent.top,
+                left: accent.left,
+                fontSize: size * accent.scale,
+                lineHeight: size * accent.scale * 1.2,
+                color: isMoonlight ? (index % 2 ? '#DCC5FF' : '#FFFFFF') : (index % 2 ? '#FFB46B' : '#FFE1A3'),
+                opacity: shimmer.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0.45, index % 2 ? 0.96 : 0.72, 0.45],
+                }),
+                textShadowColor: color,
+                textShadowRadius: size * 0.1,
+              },
+            ]}
+          >
+            {accent.glyph}
+          </Animated.Text>
+        ))}
+      </View>
+    );
+  }
 
   return (
     <>
