@@ -1758,6 +1758,12 @@ components:
         profileLikeCount:
           type: integer
           minimum: 0
+        activeFrame:
+          type: [string, "null"]
+          description: Publicly visible equipped profile frame, when owned.
+        activeEffect:
+          type: [string, "null"]
+          description: Publicly visible equipped profile background/effect, when owned.
       required: [userId, profileLiked, profileLikeCount]
 
     RewardBalance:

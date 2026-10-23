@@ -11,6 +11,7 @@ import { isBlocked } from "./blocks";
 
 const router: IRouter = Router();
 const PUBLIC_PROFILE_FRAME_IDS = ["frame_moonlight", "frame_fire", "frame_celestial_wings"] as const;
+const PUBLIC_PROFILE_EFFECT_IDS = ["effect_aurora_clouds"] as const;
 
 function safeDiscoverUri(uri: string | null | undefined): string | null {
   if (!uri) return null;
@@ -329,7 +330,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
         .from(userPurchasesTable)
         .where(and(
           eq(userPurchasesTable.userId, targetId),
-          inArray(userPurchasesTable.itemId, [...PUBLIC_PROFILE_FRAME_IDS]),
+          inArray(userPurchasesTable.itemId, [...PUBLIC_PROFILE_FRAME_IDS, ...PUBLIC_PROFILE_EFFECT_IDS]),
         )),
     ]);
 
@@ -339,15 +340,21 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
 
     const char = charRows[0];
     const followingSet = new Set(followingRows.map(r => r.followingId));
-    const ownedFrameIds = new Set(ownedFrameRows.map(row => row.itemId));
+    const ownedCosmeticIds = new Set(ownedFrameRows.map(row => row.itemId));
     const savedCosmetics = char.activeCosmetics && typeof char.activeCosmetics === "object"
       ? char.activeCosmetics as Record<string, unknown>
       : {};
     const savedFrame = savedCosmetics.frame;
     const activeFrame = typeof savedFrame === "string"
       && PUBLIC_PROFILE_FRAME_IDS.includes(savedFrame as typeof PUBLIC_PROFILE_FRAME_IDS[number])
-      && ownedFrameIds.has(savedFrame)
+      && ownedCosmeticIds.has(savedFrame)
       ? savedFrame
+      : null;
+    const savedEffect = savedCosmetics.effect;
+    const activeEffect = typeof savedEffect === "string"
+      && PUBLIC_PROFILE_EFFECT_IDS.includes(savedEffect as typeof PUBLIC_PROFILE_EFFECT_IDS[number])
+      && (char.isFounder || ownedCosmeticIds.has(savedEffect))
+      ? savedEffect
       : null;
 
     // Fetch active outfit data if one is set
@@ -418,6 +425,7 @@ router.get("/users/:userId", requireAuth, async (req, res) => {
       activeOutfitId: char.activeOutfitId ?? null,
       activeOutfit,
       activeFrame,
+      activeEffect,
       birthday:      char.birthday  ?? null,
       country:       char.country   ?? null,
       role:          char.role      ?? null,

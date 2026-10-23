@@ -33,6 +33,7 @@ import { SHADOW } from '@/constants/colors';
 import { ReportSheet } from '@/components/ReportSheet';
 import { WeatherWidget } from '@/components/WeatherWidget';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
+import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
 
 // ── Mood aura data ────────────────────────────────────────────────────────────
 type AuraData = {
@@ -90,12 +91,14 @@ function AuraBanner({
   bannerH,
   isFounder,
   isBeta,
+  activeEffect,
   children,
 }: {
   mood: string;
   bannerH: number;
   isFounder?: boolean;
   isBeta?: boolean;
+  activeEffect?: string | null;
   children: React.ReactNode;
 }) {
   const aura = MOOD_AURA[mood] ?? DEFAULT_AURA;
@@ -172,6 +175,7 @@ function AuraBanner({
         start={{ x: 0.1, y: 0 }}
         end={{ x: 0.9, y: 1 }}
       />
+      {activeEffect === 'effect_aurora_clouds' && <AuroraCloudBackdrop />}
       {/* Founder golden tint overlay */}
       {isFounder && (
         <LinearGradient
@@ -599,6 +603,7 @@ interface PublicProfile {
   activeOutfitId:   string | null;
   activeOutfit:     ActiveOutfit | null;
   activeFrame?:     string | null;
+  activeEffect?:    string | null;
   isFollowing:      boolean;
   profileLiked:     boolean;
   profileLikeCount: number;
@@ -910,7 +915,13 @@ export default function UserProfileScreen() {
       >
 
         {/* ── ANIMATED AURA BANNER ────────────────────────────────── */}
-        <AuraBanner mood={mood} bannerH={bannerH} isFounder={isFounder} isBeta={isBeta}>
+        <AuraBanner
+          mood={mood}
+          bannerH={bannerH}
+          isFounder={isFounder}
+          isBeta={isBeta}
+          activeEffect={profile.activeEffect}
+        >
           {/* Back button */}
           <TouchableOpacity
             style={[styles.topBtn, { top: topPad + 10, left: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}

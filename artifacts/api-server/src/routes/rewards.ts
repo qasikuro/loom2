@@ -1,10 +1,11 @@
-import { db, userRewardsTable, constellationProgressTable, userPurchasesTable } from "@workspace/db";
+import { db, userRewardsTable, constellationProgressTable, userPurchasesTable, characterTable } from "@workspace/db";
 import { and, desc, eq, gte, sql } from "drizzle-orm";
 import { Router, type IRouter } from "express";
 import { requireAuth, getUserId } from "../middleware/auth";
 import { syncConstellation } from "../services/constellationService";
 
 const router: IRouter = Router();
+const FOUNDER_AURORA_ITEM_ID = "effect_aurora_clouds";
 
 // ── Shop catalog (source of truth — validated server-side) ──────────────────
 export interface ShopItem {
@@ -77,6 +78,14 @@ export const SHOP_CATALOG: ShopItem[] = [
     icon:        "💜",
     category:    "effect",
     cost:        { stars: 0 },
+  },
+  {
+    id:          FOUNDER_AURORA_ITEM_ID,
+    name:        "Aurora Sanctuary",
+    description: "A living fantasy sky of violet auroras, drifting clouds, and distant mountains.",
+    icon:        "✦",
+    category:    "effect",
+    cost:        { stars: 600 },
   },
   {
     id:             "effect_fire",
@@ -194,7 +203,7 @@ router.get("/constellation", requireAuth, async (req, res) => {
 router.get("/rewards/shop", requireAuth, async (req, res) => {
   const userId = getUserId(req);
   try {
-    const [purchases, rewardsRow] = await Promise.all([
+    const [purchases, rewardsRow, characterRows] = await Promise.all([
       db
         .select({ itemId: userPurchasesTable.itemId })
         .from(userPurchasesTable)
@@ -204,9 +213,17 @@ router.get("/rewards/shop", requireAuth, async (req, res) => {
         .from(userRewardsTable)
         .where(eq(userRewardsTable.userId, userId))
         .limit(1),
+      db
+        .select({ isFounder: characterTable.isFounder })
+        .from(characterTable)
+        .where(eq(characterTable.userId, userId))
+        .limit(1),
     ]);
 
-    const purchasedIds     = purchases.map((p) => p.itemId);
+    const purchasedIds = [...new Set([
+      ...purchases.map((p) => p.itemId),
+      ...(characterRows[0]?.isFounder ? [FOUNDER_AURORA_ITEM_ID] : []),
+    ])];
     const rawActive        = (rewardsRow[0]?.activeCosmetics ?? {}) as Record<string, string>;
     // Sanitise: only keep active entries where the item is actually owned
     const activeCosmetics: Record<string, string> = {};
@@ -240,11 +257,21 @@ router.put("/rewards/active-cosmetics", requireAuth, async (req, res) => {
 
   try {
     // Validate: only store entries where the item is actually owned
-    const purchases = await db
-      .select({ itemId: userPurchasesTable.itemId })
-      .from(userPurchasesTable)
-      .where(eq(userPurchasesTable.userId, userId));
-    const purchasedIds = purchases.map((p) => p.itemId);
+    const [purchases, characterRows] = await Promise.all([
+      db
+        .select({ itemId: userPurchasesTable.itemId })
+        .from(userPurchasesTable)
+        .where(eq(userPurchasesTable.userId, userId)),
+      db
+        .select({ isFounder: characterTable.isFounder })
+        .from(characterTable)
+        .where(eq(characterTable.userId, userId))
+        .limit(1),
+    ]);
+    const purchasedIds = [
+      ...purchases.map((p) => p.itemId),
+      ...(characterRows[0]?.isFounder ? [FOUNDER_AURORA_ITEM_ID] : []),
+    ];
 
     const sanitised: Record<string, string> = {};
     for (const [category, itemId] of Object.entries(activeCosmetics)) {
@@ -418,6 +445,17 @@ router.post("/rewards/spend", requireAuth, async (req, res) => {
   const shardsNeeded = item.cost.shards ?? 0;
 
   try {
+    if (itemId === FOUNDER_AURORA_ITEM_ID) {
+      const [character] = await db
+        .select({ isFounder: characterTable.isFounder })
+        .from(characterTable)
+        .where(eq(characterTable.userId, userId))
+        .limit(1);
+      if (character?.isFounder) {
+        return res.status(409).json({ error: "already_owned" });
+      }
+    }
+
     const newBalance = await db.transaction(async (tx) => {
       // ── Step 1: ensure balance row exists ─────────────────────────────
       await tx

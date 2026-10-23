@@ -878,6 +878,16 @@ export const GetPublicUserProfileResponse = zod.object({
   profileLikeCount: zod
     .number()
     .min(getPublicUserProfileResponseProfileLikeCountMin),
+  activeFrame: zod
+    .string()
+    .nullish()
+    .describe("Publicly visible equipped profile frame, when owned."),
+  activeEffect: zod
+    .string()
+    .nullish()
+    .describe(
+      "Publicly visible equipped profile background\/effect, when owned.",
+    ),
 });
 
 /**

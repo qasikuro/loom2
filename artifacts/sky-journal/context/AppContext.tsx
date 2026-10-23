@@ -296,6 +296,7 @@ export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' 
   'effect_blossom':     'effect',
   'effect_fire':        'effect',
   'effect_leaves':      'effect',
+  'effect_aurora_clouds': 'effect',
 };
 
 export interface ShopItem {

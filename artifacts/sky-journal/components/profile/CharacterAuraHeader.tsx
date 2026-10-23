@@ -10,6 +10,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
 import { ProfileEffect } from '@/components/ProfileEffect';
 import { SecureImage as Image } from '@/components/SecureImage';
+import AuroraCloudBackdrop from './AuroraCloudBackdrop';
 import {
   ACCENT_CONFIGS, DEFAULT_AURA, FRAME_CONFIGS, MOOD_AURA, MOOD_ORBS,
   PARTICLE_SIZES, PARTICLE_XS,
@@ -571,7 +572,11 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
           />
         </>
       ) : null}
-      {activeEffect && animate && <ProfileEffect effectId={activeEffect} />}
+      {activeEffect === 'effect_aurora_clouds' && animate
+        ? <AuroraCloudBackdrop />
+        : activeEffect && animate
+          ? <ProfileEffect effectId={activeEffect} />
+          : null}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.1, left: -screenW * 0.1, width: screenW * 1.2, height: screenW * 1.2, borderRadius: screenW * 0.6, backgroundColor: aura.accent, opacity: glow2Opacity, transform: [{ scale: glowScale }] }} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.4, left: screenW * 0.15, width: screenW * 0.70, height: screenW * 0.70, borderRadius: screenW * 0.35, backgroundColor: aura.accent, opacity: glowOpacity, transform: [{ scale: glowScale }] }} />
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: 90, backgroundColor: aura.accent, opacity: cornerOpacity }} />

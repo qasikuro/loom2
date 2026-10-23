@@ -11,4 +11,14 @@ export interface PublicUserProfile {
   profileLiked: boolean;
   /** @minimum 0 */
   profileLikeCount: number;
+  /**
+   * Publicly visible equipped profile frame, when owned.
+   * @nullable
+   */
+  activeFrame?: string | null;
+  /**
+   * Publicly visible equipped profile background/effect, when owned.
+   * @nullable
+   */
+  activeEffect?: string | null;
 }

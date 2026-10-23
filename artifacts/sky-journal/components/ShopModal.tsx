@@ -19,6 +19,7 @@ import { useColors } from '@/hooks/useColors';
 import { Icon } from '@/components/Icon';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
+import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
 import { useTranslation } from 'react-i18next';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
@@ -64,6 +65,7 @@ const ITEM_ICON_MAP: Record<string, string> = {
   effect_blossom:     '🌸',
   effect_fire:        '🔥',
   effect_leaves:      '🍃',
+  effect_aurora_clouds: '✦',
 };
 
 // Static fallback — effects only, shown instantly before API responds
@@ -74,6 +76,7 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'effect_butterfly', name: 'Ethereal Butterflies', description: 'Luminous butterflies drift across your profile, wings catching the light of distant stars.', icon: '🦋', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_fireflies', name: 'Firefly Glow',         description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',         icon: '✨', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
+  { id: 'effect_aurora_clouds', name: 'Aurora Sanctuary', description: 'A living fantasy sky of violet auroras, drifting clouds, and distant mountains.', icon: '✦', category: 'effect', cost: { stars: 600 } },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -220,7 +223,14 @@ function ItemPreview({ category, icon, color, itemId }: { category: string; colo
         </View>
       )}
 
-      {category === 'effect' && (
+      {category === 'effect' && itemId === 'effect_aurora_clouds' && (
+        <View style={[pv.effectWrap, { position: 'relative', overflow: 'hidden', backgroundColor: '#0A0818' }]}>
+          <AuroraCloudBackdrop />
+          <Text style={[pv.effectIcon, { color: '#EDE8FF', zIndex: 1 }]}>✦</Text>
+        </View>
+      )}
+
+      {category === 'effect' && itemId !== 'effect_aurora_clouds' && (
         <View style={[pv.effectWrap, { backgroundColor: `${color}0A` }]}>
           {['●', '✦', '●'].map((dot, i) => (
             <View
