@@ -66,6 +66,13 @@ const DEFAULT_AURA: AuraData = {
   orbs:     ['#9B78E820','#6040C0','#9B78E810'],
 };
 
+const PUBLIC_PROFILE_AVATAR_SIZE = 104;
+const PUBLIC_PROFILE_FRAME_SIZE = 112;
+const PUBLIC_PROFILE_HALO_SIZE = 128;
+const PUBLIC_PROFILE_OUTER_RING_SIZE = 120;
+const PUBLIC_PROFILE_MID_RING_SIZE = 112;
+const PUBLIC_PROFILE_INNER_RING_SIZE = 108;
+
 const ROLES = [
   { key: 'Collector', emoji: '🎁', color: '#C8A84B' },
   { key: 'Trader',    emoji: '🤝', color: '#78A8C8' },
@@ -324,12 +331,12 @@ function AnimatedAvatarRing({
     return () => pulseLoop.stop();
   }, [pulse, isFounder, isBeta]);
 
-  const ringScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.06 : 1.10] });
+  const ringScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.04 : 1.06] });
   const ringOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [isFounder ? 0.55 : 0.30, 1, isFounder ? 0.55 : 0.30] });
   const haloOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, isFounder ? 0.55 : isBeta ? 0.50 : 0.38, 0.12] });
-  const haloScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.28 : 1.20] });
+  const haloScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, isFounder ? 1.08 : 1.06] });
   const spin        = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
-  const pulseScale  = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.18] });
+  const pulseScale  = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
   const pulseOp     = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.55, 0] });
 
   const avatarSource = profile.avatarUri ? { uri: profile.avatarUri } : null;
@@ -348,19 +355,28 @@ function AnimatedAvatarRing({
         {/* Outer shimmer halo */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 172, height: 172, borderRadius: 86,
+          width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE, borderRadius: PUBLIC_PROFILE_HALO_SIZE / 2,
           backgroundColor: founderGold + '14',
           transform: [{ scale: haloScale }],
           opacity: haloOpacity,
         }} />
         {/* Spark dots container (sized to match outer ring) */}
-        <View pointerEvents="none" style={{ position: 'absolute', width: 152, height: 152, left: -10, top: -10 }}>
-          <FounderSparks radius={76} color={founderGold} />
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            width: PUBLIC_PROFILE_HALO_SIZE - 6,
+            height: PUBLIC_PROFILE_HALO_SIZE - 6,
+            left: (PUBLIC_PROFILE_AVATAR_SIZE - (PUBLIC_PROFILE_HALO_SIZE - 6)) / 2,
+            top: (PUBLIC_PROFILE_AVATAR_SIZE - (PUBLIC_PROFILE_HALO_SIZE - 6)) / 2,
+          }}
+        >
+          <FounderSparks radius={(PUBLIC_PROFILE_HALO_SIZE - 6) / 2} color={founderGold} />
         </View>
         {/* Slow-spinning outer ring — thick gold */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 148, height: 148, borderRadius: 74,
+          width: PUBLIC_PROFILE_OUTER_RING_SIZE, height: PUBLIC_PROFILE_OUTER_RING_SIZE, borderRadius: PUBLIC_PROFILE_OUTER_RING_SIZE / 2,
           borderWidth: 2.5,
           borderColor: founderGold,
           transform: [{ rotate: spin }],
@@ -369,7 +385,7 @@ function AnimatedAvatarRing({
         {/* Breathing solid ring — inner */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 118, height: 118, borderRadius: 59,
+          width: PUBLIC_PROFILE_INNER_RING_SIZE, height: PUBLIC_PROFILE_INNER_RING_SIZE, borderRadius: PUBLIC_PROFILE_INNER_RING_SIZE / 2,
           borderWidth: 3,
           borderColor: founderDeep,
           transform: [{ scale: ringScale }],
@@ -378,13 +394,13 @@ function AnimatedAvatarRing({
         {/* Pulse ring — energy burst */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 118, height: 118, borderRadius: 59,
+          width: PUBLIC_PROFILE_INNER_RING_SIZE, height: PUBLIC_PROFILE_INNER_RING_SIZE, borderRadius: PUBLIC_PROFILE_INNER_RING_SIZE / 2,
           borderWidth: 1.5,
           borderColor: founderGold,
           transform: [{ scale: pulseScale }],
           opacity: pulseOp,
         }} />
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="wings" />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" />}
         {/* Avatar circle */}
         <View style={[styles.avatarCircle, { borderColor: founderGold, borderWidth: 3, backgroundColor: '#1A1408' }]}>
           {avatarSource ? (
@@ -393,7 +409,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: founderGold }]}>{initial}</Text>
           )}
         </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="ornament" />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
       </View>
     );
   }
@@ -404,7 +420,7 @@ function AnimatedAvatarRing({
         {/* Outer halo */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 165, height: 165, borderRadius: 82.5,
+          width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE, borderRadius: PUBLIC_PROFILE_HALO_SIZE / 2,
           backgroundColor: betaPurple + '18',
           transform: [{ scale: haloScale }],
           opacity: haloOpacity,
@@ -412,7 +428,7 @@ function AnimatedAvatarRing({
         {/* Fast-spinning outer ring — purple dashed */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 148, height: 148, borderRadius: 74,
+          width: PUBLIC_PROFILE_OUTER_RING_SIZE, height: PUBLIC_PROFILE_OUTER_RING_SIZE, borderRadius: PUBLIC_PROFILE_OUTER_RING_SIZE / 2,
           borderWidth: 2,
           borderColor: betaPurple + 'CC',
           borderStyle: 'dashed',
@@ -421,14 +437,14 @@ function AnimatedAvatarRing({
         {/* Steady solid middle ring */}
         <View pointerEvents="none" style={{
           position: 'absolute',
-          width: 130, height: 130, borderRadius: 65,
+          width: PUBLIC_PROFILE_MID_RING_SIZE, height: PUBLIC_PROFILE_MID_RING_SIZE, borderRadius: PUBLIC_PROFILE_MID_RING_SIZE / 2,
           borderWidth: 1.5,
           borderColor: betaDark + '99',
         }} />
         {/* Breathing solid inner ring */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 118, height: 118, borderRadius: 59,
+          width: PUBLIC_PROFILE_INNER_RING_SIZE, height: PUBLIC_PROFILE_INNER_RING_SIZE, borderRadius: PUBLIC_PROFILE_INNER_RING_SIZE / 2,
           borderWidth: 2.5,
           borderColor: betaPurple,
           transform: [{ scale: ringScale }],
@@ -437,13 +453,13 @@ function AnimatedAvatarRing({
         {/* Pulse ring */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
-          width: 118, height: 118, borderRadius: 59,
+          width: PUBLIC_PROFILE_INNER_RING_SIZE, height: PUBLIC_PROFILE_INNER_RING_SIZE, borderRadius: PUBLIC_PROFILE_INNER_RING_SIZE / 2,
           borderWidth: 1.5,
           borderColor: betaPurple,
           transform: [{ scale: pulseScale }],
           opacity: pulseOp,
         }} />
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="wings" />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" />}
         {/* Avatar circle */}
         <View style={[styles.avatarCircle, { borderColor: betaPurple, borderWidth: 3, backgroundColor: '#120A20' }]}>
           {avatarSource ? (
@@ -452,7 +468,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: betaPurple }]}>{initial}</Text>
           )}
         </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="ornament" />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
       </View>
     );
   }
@@ -465,7 +481,7 @@ function AnimatedAvatarRing({
         pointerEvents="none"
         style={{
           position: 'absolute',
-          width: 148, height: 148, borderRadius: 74,
+          width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE, borderRadius: PUBLIC_PROFILE_HALO_SIZE / 2,
           backgroundColor: aura.accent + '18',
           transform: [{ scale: haloScale }],
           opacity: haloOpacity,
@@ -476,7 +492,7 @@ function AnimatedAvatarRing({
         pointerEvents="none"
         style={{
           position: 'absolute',
-          width: 128, height: 128, borderRadius: 64,
+          width: PUBLIC_PROFILE_OUTER_RING_SIZE, height: PUBLIC_PROFILE_OUTER_RING_SIZE, borderRadius: PUBLIC_PROFILE_OUTER_RING_SIZE / 2,
           borderWidth: 1.5,
           borderColor: aura.accent + 'AA',
           borderStyle: 'dashed',
@@ -488,14 +504,14 @@ function AnimatedAvatarRing({
         pointerEvents="none"
         style={{
           position: 'absolute',
-          width: 118, height: 118, borderRadius: 59,
+          width: PUBLIC_PROFILE_INNER_RING_SIZE, height: PUBLIC_PROFILE_INNER_RING_SIZE, borderRadius: PUBLIC_PROFILE_INNER_RING_SIZE / 2,
           borderWidth: 2,
           borderColor: aura.accent,
           transform: [{ scale: ringScale }],
           opacity: ringOpacity,
         }}
       />
-      {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="wings" />}
+      {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" />}
       {/* Avatar circle */}
       <View style={[styles.avatarCircle, { borderColor: aura.accent + '80' }]}>
         {avatarSource ? (
@@ -509,7 +525,7 @@ function AnimatedAvatarRing({
           <Text style={[styles.avatarInitial, { color: aura.accent }]}>{initial}</Text>
         )}
       </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={158} layer="ornament" />}
+        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
     </View>
   );
 }
@@ -1693,7 +1709,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarCircle: {
-    width: 104, height: 104, borderRadius: 52,
+    width: PUBLIC_PROFILE_AVATAR_SIZE,
+    height: PUBLIC_PROFILE_AVATAR_SIZE,
+    borderRadius: PUBLIC_PROFILE_AVATAR_SIZE / 2,
     borderWidth: 2.5, overflow: 'hidden',
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: '#1A1630',
