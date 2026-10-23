@@ -1,338 +1,187 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Metro needs static require paths for bundled PNG artwork. */
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Image, Platform, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDecorativeMotion } from '@/components/profile/CharacterAuraHeader';
 
-const FRAME_GOLD = '#F0D28B';
-const FRAME_GOLD_HIGHLIGHT = '#FFF1C5';
-const FRAME_VIOLET = '#B69AFF';
+const TOP = require('@/assets/images/founder-regalia/top.png');
+const BOTTOM = require('@/assets/images/founder-regalia/bottom.png');
+const SIDES = {
+  left: {
+    joinTop: require('@/assets/images/founder-regalia/left-join-top.png'),
+    gemUpper: require('@/assets/images/founder-regalia/left-gem-upper.png'),
+    stemUpper: require('@/assets/images/founder-regalia/left-stem-upper.png'),
+    gemCenter: require('@/assets/images/founder-regalia/left-gem-center.png'),
+    stemLower: require('@/assets/images/founder-regalia/left-stem-lower.png'),
+    gemLower: require('@/assets/images/founder-regalia/left-gem-lower.png'),
+    joinBottom: require('@/assets/images/founder-regalia/left-join-bottom.png'),
+  },
+  right: {
+    joinTop: require('@/assets/images/founder-regalia/right-join-top.png'),
+    gemUpper: require('@/assets/images/founder-regalia/right-gem-upper.png'),
+    stemUpper: require('@/assets/images/founder-regalia/right-stem-upper.png'),
+    gemCenter: require('@/assets/images/founder-regalia/right-gem-center.png'),
+    stemLower: require('@/assets/images/founder-regalia/right-stem-lower.png'),
+    gemLower: require('@/assets/images/founder-regalia/right-gem-lower.png'),
+    joinBottom: require('@/assets/images/founder-regalia/right-join-bottom.png'),
+  },
+};
+// Source heights of side sub-slices (140px wide). Only stems stretch.
+const H = { joinTop: 50, gemUpper: 65, stemUpper: 100, gemCenter: 95, stemLower: 85, gemLower: 60, joinBottom: 85 };
+const EDGE_H = H.joinTop + H.gemUpper + H.gemLower + H.joinBottom;
+const STEM_H = H.stemUpper + H.stemLower;
+const PREVIEW = require('@/assets/images/founder-regalia/preview.png');
+
+// Source geometry (960 x 1024 original). Rail centres x43 / x917, top rail y90, bottom rail y904.
+const SRC_W = 960;
+const SRC_H = 1024;
+const TOP_RAIL_Y = 90;
+const BOTTOM_RAIL_Y = 904;
+const TOP_H = 250;
+const BOTTOM_H = 234;
+const SIDE_W = 140;
+const OUTSET = 16;
+const SEAM_OVERLAP = 0.75;
+const USE_NATIVE_DRIVER = Platform.OS !== 'web';
 
 /**
- * Founder-only profile-card ornament inspired by the celestial reference:
- * a double gold/violet rail, small crystal details, and a slow traveling glint.
- * It is purely decorative and never intercepts profile interactions.
+ * Founder Regalia: detailed gold filigree + violet crystal border,
+ * image-sliced so it stretches vertically around a profile card of any height.
+ * Center remains fully transparent and never intercepts touches.
  */
-export default function FounderAuroraCardFrame() {
+export default function FounderAuroraCardFrame({ compact = false }: { compact?: boolean }) {
   const { animate } = useDecorativeMotion();
-  const [width, setWidth] = useState(0);
-  const shimmer = useRef(new Animated.Value(0)).current;
-  const breathe = useRef(new Animated.Value(0)).current;
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const glow = useRef(new Animated.Value(0)).current;
+  const glint = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!animate) {
-      shimmer.stopAnimation();
-      breathe.stopAnimation();
-      shimmer.setValue(0.5);
-      breathe.setValue(0.5);
+    if (!animate || compact) {
+      glow.stopAnimation();
+      glint.stopAnimation();
+      glow.setValue(0.4);
+      glint.setValue(0);
       return;
     }
-
-    const shimmerLoop = Animated.loop(Animated.timing(shimmer, {
-      toValue: 1,
-      duration: 7600,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    }));
-    const breatheLoop = Animated.loop(Animated.sequence([
-      Animated.timing(breathe, {
-        toValue: 1,
-        duration: 3600,
-        easing: Easing.inOut(Easing.sin),
-        useNativeDriver: true,
-      }),
-      Animated.timing(breathe, {
-        toValue: 0,
-        duration: 3600,
-        easing: Easing.inOut(Easing.sin),
-        useNativeDriver: true,
-      }),
+    const glowLoop = Animated.loop(Animated.sequence([
+      Animated.timing(glow, { toValue: 1, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: USE_NATIVE_DRIVER, isInteraction: false }),
+      Animated.timing(glow, { toValue: 0, duration: 2800, easing: Easing.inOut(Easing.sin), useNativeDriver: USE_NATIVE_DRIVER, isInteraction: false }),
     ]));
+    const glintLoop = Animated.loop(Animated.sequence([
+      Animated.timing(glint, { toValue: 1, duration: 3400, easing: Easing.inOut(Easing.quad), useNativeDriver: USE_NATIVE_DRIVER, isInteraction: false }),
+      Animated.delay(4200),
+      Animated.timing(glint, { toValue: 0, duration: 0, useNativeDriver: USE_NATIVE_DRIVER, isInteraction: false }),
+    ]));
+    glowLoop.start();
+    glintLoop.start();
+    return () => { glowLoop.stop(); glintLoop.stop(); };
+  }, [animate, compact, glow, glint]);
 
-    shimmerLoop.start();
-    breatheLoop.start();
-    return () => {
-      shimmerLoop.stop();
-      breatheLoop.stop();
-    };
-  }, [animate, breathe, shimmer]);
+  if (compact) {
+    return (
+      <View pointerEvents="none" accessible={false} style={styles.compact}>
+        <Image source={PREVIEW} style={styles.compactImg} resizeMode="contain" />
+      </View>
+    );
+  }
 
-  const sweepOpacity = shimmer.interpolate({
-    inputRange: [0, 0.12, 0.50, 0.88, 1],
-    outputRange: [0, 0.76, 0.38, 0.76, 0],
-  });
-  const sweepX = shimmer.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-82, Math.max(-82, width - 18)],
-  });
-  const reverseSweepX = shimmer.interpolate({
-    inputRange: [0, 1],
-    outputRange: [Math.max(0, width - 82), 0],
-  });
-  const railOpacity = breathe.interpolate({
-    inputRange: [0, 0.5, 1],
-    outputRange: [0.76, 1, 0.76],
-  });
+  const { w, h } = size;
+  const ready = w > 0 && h > 0;
+  const overlayW = w + OUTSET * 2;
+  const s = overlayW / SRC_W;
+  const sideTop = (TOP_H - TOP_RAIL_Y) * s - SEAM_OVERLAP;
+  const sideBottom = (BOTTOM_H - (SRC_H - BOTTOM_RAIL_Y)) * s - SEAM_OVERLAP;
+  const sideH = Math.max(0, h - sideTop - sideBottom);
+  // Repeat complete ornament units instead of elongating a single pair of rails
+  // across a tall profile. Gems keep their native proportions at every height.
+  const middleH = Math.max(0, sideH - EDGE_H * s);
+  const repeatCount = Math.max(1, Math.min(8, Math.round(middleH / Math.max(1, (STEM_H + H.gemCenter) * s))));
+  const unitH = middleH / repeatCount;
+  const stemUpperH = Math.max(0, unitH - H.gemCenter * s) * (H.stemUpper / STEM_H);
+  const centerGemYs = Array.from({ length: repeatCount }, (_, index) =>
+    sideTop + (H.joinTop + H.gemUpper) * s + index * unitH + stemUpperH + (H.gemCenter / 2) * s);
+  const sideW = SIDE_W * s;
+
+  const jewelOpacity = glow.interpolate({ inputRange: [0, 1], outputRange: [0.15, 0.7] });
+  const glintOpacity = glint.interpolate({ inputRange: [0, 0.1, 0.9, 1], outputRange: [0, 1, 1, 0] });
+  const travelX = glint.interpolate({ inputRange: [0, 1], outputRange: [-40, Math.max(0, w)] });
+  const travelY = glint.interpolate({ inputRange: [0, 1], outputRange: [Math.max(0, h), -40] });
+  const railX = 43 * s - OUTSET;
+
+  const jewel = (style: object, key: string, d = 22) => (
+    <Animated.View key={key} style={[styles.jewel, { width: d, height: d, borderRadius: d / 2, marginLeft: -d / 2, marginTop: -d / 2, opacity: jewelOpacity }, style]} />
+  );
 
   return (
     <View
       pointerEvents="none"
       accessible={false}
+      importantForAccessibility="no-hide-descendants"
       style={StyleSheet.absoluteFill}
-      onLayout={event => {
-        const nextWidth = event.nativeEvent.layout.width;
-        setWidth(current => current === nextWidth ? current : nextWidth);
+      onLayout={e => {
+        const { width, height } = e.nativeEvent.layout;
+        setSize(c => (c.w === width && c.h === height ? c : { w: width, h: height }));
       }}
     >
-      <Animated.View style={[styles.outerRail, { opacity: railOpacity }]} />
-      <View style={styles.innerRail} />
+      {ready && (
+        <>
+          {(['left', 'right'] as const).map(side => {
+            const src = SIDES[side];
+            const fixed = (k: keyof typeof H) => (
+              <Image key={k} source={src[k]} resizeMode="stretch" style={{ width: sideW, height: H[k] * s }} />
+            );
+            const stem = (k: 'stemUpper' | 'stemLower') => (
+              <Image key={k} source={src[k]} resizeMode="stretch" style={{ width: sideW, flexGrow: H[k], flexBasis: 0, flexShrink: 1 }} />
+            );
+            return (
+              <View key={side} style={[styles.sideCol, { top: sideTop, bottom: sideBottom, width: sideW }, side === 'left' ? { left: -OUTSET } : { right: -OUTSET }]}>
+                {fixed('joinTop')}
+                {fixed('gemUpper')}
+                {Array.from({ length: repeatCount }, (_, index) => (
+                  <View key={`ornament-${index}`} style={{ flexGrow: 1, flexBasis: 0, minHeight: H.gemCenter * s }}>
+                    {stem('stemUpper')}
+                    {fixed('gemCenter')}
+                    {stem('stemLower')}
+                  </View>
+                ))}
+                {fixed('gemLower')}
+                {fixed('joinBottom')}
+              </View>
+            );
+          })}
+          <Image source={TOP} resizeMode="stretch" style={{ position: 'absolute', left: -OUTSET, top: -TOP_RAIL_Y * s, width: overlayW, height: TOP_H * s }} />
+          <Image source={BOTTOM} resizeMode="stretch" style={{ position: 'absolute', left: -OUTSET, bottom: -(SRC_H - BOTTOM_RAIL_Y) * s, width: overlayW, height: BOTTOM_H * s }} />
 
-      <LinearGradient
-        pointerEvents="none"
-        colors={['transparent', 'rgba(182,154,255,0.92)', FRAME_GOLD_HIGHLIGHT, 'rgba(182,154,255,0.92)', 'transparent']}
-        locations={[0, 0.24, 0.5, 0.76, 1]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.topRail}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={['transparent', 'rgba(182,154,255,0.78)', FRAME_GOLD, 'rgba(182,154,255,0.78)', 'transparent']}
-        locations={[0, 0.24, 0.5, 0.76, 1]}
-        start={{ x: 0, y: 0.5 }}
-        end={{ x: 1, y: 0.5 }}
-        style={styles.bottomRail}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={['transparent', 'rgba(240,210,139,0.78)', 'rgba(182,154,255,0.72)', 'transparent']}
-        locations={[0, 0.48, 0.78, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.leftRail}
-      />
-      <LinearGradient
-        pointerEvents="none"
-        colors={['transparent', 'rgba(240,210,139,0.78)', 'rgba(182,154,255,0.72)', 'transparent']}
-        locations={[0, 0.48, 0.78, 1]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={styles.rightRail}
-      />
+          {/* Jewel glows: crest, pendant, side crystals */}
+          {jewel({ left: w / 2, top: (60 - TOP_RAIL_Y) * s }, 'crest', 30 * s * 2)}
+          {jewel({ left: w / 2, top: h + (938 - BOTTOM_RAIL_Y) * s }, 'pendant', 26 * s * 2)}
+          {centerGemYs.map((top, index) => jewel({ left: railX, top }, `l-${index}`, 18 * s * 2))}
+          {centerGemYs.map((top, index) => jewel({ left: w - railX, top }, `r-${index}`, 18 * s * 2))}
 
-      <Animated.View
-        style={[
-          styles.topSweep,
-          { opacity: sweepOpacity, transform: [{ translateX: sweepX }] },
-        ]}
-      >
-        <LinearGradient
-          colors={['transparent', FRAME_GOLD_HIGHLIGHT, 'rgba(182,154,255,0.72)', 'transparent']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      <Animated.View
-        style={[
-          styles.bottomSweep,
-          { opacity: sweepOpacity, transform: [{ translateX: reverseSweepX }] },
-        ]}
-      >
-        <LinearGradient
-          colors={['transparent', 'rgba(182,154,255,0.7)', FRAME_GOLD_HIGHLIGHT, 'transparent']}
-          start={{ x: 0, y: 0.5 }}
-          end={{ x: 1, y: 0.5 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-
-      {(['topLeft', 'topRight', 'bottomLeft', 'bottomRight'] as const).map(corner => (
-        <View key={corner} style={[styles.corner, styles[corner]]}>
-          <View style={styles.cornerLongStroke} />
-          <View style={styles.cornerShortStroke} />
-          <Text style={styles.cornerStar}>✧</Text>
-        </View>
-      ))}
-
-      {[22, 50, 78].map(position => (
-        <React.Fragment key={position}>
-          <Text style={[styles.sideCrystal, styles.leftCrystal, { top: `${position}%` }]}>◇</Text>
-          <Text style={[styles.sideCrystal, styles.rightCrystal, { top: `${position}%` }]}>◇</Text>
-        </React.Fragment>
-      ))}
-
-      <View style={styles.topCrest}>
-        <View style={styles.crestOuterDiamond} />
-        <View style={styles.crestInnerDiamond} />
-        <Text style={styles.crestStar}>✦</Text>
-      </View>
-      <View style={styles.bottomPendant}>
-        <View style={styles.pendantDiamond} />
-        <Text style={styles.pendantStar}>✧</Text>
-      </View>
+          {/* Traveling glints along top and right rails */}
+          <Animated.View style={[styles.glintH, { top: -1, opacity: glintOpacity, transform: [{ translateX: travelX }] }]}>
+            <LinearGradient colors={['transparent', 'rgba(255,241,197,0.95)', 'transparent']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={StyleSheet.absoluteFill} />
+          </Animated.View>
+          <Animated.View style={[styles.glintV, { right: railX - 1, opacity: glintOpacity, transform: [{ translateY: travelY }] }]}>
+            <LinearGradient colors={['transparent', 'rgba(214,190,255,0.9)', 'transparent']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={StyleSheet.absoluteFill} />
+          </Animated.View>
+        </>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  outerRail: {
-    ...StyleSheet.absoluteFillObject,
-    margin: 3,
-    borderRadius: 20,
-    borderWidth: 1.3,
-    borderColor: 'rgba(240,210,139,0.82)',
-    shadowColor: FRAME_GOLD,
-    shadowOpacity: 0.42,
+  compact: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
+  compactImg: { width: '100%', height: '100%' },
+  jewel: {
+    position: 'absolute',
+    backgroundColor: 'rgba(196,160,255,0.28)',
+    shadowColor: '#C9A8FF',
+    shadowOpacity: 0.9,
     shadowRadius: 8,
-    elevation: 3,
   },
-  innerRail: {
-    ...StyleSheet.absoluteFillObject,
-    margin: 7,
-    borderRadius: 16,
-    borderWidth: 0.7,
-    borderColor: 'rgba(182,154,255,0.36)',
-  },
-  topRail: {
-    position: 'absolute',
-    top: 2,
-    left: 28,
-    right: 28,
-    height: 1.4,
-  },
-  bottomRail: {
-    position: 'absolute',
-    bottom: 2,
-    left: 28,
-    right: 28,
-    height: 1.4,
-  },
-  leftRail: { position: 'absolute', top: 28, bottom: 28, left: 2, width: 1.4 },
-  rightRail: { position: 'absolute', top: 28, bottom: 28, right: 2, width: 1.4 },
-  topSweep: {
-    position: 'absolute',
-    top: 1,
-    left: 0,
-    width: 82,
-    height: 2,
-    overflow: 'hidden',
-  },
-  bottomSweep: {
-    position: 'absolute',
-    bottom: 1,
-    left: 0,
-    width: 82,
-    height: 2,
-    overflow: 'hidden',
-  },
-  corner: { position: 'absolute', width: 28, height: 28 },
-  topLeft: { top: 3, left: 3 },
-  topRight: { top: 3, right: 3, transform: [{ scaleX: -1 }] },
-  bottomLeft: { bottom: 3, left: 3, transform: [{ scaleY: -1 }] },
-  bottomRight: { bottom: 3, right: 3, transform: [{ scaleX: -1 }, { scaleY: -1 }] },
-  cornerLongStroke: {
-    position: 'absolute',
-    top: 4,
-    left: 4,
-    width: 17,
-    height: 17,
-    borderTopWidth: 1.2,
-    borderLeftWidth: 1.2,
-    borderColor: FRAME_GOLD,
-    borderTopLeftRadius: 10,
-  },
-  cornerShortStroke: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 9,
-    height: 9,
-    borderTopWidth: 0.8,
-    borderLeftWidth: 0.8,
-    borderColor: 'rgba(182,154,255,0.9)',
-    borderTopLeftRadius: 6,
-  },
-  cornerStar: {
-    position: 'absolute',
-    top: 0,
-    left: 1,
-    color: FRAME_GOLD_HIGHLIGHT,
-    fontSize: 13,
-    textShadowColor: 'rgba(240,210,139,0.82)',
-    textShadowRadius: 6,
-  },
-  sideCrystal: {
-    position: 'absolute',
-    color: FRAME_GOLD_HIGHLIGHT,
-    fontSize: 15,
-    lineHeight: 18,
-    textShadowColor: 'rgba(182,154,255,0.95)',
-    textShadowRadius: 8,
-  },
-  leftCrystal: { left: -2 },
-  rightCrystal: { right: -2 },
-  topCrest: {
-    position: 'absolute',
-    top: -8,
-    left: '50%',
-    width: 28,
-    height: 28,
-    marginLeft: -14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  crestOuterDiamond: {
-    position: 'absolute',
-    width: 22,
-    height: 22,
-    transform: [{ rotate: '45deg' }],
-    borderWidth: 1.2,
-    borderColor: FRAME_GOLD_HIGHLIGHT,
-    backgroundColor: 'rgba(42,28,68,0.98)',
-    shadowColor: FRAME_GOLD,
-    shadowOpacity: 0.72,
-    shadowRadius: 7,
-    elevation: 5,
-  },
-  crestInnerDiamond: {
-    position: 'absolute',
-    width: 13,
-    height: 13,
-    transform: [{ rotate: '45deg' }],
-    borderWidth: 0.8,
-    borderColor: FRAME_VIOLET,
-    backgroundColor: 'rgba(133,91,194,0.62)',
-  },
-  crestStar: {
-    color: FRAME_GOLD_HIGHLIGHT,
-    fontSize: 13,
-    textShadowColor: FRAME_GOLD,
-    textShadowRadius: 7,
-  },
-  bottomPendant: {
-    position: 'absolute',
-    bottom: -8,
-    left: '50%',
-    width: 24,
-    height: 24,
-    marginLeft: -12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pendantDiamond: {
-    position: 'absolute',
-    width: 17,
-    height: 17,
-    transform: [{ rotate: '45deg' }],
-    borderWidth: 1,
-    borderColor: FRAME_GOLD,
-    borderRadius: 2,
-    backgroundColor: 'rgba(40,26,66,0.98)',
-  },
-  pendantStar: {
-    color: FRAME_VIOLET,
-    fontSize: 12,
-    textShadowColor: FRAME_GOLD_HIGHLIGHT,
-    textShadowRadius: 5,
-  },
+  sideCol: { position: 'absolute', flexDirection: 'column', overflow: 'hidden' },
+  glintH: { position: 'absolute', left: 0, width: 40, height: 3 },
+  glintV: { position: 'absolute', top: 0, width: 3, height: 40 },
 });

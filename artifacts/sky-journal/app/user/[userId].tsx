@@ -605,6 +605,7 @@ interface PublicProfile {
   activeOutfit:     ActiveOutfit | null;
   activeFrame?:     string | null;
   activeEffect?:    string | null;
+  activeCardFrame?: string | null;
   isFollowing:      boolean;
   profileLiked:     boolean;
   profileLikeCount: number;
@@ -873,6 +874,8 @@ export default function UserProfileScreen() {
   const hasDynamicFounderBadge = profileBadges.some(badge => badge.slug === 'founder');
   const hasDynamicBetaBadge = profileBadges.some(badge => badge.slug === 'beta_tester');
   const isFounder = Boolean(profile?.isFounder) || hasDynamicFounderBadge;
+  const hasRegalia = profile?.activeCardFrame === 'card_frame_founder_regalia'
+    || (profile?.activeCardFrame === undefined && profile?.isFounder === true);
   const isBeta = Boolean(profile?.isBetaTester) || hasDynamicBetaBadge;
   const founderBadge = hasDynamicFounderBadge ? profileBadges.find(badge => badge.slug === 'founder') : null;
   const betaBadge = hasDynamicBetaBadge ? profileBadges.find(badge => badge.slug === 'beta_tester') : null;
@@ -977,6 +980,7 @@ export default function UserProfileScreen() {
               width: Math.min(Math.max(windowWidth - 28, 0), 720),
               alignSelf: 'center',
               backgroundColor: colors.card,
+              paddingHorizontal: hasRegalia ? 24 : 16,
               borderColor: isFounder ? '#C8A84B55' : isBeta ? '#9B78E855' : colors.border,
             },
             SHADOW.md,
@@ -1298,13 +1302,14 @@ export default function UserProfileScreen() {
               />
             </View>
           )}
-          {isFounder && <FounderAuroraCardFrame />}
+          {hasRegalia && <FounderAuroraCardFrame />}
         </Animated.View>
 
         {/* ── BODY ─────────────────────────────────────────────────── */}
         <Animated.View
           style={[
             styles.body,
+            hasRegalia && { paddingTop: 36 },
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >

@@ -267,7 +267,8 @@ export interface RewardBalance {
 }
 
 // ── Cosmetic item → category map (mirrors server SHOP_CATALOG) ───────────────
-export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' | 'effect'> = {
+export const COSMETIC_CATEGORY_MAP: Record<string, 'frame' | 'accent' | 'theme' | 'effect' | 'card_frame'> = {
+  'card_frame_founder_regalia': 'card_frame',
   // Permanent
   'frame_starlight':    'frame',
   'frame_moonveil':     'frame',
@@ -304,7 +305,8 @@ export interface ShopItem {
   name:            string;
   description:     string;
   icon:            string;
-  category:        'frame' | 'accent' | 'theme' | 'effect';
+  category:        'frame' | 'accent' | 'theme' | 'effect' | 'card_frame';
+  founderOnly?:    boolean;
   cost:            { stars?: number; aura?: number; shards?: number };
   seasonal?:       boolean;
   seasonalLabel?:  string;
@@ -2180,7 +2182,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setActiveCosmeticsState(prev => {
       const next = { ...prev };
       if (next[category] === itemId) {
-        delete next[category];
+        // Persist an explicit off value for this slot: the API uses a JSON merge.
+        if (category === 'card_frame') next[category] = '';
+        else delete next[category];
       } else {
         next[category] = itemId;
       }

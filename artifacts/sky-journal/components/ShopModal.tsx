@@ -20,6 +20,7 @@ import { Icon } from '@/components/Icon';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
+import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
 import { useTranslation } from 'react-i18next';
 
 const COLLECTION_CACHE_KEY  = 'collection_v1';
@@ -66,6 +67,7 @@ const ITEM_ICON_MAP: Record<string, string> = {
   effect_fire:        '🔥',
   effect_leaves:      '🍃',
   effect_aurora_clouds: '✦',
+  card_frame_founder_regalia: '◆',
 };
 
 // Static fallback — effects only, shown instantly before API responds
@@ -76,6 +78,7 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'effect_butterfly', name: 'Ethereal Butterflies', description: 'Luminous butterflies drift across your profile, wings catching the light of distant stars.', icon: '🦋', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_fireflies', name: 'Firefly Glow',         description: 'Golden fireflies blink softly around you like scattered wishes under a summer sky.',         icon: '✨', category: 'effect', cost: { stars: 0 } },
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
+  { id: 'card_frame_founder_regalia', name: 'Founder Regalia', description: 'Gold filigree and violet crystals crowning your whole profile card. Included free with Founder.', icon: '◆', category: 'card_frame', cost: { stars: 0 }, founderOnly: true },
   { id: 'effect_aurora_clouds', name: 'Aurora Sanctuary', description: 'A living fantasy sky of violet auroras, drifting clouds, and distant mountains.', icon: '✦', category: 'effect', cost: { stars: 600 } },
 ];
 
@@ -84,7 +87,14 @@ const CATEGORY_COLORS: Record<string, string> = {
   accent: '#9878D8',
   theme:  '#78B4DC',
   effect: '#70C8A0',
+  card_frame: '#D9B566',
 };
+
+function categoryLabel(t: (k: string, o?: Record<string, unknown>) => string, category: string) {
+  return category === 'card_frame'
+    ? t('components.shop.categories.card_frame', { defaultValue: 'Profile border' })
+    : t(`components.shop.categories.${category}`);
+}
 
 // ── Purchase history entry type ───────────────────────────────────────────────
 
@@ -194,6 +204,12 @@ function ItemPreview({ category, icon, color, itemId }: { category: string; colo
         )
       )}
 
+      {category === 'card_frame' && (
+        <View style={pv.cardFrameWrap}>
+          <FounderAuroraCardFrame compact />
+        </View>
+      )}
+
       {category === 'accent' && (
         <View style={pv.accentWrap}>
           <LinearGradient
@@ -269,9 +285,10 @@ interface ItemCardProps {
   onBuy:      (item: ShopItem) => void;
   onActivate: (item: ShopItem) => void;
   purchasing: boolean;
+  founderLocked?: boolean;
 }
 
-function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchasing }: ItemCardProps) {
+function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchasing, founderLocked = false }: ItemCardProps) {
   const { t } = useTranslation();
   const colors   = useColors();
   const scale    = useRef(new Animated.Value(1)).current;
@@ -288,11 +305,11 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
   if (item.cost.aura)   costParts.push(<Text key="a" style={[styles.costPart, { color: '#9878D8' }]}>◈ {item.cost.aura}</Text>);
   if (item.cost.shards) costParts.push(<Text key="h" style={[styles.costPart, { color: '#78B4DC' }]}>◇ {item.cost.shards}</Text>);
 
-  const isUnavailable = !availableNow && !owned;
+  const isUnavailable = (!availableNow || founderLocked) && !owned;
   const disabled      = isUnavailable || (!owned && (!canAfford || purchasing));
 
   function handlePress() {
-    if (isUnavailable) return;
+    if (isUnavailable || founderLocked && !owned) return;
     if (owned) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       onActivate(item);
@@ -326,7 +343,7 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
             <View style={styles.cardTitleRow}>
               <Text style={[styles.cardName, { color: colors.foreground }]} numberOfLines={1}>{item.name}</Text>
               <View style={[styles.catBadge, { backgroundColor: `${catColor}18` }]}>
-                <Text style={[styles.catBadgeText, { color: catColor }]}>{t(`components.shop.categories.${item.category}`)}</Text>
+                <Text style={[styles.catBadgeText, { color: catColor }]}>{categoryLabel(t, item.category)}</Text>
               </View>
               {item.seasonal && item.seasonalLabel && (
                 <SeasonalBadge label={item.seasonalLabel} />
@@ -353,6 +370,12 @@ function ItemCard({ item, owned, isActive, canAfford, onBuy, onActivate, purchas
                     {isActive ? t('components.shop.active') : t('components.shop.setActive')}
                   </Text>
                 </TouchableOpacity>
+              ) : founderLocked ? (
+                <View style={[styles.returnsBadge, { backgroundColor: `${catColor}14`, borderColor: `${catColor}55` }]}>
+                  <Text style={[styles.returnsBadgeText, { color: catColor }]}>
+                    {t('components.shop.founderExclusive', { defaultValue: 'Founder exclusive' })}
+                  </Text>
+                </View>
               ) : !availableNow ? (
                 <View style={[styles.returnsBadge, { backgroundColor: colors.muted, borderColor: colors.border }]}>
                   <Text style={[styles.returnsBadgeText, { color: colors.mutedForeground }]}>
@@ -420,7 +443,7 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
         <View style={styles.collTitleRow}>
           <Text style={[styles.collName, { color: colors.foreground }]} numberOfLines={1}>{entry.itemName}</Text>
           <View style={[styles.catBadge, { backgroundColor: `${catColor}18` }]}>
-            <Text style={[styles.catBadgeText, { color: catColor }]}>{t(`components.shop.categories.${category}`)}</Text>
+            <Text style={[styles.catBadgeText, { color: catColor }]}>{categoryLabel(t, category)}</Text>
           </View>
         </View>
         <View style={styles.collMeta}>
@@ -456,17 +479,25 @@ function CollectionRow({ entry, isActive, onActivate }: CollectionRowProps) {
 interface CollectionTabProps {
   visible: boolean;
   purchaseVersion: number;
+  catalogItems: ShopItem[];
 }
 
-function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
+function CollectionTab({ visible, purchaseVersion, catalogItems }: CollectionTabProps) {
   const { t } = useTranslation();
   const colors  = useColors();
-  const { activeCosmetics, setActiveCosmetic } = useApp();
+  const { activeCosmetics, setActiveCosmetic, character } = useApp();
+  const isFounder = !!character?.isFounder;
   const [purchases,      setPurchases]      = useState<PurchaseEntry[]>([]);
   const [initialLoading, setInitialLoading] = useState(false);
   const [error,          setError]          = useState(false);
   // true while a background refresh is running (cache already shown)
   const [refreshing, setRefreshing] = useState(false);
+  // Founder entitlements have no purchase record — surface them from the catalog.
+  const purchasedSet = new Set(purchases.map(p => p.itemId));
+  const founderItems = isFounder
+    ? catalogItems.filter(i => (i.founderOnly || i.id === 'card_frame_founder_regalia') && !purchasedSet.has(i.id))
+    : [];
+  const founderCatColor = CATEGORY_COLORS.card_frame;
 
   // Track whether we need to force a fresh fetch (post-purchase)
   const needsRefresh = useRef(true);
@@ -547,7 +578,7 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
     );
   }
 
-  if (error && purchases.length === 0) {
+  if (error && purchases.length === 0 && founderItems.length === 0) {
     return (
       <View style={styles.collCenter}>
         <Text style={styles.collEmptyIcon}>✕</Text>
@@ -557,7 +588,7 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
     );
   }
 
-  if (purchases.length === 0) {
+  if (purchases.length === 0 && founderItems.length === 0) {
     return (
       <View style={styles.collCenter}>
         <Text style={styles.collEmptyIcon}>✦</Text>
@@ -575,6 +606,28 @@ function CollectionTab({ visible, purchaseVersion }: CollectionTabProps) {
       contentContainerStyle={styles.collList}
       showsVerticalScrollIndicator={false}
     >
+      {founderItems.length > 0 && (
+        <View style={{ gap: 10, marginBottom: 6 }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', color: founderCatColor }}>
+            {t('components.shop.includedWithFounder', { defaultValue: 'Included with Founder' })}
+          </Text>
+          {founderItems.map(item => {
+            const category = COSMETIC_CATEGORY_MAP[item.id] ?? item.category;
+            return (
+              <ItemCard
+                key={item.id}
+                item={item}
+                owned
+                isActive={activeCosmetics[category] === item.id}
+                canAfford
+                onBuy={() => undefined}
+                onActivate={it => setActiveCosmetic(it.id)}
+                purchasing={false}
+              />
+            );
+          })}
+        </View>
+      )}
       {purchases.map(entry => (
         <CollectionRow
           key={entry.id}
@@ -630,7 +683,8 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
   const { t } = useTranslation();
   const colors  = useColors();
   const insets  = useSafeAreaInsets();
-  const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased } = useApp();
+  const { rewardBalance, reloadRewards, purchasedIds, activeCosmetics, setActiveCosmetic, markPurchased, character } = useApp();
+  const isFounder = !!character?.isFounder;
 
   // Refresh balance in background every time the modal opens so the chip
   // shows the cached value instantly and updates silently when the API responds.
@@ -837,6 +891,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                 { id: 'frame',  label: t('components.shop.categories.frame'),  icon: '◑', color: '#C8A84B' },
                 { id: 'accent', label: t('components.shop.categories.accent'), icon: '◈', color: '#9878D8' },
                 { id: 'theme',  label: t('components.shop.categories.theme'),  icon: '⋆', color: '#78B4DC' },
+                { id: 'card_frame', label: categoryLabel(t, 'card_frame'), icon: '◆', color: '#D9B566' },
               ];
               return (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterRowContent}>
@@ -872,7 +927,8 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
               const seasonIcon  = seasonLabel ? (SEASON_ICONS[seasonLabel]  ?? '✦')       : '✦';
 
               function renderItem(item: ShopItem, overrides?: Partial<ShopItem>) {
-                const owned    = purchasedIds.includes(item.id);
+                const founderOnly = !!item.founderOnly || item.id === 'card_frame_founder_regalia';
+                const owned    = purchasedIds.includes(item.id) || (founderOnly && isFounder);
                 const category = COSMETIC_CATEGORY_MAP[item.id];
                 const isActive = owned && !!category && activeCosmetics[category] === item.id;
                 return (
@@ -885,6 +941,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
                     onBuy={handleBuy}
                     onActivate={it => setActiveCosmetic(it.id)}
                     purchasing={purchasing === item.id}
+                    founderLocked={founderOnly && !isFounder}
                   />
                 );
               }
@@ -943,7 +1000,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
             })()}
           </>
         ) : (
-          <CollectionTab visible={activeTab === 'collection'} purchaseVersion={purchaseVersion} />
+          <CollectionTab visible={activeTab === 'collection'} purchaseVersion={purchaseVersion} catalogItems={catalogItems} />
         )}
 
         {/* Toast */}
@@ -959,6 +1016,7 @@ export function ShopModal({ visible, onClose }: ShopModalProps) {
 
 // ── ItemPreview styles ────────────────────────────────────────────────────────
 const pv = StyleSheet.create({
+  cardFrameWrap: { width: 46, height: 50, alignItems: 'center', justifyContent: 'center' },
   wrap: {
     width: 64,
     height: 64,
