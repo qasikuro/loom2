@@ -75,21 +75,32 @@ export default function ReelsScreen() {
   }, [discoverPosts, filter]);
   const playbackEnabled = isFocused && appActive && !selectedVideoPost;
   const { activePostId, preparedIndices } = getReelPlaybackWindow(reels, visiblePostId, readyPostId, playbackEnabled);
+  const activePostIdRef = useRef(activePostId);
+  activePostIdRef.current = activePostId;
+  const onVideoBufferHealth = useCallback((id: string, allowed: boolean) => {
+    // Late status callbacks from a reel we just swiped past cannot change
+    // the visible player's bandwidth budget.
+    if (id !== activePostIdRef.current) return;
+    setReadyPostId(current => allowed ? id : current === id ? null : current);
+  }, []);
+  useEffect(() => {
+    if (!playbackEnabled) setReadyPostId(null);
+  }, [playbackEnabled]);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => setAppActive(state === 'active'));
     return () => subscription.remove();
   }, []);
 
   const viewabilityConfig = useRef({
-    itemVisiblePercentThreshold: 60,
-    minimumViewTime: 80,
+    itemVisiblePercentThreshold: 55,
+    minimumViewTime: 40,
   });
   const onViewableItemsChanged = useRef(({
     viewableItems,
   }: {
     viewableItems: { item: DiscoverPost }[];
   }) => {
-    // Keep the current reel during the brief gap between two 60%-visible pages.
+    // Keep the current reel during the brief gap between two 55%-visible pages.
     const visible = viewableItems[0];
     if (visible) setVisiblePostId(visible.item.id);
   });
@@ -122,7 +133,12 @@ export default function ReelsScreen() {
     router.push({ pathname: '/story/[id]', params: { id: post.id, source: 'reels' } });
   }, []);
 
-  async function sharePost(post: DiscoverPost) {
+  const openAuthor = useCallback((userId: string) => {
+    router.push({ pathname: '/user/[userId]', params: { userId } } as never);
+  }, []);
+  const toggleMuted = useCallback(() => setVideosMuted(muted => !muted), []);
+
+  const sharePost = useCallback(async (post: DiscoverPost) => {
     const path = post.bookId
       ? `/book-public?bookId=${encodeURIComponent(post.bookId)}`
       : `/story/${encodeURIComponent(post.id)}`;
@@ -131,7 +147,7 @@ export default function ReelsScreen() {
       description: t('reels.byAuthor', { title: post.chapterTitle, name: post.authorName }),
       path,
     });
-  }
+  }, [t]);
 
   return (
     <View
@@ -150,20 +166,17 @@ export default function ReelsScreen() {
             post={item}
             height={reelHeight}
             topInset={topPad}
-            onOpen={() => openPost(item)}
-            onAuthorPress={() => router.push({
-              pathname: '/user/[userId]',
-              params: { userId: item.authorUserId },
-            } as never)}
+            onOpen={openPost}
+            onAuthorPress={openAuthor}
             playing={playbackEnabled && item.id === activePostId && item.contentType === 'video'}
             prepareVideo={preparedIndices.includes(index)}
-            onVideoReady={setReadyPostId}
+            onVideoReady={onVideoBufferHealth}
             muted={videosMuted}
-            onMuteToggle={() => setVideosMuted(muted => !muted)}
-            onShare={() => { void sharePost(item); }}
-            onLike={() => { void toggleLikePost(item.id); }}
-            onSave={() => toggleSavePost(item.id)}
-            onReport={() => setReportTargetId(item.id)}
+            onMuteToggle={toggleMuted}
+            onShare={sharePost}
+            onLike={toggleLikePost}
+            onSave={toggleSavePost}
+            onReport={setReportTargetId}
           />
         )}
         ListEmptyComponent={
@@ -201,10 +214,10 @@ export default function ReelsScreen() {
         }
         viewabilityConfig={viewabilityConfig.current}
         onViewableItemsChanged={onViewableItemsChanged.current}
-        initialNumToRender={2}
+        initialNumToRender={3}
         maxToRenderPerBatch={2}
         updateCellsBatchingPeriod={80}
-        windowSize={3}
+        windowSize={5}
         removeClippedSubviews={false}
         getItemLayout={(_, index) => ({
           length: reelHeight,

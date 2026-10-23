@@ -1,4 +1,4 @@
-/** Prioritize the visible reel. Only warm its immediate successor once ready. */
+/** At most two players: visible plus one video within the next two feed cards. */
 export function getReelPlaybackWindow(
   posts: readonly { id: string; contentType?: string }[],
   visibleId: string | null,
@@ -10,8 +10,15 @@ export function getReelPlaybackWindow(
   const preparedIndices: number[] = [];
   if (enabled && active) {
     preparedIndices.push(activeIndex);
-    if (activeIndex + 1 < posts.length && (active.contentType !== 'video' || readyId === active.id)) {
-      preparedIndices.push(activeIndex + 1);
+    if (active.contentType !== 'video' || readyId === active.id) {
+      // Mixed feeds may have a story between two videos. Prepare the next
+      // video, not a story with no player, without scanning/loading the feed.
+      for (let index = activeIndex + 1; index < Math.min(posts.length, activeIndex + 3); index++) {
+        if (posts[index].contentType === 'video') {
+          preparedIndices.push(index);
+          break;
+        }
+      }
     }
   }
   return { activeIndex, activePostId: active?.id, preparedIndices };

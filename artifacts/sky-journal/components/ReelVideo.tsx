@@ -1,14 +1,16 @@
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { canonicalMediaUri } from '@/utils/mediaAccess';
+import { canWarmNextReel } from '@/utils/reelBuffer';
+import { hintReelWebPreload } from '@/utils/reelWebPreload';
 import { Video, ResizeMode } from 'expo-av';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 /** A bounded, paused preloader and the visible reel share the same player. */
 export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
-  uri: string; playing: boolean; muted: boolean; onPrepared: () => void;
+  uri: string; playing: boolean; muted: boolean; onPrepared: (allowed: boolean) => void;
 }) {
   const colors = useColors();
   const { t } = useTranslation();
@@ -24,14 +26,54 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
   const identity = `${uri ?? originalUri}:${attempt}`;
   const currentIdentity = useRef(identity);
   currentIdentity.current = identity;
+  const hostRef = useRef<View>(null);
+  const firstFrameRef = useRef(false);
+  const preloadAllowed = useRef(false);
+  const wasPlaying = useRef(playing);
+  const preparedCallback = useRef(onPrepared);
+  preparedCallback.current = onPrepared;
 
   useEffect(() => {
+    firstFrameRef.current = false;
     setFirstFrame(false);
     setFailed(false);
+    if (preloadAllowed.current) preparedCallback.current(false);
+    preloadAllowed.current = false;
   }, [identity]);
+
   useEffect(() => {
-    if (playing && firstFrame && !failed) onPrepared();
-  }, [playing, firstFrame, failed, onPrepared]);
+    if (Platform.OS !== 'web') return;
+    // expo-av's web backend leaves preload to browser defaults (often only
+    // metadata). Use the standard DOM hint on its existing video element,
+    // without resetting src/load() when this paused player becomes visible.
+    const host = hostRef.current as unknown as HTMLElement | null;
+    const video = host?.querySelector?.('video');
+    if (video) return hintReelWebPreload(video, playing);
+  }, [identity, failed, playing]);
+
+  useEffect(() => {
+    if (failed && preloadAllowed.current) {
+      preloadAllowed.current = false;
+      preparedCallback.current(false);
+    }
+  }, [failed]);
+
+  useEffect(() => {
+    const promoted = playing && !wasPlaying.current;
+    wasPlaying.current = playing;
+    // A speculative load can fail on a brief network interruption. Retry once
+    // when promoted, rather than presenting a stale preloader error to viewers.
+    // Failures during visible playback still require the explicit Retry button.
+    if (promoted && failed) {
+      setAttempt(value => value + 1);
+    }
+  }, [playing, failed]);
+
+  function revealFirstFrame() {
+    if (firstFrameRef.current) return;
+    firstFrameRef.current = true;
+    setFirstFrame(true);
+  }
 
   // A mid-playback buffer should not cover the reel with a reconnect message.
   // Keep feedback only until the first actual video frame is available.
@@ -54,9 +96,12 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
 
   const hasError = failed;
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
+    <View ref={hostRef} style={StyleSheet.absoluteFill} pointerEvents="box-none">
       {source && !hasError && (
         <Video
+          // The key/source deliberately do not depend on playing: promotion
+          // reuses the paused player's native buffer. expo-av unloads this
+          // player on unmount when it leaves the bounded preparation window.
           key={identity}
           source={source}
           shouldPlay={playing}
@@ -64,14 +109,21 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
           isLooping
           resizeMode={ResizeMode.COVER}
           useNativeControls={false}
-          progressUpdateIntervalMillis={500}
+          progressUpdateIntervalMillis={playing ? 500 : 1500}
           style={[StyleSheet.absoluteFill, { opacity: firstFrame ? 1 : 0 }]}
           pointerEvents="none"
-          onReadyForDisplay={() => { if (currentIdentity.current === identity) setFirstFrame(true); }}
+          onReadyForDisplay={() => { if (currentIdentity.current === identity) revealFirstFrame(); }}
           onPlaybackStatusUpdate={status => {
             if (currentIdentity.current !== identity) return;
             if (status.isLoaded) {
-              if (status.isPlaying && status.positionMillis > 0) setFirstFrame(true);
+              if (status.isPlaying && status.positionMillis > 0) revealFirstFrame();
+              if (playing) {
+                const allowed = canWarmNextReel(status, preloadAllowed.current);
+                if (allowed !== preloadAllowed.current) {
+                  preloadAllowed.current = allowed;
+                  preparedCallback.current(allowed);
+                }
+              }
             } else if (status.error) setFailed(true);
           }}
           onError={() => { if (currentIdentity.current === identity) setFailed(true); }}

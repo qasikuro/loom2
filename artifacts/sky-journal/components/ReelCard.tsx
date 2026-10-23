@@ -16,15 +16,15 @@ interface Props {
   topInset: number;
   playing: boolean;
   prepareVideo: boolean;
-  onVideoReady: (id: string) => void;
+  onVideoReady: (id: string, allowed: boolean) => void;
   muted: boolean;
-  onOpen: () => void;
-  onAuthorPress: () => void;
+  onOpen: (post: DiscoverPost) => void;
+  onAuthorPress: (userId: string) => void;
   onMuteToggle: () => void;
-  onShare: () => void;
-  onLike: () => void;
-  onSave: () => void;
-  onReport: () => void;
+  onShare: (post: DiscoverPost) => void;
+  onLike: (id: string) => void;
+  onSave: (id: string) => void;
+  onReport: (id: string) => void;
 }
 
 function ReelAction({ name, label, active, count, onPress }: {
@@ -47,7 +47,7 @@ function ReelAction({ name, label, active, count, onPress }: {
   );
 }
 
-export function ReelCard({
+export const ReelCard = React.memo(function ReelCard({
   post, height, topInset, playing, prepareVideo, onVideoReady, muted, onOpen, onAuthorPress,
   onMuteToggle, onShare, onLike, onSave, onReport,
 }: Props) {
@@ -60,8 +60,10 @@ export function ReelCard({
     <View style={[styles.card, { height }]}>
       {imageUri ? (
         <>
-          <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={24} />
-          <View style={styles.backdropTint} />
+          {!isVideo && <>
+            <Image source={{ uri: imageUri }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={24} />
+            <View style={styles.backdropTint} />
+          </>}
           <Image
             source={{ uri: imageUri }}
             style={StyleSheet.absoluteFill}
@@ -74,14 +76,14 @@ export function ReelCard({
       )}
       <TouchableOpacity
         style={StyleSheet.absoluteFill}
-        onPress={() => { if (isVideo) setPaused(value => !value); else onOpen(); }}
+        onPress={() => { if (isVideo) setPaused(value => !value); else onOpen(post); }}
         activeOpacity={1}
         accessibilityRole="button"
         accessibilityLabel={isVideo
           ? t(paused ? 'reels.resumeVideo' : 'reels.pauseVideo', { defaultValue: paused ? 'Resume video' : 'Pause video' })
           : t('reels.readNamed', { title: post.chapterTitle })}
       />
-      {isVideo && prepareVideo && <ReelVideo uri={post.videoUri!} playing={playing && !paused} muted={muted} onPrepared={() => onVideoReady(post.id)} />}
+      {isVideo && prepareVideo && <ReelVideo uri={post.videoUri!} playing={playing && !paused} muted={muted} onPrepared={allowed => onVideoReady(post.id, allowed)} />}
       {isVideo && playing && paused && (
         <View pointerEvents="none" style={styles.pauseIndicator}>
           <Icon name="play" size={35} color="white" />
@@ -101,7 +103,7 @@ export function ReelCard({
       />
 
       <View style={[styles.authorRow, { top: topInset + 102 }]}>
-        <TouchableOpacity onPress={onAuthorPress} style={styles.authorTap} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel={t('reels.viewProfile', { name: post.authorName })}>
+        <TouchableOpacity onPress={() => onAuthorPress(post.authorUserId)} style={styles.authorTap} activeOpacity={0.78} accessibilityRole="button" accessibilityLabel={t('reels.viewProfile', { name: post.authorName })}>
           <View style={styles.avatar}>
             {post.authorAvatarUri
               ? <Image source={{ uri: post.authorAvatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
@@ -111,7 +113,7 @@ export function ReelCard({
             <Text style={styles.authorName} numberOfLines={1}>{post.authorName}</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.chapterPill} onPress={onOpen} accessibilityLabel={t('reels.openChapter', { n: post.chapterNumber })}>
+        <TouchableOpacity style={styles.chapterPill} onPress={() => onOpen(post)} accessibilityLabel={t('reels.openChapter', { n: post.chapterNumber })}>
           <Text style={styles.chapterText}>{isVideo ? t('reels.videoUpper') : t('reels.chapterShort', { n: post.chapterNumber })}</Text>
           <Icon name="chevron-right" size={13} color="#FFFFFF" />
         </TouchableOpacity>
@@ -129,7 +131,7 @@ export function ReelCard({
       )}
 
       <View style={styles.actions}>
-        <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={onLike} />
+        <ReelAction name="heart" label={t(post.liked ? 'reels.liked' : 'reels.like')} count={post.likeCount} active={post.liked} onPress={() => onLike(post.id)} />
         <ShareButton
           style={[styles.action, {
             flexDirection: 'column',
@@ -147,10 +149,10 @@ export function ReelCard({
           label={t('reels.share')}
           labelStyle={styles.actionText}
           accessibilityLabel={t('reels.share')}
-          onPress={() => { void Haptics.selectionAsync(); onShare(); }}
+          onPress={() => { void Haptics.selectionAsync(); onShare(post); }}
         />
-        <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={onSave} />
-        <ReelAction name="flag" label={t('reels.report')} onPress={onReport} />
+        <ReelAction name="bookmark" label={t(post.saved ? 'reels.saved' : 'reels.save')} active={post.saved} onPress={() => onSave(post.id)} />
+        <ReelAction name="flag" label={t('reels.report')} onPress={() => onReport(post.id)} />
       </View>
 
       <View style={styles.details} pointerEvents="box-none">
@@ -165,7 +167,7 @@ export function ReelCard({
         </Text>
         {!!post.authorBadges?.length && <BadgeTray badges={post.authorBadges} />}
         {!!post.bookTitle && <Text style={styles.bookTitle} numberOfLines={1}>{post.bookTitle}</Text>}
-        <TouchableOpacity style={styles.openLink} onPress={onOpen} accessibilityRole="button" accessibilityLabel={t(isVideo ? 'reels.watchFull' : 'reels.readFull')}>
+        <TouchableOpacity style={styles.openLink} onPress={() => onOpen(post)} accessibilityRole="button" accessibilityLabel={t(isVideo ? 'reels.watchFull' : 'reels.readFull')}>
           <Text style={styles.openText}>{t(isVideo ? 'reels.watchFull' : 'reels.readStory')}</Text>
           <Icon name="arrow-right" size={15} color="#FFFFFF" />
         </TouchableOpacity>
@@ -173,7 +175,7 @@ export function ReelCard({
       <View style={styles.bottomRule} pointerEvents="none" />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: { width: '100%', overflow: 'hidden', backgroundColor: '#100B22' },
