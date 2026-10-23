@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@clerk/expo';
 import { accountCacheKey } from '@/utils/accountCache';
+import { publishReelStartup } from '@/utils/reelStartup';
 import { clearLumiCreations, publishLumiCreation } from '@/features/lumi/home/events';
 import { enqueueMutation, drainMutationQueue, clearMutation } from '@/utils/mutationQueue';
 import { registerCustomEffects, type EffectDef } from '@/components/ProfileEffect';
@@ -921,10 +922,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         fetchOptional<unknown>('/stories'),
         fetchOptional<unknown>('/outfits'),
       ]);
+      const discoverRequest = fetchOptional<unknown>('/discover');
+      const blockRequest = fetchOptional<{ blockedId: string }[]>('/users/blocked');
+      // Reels is the initial tab. Do not hold its video source behind a slow
+      // gallery, shop, notifications, or even core-profile response. Reuse these
+      // same promises below: this adds no requests.
+      void publishReelStartup(
+        discoverRequest,
+        blockRequest,
+        () => requestEpoch === loadEpochRef.current && requestAccountId === cacheUserIdRef.current,
+        (raw, blocked) => {
+          const valid = parseOrDefault(ApiDiscoverSchema, raw, null, '/discover') as RawDiscoverApiItem[] | null;
+          if (valid === null) return;
+          const records = valid.filter(isValidDiscoverPost);
+          const feed = records.map(record => toRawDiscoverPost(record, API_BASE));
+          setBlockedIds(blocked);
+          setDiscoverFeedRaw(feed);
+          setDiscoverLoadError(false);
+          setHasCorruptedDiscover(records.length < valid.length);
+          // The normal snapshot batch below still persists this response;
+          // don't add disk writes while the first video is starting.
+        },
+      ).catch(error => console.warn('[AppContext] Early reel preparation failed', error));
       const secondaryFetchPromise = Promise.all([
         fetchOptional<unknown>('/gallery'),
         fetchOptional<unknown>('/gallery/usage'),
-        fetchOptional<unknown>('/discover'),
+        discoverRequest,
         fetchOptional<unknown>('/follows/following'),
         fetchOptional<unknown>('/notifications'),
         fetchOptional<unknown>('/friends'),
@@ -934,7 +957,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         fetchOptional<unknown>('/rewards/shop'),
         fetchOptional<string[]>('/stories/saved/ids'),
         fetchOptional<{ effects: Array<{ id: string; config: EffectDef }> }>('/effects/catalog'),
-        fetchOptional<{ blockedId: string }[]>('/users/blocked'),
+        blockRequest,
       ]);
       const [_charFetch, _entriesFetch, _storiesFetch, _outfitsFetch] = await coreFetchPromise;
       if (
@@ -2413,6 +2436,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshFeed = useCallback(async () => {
+    // Startup already requests the same feed. A second request on initial tab
+    // focus competes with the first video's media transfer and can race it.
+    if (isLoadingRef.current) return;
     setIsRefreshing(true);
     try {
       await loadSocialData();
