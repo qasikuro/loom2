@@ -29,6 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@clerk/expo';
 import { apiFetch, ApiError, useApp } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { useTheme } from '@/context/ThemeContext';
 import { SHADOW } from '@/constants/colors';
 import { ReportSheet } from '@/components/ReportSheet';
 import { WeatherWidget } from '@/components/WeatherWidget';
@@ -536,13 +537,14 @@ function AnimatedAvatarRing({
 }
 
 // ── Mood chip ─────────────────────────────────────────────────────────────────
-function MoodChip({ mood }: { mood: string }) {
+function MoodChip({ mood, accentOverride }: { mood: string; accentOverride?: string }) {
   const { t } = useTranslation();
   const aura = MOOD_AURA[mood] ?? DEFAULT_AURA;
+  const accent = accentOverride ?? aura.accent;
   return (
-    <View style={[styles.moodChip, { backgroundColor: aura.accent + '18', borderColor: aura.accent + '40' }]}>
-      <View style={[styles.moodDot, { backgroundColor: aura.accent }]} />
-      <Text style={[styles.moodChipText, { color: aura.accent }]}>{t(`publicProfile.moods.${mood}`, { defaultValue: mood })}</Text>
+    <View style={[styles.moodChip, { backgroundColor: accent + '18', borderColor: accent + '40' }]}>
+      <View style={[styles.moodDot, { backgroundColor: accent }]} />
+      <Text style={[styles.moodChipText, { color: accent }]}>{t(`publicProfile.moods.${mood}`, { defaultValue: mood })}</Text>
     </View>
   );
 }
@@ -657,6 +659,7 @@ interface PublicBook {
 export default function UserProfileScreen() {
   const { userId }          = useLocalSearchParams<{ userId: string }>();
   const colors              = useColors();
+  const { isDark }           = useTheme();
   const { t, i18n }         = useTranslation();
   const insets              = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -881,6 +884,28 @@ export default function UserProfileScreen() {
   const betaBadge = hasDynamicBetaBadge ? profileBadges.find(badge => badge.slug === 'beta_tester') : null;
   const showLegacyFounderBadge = Boolean(profile?.isFounder) && !hasDynamicFounderBadge;
   const showLegacyBetaBadge = Boolean(profile?.isBetaTester) && !hasDynamicBetaBadge;
+  const regaliaTheme = isDark
+    ? {
+        panel: '#100D20',
+        inset: '#17132A',
+        insetAlt: '#1B1730',
+        border: 'rgba(221,184,108,0.25)',
+        divider: 'rgba(221,184,108,0.22)',
+        gold: '#E4C16F',
+        xpTrack: '#302844',
+        xpFill: '#C6A6FF',
+      }
+    : {
+        panel: '#FFFEFC',
+        inset: '#F8F5EF',
+        insetAlt: '#F3EFE7',
+        border: '#D7C5A1',
+        divider: '#E2D7C2',
+        gold: '#895B16',
+        xpTrack: '#E8E0D2',
+        xpFill: '#7656B4',
+      };
+  const regaliaAccent = hasRegalia && !isDark ? colors.tint : aura.accent;
 
   if (loading) {
     return (
@@ -979,20 +1004,38 @@ export default function UserProfileScreen() {
             {
               width: Math.min(Math.max(windowWidth - 28, 0), 720),
               alignSelf: 'center',
-              backgroundColor: colors.card,
+              backgroundColor: hasRegalia ? regaliaTheme.panel : colors.card,
               paddingHorizontal: hasRegalia ? 24 : 16,
-              borderColor: isFounder ? '#C8A84B55' : isBeta ? '#9B78E855' : colors.border,
+              paddingBottom: hasRegalia ? 18 : 0,
+              borderColor: hasRegalia ? regaliaTheme.border : isFounder ? '#C8A84B55' : isBeta ? '#9B78E855' : colors.border,
+              borderWidth: hasRegalia ? 1.25 : 1,
             },
-            SHADOW.md,
+            hasRegalia
+              ? {
+                  shadowColor: isDark ? '#000000' : '#71582F',
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: isDark ? 0.58 : 0.14,
+                  shadowRadius: 22,
+                  elevation: 8,
+                }
+              : SHADOW.md,
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
           ]}
         >
+          {hasRegalia && (
+            <LinearGradient
+              pointerEvents="none"
+              colors={isDark ? ['rgba(205,165,88,0.075)', 'transparent', 'rgba(130,98,180,0.045)'] : ['rgba(183,132,47,0.055)', 'transparent', 'rgba(95,59,186,0.025)']}
+              locations={[0, 0.38, 1]}
+              style={[StyleSheet.absoluteFill, { borderRadius: 22 }]}
+            />
+          )}
           {/* Name + badge */}
-          <View style={styles.nameRow}>
-            <Text style={[styles.name, { color: colors.foreground }]}>{profile.name}</Text>
+          <View style={[styles.nameRow, hasRegalia && styles.regaliaNameRow]}>
+            <Text style={[styles.name, hasRegalia && styles.regaliaName, { color: colors.foreground }]}>{profile.name}</Text>
             {isFounder && (
-              <View style={[styles.verifiedBadge, { backgroundColor: '#C8A84B22', borderColor: '#C8A84B55' }]}>
-                <Text style={{ fontSize: 11, color: '#C8A84B' }}>✦</Text>
+              <View style={[styles.verifiedBadge, { backgroundColor: hasRegalia ? regaliaAccent + '22' : '#C8A84B22', borderColor: hasRegalia ? regaliaAccent + '55' : '#C8A84B55' }]}>
+                <Text style={{ fontSize: 11, color: hasRegalia ? regaliaTheme.gold : '#C8A84B' }}>✦</Text>
               </View>
             )}
             {isBeta && !isFounder && (
@@ -1000,8 +1043,8 @@ export default function UserProfileScreen() {
                 <Text style={{ fontSize: 11 }}>⚗️</Text>
               </View>
             )}
-            <View style={[styles.nameBadge, { backgroundColor: aura.accent + '20', borderColor: aura.accent + '40' }]}>
-              <Text style={{ fontSize: 12 }}>{aura.particle}</Text>
+            <View style={[styles.nameBadge, { backgroundColor: regaliaAccent + '20', borderColor: regaliaAccent + '40' }]}>
+              <Text style={{ fontSize: 12, color: regaliaAccent }}>{aura.particle}</Text>
             </View>
             {!isSelf && (
               <TouchableOpacity
@@ -1024,15 +1067,20 @@ export default function UserProfileScreen() {
           <View style={styles.profileLikesRow}>
             {!isSelf && (
               <TouchableOpacity
-                style={[styles.profileLikeButton, profile.profileLiked && styles.profileLikeButtonActive]}
+                style={[
+                  styles.profileLikeButton,
+                  profile.profileLiked && styles.profileLikeButtonActive,
+                  hasRegalia && { borderColor: regaliaAccent + '55', backgroundColor: regaliaAccent + '12' },
+                  hasRegalia && profile.profileLiked && { borderColor: '#A83F7380', backgroundColor: '#A83F7318' },
+                ]}
                 onPress={() => { void handleLikeProfile(); }}
                 disabled={likingProfile}
                 accessibilityRole="button"
                 accessibilityLabel={t(profile.profileLiked ? 'likes.unlikeProfile' : 'likes.likeProfile')}
                 accessibilityState={{ selected: profile.profileLiked, disabled: likingProfile }}
               >
-                <Icon name="heart" size={16} color={profile.profileLiked ? '#F4B1D5' : colors.primary} />
-                <Text style={[styles.profileLikeText, { color: profile.profileLiked ? '#F4B1D5' : colors.primary }]}>
+                <Icon name="heart" size={16} color={profile.profileLiked ? (hasRegalia && !isDark ? '#A83F73' : '#F4B1D5') : colors.primary} />
+                <Text style={[styles.profileLikeText, { color: profile.profileLiked ? (hasRegalia && !isDark ? '#A83F73' : '#F4B1D5') : colors.primary }]}>
                   {t(profile.profileLiked ? 'likes.liked' : 'likes.like')}
                 </Text>
               </TouchableOpacity>
@@ -1043,14 +1091,14 @@ export default function UserProfileScreen() {
           </View>
 
           {/* @handle + online status */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }, hasRegalia && styles.regaliaIdentityRow]}>
             {profile.username ? (
-              <Text style={[styles.handle, { color: aura.accent }]}>@{profile.username}</Text>
+              <Text style={[styles.handle, { color: regaliaAccent }]}>@{profile.username}</Text>
             ) : null}
             {profile.showOnlineStatus && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: profile.isOnline ? 'rgba(80,200,120,0.12)' : 'rgba(200,184,232,0.08)', borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: profile.isOnline ? 'rgba(80,200,120,0.30)' : 'rgba(200,184,232,0.15)' }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: profile.isOnline ? '#4EC87A' : 'rgba(200,184,232,0.40)' }} />
-                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: profile.isOnline ? '#4EC87A' : 'rgba(200,184,232,0.50)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: profile.isOnline ? 'rgba(80,200,120,0.12)' : (hasRegalia && !isDark ? 'rgba(25,23,39,0.045)' : 'rgba(200,184,232,0.08)'), borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: profile.isOnline ? 'rgba(80,200,120,0.30)' : (hasRegalia && !isDark ? 'rgba(25,23,39,0.14)' : 'rgba(200,184,232,0.15)') }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: profile.isOnline ? (hasRegalia && !isDark ? '#24804A' : '#4EC87A') : (hasRegalia && !isDark ? '#8B8490' : 'rgba(200,184,232,0.40)') }} />
+                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: profile.isOnline ? (hasRegalia && !isDark ? '#24804A' : '#4EC87A') : (hasRegalia && !isDark ? '#655D69' : 'rgba(200,184,232,0.50)') }}>
                   {profile.isOnline ? t('publicProfile.online') : t('publicProfile.offline')}
                 </Text>
               </View>
@@ -1059,7 +1107,7 @@ export default function UserProfileScreen() {
 
           {/* Active title */}
           {profile.activeTitle ? (
-            <Text style={{ fontSize: 11, color: '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, marginTop: 3 }}>
+            <Text style={{ fontSize: 11, color: hasRegalia ? regaliaTheme.gold : '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, marginTop: 3 }}>
               ✦ {profile.activeTitle}
             </Text>
           ) : null}
@@ -1087,17 +1135,17 @@ export default function UserProfileScreen() {
             const level     = Math.max(1, Math.floor(xp / XP_PER_LEVEL) + 1);
             const xpPct     = (xp % XP_PER_LEVEL) / XP_PER_LEVEL;
             return (
-              <View style={{ marginTop: 6, gap: 4 }}>
+              <View style={[{ marginTop: 6, gap: 4 }, hasRegalia && styles.regaliaXpPanel, hasRegalia && { backgroundColor: regaliaTheme.inset, borderColor: regaliaTheme.divider }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={{ paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, backgroundColor: aura.accent + '22', borderWidth: 1, borderColor: aura.accent + '44' }}>
-                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: aura.accent, letterSpacing: 0.4 }}>{t('publicProfile.levelShort')} {level}</Text>
+                  <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: (hasRegalia ? regaliaTheme.xpFill : aura.accent) + '22', borderWidth: 1, borderColor: (hasRegalia ? regaliaTheme.xpFill : aura.accent) + '44' }}>
+                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: hasRegalia ? regaliaTheme.xpFill : aura.accent, letterSpacing: 0.4 }}>{t('publicProfile.levelShort')} {level}</Text>
                   </View>
-                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)' }}>
+                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.45)' }}>
                     {xp % XP_PER_LEVEL} / {XP_PER_LEVEL} XP
                   </Text>
                 </View>
-                <View style={{ height: 3, borderRadius: 2, backgroundColor: aura.accent + '22', overflow: 'hidden' }}>
-                  <View style={{ height: '100%', width: `${Math.round(xpPct * 100)}%` as `${number}%`, borderRadius: 2, backgroundColor: aura.accent + 'AA' }} />
+                <View style={{ height: 5, borderRadius: 3, backgroundColor: hasRegalia ? regaliaTheme.xpTrack : aura.accent + '22', overflow: 'hidden' }}>
+                  <View style={{ height: '100%', width: `${Math.round(xpPct * 100)}%` as `${number}%`, borderRadius: 3, backgroundColor: hasRegalia ? regaliaTheme.xpFill : aura.accent + 'AA' }} />
                 </View>
               </View>
             );
@@ -1109,14 +1157,14 @@ export default function UserProfileScreen() {
             const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             return profile.intentionDate === today;
           })() ? (
-            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: 'rgba(200,184,232,0.60)', marginTop: 4 }} numberOfLines={2}>
+            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.60)', marginTop: 4 }} numberOfLines={2}>
               ◌ {profile.intention}
             </Text>
           ) : null}
 
           {/* Vibe chip — mood shown in the card */}
-          <View style={{ marginTop: 2 }}>
-            <MoodChip mood={mood} />
+          <View style={[{ marginTop: 2 }, hasRegalia && styles.regaliaMoodRow]}>
+            <MoodChip mood={mood} accentOverride={hasRegalia && !isDark ? colors.tint : undefined} />
           </View>
 
           {/* ── Meta row: role + weather/time ─────────────────── */}
@@ -1125,13 +1173,13 @@ export default function UserProfileScreen() {
               {userRole ? (
                 <View style={[styles.roleBadge, { backgroundColor: userRole.color + '20', borderColor: userRole.color + '45' }]}>
                   <Text style={{ fontSize: 13 }}>{userRole.emoji}</Text>
-                  <Text style={[styles.roleBadgeText, { color: userRole.color }]}>{t(`publicProfile.roles.${userRole.key.toLowerCase()}`)}</Text>
+                  <Text style={[styles.roleBadgeText, { color: hasRegalia && !isDark ? colors.tint : userRole.color }]}>{t(`publicProfile.roles.${userRole.key.toLowerCase()}`)}</Text>
                 </View>
               ) : null}
               <WeatherWidget
                 query={weatherQuery}
                 timezone={profile.timezone}
-                accentColor={aura.accent}
+                accentColor={regaliaAccent}
                 compact
               />
             </View>
@@ -1148,9 +1196,9 @@ export default function UserProfileScreen() {
               {profile.traits.map(tr => (
                 <View
                   key={tr}
-                  style={[styles.traitChip, { backgroundColor: aura.accent + '14', borderColor: aura.accent + '30' }]}
+                  style={[styles.traitChip, { backgroundColor: regaliaAccent + '14', borderColor: regaliaAccent + '30' }]}
                 >
-                  <Text style={[styles.traitText, { color: aura.accent }]}>{tr}</Text>
+                  <Text style={[styles.traitText, { color: regaliaAccent }]}>{tr}</Text>
                 </View>
               ))}
             </ScrollView>
@@ -1158,14 +1206,14 @@ export default function UserProfileScreen() {
 
           {/* Birthday inline */}
           {profile.birthday ? (
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.60)', marginTop: 1 }}>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.60)', marginTop: 1 }}>
               🎂 {fmtBirthday(profile.birthday, i18n.language)}
             </Text>
           ) : null}
 
           {/* Country */}
           {profile.country ? (
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.55)', marginTop: 1 }}>
+            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.55)', marginTop: 1 }}>
               📍 {profile.country}
             </Text>
           ) : null}
@@ -1187,7 +1235,7 @@ export default function UserProfileScreen() {
               {profile.links.map((link, i) => (
                 <TouchableOpacity
                   key={i}
-                  style={[styles.linkPill, { backgroundColor: aura.accent + '10', borderColor: aura.accent + '35' }]}
+                  style={[styles.linkPill, { backgroundColor: regaliaAccent + '10', borderColor: regaliaAccent + '35' }]}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     Linking.openURL(link.url).catch(() => null);
@@ -1195,38 +1243,44 @@ export default function UserProfileScreen() {
                   activeOpacity={0.75}
                 >
                   <Text style={{ fontSize: 12 }}>{platformEmoji(link.platform)}</Text>
-                  <Text style={[styles.linkPillText, { color: aura.accent }]} numberOfLines={1}>
+                  <Text style={[styles.linkPillText, { color: regaliaAccent }]} numberOfLines={1}>
                     {link.label}
                   </Text>
-                  <Icon name="external-link" size={9} color={aura.accent + '80'} />
+                  <Icon name="external-link" size={9} color={regaliaAccent + 'B0'} />
                 </TouchableOpacity>
               ))}
             </ScrollView>
           ) : null}
 
+          {hasRegalia && (
+            <View pointerEvents="none" style={[styles.regaliaDivider, { backgroundColor: regaliaTheme.divider }]}>
+              <View style={[styles.regaliaDividerGem, { backgroundColor: regaliaTheme.gold }]} />
+            </View>
+          )}
+
           {/* Stats row — icon + colored number + label */}
-          <View style={[styles.statsRow, { borderTopColor: colors.border }]}>
+          <View style={[styles.statsRow, hasRegalia && styles.regaliaStatsRow, { borderTopColor: hasRegalia ? regaliaTheme.divider : colors.border, backgroundColor: hasRegalia ? regaliaTheme.inset : 'transparent', borderColor: hasRegalia ? regaliaTheme.divider : 'transparent' }]}>
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>📖</Text>
-              <Text style={[styles.statNum, { color: '#78A8D4' }]}>{stories.length}</Text>
+              <Text style={[styles.statNum, { color: hasRegalia && !isDark ? '#426E92' : '#78A8D4' }]}>{stories.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.stories')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>🧥</Text>
-              <Text style={[styles.statNum, { color: '#C8A84B' }]}>{outfits.length}</Text>
+              <Text style={[styles.statNum, { color: hasRegalia && !isDark ? '#895B16' : '#C8A84B' }]}>{outfits.length}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.outfits')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>💗</Text>
-              <Text style={[styles.statNum, { color: '#D878B0' }]}>{totalLikes}</Text>
+              <Text style={[styles.statNum, { color: hasRegalia && !isDark ? '#A83F73' : '#D878B0' }]}>{totalLikes}</Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.likes')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
               <Text style={styles.statIcon}>{isFounder ? '👑' : isBeta ? '⚗️' : '✦'}</Text>
-              <Text style={[styles.statNum, { color: isFounder ? '#C8A84B' : isBeta ? '#9B78E8' : colors.foreground }]}>
+              <Text style={[styles.statNum, { color: isFounder ? (hasRegalia ? regaliaTheme.gold : '#C8A84B') : isBeta ? '#9B78E8' : colors.foreground }]}>
                 {Math.floor((profile.stars ?? 0) / XP_PER_LEVEL) + 1}
               </Text>
               <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.level')}</Text>
@@ -1236,7 +1290,7 @@ export default function UserProfileScreen() {
           {/* ── Founder / Beta spotlight card ──────────────────── */}
           {(isFounder || isBeta) && (() => {
             const badge       = isFounder ? founderBadge : betaBadge;
-            const cardColor   = isFounder ? '#C8A84B' : '#9B78E8';
+            const cardColor   = isFounder ? (hasRegalia ? regaliaTheme.gold : '#C8A84B') : '#9B78E8';
             const cardDark    = isFounder ? '#6B4A14' : '#3A1878';
             const icon        = isFounder ? '👑'       : '⚗️';
             const title       = isFounder ? t('publicProfile.founderTitle') : t('publicProfile.betaPioneerTitle');
@@ -1244,17 +1298,17 @@ export default function UserProfileScreen() {
               ? t('publicProfile.founderDescription')
               : t('publicProfile.betaPioneerDescription');
             return (
-              <View style={[styles.spotlightBadgeCard, {
-                backgroundColor: cardDark + '33',
-                borderColor:     cardColor + '55',
+              <View style={[styles.spotlightBadgeCard, hasRegalia && styles.regaliaSpotlightCard, {
+                backgroundColor: hasRegalia ? regaliaTheme.insetAlt : cardDark + '33',
+                borderColor: hasRegalia ? regaliaTheme.divider : cardColor + '55',
               }]}>
                 <LinearGradient
-                  colors={[cardColor + '22', 'transparent']}
+                  colors={hasRegalia ? (isDark ? ['rgba(214,176,94,0.12)', 'rgba(125,92,50,0.035)'] : ['rgba(213,185,130,0.24)', 'rgba(255,255,255,0.15)']) : [cardColor + '22', 'transparent']}
                   style={StyleSheet.absoluteFill}
                   start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
                 />
                 {/* Icon or badge image */}
-                <View style={[styles.spotlightBadgeIcon, { backgroundColor: cardColor + '22', borderColor: cardColor + '55' }]}>
+                <View style={[styles.spotlightBadgeIcon, hasRegalia && styles.regaliaBadgeIcon, { backgroundColor: hasRegalia ? (isDark ? 'rgba(220,178,84,0.12)' : 'rgba(183,132,47,0.12)') : cardColor + '22', borderColor: hasRegalia ? cardColor + '88' : cardColor + '55' }]}>
                   {badge?.imageUrl ? (
                     <Image source={{ uri: badge.imageUrl }} style={{ width: 44, height: 44 }} contentFit="contain" />
                   ) : (
@@ -1264,7 +1318,7 @@ export default function UserProfileScreen() {
                 {/* Text */}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.spotlightBadgeTitle, { color: cardColor }]}>{title}</Text>
-                  <Text style={[styles.spotlightBadgeDesc, { color: cardColor + 'BB' }]}>{description}</Text>
+                  <Text style={[styles.spotlightBadgeDesc, { color: hasRegalia && !isDark ? '#66563D' : cardColor + (hasRegalia ? 'DD' : 'BB') }]}>{description}</Text>
                 </View>
               </View>
             );
@@ -1273,7 +1327,7 @@ export default function UserProfileScreen() {
           {/* Message button — only visible when viewing someone else's profile */}
           {!isSelf && (
             <TouchableOpacity
-              style={[styles.messageBtn, { borderColor: aura.accent + '55', backgroundColor: aura.accent + '10' }]}
+              style={[styles.messageBtn, hasRegalia && styles.regaliaActionBtn, { borderColor: hasRegalia ? regaliaTheme.divider : aura.accent + '55', backgroundColor: hasRegalia ? regaliaTheme.inset : aura.accent + '10' }]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1281,23 +1335,23 @@ export default function UserProfileScreen() {
               }}
               activeOpacity={0.8}
             >
-              <Icon name="message-circle" size={15} color={aura.accent} />
-              <Text style={[styles.messageBtnText, { color: aura.accent }]}>{t('publicProfile.sendMessage')}</Text>
+              <Icon name="message-circle" size={15} color={regaliaAccent} />
+              <Text style={[styles.messageBtnText, { color: hasRegalia && !isDark ? colors.tint : aura.accent }]}>{t('publicProfile.sendMessage')}</Text>
             </TouchableOpacity>
           )}
 
           {/* Notification toggle — shown when following someone else */}
           {!isSelf && isFollowing && (
-            <View style={[styles.notifyRow, { borderTopColor: colors.border }]}>
-              <Icon name="bell" size={14} color={aura.accent} />
+            <View style={[styles.notifyRow, hasRegalia && styles.regaliaNotifyRow, { borderTopColor: hasRegalia ? regaliaTheme.divider : colors.border, backgroundColor: hasRegalia ? regaliaTheme.inset : 'transparent' }]}>
+              <Icon name="bell" size={14} color={regaliaAccent} />
               <Text style={[styles.notifyRowText, { color: colors.mutedForeground }]} numberOfLines={2}>
                 {t('publicProfile.newPostsNotice', { name: profile.name })}
               </Text>
               <Switch
                 value
                 onValueChange={() => {}}
-                trackColor={{ false: colors.border, true: aura.accent + '90' }}
-                thumbColor={aura.accent}
+                trackColor={{ false: colors.border, true: regaliaAccent + '90' }}
+                thumbColor={regaliaAccent}
                 style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
               />
             </View>
@@ -1746,6 +1800,63 @@ const styles = StyleSheet.create({
     paddingTop: 14,
     paddingBottom: 0,
     gap: 3,
+  },
+  regaliaNameRow: { minHeight: 34, gap: 8 },
+  regaliaName: { fontSize: 22, letterSpacing: -0.45 },
+  regaliaIdentityRow: { marginTop: 4, minHeight: 25 },
+  regaliaXpPanel: {
+    marginTop: 8,
+    gap: 6,
+    paddingHorizontal: 11,
+    paddingVertical: 9,
+    borderRadius: 15,
+    borderWidth: 1,
+  },
+  regaliaMoodRow: { marginTop: 7 },
+  regaliaDivider: {
+    height: 1,
+    marginTop: 10,
+    marginBottom: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  regaliaDividerGem: {
+    position: 'absolute',
+    width: 7,
+    height: 7,
+    borderRadius: 1,
+    transform: [{ rotate: '45deg' }],
+  },
+  regaliaStatsRow: {
+    marginHorizontal: 0,
+    marginTop: 5,
+    paddingHorizontal: 5,
+    paddingVertical: 11,
+    borderRadius: 17,
+    borderWidth: 1,
+  },
+  regaliaSpotlightCard: {
+    marginHorizontal: 0,
+    marginTop: 9,
+    paddingHorizontal: 13,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderRadius: 18,
+  },
+  regaliaBadgeIcon: { borderRadius: 18, borderWidth: 1.5 },
+  regaliaActionBtn: {
+    marginHorizontal: 0,
+    marginTop: 8,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 15,
+  },
+  regaliaNotifyRow: {
+    marginHorizontal: 0,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRadius: 15,
   },
   nameRow: {
     flexDirection: 'row',
