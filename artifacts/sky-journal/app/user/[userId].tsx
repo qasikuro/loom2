@@ -36,6 +36,7 @@ import { WeatherWidget } from '@/components/WeatherWidget';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
 import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
+import { FounderProfileIntro } from '@/components/profile/FounderProfileIntro';
 
 // ── Mood aura data ────────────────────────────────────────────────────────────
 type AuraData = {
@@ -676,6 +677,7 @@ export default function UserProfileScreen() {
   const [outfitsError, setOutfitsError] = useState(false);
   const [booksError,   setBooksError]   = useState(false);
   const [reportVisible, setReportVisible] = useState(false);
+  const [founderIntroVisible, setFounderIntroVisible] = useState(false);
   const profileLikeBusy = useRef(false);
   const [likingProfile, setLikingProfile] = useState(false);
 
@@ -743,6 +745,7 @@ export default function UserProfileScreen() {
 
   useEffect(() => {
     if (!userId) return;
+    setFounderIntroVisible(false);
     (async () => {
       const [profResult, storsResult, outsResult, booksResult] = await Promise.allSettled([
         apiFetch<PublicProfile>(`/users/${userId}`),
@@ -760,6 +763,8 @@ export default function UserProfileScreen() {
       }
 
       setProfile(profResult.value);
+      const profileHasFounderBadge = profResult.value.badges?.some(badge => badge.slug === 'founder') ?? false;
+      setFounderIntroVisible(Boolean(profResult.value.isFounder) || profileHasFounderBadge);
       setStories(storsResult.status === 'fulfilled' ? storsResult.value : []);
       setStoriesError(storsResult.status === 'rejected');
       setOutfits(outsResult.status === 'fulfilled' ? outsResult.value : []);
@@ -1720,6 +1725,13 @@ export default function UserProfileScreen() {
         targetLabel={profile?.name}
         onClose={() => setReportVisible(false)}
       />
+      {founderIntroVisible && (
+        <FounderProfileIntro
+          title={t('publicProfile.founderTitle')}
+          closeLabel={t('common.cancel')}
+          onComplete={() => setFounderIntroVisible(false)}
+        />
+      )}
     </View>
   );
 }
