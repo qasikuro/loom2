@@ -4,7 +4,7 @@ export interface FriendLike {
 }
 export interface ThreadLike {
   partnerId: string; partnerName: string; partnerHandle: string | null; partnerAvatar: string | null;
-  lastMessage: string; lastAt: string; unread: boolean;
+  lastMessage: string; lastAt: string; unread: boolean; partnerDeleted?: boolean;
 }
 export interface Contact {
   userId: string; name: string; handle: string | null; avatar: string | null;
@@ -17,7 +17,7 @@ export function matchesQuery(query: string, name: string, handle: string | null 
   return !q || `${name} ${handle ?? ''}`.toLowerCase().includes(q);
 }
 
-/** Merge friends with DM threads; blocked removed; only friends carry presence. */
+/** Hide blocked friendships, but retain their separately deletable chat history. */
 export function mergeContacts(
   friends: readonly FriendLike[], threads: readonly ThreadLike[], blocked: ReadonlySet<string>, restricted: boolean,
 ): Contact[] {
@@ -31,12 +31,17 @@ export function mergeContacts(
       });
     }
     for (const th of threads) {
-      if (blocked.has(th.partnerId)) continue;
       const base: Contact = map.get(th.partnerId) ?? {
         userId: th.partnerId, name: th.partnerName, handle: th.partnerHandle, avatar: th.partnerAvatar, isFriend: false,
         online: false, lastSeenAt: null, preview: null, lastAt: null, unread: false,
       };
-      map.set(th.partnerId, { ...base, preview: th.lastMessage, lastAt: th.lastAt, unread: th.unread });
+      map.set(th.partnerId, {
+        ...base,
+        ...(th.partnerDeleted ? {
+          name: 'Deleted account', handle: null, avatar: null, isFriend: false, online: false, lastSeenAt: null,
+        } : {}),
+        preview: th.lastMessage, lastAt: th.lastAt, unread: th.unread,
+      });
     }
   }
   return [...map.values()].sort((a, b) => {

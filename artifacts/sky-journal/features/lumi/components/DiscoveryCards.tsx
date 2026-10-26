@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { apiFetch, useApp, resolveUri } from '@/context/AppContext';
@@ -7,6 +7,8 @@ import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { AudiusTrack, AudiusTrackPlayer } from '@/features/story-studio/components/AudiusMusicPicker';
 import { useLumiMusic } from '../music/LumiMusicProvider';
+import { alternateStyles, buildQueue, differentArtists, rankCampfires } from '../logic';
+import { useLumiChat } from './LumiChatContext';
 
 type C = ReturnType<typeof useColors>;
 
@@ -57,20 +59,32 @@ export function InlineState({ c, text, onRetry }: { c: C; text: string; onRetry?
 
 function fmt(sec: number) { return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; }
 
-export function MusicDiscovery({ query }: { query: string }) {
+export function MusicDiscovery({ query: initialQuery }: { query: string }) {
   const c = useColors();
   const { t } = useTranslation();
   const music = useLumiMusic();
-  const preview = { playingId: music.playingId, toggle: music.toggle };
+  const chat = useLumiChat();
+  const [query, setQuery] = useState(initialQuery);
+  const [draft, setDraft] = useState('');
+  const [shown, setShown] = useState<AudiusTrack[]>([]);
+  const skipsAtMount = useRef(music.skips);
   const { data, error, loading, retry } = useLoader(
     async () => {
-      const r = await apiFetch<{ tracks: AudiusTrack[] }>(`/music/search?q=${encodeURIComponent(query)}`);
-      return (r.tracks ?? []).filter(tr => tr.duration > 0 && tr.duration <= 3600).slice(0, 3);
+      const r = await apiFetch<{ tracks: AudiusTrack[] }>(`/music/search?q=${encodeURIComponent(query.slice(0, 80))}`);
+      return buildQueue((r.tracks ?? []).filter(tr => tr && tr.duration > 0 && tr.duration <= 3600));
     },
     [query],
   );
+  useEffect(() => { setShown(data ? data.slice(0, 3) : []); }, [data]);
+  const pool = data ?? [];
+  const exhausted = pool.length > 0 && differentArtists(pool, shown, 1).length === 0;
+  const preview = {
+    playingId: music.playingId,
+    // Playing from a list makes next/previous walk the full search result, not just three rows.
+    toggle: (tr: AudiusTrack) => music.toggle(tr, [...shown, ...pool]),
+  };
   const row = (tr: AudiusTrack) => (
-    <View key={tr.id} style={[s.row, { borderColor: c.border, backgroundColor: c.background }]}>
+    <View key={tr.id} style={[s.row, { borderColor: music.track?.id === tr.id ? c.tint : c.border, backgroundColor: c.background }]}>
       {tr.artworkUrl
         ? <Image source={{ uri: tr.artworkUrl }} style={s.art} />
         : <View style={[s.art, { backgroundColor: c.glowPurple, alignItems: 'center', justifyContent: 'center' }]}><Icon name="volume-2" size={16} color={c.tint} /></View>}
@@ -91,16 +105,61 @@ export function MusicDiscovery({ query }: { query: string }) {
   const favBlock = favs.length > 0 && (
     <View style={{ gap: 8, marginBottom: 6 }}>
       <Text style={[s.attrib, { color: c.mutedForeground }]}>{t('lumi.music.saved', 'Your saved tracks')}</Text>
-      {favs.map(row)}
+      {favs.map(tr => (
+        <View key={tr.id}>{row(tr)}</View>
+      ))}
     </View>
   );
+  const styles = alternateStyles(query, shown.map(x => x.genre));
+  const search = (q: string) => { const v = q.trim().slice(0, 80); if (v) { setQuery(v); setDraft(''); } };
+  const tasteBar = (
+    <View style={{ gap: 8 }}>
+      <View style={s.chips}>
+        {styles.map(st => (
+          <TouchableOpacity key={st} onPress={() => search(st)} style={[s.ghostBtn, { borderColor: c.border }]} accessibilityRole="button">
+            <Text style={[s.ghostText, { color: c.text }]}>{st}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={[s.searchRow, { borderColor: c.border, backgroundColor: c.background }]}>
+        <Icon name="search" size={13} color={c.mutedForeground} />
+        <TextInput value={draft} onChangeText={v => setDraft(v.slice(0, 80))} onSubmitEditing={() => search(draft)}
+          placeholder={t('lumi.music.otherTaste', 'Another artist or genre')} placeholderTextColor={c.mutedForeground}
+          style={[s.searchInput, { color: c.foreground }]} returnKeyType="search" />
+        {!!draft.trim() && (
+          <TouchableOpacity onPress={() => search(draft)} hitSlop={8} accessibilityLabel={t('lumi.music.search', 'Search')}>
+            <Icon name="arrow-right" size={14} color={c.tint} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+  const rejected = music.skips > skipsAtMount.current || exhausted;
+  const followUp = rejected && chat.ask && (
+    <TouchableOpacity onPress={() => chat.ask?.(t('lumi.music.rejectAsk', 'These tracks are not my taste. Can you suggest a different artist or genre?'))}
+      style={[s.ghostBtn, { borderColor: c.tint }]} accessibilityRole="button">
+      <Icon name="message-circle" size={12} color={c.tint} />
+      <Text style={[s.ghostText, { color: c.tint }]}>{t('lumi.music.tellLumi', 'Not my taste, tell Lumi')}</Text>
+    </TouchableOpacity>
+  );
   if (loading) return <View>{favBlock}<Skeleton c={c} rows={3} /></View>;
-  if (error) return <InlineState c={c} text={t('lumi.musicError', 'Music search is not available right now.')} onRetry={retry} />;
-  if (!data?.length) return <InlineState c={c} text={t('lumi.musicEmpty', 'No tracks matched that. Try another mood.')} />;
+  if (error) return <View style={{ gap: 8 }}><InlineState c={c} text={t('lumi.musicError', 'Music search is not available right now.')} onRetry={retry} />{tasteBar}</View>;
+  if (!pool.length) return <View style={{ gap: 8 }}><InlineState c={c} text={t('lumi.musicEmpty', 'No tracks matched that. Try another mood.')} />{tasteBar}{followUp}</View>;
   return (
     <View style={{ gap: 8 }}>
       {favBlock}
-      {data.filter(tr => !favs.some(f => f.id === tr.id)).map(row)}
+      <Text style={[s.attrib, { color: c.mutedForeground }]}>{t('lumi.music.results', 'Results for "{{q}}"', { q: query })}</Text>
+      {shown.filter(tr => !favs.some(f => f.id === tr.id)).map(row)}
+      <View style={s.chips}>
+        {!exhausted && (
+          <TouchableOpacity onPress={() => setShown(differentArtists(pool, shown, 3))} style={[s.ghostBtn, { borderColor: c.border }]} accessibilityRole="button">
+            <Icon name="refresh-cw" size={12} color={c.tint} />
+            <Text style={[s.ghostText, { color: c.tint }]}>{t('lumi.music.differentArtist', 'Different artists')}</Text>
+          </TouchableOpacity>
+        )}
+        {followUp}
+      </View>
+      {tasteBar}
       <Text style={[s.attrib, { color: c.mutedForeground }]}>{t('lumi.audius', 'Streams from Audius. Keeps playing in Lumi, journal and creators; stops anywhere else.')}</Text>
     </View>
   );
@@ -212,53 +271,94 @@ export function CampfireDiscovery({ query }: { query?: string }) {
   const { t } = useTranslation();
   const router = useRouter();
   const [open, setOpen] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const [showQuiet, setShowQuiet] = useState(false);
   const { data, error, loading, retry } = useLoader(async () => {
     const rooms = await apiFetch<CampfireRoom[]>('/campfire');
-    const q = (query ?? '').toLowerCase();
-    const sorted = [...(rooms ?? [])].sort((a, b) => {
-      const ma = q && `${a.name} ${a.mood}`.toLowerCase().includes(q) ? 1 : 0;
-      const mb = q && `${b.name} ${b.mood}`.toLowerCase().includes(q) ? 1 : 0;
-      return mb - ma || b.soulCount - a.soulCount;
-    });
-    return sorted.slice(0, 3);
+    return rankCampfires(Array.isArray(rooms) ? rooms : [], query);
   }, [query]);
   if (loading) return <Skeleton c={c} rows={2} />;
   if (error) return <InlineState c={c} text={t('lumi.campError', 'Could not load campfires.')} onRetry={retry} />;
-  if (!data?.length) return <InlineState c={c} text={t('lumi.campEmpty', 'No campfires are open right now.')} />;
-  return (
-    <View style={{ gap: 8 }}>
-      {data.map(r => {
-        const expanded = open === r.id;
-        return (
-          <View key={r.id} style={[s.rowCol, { borderColor: expanded ? c.tint : c.border, backgroundColor: c.background }]}>
-            <TouchableOpacity onPress={() => setOpen(expanded ? null : r.id)} style={s.rowInner} accessibilityRole="button">
-              <View style={[s.avatar, { backgroundColor: c.glowGold, alignItems: 'center', justifyContent: 'center' }]}>
-                <Icon name="sunrise" size={16} color={c.gold} />
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[s.rowTitle, { color: c.foreground }]} numberOfLines={1}>{r.name}</Text>
-                <Text style={[s.rowSub, { color: c.mutedForeground }]} numberOfLines={1}>
-                  {r.mood} · {t('lumi.souls', '{{n}} here', { n: r.soulCount })}
+  if (!data || (!data.active.length && !data.quiet.length)) return <InlineState c={c} text={t('lumi.campEmpty', 'No campfires are open right now.')} />;
+  const active = data.active.slice(0, 3);
+  const quiet = data.quiet.slice(0, active.length ? 2 : 3);
+  const room = (r: CampfireRoom) => {
+    const expanded = open === r.id;
+    const confirming = confirm === r.id;
+    const n = r.soulCount > 0 ? Math.floor(r.soulCount) : 0;
+    return (
+      <View key={r.id} style={[s.rowCol, { borderColor: expanded ? c.tint : c.border, backgroundColor: c.background }]}>
+        <TouchableOpacity onPress={() => { setOpen(expanded ? null : r.id); setConfirm(null); }} style={s.rowInner} accessibilityRole="button">
+          <View style={[s.avatar, { backgroundColor: n ? c.glowGold : c.muted, alignItems: 'center', justifyContent: 'center' }]}>
+            <Icon name="sunrise" size={16} color={n ? c.gold : c.mutedForeground} />
+          </View>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={[s.rowTitle, { color: c.foreground }]} numberOfLines={1}>{r.name}</Text>
+            <Text style={[s.rowSub, { color: c.mutedForeground }]} numberOfLines={1}>
+              {r.mood ? `${r.mood} · ` : ''}{n
+                ? t('lumi.camp.recent', '{{n}} chatted in the last 5 min', { n })
+                : t('lumi.camp.quietNow', 'No recent messages')}
+            </Text>
+          </View>
+          <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={16} color={c.mutedForeground} />
+        </TouchableOpacity>
+        {expanded && (
+          <View style={{ gap: 8, paddingTop: 8 }}>
+            <Text style={[s.rowSub, { color: c.text }]} numberOfLines={3}>
+              {r.lastMessage?.content
+                ? `${r.lastMessage.authorName}: ${r.lastMessage.content}`
+                : t('lumi.campQuiet', 'Quiet so far. You could be the first to say hi.')}
+            </Text>
+            {confirming ? (
+              <View style={{ gap: 8 }}>
+                <Text style={[s.rowSub, { color: c.mutedForeground }]}>
+                  {t('lumi.camp.confirm', 'Open {{name}}? Nothing is sent until you write something yourself.', { name: r.name })}
                 </Text>
+                <View style={s.chips}>
+                  <TouchableOpacity onPress={() => router.push(`/campfire/${r.id}` as never)}
+                    style={[s.solidBtn, { backgroundColor: c.secondary }]} accessibilityRole="button">
+                    <Text style={[s.solidText, { color: c.secondaryForeground }]}>{t('lumi.camp.go', 'Open room')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setConfirm(null)} style={[s.ghostBtn, { borderColor: c.border }]} accessibilityRole="button">
+                    <Text style={[s.ghostText, { color: c.text }]}>{t('lumi.camp.notNow', 'Not now')}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <Icon name={expanded ? 'chevron-down' : 'chevron-right'} size={16} color={c.mutedForeground} />
-            </TouchableOpacity>
-            {expanded && (
-              <View style={{ gap: 8, paddingTop: 8 }}>
-                <Text style={[s.rowSub, { color: c.text }]} numberOfLines={3}>
-                  {r.lastMessage?.content
-                    ? `${r.lastMessage.authorName}: ${r.lastMessage.content}`
-                    : t('lumi.campQuiet', 'Quiet so far. You could be the first to say hi.')}
-                </Text>
-                <TouchableOpacity onPress={() => router.push(`/campfire/${r.id}` as never)}
-                  style={[s.solidBtn, { backgroundColor: c.secondary }]} accessibilityRole="button">
-                  <Text style={[s.solidText, { color: c.secondaryForeground }]}>{t('lumi.enterRoom', 'Enter this room')}</Text>
-                </TouchableOpacity>
-              </View>
+            ) : (
+              <TouchableOpacity onPress={() => setConfirm(r.id)}
+                style={[s.solidBtn, { backgroundColor: c.secondary }]} accessibilityRole="button">
+                <Text style={[s.solidText, { color: c.secondaryForeground }]}>{t('lumi.enterRoom', 'Enter this room')}</Text>
+              </TouchableOpacity>
             )}
           </View>
-        );
-      })}
+        )}
+      </View>
+    );
+  };
+  return (
+    <View style={{ gap: 8 }}>
+      {active.length > 0 ? (
+        <>
+          <Text style={[s.attrib, { color: c.mutedForeground }]}>{t('lumi.camp.activeHead', 'Active now, by recent chat')}</Text>
+          {active.map(room)}
+          {quiet.length > 0 && (showQuiet ? (
+            <>
+              <Text style={[s.attrib, { color: c.mutedForeground }]}>{t('lumi.camp.quietHead', 'Quieter rooms')}</Text>
+              {quiet.map(room)}
+            </>
+          ) : (
+            <TouchableOpacity onPress={() => setShowQuiet(true)} style={[s.ghostBtn, { borderColor: c.border }]} accessibilityRole="button">
+              <Text style={[s.ghostText, { color: c.tint }]}>{t('lumi.camp.showQuiet', 'Prefer somewhere quiet?')}</Text>
+            </TouchableOpacity>
+          ))}
+        </>
+      ) : (
+        <>
+          <Text style={[s.attrib, { color: c.mutedForeground }]}>{t('lumi.camp.noneActive', 'No one has chatted in the last few minutes. These rooms are open and quiet.')}</Text>
+          {quiet.map(room)}
+        </>
+      )}
+      <Text style={[s.attrib, { color: c.mutedForeground }]}>{t('lumi.camp.note', 'Counts show people who sent messages recently, not everyone reading.')}</Text>
     </View>
   );
 }
@@ -281,4 +381,7 @@ const s = StyleSheet.create({
   draft: { fontFamily: 'Satoshi-Regular', fontSize: 12, borderLeftWidth: 2, paddingLeft: 8 },
   solidBtn: { alignSelf: 'flex-start', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
   solidText: { fontFamily: 'Satoshi-Bold', fontSize: 12.5 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 },
+  searchInput: { flex: 1, fontFamily: 'Satoshi-Regular', fontSize: 12.5, paddingVertical: 6 },
 });

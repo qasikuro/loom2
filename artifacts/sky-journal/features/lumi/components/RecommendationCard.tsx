@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon, IconName } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { LumiRecommendation, LumiRecType } from '../types';
+import { useLumiChat } from './LumiChatContext';
 import { CampfireDiscovery, FriendsDiscovery, GuidesDiscovery, MusicDiscovery } from './DiscoveryCards';
 
 const ICONS: Record<LumiRecType, IconName> = {
@@ -26,6 +27,8 @@ export function RecommendationCard({ rec, onStartSession, onCheckIn }: {
   const c = useColors();
   const { t } = useTranslation();
   const router = useRouter();
+  const chat = useLumiChat();
+  const running = !!chat.activeSession;
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState(rec.draft ?? '');
   const [minutes, setMinutes] = useState<5 | 15 | 30>(rec.duration ?? 15);
@@ -100,9 +103,13 @@ export function RecommendationCard({ rec, onStartSession, onCheckIn }: {
                   </TouchableOpacity>
                 ))}
               </View>
-              <TouchableOpacity onPress={() => onStartSession(minutes)} style={[s.solid, { backgroundColor: c.secondary }]}>
-                <Text style={[s.solidText, { color: c.secondaryForeground }]}>{t('lumi.startSession', 'Start {{n}} minute session', { n: minutes })}</Text>
-              </TouchableOpacity>
+              {running ? (
+                <Text style={[s.hint, { color: c.mutedForeground }]}>{t('lumi.gs.already', 'A guided session is already running below.')}</Text>
+              ) : (
+                <TouchableOpacity onPress={() => onStartSession(minutes)} style={[s.solid, { backgroundColor: c.secondary }]}>
+                  <Text style={[s.solidText, { color: c.secondaryForeground }]}>{t('lumi.startSession', 'Start {{n}} minute session', { n: minutes })}</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity onPress={onCheckIn} style={[s.ghost, { borderColor: c.border, marginTop: 0 }]} accessibilityRole="button">
                 <Text style={[s.ghostText, { color: c.tint }]}>{t('lumi.checkIn', 'Or answer a short check-in first')}</Text>
               </TouchableOpacity>

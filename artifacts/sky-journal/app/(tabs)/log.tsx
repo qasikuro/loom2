@@ -25,6 +25,7 @@ import { MoodBadge } from '@/components/MoodBadge';
 import { useApp, type JournalEntry, type JournalEntryType } from '@/context/AppContext';
 import { journalDraft } from '@/utils/entryDraftStore';
 import { SHADOW } from '@/constants/colors';
+import { UI } from '@/constants/uiTokens';
 import { useColors } from '@/hooks/useColors';
 import { useTranslation } from 'react-i18next';
 import { SkeletonCard } from '@/components/Skeleton';
@@ -247,8 +248,8 @@ function TimelineCard({ entry, onDelete, index = 0, theme }: { entry: JournalEnt
 }
 
 const tc = StyleSheet.create({
-  card: { borderRadius:16, borderWidth:1, padding:15, paddingLeft:18, gap:10, marginBottom:10, overflow:'hidden' },
-  accentStrip: { position:'absolute', left:0, top:0, bottom:0, width:3, borderTopLeftRadius:16, borderBottomLeftRadius:16 },
+  card: { borderRadius:UI.radius.card, borderWidth:1, padding:UI.space.md, paddingLeft:18, gap:12, marginBottom:12, overflow:'hidden' },
+  accentStrip: { position:'absolute', left:0, top:0, bottom:0, width:3, borderTopLeftRadius:UI.radius.card, borderBottomLeftRadius:UI.radius.card },
   topRow: { flexDirection:'row', alignItems:'center', gap:12, minWidth:0 },
   avatar: {
     width:44, height:44, borderRadius:14,
@@ -256,10 +257,10 @@ const tc = StyleSheet.create({
   },
   avatarInitial: { fontSize:18, fontFamily:'Satoshi-Bold', color:'#fff' },
   nameCol: { flex:1 },
-  nameText: { fontSize:14, fontFamily:'Satoshi-Bold', letterSpacing:-0.2 },
+  nameText: { fontSize:UI.type.body, fontFamily:'Satoshi-Bold', letterSpacing:-0.2 },
   timeText: { fontSize:11, fontFamily:'Satoshi-Regular', marginTop:2 },
   contentRow: { flexDirection:'row', gap:12, alignItems:'flex-start' },
-  snippet: { flex:1, fontSize:13, fontFamily:'Satoshi-Regular', lineHeight:20, fontStyle:'italic' },
+  snippet: { flex:1, fontSize:UI.type.supporting, fontFamily:'Satoshi-Regular', lineHeight:21 },
   thumbnail: { width:64, height:64, borderRadius:12, flexShrink:0 },
   footer: { flexDirection:'row', alignItems:'center', gap:8, flexWrap:'wrap', minWidth:0 },
   typePill: { flexDirection:'row', alignItems:'center', gap:4, paddingHorizontal:8, paddingVertical:3, borderRadius:10, borderWidth:1 },
@@ -858,16 +859,16 @@ const styles = StyleSheet.create({
   streakFlame:    { fontSize: 14, lineHeight: 18 },
   streakText:     { fontSize: 12.5, fontFamily: 'Satoshi-Bold', color: 'rgba(220,210,255,0.82)' },
   streakSub:      { fontSize: 11.5, fontFamily: 'Satoshi-Regular', color: 'rgba(200,184,232,0.45)' },
-  filtersScroll: { maxHeight:56 },
-  filtersRow: { flexDirection:'row', gap:7, paddingHorizontal:16, paddingVertical:8, paddingBottom:12 },
+  filtersScroll: { maxHeight:60 },
+  filtersRow: { flexDirection:'row', gap:UI.space.sm, paddingHorizontal:16, paddingVertical:8, paddingBottom:12 },
   filterTab: {
     flexDirection:'row', alignItems:'center', gap:5,
-    paddingHorizontal:11, paddingVertical:6, borderRadius:20,
+    minHeight:UI.minTapTarget, paddingHorizontal:14, paddingVertical:6, borderRadius:UI.radius.pill,
     backgroundColor:'rgba(255,255,255,0.04)',
     borderWidth: 1, borderColor: 'rgba(200,184,232,0.12)',
   },
   filterTabActive: { backgroundColor:'rgba(120,86,255,0.16)', borderColor:'rgba(120,86,255,0.30)' },
-  filterLabel: { fontSize:12, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.55)' },
+  filterLabel: { fontSize:UI.type.supporting, fontFamily:'Satoshi-Medium', color:'rgba(200,184,232,0.70)' },
   filterLabelActive: { color:'rgba(235,225,255,0.95)', fontFamily:'Satoshi-Bold' },
   filterCount: { paddingHorizontal:6, paddingVertical:2, borderRadius:9, backgroundColor:'rgba(255,255,255,0.10)', minWidth:18, alignItems:'center' },
   filterCountActive: { backgroundColor:'rgba(120,86,255,0.28)' },
@@ -875,12 +876,12 @@ const styles = StyleSheet.create({
   filterCountTextActive: { color:'#fff' },
 
   // Search
-  searchBar: { flexDirection:'row', alignItems:'center', gap:10, borderWidth:1, borderRadius:14, paddingHorizontal:14, paddingVertical:11, marginHorizontal:16, marginTop:0, borderColor:'rgba(255,255,255,0.08)' },
-  searchInput: { flex:1, fontSize:13, fontFamily:'Satoshi-Regular' },
+  searchBar: { flexDirection:'row', alignItems:'center', gap:10, minHeight:48, borderWidth:1, borderRadius:UI.radius.control, paddingHorizontal:14, paddingVertical:10, marginHorizontal:16, marginTop:0, borderColor:'rgba(255,255,255,0.12)' },
+  searchInput: { flex:1, fontSize:UI.type.supporting, fontFamily:'Satoshi-Regular' },
   searchHint: { fontSize:12, fontFamily:'Satoshi-Regular', fontStyle:'italic', marginHorizontal:16, marginBottom:6 },
 
   // Timeline
-  timelineContent: { paddingHorizontal:16, paddingTop:16, width:'100%', maxWidth:760, alignSelf:'center' },
+  timelineContent: { paddingHorizontal:20, paddingTop:20, width:'100%', maxWidth:760, alignSelf:'center' },
   timelineRow: { flexDirection:'row', gap:14 },
   timelineLeft: { width:22, alignItems:'center', paddingTop:4 },
   dot: { width:12, height:12, borderRadius:6, borderWidth:1.5, zIndex:1 },
@@ -894,7 +895,7 @@ const styles = StyleSheet.create({
   emptyInnerRing: { width:88, height:88, borderRadius:44, borderWidth:1, alignItems:'center', justifyContent:'center' },
   emptyIcon: { width:64, height:64, borderRadius:20, alignItems:'center', justifyContent:'center' },
   emptyTitle: { fontSize:18, fontFamily:'Satoshi-Bold', textAlign:'center', letterSpacing:-0.3 },
-  emptyText: { fontSize:13, fontFamily:'Satoshi-Regular', textAlign:'center', lineHeight:20, fontStyle:'italic' },
+  emptyText: { fontSize:UI.type.supporting, fontFamily:'Satoshi-Regular', textAlign:'center', lineHeight:21 },
   emptyBtn: { flexDirection:'row', alignItems:'center', gap:8, paddingHorizontal:24, height:48, borderRadius:24, marginTop:4 },
   emptyBtnText: { fontSize:14, fontFamily:'Satoshi-Bold', color:'#fff' },
 });

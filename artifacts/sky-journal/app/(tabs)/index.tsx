@@ -2373,7 +2373,7 @@ export default function HomeScreen() {
                 {serverNotifications.map(n => (
                   <View key={n.id} style={[m.notif, { backgroundColor: n.isRead ? colors.muted : `${accent}14`, borderColor: n.isRead ? 'transparent' : `${accent}28` }]}>
                     <View style={[m.notifIcon, { backgroundColor: `${accent}18` }]}>
-                      <Icon name={n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : (n.type === 'new_story' || n.type === 'new_chapter') ? 'book-open' : n.type === 'resonate' ? 'activity' : 'star'} size={13} color={accent} />
+                      <Icon name={n.type === 'guide_session_rescheduled' || n.type === 'guide_session_cancelled' ? 'calendar' : n.type === 'witness' ? 'eye' : n.type === 'save' ? 'bookmark' : (n.type === 'new_story' || n.type === 'new_chapter') ? 'book-open' : n.type === 'resonate' ? 'activity' : 'star'} size={13} color={accent} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[m.notifTitle, { color: colors.foreground }]} numberOfLines={2}>{n.title}</Text>
@@ -2387,6 +2387,26 @@ export default function HomeScreen() {
                     >
                       <Icon name="x" size={12} color="rgba(255,120,120,0.80)" />
                     </TouchableOpacity>
+                    {(n.type === 'guide_session_rescheduled' || n.type === 'guide_session_cancelled') && (
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={n.type === 'guide_session_rescheduled' ? 'Open updated session' : 'Open guide profile'}
+                        style={{ width: 26, height: 26, alignItems: 'center', justifyContent: 'center' }}
+                        onPress={() => {
+                          markServerNotificationsRead();
+                          setShowNotifs(false);
+                          setTimeout(() => {
+                            if (n.type === 'guide_session_rescheduled') {
+                              router.push({ pathname: '/guide-session/[sessionId]', params: { sessionId: n.refId } });
+                            } else {
+                              router.push({ pathname: '/guide/[userId]', params: { userId: n.actorId } });
+                            }
+                          }, 260);
+                        }}
+                      >
+                        <Icon name="chevron-right" size={14} color={accent} />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 ))}
                 {rewards.map(r => (

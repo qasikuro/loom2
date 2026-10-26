@@ -61,6 +61,7 @@ function TabIcon({
       style={[
         styles.iconWrap,
         focused && styles.iconWrapFocused,
+        focused && { backgroundColor: 'rgba(155,120,255,0.12)' },
         { transform: [{ scale }] },
       ]}
     >
@@ -198,14 +199,16 @@ function ClassicTabLayout() {
           marginBottom: barMarginBottom,
            // Web has no native home-indicator inset; reserve the same 34px
            // visual breathing room so the bar never covers the final row.
-           height: isWeb ? 84 : BAR_HEIGHT,
+           height: isWeb ? 84 : BAR_HEIGHT + 6,
            paddingBottom: isWeb ? 30 : 0,
            paddingTop: isWeb ? 4 : 0,
           borderRadius: isWeb ? 0 : 32,
           backgroundColor: colors.tabBar,
           borderTopWidth: 0,
           borderWidth: 1,
-          borderColor: onHome ? 'rgba(168,124,255,0.55)' : colors.border,
+          borderColor: isDark
+            ? (onHome ? 'rgba(168,124,255,0.55)' : colors.border)
+            : 'rgba(96,72,128,0.16)',
           elevation: isDark || onHome ? 28 : 8,
           shadowColor: onHome ? '#8B5CF6' : isDark ? '#5820A8' : colors.secondary,
           shadowOffset: { width: 0, height: 8 },
@@ -214,7 +217,7 @@ function ClassicTabLayout() {
         },
 
         tabBarLabelStyle: {
-          fontSize:      10,
+          fontSize:      11,
           fontFamily:    'Satoshi-Medium',
           letterSpacing: 0.2,
           marginBottom:  Platform.OS === 'android' ? 4 : 5,

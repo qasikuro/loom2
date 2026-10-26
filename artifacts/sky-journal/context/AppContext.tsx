@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '@clerk/expo';
 import { accountCacheKey } from '@/utils/accountCache';
+import { clearDmAccountCache, forgetDmConversation } from '@/utils/dmConversationCache';
+import { useAppSSE } from '@/hooks/useSSE';
+import { TOKEN_GETTER_KEY as _TOKEN_GETTER_KEY, readAuthToken, type TokenGetter } from '@/utils/authToken';
 import { publishReelStartup } from '@/utils/reelStartup';
 import { clearLumiCreations, publishLumiCreation } from '@/features/lumi/home/events';
 import { enqueueMutation, drainMutationQueue, clearMutation } from '@/utils/mutationQueue';
@@ -127,7 +130,6 @@ function isFetchStale(timestamps: Record<string, number>, key: string): boolean 
 
 // ── Auth token getter (injected from Clerk context in _layout) ────────────────
 
-type TokenGetter = () => Promise<string | null>;
 
 // Survive Expo Go HMR: every hot-reload re-evaluates this module and would
 // reset a plain `let _getToken = ...` back to the no-op.  The useEffect in
@@ -136,7 +138,6 @@ type TokenGetter = () => Promise<string | null>;
 // PUT/POST requests to be sent without auth → 401 → silent data loss.
 // globalThis persists across module re-evaluations, so we use it as a stable
 // registry that survives HMR without needing a full component remount.
-const _TOKEN_GETTER_KEY = '__skyJournalTokenGetter';
 if (!(globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY]) {
   (globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY] = async () => null;
 }
@@ -147,7 +148,7 @@ export function setAuthTokenGetter(fn: TokenGetter) {
 }
 
 function _getToken(): Promise<string | null> {
-  return ((globalThis as Record<string, unknown>)[_TOKEN_GETTER_KEY] as TokenGetter)();
+  return readAuthToken();
 }
 
 export async function getAuthToken(): Promise<string | null> {
@@ -359,6 +360,7 @@ export interface DmThread {
   partnerName: string;
   partnerHandle: string | null;
   partnerAvatar: string | null;
+  partnerDeleted?: boolean;
   lastMessage: string;
   lastAt: string;
   unread: boolean;
@@ -441,12 +443,13 @@ interface AppContextValue {
 
   friends:       FriendSummary[];
   refreshFriends: () => Promise<void>;
+  refreshSocialRelationships: () => Promise<void>;
   followingIds:  string[];
   blockedIds:    string[];
   followUser:    (targetUserId: string) => void;
   unfollowUser:  (targetUserId: string) => void;
-  blockUser:     (targetUserId: string) => Promise<void>;
-  unblockUser:   (targetUserId: string) => Promise<void>;
+  blockUser:     (targetUserId: string) => Promise<boolean>;
+  unblockUser:   (targetUserId: string) => Promise<boolean>;
   myGuides:      GuideProfile[];
 
   rewards:       Reward[];
@@ -802,6 +805,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // new account must never inherit the previous account's offline content.
     const outgoingUserId = previousCacheIdentityRef.current;
     if (outgoingUserId) {
+      clearDmAccountCache(outgoingUserId);
       const prefix = accountCacheKey(outgoingUserId, '');
       void AsyncStorage.getAllKeys().then(keys => {
         const accountKeys = keys.filter(key => key.startsWith(prefix));
@@ -844,7 +848,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setApiOnline(false);
     setHasCheckedApi(false);
     // Drop old unscoped values. New caches are namespaced by Clerk user ID.
-    AsyncStorage.multiRemove(LEGACY_UNSCOPED_CACHE_KEYS).catch(() => null);
+    AsyncStorage.multiRemove([...LEGACY_UNSCOPED_CACHE_KEYS, 'pending_mutations_v2']).catch(() => null);
     loadEpochRef.current += 1;
     cacheHydrationRef.current = null;
     hasCachedContentRef.current = false;
@@ -1276,6 +1280,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch { /* silently skip */ }
   }, []);
 
+  const refreshSocialRelationships = useCallback(async () => {
+    const requestAccountId = cacheUserIdRef.current;
+    if (!requestAccountId) return;
+    try {
+      const [blockedRows, friendsData, followingData] = await Promise.all([
+        apiFetch<{ blockedId: string }[]>('/users/blocked'),
+        apiFetch<FriendSummary[]>('/friends'),
+        apiFetch<string[]>('/follows/following'),
+      ]);
+      if (requestAccountId !== cacheUserIdRef.current) return;
+      setBlockedIds(Array.isArray(blockedRows) ? blockedRows.map(row => row.blockedId) : []);
+      setFriends(Array.isArray(friendsData) ? friendsData : []);
+      setFollowingIds(Array.isArray(followingData) ? followingData : []);
+    } catch {
+      // Keep the last known relationship state during transient network errors.
+    }
+  }, []);
+
   async function loadSocialData() {
     const requestAccountId = cacheUserIdRef.current;
     if (!requestAccountId) return;
@@ -1311,13 +1333,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const discoverValid = (discoverRaw ?? []).filter(isValidDiscoverPost);
       const socialCorrupted = discoverRaw !== null && discoverValid.length < (discoverRaw ?? []).length;
       if (socialCorrupted) console.warn(`[AppContext] loadSocialData: dropped ${(discoverRaw ?? []).length - discoverValid.length} malformed discover posts`);
-      setHasCorruptedDiscover(socialCorrupted);
 
       const feed    = discoverValid.map(r => toRawDiscoverPost(r, API_BASE));
       const follows = followingRaw ?? [];
 
-      setDiscoverFeedRaw(feed);
-      setFollowingIds(follows);
+      // A failed refresh (including an unusable 304) must not erase the last
+      // feed already shown from memory or AsyncStorage.
+      if (discoverRaw !== null) {
+        setHasCorruptedDiscover(socialCorrupted);
+        setDiscoverFeedRaw(feed);
+      }
+      if (followingRaw !== null) setFollowingIds(follows);
       if (friendsRaw !== null) setFriends(friendsRaw);
 
       const now = Date.now();
@@ -2381,35 +2407,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // ── Block / Unblock ────────────────────────────────────────────────────────
 
-  const blockUser = useCallback(async (targetUserId: string) => {
+  const blockUser = useCallback(async (targetUserId: string): Promise<boolean> => {
+    const wasFollowing = followingIds.includes(targetUserId);
+    const previousFriend = friends.find(friend => friend.userId === targetUserId);
     // Optimistic: add to blocked list and remove from following/friends immediately
     setBlockedIds(prev => prev.includes(targetUserId) ? prev : [...prev, targetUserId]);
     setFollowingIds(prev => prev.filter(id => id !== targetUserId));
     setFriends(prev => prev.filter(f => f.userId !== targetUserId));
     try {
       await apiFetch(`/users/${targetUserId}/block`, { method: 'POST' });
+      showToastGlobal("User blocked. Your chat history is still available.", 'info');
+      return true;
     } catch {
       // Rollback optimistic update on failure
       setBlockedIds(prev => prev.filter(id => id !== targetUserId));
+      if (wasFollowing) {
+        setFollowingIds(prev => prev.includes(targetUserId) ? prev : [...prev, targetUserId]);
+      }
+      if (previousFriend) {
+        setFriends(prev => prev.some(friend => friend.userId === targetUserId)
+          ? prev
+          : [...prev, previousFriend]);
+      }
       showToastGlobal("Couldn't block user", 'warning', () => {
         blockUser(targetUserId).catch(() => null);
       });
+      return false;
     }
-  }, []);
+  }, [followingIds, friends]);
 
-  const unblockUser = useCallback(async (targetUserId: string) => {
+  const unblockUser = useCallback(async (targetUserId: string): Promise<boolean> => {
     // Optimistic: remove from blocked list immediately
     setBlockedIds(prev => prev.filter(id => id !== targetUserId));
     try {
       await apiFetch(`/users/${targetUserId}/block`, { method: 'DELETE' });
+      return true;
     } catch {
       // Rollback optimistic update on failure
       setBlockedIds(prev => prev.includes(targetUserId) ? prev : [...prev, targetUserId]);
       showToastGlobal("Couldn't unblock user", 'warning', () => {
         unblockUser(targetUserId).catch(() => null);
       });
+      return false;
     }
   }, []);
+
+  useAppSSE(userId ? [`messages:${userId}`] : [], (_channel, data) => {
+    if (!data || typeof data !== 'object') return;
+    const event = data as { type?: string; partnerId?: string };
+    if (userId && event.partnerId && ['conversation_cleared', 'partner_account_deleted'].includes(event.type ?? '')) {
+      forgetDmConversation(userId, event.partnerId);
+    }
+    if (['friend_removed', 'block_relationship_changed', 'partner_account_deleted'].includes(event.type ?? '')) {
+      void refreshSocialRelationships();
+      void pollDmUnread();
+    } else if (event.type === 'conversation_cleared') {
+      void pollDmUnread();
+    }
+  }, !!userId && isSignedIn === true);
 
   // ── Rewards ────────────────────────────────────────────────────────────────
 
@@ -2464,7 +2519,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
     discoverPosts, savedStoryIds, toggleSavePost, toggleLikePost,
-    friends, refreshFriends: fetchFriends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
+    friends, refreshFriends: fetchFriends, refreshSocialRelationships, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,
@@ -2488,7 +2543,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     outfits, addOutfit, updateOutfit, deleteOutfit, activeOutfitId, setActiveOutfitId,
     gallery, galleryUsage, addGalleryPhoto, deleteGalleryPhoto,
     discoverPosts, savedStoryIds, toggleSavePost, toggleLikePost,
-    friends, fetchFriends, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
+    friends, fetchFriends, refreshSocialRelationships, followingIds, blockedIds, followUser, unfollowUser, blockUser, unblockUser, myGuides,
     rewards, dismissReward, showRewardToast,
     rewardBalance, constellation, reloadRewards, reloadConstellation,
     shopCatalog, purchasedIds, markPurchased, activeCosmetics, setActiveCosmetic,

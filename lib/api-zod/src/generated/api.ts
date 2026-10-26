@@ -87,6 +87,37 @@ export const ConverseWithLumiResponse = zod.object({
     )
     .max(converseWithLumiResponseRecommendationsMax),
   fallback: zod.boolean(),
+  mood: zod
+    .enum([
+      "unknown",
+      "neutral",
+      "sad",
+      "lonely",
+      "stressed",
+      "tired",
+      "happy",
+      "calm",
+      "excited",
+    ])
+    .optional()
+    .describe(
+      "Temporary user-stated mood for this conversation, never a diagnosis or permanent profile.",
+    ),
+  phase: zod
+    .enum(["check_in", "conversation", "suggest", "support"])
+    .optional(),
+  emotion: zod
+    .enum(["thoughtful", "affectionate", "excited", "calm"])
+    .optional()
+    .describe(
+      "Allow-listed companion expression, not a psychological assessment.",
+    ),
+  intent: zod
+    .enum(["unspecified", "company", "quiet", "creative", "focus"])
+    .optional()
+    .describe(
+      "Temporary stated activity preference, interpreted in the player's language.",
+    ),
 });
 
 export const getLumiStateResponseMessagesItemContentMax = 1600;
@@ -240,6 +271,8 @@ export const GetAppConfigResponse = zod.object({
     music: zod.boolean(),
     shop: zod.boolean(),
     season: zod.boolean(),
+    shop_button: zod.boolean(),
+    season_button: zod.boolean(),
     campfire: zod.boolean(),
     guides: zod.boolean(),
     notifications: zod.boolean(),
@@ -864,6 +897,880 @@ export const ListDiscoverFeedResponseItem = zod.object({
 export const ListDiscoverFeedResponse = zod.array(ListDiscoverFeedResponseItem);
 
 /**
+ * @summary List upcoming or active guide sessions
+ */
+export const ListGuideSessionsQueryParams = zod.object({
+  guideId: zod.coerce.string().optional(),
+});
+
+export const listGuideSessionsResponseTutorialOneStepsItemTitleMax = 100;
+
+export const listGuideSessionsResponseTutorialOneStepsItemBodyMax = 1200;
+
+export const ListGuideSessionsResponseItem = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  roomId: zod.string().uuid(),
+  title: zod.string(),
+  description: zod.string(),
+  coverImageUri: zod.string().nullable(),
+  topic: zod.string().nullable(),
+  startsAt: zod.coerce.date(),
+  endsAt: zod.coerce.date(),
+  capacity: zod.number(),
+  status: zod.string(),
+  reminderSentAt: zod.coerce.date().nullable(),
+  createdAt: zod.coerce.date(),
+  attendeeCount: zod.number(),
+  isJoined: zod.boolean(),
+  tutorialId: zod.string().uuid().nullable(),
+  tutorial: zod
+    .object({
+      id: zod.string().uuid(),
+      guideId: zod.string(),
+      guideName: zod.string(),
+      guideUsername: zod.string().nullable(),
+      guideAvatarUri: zod.string().nullable(),
+      title: zod.string(),
+      description: zod.string(),
+      topic: zod.string().nullable(),
+      visibility: zod.enum(["public", "followers", "unlisted"]),
+      status: zod.enum(["draft", "published"]),
+      steps: zod.array(
+        zod.object({
+          id: zod.string(),
+          type: zod.enum(["text", "image", "video", "tip", "question"]),
+          title: zod
+            .string()
+            .max(listGuideSessionsResponseTutorialOneStepsItemTitleMax),
+          body: zod
+            .string()
+            .max(listGuideSessionsResponseTutorialOneStepsItemBodyMax),
+          mediaUri: zod.string().nullable(),
+        }),
+      ),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    })
+    .nullable(),
+  tutorialProgress: zod.number(),
+  tutorialCompletedAt: zod.coerce.date().nullable(),
+});
+export const ListGuideSessionsResponse = zod.array(
+  ListGuideSessionsResponseItem,
+);
+
+/**
+ * @summary Schedule a public guide session with an optional cover image
+ */
+export const createGuideSessionBodyTitleMin = 3;
+export const createGuideSessionBodyTitleMax = 80;
+
+export const createGuideSessionBodyDescriptionMin = 10;
+export const createGuideSessionBodyDescriptionMax = 1200;
+
+export const createGuideSessionBodyTopicMax = 80;
+
+export const createGuideSessionBodyDurationMinutesMin = 15;
+export const createGuideSessionBodyDurationMinutesMax = 240;
+
+export const createGuideSessionBodyCapacityDefault = 30;
+export const createGuideSessionBodyCapacityMin = 2;
+export const createGuideSessionBodyCapacityMax = 100;
+
+export const createGuideSessionBodyCoverImageUriMax = 2048;
+
+export const CreateGuideSessionBody = zod.object({
+  title: zod
+    .string()
+    .min(createGuideSessionBodyTitleMin)
+    .max(createGuideSessionBodyTitleMax),
+  description: zod
+    .string()
+    .min(createGuideSessionBodyDescriptionMin)
+    .max(createGuideSessionBodyDescriptionMax),
+  topic: zod.string().max(createGuideSessionBodyTopicMax).nullish(),
+  startsAt: zod.coerce.date(),
+  durationMinutes: zod
+    .number()
+    .min(createGuideSessionBodyDurationMinutesMin)
+    .max(createGuideSessionBodyDurationMinutesMax),
+  capacity: zod
+    .number()
+    .min(createGuideSessionBodyCapacityMin)
+    .max(createGuideSessionBodyCapacityMax)
+    .default(createGuideSessionBodyCapacityDefault),
+  coverImageUri: zod
+    .string()
+    .url()
+    .max(createGuideSessionBodyCoverImageUriMax)
+    .nullish(),
+  tutorialId: zod.string().uuid().nullish(),
+});
+
+/**
+ * @summary Get a guide session and its attached tutorial
+ */
+export const GetGuideSessionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const getGuideSessionResponseTutorialOneStepsItemTitleMax = 100;
+
+export const getGuideSessionResponseTutorialOneStepsItemBodyMax = 1200;
+
+export const GetGuideSessionResponse = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  roomId: zod.string().uuid(),
+  title: zod.string(),
+  description: zod.string(),
+  coverImageUri: zod.string().nullable(),
+  topic: zod.string().nullable(),
+  startsAt: zod.coerce.date(),
+  endsAt: zod.coerce.date(),
+  capacity: zod.number(),
+  status: zod.string(),
+  reminderSentAt: zod.coerce.date().nullable(),
+  createdAt: zod.coerce.date(),
+  attendeeCount: zod.number(),
+  isJoined: zod.boolean(),
+  tutorialId: zod.string().uuid().nullable(),
+  tutorial: zod
+    .object({
+      id: zod.string().uuid(),
+      guideId: zod.string(),
+      guideName: zod.string(),
+      guideUsername: zod.string().nullable(),
+      guideAvatarUri: zod.string().nullable(),
+      title: zod.string(),
+      description: zod.string(),
+      topic: zod.string().nullable(),
+      visibility: zod.enum(["public", "followers", "unlisted"]),
+      status: zod.enum(["draft", "published"]),
+      steps: zod.array(
+        zod.object({
+          id: zod.string(),
+          type: zod.enum(["text", "image", "video", "tip", "question"]),
+          title: zod
+            .string()
+            .max(getGuideSessionResponseTutorialOneStepsItemTitleMax),
+          body: zod
+            .string()
+            .max(getGuideSessionResponseTutorialOneStepsItemBodyMax),
+          mediaUri: zod.string().nullable(),
+        }),
+      ),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    })
+    .nullable(),
+  tutorialProgress: zod.number(),
+  tutorialCompletedAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary Reschedule a guide's upcoming session and notify joined participants
+ */
+export const RescheduleGuideSessionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const RescheduleGuideSessionBody = zod.object({
+  startsAt: zod.coerce.date(),
+});
+
+export const rescheduleGuideSessionResponseTutorialOneStepsItemTitleMax = 100;
+
+export const rescheduleGuideSessionResponseTutorialOneStepsItemBodyMax = 1200;
+
+export const RescheduleGuideSessionResponse = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  roomId: zod.string().uuid(),
+  title: zod.string(),
+  description: zod.string(),
+  coverImageUri: zod.string().nullable(),
+  topic: zod.string().nullable(),
+  startsAt: zod.coerce.date(),
+  endsAt: zod.coerce.date(),
+  capacity: zod.number(),
+  status: zod.string(),
+  reminderSentAt: zod.coerce.date().nullable(),
+  createdAt: zod.coerce.date(),
+  attendeeCount: zod.number(),
+  isJoined: zod.boolean(),
+  tutorialId: zod.string().uuid().nullable(),
+  tutorial: zod
+    .object({
+      id: zod.string().uuid(),
+      guideId: zod.string(),
+      guideName: zod.string(),
+      guideUsername: zod.string().nullable(),
+      guideAvatarUri: zod.string().nullable(),
+      title: zod.string(),
+      description: zod.string(),
+      topic: zod.string().nullable(),
+      visibility: zod.enum(["public", "followers", "unlisted"]),
+      status: zod.enum(["draft", "published"]),
+      steps: zod.array(
+        zod.object({
+          id: zod.string(),
+          type: zod.enum(["text", "image", "video", "tip", "question"]),
+          title: zod
+            .string()
+            .max(rescheduleGuideSessionResponseTutorialOneStepsItemTitleMax),
+          body: zod
+            .string()
+            .max(rescheduleGuideSessionResponseTutorialOneStepsItemBodyMax),
+          mediaUri: zod.string().nullable(),
+        }),
+      ),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    })
+    .nullable(),
+  tutorialProgress: zod.number(),
+  tutorialCompletedAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary Cancel a guide's upcoming session and notify joined participants
+ */
+export const CancelGuideSessionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+/**
+ * @summary Join a scheduled guide session and its shared chat
+ */
+export const JoinGuideSessionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const joinGuideSessionResponseTutorialOneStepsItemTitleMax = 100;
+
+export const joinGuideSessionResponseTutorialOneStepsItemBodyMax = 1200;
+
+export const JoinGuideSessionResponse = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  roomId: zod.string().uuid(),
+  title: zod.string(),
+  description: zod.string(),
+  coverImageUri: zod.string().nullable(),
+  topic: zod.string().nullable(),
+  startsAt: zod.coerce.date(),
+  endsAt: zod.coerce.date(),
+  capacity: zod.number(),
+  status: zod.string(),
+  reminderSentAt: zod.coerce.date().nullable(),
+  createdAt: zod.coerce.date(),
+  attendeeCount: zod.number(),
+  isJoined: zod.boolean(),
+  tutorialId: zod.string().uuid().nullable(),
+  tutorial: zod
+    .object({
+      id: zod.string().uuid(),
+      guideId: zod.string(),
+      guideName: zod.string(),
+      guideUsername: zod.string().nullable(),
+      guideAvatarUri: zod.string().nullable(),
+      title: zod.string(),
+      description: zod.string(),
+      topic: zod.string().nullable(),
+      visibility: zod.enum(["public", "followers", "unlisted"]),
+      status: zod.enum(["draft", "published"]),
+      steps: zod.array(
+        zod.object({
+          id: zod.string(),
+          type: zod.enum(["text", "image", "video", "tip", "question"]),
+          title: zod
+            .string()
+            .max(joinGuideSessionResponseTutorialOneStepsItemTitleMax),
+          body: zod
+            .string()
+            .max(joinGuideSessionResponseTutorialOneStepsItemBodyMax),
+          mediaUri: zod.string().nullable(),
+        }),
+      ),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    })
+    .nullable(),
+  tutorialProgress: zod.number(),
+  tutorialCompletedAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary Save the authenticated attendee's completed tutorial steps
+ */
+export const SaveGuideTutorialProgressParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const saveGuideTutorialProgressBodyCompletedStepsMin = 0;
+export const saveGuideTutorialProgressBodyCompletedStepsMax = 24;
+
+export const SaveGuideTutorialProgressBody = zod.object({
+  completedSteps: zod
+    .number()
+    .min(saveGuideTutorialProgressBodyCompletedStepsMin)
+    .max(saveGuideTutorialProgressBodyCompletedStepsMax),
+});
+
+export const saveGuideTutorialProgressResponseTutorialOneStepsItemTitleMax = 100;
+
+export const saveGuideTutorialProgressResponseTutorialOneStepsItemBodyMax = 1200;
+
+export const SaveGuideTutorialProgressResponse = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  roomId: zod.string().uuid(),
+  title: zod.string(),
+  description: zod.string(),
+  coverImageUri: zod.string().nullable(),
+  topic: zod.string().nullable(),
+  startsAt: zod.coerce.date(),
+  endsAt: zod.coerce.date(),
+  capacity: zod.number(),
+  status: zod.string(),
+  reminderSentAt: zod.coerce.date().nullable(),
+  createdAt: zod.coerce.date(),
+  attendeeCount: zod.number(),
+  isJoined: zod.boolean(),
+  tutorialId: zod.string().uuid().nullable(),
+  tutorial: zod
+    .object({
+      id: zod.string().uuid(),
+      guideId: zod.string(),
+      guideName: zod.string(),
+      guideUsername: zod.string().nullable(),
+      guideAvatarUri: zod.string().nullable(),
+      title: zod.string(),
+      description: zod.string(),
+      topic: zod.string().nullable(),
+      visibility: zod.enum(["public", "followers", "unlisted"]),
+      status: zod.enum(["draft", "published"]),
+      steps: zod.array(
+        zod.object({
+          id: zod.string(),
+          type: zod.enum(["text", "image", "video", "tip", "question"]),
+          title: zod
+            .string()
+            .max(saveGuideTutorialProgressResponseTutorialOneStepsItemTitleMax),
+          body: zod
+            .string()
+            .max(saveGuideTutorialProgressResponseTutorialOneStepsItemBodyMax),
+          mediaUri: zod.string().nullable(),
+        }),
+      ),
+      createdAt: zod.coerce.date(),
+      updatedAt: zod.coerce.date(),
+    })
+    .nullable(),
+  tutorialProgress: zod.number(),
+  tutorialCompletedAt: zod.coerce.date().nullable(),
+});
+
+/**
+ * @summary List visible attendees for the guide who owns the session
+ */
+export const ListGuideSessionParticipantsParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const ListGuideSessionParticipantsResponseItem = zod.object({
+  userId: zod.string(),
+  name: zod.string().nullable(),
+  username: zod.string().nullable(),
+  avatarUri: zod.string().nullable(),
+  joinedAt: zod.coerce.date(),
+  tutorialProgress: zod.number(),
+  tutorialCompletedAt: zod.coerce.date().nullable(),
+});
+export const ListGuideSessionParticipantsResponse = zod.array(
+  ListGuideSessionParticipantsResponseItem,
+);
+
+/**
+ * @summary Get polls, participant questions, and the recap for a joined session
+ */
+export const GetGuideSessionEngagementParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const GetGuideSessionEngagementResponse = zod.object({
+  polls: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      sessionId: zod.string().uuid(),
+      createdBy: zod.string(),
+      question: zod.string(),
+      options: zod.array(zod.string()),
+      voteCounts: zod.array(zod.number()),
+      myVote: zod.number().nullable(),
+      createdAt: zod.coerce.date(),
+      closedAt: zod.coerce.date().nullable(),
+    }),
+  ),
+  questions: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      question: zod.string(),
+      answer: zod.string().nullable(),
+      createdAt: zod.coerce.date(),
+      answeredAt: zod.coerce.date().nullable(),
+      askerName: zod.string(),
+      upvoteCount: zod.number().optional(),
+      myUpvoted: zod.boolean().optional(),
+      isMine: zod.boolean().optional(),
+    }),
+  ),
+  activities: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      sessionId: zod.string().uuid(),
+      guideId: zod.string(),
+      title: zod.string(),
+      prompt: zod.string(),
+      kind: zod.enum(["challenge", "reflection", "resource"]),
+      resourceUrl: zod.string().url().nullable(),
+      status: zod.enum(["active", "completed"]),
+      createdAt: zod.coerce.date(),
+      closedAt: zod.coerce.date().nullable(),
+      responseCount: zod.number(),
+      myResponse: zod.string().nullable(),
+      responses: zod.array(
+        zod.object({
+          userId: zod.string(),
+          displayName: zod.string().nullable(),
+          response: zod.string(),
+          submittedAt: zod.coerce.date(),
+        }),
+      ),
+    }),
+  ),
+  activitiesReady: zod.boolean(),
+  questionVotingReady: zod.boolean(),
+  recap: zod
+    .object({
+      sessionId: zod.string().uuid(),
+      guideId: zod.string(),
+      summary: zod.string(),
+      highlights: zod.array(zod.string()),
+      updatedAt: zod.coerce.date(),
+    })
+    .nullable(),
+});
+
+/**
+ * @summary Create a live poll as the session guide
+ */
+export const CreateGuideSessionPollParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const createGuideSessionPollBodyQuestionMin = 5;
+export const createGuideSessionPollBodyQuestionMax = 180;
+
+export const createGuideSessionPollBodyOptionsItemMax = 80;
+
+export const createGuideSessionPollBodyOptionsMin = 2;
+export const createGuideSessionPollBodyOptionsMax = 6;
+
+export const CreateGuideSessionPollBody = zod.object({
+  question: zod
+    .string()
+    .min(createGuideSessionPollBodyQuestionMin)
+    .max(createGuideSessionPollBodyQuestionMax),
+  options: zod
+    .array(zod.string().min(1).max(createGuideSessionPollBodyOptionsItemMax))
+    .min(createGuideSessionPollBodyOptionsMin)
+    .max(createGuideSessionPollBodyOptionsMax),
+});
+
+/**
+ * @summary Vote or change a vote in a live session poll
+ */
+export const VoteGuideSessionPollParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+  pollId: zod.coerce.string().uuid(),
+});
+
+export const voteGuideSessionPollBodyOptionIndexMin = 0;
+export const voteGuideSessionPollBodyOptionIndexMax = 5;
+
+export const VoteGuideSessionPollBody = zod.object({
+  optionIndex: zod
+    .number()
+    .min(voteGuideSessionPollBodyOptionIndexMin)
+    .max(voteGuideSessionPollBodyOptionIndexMax),
+});
+
+/**
+ * @summary Close a session poll as its guide
+ */
+export const CloseGuideSessionPollParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+  pollId: zod.coerce.string().uuid(),
+});
+
+/**
+ * @summary Ask the guide a question during a live session
+ */
+export const AskGuideSessionQuestionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const askGuideSessionQuestionBodyQuestionMin = 4;
+export const askGuideSessionQuestionBodyQuestionMax = 500;
+
+export const AskGuideSessionQuestionBody = zod.object({
+  question: zod
+    .string()
+    .min(askGuideSessionQuestionBodyQuestionMin)
+    .max(askGuideSessionQuestionBodyQuestionMax),
+});
+
+/**
+ * @summary Answer a participant question as the session guide
+ */
+export const AnswerGuideSessionQuestionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+  questionId: zod.coerce.string().uuid(),
+});
+
+export const answerGuideSessionQuestionBodyAnswerMin = 2;
+export const answerGuideSessionQuestionBodyAnswerMax = 1000;
+
+export const AnswerGuideSessionQuestionBody = zod.object({
+  answer: zod
+    .string()
+    .min(answerGuideSessionQuestionBodyAnswerMin)
+    .max(answerGuideSessionQuestionBodyAnswerMax),
+});
+
+export const AnswerGuideSessionQuestionResponse = zod.object({
+  id: zod.string().uuid(),
+  question: zod.string(),
+  answer: zod.string().nullable(),
+  createdAt: zod.coerce.date(),
+  answeredAt: zod.coerce.date().nullable(),
+  askerName: zod.string(),
+  upvoteCount: zod.number().optional(),
+  myUpvoted: zod.boolean().optional(),
+  isMine: zod.boolean().optional(),
+});
+
+/**
+ * @summary Upvote or remove an upvote from a live session question
+ */
+export const VoteGuideSessionQuestionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+  questionId: zod.coerce.string().uuid(),
+});
+
+export const VoteGuideSessionQuestionBody = zod.object({
+  voted: zod.boolean(),
+});
+
+/**
+ * @summary Launch a live exercise, reflection, or resource as the session guide
+ */
+export const CreateGuideSessionActivityParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const createGuideSessionActivityBodyTitleMin = 3;
+export const createGuideSessionActivityBodyTitleMax = 100;
+
+export const createGuideSessionActivityBodyPromptMin = 5;
+export const createGuideSessionActivityBodyPromptMax = 1000;
+
+export const createGuideSessionActivityBodyResourceUrlMax = 2048;
+
+export const CreateGuideSessionActivityBody = zod.object({
+  title: zod
+    .string()
+    .min(createGuideSessionActivityBodyTitleMin)
+    .max(createGuideSessionActivityBodyTitleMax),
+  prompt: zod
+    .string()
+    .min(createGuideSessionActivityBodyPromptMin)
+    .max(createGuideSessionActivityBodyPromptMax),
+  kind: zod.enum(["challenge", "reflection", "resource"]),
+  resourceUrl: zod
+    .string()
+    .url()
+    .max(createGuideSessionActivityBodyResourceUrlMax)
+    .nullish(),
+});
+
+/**
+ * @summary Submit or update a response to the active session activity
+ */
+export const RespondToGuideSessionActivityParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+  activityId: zod.coerce.string().uuid(),
+});
+
+export const respondToGuideSessionActivityBodyResponseMin = 2;
+export const respondToGuideSessionActivityBodyResponseMax = 1000;
+
+export const RespondToGuideSessionActivityBody = zod.object({
+  response: zod
+    .string()
+    .min(respondToGuideSessionActivityBodyResponseMin)
+    .max(respondToGuideSessionActivityBodyResponseMax),
+});
+
+/**
+ * @summary Complete the active activity as the session guide
+ */
+export const CloseGuideSessionActivityParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+  activityId: zod.coerce.string().uuid(),
+});
+
+/**
+ * @summary Publish or update the post-session recap as its guide
+ */
+export const SaveGuideSessionRecapParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+export const saveGuideSessionRecapBodySummaryMin = 20;
+export const saveGuideSessionRecapBodySummaryMax = 1200;
+
+export const saveGuideSessionRecapBodyHighlightsItemMin = 2;
+export const saveGuideSessionRecapBodyHighlightsItemMax = 140;
+
+export const saveGuideSessionRecapBodyHighlightsMax = 6;
+
+export const SaveGuideSessionRecapBody = zod.object({
+  summary: zod
+    .string()
+    .min(saveGuideSessionRecapBodySummaryMin)
+    .max(saveGuideSessionRecapBodySummaryMax),
+  highlights: zod
+    .array(
+      zod
+        .string()
+        .min(saveGuideSessionRecapBodyHighlightsItemMin)
+        .max(saveGuideSessionRecapBodyHighlightsItemMax),
+    )
+    .max(saveGuideSessionRecapBodyHighlightsMax)
+    .optional(),
+});
+
+export const SaveGuideSessionRecapResponse = zod.object({
+  sessionId: zod.string().uuid(),
+  guideId: zod.string(),
+  summary: zod.string(),
+  highlights: zod.array(zod.string()),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary End a scheduled guide session as its owner
+ */
+export const EndGuideSessionParams = zod.object({
+  sessionId: zod.coerce.string().uuid(),
+});
+
+/**
+ * @summary List discoverable tutorials or the authenticated guide's own tutorials
+ */
+export const ListGuideTutorialsQueryParams = zod.object({
+  mine: zod.coerce.boolean().optional(),
+});
+
+export const listGuideTutorialsResponseStepsItemTitleMax = 100;
+
+export const listGuideTutorialsResponseStepsItemBodyMax = 1200;
+
+export const ListGuideTutorialsResponseItem = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  guideName: zod.string(),
+  guideUsername: zod.string().nullable(),
+  guideAvatarUri: zod.string().nullable(),
+  title: zod.string(),
+  description: zod.string(),
+  topic: zod.string().nullable(),
+  visibility: zod.enum(["public", "followers", "unlisted"]),
+  status: zod.enum(["draft", "published"]),
+  steps: zod.array(
+    zod.object({
+      id: zod.string(),
+      type: zod.enum(["text", "image", "video", "tip", "question"]),
+      title: zod.string().max(listGuideTutorialsResponseStepsItemTitleMax),
+      body: zod.string().max(listGuideTutorialsResponseStepsItemBodyMax),
+      mediaUri: zod.string().nullable(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+export const ListGuideTutorialsResponse = zod.array(
+  ListGuideTutorialsResponseItem,
+);
+
+/**
+ * @summary Save a tutorial draft or publish it
+ */
+export const createGuideTutorialBodyTitleMin = 3;
+export const createGuideTutorialBodyTitleMax = 80;
+
+export const createGuideTutorialBodyDescriptionMin = 10;
+export const createGuideTutorialBodyDescriptionMax = 1200;
+
+export const createGuideTutorialBodyTopicMax = 80;
+
+export const createGuideTutorialBodyStepsItemTitleMax = 100;
+
+export const createGuideTutorialBodyStepsItemBodyMax = 1200;
+
+export const createGuideTutorialBodyStepsMax = 24;
+
+export const CreateGuideTutorialBody = zod.object({
+  title: zod
+    .string()
+    .min(createGuideTutorialBodyTitleMin)
+    .max(createGuideTutorialBodyTitleMax),
+  description: zod
+    .string()
+    .min(createGuideTutorialBodyDescriptionMin)
+    .max(createGuideTutorialBodyDescriptionMax),
+  topic: zod.string().max(createGuideTutorialBodyTopicMax).nullish(),
+  visibility: zod.enum(["public", "followers", "unlisted"]),
+  status: zod.enum(["draft", "published"]),
+  steps: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.enum(["text", "image", "video", "tip", "question"]),
+        title: zod.string().max(createGuideTutorialBodyStepsItemTitleMax),
+        body: zod.string().max(createGuideTutorialBodyStepsItemBodyMax),
+        mediaUri: zod.string().nullable(),
+      }),
+    )
+    .min(1)
+    .max(createGuideTutorialBodyStepsMax),
+});
+
+/**
+ * @summary Get a published or owned guide tutorial
+ */
+export const GetGuideTutorialParams = zod.object({
+  tutorialId: zod.coerce.string().uuid(),
+});
+
+export const getGuideTutorialResponseStepsItemTitleMax = 100;
+
+export const getGuideTutorialResponseStepsItemBodyMax = 1200;
+
+export const GetGuideTutorialResponse = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  guideName: zod.string(),
+  guideUsername: zod.string().nullable(),
+  guideAvatarUri: zod.string().nullable(),
+  title: zod.string(),
+  description: zod.string(),
+  topic: zod.string().nullable(),
+  visibility: zod.enum(["public", "followers", "unlisted"]),
+  status: zod.enum(["draft", "published"]),
+  steps: zod.array(
+    zod.object({
+      id: zod.string(),
+      type: zod.enum(["text", "image", "video", "tip", "question"]),
+      title: zod.string().max(getGuideTutorialResponseStepsItemTitleMax),
+      body: zod.string().max(getGuideTutorialResponseStepsItemBodyMax),
+      mediaUri: zod.string().nullable(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Update a guide's own tutorial
+ */
+export const UpdateGuideTutorialParams = zod.object({
+  tutorialId: zod.coerce.string().uuid(),
+});
+
+export const updateGuideTutorialBodyTitleMin = 3;
+export const updateGuideTutorialBodyTitleMax = 80;
+
+export const updateGuideTutorialBodyDescriptionMin = 10;
+export const updateGuideTutorialBodyDescriptionMax = 1200;
+
+export const updateGuideTutorialBodyTopicMax = 80;
+
+export const updateGuideTutorialBodyStepsItemTitleMax = 100;
+
+export const updateGuideTutorialBodyStepsItemBodyMax = 1200;
+
+export const updateGuideTutorialBodyStepsMax = 24;
+
+export const UpdateGuideTutorialBody = zod.object({
+  title: zod
+    .string()
+    .min(updateGuideTutorialBodyTitleMin)
+    .max(updateGuideTutorialBodyTitleMax),
+  description: zod
+    .string()
+    .min(updateGuideTutorialBodyDescriptionMin)
+    .max(updateGuideTutorialBodyDescriptionMax),
+  topic: zod.string().max(updateGuideTutorialBodyTopicMax).nullish(),
+  visibility: zod.enum(["public", "followers", "unlisted"]),
+  status: zod.enum(["draft", "published"]),
+  steps: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        type: zod.enum(["text", "image", "video", "tip", "question"]),
+        title: zod.string().max(updateGuideTutorialBodyStepsItemTitleMax),
+        body: zod.string().max(updateGuideTutorialBodyStepsItemBodyMax),
+        mediaUri: zod.string().nullable(),
+      }),
+    )
+    .min(1)
+    .max(updateGuideTutorialBodyStepsMax),
+});
+
+export const updateGuideTutorialResponseStepsItemTitleMax = 100;
+
+export const updateGuideTutorialResponseStepsItemBodyMax = 1200;
+
+export const UpdateGuideTutorialResponse = zod.object({
+  id: zod.string().uuid(),
+  guideId: zod.string(),
+  guideName: zod.string(),
+  guideUsername: zod.string().nullable(),
+  guideAvatarUri: zod.string().nullable(),
+  title: zod.string(),
+  description: zod.string(),
+  topic: zod.string().nullable(),
+  visibility: zod.enum(["public", "followers", "unlisted"]),
+  status: zod.enum(["draft", "published"]),
+  steps: zod.array(
+    zod.object({
+      id: zod.string(),
+      type: zod.enum(["text", "image", "video", "tip", "question"]),
+      title: zod.string().max(updateGuideTutorialResponseStepsItemTitleMax),
+      body: zod.string().max(updateGuideTutorialResponseStepsItemBodyMax),
+      mediaUri: zod.string().nullable(),
+    }),
+  ),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
  * @summary Get a public user profile and viewer profile-like state
  */
 export const GetPublicUserProfileParams = zod.object({
@@ -998,7 +1905,8 @@ export const GetRewardsShopResponse = zod.object({
       name: zod.string(),
       description: zod.string(),
       icon: zod.string(),
-      category: zod.enum(["frame", "accent", "theme", "effect"]),
+      category: zod.enum(["frame", "accent", "theme", "effect", "card_frame"]),
+      founderOnly: zod.boolean().optional(),
       cost: zod.object({
         stars: zod.number().optional(),
         aura: zod.number().optional(),
@@ -1015,7 +1923,8 @@ export const GetRewardsShopResponse = zod.object({
       name: zod.string(),
       description: zod.string(),
       icon: zod.string(),
-      category: zod.enum(["frame", "accent", "theme", "effect"]),
+      category: zod.enum(["frame", "accent", "theme", "effect", "card_frame"]),
+      founderOnly: zod.boolean().optional(),
       cost: zod.object({
         stars: zod.number().optional(),
         aura: zod.number().optional(),
@@ -1137,6 +2046,42 @@ export const SubmitStorigamInterestResponse = zod.object({
 });
 
 /**
+ * Public, rate-limited feedback form. Submissions are emailed to Storigam support and are not stored in the application database.
+ * @summary Send feedback to Storigam support
+ */
+export const submitStorigamFeedbackBodyNameMax = 100;
+
+export const submitStorigamFeedbackBodyEmailMax = 254;
+
+export const submitStorigamFeedbackBodyMessageMin = 10;
+export const submitStorigamFeedbackBodyMessageMax = 4000;
+
+export const submitStorigamFeedbackBodyWebsiteMax = 100;
+
+export const SubmitStorigamFeedbackBody = zod.object({
+  category: zod.enum(["idea", "bug", "other"]),
+  name: zod.string().max(submitStorigamFeedbackBodyNameMax).optional(),
+  email: zod
+    .string()
+    .email()
+    .max(submitStorigamFeedbackBodyEmailMax)
+    .optional(),
+  message: zod
+    .string()
+    .min(submitStorigamFeedbackBodyMessageMin)
+    .max(submitStorigamFeedbackBodyMessageMax),
+  website: zod
+    .string()
+    .max(submitStorigamFeedbackBodyWebsiteMax)
+    .optional()
+    .describe("Hidden anti-spam field; must be left empty."),
+});
+
+export const SubmitStorigamFeedbackResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
  * @summary Show unsubscribe confirmation
  */
 export const ViewStorigamUnsubscribeQueryParams = zod.object({
@@ -1174,6 +2119,24 @@ export const SendAdminEmailResponse = zod.object({
 /**
  * @summary List landing page signups and consent status
  */
+export const listInterestSubscribersQueryLimitDefault = 50;
+export const listInterestSubscribersQueryLimitMax = 100;
+
+export const listInterestSubscribersQueryOffsetDefault = 0;
+export const listInterestSubscribersQueryOffsetMin = 0;
+
+export const ListInterestSubscribersQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(listInterestSubscribersQueryLimitMax)
+    .default(listInterestSubscribersQueryLimitDefault),
+  offset: zod.coerce
+    .number()
+    .min(listInterestSubscribersQueryOffsetMin)
+    .default(listInterestSubscribersQueryOffsetDefault),
+});
+
 export const ListInterestSubscribersResponse = zod.object({
   subscribers: zod.array(
     zod.object({
@@ -1186,6 +2149,7 @@ export const ListInterestSubscribersResponse = zod.object({
   ),
   total: zod.number(),
   activeTotal: zod.number(),
+  _ts: zod.number(),
   audienceCounts: zod.object({
     all: zod.number(),
     beta_tester: zod.number(),
@@ -1260,4 +2224,692 @@ export const DispatchInterestCampaignResponse = zod.object({
   pending: zod.number(),
   uncertain: zod.number(),
   skipped: zod.number(),
+});
+
+/**
+ * Requires an authenticated administrator. Costs are app-side estimates, not Replit workspace billing.
+ * @summary Read app feature activity, cost estimates, and limits
+ */
+export const getAdminFeatureUsageQueryDaysDefault = 30;
+export const getAdminFeatureUsageQueryDaysMax = 90;
+
+export const GetAdminFeatureUsageQueryParams = zod.object({
+  days: zod.coerce
+    .number()
+    .min(1)
+    .max(getAdminFeatureUsageQueryDaysMax)
+    .default(getAdminFeatureUsageQueryDaysDefault),
+});
+
+export const getAdminFeatureUsageResponseFeaturesItemPolicyCostPerActionMicrosMin = 0;
+
+export const GetAdminFeatureUsageResponse = zod.object({
+  periodDays: zod.number(),
+  totals: zod.object({
+    actions: zod.number(),
+    activeUsers: zod.number(),
+    estimatedCostMicros: zod.number(),
+    pricedActions: zod.number(),
+    unpricedActions: zod.number(),
+    projectedMonthlyCostMicros: zod.number(),
+  }),
+  daily: zod.array(
+    zod.object({
+      date: zod.coerce.date(),
+      actions: zod.number(),
+      activeUsers: zod.number(),
+      estimatedCostMicros: zod.number(),
+      pricedActions: zod.number(),
+      unpricedActions: zod.number(),
+    }),
+  ),
+  features: zod.array(
+    zod.object({
+      featureKey: zod.string(),
+      label: zod.string(),
+      costSource: zod.enum(["configurable", "recorded"]),
+      actions: zod.number(),
+      activeUsers: zod.number(),
+      estimatedCostMicros: zod.number(),
+      pricedActions: zod.number(),
+      unpricedActions: zod.number(),
+      providerUsageCostMicros: zod.number(),
+      providerPricedActions: zod.number(),
+      providerUnpricedActions: zod.number(),
+      currentDailySpendMicros: zod.number(),
+      currentDailyProviderUsageCostMicros: zod.number(),
+      policy: zod.object({
+        enabled: zod.boolean(),
+        hourlyLimit: zod.number().min(1).nullable(),
+        dailyLimit: zod.number().min(1).nullable(),
+        dailyBudgetMicros: zod.number().min(1).nullable(),
+        costPerActionMicros: zod
+          .number()
+          .min(
+            getAdminFeatureUsageResponseFeaturesItemPolicyCostPerActionMicrosMin,
+          )
+          .nullable(),
+      }),
+    }),
+  ),
+  topUsers: zod.array(
+    zod.object({
+      userId: zod.string(),
+      name: zod.string(),
+      actions: zod.number(),
+    }),
+  ),
+  mangaGenerationUsers: zod
+    .array(
+      zod.object({
+        userId: zod.string(),
+        name: zod.string(),
+        attempts: zod.number(),
+        successful: zod.number(),
+        failed: zod.number(),
+        pending: zod.number(),
+        estimatedCostMicros: zod.number(),
+        usagePricedAttempts: zod.number(),
+        usageUnpricedSuccesses: zod.number(),
+        providerUsageCostMicros: zod.number().nullable(),
+      }),
+    )
+    .describe(
+      "Lifetime counts and provider-usage pricing of retained manga generation records.",
+    ),
+});
+
+/**
+ * Returns only aggregate counts from existing database records. Metrics without reliable source data are null.
+ * @summary Read aggregate product analytics for an administrator
+ */
+export const getAdminAnalyticsQueryDaysDefault = 7;
+export const getAdminAnalyticsQueryDaysMax = 90;
+
+export const GetAdminAnalyticsQueryParams = zod.object({
+  days: zod.coerce
+    .number()
+    .min(1)
+    .max(getAdminAnalyticsQueryDaysMax)
+    .default(getAdminAnalyticsQueryDaysDefault),
+});
+
+export const GetAdminAnalyticsResponse = zod.object({
+  periodDays: zod.number(),
+  metrics: zod.object({
+    totalUsers: zod.number(),
+    newUsers: zod.number().nullable(),
+    activeUsers: zod.number(),
+    averageDailyActiveUsers: zod.number(),
+    storiesCreated: zod.number(),
+    storiesPublished: zod.number(),
+    aiGenerations: zod.number(),
+    messages: zod.number(),
+    reports: zod.number(),
+    storiesViewed: zod.number(),
+    likes: zod.number(),
+    comments: zod.number(),
+    shares: zod.number().nullable(),
+    mangaCreated: zod.number(),
+    imagesUploaded: zod.number(),
+    videoUploads: zod.number().nullable(),
+  }),
+  daily: zod.array(
+    zod.object({
+      date: zod.coerce.date(),
+      activeUsers: zod.number(),
+      storiesCreated: zod.number(),
+    }),
+  ),
+  features: zod.object({
+    discover: zod.number(),
+    storyCreator: zod.number(),
+    aiGeneration: zod.number(),
+    friends: zod.number().nullable(),
+    chat: zod.number(),
+    search: zod.number().nullable(),
+  }),
+  topContent: zod.array(
+    zod.object({
+      id: zod.string(),
+      contentType: zod.enum(["story", "book"]),
+      title: zod.string(),
+      views: zod.number(),
+    }),
+  ),
+});
+
+/**
+ * Runs a live database probe without exposing provider details or configuration values.
+ * @summary Check API and database status for an administrator
+ */
+export const GetAdminApiStatusResponse = zod.object({
+  api: zod.enum(["ok"]),
+  database: zod.enum(["ok", "unavailable"]),
+  databaseLatencyMs: zod.number().nullable(),
+  checkedAt: zod.coerce.date(),
+});
+
+/**
+ * Requires an authenticated administrator. This fixed test grant is limited to @thekin.
+ * @summary Check Celestial Wings test credits
+ */
+export const getCelestialWingsTestGrantStatusResponseStarsBalanceMin = 0;
+
+export const getCelestialWingsTestGrantStatusResponseGrantsCountMin = 0;
+
+export const GetCelestialWingsTestGrantStatusResponse = zod.object({
+  username: zod.string(),
+  name: zod.string(),
+  starsBalance: zod
+    .number()
+    .min(getCelestialWingsTestGrantStatusResponseStarsBalanceMin),
+  grantsCount: zod
+    .number()
+    .min(getCelestialWingsTestGrantStatusResponseGrantsCountMin),
+});
+
+/**
+ * Requires an authenticated administrator. Each new request ID grants exactly 1,000 Stars to @thekin. Repeating the same request ID is idempotent.
+ * @summary Grant 1,000 Celestial Wings test Stars
+ */
+export const GrantCelestialWingsTestStarsBody = zod.object({
+  requestId: zod.string().uuid(),
+});
+
+export const grantCelestialWingsTestStarsResponseStarsBeforeMin = 0;
+
+export const grantCelestialWingsTestStarsResponseStarsAfterMin = 0;
+
+export const GrantCelestialWingsTestStarsResponse = zod.object({
+  username: zod.string(),
+  amount: zod.literal(1000),
+  granted: zod.boolean(),
+  alreadyGranted: zod.boolean(),
+  starsBefore: zod
+    .number()
+    .min(grantCelestialWingsTestStarsResponseStarsBeforeMin),
+  starsAfter: zod
+    .number()
+    .min(grantCelestialWingsTestStarsResponseStarsAfterMin),
+});
+
+/**
+ * @summary Temporarily hide a user and their published activity
+ */
+export const HideAdminUserParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const HideAdminUserResponse = zod.object({
+  ok: zod.boolean(),
+  isHidden: zod.boolean(),
+});
+
+/**
+ * @summary Restore a temporarily hidden user's visibility
+ */
+export const RestoreAdminUserVisibilityParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const RestoreAdminUserVisibilityResponse = zod.object({
+  ok: zod.boolean(),
+  isHidden: zod.boolean(),
+});
+
+/**
+ * Groups open user reports by target. High priority means three or more reports. AI flags are returned only when recorded by an existing moderation source.
+ * @summary List active moderation items
+ */
+export const getAdminModerationQueueQueryFilterDefault = `all`;
+export const getAdminModerationQueueQueryQMax = 120;
+
+export const getAdminModerationQueueQueryLimitDefault = 50;
+export const getAdminModerationQueueQueryLimitMax = 100;
+
+export const getAdminModerationQueueQueryOffsetDefault = 0;
+export const getAdminModerationQueueQueryOffsetMin = 0;
+
+export const GetAdminModerationQueueQueryParams = zod.object({
+  filter: zod
+    .enum(["all", "high", "new", "reported", "ai_flagged"])
+    .default(getAdminModerationQueueQueryFilterDefault),
+  q: zod.coerce.string().max(getAdminModerationQueueQueryQMax).optional(),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getAdminModerationQueueQueryLimitMax)
+    .default(getAdminModerationQueueQueryLimitDefault),
+  offset: zod.coerce
+    .number()
+    .min(getAdminModerationQueueQueryOffsetMin)
+    .default(getAdminModerationQueueQueryOffsetDefault),
+});
+
+export const GetAdminModerationQueueResponse = zod.object({
+  items: zod.array(
+    zod.object({
+      id: zod.string(),
+      targetType: zod.enum([
+        "story",
+        "image",
+        "video",
+        "outfit",
+        "sticker",
+        "comment",
+        "message",
+        "campfire_message",
+        "manga_generation",
+        "user",
+      ]),
+      targetId: zod.string(),
+      contentType: zod.string(),
+      title: zod.string(),
+      preview: zod.string(),
+      targetUserId: zod.string().nullable(),
+      userName: zod.string().nullable(),
+      username: zod.string().nullable(),
+      reportCount: zod.number(),
+      reportReasons: zod.array(zod.string()),
+      priority: zod.enum(["normal", "high"]),
+      status: zod.enum(["open", "reviewing"]),
+      source: zod.enum(["report", "ai"]),
+      aiCategory: zod.string().nullable(),
+      aiConfidence: zod.number().nullable(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  aiAvailable: zod.boolean(),
+});
+
+/**
+ * @summary List user-submitted moderation reports
+ */
+export const getAdminModerationReportsQueryStatusDefault = `open`;
+export const getAdminModerationReportsQueryQMax = 120;
+
+export const getAdminModerationReportsQueryLimitDefault = 50;
+export const getAdminModerationReportsQueryLimitMax = 100;
+
+export const getAdminModerationReportsQueryOffsetDefault = 0;
+export const getAdminModerationReportsQueryOffsetMin = 0;
+
+export const GetAdminModerationReportsQueryParams = zod.object({
+  status: zod
+    .enum(["all", "open", "reviewing", "resolved", "dismissed"])
+    .default(getAdminModerationReportsQueryStatusDefault),
+  q: zod.coerce.string().max(getAdminModerationReportsQueryQMax).optional(),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getAdminModerationReportsQueryLimitMax)
+    .default(getAdminModerationReportsQueryLimitDefault),
+  offset: zod.coerce
+    .number()
+    .min(getAdminModerationReportsQueryOffsetMin)
+    .default(getAdminModerationReportsQueryOffsetDefault),
+});
+
+export const GetAdminModerationReportsResponse = zod.object({
+  reports: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      reporterId: zod.string(),
+      reporterName: zod.string().nullable(),
+      targetType: zod.enum([
+        "story",
+        "image",
+        "video",
+        "outfit",
+        "sticker",
+        "comment",
+        "message",
+        "campfire_message",
+        "manga_generation",
+        "user",
+      ]),
+      targetId: zod.string(),
+      contentType: zod.string(),
+      title: zod.string(),
+      preview: zod.string(),
+      targetUserId: zod.string().nullable(),
+      userName: zod.string().nullable(),
+      username: zod.string().nullable(),
+      reason: zod.string(),
+      details: zod.string(),
+      status: zod.enum(["open", "reviewing", "resolved", "dismissed"]),
+      resolvedById: zod.string().nullable(),
+      resolvedAt: zod.coerce.date().nullable(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+});
+
+/**
+ * @summary Move a report into review or close it
+ */
+export const UpdateAdminModerationReportStatusParams = zod.object({
+  id: zod.coerce.string().uuid(),
+});
+
+export const updateAdminModerationReportStatusBodyReasonMax = 500;
+
+export const UpdateAdminModerationReportStatusBody = zod.object({
+  status: zod.enum(["reviewing", "resolved", "dismissed"]),
+  reason: zod
+    .string()
+    .max(updateAdminModerationReportStatusBodyReasonMax)
+    .optional(),
+});
+
+export const UpdateAdminModerationReportStatusResponse = zod.object({
+  ok: zod.boolean(),
+  actionId: zod.string().uuid(),
+});
+
+/**
+ * AI flags require a human action; an AI flag never automatically bans a user.
+ * @summary Apply and audit a moderation action
+ */
+export const createAdminModerationActionBodyTargetIdMax = 2048;
+
+export const createAdminModerationActionBodyReasonMin = 3;
+export const createAdminModerationActionBodyReasonMax = 500;
+
+export const createAdminModerationActionBodySuspensionDaysMax = 30;
+
+export const CreateAdminModerationActionBody = zod.object({
+  targetType: zod.enum([
+    "story",
+    "image",
+    "video",
+    "outfit",
+    "sticker",
+    "comment",
+    "message",
+    "campfire_message",
+    "manga_generation",
+    "user",
+  ]),
+  targetId: zod.string().min(1).max(createAdminModerationActionBodyTargetIdMax),
+  targetUserId: zod.string().nullish(),
+  action: zod.enum([
+    "review",
+    "keep",
+    "hide",
+    "remove",
+    "restore",
+    "warn_user",
+    "suspend_user",
+    "ban_user",
+    "ai_override_keep",
+    "ai_override_remove",
+  ]),
+  reason: zod
+    .string()
+    .min(createAdminModerationActionBodyReasonMin)
+    .max(createAdminModerationActionBodyReasonMax),
+  suspensionDays: zod
+    .number()
+    .min(1)
+    .max(createAdminModerationActionBodySuspensionDaysMax)
+    .nullish(),
+});
+
+export const CreateAdminModerationActionResponse = zod.object({
+  ok: zod.boolean(),
+  actionId: zod.string().uuid(),
+});
+
+/**
+ * @summary List hidden content, removals, AI flags, or moderation history
+ */
+export const getAdminModerationRecordsQueryQMax = 120;
+
+export const getAdminModerationRecordsQueryLimitDefault = 50;
+export const getAdminModerationRecordsQueryLimitMax = 100;
+
+export const getAdminModerationRecordsQueryOffsetDefault = 0;
+export const getAdminModerationRecordsQueryOffsetMin = 0;
+
+export const GetAdminModerationRecordsQueryParams = zod.object({
+  kind: zod.enum(["hidden", "removed", "ai", "history"]),
+  q: zod.coerce.string().max(getAdminModerationRecordsQueryQMax).optional(),
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getAdminModerationRecordsQueryLimitMax)
+    .default(getAdminModerationRecordsQueryLimitDefault),
+  offset: zod.coerce
+    .number()
+    .min(getAdminModerationRecordsQueryOffsetMin)
+    .default(getAdminModerationRecordsQueryOffsetDefault),
+});
+
+export const GetAdminModerationRecordsResponse = zod.object({
+  kind: zod.enum(["hidden", "removed", "ai", "history"]),
+  records: zod.array(
+    zod.object({
+      id: zod.string().uuid(),
+      adminId: zod.string(),
+      adminName: zod.string().nullable(),
+      action: zod.string(),
+      targetType: zod.enum([
+        "story",
+        "image",
+        "video",
+        "outfit",
+        "sticker",
+        "comment",
+        "message",
+        "campfire_message",
+        "manga_generation",
+        "user",
+      ]),
+      targetId: zod.string(),
+      targetUserId: zod.string().nullable(),
+      contentType: zod.string(),
+      title: zod.string(),
+      preview: zod.string(),
+      reason: zod.string(),
+      aiCategory: zod.string().nullable(),
+      aiConfidence: zod.number().nullable(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+  total: zod.number(),
+  sourceAvailable: zod.boolean(),
+});
+
+/**
+ * Requires an authenticated administrator. Cost values are optional estimates per tracked request.
+ * @summary Update a feature's server-side limit, estimate, or availability
+ */
+export const UpdateAdminFeatureUsageParams = zod.object({
+  featureKey: zod.coerce.string(),
+});
+
+export const updateAdminFeatureUsageBodyOneCostPerActionMicrosMin = 0;
+
+export const UpdateAdminFeatureUsageBody = zod.object({
+  enabled: zod.boolean(),
+  hourlyLimit: zod.number().min(1).nullable(),
+  dailyLimit: zod.number().min(1).nullable(),
+  dailyBudgetMicros: zod.number().min(1).nullable(),
+  costPerActionMicros: zod
+    .number()
+    .min(updateAdminFeatureUsageBodyOneCostPerActionMicrosMin)
+    .nullable(),
+});
+
+export const updateAdminFeatureUsageResponseCostPerActionMicrosMin = 0;
+
+export const UpdateAdminFeatureUsageResponse = zod.object({
+  enabled: zod.boolean(),
+  hourlyLimit: zod.number().min(1).nullable(),
+  dailyLimit: zod.number().min(1).nullable(),
+  dailyBudgetMicros: zod.number().min(1).nullable(),
+  costPerActionMicros: zod
+    .number()
+    .min(updateAdminFeatureUsageResponseCostPerActionMicrosMin)
+    .nullable(),
+});
+
+/**
+ * @summary Send a photo without silently dropping it on older servers
+ */
+export const SendChatPhotoParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const sendChatPhotoBodyContentMax = 2000;
+
+export const sendChatPhotoBodyImageUriMax = 2048;
+
+export const sendChatPhotoBodyImageUriRegExp = new RegExp(
+  "^\/api\/images\/[\\w.-]+$",
+);
+
+export const SendChatPhotoBody = zod.object({
+  content: zod.string().min(1).max(sendChatPhotoBodyContentMax).optional(),
+  imageUri: zod
+    .string()
+    .max(sendChatPhotoBodyImageUriMax)
+    .regex(sendChatPhotoBodyImageUriRegExp),
+});
+
+/**
+ * @summary Read a private direct-message conversation
+ */
+export const GetChatConversationParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const getChatConversationQueryLimitDefault = 50;
+export const getChatConversationQueryLimitMax = 100;
+
+export const GetChatConversationQueryParams = zod.object({
+  limit: zod.coerce
+    .number()
+    .min(1)
+    .max(getChatConversationQueryLimitMax)
+    .default(getChatConversationQueryLimitDefault)
+    .describe(
+      "Number of most recent messages to return (default 50, maximum 100).",
+    ),
+  before: zod
+    .date()
+    .optional()
+    .describe(
+      "ISO timestamp of the oldest message already loaded; use with beforeId for keyset pagination.",
+    ),
+  beforeId: zod.coerce
+    .string()
+    .uuid()
+    .optional()
+    .describe("UUID of the oldest message already loaded."),
+});
+
+export const GetChatConversationResponseItem = zod.object({
+  id: zod.string(),
+  fromUserId: zod.string(),
+  toUserId: zod.string(),
+  content: zod.string().nullable(),
+  expression: zod.string().nullable(),
+  imageUri: zod.string().nullish(),
+  isRead: zod.boolean(),
+  createdAt: zod.string(),
+  isOwn: zod.boolean(),
+});
+export const GetChatConversationResponse = zod.array(
+  GetChatConversationResponseItem,
+);
+
+/**
+ * @summary Send text, an expression, or an owned uploaded photo
+ */
+export const SendChatMessageParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const sendChatMessageBodyContentMax = 2000;
+
+export const sendChatMessageBodyImageUriRegExp = new RegExp(
+  "^\/api\/images\/[\\w.-]+$",
+);
+
+export const SendChatMessageBody = zod.object({
+  content: zod.string().min(1).max(sendChatMessageBodyContentMax).optional(),
+  expression: zod
+    .enum([
+      "bomb",
+      "stone",
+      "mirror",
+      "kiss",
+      "stars",
+      "fire",
+      "snow",
+      "confetti",
+      "candle",
+      "spark",
+      "lantern",
+      "hush",
+      "donkey",
+      "wolf",
+    ])
+    .optional(),
+  imageUri: zod
+    .string()
+    .regex(sendChatMessageBodyImageUriRegExp)
+    .optional()
+    .describe(
+      "Canonical uploaded image path owned by the sender; never a temporary read URL.",
+    ),
+});
+
+/**
+ * @summary Hide a direct-message conversation from the authenticated user's chat list
+ */
+export const ClearConversationParams = zod.object({
+  partnerId: zod.coerce.string(),
+});
+
+export const ClearConversationResponse = zod.object({
+  cleared: zod.boolean(),
+});
+
+/**
+ * @summary Remove the relationship in both directions without blocking
+ */
+export const RemoveFriendParams = zod.object({
+  targetUserId: zod.coerce.string(),
+});
+
+export const RemoveFriendResponse = zod.object({
+  removed: zod.boolean(),
+});
+
+/**
+ * @summary Block a user from initiating contact
+ */
+export const BlockUserParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const BlockUserResponse = zod.object({
+  blocked: zod.boolean(),
+});
+
+/**
+ * @summary Unblock a user
+ */
+export const UnblockUserParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const UnblockUserResponse = zod.object({
+  blocked: zod.boolean(),
 });

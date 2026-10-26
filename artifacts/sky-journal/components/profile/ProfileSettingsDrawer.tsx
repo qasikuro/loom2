@@ -1,5 +1,6 @@
 import { Icon } from '@/components/Icon';
 import type { Character } from '@/context/AppContext';
+import { useApp } from '@/context/AppContext';
 import { useSound } from '@/context/SoundContext';
 import { useTheme, type ThemeMode } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
@@ -9,9 +10,15 @@ import * as Haptics from 'expo-haptics';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { router } from 'expo-router';
 import React from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Animated, Linking, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useGlobalChatButtonSettings } from '@/context/GlobalChatButtonSettingsContext';
+import { useClerk } from '@clerk/expo';
+import { useDeleteMyAccount } from '@workspace/api-client-react';
+
+const HELP_CENTER_URL = 'https://www.storigam.com/storigam/help';
+const FEEDBACK_URL = 'https://www.storigam.com/storigam/help#feedback';
+const ABOUT_URL = 'https://www.storigam.com/storigam/about';
 
 // ── SoundToggle ────────────────────────────────────────────────────────────────
 
@@ -167,6 +174,56 @@ export function ProfileSettingsDrawer({
   handleSignOut, confirmingSignOut, closeDrawer, user, avatarSource, topPad, colors,
 }: Props) {
   const { t } = useTranslation();
+  const { signOut } = useClerk();
+  const { clearUserData } = useApp();
+  const deleteAccountMutation = useDeleteMyAccount();
+  const [deletingAccount, setDeletingAccount] = React.useState(false);
+  const openSupportPage = (url: string) => {
+    closeDrawer();
+    setTimeout(() => {
+      void Linking.openURL(url).catch(() => {
+        Alert.alert(
+          t('settings.support'),
+          `Unable to open the page. Visit ${url} or email shpport@gmail.com.`,
+        );
+      });
+    }, 260);
+  };
+  const confirmDeleteAccount = () => {
+    if (deletingAccount) return;
+    Alert.alert(
+      t('settings.requestAccountDeletion'),
+      'This permanently deletes your profile, stories, outfits, gallery, journal, tutorials, and friendships. Text already delivered in chats may remain for other participants as “Deleted account”; photos you uploaded will be removed. This cannot be undone.',
+      [
+        { text: t('social.cancel', { defaultValue: 'Cancel' }), style: 'cancel' },
+        {
+          text: t('settings.requestAccountDeletion'),
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingAccount(true);
+            try {
+              await deleteAccountMutation.mutateAsync(undefined);
+              await clearUserData();
+              closeDrawer();
+              await signOut().catch(() => undefined);
+              router.replace('/(auth)/sign-in' as any);
+              Alert.alert(
+                t('settings.requestAccountDeletion'),
+                'Your account data has been removed. Authentication and uploaded-file cleanup are finishing securely.',
+              );
+            } catch {
+              setDeletingAccount(false);
+              Alert.alert(
+                t('settings.requestAccountDeletion'),
+                'We could not confirm the deletion result. Check your connection and try again, or contact support if you can no longer sign in.',
+              );
+            }
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  };
   return (
     <>
       {drawerOpen && (
@@ -276,6 +333,21 @@ export function ProfileSettingsDrawer({
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity
+              style={s.drawerItem}
+              accessibilityRole="button"
+              accessibilityLabel={t('settings.requestAccountDeletion')}
+              accessibilityState={{ disabled: deletingAccount }}
+              testID="settings-delete-account"
+              onPress={confirmDeleteAccount}
+              disabled={deletingAccount}
+              activeOpacity={0.7}
+            >
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="trash-2" size={15} color={colors.destructive} /></View>
+              <Text style={[s.drawerItemLabel, { flex: 1, color: colors.destructive }]}>{deletingAccount ? 'Deleting…' : t('settings.requestAccountDeletion')}</Text>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
+            </TouchableOpacity>
+            <View style={s.drawerDivider} />
+            <TouchableOpacity
               style={[s.drawerItem, confirmingSignOut && { backgroundColor: `${colors.destructive}18` }]}
               onPress={handleSignOut}
               activeOpacity={0.7}
@@ -289,19 +361,37 @@ export function ProfileSettingsDrawer({
 
           <Text style={[s.drawerSectionLabel, { color: colors.mutedForeground }]}>{t('settings.support')}</Text>
           <View style={[s.drawerGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={s.drawerItem}
+              accessibilityRole="link"
+              testID="settings-help-center"
+              onPress={() => openSupportPage(HELP_CENTER_URL)}
+              activeOpacity={0.7}
+            >
               <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="help-circle" size={15} color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.helpCenter')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
-            <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={s.drawerItem}
+              accessibilityRole="link"
+              testID="settings-send-feedback"
+              onPress={() => openSupportPage(FEEDBACK_URL)}
+              activeOpacity={0.7}
+            >
               <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="message-square" size={15} color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.sendFeedback')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
-            <TouchableOpacity style={s.drawerItem} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={s.drawerItem}
+              accessibilityRole="link"
+              testID="settings-about"
+              onPress={() => openSupportPage(ABOUT_URL)}
+              activeOpacity={0.7}
+            >
               <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="info" size={15} color={colors.mutedForeground} /></View>
               <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.about')}</Text>
               <Icon name="chevron-right" size={13} color={colors.mutedForeground} />

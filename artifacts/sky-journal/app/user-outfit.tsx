@@ -75,6 +75,7 @@ function fmtDate(iso: string, locale: string) {
 function rnd(a: number, b: number) { return a + Math.random() * (b - a); }
 
 interface SlimOutfit {
+  id?:         string;
   name:        string;
   description: string;
   story:       string;
@@ -108,10 +109,13 @@ export default function UserOutfitScreen() {
     outfitImage:    string;
     outfitTags:     string;
     outfitDate:     string;
+    outfitId:       string;
     authorUserId:   string;
     authorName:     string;
     authorHandle:   string;
     authorBio:      string;
+    authorAvatarUri: string;
+    authorIsSelf:   string;
     authorMood:     string;
     authorTraits:   string;
     allOutfitsJson: string;
@@ -125,6 +129,7 @@ export default function UserOutfitScreen() {
       if (params.allOutfitsJson) return JSON.parse(params.allOutfitsJson) as SlimOutfit[];
     } catch { /* ignore */ }
     return [{
+      id:          params.outfitId ?? '',
       name:        params.outfitName  ?? '',
       description: params.outfitDesc  ?? '',
       story:       params.outfitStory ?? '',
@@ -160,6 +165,7 @@ export default function UserOutfitScreen() {
   const liveDot = useRef(new Animated.Value(1)).current;
 
   const [reportVisible, setReportVisible]   = useState(false);
+  const [avatarFailedFor, setAvatarFailedFor] = useState<string | null>(null);
   const [appreciated, setAppreciated]       = useState(false);
   const [musicMuted, setMusicMuted] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
@@ -257,7 +263,11 @@ export default function UserOutfitScreen() {
   const traits     = params.authorTraits ? (JSON.parse(params.authorTraits) as string[]) : [];
   const moodColor  = MOOD_COLORS[params.authorMood ?? ''] ?? colors.primary;
   const darkBg     = MOOD_DARK_BG[params.authorMood ?? ''] ?? (['#100828', '#1C1040', '#281850'] as const);
-  const isFollowing = followingIds.includes(params.authorUserId ?? '');
+  const authorUserId = params.authorUserId?.trim() ?? '';
+  const authorAvatarUri = params.authorAvatarUri?.trim() ?? '';
+  const isAuthorSelf = params.authorIsSelf === 'true';
+  const isFollowing = !!authorUserId && followingIds.includes(authorUserId);
+  const reportTargetId = outfit?.id?.trim() || params.outfitId?.trim() || '';
   const initial    = (params.authorName ?? '?').charAt(0).toUpperCase();
   const total      = allOutfits.length;
   const localizedTag = (tag: string) => {
@@ -270,6 +280,10 @@ export default function UserOutfitScreen() {
     'Warm', 'Peaceful', 'Grateful', 'Quiet', 'Joyful', 'Nostalgic', 'Hopeful',
     'Lonely', 'Dreamy', 'Soft', 'Chaotic',
   ].includes(mood) ? t(`outfitJournal.mood${mood}`) : mood;
+
+  useEffect(() => {
+    setAvatarFailedFor(null);
+  }, [authorAvatarUri]);
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 34 : insets.bottom + 24;
@@ -379,9 +393,17 @@ export default function UserOutfitScreen() {
   }
 
   function handleFollow() {
+    if (!authorUserId || isAuthorSelf) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (isFollowing) unfollowUser(params.authorUserId!);
-    else followUser(params.authorUserId!);
+    if (isFollowing) unfollowUser(authorUserId);
+    else followUser(authorUserId);
+  }
+
+  function handleOpenProfile() {
+    if (!authorUserId) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    router.push({ pathname: '/user/[userId]', params: { userId: authorUserId } } as any);
   }
 
   return (
@@ -434,22 +456,22 @@ export default function UserOutfitScreen() {
               { opacity: transitionAnim },
             ]}
           >
-              {outfit?.imageUri ? (
-                <VibeMotion key={outfit.imageUri + ':' + (vibe ?? '')} vibe={vibe ?? ''}>
-                  <Image
-                    source={{ uri: outfit.imageUri }}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="contain"
-                  />
-                </VibeMotion>
-              ) : (
-                <LinearGradient
-                  colors={darkBg}
+            {outfit?.imageUri ? (
+              <VibeMotion key={`${outfit.id ?? outfit.imageUri}:${vibe ?? ''}`} vibe={vibe ?? ''}>
+                <Image
+                  source={{ uri: outfit.imageUri }}
                   style={StyleSheet.absoluteFill}
-                  start={{ x: 0.25, y: 0 }}
-                  end={{ x: 0.75, y: 1 }}
+                  contentFit="contain"
                 />
-              )}
+              </VibeMotion>
+            ) : (
+              <LinearGradient
+                colors={darkBg}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0.25, y: 0 }}
+                end={{ x: 0.75, y: 1 }}
+              />
+            )}
           </Animated.View>
           {!!outfit?.music && (
             <Animated.View style={[styles.musicPill, { top: topPad + 62, opacity: heroFade }]}>
@@ -652,20 +674,51 @@ export default function UserOutfitScreen() {
 
             <View style={styles.charTop}>
               <View style={[styles.charAvatar, { backgroundColor: `${moodColor}20`, borderColor: `${moodColor}44` }]}>
-                <Text style={[styles.charInitial, { color: moodColor }]}>{initial}</Text>
+                {authorAvatarUri && avatarFailedFor !== authorAvatarUri ? (
+                  <View style={styles.charAvatarImageClip}>
+                    <Image
+                      source={{ uri: authorAvatarUri }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      onError={() => setAvatarFailedFor(authorAvatarUri)}
+                      accessibilityLabel={params.authorName ? `${params.authorName} profile photo` : undefined}
+                    />
+                  </View>
+                ) : (
+                  <Text style={[styles.charInitial, { color: moodColor }]}>{initial}</Text>
+                )}
               </View>
               <View style={styles.charNameBlock}>
-                <Text style={[styles.charName, { color: colors.foreground }]}>{params.authorName}</Text>
+                <Text style={[styles.charName, { color: colors.foreground }]} numberOfLines={1}>
+                  {params.authorName}
+                </Text>
                 {params.authorHandle ? (
-                  <Text style={[styles.charHandle, { color: colors.primary }]}>@{params.authorHandle}</Text>
+                  <Text style={[styles.charHandle, { color: colors.primary }]} numberOfLines={1}>
+                    @{params.authorHandle}
+                  </Text>
                 ) : null}
               </View>
-              {params.authorMood ? (
-                <View style={[styles.moodPill, { backgroundColor: `${moodColor}18`, borderColor: `${moodColor}32` }]}>
-                  <Text style={[styles.moodPillText, { color: moodColor }]}>{localizedMood(params.authorMood)}</Text>
-                </View>
-              ) : null}
+              <TouchableOpacity
+                style={[styles.reportBtn, !reportTargetId && styles.disabledAction]}
+                onPress={() => { if (reportTargetId) setReportVisible(true); }}
+                disabled={!reportTargetId}
+                activeOpacity={0.68}
+                hitSlop={8}
+                testID="outfit-report-button"
+                accessibilityRole="button"
+                accessibilityLabel={t('outfitJournal.reportOutfit')}
+                accessibilityState={{ disabled: !reportTargetId }}
+              >
+                <Icon name="flag" size={17} color={colors.destructive} />
+              </TouchableOpacity>
             </View>
+
+            {params.authorMood ? (
+              <View style={[styles.moodPill, { backgroundColor: `${moodColor}18`, borderColor: `${moodColor}32` }]}>
+                <Text style={[styles.moodPillText, { color: moodColor }]}>{localizedMood(params.authorMood)}</Text>
+              </View>
+            ) : null}
 
             {!!params.authorBio && (
               <Text style={[styles.charBio, { color: colors.mutedForeground }]}>
@@ -686,50 +739,53 @@ export default function UserOutfitScreen() {
             <View style={[styles.charDivider, { backgroundColor: colors.border }]} />
 
             <View style={styles.charActions}>
+              {!isAuthorSelf && (
+                <TouchableOpacity
+                  style={[
+                    styles.followBtn,
+                    isFollowing
+                      ? { backgroundColor: colors.muted, borderColor: colors.border }
+                      : { backgroundColor: moodColor, borderColor: moodColor },
+                    !authorUserId && styles.disabledAction,
+                  ]}
+                  onPress={handleFollow}
+                  disabled={!authorUserId}
+                  activeOpacity={0.78}
+                  testID="outfit-follow-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={t(isFollowing ? 'outfitJournal.following' : 'outfitJournal.follow')}
+                  accessibilityState={{ selected: isFollowing, disabled: !authorUserId }}
+                >
+                  <Icon
+                    name={isFollowing ? 'user-check' : 'user-plus'}
+                    size={16}
+                    color={isFollowing ? colors.mutedForeground : '#fff'}
+                  />
+                  <Text style={[styles.followBtnText, { color: isFollowing ? colors.mutedForeground : '#fff' }]} numberOfLines={1}>
+                    {isFollowing ? t('outfitJournal.following') : t('outfitJournal.follow')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
               <TouchableOpacity
                 style={[
-                  styles.followBtn,
-                  isFollowing
-                    ? { backgroundColor: colors.muted, borderColor: colors.border }
-                    : { backgroundColor: moodColor,    borderColor: moodColor },
+                  styles.profileBtn,
+                  { backgroundColor: colors.muted, borderColor: colors.border },
+                  !authorUserId && styles.disabledAction,
+                  isAuthorSelf && styles.profileBtnFull,
                 ]}
-                onPress={handleFollow}
-                activeOpacity={0.82}
+                onPress={handleOpenProfile}
+                disabled={!authorUserId}
+                activeOpacity={0.78}
+                testID="outfit-full-profile-button"
+                accessibilityRole="button"
+                accessibilityLabel={t('discover.fullProfile')}
+                accessibilityState={{ disabled: !authorUserId }}
               >
-                <Icon
-                  name={isFollowing ? 'user-check' : 'user-plus'}
-                  size={14}
-                  color={isFollowing ? colors.mutedForeground : '#fff'}
-                />
-                <Text style={[styles.followBtnText, { color: isFollowing ? colors.mutedForeground : '#fff' }]}>
-                  {isFollowing ? t('outfitJournal.following') : t('outfitJournal.follow')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.profileBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  router.push({ pathname: '/user/[userId]', params: { userId: params.authorUserId } } as any);
-                }}
-                activeOpacity={0.82}
-              >
-                <Icon name="user" size={14} color={colors.mutedForeground} />
-                <Text style={[styles.profileBtnText, { color: colors.mutedForeground }]}>
+                <Icon name="user" size={16} color={colors.mutedForeground} />
+                <Text style={[styles.profileBtnText, { color: colors.mutedForeground }]} numberOfLines={1}>
                   {t('discover.fullProfile')}
                 </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.reportBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                onPress={() => setReportVisible(true)}
-                activeOpacity={0.82}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel={t('outfitJournal.reportOutfit')}
-              >
-                <Icon name="flag" size={14} color="rgba(200,100,100,0.65)" />
               </TouchableOpacity>
             </View>
           </View>
@@ -781,7 +837,7 @@ export default function UserOutfitScreen() {
       <ReportSheet
         visible={reportVisible}
         targetType="outfit"
-        targetId={params.authorUserId ?? ''}
+        targetId={reportTargetId}
         targetLabel={t('outfitJournal.reportOutfitBy', { name: params.authorName ?? '' })}
         onClose={() => setReportVisible(false)}
       />
@@ -925,52 +981,60 @@ const styles = StyleSheet.create({
   dotInactive: { backgroundColor: 'rgba(255,255,255,0.30)' },
 
   // ── Details ─────────────────────────────────────────────────────────────
-  details:  { paddingTop: 26 },
-  moodBar:  { height: 3, marginHorizontal: 44, borderRadius: 2, marginBottom: 24 },
+  details:  { paddingTop: 20 },
+  moodBar:  { height: 3, marginHorizontal: 48, borderRadius: 2, marginBottom: 18 },
 
   charCard: {
     marginHorizontal: 16, marginBottom: 14,
-    borderRadius: 24, borderWidth: 1, padding: 20, overflow: 'hidden',
+    borderRadius: 22, borderWidth: 1, padding: 18, overflow: 'hidden',
   },
-  charTop:  { flexDirection: 'row', alignItems: 'center', gap: 13, marginBottom: 12 },
+  charTop:  { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 10 },
   charAvatar: {
     width: 60, height: 60, borderRadius: 30, borderWidth: 2,
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    overflow: 'hidden',
+  },
+  charAvatarImageClip: {
+    ...StyleSheet.absoluteFillObject,
+    top: 2, right: 2, bottom: 2, left: 2,
+    borderRadius: 28, overflow: 'hidden',
   },
   charInitial:   { fontSize: 25, fontFamily: 'Satoshi-Bold' },
-  charNameBlock: { flex: 1, gap: 3 },
-  charName:      { fontSize: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
+  charNameBlock: { flex: 1, minWidth: 0, gap: 3 },
+  charName:      { fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
   charHandle:    { fontSize: 13, fontFamily: 'Satoshi-Medium' },
   moodPill: {
-    paddingHorizontal: 11, paddingVertical: 5,
-    borderRadius: 14, borderWidth: 1, flexShrink: 0,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 11, paddingVertical: 6,
+    borderRadius: 14, borderWidth: 1, marginBottom: 12,
   },
   moodPillText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
   charBio: {
-    fontSize: 13, fontFamily: 'Satoshi-Regular', lineHeight: 20,
-    fontStyle: 'italic', marginBottom: 12, opacity: 0.82,
+    fontSize: 14, fontFamily: 'Satoshi-Regular', lineHeight: 21,
+    fontStyle: 'italic', marginBottom: 12, opacity: 0.88,
   },
-  traitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 14 },
-  traitChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
+  traitsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, marginBottom: 14 },
+  traitChip: { minHeight: 30, justifyContent: 'center', paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20, borderWidth: 1 },
   traitText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  charDivider: { height: StyleSheet.hairlineWidth, marginBottom: 14 },
-  charActions:  { flexDirection: 'row', gap: 10 },
+  charDivider: { height: StyleSheet.hairlineWidth, marginBottom: 12 },
+  charActions:  { flexDirection: 'row', alignItems: 'stretch', gap: 9 },
 
   followBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
+    flex: 1, minWidth: 0, minHeight: 52, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 6,
-    paddingVertical: 12, borderRadius: 26, borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 10, borderRadius: 22, borderWidth: 1,
   },
-  followBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  followBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
   profileBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center',
+    flex: 1, minWidth: 0, minHeight: 52, flexDirection: 'row', alignItems: 'center',
     justifyContent: 'center', gap: 6,
-    paddingVertical: 12, borderRadius: 26, borderWidth: 1,
+    paddingHorizontal: 8, paddingVertical: 10, borderRadius: 22, borderWidth: 1,
   },
-  profileBtnText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  profileBtnFull: { flex: 1 },
+  profileBtnText: { fontSize: 12, fontFamily: 'Satoshi-Bold', flexShrink: 1 },
+  disabledAction: { opacity: 0.55 },
   reportBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    borderWidth: 1, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 40, height: 40, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
 
   contentCard: {

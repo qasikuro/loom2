@@ -62,6 +62,7 @@ const en = {
     blockedUsers: 'Blocked Users', purchaseHistory: 'Purchase History',
     animationSounds: 'Animation Sounds', light: 'Light', auto: 'Auto', dark: 'Dark',
     changeEmail: 'Change Email', changePassword: 'Change Password',
+    requestAccountDeletion: 'Delete account',
     signOut: 'Sign out', confirmSignOut: 'Tap again to sign out',
     helpCenter: 'Help Center', sendFeedback: 'Send Feedback', about: 'About',
     appVersion: 'App version {{version}}',
@@ -1552,7 +1553,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "إرسال الملاحظات",
     "settings.signOut": "تسجيل الخروج",
     "settings.sound": "الصوت",
-    "settings.support": "الدعم"
+    "settings.support": "الدعم",
+    "settings.requestAccountDeletion": "طلب حذف الحساب"
   },
   "de": {
     "auth.additionalVerification": "Eine zusätzliche Überprüfung ist erforderlich. Bitte nutzen Sie die E-Mail-Anmeldung.",
@@ -1693,7 +1695,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "Feedback senden",
     "settings.signOut": "Abmelden",
     "settings.sound": "Ton",
-    "settings.support": "Unterstützung"
+    "settings.support": "Unterstützung",
+    "settings.requestAccountDeletion": "Kontolöschung anfordern"
   },
   "es": {
     "auth.additionalVerification": "Se requiere verificación adicional. Utilice el inicio de sesión por correo electrónico.",
@@ -1834,7 +1837,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "Enviar comentarios",
     "settings.signOut": "Cerrar sesión",
     "settings.sound": "sonido",
-    "settings.support": "Soporte"
+    "settings.support": "Soporte",
+    "settings.requestAccountDeletion": "Solicitar la eliminación de la cuenta"
   },
   "fr": {
     "auth.additionalVerification": "Une vérification supplémentaire est requise. Veuillez utiliser la connexion par e-mail.",
@@ -1967,7 +1971,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "Envoyer des commentaires",
     "settings.signOut": "Se déconnecter",
     "settings.sound": "Son",
-    "settings.support": "Assistance"
+    "settings.support": "Assistance",
+    "settings.requestAccountDeletion": "Demander la suppression du compte"
   },
   "it": {
     "auth.additionalVerification": "È necessaria un'ulteriore verifica. Utilizza l'accesso via e-mail.",
@@ -2108,7 +2113,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "Invia feedback",
     "settings.signOut": "Esci",
     "settings.sound": "Suono",
-    "settings.support": "Supporto"
+    "settings.support": "Supporto",
+    "settings.requestAccountDeletion": "Richiedi l'eliminazione dell'account"
   },
   "ja": {
     "auth.additionalVerification": "追加の検証が必要です。電子メールによるサインインを使用してください。",
@@ -2241,7 +2247,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "フィードバックを送信する",
     "settings.signOut": "サインアウト",
     "settings.sound": "サウンド",
-    "settings.support": "サポート"
+    "settings.support": "サポート",
+    "settings.requestAccountDeletion": "アカウント削除をリクエスト"
   },
   "ko": {
     "auth.additionalVerification": "추가 확인이 필요합니다. 이메일 로그인을 이용해 주세요.",
@@ -2374,7 +2381,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "피드백 보내기",
     "settings.signOut": "로그아웃",
     "settings.sound": "소리",
-    "settings.support": "지원"
+    "settings.support": "지원",
+    "settings.requestAccountDeletion": "계정 삭제 요청"
   },
   "pt": {
     "auth.additionalVerification": "Verificação adicional é necessária. Por favor, use o login por e-mail.",
@@ -2515,7 +2523,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "Enviar comentários",
     "settings.signOut": "Sair",
     "settings.sound": "Som",
-    "settings.support": "Suporte"
+    "settings.support": "Suporte",
+    "settings.requestAccountDeletion": "Solicitar exclusão da conta"
   },
   "ru": {
     "auth.additionalVerification": "Требуется дополнительная проверка. Пожалуйста, используйте вход по электронной почте.",
@@ -2656,7 +2665,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "Отправить отзыв",
     "settings.signOut": "Выйти",
     "settings.sound": "Звук",
-    "settings.support": "Поддержка"
+    "settings.support": "Поддержка",
+    "settings.requestAccountDeletion": "Запросить удаление аккаунта"
   },
   "tr": {
     "auth.additionalVerification": "Ek doğrulama gerekli. Lütfen e-postayla oturum açmayı kullanın.",
@@ -2797,7 +2807,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "Geri Bildirim Gönder",
     "settings.signOut": "Oturumu kapat",
     "settings.sound": "Ses",
-    "settings.support": "Destek"
+    "settings.support": "Destek",
+    "settings.requestAccountDeletion": "Hesap silme talebi"
   },
   "zh": {
     "auth.additionalVerification": "需要额外验证。请使用电子邮件登录。",
@@ -2930,7 +2941,8 @@ const localeAdditions: Record<string, Record<string, string>> = {
     "settings.sendFeedback": "发送反馈",
     "settings.signOut": "退出",
     "settings.sound": "声音",
-    "settings.support": "支持"
+    "settings.support": "支持",
+    "settings.requestAccountDeletion": "请求删除帐户"
   }
 };
 

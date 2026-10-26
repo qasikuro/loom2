@@ -3,16 +3,19 @@ const { spawnSync } = require('node:child_process');
 const { parseArgs } = require('node:util');
 const profile = require('../eas.json').build.production;
 
-function createProductionUpdateCommand(message, environment = {}) {
+function createProductionUpdateCommand(message, environment = {}, platform = 'all') {
   if (typeof message !== 'string' || !message.trim()) {
     throw new Error('Provide a release description with --message.');
+  }
+  if (!['android', 'ios', 'all'].includes(platform)) {
+    throw new Error('Choose an OTA target with --platform android, ios, or all.');
   }
 
   return {
     args: [
       'exec', 'eas', 'update',
       '--channel', profile.channel,
-      '--platform', 'all',
+      '--platform', platform,
       '--message', message.trim(),
       '--non-interactive',
     ],
@@ -23,10 +26,13 @@ function createProductionUpdateCommand(message, environment = {}) {
 if (require.main === module) {
   try {
     const { values } = parseArgs({
-      options: { message: { type: 'string' } },
+      options: {
+        message: { type: 'string' },
+        platform: { type: 'string', default: 'all' },
+      },
       allowPositionals: false,
     });
-    const command = createProductionUpdateCommand(values.message, process.env);
+    const command = createProductionUpdateCommand(values.message, process.env, values.platform);
     const result = spawnSync('pnpm', command.args, {
       cwd: path.resolve(__dirname, '..'),
       env: command.env,

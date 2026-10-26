@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@clerk/expo';
 import { fetchDmConversation, forgetDmConversation, type DmCachedMessage } from '@/utils/dmConversationCache';
+import { useClearConversation } from '@workspace/api-client-react';
 
 function fmtThreadTime(iso: string, t: (key: string) => string): string {
   const d   = new Date(iso);
@@ -44,10 +45,12 @@ export default function MessagesInboxScreen() {
   const topPad  = Platform.OS === 'web' ? 67 : insets.top;
   const { userId: accountId } = useAuth();
 
-  const { dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads, blockedIds } = useApp();
+  const {
+    dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads,
+  } = useApp();
+  const clearConversation = useClearConversation();
   const [clearedThreads, setClearedThreads] = useState<Record<string, { lastAt: string; lastMessage: string }>>({});
   const threads = dmThreads.filter(thread => {
-    if (blockedIds.includes(thread.partnerId)) return false;
     const cleared = clearedThreads[thread.partnerId];
     return !cleared || cleared.lastAt !== thread.lastAt || cleared.lastMessage !== thread.lastMessage;
   });
@@ -84,6 +87,7 @@ export default function MessagesInboxScreen() {
         name:      thread.partnerName,
         handle:    thread.partnerHandle ?? '',
         avatarUri: thread.partnerAvatar ?? '',
+        deleted: thread.partnerDeleted ? 'true' : '',
       },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
@@ -99,18 +103,22 @@ export default function MessagesInboxScreen() {
           style: 'cancel',
         },
         {
-          text: t('social.clear'),
+          text: t('social.deleteChat', { defaultValue: 'Delete chat' }),
           style: 'destructive',
           onPress: async () => {
             setClearingId(thread.partnerId);
             try {
-              await apiFetch(`/messages/conversation/${thread.partnerId}`, { method: 'DELETE' });
+              await clearConversation.mutateAsync({ partnerId: thread.partnerId });
               forgetDmConversation(accountId, thread.partnerId);
               setClearedThreads(prev => ({
                 ...prev,
                 [thread.partnerId]: { lastAt: thread.lastAt, lastMessage: thread.lastMessage },
               }));
               await refreshDmThreads();
+              Alert.alert(
+                t('social.deleteChat', { defaultValue: 'Delete chat' }),
+                'This conversation was removed from your chat list. The other participant still has their copy.',
+              );
             } catch {
               Alert.alert(t('social.error'), t('social.clearError'));
             } finally {

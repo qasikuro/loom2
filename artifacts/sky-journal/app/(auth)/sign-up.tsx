@@ -66,6 +66,7 @@ export default function SignUpScreen() {
   const [password, setPassword]         = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [code, setCode]                 = useState('');
+  const [verificationDismissed, setVerificationDismissed] = useState(false);
   const [catchError, setCatchError]     = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -78,6 +79,7 @@ export default function SignUpScreen() {
     Array.isArray(signUp?.unverifiedFields) &&
     signUp.unverifiedFields.includes('email_address') &&
     (signUp?.missingFields?.length ?? 0) === 0;
+  const verificationEmail = email || signUp?.emailAddress || '';
 
   // entrance animation
   const fadeAnim  = useRef(new Animated.Value(0)).current;
@@ -125,13 +127,14 @@ export default function SignUpScreen() {
   async function handleSignUp() {
     if (!isLoaded || !signUp) return;
     setCatchError('');
+    setVerificationDismissed(true);
     setSubmitting(true);
     try {
-      // Legacy API: signUp.create() then prepareEmailAddressVerification()
-      // Same pattern useSSO uses internally — setActive from the hook saves
-      // the session through the native token cache so getToken() works in the APK.
-      await signUp.create({ emailAddress: email.trim(), password });
-      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      // Upsert replaces an unfinished verification attempt when the user chose
+      // Start over, while still creating a fresh attempt for first-time sign-ups.
+      const attempt = await signUp.upsert({ emailAddress: email.trim(), password });
+      await attempt.prepareEmailAddressVerification({ strategy: 'email_code' });
+      setVerificationDismissed(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setCatchError(err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message || err?.message || t('auth.createAccountFailed'));
@@ -160,10 +163,21 @@ export default function SignUpScreen() {
     }
   }
 
+  function handleStartOver() {
+    if (isLoading) return;
+    setCatchError('');
+    setVerificationDismissed(true);
+    setEmail('');
+    setPassword('');
+    setCode('');
+    setShowPassword(false);
+    setFocusedField(null);
+  }
+
   const fieldError = catchError;
 
   // ── Email verification screen ─────────────────────────────────────────────
-  if (needsVerification) {
+  if (needsVerification && !verificationDismissed) {
     return (
       <LinearGradient colors={backgroundGradient} style={styles.root}>
         <Animated.View style={[{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
@@ -180,7 +194,7 @@ export default function SignUpScreen() {
 
             <Text style={[styles.title, !isDark && { color: colors.foreground }]}>{t('auth.checkEmail')}</Text>
             <Text style={[styles.subtitle, !isDark && { color: colors.mutedForeground }]}>
-              {t('auth.codeSentTo', { email })}
+              {t('auth.codeSentTo', { email: verificationEmail })}
             </Text>
 
             {/* OTP input row */}
@@ -227,7 +241,13 @@ export default function SignUpScreen() {
                 <Text style={[styles.footerLink, !isDark && { color: colors.tint }]}>{t('auth.resendCode')}</Text>
               </TouchableOpacity>
               <Text style={[styles.footerText, !isDark && { color: colors.mutedForeground }]}> · </Text>
-              <TouchableOpacity onPress={() => { setCode(''); setCatchError(''); router.replace('/(auth)/sign-up' as Href); }}>
+              <TouchableOpacity
+                testID="signup-start-over"
+                accessibilityRole="button"
+                disabled={isLoading}
+                onPress={handleStartOver}
+                activeOpacity={0.75}
+              >
                 <Text style={[styles.footerLink, !isDark && { color: colors.tint }]}>{t('auth.startOver')}</Text>
               </TouchableOpacity>
             </View>

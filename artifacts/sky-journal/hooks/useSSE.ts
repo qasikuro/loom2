@@ -21,7 +21,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform } from 'react-native';
 import { useFocusEffect } from 'expo-router';
-import { getAuthToken } from '@/context/AppContext';
+import { readAuthToken as getAuthToken } from '@/utils/authToken';
 import { getApiBase } from '@/utils/apiBase';
 import { fetch as expoFetch } from 'expo/fetch';
 
@@ -58,12 +58,12 @@ function parseSSEChunk(buffer: string): [SSEPayload[], string] {
   return [events, leftover];
 }
 
-export function useSSE(
+function useSSETransport(
   channels: string[],
   onEvent: OnEventFn,
   enabled = true,
   nativeStreaming = false,
-): { connected: boolean } {
+) {
   const abortRef    = useRef<AbortController | null>(null);
   const backoffRef  = useRef(BASE_BACKOFF_MS);
   const retryRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -159,14 +159,6 @@ export function useSSE(
     retryRef.current = setTimeout(() => { connect(); }, delay);
   }, [disconnect, nativeStreaming]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (!enabled || channelKey === '[]') return;
-      connect();
-      return disconnect;
-    }, [enabled, channelKey, connect, disconnect]),
-  );
-
   // Reconnect when the app returns from background (OS-level, not just tab focus).
   // Debounced by 400 ms so a brief flicker to inactive doesn't fire two connects.
   useEffect(() => {
@@ -190,5 +182,32 @@ export function useSSE(
   // Also disconnect when the component unmounts entirely
   useEffect(() => () => disconnect(), [disconnect]);
 
+  return { connected, connect, disconnect, channelKey };
+}
+
+export function useSSE(
+  channels: string[], onEvent: OnEventFn, enabled = true, nativeStreaming = false,
+): { connected: boolean } {
+  const { connected, connect, disconnect, channelKey } =
+    useSSETransport(channels, onEvent, enabled, nativeStreaming);
+  useFocusEffect(useCallback(() => {
+    if (!enabled || channelKey === '[]') return;
+    void connect();
+    return disconnect;
+  }, [enabled, channelKey, connect, disconnect]));
+  return { connected };
+}
+
+/** One app-lifetime subscription, independent of screen navigation focus. */
+export function useAppSSE(
+  channels: string[], onEvent: OnEventFn, enabled = true,
+): { connected: boolean } {
+  const { connected, connect, disconnect, channelKey } =
+    useSSETransport(channels, onEvent, enabled, true);
+  useEffect(() => {
+    if (!enabled || channelKey === '[]') return;
+    void connect();
+    return disconnect;
+  }, [enabled, channelKey, connect, disconnect]);
   return { connected };
 }

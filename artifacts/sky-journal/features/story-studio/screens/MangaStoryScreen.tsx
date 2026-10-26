@@ -188,7 +188,8 @@ export default function MangaStoryScreen() {
       let displayUri = remoteUri;
       if (Platform.OS !== 'web') {
         const localUri = `${FileSystem.cacheDirectory}ximo-manga-${result.generationId}.png`;
-        const download = await FileSystem.downloadAsync(remoteUri, localUri);
+        const downloadUri = await resolveMediaReadUrl(remoteUri);
+        const download = await FileSystem.downloadAsync(downloadUri, localUri);
         if (download.status !== 200) {
           throw new Error(`Generated image download failed with status ${download.status}`);
         }

@@ -447,6 +447,498 @@ paths:
                 items:
                   $ref: "#/components/schemas/DiscoverPost"
 
+  /guide-sessions:
+    get:
+      operationId: listGuideSessions
+      tags: [social]
+      summary: List upcoming or active guide sessions
+      parameters:
+        - in: query
+          name: guideId
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Sessions visible to the authenticated viewer
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GuideSession" }
+    post:
+      operationId: createGuideSession
+      tags: [social]
+      summary: Schedule a public guide session with an optional cover image
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateGuideSessionInput" }
+      responses:
+        "201":
+          description: Created session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSession" }
+        "400":
+          description: Invalid session details or cover image
+        "403":
+          description: Guide access required or cover image not owned by the guide
+
+  /guide-sessions/{sessionId}:
+    get:
+      operationId: getGuideSession
+      tags: [social]
+      summary: Get a guide session and its attached tutorial
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Session detail for a visible guide
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSession" }
+        "404": { description: Session not found or unavailable }
+    patch:
+      operationId: rescheduleGuideSession
+      tags: [social]
+      summary: Reschedule a guide's upcoming session and notify joined participants
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RescheduleGuideSessionInput" }
+      responses:
+        "200":
+          description: Rescheduled session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSession" }
+        "400": { description: Invalid new start time }
+        "404": { description: Session not found or no longer upcoming }
+        "409": { description: Session changed concurrently; refresh and try again }
+    delete:
+      operationId: cancelGuideSession
+      tags: [social]
+      summary: Cancel a guide's upcoming session and notify joined participants
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Session cancelled }
+        "404": { description: Session not found or no longer upcoming }
+
+  /guide-sessions/{sessionId}/join:
+    post:
+      operationId: joinGuideSession
+      tags: [social]
+      summary: Join a scheduled guide session and its shared chat
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Joined session, including its tutorial and chat room
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSession" }
+        "403": { description: Session is full or unavailable }
+
+  /guide-sessions/{sessionId}/progress:
+    patch:
+      operationId: saveGuideTutorialProgress
+      tags: [social]
+      summary: Save the authenticated attendee's completed tutorial steps
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideTutorialProgressInput" }
+      responses:
+        "200":
+          description: Updated session and attendee progress
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSession" }
+        "403": { description: Join the session before saving progress }
+
+  /guide-sessions/{sessionId}/participants:
+    get:
+      operationId: listGuideSessionParticipants
+      tags: [social]
+      summary: List visible attendees for the guide who owns the session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Attendees and their tutorial progress
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GuideSessionParticipant" }
+        "404": { description: Session not found or caller is not its guide }
+
+  /guide-sessions/{sessionId}/engagement:
+    get:
+      operationId: getGuideSessionEngagement
+      tags: [social]
+      summary: Get polls, participant questions, and the recap for a joined session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Session engagement visible to the guide and attendees
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSessionEngagement" }
+        "404": { description: Caller has not joined the session }
+        "503": { description: Engagement schema is not available yet }
+
+  /guide-sessions/{sessionId}/polls:
+    post:
+      operationId: createGuideSessionPoll
+      tags: [social]
+      summary: Create a live poll as the session guide
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionPollInput" }
+      responses:
+        "201":
+          description: Poll created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSessionPoll" }
+        "409": { description: Session is not live }
+
+  /guide-sessions/{sessionId}/polls/{pollId}/vote:
+    patch:
+      operationId: voteGuideSessionPoll
+      tags: [social]
+      summary: Vote or change a vote in a live session poll
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: pollId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionPollVoteInput" }
+      responses:
+        "200": { description: Vote saved }
+        "400": { description: Invalid option }
+        "403": { description: Join the session to vote }
+        "409": { description: Poll is closed or session is not live }
+
+  /guide-sessions/{sessionId}/polls/{pollId}/close:
+    patch:
+      operationId: closeGuideSessionPoll
+      tags: [social]
+      summary: Close a session poll as its guide
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: pollId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Poll closed }
+        "404": { description: Poll not found or caller is not the guide }
+
+  /guide-sessions/{sessionId}/questions:
+    post:
+      operationId: askGuideSessionQuestion
+      tags: [social]
+      summary: Ask the guide a question during a live session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionQuestionInput" }
+      responses:
+        "201":
+          description: Question submitted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSessionQuestion" }
+        "403": { description: Join as a participant to ask a question }
+        "409": { description: Session is not live }
+
+  /guide-sessions/{sessionId}/questions/{questionId}:
+    patch:
+      operationId: answerGuideSessionQuestion
+      tags: [social]
+      summary: Answer a participant question as the session guide
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionAnswerInput" }
+      responses:
+        "200":
+          description: Answer saved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSessionQuestion" }
+        "404": { description: Question not found or caller is not the guide }
+
+  /guide-sessions/{sessionId}/questions/{questionId}/vote:
+    put:
+      operationId: voteGuideSessionQuestion
+      tags: [social]
+      summary: Upvote or remove an upvote from a live session question
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: questionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionQuestionVoteInput" }
+      responses:
+        "200": { description: Question vote saved }
+        "403": { description: Join the session to vote and do not vote on your own question }
+        "409": { description: Session is not live }
+
+  /guide-sessions/{sessionId}/activities:
+    post:
+      operationId: createGuideSessionActivity
+      tags: [social]
+      summary: Launch a live exercise, reflection, or resource as the session guide
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionActivityInput" }
+      responses:
+        "201":
+          description: Activity launched; any previous activity is completed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSessionActivity" }
+        "403": { description: Caller is not the guide }
+        "409": { description: Session is not live }
+        "503": { description: Activity storage is not available yet }
+
+  /guide-sessions/{sessionId}/activities/{activityId}/responses:
+    post:
+      operationId: respondToGuideSessionActivity
+      tags: [social]
+      summary: Submit or update a response to the active session activity
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: activityId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionActivityResponseInput" }
+      responses:
+        "200": { description: Activity response saved }
+        "403": { description: Join the session as a participant to respond }
+        "409": { description: Activity is closed or the session is not live }
+        "503": { description: Activity storage is not available yet }
+
+  /guide-sessions/{sessionId}/activities/{activityId}/close:
+    patch:
+      operationId: closeGuideSessionActivity
+      tags: [social]
+      summary: Complete the active activity as the session guide
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: activityId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Activity completed }
+        "404": { description: Activity not found or caller is not the guide }
+        "503": { description: Activity storage is not available yet }
+
+  /guide-sessions/{sessionId}/recap:
+    put:
+      operationId: saveGuideSessionRecap
+      tags: [social]
+      summary: Publish or update the post-session recap as its guide
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideSessionRecapInput" }
+      responses:
+        "200":
+          description: Recap published
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideSessionRecap" }
+        "409": { description: Session has not ended yet }
+
+  /guide-sessions/{sessionId}/end:
+    post:
+      operationId: endGuideSession
+      tags: [social]
+      summary: End a scheduled guide session as its owner
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: Session ended }
+        "404": { description: Session not found or already ended }
+
+  /guide-tutorials:
+    get:
+      operationId: listGuideTutorials
+      tags: [social]
+      summary: List discoverable tutorials or the authenticated guide's own tutorials
+      parameters:
+        - in: query
+          name: mine
+          required: false
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Visible tutorials
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/GuideTutorial" }
+    post:
+      operationId: createGuideTutorial
+      tags: [social]
+      summary: Save a tutorial draft or publish it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideTutorialInput" }
+      responses:
+        "201":
+          description: Saved tutorial
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideTutorial" }
+        "403": { description: Guide access required }
+
+  /guide-tutorials/{tutorialId}:
+    get:
+      operationId: getGuideTutorial
+      tags: [social]
+      summary: Get a published or owned guide tutorial
+      parameters:
+        - in: path
+          name: tutorialId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Tutorial details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideTutorial" }
+        "404": { description: Tutorial not found or unavailable }
+    patch:
+      operationId: updateGuideTutorial
+      tags: [social]
+      summary: Update a guide's own tutorial
+      parameters:
+        - in: path
+          name: tutorialId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GuideTutorialInput" }
+      responses:
+        "200":
+          description: Updated tutorial
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GuideTutorial" }
+        "404": { description: Tutorial not found }
+
   /users/{userId}:
     get:
       operationId: getPublicUserProfile
@@ -748,6 +1240,32 @@ paths:
         "429":
           description: Too many submissions
 
+  /support/feedback:
+    post:
+      operationId: submitStorigamFeedback
+      tags: [support]
+      summary: Send feedback to Storigam support
+      description: Public, rate-limited feedback form. Submissions are emailed to Storigam support and are not stored in the application database.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorigamFeedbackInput"
+      responses:
+        "200":
+          description: Feedback accepted by the email provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorigamFeedbackResponse"
+        "400":
+          description: Invalid feedback
+        "429":
+          description: Too many submissions
+        "503":
+          description: Feedback delivery is temporarily unavailable
+
   /storigam-interest/unsubscribe:
     get:
       operationId: viewStorigamUnsubscribe
@@ -813,6 +1331,22 @@ paths:
       operationId: listInterestSubscribers
       tags: [admin]
       summary: List landing page signups and consent status
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
       responses:
         "200":
           description: Subscribers
@@ -820,6 +1354,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InterestSubscribersResponse"
+        "400":
+          description: Invalid pagination parameters
 
   /admin/interest/campaigns:
     get:
@@ -871,99 +1407,513 @@ paths:
               schema:
                 $ref: "#/components/schemas/InterestCampaign"
 
-  /guide-sessions:
+  /admin/feature-usage:
     get:
-      operationId: listGuideSessionManagementSessions
-      tags: [social]
-      summary: List guide sessions for a guide
+      operationId: getAdminFeatureUsage
+      tags: [admin]
+      summary: Read app feature activity, cost estimates, and limits
+      description: Requires an authenticated administrator. Costs are app-side estimates, not Replit workspace billing.
       parameters:
         - in: query
-          name: guideId
+          name: days
           required: false
-          schema:
-            type: string
+          schema: { type: integer, minimum: 1, maximum: 90, default: 30 }
       responses:
         "200":
-          description: Sessions visible to the authenticated viewer
+          description: Feature activity and configured controls
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/GuideSessionManagementEntry"
-  /guide-sessions/{sessionId}:
-    patch:
-      operationId: rescheduleGuideSessionManagementSession
-      tags: [social]
-      summary: Reschedule an upcoming guide session
+                $ref: "#/components/schemas/FeatureUsageOverview"
+        "403":
+          description: Administrator access required
+
+  /admin/analytics:
+    get:
+      operationId: getAdminAnalytics
+      tags: [admin]
+      summary: Read aggregate product analytics for an administrator
+      description: Returns only aggregate counts from existing database records. Metrics without reliable source data are null.
       parameters:
-        - in: path
-          name: sessionId
-          required: true
-          schema:
-            type: string
+        - in: query
+          name: days
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 90, default: 7 }
+      responses:
+        "200":
+          description: Aggregate analytics for the selected period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAnalytics"
+        "400":
+          description: Invalid period
+        "403":
+          description: Administrator access required
+
+  /admin/api-status:
+    get:
+      operationId: getAdminApiStatus
+      tags: [admin]
+      summary: Check API and database status for an administrator
+      description: Runs a live database probe without exposing provider details or configuration values.
+      responses:
+        "200":
+          description: API response and database probe result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminApiStatus"
+        "403":
+          description: Administrator access required
+
+  /admin/test-grants/celestial-wings:
+    get:
+      operationId: getCelestialWingsTestGrantStatus
+      tags: [admin]
+      summary: Check Celestial Wings test credits
+      description: Requires an authenticated administrator. This fixed test grant is limited to @thekin.
+      responses:
+        "200":
+          description: Current Stars balance and number of audited test grants
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CelestialWingsTestGrantStatus"
+        "403":
+          description: Administrator access required
+        "404":
+          description: The fixed test account was not found
+    post:
+      operationId: grantCelestialWingsTestStars
+      tags: [admin]
+      summary: Grant 1,000 Celestial Wings test Stars
+      description: Requires an authenticated administrator. Each new request ID grants exactly 1,000 Stars to @thekin. Repeating the same request ID is idempotent.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RescheduleGuideSessionManagementInput"
+              $ref: "#/components/schemas/CelestialWingsTestGrantInput"
       responses:
         "200":
-          description: Rescheduled guide session
+          description: Grant result and current balance
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GuideSessionManagementEntry"
-        "400":
-          description: Invalid new start time
+                $ref: "#/components/schemas/CelestialWingsTestGrantResult"
+        "403":
+          description: Administrator access required
         "404":
-          description: Session not found or no longer upcoming
-        "409":
-          description: Session changed concurrently
-    delete:
-      operationId: cancelGuideSessionManagementSession
-      tags: [social]
-      summary: Cancel an upcoming guide session
+          description: The fixed test account was not found
+        "400":
+          description: Invalid or missing grant request ID
+
+  /admin/users/{id}/hide:
+    put:
+      operationId: hideAdminUser
+      tags: [admin]
+      summary: Temporarily hide a user and their published activity
       parameters:
         - in: path
-          name: sessionId
+          name: id
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         "200":
-          description: Session cancelled
+          description: User visibility updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, isHidden]
+                properties:
+                  ok: { type: boolean }
+                  isHidden: { type: boolean }
+        "400":
+          description: Cannot hide the current administrator
+        "403":
+          description: Administrator access required
         "404":
-          description: Session not found or no longer upcoming
+          description: User not found or cannot be hidden
+
+  /admin/users/{id}/unhide:
+    put:
+      operationId: restoreAdminUserVisibility
+      tags: [admin]
+      summary: Restore a temporarily hidden user's visibility
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: User visibility updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, isHidden]
+                properties:
+                  ok: { type: boolean }
+                  isHidden: { type: boolean }
+        "400":
+          description: Cannot restore the current administrator
+        "403":
+          description: Administrator access required
+        "404":
+          description: User not found
+
+  /admin/moderation/queue:
+    get:
+      operationId: getAdminModerationQueue
+      tags: [admin]
+      summary: List active moderation items
+      description: Groups open user reports by target. High priority means three or more reports. AI flags are returned only when recorded by an existing moderation source.
+      parameters:
+        - in: query
+          name: filter
+          required: false
+          schema: { type: string, enum: [all, high, new, reported, ai_flagged], default: all }
+        - in: query
+          name: q
+          required: false
+          schema: { type: string, maxLength: 120 }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Active moderation items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModerationQueueResponse"
+        "403":
+          description: Administrator access required
+
+  /admin/moderation/reports:
+    get:
+      operationId: getAdminModerationReports
+      tags: [admin]
+      summary: List user-submitted moderation reports
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema: { type: string, enum: [all, open, reviewing, resolved, dismissed], default: open }
+        - in: query
+          name: q
+          required: false
+          schema: { type: string, maxLength: 120 }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Reports with reporter and content previews
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModerationReportsResponse"
+        "403":
+          description: Administrator access required
+
+  /admin/moderation/reports/{id}/status:
+    put:
+      operationId: updateAdminModerationReportStatus
+      tags: [admin]
+      summary: Move a report into review or close it
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminModerationReportStatusInput"
+      responses:
+        "200":
+          description: Report status updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModerationActionResult"
+        "400":
+          description: Invalid status or reason
+        "404":
+          description: Report not found
+        "403":
+          description: Administrator access required
+
+  /admin/moderation/actions:
+    post:
+      operationId: createAdminModerationAction
+      tags: [admin]
+      summary: Apply and audit a moderation action
+      description: AI flags require a human action; an AI flag never automatically bans a user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminModerationActionInput"
+      responses:
+        "200":
+          description: Moderation action applied and recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModerationActionResult"
+        "400":
+          description: Invalid or unsupported action
+        "404":
+          description: Target not found
+        "403":
+          description: Administrator access required
+
+  /admin/moderation/records:
+    get:
+      operationId: getAdminModerationRecords
+      tags: [admin]
+      summary: List hidden content, removals, AI flags, or moderation history
+      parameters:
+        - in: query
+          name: kind
+          required: true
+          schema: { type: string, enum: [hidden, removed, ai, history] }
+        - in: query
+          name: q
+          required: false
+          schema: { type: string, maxLength: 120 }
+        - in: query
+          name: limit
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: offset
+          required: false
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        "200":
+          description: Moderation records from persisted reports and actions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminModerationRecordsResponse"
+        "403":
+          description: Administrator access required
+
+  /admin/feature-usage/{featureKey}:
+    put:
+      operationId: updateAdminFeatureUsage
+      tags: [admin]
+      summary: Update a feature's server-side limit, estimate, or availability
+      description: Requires an authenticated administrator. Cost values are optional estimates per tracked request.
+      parameters:
+        - in: path
+          name: featureKey
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeatureUsageControlInput"
+      responses:
+        "200":
+          description: Updated feature controls
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeatureUsagePolicy"
+        "400":
+          description: Invalid feature or control values
+        "403":
+          description: Administrator access required
+
+  /messages/{userId}/photos:
+    post:
+      operationId: sendChatPhoto
+      summary: Send a photo without silently dropping it on older servers
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatPhotoInput" }
+      responses:
+        "201":
+          description: Sent photo message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMessage" }
+        "400":
+          description: A valid photo is required
+        "403":
+          description: Blocked conversation or photo not owned by sender
+  /messages/{userId}:
+    get:
+      operationId: getChatConversation
+      summary: Read a private direct-message conversation
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: limit
+          description: Number of most recent messages to return (default 50, maximum 100).
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: before
+          description: ISO timestamp of the oldest message already loaded; use with beforeId for keyset pagination.
+          schema: { type: string, format: date-time }
+        - in: query
+          name: beforeId
+          description: UUID of the oldest message already loaded.
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Messages visible to the authenticated participant
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ChatMessage" }
+    post:
+      operationId: sendChatMessage
+      summary: Send text, an expression, or an owned uploaded photo
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChatMessageInput" }
+      responses:
+        "201":
+          description: Sent message
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMessage" }
+        "400":
+          description: Invalid message or photo reference
+        "403":
+          description: Blocked conversation or photo not owned by sender
+
+  /messages/conversation/{partnerId}:
+    delete:
+      operationId: clearConversation
+      summary: Hide a direct-message conversation from the authenticated user's chat list
+      parameters:
+        - in: path
+          name: partnerId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Conversation hidden for the caller only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationClearResult"
+        "400":
+          description: Invalid conversation partner
+
+  /friends/{targetUserId}:
+    delete:
+      operationId: removeFriend
+      summary: Remove the relationship in both directions without blocking
+      parameters:
+        - in: path
+          name: targetUserId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Social relationship removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FriendRemovalResult"
+        "400":
+          description: Invalid target
+
+  /users/{userId}/block:
+    post:
+      operationId: blockUser
+      summary: Block a user from initiating contact
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: User blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockState"
+        "403":
+          description: Invalid or unavailable target
+    delete:
+      operationId: unblockUser
+      summary: Unblock a user
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: User unblocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockState"
+
+  /account:
+    delete:
+      operationId: deleteMyAccount
+      summary: Permanently delete the authenticated user's account and personal data
+      responses:
+        "202":
+          description: App data is removed; authentication and uploaded-media cleanup are processing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeletionResult"
+        "403":
+          description: The account is already deleted or unavailable
+        "500":
+          description: The deletion request could not be started
 
 components:
   schemas:
-    GuideSessionManagementEntry:
-      type: object
-      required: [id, title, startsAt, endsAt, status, attendeeCount]
-      properties:
-        id:
-          type: string
-        title:
-          type: string
-        startsAt:
-          type: string
-          format: date-time
-        endsAt:
-          type: string
-          format: date-time
-        status:
-          type: string
-        attendeeCount:
-          type: integer
-    RescheduleGuideSessionManagementInput:
-      type: object
-      required: [startsAt]
-      properties:
-        startsAt:
-          type: string
-          format: date-time
     LumiMessage:
       type: object
       required: [role, content]
@@ -1030,6 +1980,21 @@ components:
             $ref: "#/components/schemas/LumiRecommendation"
         fallback:
           type: boolean
+        mood:
+          type: string
+          description: Temporary user-stated mood for this conversation, never a diagnosis or permanent profile.
+          enum: [unknown, neutral, sad, lonely, stressed, tired, happy, calm, excited]
+        phase:
+          type: string
+          enum: [check_in, conversation, suggest, support]
+        emotion:
+          type: string
+          description: Allow-listed companion expression, not a psychological assessment.
+          enum: [thoughtful, affectionate, excited, calm]
+        intent:
+          type: string
+          description: Temporary stated activity preference, interpreted in the player's language.
+          enum: [unspecified, company, quiet, creative, focus]
     LumiPreferences:
       type: object
       properties:
@@ -1069,6 +2034,109 @@ components:
       properties:
         success:
           type: boolean
+    ConversationClearResult:
+      type: object
+      required: [cleared]
+      properties:
+        cleared: { type: boolean }
+    FriendRemovalResult:
+      type: object
+      required: [removed]
+      properties:
+        removed: { type: boolean }
+    BlockState:
+      type: object
+      required: [blocked]
+      properties:
+        blocked: { type: boolean }
+    AccountDeletionResult:
+      type: object
+      required: [deleted, status]
+      properties:
+        deleted: { type: boolean }
+        status:
+          type: string
+          enum: [processing]
+    ChatPhotoInput:
+      type: object
+      required: [imageUri]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000 }
+        imageUri:
+          type: string
+          maxLength: 2048
+          pattern: '^/api/images/[\w.-]+$'
+    ChatMessageInput:
+      type: object
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000 }
+        expression:
+          type: string
+          enum: [bomb, stone, mirror, kiss, stars, fire, snow, confetti, candle, spark, lantern, hush, donkey, wolf]
+        imageUri:
+          type: string
+          pattern: '^/api/images/[\w.-]+$'
+          description: Canonical uploaded image path owned by the sender; never a temporary read URL.
+    ChatMessage:
+      type: object
+      required: [id, fromUserId, toUserId, content, expression, isRead, createdAt, isOwn]
+      properties:
+        id: { type: string }
+        fromUserId: { type: string }
+        toUserId: { type: string }
+        content: { type: [string, "null"] }
+        expression: { type: [string, "null"] }
+        imageUri: { type: [string, "null"] }
+        isRead: { type: boolean }
+        createdAt: { type: string }
+        isOwn: { type: boolean }
+    AdminApiStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        api:
+          type: string
+          enum: [ok]
+        database:
+          type: string
+          enum: [ok, unavailable]
+        databaseLatencyMs:
+          type: integer
+          nullable: true
+        checkedAt:
+          type: string
+          format: date-time
+      required: [api, database, databaseLatencyMs, checkedAt]
+
+    CelestialWingsTestGrantInput:
+      type: object
+      additionalProperties: false
+      properties:
+        requestId: { type: string, format: uuid }
+      required: [requestId]
+
+    CelestialWingsTestGrantStatus:
+      type: object
+      additionalProperties: false
+      properties:
+        username: { type: string }
+        name: { type: string }
+        starsBalance: { type: integer, minimum: 0 }
+        grantsCount: { type: integer, minimum: 0 }
+      required: [username, name, starsBalance, grantsCount]
+
+    CelestialWingsTestGrantResult:
+      type: object
+      additionalProperties: false
+      properties:
+        username: { type: string }
+        amount: { type: integer, enum: [1000] }
+        granted: { type: boolean }
+        alreadyGranted: { type: boolean }
+        starsBefore: { type: integer, minimum: 0 }
+        starsAfter: { type: integer, minimum: 0 }
+      required: [username, amount, granted, alreadyGranted, starsBefore, starsAfter]
+
     MediaReadUrlsInput:
       type: object
       additionalProperties: false
@@ -1155,6 +2223,37 @@ components:
           type: boolean
       required: [ok]
 
+    StorigamFeedbackInput:
+      type: object
+      additionalProperties: false
+      properties:
+        category:
+          type: string
+          enum: [idea, bug, other]
+        name:
+          type: string
+          maxLength: 100
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        message:
+          type: string
+          minLength: 10
+          maxLength: 4000
+        website:
+          type: string
+          maxLength: 100
+          description: Hidden anti-spam field; must be left empty.
+      required: [category, message]
+
+    StorigamFeedbackResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required: [ok]
+
     InterestSubscriber:
       type: object
       properties:
@@ -1175,6 +2274,7 @@ components:
           items: { $ref: "#/components/schemas/InterestSubscriber" }
         total: { type: integer }
         activeTotal: { type: integer }
+        _ts: { type: integer }
         audienceCounts:
           type: object
           properties:
@@ -1182,7 +2282,7 @@ components:
             beta_tester: { type: integer }
             content_creator: { type: integer }
           required: [all, beta_tester, content_creator]
-      required: [subscribers, total, activeTotal, audienceCounts]
+      required: [subscribers, total, activeTotal, audienceCounts, _ts]
 
     InterestCampaignInput:
       type: object
@@ -1802,7 +2902,9 @@ components:
           type: string
         category:
           type: string
-          enum: [frame, accent, theme, effect]
+          enum: [frame, accent, theme, effect, card_frame]
+        founderOnly:
+          type: boolean
         cost:
           $ref: "#/components/schemas/ShopItemCost"
         seasonal:
@@ -1930,11 +3032,13 @@ components:
         music: { type: boolean }
         shop: { type: boolean }
         season: { type: boolean }
+        shop_button: { type: boolean }
+        season_button: { type: boolean }
         campfire: { type: boolean }
         guides: { type: boolean }
         notifications: { type: boolean }
         image_generation: { type: boolean }
-      required: [ai, stories, music, shop, season, campfire, guides, notifications, image_generation]
+      required: [ai, stories, music, shop, season, shop_button, season_button, campfire, guides, notifications, image_generation]
 
     AppConfig:
       type: object
@@ -1944,3 +3048,575 @@ components:
         features:
           $ref: "#/components/schemas/FeatureFlags"
       required: [maintenance_mode, min_app_version, features]
+
+    FeatureUsagePolicy:
+      type: object
+      additionalProperties: false
+      properties:
+        enabled: { type: boolean }
+        hourlyLimit: { type: integer, nullable: true, minimum: 1 }
+        dailyLimit: { type: integer, nullable: true, minimum: 1 }
+        dailyBudgetMicros: { type: integer, format: int64, nullable: true, minimum: 1 }
+        costPerActionMicros: { type: integer, format: int64, nullable: true, minimum: 0 }
+      required: [enabled, hourlyLimit, dailyLimit, dailyBudgetMicros, costPerActionMicros]
+
+    FeatureUsageControlInput:
+      allOf:
+        - $ref: "#/components/schemas/FeatureUsagePolicy"
+
+    FeatureUsageOverview:
+      type: object
+      additionalProperties: false
+      properties:
+        periodDays: { type: integer }
+        totals:
+          type: object
+          additionalProperties: false
+          properties:
+            actions: { type: integer }
+            activeUsers: { type: integer }
+            estimatedCostMicros: { type: integer, format: int64 }
+            pricedActions: { type: integer }
+            unpricedActions: { type: integer }
+            projectedMonthlyCostMicros: { type: integer, format: int64 }
+          required: [actions, activeUsers, estimatedCostMicros, pricedActions, unpricedActions, projectedMonthlyCostMicros]
+        daily:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              date: { type: string, format: date }
+              actions: { type: integer }
+              activeUsers: { type: integer }
+              estimatedCostMicros: { type: integer, format: int64 }
+              pricedActions: { type: integer }
+              unpricedActions: { type: integer }
+            required: [date, actions, activeUsers, estimatedCostMicros, pricedActions, unpricedActions]
+        features:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              featureKey: { type: string }
+              label: { type: string }
+              costSource: { type: string, enum: [configurable, recorded] }
+              actions: { type: integer }
+              activeUsers: { type: integer }
+              estimatedCostMicros: { type: integer, format: int64 }
+              pricedActions: { type: integer }
+              unpricedActions: { type: integer }
+              providerUsageCostMicros: { type: integer, format: int64 }
+              providerPricedActions: { type: integer }
+              providerUnpricedActions: { type: integer }
+              currentDailySpendMicros: { type: integer, format: int64 }
+              currentDailyProviderUsageCostMicros: { type: integer, format: int64 }
+              policy:
+                $ref: "#/components/schemas/FeatureUsagePolicy"
+            required: [featureKey, label, costSource, actions, activeUsers, estimatedCostMicros, pricedActions, unpricedActions, providerUsageCostMicros, providerPricedActions, providerUnpricedActions, currentDailySpendMicros, currentDailyProviderUsageCostMicros, policy]
+        topUsers:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              userId: { type: string }
+              name: { type: string }
+              actions: { type: integer }
+            required: [userId, name, actions]
+        mangaGenerationUsers:
+          type: array
+          description: Lifetime counts and provider-usage pricing of retained manga generation records.
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              userId: { type: string }
+              name: { type: string }
+              attempts: { type: integer }
+              successful: { type: integer }
+              failed: { type: integer }
+              pending: { type: integer }
+              estimatedCostMicros: { type: integer, format: int64 }
+              usagePricedAttempts: { type: integer }
+              usageUnpricedSuccesses: { type: integer }
+              providerUsageCostMicros: { type: ["integer", "null"], format: int64 }
+            required: [userId, name, attempts, successful, failed, pending, estimatedCostMicros, usagePricedAttempts, usageUnpricedSuccesses, providerUsageCostMicros]
+      required: [periodDays, totals, daily, features, topUsers, mangaGenerationUsers]
+
+    AdminAnalytics:
+      type: object
+      additionalProperties: false
+      properties:
+        periodDays: { type: integer }
+        metrics:
+          type: object
+          additionalProperties: false
+          properties:
+            totalUsers: { type: integer }
+            newUsers: { type: integer, nullable: true }
+            activeUsers: { type: integer }
+            averageDailyActiveUsers: { type: integer }
+            storiesCreated: { type: integer }
+            storiesPublished: { type: integer }
+            aiGenerations: { type: integer }
+            messages: { type: integer }
+            reports: { type: integer }
+            storiesViewed: { type: integer }
+            likes: { type: integer }
+            comments: { type: integer }
+            shares: { type: integer, nullable: true }
+            mangaCreated: { type: integer }
+            imagesUploaded: { type: integer }
+            videoUploads: { type: integer, nullable: true }
+          required: [totalUsers, newUsers, activeUsers, averageDailyActiveUsers, storiesCreated, storiesPublished, aiGenerations, messages, reports, storiesViewed, likes, comments, shares, mangaCreated, imagesUploaded, videoUploads]
+        daily:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              date: { type: string, format: date }
+              activeUsers: { type: integer }
+              storiesCreated: { type: integer }
+            required: [date, activeUsers, storiesCreated]
+        features:
+          type: object
+          additionalProperties: false
+          properties:
+            discover: { type: integer }
+            storyCreator: { type: integer }
+            aiGeneration: { type: integer }
+            friends: { type: integer, nullable: true }
+            chat: { type: integer }
+            search: { type: integer, nullable: true }
+          required: [discover, storyCreator, aiGeneration, friends, chat, search]
+        topContent:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            properties:
+              id: { type: string }
+              contentType: { type: string, enum: [story, book] }
+              title: { type: string }
+              views: { type: integer }
+            required: [id, contentType, title, views]
+      required: [periodDays, metrics, daily, features, topContent]
+
+    AdminModerationTargetType:
+      type: string
+      enum: [story, image, video, outfit, sticker, comment, message, campfire_message, manga_generation, user]
+
+    AdminModerationQueueItem:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string }
+        targetType: { $ref: "#/components/schemas/AdminModerationTargetType" }
+        targetId: { type: string }
+        contentType: { type: string }
+        title: { type: string }
+        preview: { type: string }
+        targetUserId: { type: string, nullable: true }
+        userName: { type: string, nullable: true }
+        username: { type: string, nullable: true }
+        reportCount: { type: integer }
+        reportReasons:
+          type: array
+          items: { type: string }
+        priority: { type: string, enum: [normal, high] }
+        status: { type: string, enum: [open, reviewing] }
+        source: { type: string, enum: [report, ai] }
+        aiCategory: { type: string, nullable: true }
+        aiConfidence: { type: number, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, targetType, targetId, contentType, title, preview, targetUserId, userName, username, reportCount, reportReasons, priority, status, source, aiCategory, aiConfidence, createdAt]
+
+    AdminModerationQueueResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminModerationQueueItem" }
+        total: { type: integer }
+        aiAvailable: { type: boolean }
+      required: [items, total, aiAvailable]
+
+    AdminModerationReport:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        reporterId: { type: string }
+        reporterName: { type: string, nullable: true }
+        targetType: { $ref: "#/components/schemas/AdminModerationTargetType" }
+        targetId: { type: string }
+        contentType: { type: string }
+        title: { type: string }
+        preview: { type: string }
+        targetUserId: { type: string, nullable: true }
+        userName: { type: string, nullable: true }
+        username: { type: string, nullable: true }
+        reason: { type: string }
+        details: { type: string }
+        status: { type: string, enum: [open, reviewing, resolved, dismissed] }
+        resolvedById: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, reporterId, reporterName, targetType, targetId, contentType, title, preview, targetUserId, userName, username, reason, details, status, resolvedById, resolvedAt, createdAt]
+
+    AdminModerationReportsResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        reports:
+          type: array
+          items: { $ref: "#/components/schemas/AdminModerationReport" }
+        total: { type: integer }
+      required: [reports, total]
+
+    AdminModerationReportStatusInput:
+      type: object
+      additionalProperties: false
+      properties:
+        status: { type: string, enum: [reviewing, resolved, dismissed] }
+        reason: { type: string, maxLength: 500 }
+      required: [status]
+
+    AdminModerationActionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        targetType: { $ref: "#/components/schemas/AdminModerationTargetType" }
+        targetId: { type: string, minLength: 1, maxLength: 2048 }
+        targetUserId: { type: string, nullable: true }
+        action:
+          type: string
+          enum: [review, keep, hide, remove, restore, warn_user, suspend_user, ban_user, ai_override_keep, ai_override_remove]
+        reason: { type: string, minLength: 3, maxLength: 500 }
+        suspensionDays: { type: integer, minimum: 1, maximum: 30, nullable: true }
+      required: [targetType, targetId, action, reason]
+
+    AdminModerationActionResult:
+      type: object
+      additionalProperties: false
+      properties:
+        ok: { type: boolean }
+        actionId: { type: string, format: uuid }
+      required: [ok, actionId]
+
+    AdminModerationRecord:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        adminId: { type: string }
+        adminName: { type: string, nullable: true }
+        action: { type: string }
+        targetType: { $ref: "#/components/schemas/AdminModerationTargetType" }
+        targetId: { type: string }
+        targetUserId: { type: string, nullable: true }
+        contentType: { type: string }
+        title: { type: string }
+        preview: { type: string }
+        reason: { type: string }
+        aiCategory: { type: string, nullable: true }
+        aiConfidence: { type: number, nullable: true }
+        createdAt: { type: string, format: date-time }
+      required: [id, adminId, adminName, action, targetType, targetId, targetUserId, contentType, title, preview, reason, aiCategory, aiConfidence, createdAt]
+
+    AdminModerationRecordsResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        kind: { type: string, enum: [hidden, removed, ai, history] }
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/AdminModerationRecord" }
+        total: { type: integer }
+        sourceAvailable: { type: boolean }
+      required: [kind, records, total, sourceAvailable]
+
+    CreateGuideSessionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 3, maxLength: 80 }
+        description: { type: string, minLength: 10, maxLength: 1200 }
+        topic: { type: string, maxLength: 80, nullable: true }
+        startsAt: { type: string, format: date-time }
+        durationMinutes: { type: integer, minimum: 15, maximum: 240 }
+        capacity: { type: integer, minimum: 2, maximum: 100, default: 30 }
+        coverImageUri: { type: string, format: uri, maxLength: 2048, nullable: true }
+        tutorialId: { type: string, format: uuid, nullable: true }
+      required: [title, description, startsAt, durationMinutes]
+
+    RescheduleGuideSessionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        startsAt: { type: string, format: date-time }
+      required: [startsAt]
+
+    GuideTutorialStep:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [text, image, video, tip, question] }
+        title: { type: string, maxLength: 100 }
+        body: { type: string, maxLength: 1200 }
+        mediaUri: { type: string, nullable: true }
+      required: [id, type, title, body, mediaUri]
+
+    GuideTutorialInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 3, maxLength: 80 }
+        description: { type: string, minLength: 10, maxLength: 1200 }
+        topic: { type: string, maxLength: 80, nullable: true }
+        visibility: { type: string, enum: [public, followers, unlisted] }
+        status: { type: string, enum: [draft, published] }
+        steps:
+          type: array
+          minItems: 1
+          maxItems: 24
+          items: { $ref: "#/components/schemas/GuideTutorialStep" }
+      required: [title, description, visibility, status, steps]
+
+    GuideTutorialProgressInput:
+      type: object
+      additionalProperties: false
+      properties:
+        completedSteps: { type: integer, minimum: 0, maximum: 24 }
+      required: [completedSteps]
+
+    GuideSessionPollInput:
+      type: object
+      additionalProperties: false
+      properties:
+        question: { type: string, minLength: 5, maxLength: 180 }
+        options:
+          type: array
+          minItems: 2
+          maxItems: 6
+          uniqueItems: true
+          items: { type: string, minLength: 1, maxLength: 80 }
+      required: [question, options]
+
+    GuideSessionPollVoteInput:
+      type: object
+      additionalProperties: false
+      properties:
+        optionIndex: { type: integer, minimum: 0, maximum: 5 }
+      required: [optionIndex]
+
+    GuideSessionPoll:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        createdBy: { type: string }
+        question: { type: string }
+        options:
+          type: array
+          items: { type: string }
+        voteCounts:
+          type: array
+          items: { type: integer }
+        myVote: { type: integer, nullable: true }
+        createdAt: { type: string, format: date-time }
+        closedAt: { type: string, format: date-time, nullable: true }
+      required: [id, sessionId, createdBy, question, options, voteCounts, myVote, createdAt, closedAt]
+
+    GuideSessionQuestionInput:
+      type: object
+      additionalProperties: false
+      properties:
+        question: { type: string, minLength: 4, maxLength: 500 }
+      required: [question]
+
+    GuideSessionQuestion:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        question: { type: string }
+        answer: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        answeredAt: { type: string, format: date-time, nullable: true }
+        askerName: { type: string }
+        upvoteCount: { type: integer }
+        myUpvoted: { type: boolean }
+        isMine: { type: boolean }
+      required: [id, question, answer, createdAt, answeredAt, askerName]
+
+    GuideSessionQuestionVoteInput:
+      type: object
+      additionalProperties: false
+      properties:
+        voted: { type: boolean }
+      required: [voted]
+
+    GuideSessionActivityInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 3, maxLength: 100 }
+        prompt: { type: string, minLength: 5, maxLength: 1000 }
+        kind: { type: string, enum: [challenge, reflection, resource] }
+        resourceUrl: { type: string, format: uri, maxLength: 2048, nullable: true }
+      required: [title, prompt, kind]
+
+    GuideSessionActivityResponseInput:
+      type: object
+      additionalProperties: false
+      properties:
+        response: { type: string, minLength: 2, maxLength: 1000 }
+      required: [response]
+
+    GuideSessionActivityResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        userId: { type: string }
+        displayName: { type: string, nullable: true }
+        response: { type: string }
+        submittedAt: { type: string, format: date-time }
+      required: [userId, displayName, response, submittedAt]
+
+    GuideSessionActivity:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        guideId: { type: string }
+        title: { type: string }
+        prompt: { type: string }
+        kind: { type: string, enum: [challenge, reflection, resource] }
+        resourceUrl: { type: string, format: uri, nullable: true }
+        status: { type: string, enum: [active, completed] }
+        createdAt: { type: string, format: date-time }
+        closedAt: { type: string, format: date-time, nullable: true }
+        responseCount: { type: integer }
+        myResponse: { type: string, nullable: true }
+        responses:
+          type: array
+          items: { $ref: "#/components/schemas/GuideSessionActivityResponse" }
+      required: [id, sessionId, guideId, title, prompt, kind, resourceUrl, status, createdAt, closedAt, responseCount, myResponse, responses]
+
+    GuideSessionAnswerInput:
+      type: object
+      additionalProperties: false
+      properties:
+        answer: { type: string, minLength: 2, maxLength: 1000 }
+      required: [answer]
+
+    GuideSessionRecapInput:
+      type: object
+      additionalProperties: false
+      properties:
+        summary: { type: string, minLength: 20, maxLength: 1200 }
+        highlights:
+          type: array
+          maxItems: 6
+          items: { type: string, minLength: 2, maxLength: 140 }
+      required: [summary]
+
+    GuideSessionRecap:
+      type: object
+      additionalProperties: false
+      properties:
+        sessionId: { type: string, format: uuid }
+        guideId: { type: string }
+        summary: { type: string }
+        highlights:
+          type: array
+          items: { type: string }
+        updatedAt: { type: string, format: date-time }
+      required: [sessionId, guideId, summary, highlights, updatedAt]
+
+    GuideSessionEngagement:
+      type: object
+      additionalProperties: false
+      properties:
+        polls:
+          type: array
+          items: { $ref: "#/components/schemas/GuideSessionPoll" }
+        questions:
+          type: array
+          items: { $ref: "#/components/schemas/GuideSessionQuestion" }
+        activities:
+          type: array
+          items: { $ref: "#/components/schemas/GuideSessionActivity" }
+        activitiesReady: { type: boolean }
+        questionVotingReady: { type: boolean }
+        recap:
+          allOf: [{ $ref: "#/components/schemas/GuideSessionRecap" }]
+          nullable: true
+      required: [polls, questions, activities, activitiesReady, questionVotingReady, recap]
+
+    GuideSessionParticipant:
+      type: object
+      additionalProperties: false
+      properties:
+        userId: { type: string }
+        name: { type: string, nullable: true }
+        username: { type: string, nullable: true }
+        avatarUri: { type: string, nullable: true }
+        joinedAt: { type: string, format: date-time }
+        tutorialProgress: { type: integer }
+        tutorialCompletedAt: { type: string, format: date-time, nullable: true }
+      required: [userId, name, username, avatarUri, joinedAt, tutorialProgress, tutorialCompletedAt]
+
+    GuideTutorial:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        guideId: { type: string }
+        guideName: { type: string }
+        guideUsername: { type: string, nullable: true }
+        guideAvatarUri: { type: string, nullable: true }
+        title: { type: string }
+        description: { type: string }
+        topic: { type: string, nullable: true }
+        visibility: { type: string, enum: [public, followers, unlisted] }
+        status: { type: string, enum: [draft, published] }
+        steps:
+          type: array
+          items: { $ref: "#/components/schemas/GuideTutorialStep" }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, guideId, guideName, guideUsername, guideAvatarUri, title, description, topic, visibility, status, steps, createdAt, updatedAt]
+
+    GuideSession:
+      type: object
+      additionalProperties: false
+      properties:
+        id: { type: string, format: uuid }
+        guideId: { type: string }
+        roomId: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        coverImageUri: { type: string, nullable: true }
+        topic: { type: string, nullable: true }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        capacity: { type: integer }
+        status: { type: string }
+        reminderSentAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        attendeeCount: { type: integer }
+        isJoined: { type: boolean }
+        tutorialId: { type: string, format: uuid, nullable: true }
+        tutorial: { allOf: [{ $ref: "#/components/schemas/GuideTutorial" }], nullable: true }
+        tutorialProgress: { type: integer }
+        tutorialCompletedAt: { type: string, format: date-time, nullable: true }
+      required: [id, guideId, roomId, title, description, coverImageUri, topic, startsAt, endsAt, capacity, status, reminderSentAt, createdAt, attendeeCount, isJoined, tutorialId, tutorial, tutorialProgress, tutorialCompletedAt]

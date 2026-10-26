@@ -6,6 +6,7 @@ import { SkeletonDiscoverCard } from '@/components/Skeleton';
 import { useFriendsDrawer } from '@/context/FriendsDrawerContext';
 import { useApp, type DiscoverPost } from '@/context/AppContext';
 import { useColors } from '@/hooks/useColors';
+import { UI } from '@/constants/uiTokens';
 import { getReelPlaybackWindow } from '@/utils/reelPlayback';
 import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -360,9 +361,9 @@ const styles = StyleSheet.create({
   titleStar: { color: '#D6B8FF', fontSize: 22 },
   dmDot: { position: 'absolute', top: 6, right: 6, width: 9, height: 9, borderRadius: 5, backgroundColor: '#E05568' },
   createButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: UI.minTapTarget,
+    height: UI.minTapTarget,
+    borderRadius: UI.radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(180,130,255,0.17)',
@@ -375,9 +376,9 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   filterChip: {
-    height: 35,
-    paddingHorizontal: 15,
-    borderRadius: 18,
+    minHeight: UI.minTapTarget,
+    paddingHorizontal: 16,
+    borderRadius: UI.radius.pill,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -390,7 +391,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(180,145,245,0.48)',
   },
   filterText: {
-    fontSize: 11,
+    fontSize: UI.type.supporting,
     fontFamily: 'Satoshi-Bold',
     color: 'rgba(205,192,235,0.48)',
   },
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 19,
+    fontSize: UI.type.cardTitle,
     fontFamily: 'Satoshi-Bold',
     color: 'rgba(230,220,250,0.92)',
   },
@@ -473,15 +474,15 @@ const styles = StyleSheet.create({
     marginTop: 7,
     maxWidth: 280,
     textAlign: 'center',
-    fontSize: 13,
-    lineHeight: 20,
+    fontSize: UI.type.supporting,
+    lineHeight: 21,
     fontFamily: 'Satoshi-Regular',
     color: 'rgba(200,184,232,0.52)',
   },
   emptyButton: {
     marginTop: 18,
-    height: 44,
-    borderRadius: 22,
+    minHeight: 48,
+    borderRadius: UI.radius.pill,
     paddingHorizontal: 22,
     flexDirection: 'row',
     alignItems: 'center',
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   emptyButtonText: {
-    fontSize: 13,
+    fontSize: UI.type.supporting,
     fontFamily: 'Satoshi-Bold',
     color: '#fff',
   },

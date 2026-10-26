@@ -46,7 +46,7 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { userId: accountId } = useAuth();
-  const { blockedIds, dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads } = useApp();
+  const { friends, blockedIds, dmThreads, dmThreadsLoading, dmThreadsError, refreshDmThreads } = useApp();
   const drawerW = Math.min(Math.round(width * 0.9), 440);
   const { accent, onAccent } = useChatAccent();
   const sub = colors.mutedForeground;
@@ -61,6 +61,9 @@ export function FriendsMessagesDrawer({ visible, scopeKey, initialTab, onClose }
 
   // Cached rows are available immediately; revalidation starts after the entry animation.
   const data = useFriendsDrawerData(visible && openingComplete, scopeKey, query, tab === 'find');
+  useEffect(() => {
+    if (visible && openingComplete) void data.load();
+  }, [friends, visible, openingComplete, data.load]);
 
   useEffect(() => {
     let on = true;

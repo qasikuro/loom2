@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Icon } from '@/components/Icon';
 import { useColors } from '@/hooks/useColors';
 import { AudiusTrack, useAudiusPreview } from '@/features/story-studio/components/AudiusMusicPicker';
+import { buildQueue, isNaturalEnd, nextInQueue, prevInQueue } from '../logic';
 
 /** Routes where the Lumi soundtrack may keep playing. Anything else stops it. */
 const SUPPORTED = [/^\/drift(\/|$)/, /^\/create-journal-entry(\/|$)/, /^\/create-outfit(\/|$)/, /^\/chapter-editor(\/|$)/];
@@ -22,7 +23,15 @@ type Ctx = {
   pausedId: string | null;
   loadingId: string | null;
   errorId: string | null;
-  toggle: (track: AudiusTrack) => Promise<void>;
+  /** Explicit play/pause. Passing `queue` makes next/previous walk that list. */
+  toggle: (track: AudiusTrack, queue?: AudiusTrack[]) => Promise<void>;
+  queue: AudiusTrack[];
+  hasNext: boolean;
+  hasPrev: boolean;
+  next: () => Promise<void>;
+  previous: () => Promise<void>;
+  /** Increments whenever the player skips; lets cards offer a different-taste follow-up. */
+  skips: number;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
   stop: () => Promise<void>;
@@ -47,13 +56,19 @@ export function LumiMusicProvider({ children }: { children: React.ReactNode }) {
   const preview = useAudiusPreview({ retainOnPause: true });
   const [track, setTrack] = useState<AudiusTrack | null>(null);
   const [favorites, setFavorites] = useState<AudiusTrack[]>([]);
+  const [queue, setQueue] = useState<AudiusTrack[]>([]);
+  const [skips, setSkips] = useState(0);
+  const manualRef = useRef(false);
+  const prevPlayingRef = useRef<string | null>(null);
   const stopRef = useRef(preview.stop);
   const favoritesEpoch = useRef(0);
   const favoritesWrites = useRef(Promise.resolve());
   stopRef.current = preview.stop;
 
   const stop = useCallback(async () => {
+    manualRef.current = true;
     setTrack(null);
+    setQueue([]);
     await stopRef.current();
   }, []);
 
@@ -89,11 +104,43 @@ export function LumiMusicProvider({ children }: { children: React.ReactNode }) {
   const active = preview.playingId ?? preview.pausedId ?? preview.loadingId;
   const shownTrack = track && (active === track.id || preview.errorId === track.id) ? track : null;
 
-  const toggle = useCallback(async (tr: AudiusTrack) => {
+  const toggle = useCallback(async (tr: AudiusTrack, list?: AudiusTrack[]) => {
     if (!isLumiMusicPath(pathname)) return;
+    manualRef.current = true;
+    if (list?.length) setQueue(buildQueue(list.some(x => x.id === tr.id) ? list : [tr, ...list]));
     setTrack(tr);
     await preview.toggle(tr);
   }, [pathname, preview]);
+
+  const pause = useCallback(async () => { manualRef.current = true; await preview.pause(); }, [preview]);
+
+  const trackRef = useRef(track);
+  trackRef.current = track;
+  const queueRef = useRef(queue);
+  queueRef.current = queue;
+  const jump = useCallback(async (target: AudiusTrack | null, skip: boolean) => {
+    if (!target || !isLumiMusicPath(pathname)) return;
+    manualRef.current = true;
+    if (skip) setSkips(n => n + 1);
+    setTrack(target);
+    // preview.toggle on a different id stops the current sound first and is generation-guarded.
+    await preview.toggle(target);
+  }, [pathname, preview]);
+  const next = useCallback(() => jump(nextInQueue(queueRef.current, trackRef.current?.id), true), [jump]);
+  const previous = useCallback(() => jump(prevInQueue(queueRef.current, trackRef.current?.id), false), [jump]);
+
+  // Safe end-of-track advance: only after the player already pressed play, only within the queue.
+  useEffect(() => {
+    const prev = prevPlayingRef.current;
+    if (preview.playingId) { manualRef.current = false; prevPlayingRef.current = preview.playingId; return; }
+    if (preview.pausedId || preview.loadingId) return;
+    prevPlayingRef.current = null;
+    if (isNaturalEnd({ prevPlayingId: prev, playingId: preview.playingId, pausedId: preview.pausedId, loadingId: preview.loadingId, errorId: preview.errorId, manual: manualRef.current })
+      && trackRef.current?.id === prev) {
+      const target = nextInQueue(queueRef.current, prev);
+      if (target) void jump(target, false);
+    }
+  }, [preview.playingId, preview.pausedId, preview.loadingId, preview.errorId, jump]);
 
   const persistFavs = useCallback((next: AudiusTrack[]) => {
     favoritesEpoch.current++;
@@ -123,14 +170,20 @@ export function LumiMusicProvider({ children }: { children: React.ReactNode }) {
     loadingId: preview.loadingId,
     errorId: preview.errorId,
     toggle,
-    pause: preview.pause,
+    queue,
+    hasNext: !!nextInQueue(queue, shownTrack?.id) && !!shownTrack && queue.some(q => q.id === shownTrack.id),
+    hasPrev: !!prevInQueue(queue, shownTrack?.id),
+    next,
+    previous,
+    skips,
+    pause,
     resume: preview.resume,
     stop,
     favorites,
     isFavorite: (id: string) => favorites.some(f => f.id === id),
     toggleFavorite,
     clearFavorites,
-  }), [shownTrack, preview.playingId, preview.pausedId, preview.loadingId, preview.errorId, preview.pause, preview.resume, toggle, stop, favorites, toggleFavorite, clearFavorites]);
+  }), [shownTrack, preview.playingId, preview.pausedId, preview.loadingId, preview.errorId, pause, preview.resume, toggle, queue, next, previous, skips, stop, favorites, toggleFavorite, clearFavorites]);
 
   return (
     <LumiMusicContext.Provider value={value}>
@@ -170,6 +223,12 @@ function LumiMiniPlayer() {
             {status ? `${status} · ` : ''}{tr.artist}
           </Text>
         </View>
+        {m.hasPrev && (
+          <TouchableOpacity onPress={() => { void m.previous(); }} style={s.btn} disabled={loading}
+            accessibilityLabel={t('lumi.music.prev', 'Previous track')}>
+            <Icon name="chevron-left" size={17} color={loading ? c.mutedForeground : c.text} />
+          </TouchableOpacity>
+        )}
         {loading ? (
           <ActivityIndicator size="small" color={c.tint} />
         ) : failed ? (
@@ -180,6 +239,12 @@ function LumiMiniPlayer() {
           <TouchableOpacity onPress={() => { void (playing ? m.pause() : m.resume()); }} style={s.btn}
             accessibilityLabel={playing ? t('lumi.music.pause', 'Pause') : t('lumi.music.resume', 'Resume')}>
             <Icon name={playing ? 'pause' : 'play'} size={15} color={c.tint} />
+          </TouchableOpacity>
+        )}
+        {m.hasNext && (
+          <TouchableOpacity onPress={() => { void m.next(); }} style={s.btn} disabled={loading}
+            accessibilityLabel={t('lumi.music.next', 'Next track')} testID="lumi-mini-next">
+            <Icon name="chevron-right" size={17} color={loading ? c.mutedForeground : c.tint} />
           </TouchableOpacity>
         )}
         <TouchableOpacity onPress={() => m.toggleFavorite(tr)} style={s.btn}

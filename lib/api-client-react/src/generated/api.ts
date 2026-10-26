@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AccountDeletionResult,
   AdminAnalytics,
   AdminApiStatus,
   AdminEmailInput,
@@ -28,6 +29,10 @@ import type {
   AdminModerationReportStatusInput,
   AdminModerationReportsResponse,
   AppConfig,
+  BlockState,
+  CelestialWingsTestGrantInput,
+  CelestialWingsTestGrantResult,
+  CelestialWingsTestGrantStatus,
   Character,
   CharacterInput,
   ChatMessage,
@@ -37,11 +42,13 @@ import type {
   ComposeVideoResponse,
   ConfirmStorigamUnsubscribeParams,
   ConstellationState,
+  ConversationClearResult,
   CreateGuideSessionInput,
   DiscoverPost,
   FeatureUsageControlInput,
   FeatureUsageOverview,
   FeatureUsagePolicy,
+  FriendRemovalResult,
   FriendRequest,
   FriendSummary,
   GalleryPhoto,
@@ -51,6 +58,7 @@ import type {
   GetAdminModerationQueueParams,
   GetAdminModerationRecordsParams,
   GetAdminModerationReportsParams,
+  GetChatConversationParams,
   GuideSession,
   GuideSessionActivity,
   GuideSessionActivityInput,
@@ -79,6 +87,7 @@ import type {
   JournalEntryInput,
   ListGuideSessionsParams,
   ListGuideTutorialsParams,
+  ListInterestSubscribersParams,
   LumiClearResult,
   LumiConversationInput,
   LumiConversationResult,
@@ -97,6 +106,8 @@ import type {
   RestoreAdminUserVisibility200,
   RewardBalance,
   ShopResponse,
+  StorigamFeedbackInput,
+  StorigamFeedbackResponse,
   StorigamInterestInput,
   StorigamInterestResponse,
   Story,
@@ -5867,6 +5878,94 @@ export const useSubmitStorigamInterest = <
 };
 
 /**
+ * Public, rate-limited feedback form. Submissions are emailed to Storigam support and are not stored in the application database.
+ * @summary Send feedback to Storigam support
+ */
+export const getSubmitStorigamFeedbackUrl = () => {
+  return `/api/support/feedback`;
+};
+
+export const submitStorigamFeedback = async (
+  storigamFeedbackInput: StorigamFeedbackInput,
+  options?: RequestInit,
+): Promise<StorigamFeedbackResponse> => {
+  return customFetch<StorigamFeedbackResponse>(getSubmitStorigamFeedbackUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(storigamFeedbackInput),
+  });
+};
+
+export const getSubmitStorigamFeedbackMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitStorigamFeedback>>,
+    TError,
+    { data: BodyType<StorigamFeedbackInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof submitStorigamFeedback>>,
+  TError,
+  { data: BodyType<StorigamFeedbackInput> },
+  TContext
+> => {
+  const mutationKey = ["submitStorigamFeedback"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof submitStorigamFeedback>>,
+    { data: BodyType<StorigamFeedbackInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return submitStorigamFeedback(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SubmitStorigamFeedbackMutationResult = NonNullable<
+  Awaited<ReturnType<typeof submitStorigamFeedback>>
+>;
+export type SubmitStorigamFeedbackMutationBody =
+  BodyType<StorigamFeedbackInput>;
+export type SubmitStorigamFeedbackMutationError = ErrorType<void>;
+
+/**
+ * @summary Send feedback to Storigam support
+ */
+export const useSubmitStorigamFeedback = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof submitStorigamFeedback>>,
+    TError,
+    { data: BodyType<StorigamFeedbackInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof submitStorigamFeedback>>,
+  TError,
+  { data: BodyType<StorigamFeedbackInput> },
+  TContext
+> => {
+  return useMutation(getSubmitStorigamFeedbackMutationOptions(options));
+};
+
+/**
  * @summary Show unsubscribe confirmation
  */
 export const getViewStorigamUnsubscribeUrl = (
@@ -6157,15 +6256,30 @@ export const useSendAdminEmail = <
 /**
  * @summary List landing page signups and consent status
  */
-export const getListInterestSubscribersUrl = () => {
-  return `/api/admin/interest/subscribers`;
+export const getListInterestSubscribersUrl = (
+  params?: ListInterestSubscribersParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/admin/interest/subscribers?${stringifiedParams}`
+    : `/api/admin/interest/subscribers`;
 };
 
 export const listInterestSubscribers = async (
+  params?: ListInterestSubscribersParams,
   options?: RequestInit,
 ): Promise<InterestSubscribersResponse> => {
   return customFetch<InterestSubscribersResponse>(
-    getListInterestSubscribersUrl(),
+    getListInterestSubscribersUrl(params),
     {
       ...options,
       method: "GET",
@@ -6173,29 +6287,38 @@ export const listInterestSubscribers = async (
   );
 };
 
-export const getListInterestSubscribersQueryKey = () => {
-  return [`/api/admin/interest/subscribers`] as const;
+export const getListInterestSubscribersQueryKey = (
+  params?: ListInterestSubscribersParams,
+) => {
+  return [
+    `/api/admin/interest/subscribers`,
+    ...(params ? [params] : []),
+  ] as const;
 };
 
 export const getListInterestSubscribersQueryOptions = <
   TData = Awaited<ReturnType<typeof listInterestSubscribers>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listInterestSubscribers>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+  TError = ErrorType<void>,
+>(
+  params?: ListInterestSubscribersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listInterestSubscribers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getListInterestSubscribersQueryKey();
+    queryOptions?.queryKey ?? getListInterestSubscribersQueryKey(params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof listInterestSubscribers>>
-  > = ({ signal }) => listInterestSubscribers({ signal, ...requestOptions });
+  > = ({ signal }) =>
+    listInterestSubscribers(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listInterestSubscribers>>,
@@ -6207,7 +6330,7 @@ export const getListInterestSubscribersQueryOptions = <
 export type ListInterestSubscribersQueryResult = NonNullable<
   Awaited<ReturnType<typeof listInterestSubscribers>>
 >;
-export type ListInterestSubscribersQueryError = ErrorType<unknown>;
+export type ListInterestSubscribersQueryError = ErrorType<void>;
 
 /**
  * @summary List landing page signups and consent status
@@ -6215,16 +6338,19 @@ export type ListInterestSubscribersQueryError = ErrorType<unknown>;
 
 export function useListInterestSubscribers<
   TData = Awaited<ReturnType<typeof listInterestSubscribers>>,
-  TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<
-    Awaited<ReturnType<typeof listInterestSubscribers>>,
-    TError,
-    TData
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getListInterestSubscribersQueryOptions(options);
+  TError = ErrorType<void>,
+>(
+  params?: ListInterestSubscribersParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listInterestSubscribers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListInterestSubscribersQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -6753,6 +6879,178 @@ export function useGetAdminApiStatus<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Requires an authenticated administrator. This fixed test grant is limited to @thekin.
+ * @summary Check Celestial Wings test credits
+ */
+export const getGetCelestialWingsTestGrantStatusUrl = () => {
+  return `/api/admin/test-grants/celestial-wings`;
+};
+
+export const getCelestialWingsTestGrantStatus = async (
+  options?: RequestInit,
+): Promise<CelestialWingsTestGrantStatus> => {
+  return customFetch<CelestialWingsTestGrantStatus>(
+    getGetCelestialWingsTestGrantStatusUrl(),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCelestialWingsTestGrantStatusQueryKey = () => {
+  return [`/api/admin/test-grants/celestial-wings`] as const;
+};
+
+export const getGetCelestialWingsTestGrantStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCelestialWingsTestGrantStatus>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCelestialWingsTestGrantStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCelestialWingsTestGrantStatusQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCelestialWingsTestGrantStatus>>
+  > = ({ signal }) =>
+    getCelestialWingsTestGrantStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCelestialWingsTestGrantStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCelestialWingsTestGrantStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCelestialWingsTestGrantStatus>>
+>;
+export type GetCelestialWingsTestGrantStatusQueryError = ErrorType<void>;
+
+/**
+ * @summary Check Celestial Wings test credits
+ */
+
+export function useGetCelestialWingsTestGrantStatus<
+  TData = Awaited<ReturnType<typeof getCelestialWingsTestGrantStatus>>,
+  TError = ErrorType<void>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getCelestialWingsTestGrantStatus>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCelestialWingsTestGrantStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Requires an authenticated administrator. Each new request ID grants exactly 1,000 Stars to @thekin. Repeating the same request ID is idempotent.
+ * @summary Grant 1,000 Celestial Wings test Stars
+ */
+export const getGrantCelestialWingsTestStarsUrl = () => {
+  return `/api/admin/test-grants/celestial-wings`;
+};
+
+export const grantCelestialWingsTestStars = async (
+  celestialWingsTestGrantInput: CelestialWingsTestGrantInput,
+  options?: RequestInit,
+): Promise<CelestialWingsTestGrantResult> => {
+  return customFetch<CelestialWingsTestGrantResult>(
+    getGrantCelestialWingsTestStarsUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(celestialWingsTestGrantInput),
+    },
+  );
+};
+
+export const getGrantCelestialWingsTestStarsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof grantCelestialWingsTestStars>>,
+    TError,
+    { data: BodyType<CelestialWingsTestGrantInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof grantCelestialWingsTestStars>>,
+  TError,
+  { data: BodyType<CelestialWingsTestGrantInput> },
+  TContext
+> => {
+  const mutationKey = ["grantCelestialWingsTestStars"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof grantCelestialWingsTestStars>>,
+    { data: BodyType<CelestialWingsTestGrantInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return grantCelestialWingsTestStars(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GrantCelestialWingsTestStarsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof grantCelestialWingsTestStars>>
+>;
+export type GrantCelestialWingsTestStarsMutationBody =
+  BodyType<CelestialWingsTestGrantInput>;
+export type GrantCelestialWingsTestStarsMutationError = ErrorType<void>;
+
+/**
+ * @summary Grant 1,000 Celestial Wings test Stars
+ */
+export const useGrantCelestialWingsTestStars = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof grantCelestialWingsTestStars>>,
+    TError,
+    { data: BodyType<CelestialWingsTestGrantInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof grantCelestialWingsTestStars>>,
+  TError,
+  { data: BodyType<CelestialWingsTestGrantInput> },
+  TContext
+> => {
+  return useMutation(getGrantCelestialWingsTestStarsMutationOptions(options));
+};
 
 /**
  * @summary Temporarily hide a user and their published activity
@@ -7613,22 +7911,41 @@ export const useSendChatPhoto = <
 /**
  * @summary Read a private direct-message conversation
  */
-export const getGetChatConversationUrl = (userId: string) => {
-  return `/api/messages/${userId}`;
+export const getGetChatConversationUrl = (
+  userId: string,
+  params?: GetChatConversationParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/messages/${userId}?${stringifiedParams}`
+    : `/api/messages/${userId}`;
 };
 
 export const getChatConversation = async (
   userId: string,
+  params?: GetChatConversationParams,
   options?: RequestInit,
 ): Promise<ChatMessage[]> => {
-  return customFetch<ChatMessage[]>(getGetChatConversationUrl(userId), {
+  return customFetch<ChatMessage[]>(getGetChatConversationUrl(userId, params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetChatConversationQueryKey = (userId: string) => {
-  return [`/api/messages/${userId}`] as const;
+export const getGetChatConversationQueryKey = (
+  userId: string,
+  params?: GetChatConversationParams,
+) => {
+  return [`/api/messages/${userId}`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetChatConversationQueryOptions = <
@@ -7636,6 +7953,7 @@ export const getGetChatConversationQueryOptions = <
   TError = ErrorType<unknown>,
 >(
   userId: string,
+  params?: GetChatConversationParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getChatConversation>>,
@@ -7648,12 +7966,12 @@ export const getGetChatConversationQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetChatConversationQueryKey(userId);
+    queryOptions?.queryKey ?? getGetChatConversationQueryKey(userId, params);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getChatConversation>>
   > = ({ signal }) =>
-    getChatConversation(userId, { signal, ...requestOptions });
+    getChatConversation(userId, params, { signal, ...requestOptions });
 
   return {
     queryKey,
@@ -7681,6 +7999,7 @@ export function useGetChatConversation<
   TError = ErrorType<unknown>,
 >(
   userId: string,
+  params?: GetChatConversationParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getChatConversation>>,
@@ -7690,7 +8009,11 @@ export function useGetChatConversation<
     request?: SecondParameter<typeof customFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetChatConversationQueryOptions(userId, options);
+  const queryOptions = getGetChatConversationQueryOptions(
+    userId,
+    params,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -7784,4 +8107,424 @@ export const useSendChatMessage = <
   TContext
 > => {
   return useMutation(getSendChatMessageMutationOptions(options));
+};
+
+/**
+ * @summary Hide a direct-message conversation from the authenticated user's chat list
+ */
+export const getClearConversationUrl = (partnerId: string) => {
+  return `/api/messages/conversation/${partnerId}`;
+};
+
+export const clearConversation = async (
+  partnerId: string,
+  options?: RequestInit,
+): Promise<ConversationClearResult> => {
+  return customFetch<ConversationClearResult>(
+    getClearConversationUrl(partnerId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getClearConversationMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearConversation>>,
+    TError,
+    { partnerId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof clearConversation>>,
+  TError,
+  { partnerId: string },
+  TContext
+> => {
+  const mutationKey = ["clearConversation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof clearConversation>>,
+    { partnerId: string }
+  > = (props) => {
+    const { partnerId } = props ?? {};
+
+    return clearConversation(partnerId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearConversationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof clearConversation>>
+>;
+
+export type ClearConversationMutationError = ErrorType<void>;
+
+/**
+ * @summary Hide a direct-message conversation from the authenticated user's chat list
+ */
+export const useClearConversation = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof clearConversation>>,
+    TError,
+    { partnerId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof clearConversation>>,
+  TError,
+  { partnerId: string },
+  TContext
+> => {
+  return useMutation(getClearConversationMutationOptions(options));
+};
+
+/**
+ * @summary Remove the relationship in both directions without blocking
+ */
+export const getRemoveFriendUrl = (targetUserId: string) => {
+  return `/api/friends/${targetUserId}`;
+};
+
+export const removeFriend = async (
+  targetUserId: string,
+  options?: RequestInit,
+): Promise<FriendRemovalResult> => {
+  return customFetch<FriendRemovalResult>(getRemoveFriendUrl(targetUserId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getRemoveFriendMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFriend>>,
+    TError,
+    { targetUserId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof removeFriend>>,
+  TError,
+  { targetUserId: string },
+  TContext
+> => {
+  const mutationKey = ["removeFriend"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof removeFriend>>,
+    { targetUserId: string }
+  > = (props) => {
+    const { targetUserId } = props ?? {};
+
+    return removeFriend(targetUserId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RemoveFriendMutationResult = NonNullable<
+  Awaited<ReturnType<typeof removeFriend>>
+>;
+
+export type RemoveFriendMutationError = ErrorType<void>;
+
+/**
+ * @summary Remove the relationship in both directions without blocking
+ */
+export const useRemoveFriend = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof removeFriend>>,
+    TError,
+    { targetUserId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof removeFriend>>,
+  TError,
+  { targetUserId: string },
+  TContext
+> => {
+  return useMutation(getRemoveFriendMutationOptions(options));
+};
+
+/**
+ * @summary Block a user from initiating contact
+ */
+export const getBlockUserUrl = (userId: string) => {
+  return `/api/users/${userId}/block`;
+};
+
+export const blockUser = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<BlockState> => {
+  return customFetch<BlockState>(getBlockUserUrl(userId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getBlockUserMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof blockUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof blockUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ["blockUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof blockUser>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return blockUser(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BlockUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof blockUser>>
+>;
+
+export type BlockUserMutationError = ErrorType<void>;
+
+/**
+ * @summary Block a user from initiating contact
+ */
+export const useBlockUser = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof blockUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof blockUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  return useMutation(getBlockUserMutationOptions(options));
+};
+
+/**
+ * @summary Unblock a user
+ */
+export const getUnblockUserUrl = (userId: string) => {
+  return `/api/users/${userId}/block`;
+};
+
+export const unblockUser = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<BlockState> => {
+  return customFetch<BlockState>(getUnblockUserUrl(userId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUnblockUserMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unblockUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unblockUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ["unblockUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unblockUser>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return unblockUser(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnblockUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unblockUser>>
+>;
+
+export type UnblockUserMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Unblock a user
+ */
+export const useUnblockUser = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unblockUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unblockUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  return useMutation(getUnblockUserMutationOptions(options));
+};
+
+/**
+ * @summary Permanently delete the authenticated user's account and personal data
+ */
+export const getDeleteMyAccountUrl = () => {
+  return `/api/account`;
+};
+
+export const deleteMyAccount = async (
+  options?: RequestInit,
+): Promise<AccountDeletionResult> => {
+  return customFetch<AccountDeletionResult>(getDeleteMyAccountUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteMyAccountMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMyAccount>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteMyAccount>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = ["deleteMyAccount"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteMyAccount>>,
+    void
+  > = () => {
+    return deleteMyAccount(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteMyAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteMyAccount>>
+>;
+
+export type DeleteMyAccountMutationError = ErrorType<void>;
+
+/**
+ * @summary Permanently delete the authenticated user's account and personal data
+ */
+export const useDeleteMyAccount = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteMyAccount>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteMyAccount>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(getDeleteMyAccountMutationOptions(options));
 };

@@ -8,6 +8,7 @@ interface CacheEntry {
 }
 
 const MAX_CACHED_CONVERSATIONS = 8;
+const MAX_CACHED_MESSAGES = 50;
 const conversations = new Map<string, CacheEntry>();
 const inFlight = new Map<string, { promise: Promise<DmCachedMessage[]> }>();
 
@@ -19,7 +20,7 @@ function save(key: string, messages: DmCachedMessage[]) {
   const opened = conversations.get(key)?.opened ?? false;
   conversations.delete(key);
   conversations.set(key, {
-    messages: messages.filter(message => !message.id.startsWith('temp-')),
+    messages: messages.filter(message => !message.id.startsWith('temp-')).slice(-MAX_CACHED_MESSAGES),
     opened,
   });
   while (conversations.size > MAX_CACHED_CONVERSATIONS) {
@@ -107,4 +108,15 @@ export function forgetDmConversation(
   if (!key) return;
   conversations.delete(key);
   inFlight.delete(key);
+}
+
+/** Clear all private in-memory history and invalidate late requests on sign-out. */
+export function clearDmAccountCache(accountId: string): void {
+  const prefix = `${accountId}\u001f`;
+  for (const key of conversations.keys()) {
+    if (key.startsWith(prefix)) conversations.delete(key);
+  }
+  for (const key of inFlight.keys()) {
+    if (key.startsWith(prefix)) inFlight.delete(key);
+  }
 }

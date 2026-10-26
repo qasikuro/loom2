@@ -5,6 +5,10 @@
  * Sky Journal API
  * OpenAPI spec version: 0.2.0
  */
+import type { LumiConversationResultEmotion } from "./lumiConversationResultEmotion";
+import type { LumiConversationResultIntent } from "./lumiConversationResultIntent";
+import type { LumiConversationResultMood } from "./lumiConversationResultMood";
+import type { LumiConversationResultPhase } from "./lumiConversationResultPhase";
 import type { LumiRecommendation } from "./lumiRecommendation";
 
 export interface LumiConversationResult {
@@ -13,4 +17,11 @@ export interface LumiConversationResult {
   /** @maxItems 3 */
   recommendations: LumiRecommendation[];
   fallback: boolean;
+  /** Temporary user-stated mood for this conversation, never a diagnosis or permanent profile. */
+  mood?: LumiConversationResultMood;
+  phase?: LumiConversationResultPhase;
+  /** Allow-listed companion expression, not a psychological assessment. */
+  emotion?: LumiConversationResultEmotion;
+  /** Temporary stated activity preference, interpreted in the player's language. */
+  intent?: LumiConversationResultIntent;
 }

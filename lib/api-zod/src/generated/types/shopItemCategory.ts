@@ -14,4 +14,5 @@ export const ShopItemCategory = {
   accent: "accent",
   theme: "theme",
   effect: "effect",
+  card_frame: "card_frame",
 } as const;

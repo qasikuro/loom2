@@ -14,6 +14,7 @@ export interface ShopItem {
   description: string;
   icon: string;
   category: ShopItemCategory;
+  founderOnly?: boolean;
   cost: ShopItemCost;
   seasonal?: boolean | null;
   seasonalLabel?: string | null;

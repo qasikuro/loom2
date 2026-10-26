@@ -27,6 +27,7 @@ import { ToastProvider } from '@/components/Toast';
 import { AppProvider, setAuthTokenGetter, useApp, apiFetch, getAuthToken } from '@/context/AppContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { useColors } from '@/hooks/useColors';
+import { getAuthStartupRouteDecision } from '@/utils/authStartupRoute';
 import { SoundProvider } from '@/context/SoundContext';
 import { StorigamLoadingOverlay } from '@/components/SkyLoading';
 import { hasCompletedOnboarding, markOnboardingDone } from '@/components/OnboardingOverlay';
@@ -330,29 +331,38 @@ function NotificationDeepLinkHandler() {
   return null;
 }
 
-function AuthNavigator() {
+function AuthNavigator({ onRouteReady }: { onRouteReady: () => void }) {
   const { isLoaded, isSignedIn } = useAuth();
   const segments = useSegments();
   const pathname = usePathname();
   const hasCheckedStartupRoute = useRef(false);
+  const hasReportedReady = useRef(false);
 
-  const inAuthGroup = segments[0] === '(auth)';
-  const inTabsGroup = segments[0] === '(tabs)';
+  const startupDecision = getAuthStartupRouteDecision({
+    isLoaded,
+    isSignedIn: !!isSignedIn,
+    pathname,
+    segments,
+    startupRouteChecked: hasCheckedStartupRoute.current,
+  });
 
-  if (!isLoaded) return null;
-
-  // The app's "/" path resolves to the Home tab's index route. That explicit
-  // path takes precedence over Tabs.initialRouteName, so redirect it once at
-  // startup while leaving later Home tab presses untouched.
-  if (!hasCheckedStartupRoute.current) {
+  // Wait until Expo Router provides the initial segments before consuming this
+  // one-time check. An empty segment list during cold start previously left the
+  // root route unresolved when the splash disappeared.
+  if (segments.length > 0 && !hasCheckedStartupRoute.current) {
     hasCheckedStartupRoute.current = true;
-    if (isSignedIn && inTabsGroup && pathname === '/') {
-      return <Redirect href="/(tabs)/reels" />;
-    }
   }
 
-  if (isSignedIn && inAuthGroup) return <Redirect href="/(tabs)/reels" />;
-  if (!isSignedIn && !inAuthGroup && inTabsGroup) return <Redirect href="/(auth)/sign-in" />;
+  useEffect(() => {
+    if (startupDecision === 'ready' && !hasReportedReady.current) {
+      hasReportedReady.current = true;
+      onRouteReady();
+    }
+  }, [onRouteReady, startupDecision]);
+
+  if (startupDecision === 'waiting') return null;
+  if (startupDecision === 'reels') return <Redirect href="/(tabs)/reels" />;
+  if (startupDecision === 'sign-in') return <Redirect href="/(auth)/sign-in" />;
 
   return null;
 }
@@ -360,6 +370,7 @@ function AuthNavigator() {
 export default function RootLayout() {
   const [fontsReady,  setFontsReady]  = useState(false);
   const [splashDone,  setSplashDone]  = useState(false);
+  const [initialRouteReady, setInitialRouteReady] = useState(false);
 
   useEffect(() => {
     Font.loadAsync({
@@ -384,6 +395,9 @@ export default function RootLayout() {
 
   const handleSplashReady = useCallback(() => {
     setSplashDone(true);
+  }, []);
+  const handleInitialRouteReady = useCallback(() => {
+    setInitialRouteReady(true);
   }, []);
 
   return (
@@ -413,7 +427,7 @@ export default function RootLayout() {
                         <AuthTokenBridge />
                         <IntentionStalenessGuard />
                         <NotificationDeepLinkHandler />
-                        <AuthNavigator />
+                        <AuthNavigator onRouteReady={handleInitialRouteReady} />
                         <AppOverlays />
                         <ToastProvider>
                         <GestureHandlerRootView style={{ flex: 1 }}>
@@ -520,9 +534,16 @@ export default function RootLayout() {
           </SafeAreaProvider>
         </ClerkProvider>
 
+        {fontsReady && splashDone && !initialRouteReady && (
+          <StorigamLoadingOverlay transparent />
+        )}
+
         {/* Custom splash — overlays everything, fades out when ready */}
         {!splashDone && (
-           <AppSplashScreen onReady={handleSplashReady} ready={fontsReady} />
+           <AppSplashScreen
+             onReady={handleSplashReady}
+             ready={fontsReady && initialRouteReady}
+           />
         )}
       </ThemedRoot>
     </ThemeProvider>

@@ -1,5 +1,5 @@
 export * from "./generated/api";
-export * from "./generated/types";
+export * as GeneratedApiTypes from "./generated/types";
 
 import * as zod from "zod";
 import {
@@ -63,9 +63,3 @@ export type ApiCharacter = zod.infer<typeof ApiCharacterSchema>;
 export type ApiJournalEntry = zod.infer<typeof ListJournalEntriesResponseItem>;
 export type ApiStoryItem = zod.infer<typeof ListStoriesResponseItem>;
 export type ApiOutfitItem = zod.infer<typeof ListOutfitsResponseItem>;
-export * from "./generated/api";
-export * from "./generated/types";
-export * from "./generated/api";
-export * from "./generated/types";
-export * from "./generated/api";
-export * from "./generated/types";

@@ -5,7 +5,7 @@ import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatSti
 import { ChatMessagePhoto, ChatPhotoDraft, ChatPhotoViewer } from '@/components/ChatPhoto';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
-import type { ChatMessageInput } from '@workspace/api-client-react';
+import { useClearConversation, useRemoveFriend, type ChatMessageInput } from '@workspace/api-client-react';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
 import { showToastGlobal } from '@/components/Toast';
 import { safeBack } from '@/utils/navigation';
@@ -18,6 +18,7 @@ import {
   wasDmConversationOpened,
   type DmCachedMessage,
 } from '@/utils/dmConversationCache';
+import { mergeChatMessages } from '@/utils/chatMessageHistory';
 import { useSound } from '@/context/SoundContext';
 import { useSSE } from '@/hooks/useSSE';
 import { useAuth } from '@clerk/expo';
@@ -28,6 +29,7 @@ import Reanimated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Easing,
@@ -66,6 +68,7 @@ const PURPLE  = '#6B4EE8';
 const PURPLE2 = '#3B2A8C';
 const BORDER  = 'rgba(200,184,232,0.10)';
 const MUTED   = 'rgba(200,184,232,0.45)';
+const CHAT_PAGE_SIZE = 50;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Message = DmCachedMessage;
@@ -222,6 +225,9 @@ type DmRowColors = {
   otherBorder: string;
   otherText: string;
   sub: string;
+  dateLine: string;
+  datePill: string;
+  dateText: string;
 };
 
 type DmMessageCellProps = {
@@ -241,11 +247,11 @@ const DmMessageCell = React.memo(function DmMessageCell({
   if (item.type === 'date') {
     return (
       <View style={styles.dateSep}>
-        <View style={styles.dateLine} />
-        <View style={styles.datePill}>
-          <Text style={styles.dateText}>{item.date}</Text>
+        <View style={[styles.dateLine, { backgroundColor: colors.dateLine }]} />
+        <View style={[styles.datePill, { backgroundColor: colors.datePill, borderColor: colors.otherBorder }]}>
+          <Text style={[styles.dateText, { color: colors.dateText }]}>{item.date}</Text>
         </View>
-        <View style={styles.dateLine} />
+        <View style={[styles.dateLine, { backgroundColor: colors.dateLine }]} />
       </View>
     );
   }
@@ -338,12 +344,13 @@ export default function MessagesScreen() {
 
 function MessagesScreenContent() {
   const { t } = useTranslation();
-  const { userId, name, handle, avatarUri, isGuide } = useLocalSearchParams<{
+  const { userId, name, handle, avatarUri, isGuide, deleted } = useLocalSearchParams<{
     userId:     string;
     name?:      string;
     handle?:    string;
     avatarUri?: string;
     isGuide?:   string;
+    deleted?:   string;
   }>();
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
@@ -358,6 +365,9 @@ function MessagesScreenContent() {
     otherBorder: c.border,
     otherText: c.foreground,
     own: isDark ? c.primary : PURPLE,
+    dateLine: isDark ? 'rgba(200,184,232,0.10)' : c.border,
+    datePill: isDark ? 'rgba(200,184,232,0.07)' : c.card,
+    dateText: isDark ? MUTED : c.mutedForeground,
     bar: c.card,
     field: c.input,
     border: c.border,
@@ -366,7 +376,16 @@ function MessagesScreenContent() {
     c.lavender, c.foreground, c.mutedForeground, c.primary, c.input, c.border,
   ]);
   const { width: windowWidth } = useWindowDimensions();
-  const { markDmThreadRead, blockedIds, blockUser, unblockUser, dmThreads } = useApp();
+  const {
+    markDmThreadRead, blockedIds, blockUser, unblockUser, dmThreads, refreshDmThreads,
+    friends, refreshFriends, refreshSocialRelationships,
+  } = useApp();
+  const clearConversationMutation = useClearConversation();
+  const removeFriendMutation = useRemoveFriend();
+  const [blockStateOverride, setBlockStateOverride] = React.useState<boolean | null>(null);
+  const [deletedPartnerEvent, setDeletedPartner] = React.useState(false);
+  const deletedPartner = deletedPartnerEvent || deleted === 'true'
+    || dmThreads.some(thread => thread.partnerId === userId && thread.partnerDeleted === true);
   const { playStickerSound } = useSound();
   const { userId: myUserId } = useAuth();
 
@@ -376,6 +395,8 @@ function MessagesScreenContent() {
   );
   const [messages,      setMessages]      = useState<Message[]>(initialMessages);
   const [loading,       setLoading]       = useState(initialMessages.length === 0);
+  const [hasOlderMessages, setHasOlderMessages] = useState(false);
+  const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [sending,       setSending]       = useState(false);
   const [reactionEvents, setReactionEvents] = useState<SharedLumiEvent[]>([]);
   const [reactionPlaybackEpoch, setReactionPlaybackEpoch] = useState(0);
@@ -398,6 +419,9 @@ function MessagesScreenContent() {
     photoIdentityRef.current = photoIdentity;
     setMessages(initialMessages);
     setLoading(initialMessages.length === 0);
+    setHasOlderMessages(false);
+    setLoadingOlderMessages(false);
+    loadingOlderRef.current = false;
     lastMsgIdRef.current = initialMessages.at(-1)?.id ?? null;
     setError(null);
     setPhotoUri(null);
@@ -453,6 +477,7 @@ function MessagesScreenContent() {
       : null,
   );
   const flatRef         = useRef<FlatList<ListItem>>(null);
+  const loadingOlderRef = useRef(false);
   const prevSseRef      = useRef(false);
   const typingTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -461,12 +486,25 @@ function MessagesScreenContent() {
   const bottomPad = Platform.OS === 'web' ? 34 : Math.max(insets.bottom, 8);
   const contentWidth = Math.min(windowWidth, 680);
 
-  const partnerSubtitle = isGuide === 'true'
-    ? t('social.guide')
-    : handle ? `@${handle}` : null;
+  const partnerDisplayName = deletedPartner
+    ? t('social.deletedAccount', { defaultValue: 'Deleted account' })
+    : name ?? t('social.guide');
+  const partnerDisplayAvatar = deletedPartner ? '' : avatarUri;
+  const partnerSubtitle = deletedPartner
+    ? null
+    : isGuide === 'true'
+      ? t('social.guide')
+      : handle ? `@${handle}` : null;
 
-  const isBlocked = blockedIds.includes(userId ?? '');
+  const isBlocked = blockStateOverride ?? blockedIds.includes(userId ?? '');
+  const isFriend = friends.some(friend => friend.userId === userId);
   const inboxPreview = dmThreads.find(thread => thread.partnerId === userId)?.lastMessage ?? '';
+
+  useEffect(() => {
+    setBlockStateOverride(null);
+    setDeletedPartner(false);
+    void refreshDmThreads();
+  }, [userId, refreshDmThreads]);
 
   useEffect(() => {
     if (myUserId && userId) rememberDmConversation(myUserId, userId, messages);
@@ -475,18 +513,23 @@ function MessagesScreenContent() {
   const handleClearConversation = useCallback(() => {
     if (!userId) return;
     Alert.alert(
-      t('social.clearConversation'),
+      t('social.deleteChat', { defaultValue: 'Delete chat' }),
       t('social.clearConversationBody'),
       [
         { text: t('social.cancel'), style: 'cancel' },
         {
-          text: t('social.clear'),
+          text: t('social.deleteChat', { defaultValue: 'Delete chat' }),
           style: 'destructive',
           onPress: async () => {
             try {
-              await apiFetch(`/messages/conversation/${userId}`, { method: 'DELETE' });
+              await clearConversationMutation.mutateAsync({ partnerId: userId });
               forgetDmConversation(myUserId, userId);
               setMessages([]);
+              void refreshDmThreads();
+              Alert.alert(
+                t('social.deleteChat', { defaultValue: 'Delete chat' }),
+                'This conversation was removed from your chat list. The other participant still has their copy.',
+              );
             } catch {
               Alert.alert(t('social.error'), t('social.clearError'));
             }
@@ -494,24 +537,71 @@ function MessagesScreenContent() {
         },
       ],
     );
-  }, [t, userId, myUserId]);
+  }, [t, userId, myUserId, clearConversationMutation, refreshDmThreads]);
 
   function handleMoreMenu() {
     if (!userId) return;
-    const partnerName = name ?? t('social.thisUser');
+    const partnerName = partnerDisplayName;
     const blockOption = isBlocked
-      ? { text: t('social.unblockUser'), onPress: () => unblockUser(userId) }
+      ? {
+          text: t('social.unblockUser'),
+          onPress: async () => {
+            if (await unblockUser(userId)) setBlockStateOverride(false);
+          },
+        }
       : {
           text: t('social.blockUser'),
           style: 'destructive' as const,
-          onPress: () => { blockUser(userId).catch(() => null); safeBack(); },
+          onPress: () => {
+            Alert.alert(
+              t('publicProfile.blockUser', { defaultValue: t('social.blockUser') }),
+              `${t('publicProfile.blockBody', { name: partnerName, defaultValue: `${partnerName} will no longer be able to message you.` })}\n\n${t('social.blockHistoryNotice', { defaultValue: 'Your existing chat history will stay available until you delete it.' })}`,
+              [
+                { text: t('social.cancel'), style: 'cancel' },
+                {
+                  text: t('publicProfile.block', { defaultValue: t('social.blockUser') }),
+                  style: 'destructive',
+                  onPress: async () => {
+                    if (await blockUser(userId)) setBlockStateOverride(true);
+                  },
+                },
+              ],
+            );
+          },
         };
+    const removeFriendOption = isFriend && !deletedPartner
+      ? {
+          text: t('social.removeFriend', { defaultValue: 'Remove friend' }),
+          style: 'destructive' as const,
+          onPress: () => Alert.alert(
+            t('social.removeFriend', { defaultValue: 'Remove friend' }),
+            t('social.removeFriendBody', { defaultValue: 'This removes the friend connection only. It will not block them or delete your chat.' }),
+            [
+              { text: t('social.cancel'), style: 'cancel' },
+              {
+                text: t('social.removeFriend', { defaultValue: 'Remove friend' }),
+                style: 'destructive',
+                onPress: async () => {
+                  try {
+                    await removeFriendMutation.mutateAsync({ targetUserId: userId });
+                    await refreshFriends();
+                    Alert.alert(t('social.removeFriend', { defaultValue: 'Remove friend' }), t('social.removeFriendSuccess', { defaultValue: 'Friend removed. Your chat history is unchanged.' }));
+                  } catch {
+                    Alert.alert(t('social.error'), t('social.tryAgain'));
+                  }
+                },
+              },
+            ],
+          ),
+        }
+      : null;
     Alert.alert(
       partnerName,
       undefined,
       [
-        { text: t('social.clearConversation'), onPress: handleClearConversation },
-        blockOption,
+        ...(removeFriendOption ? [removeFriendOption] : []),
+        { text: t('social.deleteChat', { defaultValue: 'Delete chat' }), onPress: handleClearConversation },
+        ...(!deletedPartner ? [blockOption] : []),
         { text: t('social.cancel'), style: 'cancel' },
       ],
     );
@@ -561,10 +651,11 @@ function MessagesScreenContent() {
       const data = await fetchDmConversation(
         myUserId,
         userId,
-        () => apiFetch<Message[]>(`/messages/${userId}`),
+        () => apiFetch<Message[]>(`/messages/${userId}?limit=${CHAT_PAGE_SIZE}`),
       );
       if (identity !== photoIdentityRef.current) return;
       const msgs = [...(data ?? [])];
+      setHasOlderMessages(msgs.length === CHAT_PAGE_SIZE);
       if (!reactionHistoryReadyRef.current) {
         seedSharedReactionHistory(reactionTrackerRef.current, msgs);
         reactionHistoryReadyRef.current = true;
@@ -606,23 +697,7 @@ function MessagesScreenContent() {
 
       if (msgs.length > 0) lastMsgIdRef.current = msgs[msgs.length - 1].id;
 
-      setMessages(previous => {
-        const unchanged = previous.length === msgs.length
-          && previous.every((message, index) => {
-            const next = msgs[index];
-            return next
-              && message.id === next.id
-              && message.fromUserId === next.fromUserId
-              && message.toUserId === next.toUserId
-              && message.content === next.content
-              && message.imageUri === next.imageUri
-              && message.expression === next.expression
-              && message.isRead === next.isRead
-              && message.createdAt === next.createdAt
-              && message.isOwn === next.isOwn;
-          });
-        return unchanged ? previous : msgs;
-      });
+      setMessages(previous => mergeChatMessages(previous, msgs, true));
       markDmThreadRead(userId);
       markDmConversationOpened(myUserId, userId);
     } catch {
@@ -637,6 +712,34 @@ function MessagesScreenContent() {
 
   useEffect(() => { load(); }, [load]);
 
+  const loadOlderMessages = useCallback(async () => {
+    const oldest = messages[0];
+    if (!oldest || !userId || !myUserId || !hasOlderMessages || loadingOlderRef.current) return;
+    const identity = photoIdentityRef.current;
+    loadingOlderRef.current = true;
+    setLoadingOlderMessages(true);
+    try {
+      const query = new URLSearchParams({
+        limit: String(CHAT_PAGE_SIZE),
+        before: oldest.createdAt,
+        beforeId: oldest.id,
+      });
+      const older = await apiFetch<Message[]>(`/messages/${userId}?${query.toString()}`);
+      if (identity !== photoIdentityRef.current) return;
+      setMessages(previous => mergeChatMessages(previous, [...older, ...previous]));
+      setHasOlderMessages(older.length === CHAT_PAGE_SIZE);
+    } catch {
+      if (identity === photoIdentityRef.current) {
+        showToastGlobal(t('social.loadMessagesError'), 'warning');
+      }
+    } finally {
+      if (identity === photoIdentityRef.current) {
+        loadingOlderRef.current = false;
+        setLoadingOlderMessages(false);
+      }
+    }
+  }, [messages, userId, myUserId, hasOlderMessages, t]);
+
   // ── SSE: live push for incoming messages ──────────────────────────────────
   // Subscribe to our own userId channel — the server emits to it when anyone
   // sends us a message, so we can append without polling.
@@ -650,8 +753,26 @@ function MessagesScreenContent() {
         type: string; id?: string; fromUserId?: string; toUserId?: string;
         content?: string | null; expression?: string | null; imageUri?: string | null;
         isRead?: boolean; createdAt?: string; isOwn?: boolean;
-        messageId?: string; forEveryone?: boolean; partnerId?: string;
+        messageId?: string; forEveryone?: boolean; partnerId?: string; blocked?: boolean;
       };
+
+      if (ev?.type === 'partner_account_deleted' && ev.partnerId === userId) {
+        setDeletedPartner(true);
+        resetSharedPlayback();
+        void load();
+        return;
+      }
+
+      if (ev?.type === 'block_relationship_changed' && ev.partnerId === userId) {
+        setBlockStateOverride(ev.blocked === true);
+        void refreshSocialRelationships();
+        return;
+      }
+
+      if (ev?.type === 'friend_removed' && ev.partnerId === userId) {
+        void refreshSocialRelationships();
+        return;
+      }
 
       const ownSharedReaction = ev?.fromUserId === myUserId && ev.toUserId === userId
         && !!parseSharedReaction(ev.content) && !ev.imageUri && !ev.expression;
@@ -690,7 +811,7 @@ function MessagesScreenContent() {
         if (typingClearRef.current) clearTimeout(typingClearRef.current);
         typingClearRef.current = setTimeout(() => setPartnerTyping(false), 4000);
       }
-    }, [userId, myUserId, photoIdentity, markDmThreadRead, queueSticker, recordSharedReaction, resetSharedPlayback]),
+    }, [userId, myUserId, photoIdentity, markDmThreadRead, queueSticker, recordSharedReaction, resetSharedPlayback, load, refreshSocialRelationships]),
   );
 
   // Gap-fill: when SSE reconnects, fetch to fill the gap
@@ -746,7 +867,7 @@ function MessagesScreenContent() {
 
   const handleSend = useCallback(async () => {
     const content = input.trim();
-    if ((!content && !photoUri) || sending || loading || pickingPhoto || !userId) return;
+    if ((!content && !photoUri) || sending || loading || pickingPhoto || !userId || isBlocked || deletedPartner) return;
     const identity = photoIdentityRef.current;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setInput('');
@@ -798,10 +919,10 @@ function MessagesScreenContent() {
     } finally {
       if (identity === photoIdentityRef.current) setSending(false);
     }
-  }, [input, photoUri, sending, loading, pickingPhoto, userId, t, jumpToNewest]);
+  }, [input, photoUri, sending, loading, pickingPhoto, userId, t, jumpToNewest, isBlocked, deletedPartner]);
 
   const handleSendLumiReaction = useCallback(async (id: ChatEmoteId): Promise<boolean> => {
-    if (!myUserId || !userId || !getChatEmote(id) || isBlocked || sending || loading || pickingPhoto
+    if (!myUserId || !userId || !getChatEmote(id) || isBlocked || deletedPartner || sending || loading || pickingPhoto
       || reactionSendRef.current || !chatActiveRef.current
       || photoIdentity !== photoIdentityRef.current) return false;
     const controller = new AbortController();
@@ -833,7 +954,7 @@ function MessagesScreenContent() {
         if (photoIdentity === photoIdentityRef.current) setSending(false);
       }
     }
-  }, [myUserId, userId, isBlocked, sending, loading, pickingPhoto, photoIdentity, recordSharedReaction, t]);
+  }, [myUserId, userId, isBlocked, deletedPartner, sending, loading, pickingPhoto, photoIdentity, recordSharedReaction, t]);
 
   const handleDeleteMsg = useCallback(async (msg: Message) => {
     if (!msg.isOwn) return;
@@ -906,22 +1027,22 @@ function MessagesScreenContent() {
     // renders visually above that day's messages.
     return items.reverse();
   }, [messages, t]);
-  const partnerInitial = (name ?? 'G').charAt(0).toUpperCase();
+  const partnerInitial = partnerDisplayName.charAt(0).toUpperCase();
   const handleOpenPhoto = useCallback((uri: string) => setViewingPhoto(uri), []);
   const renderMessageItem = useCallback(({ item }: { item: ListItem }) => {
     return (
       <DmMessageCell
         item={item}
         partnerInitial={partnerInitial}
-        avatarUri={avatarUri}
-        name={name}
+        avatarUri={partnerDisplayAvatar}
+        name={partnerDisplayName}
         contentWidth={contentWidth}
         colors={th}
         onDelete={handleDeleteMsg}
         onOpenPhoto={handleOpenPhoto}
       />
     );
-  }, [avatarUri, contentWidth, handleDeleteMsg, handleOpenPhoto, name, partnerInitial, th]);
+  }, [partnerDisplayAvatar, contentWidth, handleDeleteMsg, handleOpenPhoto, partnerDisplayName, partnerInitial, th]);
   const handleOpenLumiPalette = useCallback(() => setShowPicker(false), []);
 
   const stickerCellWidth = Math.max(52, Math.min(72, Math.floor((contentWidth - 44) / 5)));
@@ -959,16 +1080,16 @@ function MessagesScreenContent() {
             <View style={styles.avatarWrap}>
               <View style={styles.avatarGlow} />
               <View style={styles.partnerAvatar}>
-                {avatarUri
-                  ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                {partnerDisplayAvatar
+                  ? <Image source={{ uri: partnerDisplayAvatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
                   : <LinearGradient colors={['rgba(107,78,232,0.75)', 'rgba(60,100,240,0.55)']} style={StyleSheet.absoluteFill} />
                 }
-                {!avatarUri && <Text style={styles.partnerInitial}>{partnerInitial}</Text>}
+                {!partnerDisplayAvatar && <Text style={styles.partnerInitial}>{partnerInitial}</Text>}
               </View>
             </View>
 
             <View style={{ flex: 1, minWidth: 0 }}>
-              <Text style={[styles.partnerName, { color: th.ink }]} numberOfLines={1}>{name ?? t('social.guide')}</Text>
+              <Text style={[styles.partnerName, { color: th.ink }]} numberOfLines={1}>{partnerDisplayName}</Text>
               {partnerSubtitle && (
                 <Text style={[styles.partnerSubtitle, { color: th.sub }]} numberOfLines={1}>{partnerSubtitle}</Text>
               )}
@@ -1014,11 +1135,18 @@ function MessagesScreenContent() {
             maxToRenderPerBatch={8}
             updateCellsBatchingPeriod={40}
             windowSize={7}
+            onEndReached={loadOlderMessages}
+            onEndReachedThreshold={0.35}
+            ListFooterComponent={loadingOlderMessages ? (
+              <View style={styles.olderMessagesLoading}>
+                <ActivityIndicator size="small" color={PURPLE} />
+              </View>
+            ) : null}
             ListHeaderComponent={partnerTyping ? (
               <View style={[styles.msgRow, styles.msgRowOther]}>
                 <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
-                  {avatarUri
-                    ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+                  {partnerDisplayAvatar
+                    ? <Image source={{ uri: partnerDisplayAvatar }} style={StyleSheet.absoluteFill} contentFit="cover" />
                     : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>
                   }
                 </View>
@@ -1107,9 +1235,9 @@ function MessagesScreenContent() {
           <View style={[styles.dock, { backgroundColor: th.bar, borderColor: th.border }]} pointerEvents="box-none">
           <View style={{ width: contentWidth, alignSelf: 'center', paddingTop: 4 }} pointerEvents="box-none">
             <ChatLumiCompanion key={`${photoIdentity}:${reactionPlaybackEpoch}`}
-              enabled={!loading && !isBlocked && !viewingPhoto && !pickingPhoto}
+              enabled={!loading && !isBlocked && !deletedPartner && !viewingPhoto && !pickingPhoto}
               busy={sending}
-              partnerName={name}
+              partnerName={partnerDisplayName}
               events={reactionEvents}
               onSendReaction={handleSendLumiReaction}
               externalPickerOpen={showPicker}
@@ -1117,6 +1245,16 @@ function MessagesScreenContent() {
           </View>
 
           {/* ── Input bar ─────────────────────────────────── */}
+          {isBlocked || deletedPartner ? (
+            <View style={{ marginHorizontal: 16, marginBottom: bottomPad + 8, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: th.border, backgroundColor: th.field }}>
+              <Text style={{ color: th.sub, textAlign: 'center', fontFamily: 'Satoshi-Medium', fontSize: 13, lineHeight: 19 }}>
+                {deletedPartner
+                  ? 'This account was deleted. Your retained conversation is read-only.'
+                  : t('social.blockedChatReadOnly', { defaultValue: 'You blocked this user. Your existing chat is still here; unblock them to send messages.' })}
+              </Text>
+            </View>
+          ) : (
+          <>
           {photoUri && <ChatPhotoDraft uri={photoUri} busy={sending} color={th.ink} onRemove={() => { setPhotoUri(null); uploadedPhotoRef.current = null; }} />}
            <View style={[styles.inputBar, { width: contentWidth, paddingBottom: kbOpen && Platform.OS !== 'web' ? 6 : bottomPad }]}>
             <TouchableOpacity
@@ -1197,6 +1335,8 @@ function MessagesScreenContent() {
               {!sending && <Icon name="send" size={18} color="#FFFFFF" />}
             </TouchableOpacity>
           </View>
+          </>
+          )}
           </View>
         </KeyboardAvoidingViewCompat>
       )}
@@ -1262,6 +1402,7 @@ const styles = StyleSheet.create({
   },
   openingStatus: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingTop: 5 },
   openingStatusText: { color: MUTED, fontSize: 12, fontFamily: 'Satoshi-Medium' },
+  olderMessagesLoading: { minHeight: 38, alignItems: 'center', justifyContent: 'center' },
 
   // ── Empty state
   emptyWrap:  { alignItems: 'center', paddingTop: 70, paddingHorizontal: 40 },
@@ -1283,12 +1424,12 @@ const styles = StyleSheet.create({
   bubbleAvatarSm:     { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginBottom: 2, flexShrink: 0 },
   bubbleAvatarSmText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
-  bubble:      { maxWidth: '82%', paddingHorizontal: 14, paddingTop: 9, paddingBottom: 7, borderRadius: 20, gap: 3, overflow: 'hidden' },
+  bubble:      { maxWidth: '82%', paddingHorizontal: 15, paddingTop: 10, paddingBottom: 8, borderRadius: 20, gap: 3, overflow: 'hidden' },
   bubblePhoto: { padding: 4, paddingTop: 4, paddingBottom: 6, borderRadius: 18, gap: 4 },
   photoCaption:{ paddingHorizontal: 8 },
   bubbleOwn:   { borderBottomRightRadius: 5 },
   bubbleOther: { borderBottomLeftRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: BORDER },
-  bubbleText:  { fontSize: 16, fontFamily: 'Satoshi-Medium', lineHeight: 23, letterSpacing: 0 },
+  bubbleText:  { fontSize: 16, fontFamily: 'Satoshi-Medium', lineHeight: 24, letterSpacing: 0.05 },
   bubbleTime:  { fontSize: 11, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end' },
 
   // ── Sticker row + card

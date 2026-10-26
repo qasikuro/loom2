@@ -12,5 +12,6 @@ export interface InterestSubscribersResponse {
   subscribers: InterestSubscriber[];
   total: number;
   activeTotal: number;
+  _ts: number;
   audienceCounts: InterestSubscribersResponseAudienceCounts;
 }

@@ -12,6 +12,8 @@ export interface FeatureFlags {
   music: boolean;
   shop: boolean;
   season: boolean;
+  shop_button: boolean;
+  season_button: boolean;
   campfire: boolean;
   guides: boolean;
   notifications: boolean;

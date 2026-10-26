@@ -35,6 +35,7 @@ import { ReportSheet } from '@/components/ReportSheet';
 import { WeatherWidget } from '@/components/WeatherWidget';
 import { FrameRing } from '@/components/profile/CharacterAuraHeader';
 import AuroraCloudBackdrop from '@/components/profile/AuroraCloudBackdrop';
+import { ProfileEffect } from '@/components/ProfileEffect';
 import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
 import { FounderProfileIntro } from '@/components/profile/FounderProfileIntro';
 import { MoonlitMuseIntro } from '@/components/profile/MoonlitMuseIntro';
@@ -180,6 +181,9 @@ function AuraBanner({
         end={{ x: 0.9, y: 1 }}
       />
       {activeEffect === 'effect_aurora_clouds' && <AuroraCloudBackdrop />}
+      {activeEffect && activeEffect !== 'effect_aurora_clouds' && activeEffect !== 'effect_moonlit_muse' && (
+        <ProfileEffect effectId={activeEffect} />
+      )}
       {/* Founder golden tint overlay */}
       {isFounder && (
         <LinearGradient
@@ -533,7 +537,7 @@ function AnimatedAvatarRing({
           <Text style={[styles.avatarInitial, { color: aura.accent }]}>{initial}</Text>
         )}
       </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
+      {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
     </View>
   );
 }
@@ -1388,6 +1392,7 @@ export default function UserProfileScreen() {
                   pathname: '/user-outfit',
                   params: {
                     outfitName:     profile.activeOutfit!.name,
+                    outfitId:       profile.activeOutfit!.id,
                     outfitDesc:     profile.activeOutfit!.description ?? '',
                     outfitStory:    profile.activeOutfit!.story ?? '',
                     outfitImage:    profile.activeOutfit!.imageUri ?? '',
@@ -1398,11 +1403,13 @@ export default function UserProfileScreen() {
                     authorName:     profile.name,
                     authorHandle:   profile.username ?? '',
                     authorBio:      profile.bio ?? '',
+                    authorAvatarUri: profile.avatarUri ?? '',
+                    authorIsSelf:   String(isSelf),
                     authorMood:     profile.mood ?? '',
                     authorTraits:   JSON.stringify(profile.traits),
                     allOutfitsJson: JSON.stringify([
-                      { name: profile.activeOutfit!.name, description: profile.activeOutfit!.description ?? '', story: profile.activeOutfit!.story ?? '', imageUri: profile.activeOutfit!.imageUri ?? '', tags: profile.activeOutfit!.tags, music: profile.activeOutfit!.music ?? null, date: '' },
-                      ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
+                      { id: profile.activeOutfit!.id, name: profile.activeOutfit!.name, description: profile.activeOutfit!.description ?? '', story: profile.activeOutfit!.story ?? '', imageUri: profile.activeOutfit!.imageUri ?? '', tags: profile.activeOutfit!.tags, music: profile.activeOutfit!.music ?? null, date: '' },
+                      ...outfits.map(o => ({ id: o.id, name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
                     ]),
                     initialIndex:   '0',
                   },
@@ -1493,13 +1500,14 @@ export default function UserProfileScreen() {
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       const _allList = [
-                         ...(profile.activeOutfit ? [{ name: profile.activeOutfit.name, description: profile.activeOutfit.description ?? '', story: profile.activeOutfit.story ?? '', imageUri: profile.activeOutfit.imageUri ?? '', tags: profile.activeOutfit.tags, music: profile.activeOutfit.music ?? null, date: '' }] : []),
-                         ...outfits.map(o => ({ name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
+                          ...(profile.activeOutfit ? [{ id: profile.activeOutfit.id, name: profile.activeOutfit.name, description: profile.activeOutfit.description ?? '', story: profile.activeOutfit.story ?? '', imageUri: profile.activeOutfit.imageUri ?? '', tags: profile.activeOutfit.tags, music: profile.activeOutfit.music ?? null, date: '' }] : []),
+                          ...outfits.map(o => ({ id: o.id, name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
                       ];
                       router.push({
                         pathname: '/user-outfit',
                         params: {
                           outfitName:     outfit.name,
+                           outfitId:       outfit.id,
                           outfitDesc:     outfit.description ?? '',
                           outfitStory:    outfit.story ?? '',
                           outfitImage:    outfit.imageUri ?? '',
@@ -1510,6 +1518,8 @@ export default function UserProfileScreen() {
                           authorName:     profile.name,
                           authorHandle:   profile.username ?? '',
                           authorBio:      profile.bio ?? '',
+                           authorAvatarUri: profile.avatarUri ?? '',
+                           authorIsSelf:   String(isSelf),
                           authorMood:     profile.mood ?? '',
                           authorTraits:   JSON.stringify(profile.traits),
                           allOutfitsJson: JSON.stringify(_allList),

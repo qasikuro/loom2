@@ -83,7 +83,7 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
     if (!waiting) return;
     // Keep the thumbnail clean through short buffers; only show feedback when
     // the player has genuinely stalled, and never flash a rotating spinner.
-    const indicator = setTimeout(() => setShowLoading(true), firstFrame ? 1200 : 900);
+    const indicator = setTimeout(() => setShowLoading(true), 1500);
     const timeout = setTimeout(() => setFailed(true), 20_000);
     return () => { clearTimeout(indicator); clearTimeout(timeout); };
   }, [waiting, firstFrame, identity]);
@@ -129,8 +129,8 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
           onError={() => { if (currentIdentity.current === identity) setFailed(true); }}
         />
       )}
-      {playing && (hasError || showLoading) && (
-        <View style={styles.feedback} pointerEvents="box-none">
+      {playing && (hasError || (showLoading && !firstFrame)) && (
+        <View style={hasError ? styles.feedback : styles.loadingRail} pointerEvents="box-none">
           {hasError ? (
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={t('reels.retryVideo', { defaultValue: 'Retry video' })}
               onPress={retry} style={[styles.retry, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -138,12 +138,9 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
               <Text style={[styles.retryText, { color: colors.foreground }]}>{t('reels.retryVideo', { defaultValue: 'Retry video' })}</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.loadingPill} accessibilityRole="progressbar"
+            <View style={styles.loadingTrack} accessibilityRole="progressbar"
               accessibilityLabel={t('reels.loadingVideo', { defaultValue: 'Loading video' })}>
-              <Icon name="video" size={14} color="#F4EEFF" />
-              <Text style={styles.loadingText}>
-                {t('reels.loadingVideo', { defaultValue: 'Loading video' })}
-              </Text>
+              <View style={styles.loadingFill} />
             </View>
           )}
         </View>
@@ -154,18 +151,9 @@ export function ReelVideo({ uri: originalUri, playing, muted, onPrepared }: {
 
 const styles = StyleSheet.create({
   feedback: { position: 'absolute', top: '48%', alignSelf: 'center', alignItems: 'center' },
-  loadingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 13,
-    paddingVertical: 9,
-    borderRadius: 18,
-    backgroundColor: 'rgba(8,6,24,0.74)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-  },
-  loadingText: { color: '#F4EEFF', fontFamily: 'Satoshi-Medium', fontSize: 12 },
+  loadingRail: { position: 'absolute', bottom: 108, left: 24, right: 24 },
+  loadingTrack: { height: 2, backgroundColor: 'rgba(255,255,255,0.16)', overflow: 'hidden' },
+  loadingFill: { height: 2, width: '28%', backgroundColor: 'rgba(255,255,255,0.6)' },
   retry: { borderWidth: 1, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 12, gap: 8, flexDirection: 'row', alignItems: 'center' },
   retryText: { fontFamily: 'Satoshi-Bold', fontSize: 13 },
 });

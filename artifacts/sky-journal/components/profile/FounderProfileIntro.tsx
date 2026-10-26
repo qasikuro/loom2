@@ -86,14 +86,14 @@ export function FounderProfileIntro({
     const entrance = Animated.sequence([
       Animated.timing(phase, {
         toValue: 1,
-        duration: 1200,
+        duration: 350,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.delay(3000),
+      Animated.delay(250),
       Animated.timing(phase, {
         toValue: 2,
-        duration: 1800,
+        duration: 900,
         easing: Easing.in(Easing.cubic),
         useNativeDriver: true,
       }),
@@ -102,35 +102,35 @@ export function FounderProfileIntro({
       Animated.sequence([
         Animated.timing(flap, {
           toValue: 1,
-          duration: 700,
+          duration: 350,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
         Animated.timing(flap, {
           toValue: 0,
-          duration: 700,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ]),
-      { iterations: 4 },
-    );
-    const lightShimmer = Animated.loop(
-      Animated.sequence([
-        Animated.timing(shimmer, {
-          toValue: 1,
-          duration: 1300,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(shimmer, {
-          toValue: 0,
-          duration: 1500,
+          duration: 350,
           easing: Easing.inOut(Easing.sin),
           useNativeDriver: true,
         }),
       ]),
       { iterations: 2 },
+    );
+    const lightShimmer = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shimmer, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+        Animated.timing(shimmer, {
+          toValue: 0,
+          duration: 800,
+          easing: Easing.inOut(Easing.sin),
+          useNativeDriver: true,
+        }),
+      ]),
+      { iterations: 1 },
     );
 
     entrance.start(({ finished }) => {
@@ -160,18 +160,18 @@ export function FounderProfileIntro({
   const plaqueHeight = Math.min(78, Math.max(64, stageWidth * 0.19));
 
   const overlayOpacity = phase.interpolate({
-    inputRange: [0, 0.18, 1.6, 2],
-    outputRange: [0, 1, 1, 0],
+    inputRange: [0, 0.86, 1, 1.08, 2],
+    outputRange: [0, 1, 1, 1, 0],
     extrapolate: 'clamp',
   });
   const backdropOpacity = phase.interpolate({
-    inputRange: [0, 0.18, 0.42, 1.6, 2],
-    outputRange: [0, 0.22, 0.88, 0.82, 0],
+    inputRange: [0, 0.86, 1, 1.08, 2],
+    outputRange: [0, 0.66, 0.82, 0.82, 0],
     extrapolate: 'clamp',
   });
   const artOpacity = phase.interpolate({
-    inputRange: [0, 0.16, 0.45, 1.55, 2],
-    outputRange: [0, 0.72, 1, 1, 0],
+    inputRange: [0, 0.86, 1, 1.08, 2],
+    outputRange: [0, 0.9, 1, 1, 0],
     extrapolate: 'clamp',
   });
   const artScale = phase.interpolate({

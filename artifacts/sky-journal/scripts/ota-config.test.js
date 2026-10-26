@@ -47,6 +47,19 @@ test('OTA is enabled for the existing Expo project', () => {
   assert.equal(manifest.devDependencies['expo-updates'], undefined);
 });
 
+test('the Guide journey stays visible before session management and profile settings', () => {
+  const source = fs.readFileSync(path.resolve(__dirname, '../components/profile/ProfileAboutSection.tsx'), 'utf8');
+  const journey = source.indexOf('>Guide journey<');
+  const upcoming = source.indexOf('<GuideSessionsManagementSection');
+  const profileDetails = source.indexOf('{guideProfileDetailsExpanded &&');
+  assert.ok(journey > -1 && journey < upcoming, 'Show the Guide journey before upcoming sessions');
+  assert.ok(upcoming < profileDetails, 'Do not hide the Guide journey inside profile details');
+  const visibleJourney = source.slice(journey, upcoming);
+  for (const route of ["router.push('/create-guide-tutorial')", "router.push('/create-guide-session')", 'router.push(`/guide/${user.id}`)']) {
+    assert.ok(visibleJourney.includes(route), `Keep ${route} accessible in the Guide journey`);
+  }
+});
+
 test('production EAS profiles retain the managed workflow override', () => {
   assert.equal(profiles.production.env.EXPO_UPDATES_WORKFLOW_OVERRIDE, 'managed');
   assert.equal(profiles['production-apk'].env.EXPO_UPDATES_WORKFLOW_OVERRIDE, 'managed');
@@ -97,21 +110,25 @@ test('manual OTA publishing uses the production build environment and channel', 
   assert.equal(command.env.CI, 'true');
 });
 
+test('manual OTA publishing can target only Android', () => {
+  const command = createProductionUpdateCommand('Crop fix', {}, 'android');
+  assert.deepEqual(command.args.slice(0, 6), [
+    'exec', 'eas', 'update',
+    '--channel', 'production',
+    '--platform',
+  ]);
+  assert.equal(command.args[6], 'android');
+});
+
+test('manual OTA publishing rejects unsupported platform targets', () => {
+  assert.throws(
+    () => createProductionUpdateCommand('Crop fix', {}, 'web'),
+    /--platform android, ios, or all/,
+  );
+});
+
 test('manual OTA publishing requires a nonempty release description', () => {
   for (const message of [undefined, '', '   ']) {
     assert.throws(() => createProductionUpdateCommand(message), /--message/);
-  }
-});
-
-test('the Guide journey stays visible before session management and profile settings', () => {
-  const source = fs.readFileSync(path.resolve(__dirname, '../components/profile/ProfileAboutSection.tsx'), 'utf8');
-  const journey = source.indexOf('>Guide journey<');
-  const upcoming = source.indexOf('<GuideSessionsManagementSection');
-  const profileDetails = source.indexOf('{guideProfileDetailsExpanded &&');
-  assert.ok(journey > -1 && journey < upcoming, 'Show the Guide journey before upcoming sessions');
-  assert.ok(upcoming < profileDetails, 'Do not hide the Guide journey inside profile details');
-  const visibleJourney = source.slice(journey, upcoming);
-  for (const route of ["router.push('/create-guide-tutorial')", "router.push('/create-guide-session')", 'router.push(`/guide/${user.id}`)']) {
-    assert.ok(visibleJourney.includes(route), `Keep ${route} accessible in the Guide journey`);
   }
 });

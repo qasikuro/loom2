@@ -79,6 +79,19 @@ const EFFECTS: Record<string, EffectDef> = {
   },
 };
 
+// Unknown shop effects still get a restrained animated treatment instead of
+// silently disappearing from public profiles before a dedicated design ships.
+const FALLBACK_EFFECT: EffectDef = {
+  particles:  ['✦', '✧', '⋆', '✧'],
+  count:      6,
+  mode:       'drift',
+  fontSize:   16,
+  colors:     ['#E8D8FF', '#C7B6FF', '#F5E9FF'],
+  speedMs:    [4200, 6800],
+  xSwingPct:  0.16,
+  yTravelPct: 0.30,
+};
+
 // ── Register custom effects from DB (called by AppContext) ────────────────────
 export function registerCustomEffect(id: string, def: EffectDef) {
   EFFECTS[id] = def;
@@ -281,8 +294,7 @@ export function ProfileEffect({ effectId }: { effectId: string | undefined }) {
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
 
   if (!effectId) return null;
-  const def = EFFECTS[effectId];
-  if (!def) return null;
+  const def = EFFECTS[effectId] ?? FALLBACK_EFFECT;
 
   return (
     <View

@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { Icon } from '@/components/Icon';
 import { SkyLoadingMark } from '@/components/SkyLoading';
-import { apiFetch } from '@/context/AppContext';
+import { apiFetch, useApp } from '@/context/AppContext';
 import type { StoryMusic } from '@/context/mappers';
 import { composeVideo, type ComposeVideoController } from '@/utils/composeVideo';
 import { calculateMusicSegment, normalizeVideoTrim } from '@/utils/videoEditing';
@@ -47,6 +47,7 @@ function inferMime(uri: string, mimeType?: string | null): string {
 export default function PostVideoScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { refreshFeed } = useApp();
   const [step, setStep] = useState<Step>('picking');
   const [metadata, setMetadata] = useState<VideoEditorMetadata | null>(null);
   const [editorValue, setEditorValue] = useState<VideoEditorValue | null>(null);
@@ -193,9 +194,10 @@ export default function PostVideoScreen() {
           music: embeddedMusic,
         }),
       });
+      void refreshFeed().catch(() => null);
       setStep('done');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setTimeout(() => router.replace('/(tabs)/discover' as never), 800);
+      setTimeout(() => router.replace('/(tabs)/reels' as never), 800);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('feature.video.publishFailed'));
       setStep('editing');

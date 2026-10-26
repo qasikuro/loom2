@@ -334,7 +334,7 @@ describe('applyDeletedMessage — SSE deleted_message event', () => {
   });
 });
 
-// ── applyPollResult — poll re-fetch replaces entire message list ───────────
+// ── applyPollResult — poll snapshots replace content but reuse stable rows ──
 
 describe('applyPollResult — poll re-fetch removes deleted messages', () => {
   it('replaces messages with the server response, dropping the deleted one', () => {
@@ -352,12 +352,23 @@ describe('applyPollResult — poll re-fetch removes deleted messages', () => {
     expect(next.messages).toHaveLength(0);
   });
 
-  it('returns the fetched object directly (full replacement, not a merge)', () => {
-    const prev    = makeRoom(['msg-1']);
-    const fetched = makeRoom(['msg-2', 'msg-3']);
+  it('reuses unchanged row objects and avoids state updates for an identical snapshot', () => {
+    const prev    = makeRoom(['msg-1', 'msg-2']);
+    const fetched = makeRoom(['msg-1', 'msg-2']);
     const next = applyPollResult(prev, fetched);
-    // The returned value IS the fetched object — no old messages survive
-    expect(next).toBe(fetched);
+    expect(next).toBe(prev);
+    expect(next.messages[0]).toBe(prev.messages[0]);
+    expect(next.messages[1]).toBe(prev.messages[1]);
+  });
+
+  it('uses the new snapshot while retaining the references of messages that did not change', () => {
+    const prev    = makeRoom(['msg-1', 'msg-2']);
+    const fetched = makeRoom(['msg-1', 'msg-2', 'msg-3']);
+    const next = applyPollResult(prev, fetched);
+    expect(next).not.toBe(fetched);
+    expect(next.messages.map(m => m.id)).toEqual(['msg-1', 'msg-2', 'msg-3']);
+    expect(next.messages[0]).toBe(prev.messages[0]);
+    expect(next.messages[1]).toBe(prev.messages[1]);
   });
 
   it('works correctly when prev is null (initial load)', () => {

@@ -29,16 +29,23 @@ const threads = [
 ];
 describe('mergeContacts', () => {
   const out = mergeContacts(friends, threads, new Set(['x']), false);
-  it('filters blocked, orders by recency, merges unread', () => {
-    expect(out.map(c => c.userId)).toEqual(['c', 'b', 'a']);
-    expect(out[1].unread).toBe(true);
+  it('keeps blocked histories without friendship, orders by recency, and merges unread', () => {
+    expect(out.map(c => c.userId)).toEqual(['x', 'c', 'b', 'a']);
+    expect(out[2].unread).toBe(true);
+    expect(out[0].isFriend).toBe(false);
   });
   it('gives conversation-only contacts no presence', () => {
     expect(out[0]).toMatchObject({ isFriend: false, online: false, lastSeenAt: null });
-    expect(out[2].online).toBe(true);
+    expect(out[3].online).toBe(true);
   });
   it('returns nothing when restricted', () => {
     expect(mergeContacts(friends, threads, new Set(), true)).toEqual([]);
+  });
+  it('replaces a stale cached friend identity when the account was deleted', () => {
+    const result = mergeContacts(friends, [{ ...threads[0], partnerDeleted: true }], new Set(), false);
+    expect(result.find(contact => contact.userId === 'b')).toMatchObject({
+      name: 'Deleted account', handle: null, avatar: null, isFriend: false, online: false,
+    });
   });
 });
 describe('matchesQuery', () => {

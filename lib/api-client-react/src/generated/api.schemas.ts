@@ -176,6 +176,30 @@ export interface LumiClearResult {
   success: boolean;
 }
 
+export interface ConversationClearResult {
+  cleared: boolean;
+}
+
+export interface FriendRemovalResult {
+  removed: boolean;
+}
+
+export interface BlockState {
+  blocked: boolean;
+}
+
+export type AccountDeletionResultStatus =
+  (typeof AccountDeletionResultStatus)[keyof typeof AccountDeletionResultStatus];
+
+export const AccountDeletionResultStatus = {
+  processing: "processing",
+} as const;
+
+export interface AccountDeletionResult {
+  deleted: boolean;
+  status: AccountDeletionResultStatus;
+}
+
 export interface ChatPhotoInput {
   /**
    * @minLength 1
@@ -260,6 +284,37 @@ export interface AdminApiStatus {
   checkedAt: string;
 }
 
+export interface CelestialWingsTestGrantInput {
+  requestId: string;
+}
+
+export interface CelestialWingsTestGrantStatus {
+  username: string;
+  name: string;
+  /** @minimum 0 */
+  starsBalance: number;
+  /** @minimum 0 */
+  grantsCount: number;
+}
+
+export type CelestialWingsTestGrantResultAmount =
+  (typeof CelestialWingsTestGrantResultAmount)[keyof typeof CelestialWingsTestGrantResultAmount];
+
+export const CelestialWingsTestGrantResultAmount = {
+  NUMBER_1000: 1000,
+} as const;
+
+export interface CelestialWingsTestGrantResult {
+  username: string;
+  amount: CelestialWingsTestGrantResultAmount;
+  granted: boolean;
+  alreadyGranted: boolean;
+  /** @minimum 0 */
+  starsBefore: number;
+  /** @minimum 0 */
+  starsAfter: number;
+}
+
 export interface MediaReadUrlsInput {
   /** @maxItems 100 */
   paths: string[];
@@ -331,6 +386,37 @@ export interface StorigamInterestResponse {
   ok: boolean;
 }
 
+export type StorigamFeedbackInputCategory =
+  (typeof StorigamFeedbackInputCategory)[keyof typeof StorigamFeedbackInputCategory];
+
+export const StorigamFeedbackInputCategory = {
+  idea: "idea",
+  bug: "bug",
+  other: "other",
+} as const;
+
+export interface StorigamFeedbackInput {
+  category: StorigamFeedbackInputCategory;
+  /** @maxLength 100 */
+  name?: string;
+  /** @maxLength 254 */
+  email?: string;
+  /**
+   * @minLength 10
+   * @maxLength 4000
+   */
+  message: string;
+  /**
+   * Hidden anti-spam field; must be left empty.
+   * @maxLength 100
+   */
+  website?: string;
+}
+
+export interface StorigamFeedbackResponse {
+  ok: boolean;
+}
+
 export interface InterestSubscriber {
   email: string;
   interests: string[];
@@ -350,6 +436,7 @@ export interface InterestSubscribersResponse {
   subscribers: InterestSubscriber[];
   total: number;
   activeTotal: number;
+  _ts: number;
   audienceCounts: InterestSubscribersResponseAudienceCounts;
 }
 
@@ -762,6 +849,7 @@ export const ShopItemCategory = {
   accent: "accent",
   theme: "theme",
   effect: "effect",
+  card_frame: "card_frame",
 } as const;
 
 export interface ShopItem {
@@ -770,6 +858,7 @@ export interface ShopItem {
   description: string;
   icon: string;
   category: ShopItemCategory;
+  founderOnly?: boolean;
   cost: ShopItemCost;
   seasonal?: boolean | null;
   seasonalLabel?: string | null;
@@ -1539,6 +1628,18 @@ export type ConfirmStorigamUnsubscribeParams = {
   token: string;
 };
 
+export type ListInterestSubscribersParams = {
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * @minimum 0
+   */
+  offset?: number;
+};
+
 export type GetAdminFeatureUsageParams = {
   /**
    * @minimum 1
@@ -1647,3 +1748,20 @@ export const GetAdminModerationRecordsKind = {
   ai: "ai",
   history: "history",
 } as const;
+
+export type GetChatConversationParams = {
+  /**
+   * Number of most recent messages to return (default 50, maximum 100).
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number;
+  /**
+   * ISO timestamp of the oldest message already loaded; use with beforeId for keyset pagination.
+   */
+  before?: string;
+  /**
+   * UUID of the oldest message already loaded.
+   */
+  beforeId?: string;
+};

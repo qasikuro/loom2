@@ -69,10 +69,12 @@ function MessagePhoto({ uri, width, maxHeight, onOpen, onLongPress, scope }: Pho
     <View style={[styles.messagePhoto, { width, height: Math.min(width / aspect, maxHeight ?? Infinity), backgroundColor: colors.muted }]}>
       {readUri && <ExpoImage
         key={attempt}
-        source={{ uri: readUri }}
+        source={{ uri: readUri, cacheKey: uri }}
         recyclingKey={JSON.stringify([scope, uri])}
         style={StyleSheet.absoluteFill}
         contentFit="contain"
+        cachePolicy="memory-disk"
+        priority="high"
         transition={120}
         accessibilityLabel="Shared photo"
         accessible={!onOpen}
