@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -67,8 +68,12 @@ const ITEM_ICON_MAP: Record<string, string> = {
   effect_fire:        '🔥',
   effect_leaves:      '🍃',
   effect_aurora_clouds: '✦',
+  effect_moonlit_muse: '✦',
   card_frame_founder_regalia: '◆',
 };
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const MOONLIT_MUSE_IMAGE = require('../assets/moonlit_muse.png');
 
 // Static fallback — effects only, shown instantly before API responds
 const FALLBACK_CATALOG: ShopItem[] = [
@@ -80,6 +85,7 @@ const FALLBACK_CATALOG: ShopItem[] = [
   { id: 'effect_hearts',    name: 'Floating Hearts',      description: 'Soft hearts rise gently from below, carrying warmth to every corner of your sky.',           icon: '💜', category: 'effect', cost: { stars: 0 } },
   { id: 'card_frame_founder_regalia', name: 'Founder Regalia', description: 'Gold filigree and violet crystals crowning your whole profile card. Included free with Founder.', icon: '◆', category: 'card_frame', cost: { stars: 0 }, founderOnly: true },
   { id: 'effect_aurora_clouds', name: 'Aurora Sanctuary', description: 'A living fantasy sky of violet auroras, drifting clouds, and distant mountains.', icon: '✦', category: 'effect', cost: { stars: 600 } },
+  { id: 'effect_moonlit_muse', name: 'Moonlit Muse', description: 'A gothic anime muse arrives in a moonlit burst of violet ribbons, petals, and starlight.', icon: '✦', category: 'effect', cost: { stars: 350 } },
 ];
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -246,7 +252,25 @@ function ItemPreview({ category, icon, color, itemId }: { category: string; colo
         </View>
       )}
 
-      {category === 'effect' && itemId !== 'effect_aurora_clouds' && (
+      {category === 'effect' && itemId === 'effect_moonlit_muse' && (
+        <View style={[pv.effectWrap, { position: 'relative', overflow: 'hidden', backgroundColor: '#10091D' }]}>
+          <LinearGradient
+            colors={['rgba(39,16,63,0.15)', 'rgba(118,58,171,0.4)', 'rgba(16,9,29,0.9)']}
+            style={StyleSheet.absoluteFill}
+            start={{ x: 0.1, y: 0 }}
+            end={{ x: 0.9, y: 1 }}
+          />
+          <Image
+            source={MOONLIT_MUSE_IMAGE}
+            resizeMode="contain"
+            style={{ position: 'absolute', width: 74, height: 74, bottom: -9, left: 4 }}
+          />
+          <Text style={[pv.effectIcon, { color: '#F6C7FF', position: 'absolute', right: 9, top: 9 }]}>✦</Text>
+          <Text style={[pv.effectIcon, { color: '#D8ABFF', position: 'absolute', left: 9, top: 11, fontSize: 11 }]}>♡</Text>
+        </View>
+      )}
+
+      {category === 'effect' && itemId !== 'effect_aurora_clouds' && itemId !== 'effect_moonlit_muse' && (
         <View style={[pv.effectWrap, { backgroundColor: `${color}0A` }]}>
           {['●', '✦', '●'].map((dot, i) => (
             <View

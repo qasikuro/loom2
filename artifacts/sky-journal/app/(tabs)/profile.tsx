@@ -16,6 +16,7 @@ import { apiFetch } from '@/context/AppContext';
 import { useTranslation } from 'react-i18next';
 
 import { CharacterAuraHeader } from '@/components/profile/CharacterAuraHeader';
+import { MoonlitMuseIntro } from '@/components/profile/MoonlitMuseIntro';
 import { GalleryLightboxModal } from '@/components/profile/GalleryLightboxModal';
 import { MoodPickerModal } from '@/components/profile/MoodPickerModal';
 import { OutfitDetailModal } from '@/components/profile/OutfitDetailModal';
@@ -91,11 +92,17 @@ export default function CharacterScreen() {
   const [savingTitle,     setSavingTitle]     = useState(false);
   const [selectedStarKey, setSelectedStarKey] = useState<string | null>(null);
   const [onboardingProgress, setOnboardingProgress] = useState<OnboardingProgress | null>(null);
+  const [moonlitMuseIntroVisible, setMoonlitMuseIntroVisible] = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (Platform.OS === 'web') return;
     void prepareNativeOutfitAudio().catch(() => null);
   }, []));
+
+  useFocusEffect(useCallback(() => {
+    setMoonlitMuseIntroVisible(activeEffect === 'effect_moonlit_muse');
+    return () => setMoonlitMuseIntroVisible(false);
+  }, [activeEffect]));
 
   useFocusEffect(useCallback(() => {
     if (!userId) return;
@@ -288,6 +295,12 @@ export default function CharacterScreen() {
         handleSignOut={handleSignOut} confirmingSignOut={confirmingSignOut}
         closeDrawer={closeDrawer} user={user} avatarSource={avatarSource} topPad={topPad} colors={colors}
       />
+      {moonlitMuseIntroVisible && (
+        <MoonlitMuseIntro
+          closeLabel={t('common.cancel')}
+          onComplete={() => setMoonlitMuseIntroVisible(false)}
+        />
+      )}
     </View>
   );
 }

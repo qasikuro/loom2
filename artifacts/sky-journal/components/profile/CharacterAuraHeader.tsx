@@ -574,7 +574,7 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
       ) : null}
       {activeEffect === 'effect_aurora_clouds' && animate
         ? <AuroraCloudBackdrop />
-        : activeEffect && animate
+        : activeEffect && activeEffect !== 'effect_moonlit_muse' && animate
           ? <ProfileEffect effectId={activeEffect} />
           : null}
       <Animated.View pointerEvents="none" style={{ position: 'absolute', top: paddingTop * 0.1, left: -screenW * 0.1, width: screenW * 1.2, height: screenW * 1.2, borderRadius: screenW * 0.6, backgroundColor: aura.accent, opacity: glow2Opacity, transform: [{ scale: glowScale }] }} />
