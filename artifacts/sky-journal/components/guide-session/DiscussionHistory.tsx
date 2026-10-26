@@ -1,7 +1,7 @@
 import { Icon } from '@/components/Icon';
 import type { SessionDiscussionMessage } from '@/utils/sessionDiscussion';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { type Colors, gs } from './shared';
 
 // useColors returns a new object on parent refreshes; compare the actual tokens
@@ -45,27 +45,39 @@ export const DiscussionHistory = React.memo(function DiscussionHistory({ message
   colors: Colors; loaded: boolean; failed: boolean; ended: boolean; scope: string;
   onReport: (id: string) => void;
 }) {
-  const list = useRef<ScrollView>(null);
+  const list = useRef<FlatList<SessionDiscussionMessage>>(null);
   const atBottom = useRef(true);
-  const frame = useRef<number | null>(null);
   const lastId = useRef<string | undefined>(undefined);
   const [unread, setUnread] = useState(false);
   const jump = useCallback((animated = true) => {
     atBottom.current = true;
     setUnread(false);
-    if (frame.current !== null) cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => {
-      list.current?.scrollToEnd({ animated });
-      frame.current = null;
-    });
+    list.current?.scrollToOffset({ offset: 0, animated });
   }, []);
+  const handleScroll = useCallback((event: {
+    nativeEvent: { contentOffset: { y: number } };
+  }) => {
+    const nextAtBottom = event.nativeEvent.contentOffset.y < 70;
+    const wasAtBottom = atBottom.current;
+    atBottom.current = nextAtBottom;
+    if (nextAtBottom && !wasAtBottom) setUnread(false);
+  }, []);
+  const newestFirst = React.useMemo(() => [...messages].reverse(), [messages]);
+  const renderMessage = useCallback(({ item }: { item: SessionDiscussionMessage }) => (
+    <MessageBubble
+      message={item}
+      own={item.userId === userId}
+      guide={item.userId === guideId}
+      colors={colors}
+      onReport={onReport}
+    />
+  ), [userId, guideId, colors, onReport]);
 
   useEffect(() => {
     atBottom.current = true;
     lastId.current = undefined;
     setUnread(false);
   }, [scope]);
-  useEffect(() => () => { if (frame.current !== null) cancelAnimationFrame(frame.current); }, []);
   useEffect(() => {
     const latest = messages.at(-1);
     if (latest && latest.id !== lastId.current && !atBottom.current) setUnread(true);
@@ -74,28 +86,40 @@ export const DiscussionHistory = React.memo(function DiscussionHistory({ message
 
   return (
     <View style={s.root}>
-      <ScrollView ref={list} nestedScrollEnabled keyboardShouldPersistTaps="handled"
+      <FlatList<SessionDiscussionMessage>
+        ref={list}
+        data={newestFirst}
+        inverted
+        maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 70 }}
+        keyExtractor={message => message.id}
+        renderItem={renderMessage}
+        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         style={s.messages} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}
-        onScroll={event => {
-          const e = event.nativeEvent;
-          atBottom.current = e.contentSize.height - e.contentOffset.y - e.layoutMeasurement.height < 70;
-          if (atBottom.current) setUnread(false);
-        }} scrollEventThrottle={32}
-        onLayout={() => { if (atBottom.current) jump(false); }}
-        onContentSizeChange={() => { if (atBottom.current) jump(false); }}>
-        {!loaded && !failed && [0, 1, 2].map(i => <View key={i}
-          style={[s.placeholder, { width: i === 1 ? '64%' : '82%', alignSelf: i === 1 ? 'flex-end' : 'flex-start', backgroundColor: colors.muted }]} />)}
-        {loaded && !messages.length && <View style={s.empty}>
-          <Icon name="message-circle" size={28} color={colors.primary} />
-          <Text style={[gs.cardTitle, { color: colors.foreground, textAlign: 'center' }]}>A place to learn together</Text>
-          <Text style={[gs.body, { color: colors.mutedForeground, textAlign: 'center' }]}>
-            {ended ? 'There are no recent messages to show.' : 'Say hello, share a thought, or discuss the current activity. Use Q&A for questions you want the guide to answer.'}
-          </Text>
-        </View>}
-        {messages.map(message => <MessageBubble key={message.id} message={message} own={message.userId === userId}
-          guide={message.userId === guideId} colors={colors} onReport={onReport} />)}
-      </ScrollView>
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
+        initialNumToRender={12}
+        maxToRenderPerBatch={8}
+        updateCellsBatchingPeriod={40}
+        windowSize={7}
+        ListEmptyComponent={
+          !loaded && !failed
+            ? <View style={s.empty}>
+                {[0, 1, 2].map(i => <View key={i}
+                  style={[s.placeholder, { width: i === 1 ? '64%' : '82%', alignSelf: i === 1 ? 'flex-end' : 'flex-start', backgroundColor: colors.muted }]} />)}
+              </View>
+            : loaded && !messages.length
+              ? <View style={s.empty}>
+                  <Icon name="message-circle" size={28} color={colors.primary} />
+                  <Text style={[gs.cardTitle, { color: colors.foreground, textAlign: 'center' }]}>A place to learn together</Text>
+                  <Text style={[gs.body, { color: colors.mutedForeground, textAlign: 'center' }]}>
+                    {ended ? 'There are no recent messages to show.' : 'Say hello, share a thought, or discuss the current activity. Use Q&A for questions you want the guide to answer.'}
+                  </Text>
+                </View>
+              : null
+        }
+      />
       {unread && <TouchableOpacity accessibilityRole="button" accessibilityLabel="Jump to latest messages"
         onPress={() => jump()} style={[s.latest, { backgroundColor: colors.primary }]}>
         <Icon name="arrow-down" size={14} color={colors.primaryForeground} />
@@ -111,7 +135,7 @@ export const DiscussionHistory = React.memo(function DiscussionHistory({ message
 const s = StyleSheet.create({
   root: { flex: 1, minHeight: 0 },
   messages: { flex: 1, minHeight: 0 },
-  content: { gap: 12, paddingVertical: 8 },
+  content: { flexGrow: 1, gap: 12, paddingVertical: 8 },
   placeholder: { height: 48, borderRadius: 16, marginBottom: 8 },
   empty: { alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 12, paddingVertical: 44 },
   bubble: { maxWidth: '90%', borderRadius: 17, padding: 12, minWidth: 90 },

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -101,7 +101,7 @@ const STARS = Array.from({ length: 48 }, (_, i) => ({
 
 // ── Campfire animation ────────────────────────────────────────────────────────
 
-function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
+const CampfireScene = React.memo(function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
   const { width } = useWindowDimensions();
 
   // Flame oscillation
@@ -135,16 +135,16 @@ function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
 
   useEffect(() => {
     const loop1 = Animated.loop(Animated.sequence([
-      Animated.timing(flame1, { toValue: 1, duration: 900, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      Animated.timing(flame1, { toValue: 0, duration: 1100, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(flame1, { toValue: 1, duration: 900, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(flame1, { toValue: 0, duration: 1100, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
     ]));
     const loop2 = Animated.loop(Animated.sequence([
-      Animated.timing(flame2, { toValue: 1, duration: 700, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      Animated.timing(flame2, { toValue: 0, duration: 1300, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(flame2, { toValue: 1, duration: 700, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(flame2, { toValue: 0, duration: 1300, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
     ]));
     const loop3 = Animated.loop(Animated.sequence([
-      Animated.timing(flame3, { toValue: 1, duration: 1200, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-      Animated.timing(flame3, { toValue: 0, duration: 800, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(flame3, { toValue: 1, duration: 1200, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
+      Animated.timing(flame3, { toValue: 0, duration: 800, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
     ]));
     loop1.start(); loop2.start(); loop3.start();
 
@@ -155,14 +155,14 @@ function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
       return Animated.loop(Animated.sequence([
         Animated.delay(delay),
         Animated.parallel([
-          Animated.timing(y, { toValue: 1, duration: dur, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
+          Animated.timing(y, { toValue: 1, duration: dur, useNativeDriver: true, isInteraction: false, easing: Easing.out(Easing.quad) }),
           Animated.sequence([
-            Animated.timing(o, { toValue: 1, duration: dur * 0.2, useNativeDriver: true }),
-            Animated.timing(o, { toValue: 0, duration: dur * 0.8, useNativeDriver: true }),
+            Animated.timing(o, { toValue: 1, duration: dur * 0.2, useNativeDriver: true, isInteraction: false }),
+            Animated.timing(o, { toValue: 0, duration: dur * 0.8, useNativeDriver: true, isInteraction: false }),
           ]),
           Animated.sequence([
-            Animated.timing(x, { toValue: (i % 2 === 0 ? 1 : -1) * 0.5, duration: dur * 0.5, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
-            Animated.timing(x, { toValue: 0, duration: dur * 0.5, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+            Animated.timing(x, { toValue: (i % 2 === 0 ? 1 : -1) * 0.5, duration: dur * 0.5, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
+            Animated.timing(x, { toValue: 0, duration: dur * 0.5, useNativeDriver: true, isInteraction: false, easing: Easing.inOut(Easing.sin) }),
           ]),
         ]),
         Animated.parallel([
@@ -273,32 +273,21 @@ function CampfireScene({ ember, glow }: { ember: string; glow: string }) {
       }} />
     </View>
   );
-}
+}, (previous, next) => previous.ember === next.ember && previous.glow === next.glow);
 
 // ── Message bubble ────────────────────────────────────────────────────────────
 
-function MessageRow({ msg, palette, opacity, onReport }: {
+const MessageRow = React.memo(function MessageRow({ msg, palette, onReport }: {
   msg:      CampfireMsg;
   palette:  typeof MOOD_PALETTE.default;
-  opacity:  number;
   onReport: (msg: CampfireMsg) => void;
 }) {
   const { t } = useTranslation();
-  const fadeIn  = useRef(new Animated.Value(0)).current;
-  const slideUp = useRef(new Animated.Value(12)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeIn,  { toValue: 1, duration: 360, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-      Animated.timing(slideUp, { toValue: 0, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
-    ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (msg.expression) {
     const expr = getExpr(msg.expression);
     return (
-      <Animated.View style={[mb.exprWrap, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
+      <View style={mb.exprWrap}>
         <Text style={mb.exprSymbol}>{expr.symbol}</Text>
         <View style={mb.exprAuthorRow}>
           <Text style={[mb.exprAuthor, { color: `${palette.ember}88` }]}>
@@ -322,17 +311,12 @@ function MessageRow({ msg, palette, opacity, onReport }: {
             />
           )}
         </View>
-      </Animated.View>
+      </View>
     );
   }
 
   return (
-    <View style={{ opacity }}>
-    <Animated.View style={[
-      mb.row,
-      msg.isMine && mb.rowMine,
-      { opacity: fadeIn, transform: [{ translateY: slideUp }] },
-    ]}>
+    <View style={[mb.row, msg.isMine && mb.rowMine]}>
       {!msg.isMine && (
         <View style={mb.authorRow}>
           <Text style={[mb.author, { color: `${palette.ember}88` }]}>{msg.authorName}</Text>
@@ -367,10 +351,9 @@ function MessageRow({ msg, palette, opacity, onReport }: {
           {msg.content}
         </Text>
       </TouchableOpacity>
-    </Animated.View>
     </View>
   );
-}
+}, (previous, next) => previous.msg === next.msg && previous.palette === next.palette && previous.onReport === next.onReport);
 
 const mb = StyleSheet.create({
   row:         { marginBottom: 10, maxWidth: '78%' },
@@ -513,15 +496,36 @@ export function applyDeletedMessage(
 }
 
 /**
- * Apply a full-room poll result: the server response is the source of truth, so
- * the entire message list is replaced.  Messages absent from the response
- * (e.g. deleted server-side) are automatically removed.
+ * Apply the full-room server snapshot, dropping deleted messages while reusing
+ * unchanged rows so a fallback poll does not redraw the whole conversation.
  */
 export function applyPollResult(
-  _prev: RoomData | null,
+  prev: RoomData | null,
   fetched: RoomData,
 ): RoomData {
-  return fetched;
+  if (!prev) return fetched;
+  const previousById = new Map(prev.messages.map(message => [message.id, message]));
+  const nextMessages = fetched.messages.map(message => {
+    const old = previousById.get(message.id);
+    return old
+      && old.userId === message.userId
+      && old.authorName === message.authorName
+      && old.content === message.content
+      && old.expression === message.expression
+      && old.createdAt === message.createdAt
+      && old.isMine === message.isMine
+      && old.isFounder === message.isFounder
+      && old.isBetaTester === message.isBetaTester
+      ? old : message;
+  });
+  const messagesUnchanged = nextMessages.length === prev.messages.length
+    && nextMessages.every((message, index) => message === prev.messages[index]);
+  const roomUnchanged = prev.room.id === fetched.room.id
+    && prev.room.name === fetched.room.name
+    && prev.room.mood === fetched.room.mood
+    && prev.room.isPreset === fetched.room.isPreset;
+  if (messagesUnchanged && roomUnchanged && prev.soulCount === fetched.soulCount) return prev;
+  return { ...fetched, messages: messagesUnchanged ? prev.messages : nextMessages };
 }
 
 /** The raw message shape carried by a `new_message` SSE event. */
@@ -593,13 +597,45 @@ export default function CampfireRoom() {
   }[]>([]);
   const [presenceLoading, setPresenceLoading] = useState(false);
 
-  const scrollRef      = useRef<ScrollView>(null);
+  const scrollRef      = useRef<FlatList<CampfireMsg>>(null);
   const pollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastIdRef      = useRef<string>('');
   const prevSseRef     = useRef(false);
+  const atLatestRef    = useRef(true);
+  const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   // L-4: Collect pending scrollToEnd timer handles so they can all be
   // cancelled if the component unmounts before the 80 ms fires.
   const scrollTimerRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  const scheduleScrollToLatest = useCallback((animated = true, force = false) => {
+    if (force) {
+      atLatestRef.current = true;
+      setHasUnreadMessages(false);
+    } else if (!atLatestRef.current) {
+      setHasUnreadMessages(true);
+      return;
+    }
+    const timer = setTimeout(() => {
+      scrollTimerRef.current.delete(timer);
+      if (atLatestRef.current) scrollRef.current?.scrollToEnd({ animated });
+    }, 80);
+    scrollTimerRef.current.add(timer);
+  }, []);
+  const handleMessageScroll = useCallback((event: { nativeEvent: {
+    contentSize: { height: number }; contentOffset: { y: number }; layoutMeasurement: { height: number };
+  } }) => {
+    const { contentSize, contentOffset, layoutMeasurement } = event.nativeEvent;
+    const atLatest = contentSize.height - contentOffset.y - layoutMeasurement.height < 96;
+    const wasAtLatest = atLatestRef.current;
+    atLatestRef.current = atLatest;
+    if (atLatest && !wasAtLatest) setHasUnreadMessages(false);
+  }, []);
+  const jumpToLatest = useCallback(() => scheduleScrollToLatest(true, true), [scheduleScrollToLatest]);
+  useEffect(() => {
+    lastIdRef.current = '';
+    atLatestRef.current = true;
+    setHasUnreadMessages(false);
+  }, [roomId]);
 
   const palette = data ? (MOOD_PALETTE[data.room.mood] ?? MOOD_PALETTE.default) : MOOD_PALETTE.default;
   const topPad = Platform.OS === 'web' ? 67 : insets.top;
@@ -621,14 +657,13 @@ export default function CampfireRoom() {
         lastIdRef.current = newestId;
         setData(prev => applyPollResult(prev, res));
         if (hasNew) {
-          const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
-          scrollTimerRef.current.add(t);
+          scheduleScrollToLatest(true);
         }
       }
     } finally {
       if (!silent) setLoading(false);
     }
-  }, [roomId]);
+  }, [roomId, scheduleScrollToLatest]);
 
   useEffect(() => {
     fetchData();
@@ -665,11 +700,7 @@ export default function CampfireRoom() {
         if (!updater) return;
         setData(updater);
         lastIdRef.current = m.id;
-        // L-4: Store the timeout handle so it can be cancelled if the component
-        // unmounts in the 80 ms window (prevents no-op on unmounted ref +
-        // potential crash on older Hermes versions).
-        const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
-        scrollTimerRef.current.add(t);
+        scheduleScrollToLatest(true);
         return;
       }
 
@@ -682,7 +713,7 @@ export default function CampfireRoom() {
         setData(prev => prev ? { ...prev, soulCount: payload.soulCount! } : prev);
         return;
       }
-    }, [myUserId, blockedIds]),
+    }, [myUserId, blockedIds, scheduleScrollToLatest]),
   );
 
   // Gap-fill: refetch when SSE reconnects
@@ -741,8 +772,7 @@ export default function CampfireRoom() {
       return { ...prev, messages: [...prev.messages, msg] };
     });
     lastIdRef.current = msg.id;
-    const t = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
-    scrollTimerRef.current.add(t);
+    scheduleScrollToLatest(true, true);
   }
 
   async function sendText() {
@@ -780,8 +810,14 @@ export default function CampfireRoom() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  const messages = (data?.messages ?? []).filter(m => !blockedIds.includes(m.userId));
-  const totalMsg = messages.length;
+  const blockedSet = useMemo(() => new Set(blockedIds), [blockedIds]);
+  const messages = useMemo(
+    () => (data?.messages ?? []).filter(message => !blockedSet.has(message.userId)),
+    [data?.messages, blockedSet],
+  );
+  const renderMessage = useCallback(({ item }: { item: CampfireMsg }) => (
+    <MessageRow msg={item} palette={palette} onReport={handleReport} />
+  ), [palette, handleReport]);
 
   if (!roomId) {
     return (
@@ -878,31 +914,41 @@ export default function CampfireRoom() {
         {loading ? (
           <SkyLoadingOverlay message={t('social.tendingFire')} />
         ) : (
-           <ScrollView
+          <FlatList<CampfireMsg>
             ref={scrollRef}
             style={R.scroll}
-             contentContainerStyle={[R.scrollContent, { paddingBottom: composerReserve + 16 }]}
-            showsVerticalScrollIndicator={false}
-             keyboardShouldPersistTaps="handled"
-             keyboardDismissMode="interactive"
-            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
-          >
-            {messages.length === 0 ? (
+            contentContainerStyle={[R.scrollContent, { paddingBottom: composerReserve + 16 }]}
+            data={messages}
+            keyExtractor={message => message.id}
+            renderItem={renderMessage}
+            ListEmptyComponent={
               <View style={R.empty}>
                 <Text style={[R.emptyIcon, { color: `${palette.ember}60` }]}>✦</Text>
                 <Text style={[R.emptyText, { color: `${palette.ember}80` }]}>The fire is quiet…{'\n'}be the first to whisper</Text>
               </View>
-            ) : (
-              messages.map((msg, idx) => {
-                // Opacity: newest (bottom) = 1.0, fades as messages go up
-                const fromBottom = totalMsg - 1 - idx;
-                const opacity = Math.max(0.22, 1 - (fromBottom * 0.085));
-                return (
-                  <MessageRow key={msg.id} msg={msg} palette={palette} opacity={opacity} onReport={handleReport} />
-                );
-              })
-            )}
-          </ScrollView>
+            }
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            scrollEventThrottle={32}
+            onScroll={handleMessageScroll}
+            scrollEnabled={messages.length > 0}
+            initialNumToRender={12}
+            maxToRenderPerBatch={8}
+            updateCellsBatchingPeriod={40}
+            windowSize={7}
+          />
+        )}
+        {hasUnreadMessages && !loading && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Jump to new messages"
+            onPress={jumpToLatest}
+            style={[R.newMessageButton, { bottom: composerReserve + 10, borderColor: `${palette.ember}55`, backgroundColor: `${palette.sky[0]}EE` }]}
+          >
+            <Icon name="arrow-down" size={14} color={palette.ember} />
+            <Text style={[R.newMessageText, { color: palette.text }]}>New whispers</Text>
+          </TouchableOpacity>
         )}
 
         {/* Expressions + input */}
@@ -1054,11 +1100,17 @@ const R = StyleSheet.create({
   loadingText: { fontSize: 14, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
 
   scroll:        { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 16, gap: 0 },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 16, paddingTop: 16, gap: 0 },
 
   empty:     { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60, gap: 10 },
   emptyIcon: { fontSize: 32 },
   emptyText: { fontSize: 13, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', textAlign: 'center', lineHeight: 20 },
+  newMessageButton: {
+    position: 'absolute', alignSelf: 'center', zIndex: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderWidth: 1,
+  },
+  newMessageText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
   bottomArea: {
     backgroundColor: 'rgba(4,2,16,0.88)',

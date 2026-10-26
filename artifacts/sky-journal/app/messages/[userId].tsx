@@ -216,6 +216,116 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, textColor
   );
 }
 
+type DmRowColors = {
+  own: string;
+  other: string;
+  otherBorder: string;
+  otherText: string;
+  sub: string;
+};
+
+type DmMessageCellProps = {
+  item: ListItem;
+  partnerInitial: string;
+  avatarUri?: string;
+  name?: string;
+  contentWidth: number;
+  colors: DmRowColors;
+  onDelete: (message: Message) => void;
+  onOpenPhoto: (uri: string) => void;
+};
+
+const DmMessageCell = React.memo(function DmMessageCell({
+  item, partnerInitial, avatarUri, name, contentWidth, colors, onDelete, onOpenPhoto,
+}: DmMessageCellProps) {
+  if (item.type === 'date') {
+    return (
+      <View style={styles.dateSep}>
+        <View style={styles.dateLine} />
+        <View style={styles.datePill}>
+          <Text style={styles.dateText}>{item.date}</Text>
+        </View>
+        <View style={styles.dateLine} />
+      </View>
+    );
+  }
+
+  const msg = item.msg;
+  const deleteMessage = () => onDelete(msg);
+  if (msg.expression) {
+    return (
+      <StickerBubble
+        msg={msg}
+        partnerInitial={partnerInitial}
+        avatarUri={avatarUri}
+        primaryColor={PURPLE}
+        textColor={colors.sub}
+        onLongPress={deleteMessage}
+      />
+    );
+  }
+  return (
+    <View style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
+      {!msg.isOwn && (
+        <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
+          {avatarUri
+            ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
+            : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>}
+        </View>
+      )}
+      <TouchableOpacity
+        style={[
+          styles.bubble,
+          msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
+          msg.isOwn ? { backgroundColor: colors.own } : { backgroundColor: colors.other, borderColor: colors.otherBorder },
+          msg.imageUri && styles.bubblePhoto,
+        ]}
+        onLongPress={deleteMessage}
+        onPress={msg.imageUri ? () => onOpenPhoto(msg.imageUri!) : undefined}
+        accessibilityRole={msg.imageUri ? 'imagebutton' : undefined}
+        accessible={!msg.imageUri}
+        accessibilityLabel={msg.imageUri
+          ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a photo${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
+          : `${msg.isOwn ? 'You' : (name ?? 'Partner')}: ${msg.content ?? ''}, ${fmtTime(msg.createdAt)}`}
+        accessibilityHint={msg.imageUri ? 'Opens the photo. Hold for message options.' : msg.isOwn ? 'Hold for message options.' : undefined}
+        activeOpacity={0.85}
+        delayLongPress={350}
+      >
+        {msg.imageUri && (
+          <ChatMessagePhoto
+            uri={msg.imageUri}
+            width={Math.min(contentWidth * 0.62, 280)}
+            onOpen={() => onOpenPhoto(msg.imageUri!)}
+            onLongPress={deleteMessage}
+          />
+        )}
+        {!!msg.content && (
+          <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : colors.otherText }]}>
+            {msg.content}
+          </Text>
+        )}
+        <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : colors.sub }]}>
+          {fmtTime(msg.createdAt)}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}, (previous, next) => {
+  const sameItem = previous.item.type === next.item.type
+    && previous.item.key === next.item.key
+    && (previous.item.type === 'date'
+      ? next.item.type === 'date' && previous.item.date === next.item.date
+      : next.item.type === 'msg' && previous.item.msg === next.item.msg);
+  return sameItem
+    && previous.partnerInitial === next.partnerInitial
+    && previous.avatarUri === next.avatarUri
+    && previous.name === next.name
+    && previous.contentWidth === next.contentWidth
+    && previous.colors === next.colors
+    && previous.onDelete === next.onDelete
+    && previous.onOpenPhoto === next.onOpenPhoto;
+});
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function MessagesScreen() {
   // Keyboard-controller provider scoped to this screen's content only.
@@ -797,74 +907,21 @@ function MessagesScreenContent() {
     return items.reverse();
   }, [messages, t]);
   const partnerInitial = (name ?? 'G').charAt(0).toUpperCase();
+  const handleOpenPhoto = useCallback((uri: string) => setViewingPhoto(uri), []);
   const renderMessageItem = useCallback(({ item }: { item: ListItem }) => {
-    if (item.type === 'date') {
-      return (
-        <View style={styles.dateSep}>
-          <View style={styles.dateLine} />
-          <View style={styles.datePill}>
-            <Text style={styles.dateText}>{item.date}</Text>
-          </View>
-          <View style={styles.dateLine} />
-        </View>
-      );
-    }
-    const msg = item.msg;
-    if (msg.expression) {
-      return (
-        <StickerBubble
-          msg={msg}
-          partnerInitial={partnerInitial}
-          avatarUri={avatarUri}
-          primaryColor={PURPLE}
-          textColor={th.sub}
-          onLongPress={() => handleDeleteMsg(msg)}
-        />
-      );
-    }
     return (
-      <View style={[styles.msgRow, msg.isOwn ? styles.msgRowOwn : styles.msgRowOther]}>
-        {!msg.isOwn && (
-          <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>
-            {avatarUri
-              ? <Image source={{ uri: avatarUri }} style={StyleSheet.absoluteFill} contentFit="cover" />
-              : <Text style={[styles.bubbleAvatarSmText, { color: PURPLE }]}>{partnerInitial}</Text>}
-          </View>
-        )}
-        <TouchableOpacity
-          style={[
-            styles.bubble,
-            msg.isOwn ? styles.bubbleOwn : styles.bubbleOther,
-            msg.isOwn ? { backgroundColor: th.own } : { backgroundColor: th.other, borderColor: th.otherBorder },
-            msg.imageUri && styles.bubblePhoto,
-          ]}
-          onLongPress={() => handleDeleteMsg(msg)}
-          onPress={() => { if (msg.imageUri) setViewingPhoto(msg.imageUri); }}
-          accessibilityRole={msg.imageUri ? 'imagebutton' : undefined}
-          accessible={!msg.imageUri}
-          accessibilityLabel={msg.imageUri
-            ? `${msg.isOwn ? 'You' : (name ?? 'Partner')} sent a photo${msg.content ? `: ${msg.content}` : ''}, ${fmtTime(msg.createdAt)}`
-            : `${msg.isOwn ? 'You' : (name ?? 'Partner')}: ${msg.content ?? ''}, ${fmtTime(msg.createdAt)}`}
-          accessibilityHint={msg.imageUri ? 'Opens the photo. Hold for message options.' : msg.isOwn ? 'Hold for message options.' : undefined}
-          activeOpacity={0.85}
-          delayLongPress={350}
-        >
-          {msg.imageUri && (
-            <ChatMessagePhoto uri={msg.imageUri} width={Math.min(contentWidth * 0.62, 280)}
-              onOpen={() => setViewingPhoto(msg.imageUri!)} onLongPress={() => handleDeleteMsg(msg)} />
-          )}
-          {!!msg.content && (
-            <Text maxFontSizeMultiplier={1.35} style={[styles.bubbleText, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? '#FBF9FF' : th.otherText }]}>
-              {msg.content}
-            </Text>
-          )}
-          <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : th.sub }]}>
-            {fmtTime(msg.createdAt)}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <DmMessageCell
+        item={item}
+        partnerInitial={partnerInitial}
+        avatarUri={avatarUri}
+        name={name}
+        contentWidth={contentWidth}
+        colors={th}
+        onDelete={handleDeleteMsg}
+        onOpenPhoto={handleOpenPhoto}
+      />
     );
-  }, [avatarUri, contentWidth, handleDeleteMsg, name, partnerInitial, th, t]);
+  }, [avatarUri, contentWidth, handleDeleteMsg, handleOpenPhoto, name, partnerInitial, th]);
   const handleOpenLumiPalette = useCallback(() => setShowPicker(false), []);
 
   const stickerCellWidth = Math.max(52, Math.min(72, Math.floor((contentWidth - 44) / 5)));
@@ -949,10 +1006,14 @@ function MessagesScreenContent() {
             maintainVisibleContentPosition={{ minIndexForVisible: 0, autoscrollToTopThreshold: 60 }}
             data={listData}
             keyExtractor={item => item.key}
-             contentContainerStyle={[styles.listPad, { width: contentWidth, alignSelf: 'center', paddingTop: 14, paddingBottom: 12 }]}
+            contentContainerStyle={[styles.listPad, { width: contentWidth, alignSelf: 'center', paddingTop: 14, paddingBottom: 12 }]}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            initialNumToRender={12}
+            maxToRenderPerBatch={8}
+            updateCellsBatchingPeriod={40}
+            windowSize={7}
             ListHeaderComponent={partnerTyping ? (
               <View style={[styles.msgRow, styles.msgRowOther]}>
                 <View style={[styles.bubbleAvatarSm, { backgroundColor: 'rgba(107,78,232,0.18)', borderColor: 'rgba(107,78,232,0.30)', overflow: 'hidden' }]}>

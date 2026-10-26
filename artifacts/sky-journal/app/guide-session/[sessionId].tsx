@@ -597,28 +597,38 @@ export default function GuideSessionScreen() {
   return (
     <KeyboardAvoidingView style={[s.root, { backgroundColor: colors.background }]} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
       <View style={{ paddingTop: top, backgroundColor: colors.background }}>{header}</View>
-      <ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode={inChat ? 'none' : 'on-drag'} style={{ flex: 1 }}
-        scrollEnabled={!inChat}
-        contentContainerStyle={[s.content, { paddingBottom: bottom + (showBar ? 96 : 24) }, inChat && { flex: 1, paddingBottom: bottom + 8 }]}>
-        <Animated.View style={[{ opacity: fade }, inChat && { flex: 1, minHeight: 0 }]}>
-          {showRoom ? (
-            <>
-              {refreshBanner}
-              {tab === 'activity' && shortcutRow}
-              {roomPanels.filter(panel => visitedTabs.has(panel.key)).map(panel => (
-                <View key={`${userId}:${session.id}:${panel.key}`} pointerEvents={tab === panel.key ? 'auto' : 'none'} style={tab === panel.key ? undefined : s.hidden}>
-                  {panel.body}
-                </View>
-              ))}
-              {/* Kept mounted so unsent drafts survive tab switches; disabled (no requests) while hidden. */}
-              <View testID="session-discussion-container" pointerEvents={inChat ? 'auto' : 'none'} style={inChat ? { flex: 1, minHeight: 0 } : s.hidden}>
-                <SessionDiscussionPanel roomId={session.roomId} sessionId={session.id} guideId={session.guideId} phase={phase} colors={colors}
-                  enabled={inChat && showRoom} />
-              </View>
-            </>
-          ) : overview}
-        </Animated.View>
-      </ScrollView>
+      <View style={{ flex: 1, minHeight: 0 }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          style={[{ flex: 1 }, inChat && s.hidden]}
+          contentContainerStyle={[s.content, { paddingBottom: bottom + (showBar ? 96 : 24) }]}
+        >
+          <Animated.View style={{ opacity: fade }}>
+            {showRoom ? (
+              <>
+                {refreshBanner}
+                {tab === 'activity' && shortcutRow}
+                {roomPanels.filter(panel => visitedTabs.has(panel.key)).map(panel => (
+                  <View key={`${userId}:${session.id}:${panel.key}`} pointerEvents={tab === panel.key ? 'auto' : 'none'} style={tab === panel.key ? undefined : s.hidden}>
+                    {panel.body}
+                  </View>
+                ))}
+              </>
+            ) : overview}
+          </Animated.View>
+        </ScrollView>
+        {/* Kept mounted outside the outer ScrollView so FlatList can virtualize
+            discussion messages and preserve drafts when the user changes tabs. */}
+        <View
+          testID="session-discussion-container"
+          pointerEvents={inChat ? 'auto' : 'none'}
+          style={inChat ? { flex: 1, minHeight: 0 } : s.hidden}
+        >
+          <SessionDiscussionPanel roomId={session.roomId} sessionId={session.id} guideId={session.guideId} phase={phase} colors={colors}
+            enabled={inChat && showRoom} />
+        </View>
+      </View>
 
       {showBar && (
         <View style={[s.actionBar, { paddingBottom: bottom + 10, backgroundColor: colors.background, borderTopColor: colors.border }]}>
