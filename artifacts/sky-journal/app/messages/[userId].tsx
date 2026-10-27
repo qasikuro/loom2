@@ -530,6 +530,10 @@ function MessagesScreenContent() {
   const outboxRef = useRef<DmOutboxItem[]>(initialOutbox);
   const retryingMessageIdsRef = useRef(new Set<string>());
   const sendControllersRef = useRef(new Map<string, AbortController>());
+  const markPartnerUnavailable = useCallback(() => {
+    setDeletedPartner(true);
+    void refreshDmThreads();
+  }, [refreshDmThreads]);
   const prevSseRef      = useRef(false);
   const typingTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -563,6 +567,17 @@ function MessagesScreenContent() {
       rememberDmConversation(myUserId, userId, messages);
     }
   }, [messages, myUserId, userId]);
+
+  useEffect(() => {
+    if (!deletedPartner || !myUserId || !userId || outboxRef.current.length === 0) return;
+    const pendingIds = new Set(outboxRef.current.map(item => item.clientMessageId));
+    outboxRef.current = [];
+    for (const controller of sendControllersRef.current.values()) controller.abort();
+    sendControllersRef.current.clear();
+    void saveDmOutbox(myUserId, userId, []).catch(() => undefined);
+    setMessages(previous => previous.filter(message => !pendingIds.has(message.id) && !message.deliveryState));
+    showToastGlobal('Unsent messages were removed because this account is no longer available.', 'warning');
+  }, [deletedPartner, myUserId, userId]);
 
   const handleClearConversation = useCallback(() => {
     if (!userId) return;
@@ -801,6 +816,11 @@ function MessagesScreenContent() {
 
     void hydrateDmOutbox(myUserId, userId).then(async stored => {
       if (!active || identity !== photoIdentityRef.current) return;
+      if (deletedPartner) {
+        outboxRef.current = [];
+        await saveDmOutbox(myUserId, userId, []);
+        return;
+      }
       const remaining = stored.filter(item => !serverMessageIdsRef.current.has(item.clientMessageId));
       outboxRef.current = remaining;
       if (remaining.length !== stored.length) {
@@ -821,7 +841,7 @@ function MessagesScreenContent() {
     });
 
     return () => { active = false; };
-  }, [myUserId, userId, photoIdentity]);
+  }, [myUserId, userId, photoIdentity, deletedPartner]);
 
   const loadOlderMessages = useCallback(async () => {
     const oldest = messages.find(message => !message.deliveryState);
@@ -869,7 +889,7 @@ function MessagesScreenContent() {
       };
 
       if (ev?.type === 'partner_account_deleted' && ev.partnerId === userId) {
-        setDeletedPartner(true);
+        markPartnerUnavailable();
         resetSharedPlayback();
         void load();
         return;
@@ -925,7 +945,7 @@ function MessagesScreenContent() {
         if (typingClearRef.current) clearTimeout(typingClearRef.current);
         typingClearRef.current = setTimeout(() => setPartnerTyping(false), 4000);
       }
-    }, [userId, myUserId, photoIdentity, markDmThreadRead, queueSticker, recordSharedReaction, resetSharedPlayback, load, refreshSocialRelationships]),
+    }, [userId, myUserId, photoIdentity, markDmThreadRead, queueSticker, recordSharedReaction, resetSharedPlayback, load, refreshSocialRelationships, markPartnerUnavailable]),
   );
 
   // Gap-fill: when SSE reconnects, fetch to fill the gap
@@ -1060,6 +1080,10 @@ function MessagesScreenContent() {
       if (identity !== photoIdentityRef.current) return;
       if (!outboxRef.current.some(entry => entry.clientMessageId === prepared.clientMessageId)) return;
       const status = err instanceof ApiError ? err.status : null;
+      if (status === 404) {
+        markPartnerUnavailable();
+        return;
+      }
       if (status === 410) {
         outboxRef.current = outboxRef.current.filter(entry => entry.clientMessageId !== prepared.clientMessageId);
         await saveDmOutbox(accountId, partnerId, outboxRef.current).catch(() => undefined);
@@ -1530,7 +1554,7 @@ function MessagesScreenContent() {
             <View style={{ marginHorizontal: 16, marginBottom: bottomPad + 8, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: th.border, backgroundColor: th.field }}>
               <Text style={{ color: th.sub, textAlign: 'center', fontFamily: 'Satoshi-Medium', fontSize: 13, lineHeight: 19 }}>
                 {deletedPartner
-                  ? 'This account was deleted. Your retained conversation is read-only.'
+                  ? 'This account is no longer available. Your retained conversation is read-only.'
                   : t('social.blockedChatReadOnly', { defaultValue: 'You blocked this user. Your existing chat is still here; unblock them to send messages.' })}
               </Text>
             </View>
