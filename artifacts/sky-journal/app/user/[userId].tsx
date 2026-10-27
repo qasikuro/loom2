@@ -4,11 +4,13 @@ import { BadgeTray, type BadgeItem } from '@/components/profile/BadgeTray';
 import { ProfileBadges } from '@/components/profile/ProfileBadges';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import { prepareNativeOutfitAudio } from '@/utils/prepareNativeOutfitAudio';
 import { useTranslation } from 'react-i18next';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { DiscoverVideoPlayerModal } from '@/components/DiscoverVideoPlayerModal';
+import type { DiscoverPost, StoryMusic } from '@/context/mappers';
 import { SecureImage as Image } from '@/components/SecureImage';
 import {
   Alert,
@@ -640,6 +642,10 @@ interface PublicStory {
   likeCount:      number;
   savedCount:     number;
   date:           string;
+  contentType?:   'story' | 'video';
+  videoUri?:      string | null;
+  thumbnailUri?:  string | null;
+  music?:         StoryMusic | null;
 }
 
 interface PublicOutfit {
@@ -674,6 +680,8 @@ export default function UserProfileScreen() {
 
   const [profile,      setProfile]      = useState<PublicProfile | null>(null);
   const [stories,      setStories]      = useState<PublicStory[]>([]);
+  const [videos,       setVideos]       = useState<PublicStory[]>([]);
+  const [videoPost,    setVideoPost]    = useState<DiscoverPost | null>(null);
   const [outfits,      setOutfits]      = useState<PublicOutfit[]>([]);
   const [books,        setBooks]        = useState<PublicBook[]>([]);
   const [loading,      setLoading]      = useState(true);
@@ -717,8 +725,12 @@ export default function UserProfileScreen() {
   async function loadStories() {
     setStoriesError(false);
     try {
-      const stors = await apiFetch<PublicStory[]>(`/users/${userId}/stories`);
+      const [stors, vids] = await Promise.all([
+        apiFetch<PublicStory[]>(`/users/${userId}/stories`),
+        apiFetch<PublicStory[]>(`/users/${userId}/stories?type=video`),
+      ]);
       setStories(stors);
+      setVideos(vids);
     } catch {
       setStoriesError(true);
     }
@@ -749,22 +761,35 @@ export default function UserProfileScreen() {
     void prepareNativeOutfitAudio().catch(() => null);
   }, []);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!userId) return;
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    setProfile(null);
+    setStories([]);
+    setVideos([]);
+    setVideoPost(null);
+    setOutfits([]);
+    setBooks([]);
     setFounderIntroVisible(false);
     setMoonlitMuseIntroVisible(false);
     (async () => {
-      const [profResult, storsResult, outsResult, booksResult] = await Promise.allSettled([
+      const [profResult, storsResult, outsResult, booksResult, videosResult] = await Promise.allSettled([
         apiFetch<PublicProfile>(`/users/${userId}`),
         apiFetch<PublicStory[]>(`/users/${userId}/stories`),
         apiFetch<PublicOutfit[]>(`/users/${userId}/outfits`),
         apiFetch<PublicBook[]>(`/users/${userId}/books`),
+        apiFetch<PublicStory[]>(`/users/${userId}/stories?type=video`),
       ]);
+      if (cancelled) return;
 
       if (profResult.status === 'rejected') {
         const err = profResult.reason;
         const isBlocked = err instanceof ApiError && err.status === 403;
-        setError(isBlocked ? 'publicProfile.errorUnavailable' : 'publicProfile.errorLoad');
+        setError(isBlocked && String(err.message).includes('private')
+          ? 'This profile is private. Only friends can view it.'
+          : isBlocked ? 'publicProfile.errorUnavailable' : 'publicProfile.errorLoad');
         setLoading(false);
         return;
       }
@@ -775,7 +800,8 @@ export default function UserProfileScreen() {
       setMoonlitMuseIntroVisible(hasMoonlitMuse);
       setFounderIntroVisible((Boolean(profResult.value.isFounder) || profileHasFounderBadge) && !hasMoonlitMuse);
       setStories(storsResult.status === 'fulfilled' ? storsResult.value : []);
-      setStoriesError(storsResult.status === 'rejected');
+      setVideos(videosResult.status === 'fulfilled' ? videosResult.value : []);
+      setStoriesError(storsResult.status === 'rejected' || videosResult.status === 'rejected');
       setOutfits(outsResult.status === 'fulfilled' ? outsResult.value : []);
       setOutfitsError(outsResult.status === 'rejected');
       setBooks(booksResult.status === 'fulfilled' ? booksResult.value : []);
@@ -784,7 +810,8 @@ export default function UserProfileScreen() {
       runEnterAnimation();
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+    return () => { cancelled = true; };
+  }, [userId, meId]));
 
   function handleFollow() {
     if (!profile) return;
@@ -1465,6 +1492,42 @@ export default function UserProfileScreen() {
             </TouchableOpacity>
           )}
 
+          {videos.length > 0 && (
+            <View style={styles.hSection}>
+              <View style={styles.hSectionHeader}>
+                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Videos</Text>
+                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{videos.length}</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollContent}>
+                {videos.map(video => (
+                  <TouchableOpacity
+                    key={video.id}
+                    testID={`profile-video-${video.id}`}
+                    disabled={!video.videoUri}
+                    accessibilityLabel={`Play ${video.chapterTitle}`}
+                    style={{ width: 146, height: 210, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}
+                    onPress={() => setVideoPost({
+                      id: video.id, authorUserId: profile.userId, authorName: profile.name,
+                      authorHandle: profile.username ?? '', authorAvatarUri: profile.avatarUri,
+                      chapterTitle: video.chapterTitle, storySnippet: '', mood: video.mood,
+                      witnessedCount: video.witnessedCount, likeCount: video.likeCount ?? 0, liked: false,
+                      savedCount: video.savedCount, stickerCount: 0, timeAgo: '', date: video.date,
+                      chapterNumber: 0, vibe: '', saved: false, isFollowing,
+                      contentType: 'video', videoUri: video.videoUri, thumbnailUri: video.thumbnailUri, music: video.music,
+                    })}
+                  >
+                    {!!video.thumbnailUri && <Image source={{ uri: video.thumbnailUri }} style={StyleSheet.absoluteFill} contentFit="cover" />}
+                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 12 }]}>
+                      <Icon name="play" size={28} color="#FFFFFF" />
+                      <Text numberOfLines={2} style={{ color: '#FFFFFF', fontFamily: 'Satoshi-Bold', marginTop: 8 }}>{video.chapterTitle}</Text>
+                      {!video.videoUri && <Text style={{ color: '#FFFFFF', fontSize: 11 }}>Video unavailable</Text>}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* ── OTHER OUTFITS horizontal row ──────────────────────── */}
           {outfitsError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -1709,7 +1772,7 @@ export default function UserProfileScreen() {
           )}
 
           {/* Empty state when everything is empty (and no errors showing) */}
-          {stories.length === 0 && outfits.length === 0 && books.length === 0 && !profile.activeOutfit && !storiesError && !outfitsError && !booksError && (
+          {stories.length === 0 && videos.length === 0 && outfits.length === 0 && books.length === 0 && !profile.activeOutfit && !storiesError && !outfitsError && !booksError && (
             <View style={[styles.emptyState, { borderColor: aura.accent + '18' }]}>
               <Text style={{ fontSize: 24 }}>{aura.particle}</Text>
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
@@ -1733,6 +1796,7 @@ export default function UserProfileScreen() {
 
       </ScrollView>
 
+      <DiscoverVideoPlayerModal post={videoPost} onClose={() => setVideoPost(null)} />
       <ReportSheet
         visible={reportVisible}
         targetType="user"

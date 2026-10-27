@@ -260,12 +260,36 @@ export function ProfileSettingsDrawer({
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} onPress={toggleVisibility} activeOpacity={0.7}>
               <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="lock" size={15} color={colors.mutedForeground} /></View>
-              <Text style={[s.drawerItemLabel, { flex: 1, color: colors.foreground }]}>{t('settings.privacy')}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>{t('settings.privacy')}</Text>
+                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
+                  Profile visibility · Private means friends only
+                </Text>
+              </View>
               <View style={{ backgroundColor: character.isPublic ? `${colors.primary}18` : colors.muted, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: character.isPublic ? `${colors.primary}40` : colors.border }}>
                 <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Bold', color: character.isPublic ? colors.primary : colors.mutedForeground }}>
                   {t(character.isPublic ? 'common.public' : 'common.private')}
                 </Text>
               </View>
+            </TouchableOpacity>
+            <View style={s.drawerDivider} />
+            <TouchableOpacity
+              style={s.drawerItem}
+              accessibilityRole="button"
+              accessibilityLabel="Post privacy"
+              testID="settings-post-privacy"
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              onPress={() => { closeDrawer(); setTimeout(() => router.push('/post-privacy' as any), 260); }}
+              activeOpacity={0.7}
+            >
+              <View style={[s.drawerItemIcon, { backgroundColor: colors.muted }]}><Icon name="eye" size={15} color={colors.mutedForeground} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.drawerItemLabel, { color: colors.foreground }]}>Post privacy</Text>
+                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: colors.mutedForeground, marginTop: 1 }}>
+                  Choose who sees each story, outfit, book and tutorial
+                </Text>
+              </View>
+              <Icon name="chevron-right" size={13} color={colors.mutedForeground} />
             </TouchableOpacity>
             <View style={s.drawerDivider} />
             <TouchableOpacity style={s.drawerItem} onPress={toggleOnlineStatus} activeOpacity={0.7}>
