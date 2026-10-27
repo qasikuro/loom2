@@ -2842,6 +2842,13 @@ export const sendChatMessageBodyImageUriRegExp = new RegExp(
 );
 
 export const SendChatMessageBody = zod.object({
+  clientMessageId: zod
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      "Stable client-generated UUID used to make safe retries idempotent.",
+    ),
   content: zod.string().min(1).max(sendChatMessageBodyContentMax).optional(),
   expression: zod
     .enum([
@@ -2868,6 +2875,18 @@ export const SendChatMessageBody = zod.object({
     .describe(
       "Canonical uploaded image path owned by the sender; never a temporary read URL.",
     ),
+});
+
+export const SendChatMessageResponse = zod.object({
+  id: zod.string(),
+  fromUserId: zod.string(),
+  toUserId: zod.string(),
+  content: zod.string().nullable(),
+  expression: zod.string().nullable(),
+  imageUri: zod.string().nullish(),
+  isRead: zod.boolean(),
+  createdAt: zod.string(),
+  isOwn: zod.boolean(),
 });
 
 /**

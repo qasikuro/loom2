@@ -4,6 +4,7 @@ import { SkyLoadingMark } from '@/components/SkyLoading';
 import { ChatStickerAnimation, type StickerAnimType } from '@/components/ChatStickerAnimation';
 import { ChatMessagePhoto, ChatPhotoDraft, ChatPhotoViewer } from '@/components/ChatPhoto';
 import * as ImagePicker from 'expo-image-picker';
+import * as Crypto from 'expo-crypto';
 import { ImageUploadError, persistImageUri } from '@/utils/persistImage';
 import { useClearConversation, useRemoveFriend, type ChatMessageInput } from '@workspace/api-client-react';
 import { ApiError, apiFetch, useApp } from '@/context/AppContext';
@@ -12,13 +13,19 @@ import { safeBack } from '@/utils/navigation';
 import {
   fetchDmConversation,
   forgetDmConversation,
+  getDmOutbox,
   getDmConversationCache,
+  hydrateDmConversationCache,
+  hydrateDmOutbox,
   markDmConversationOpened,
   rememberDmConversation,
+  saveDmOutbox,
   wasDmConversationOpened,
+  type DmOutboxItem,
   type DmCachedMessage,
 } from '@/utils/dmConversationCache';
-import { mergeChatMessages } from '@/utils/chatMessageHistory';
+import { mergeChatMessages, upsertChatMessages } from '@/utils/chatMessageHistory';
+import { nextDmRetry } from '@/utils/dmRetryPolicy';
 import { useSound } from '@/context/SoundContext';
 import { useSSE } from '@/hooks/useSSE';
 import { useAuth } from '@clerk/expo';
@@ -30,9 +37,9 @@ import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Animated,
-  Easing,
   FlatList,
   Keyboard,
   Platform,
@@ -56,7 +63,7 @@ import { ChatLumiCompanion } from '@/features/lumi/chat/ChatLumiCompanion';
 import { getChatEmote, type ChatEmoteId } from '@/features/lumi/chat/chatEmotes';
 import { useLumiActivity } from '@/features/lumi/home/useLumiActivity';
 import {
-  acceptSharedReaction, MAX_SHARED_REACTION_EVENTS, mergeConfirmedChatMessage, parseSharedReaction,
+  acceptSharedReaction, MAX_SHARED_REACTION_EVENTS, parseSharedReaction,
   seedSharedReactionHistory, sharedReactionContent,
   type SharedLumiEvent, type SharedReactionTracker,
 } from '@/features/lumi/chat/sharedChatReactions';
@@ -80,7 +87,7 @@ type ListItem =
 // ── Sticker registry ──────────────────────────────────────────────────────────
 
 export interface StickerDef {
-  id:         string;
+  id:         NonNullable<ChatMessageInput['expression']>;
   emoji:      string;
   artwork:    ImageSourcePropType;
   label:      string;
@@ -147,6 +154,26 @@ function fmtDate(iso: string, t: (key: string) => string) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
+function outboxMessage(
+  accountId: string,
+  partnerId: string,
+  item: DmOutboxItem,
+  deliveryState: NonNullable<Message['deliveryState']>,
+): Message {
+  return {
+    id: item.clientMessageId,
+    fromUserId: accountId,
+    toUserId: partnerId,
+    content: item.content,
+    imageUri: item.imageUri ?? item.localPhotoUri ?? null,
+    expression: item.expression,
+    isRead: false,
+    createdAt: item.createdAt,
+    isOwn: true,
+    deliveryState,
+  };
+}
+
 // ── Star background decoration ────────────────────────────────────────────────
 const STARS = Array.from({ length: 28 }, (_, i) => ({
   key: `s${i}`,
@@ -157,28 +184,23 @@ const STARS = Array.from({ length: 28 }, (_, i) => ({
 }));
 
 // ── Sticker bubble (in chat history) ─────────────────────────────────────────
-function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, textColor, onLongPress }: {
+function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, textColor, onLongPress, onRetry }: {
   msg: Message; partnerInitial: string; avatarUri?: string; primaryColor: string; textColor: string;
   onLongPress?: () => void;
+  onRetry?: (messageId: string) => void;
 }) {
   const { t } = useTranslation();
   const def    = getSticker(msg.expression!);
-  const scaleA = useRef(new Animated.Value(0.3)).current;
-  const opA    = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleA, { toValue: 1, tension: 150, friction: 7, useNativeDriver: true }),
-      Animated.timing(opA, { toValue: 1, duration: 200, useNativeDriver: true, easing: Easing.out(Easing.quad) }),
-    ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Virtualized history rows must not replay their entrance every time they
+  // remount during scrolling. New-message effects use the existing overlay.
+  const scaleA = useRef(new Animated.Value(1)).current;
+  const opA    = useRef(new Animated.Value(1)).current;
 
   const label = t(`social.sticker_${def.id}_${msg.isOwn ? 'own' : 'other'}`);
 
   const cardInner = (
     <View style={[styles.stickerCard, { borderColor: `${def.color}68`, backgroundColor: `${def.color}12` }]}>
-      <Image source={def.artwork} style={styles.stickerArtwork} contentFit="contain" transition={140} />
+      <Image source={def.artwork} style={styles.stickerArtwork} contentFit="contain" transition={0} />
       <View style={styles.stickerTimestamp}>
         <Text style={[styles.stickerCardTime, { color: textColor }]}>{fmtTime(msg.createdAt)}</Text>
       </View>
@@ -191,6 +213,7 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, textColor
         <Animated.View style={{ opacity: opA, transform: [{ scale: scaleA }] }}>
           <TouchableOpacity
             onLongPress={onLongPress}
+            onPress={msg.deliveryState === 'failed' ? () => onRetry?.(msg.id) : undefined}
             delayLongPress={350}
             activeOpacity={0.85}
             accessibilityRole="imagebutton"
@@ -200,6 +223,11 @@ function StickerBubble({ msg, partnerInitial, avatarUri, primaryColor, textColor
             {cardInner}
           </TouchableOpacity>
         </Animated.View>
+        {msg.deliveryState && (
+          <Text style={[styles.deliveryStatus, { color: msg.deliveryState === 'failed' ? '#FF9A9A' : textColor }]}>
+            {msg.deliveryState === 'failed' ? 'Not sent · Tap to retry' : msg.deliveryState === 'queued' ? 'Waiting for connection…' : 'Sending…'}
+          </Text>
+        )}
       </View>
     );
   }
@@ -239,10 +267,11 @@ type DmMessageCellProps = {
   colors: DmRowColors;
   onDelete: (message: Message) => void;
   onOpenPhoto: (uri: string) => void;
+  onRetry: (messageId: string) => void;
 };
 
 const DmMessageCell = React.memo(function DmMessageCell({
-  item, partnerInitial, avatarUri, name, contentWidth, colors, onDelete, onOpenPhoto,
+  item, partnerInitial, avatarUri, name, contentWidth, colors, onDelete, onOpenPhoto, onRetry,
 }: DmMessageCellProps) {
   if (item.type === 'date') {
     return (
@@ -267,6 +296,7 @@ const DmMessageCell = React.memo(function DmMessageCell({
         primaryColor={PURPLE}
         textColor={colors.sub}
         onLongPress={deleteMessage}
+        onRetry={onRetry}
       />
     );
   }
@@ -287,7 +317,9 @@ const DmMessageCell = React.memo(function DmMessageCell({
           msg.imageUri && styles.bubblePhoto,
         ]}
         onLongPress={deleteMessage}
-        onPress={msg.imageUri ? () => onOpenPhoto(msg.imageUri!) : undefined}
+        onPress={msg.deliveryState === 'failed'
+          ? () => onRetry(msg.id)
+          : msg.imageUri ? () => onOpenPhoto(msg.imageUri!) : undefined}
         accessibilityRole={msg.imageUri ? 'imagebutton' : undefined}
         accessible={!msg.imageUri}
         accessibilityLabel={msg.imageUri
@@ -313,6 +345,11 @@ const DmMessageCell = React.memo(function DmMessageCell({
         <Text maxFontSizeMultiplier={1.2} style={[styles.bubbleTime, msg.imageUri && styles.photoCaption, { color: msg.isOwn ? 'rgba(255,255,255,0.68)' : colors.sub }]}>
           {fmtTime(msg.createdAt)}
         </Text>
+        {msg.deliveryState && (
+          <Text style={[styles.deliveryStatus, { color: msg.deliveryState === 'failed' ? '#FFB0B0' : msg.isOwn ? 'rgba(255,255,255,0.72)' : colors.sub }]}>
+            {msg.deliveryState === 'failed' ? 'Not sent · Tap to retry' : msg.deliveryState === 'queued' ? 'Waiting for connection…' : 'Sending…'}
+          </Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -329,15 +366,18 @@ const DmMessageCell = React.memo(function DmMessageCell({
     && previous.contentWidth === next.contentWidth
     && previous.colors === next.colors
     && previous.onDelete === next.onDelete
-    && previous.onOpenPhoto === next.onOpenPhoto;
+    && previous.onOpenPhoto === next.onOpenPhoto
+    && previous.onRetry === next.onRetry;
 });
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 export default function MessagesScreen() {
+  const { userId: accountId } = useAuth();
+  const { userId: partnerId } = useLocalSearchParams<{ userId: string }>();
   // Keyboard-controller provider scoped to this screen's content only.
   return (
     <ScreenKeyboardProvider>
-      <MessagesScreenContent />
+      <MessagesScreenContent key={JSON.stringify([accountId, partnerId])} />
     </ScreenKeyboardProvider>
   );
 }
@@ -393,8 +433,13 @@ function MessagesScreenContent() {
     () => getDmConversationCache(myUserId, userId),
     [myUserId, userId],
   );
+  const initialOutbox = useMemo(
+    () => getDmOutbox(myUserId, userId),
+    [myUserId, userId],
+  );
   const [messages,      setMessages]      = useState<Message[]>(initialMessages);
-  const [loading,       setLoading]       = useState(initialMessages.length === 0);
+  // The screen and composer render immediately; network freshness is background work.
+  const [loading,       setLoading]       = useState(false);
   const [hasOlderMessages, setHasOlderMessages] = useState(false);
   const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
   const [sending,       setSending]       = useState(false);
@@ -402,7 +447,6 @@ function MessagesScreenContent() {
   const [reactionPlaybackEpoch, setReactionPlaybackEpoch] = useState(0);
   const reactionTrackerRef = useRef<SharedReactionTracker>({ seen: initialMessages.map(m => m.id) });
   const reactionHistoryReadyRef = useRef(false);
-  const reactionSendRef = useRef<AbortController | null>(null);
   const recentReactionsRef = useRef(new Map<string, { message: Message; receivedAt: number }>());
   const chatActivity = useLumiActivity();
   const chatActiveRef = useRef(chatActivity.active);
@@ -418,18 +462,23 @@ function MessagesScreenContent() {
   useEffect(() => {
     photoIdentityRef.current = photoIdentity;
     setMessages(initialMessages);
-    setLoading(initialMessages.length === 0);
+    setLoading(false);
     setHasOlderMessages(false);
     setLoadingOlderMessages(false);
     loadingOlderRef.current = false;
+    olderHistoryLoadedRef.current = false;
+    serverSnapshotReadyRef.current = false;
+    localCacheReadyRef.current = initialMessages.length > 0;
+    conversationEpochRef.current++;
+    serverMessageIdsRef.current = new Set();
+    outboxRef.current = initialOutbox;
+    retryingMessageIdsRef.current.clear();
     lastMsgIdRef.current = initialMessages.at(-1)?.id ?? null;
     setError(null);
     setPhotoUri(null);
     setViewingPhoto(null);
     setPickingPhoto(false);
     setSending(false);
-    reactionSendRef.current?.abort();
-    reactionSendRef.current = null;
     reactionTrackerRef.current = { seen: initialMessages.map(m => m.id) };
     reactionHistoryReadyRef.current = false;
     recentReactionsRef.current.clear();
@@ -437,8 +486,8 @@ function MessagesScreenContent() {
     uploadedPhotoRef.current = null;
     return () => {
       photoIdentityRef.current = '';
-      reactionSendRef.current?.abort();
-      reactionSendRef.current = null;
+      for (const controller of sendControllersRef.current.values()) controller.abort();
+      sendControllersRef.current.clear();
     };
   }, [photoIdentity]);
 
@@ -456,11 +505,6 @@ function MessagesScreenContent() {
   }, [myUserId, userId, photoIdentity]);
 
   const resetSharedPlayback = useCallback(() => {
-    if (reactionSendRef.current) {
-      reactionSendRef.current.abort();
-      reactionSendRef.current = null;
-      setSending(false);
-    }
     recentReactionsRef.current.clear();
     setReactionEvents([]);
     setReactionPlaybackEpoch(previous => previous + 1);
@@ -478,6 +522,14 @@ function MessagesScreenContent() {
   );
   const flatRef         = useRef<FlatList<ListItem>>(null);
   const loadingOlderRef = useRef(false);
+  const olderHistoryLoadedRef = useRef(false);
+  const serverSnapshotReadyRef = useRef(false);
+  const localCacheReadyRef = useRef(initialMessages.length > 0);
+  const conversationEpochRef = useRef(0);
+  const serverMessageIdsRef = useRef(new Set<string>());
+  const outboxRef = useRef<DmOutboxItem[]>(initialOutbox);
+  const retryingMessageIdsRef = useRef(new Set<string>());
+  const sendControllersRef = useRef(new Map<string, AbortController>());
   const prevSseRef      = useRef(false);
   const typingTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingClearRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -507,7 +559,9 @@ function MessagesScreenContent() {
   }, [userId, refreshDmThreads]);
 
   useEffect(() => {
-    if (myUserId && userId) rememberDmConversation(myUserId, userId, messages);
+    if (myUserId && userId && (localCacheReadyRef.current || serverSnapshotReadyRef.current)) {
+      rememberDmConversation(myUserId, userId, messages);
+    }
   }, [messages, myUserId, userId]);
 
   const handleClearConversation = useCallback(() => {
@@ -521,9 +575,18 @@ function MessagesScreenContent() {
           text: t('social.deleteChat', { defaultValue: 'Delete chat' }),
           style: 'destructive',
           onPress: async () => {
+            if (retryingMessageIdsRef.current.size) {
+              showToastGlobal('Wait for sending messages to finish before deleting this chat.', 'warning');
+              return;
+            }
             try {
+              const paused = outboxRef.current.map(item => ({ ...item, retryAt: Number.MAX_SAFE_INTEGER }));
+              outboxRef.current = paused;
+              await saveDmOutbox(myUserId, userId, paused);
               await clearConversationMutation.mutateAsync({ partnerId: userId });
+              conversationEpochRef.current++;
               forgetDmConversation(myUserId, userId);
+              outboxRef.current = [];
               setMessages([]);
               void refreshDmThreads();
               Alert.alert(
@@ -640,6 +703,7 @@ function MessagesScreenContent() {
 
   const load = useCallback(async () => {
     const identity = photoIdentity;
+    const epoch = conversationEpochRef.current;
     if (identity !== photoIdentityRef.current) return;
     const startedAt = Date.now();
     if (!userId) {
@@ -653,25 +717,25 @@ function MessagesScreenContent() {
         userId,
         () => apiFetch<Message[]>(`/messages/${userId}?limit=${CHAT_PAGE_SIZE}`),
       );
-      if (identity !== photoIdentityRef.current) return;
+      if (identity !== photoIdentityRef.current || epoch !== conversationEpochRef.current) return;
+      setError(null);
       const msgs = [...(data ?? [])];
-      setHasOlderMessages(msgs.length === CHAT_PAGE_SIZE);
+      serverSnapshotReadyRef.current = true;
+      serverMessageIdsRef.current = new Set(msgs.map(message => message.id));
+      if (!olderHistoryLoadedRef.current) setHasOlderMessages(msgs.length === CHAT_PAGE_SIZE);
       if (!reactionHistoryReadyRef.current) {
         seedSharedReactionHistory(reactionTrackerRef.current, msgs);
         reactionHistoryReadyRef.current = true;
       } else {
         msgs.forEach(recordSharedReaction);
       }
-      // A request started before a confirmed reaction must not erase that live
-      // message when its older snapshot returns (SSE and POST can race a GET).
+      // A request started before a confirmed message must not erase that live
+      // row when its older snapshot returns (SSE and POST can race a GET).
       const fetchedIds = new Set(msgs.map(message => message.id));
-      const live = [...recentReactionsRef.current.values()]
+      const liveReactions = [...recentReactionsRef.current.values()]
         .filter(item => item.receivedAt >= startedAt && !fetchedIds.has(item.message.id))
         .map(item => item.message);
-      if (live.length) {
-        msgs.push(...live);
-        msgs.sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
-      }
+      const liveMessages = [...liveReactions];
       const isFirstLoad = lastMsgIdRef.current === null;
 
       if (!isFirstLoad && msgs.length > 0) {
@@ -697,7 +761,17 @@ function MessagesScreenContent() {
 
       if (msgs.length > 0) lastMsgIdRef.current = msgs[msgs.length - 1].id;
 
-      setMessages(previous => mergeChatMessages(previous, msgs, true));
+      setMessages(previous => {
+        const recentMessages = previous.filter(message =>
+          !fetchedIds.has(message.id)
+          && (message.deliveryState || Date.parse(message.createdAt) >= startedAt),
+        );
+        return mergeChatMessages(
+          previous,
+          [...msgs, ...liveMessages, ...recentMessages],
+          olderHistoryLoadedRef.current,
+        );
+      });
       markDmThreadRead(userId);
       markDmConversationOpened(myUserId, userId);
     } catch {
@@ -712,8 +786,45 @@ function MessagesScreenContent() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (!myUserId || !userId) return;
+    let active = true;
+    const identity = photoIdentity;
+
+    void hydrateDmConversationCache(myUserId, userId).then(cached => {
+      if (!active || identity !== photoIdentityRef.current) return;
+      localCacheReadyRef.current = true;
+      if (serverSnapshotReadyRef.current || cached.length === 0) return;
+      setMessages(previous => upsertChatMessages(previous, cached));
+      setHasOlderMessages(cached.length === CHAT_PAGE_SIZE);
+    });
+
+    void hydrateDmOutbox(myUserId, userId).then(async stored => {
+      if (!active || identity !== photoIdentityRef.current) return;
+      const remaining = stored.filter(item => !serverMessageIdsRef.current.has(item.clientMessageId));
+      outboxRef.current = remaining;
+      if (remaining.length !== stored.length) {
+        try { await saveDmOutbox(myUserId, userId, remaining); } catch { /* replay remains idempotent */ }
+      }
+      if (!active || identity !== photoIdentityRef.current) return;
+      const pending = remaining.map(item => outboxMessage(
+        myUserId,
+        userId,
+        item,
+        item.retryAt >= Number.MAX_SAFE_INTEGER ? 'failed' : 'queued',
+      ));
+      if (pending.length) setMessages(previous => upsertChatMessages(previous, pending));
+    }).catch(() => {
+      if (active && identity === photoIdentityRef.current) {
+        showToastGlobal('Queued messages could not be restored. Reopen this chat before sending.', 'warning');
+      }
+    });
+
+    return () => { active = false; };
+  }, [myUserId, userId, photoIdentity]);
+
   const loadOlderMessages = useCallback(async () => {
-    const oldest = messages[0];
+    const oldest = messages.find(message => !message.deliveryState);
     if (!oldest || !userId || !myUserId || !hasOlderMessages || loadingOlderRef.current) return;
     const identity = photoIdentityRef.current;
     loadingOlderRef.current = true;
@@ -727,6 +838,7 @@ function MessagesScreenContent() {
       const older = await apiFetch<Message[]>(`/messages/${userId}?${query.toString()}`);
       if (identity !== photoIdentityRef.current) return;
       setMessages(previous => mergeChatMessages(previous, [...older, ...previous]));
+      if (older.length > 0) olderHistoryLoadedRef.current = true;
       setHasOlderMessages(older.length === CHAT_PAGE_SIZE);
     } catch {
       if (identity === photoIdentityRef.current) {
@@ -800,8 +912,10 @@ function MessagesScreenContent() {
       }
 
       if (ev?.type === 'conversation_cleared' && ev.partnerId === userId) {
+        conversationEpochRef.current++;
         resetSharedPlayback();
         forgetDmConversation(myUserId, userId);
+        outboxRef.current = [];
         setMessages([]);
         return;
       }
@@ -865,151 +979,317 @@ function MessagesScreenContent() {
     }
   }, [pickingPhoto, sending, loading]);
 
+  const deliverQueuedMessage = useCallback(async (
+    item: DmOutboxItem,
+    options: { manual?: boolean; notify?: boolean } = {},
+  ) => {
+    const accountId = myUserId;
+    const partnerId = userId;
+    const identity = photoIdentityRef.current;
+    if (!accountId || !partnerId || identity !== JSON.stringify([accountId, partnerId])) return;
+    if ((isBlocked || deletedPartner) && !options.manual) return;
+    if (!options.manual && item.retryAt > Date.now()) return;
+    if (retryingMessageIdsRef.current.has(item.clientMessageId)) return;
+    if (options.manual && (isBlocked || deletedPartner)) {
+      showToastGlobal(isBlocked ? 'Unblock this person before retrying.' : 'This account is no longer available.', 'warning');
+      return;
+    }
+    retryingMessageIdsRef.current.add(item.clientMessageId);
+    setMessages(previous => upsertChatMessages(
+      previous,
+      [outboxMessage(accountId, partnerId, item, 'sending')],
+    ));
+
+    let prepared = item;
+    try {
+      if (!prepared.imageUri && prepared.localPhotoUri) {
+        const uploaded = await persistImageUri(prepared.localPhotoUri);
+        const path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
+        if (!/^\/api\/images\/[\w.-]+$/.test(path)) throw new Error('Invalid uploaded photo');
+        prepared = { ...prepared, imageUri: path };
+        outboxRef.current = outboxRef.current.map(entry =>
+          entry.clientMessageId === prepared.clientMessageId ? prepared : entry,
+        );
+        await saveDmOutbox(accountId, partnerId, outboxRef.current);
+      }
+      if (identity !== photoIdentityRef.current) return;
+      const body: ChatMessageInput = {
+        clientMessageId: prepared.clientMessageId,
+        ...(prepared.content ? { content: prepared.content } : {}),
+        ...(prepared.expression ? { expression: prepared.expression } : {}),
+        ...(prepared.imageUri ? { imageUri: prepared.imageUri } : {}),
+      };
+      const controller = new AbortController();
+      sendControllersRef.current.set(prepared.clientMessageId, controller);
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      let sent: Message;
+      try {
+        sent = await apiFetch<Message>(`/messages/${partnerId}${prepared.imageUri ? '/photos' : ''}`, {
+          method: 'POST', signal: controller.signal,
+          body: JSON.stringify(body),
+        });
+      } finally {
+        clearTimeout(timeout);
+        sendControllersRef.current.delete(prepared.clientMessageId);
+      }
+      if (!sent?.id || sent.fromUserId !== accountId || sent.toUserId !== partnerId) {
+        throw new Error('Message was not confirmed');
+      }
+      if (identity !== photoIdentityRef.current) return;
+      if (!outboxRef.current.some(entry => entry.clientMessageId === prepared.clientMessageId)) {
+        // A clear from another device may race the POST response. Keep the
+        // sender's copy hidden without touching the recipient's copy.
+        void apiFetch(`/messages/${sent.id}?forEveryone=false`, { method: 'DELETE' }).catch(() => undefined);
+        return;
+      }
+      const confirmed: Message = { ...sent, isOwn: true };
+      outboxRef.current = outboxRef.current.filter(entry => entry.clientMessageId !== prepared.clientMessageId);
+      // If secure storage fails here, a future replay still has the same
+      // client UUID and the API returns this committed row instead of duplicating it.
+      try { await saveDmOutbox(accountId, partnerId, outboxRef.current); } catch { /* idempotent replay is safe */ }
+      setMessages(previous => upsertChatMessages(
+        previous.filter(message => message.id !== prepared.clientMessageId), [confirmed],
+      ));
+      recordSharedReaction(confirmed);
+      lastMsgIdRef.current = confirmed.id;
+      if (prepared.localPhotoUri) {
+        setPhotoUri(current => current === prepared.localPhotoUri ? null : current);
+        if (uploadedPhotoRef.current?.uri === prepared.localPhotoUri) uploadedPhotoRef.current = null;
+      }
+    } catch (err) {
+      if (identity !== photoIdentityRef.current) return;
+      if (!outboxRef.current.some(entry => entry.clientMessageId === prepared.clientMessageId)) return;
+      const status = err instanceof ApiError ? err.status : null;
+      if (status === 410) {
+        outboxRef.current = outboxRef.current.filter(entry => entry.clientMessageId !== prepared.clientMessageId);
+        await saveDmOutbox(accountId, partnerId, outboxRef.current).catch(() => undefined);
+        setMessages(previous => previous.filter(message => message.id !== prepared.clientMessageId));
+        return;
+      }
+      const policy = nextDmRetry(
+        prepared.attempts, Date.now(), status,
+        err instanceof ApiError ? err.retryAfter : null, err instanceof ImageUploadError,
+      );
+      const permanent = policy.deliveryState === 'failed';
+      const retryItem: DmOutboxItem = {
+        ...prepared,
+        attempts: prepared.attempts + 1,
+        retryAt: policy.retryAt,
+      };
+      outboxRef.current = outboxRef.current.map(entry =>
+        entry.clientMessageId === retryItem.clientMessageId ? retryItem : entry,
+      );
+      try { await saveDmOutbox(accountId, partnerId, outboxRef.current); } catch { /* preserve memory retry state */ }
+      setMessages(previous => upsertChatMessages(
+        previous,
+        [outboxMessage(accountId, partnerId, retryItem, permanent ? 'failed' : 'queued')],
+      ));
+      if (options.notify) {
+        if (err instanceof ApiError && err.status === 429) {
+          const suffix = err.retryAfter != null && err.retryAfter >= 5 ? ` Try again in ${err.retryAfter}s.` : '';
+          showToastGlobal(`${t('social.slowDown')}${suffix}`, 'warning');
+        } else if (err instanceof ImageUploadError) {
+          showToastGlobal(err.userMessage, 'warning');
+        } else if (permanent) {
+          showToastGlobal('Message was not sent. Tap it to retry.', 'warning');
+        } else {
+          showToastGlobal('Message saved and will retry when the connection returns.', 'warning');
+        }
+      }
+    } finally {
+      retryingMessageIdsRef.current.delete(item.clientMessageId);
+    }
+  }, [myUserId, userId, isBlocked, deletedPartner, recordSharedReaction, t]);
+
+  const queueOutgoingMessage = useCallback(async (item: DmOutboxItem): Promise<boolean> => {
+    if (!myUserId || !userId || photoIdentity !== photoIdentityRef.current) return false;
+    let restored: DmOutboxItem[];
+    try {
+      restored = await hydrateDmOutbox(myUserId, userId);
+    } catch {
+      showToastGlobal('Could not restore queued messages. Reopen this chat before sending.', 'warning');
+      return false;
+    }
+    if (photoIdentity !== photoIdentityRef.current) return false;
+    const existing = [...new Map([...restored, ...outboxRef.current].map(entry => [entry.clientMessageId, entry])).values()];
+    if (existing.some(entry => entry.clientMessageId === item.clientMessageId)) return true;
+    const next = [...existing, item];
+    outboxRef.current = next;
+    setMessages(previous => upsertChatMessages(
+      previous,
+      [outboxMessage(myUserId, userId, item, 'sending')],
+    ));
+    try {
+      await saveDmOutbox(myUserId, userId, next);
+    } catch {
+      outboxRef.current = outboxRef.current.filter(entry => entry.clientMessageId !== item.clientMessageId);
+      setMessages(previous => previous.filter(message => message.id !== item.clientMessageId));
+      showToastGlobal('Could not securely save this message for retry. Please try again.', 'warning');
+      return false;
+    }
+    if (photoIdentity === photoIdentityRef.current) {
+      void deliverQueuedMessage(item, { manual: true, notify: true });
+    }
+    return true;
+  }, [myUserId, userId, photoIdentity, deliverQueuedMessage]);
+
   const handleSend = useCallback(async () => {
     const content = input.trim();
-    if ((!content && !photoUri) || sending || loading || pickingPhoto || !userId || isBlocked || deletedPartner) return;
-    const identity = photoIdentityRef.current;
+    if ((!content && !photoUri) || sending || pickingPhoto || !userId || isBlocked || deletedPartner) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setInput('');
     setSending(true);
-    const sentPhoto = photoUri;
     jumpToNewest();
-    const optimistic: Message = {
-      id: `temp-${Date.now()}`, fromUserId: 'me', toUserId: userId,
-      content: content || null, imageUri: photoUri, expression: null, isRead: false, createdAt: new Date().toISOString(), isOwn: true,
+    const item: DmOutboxItem = {
+      clientMessageId: Crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      content: content || null,
+      imageUri: null,
+      expression: null,
+      localPhotoUri: photoUri,
+      attempts: 0,
+      retryAt: Date.now(),
     };
-    setMessages(prev => [...prev, optimistic]);
     try {
-      const body: ChatMessageInput = { ...(content ? { content } : {}) };
-      if (photoUri) {
-        let path = uploadedPhotoRef.current?.uri === photoUri ? uploadedPhotoRef.current.path : null;
-        if (!path) {
-          const uploaded = await persistImageUri(photoUri);
-          path = uploaded.startsWith('/') ? uploaded : new URL(uploaded).pathname;
-          if (!/^\/api\/images\/[\w.-]+$/.test(path)) throw new Error('Invalid uploaded photo');
-          if (identity !== photoIdentityRef.current) return;
-          uploadedPhotoRef.current = { uri: photoUri, path };
-        }
-        body.imageUri = path;
-      }
-      if (identity !== photoIdentityRef.current) return;
-      const sent = await apiFetch<Message>(`/messages/${userId}${photoUri ? '/photos' : ''}`, {
-        method: 'POST', body: JSON.stringify(body),
-      });
-      if (!sent?.id) throw new Error('Message was not confirmed');
-      if (identity !== photoIdentityRef.current) return;
-      setMessages(prev => mergeConfirmedChatMessage(prev, sent, optimistic.id));
-      // Only clear the draft photo if it is still the one that was sent.
-      setPhotoUri(current => (current === sentPhoto ? null : current));
-      if (uploadedPhotoRef.current?.uri === sentPhoto) uploadedPhotoRef.current = null;
-      if (sent?.id) lastMsgIdRef.current = sent.id;
-    } catch (err) {
-      if (identity !== photoIdentityRef.current) return;
-      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-      // Restore the failed text without clobbering a draft typed meanwhile.
-      setInput(current => restoreFailedChatDraft(current, content));
-      if (err instanceof ApiError && err.status === 429) {
-        const suffix = (err.retryAfter != null && err.retryAfter >= 5)
-          ? ` Try again in ${err.retryAfter}s.`
-          : '';
-        showToastGlobal(`${t('social.slowDown')}${suffix}`, 'warning');
-      } else {
-        showToastGlobal(err instanceof ImageUploadError ? err.userMessage : 'Could not send your message. Please try again.', 'warning');
+      const queued = await queueOutgoingMessage(item);
+      if (queued) {
+        setInput(current => current === input ? '' : current);
+        setPhotoUri(current => current === photoUri ? null : current);
+        uploadedPhotoRef.current = null;
+      } else if (content) {
+        setInput(current => restoreFailedChatDraft(current, content));
       }
     } finally {
-      if (identity === photoIdentityRef.current) setSending(false);
+      setSending(false);
     }
-  }, [input, photoUri, sending, loading, pickingPhoto, userId, t, jumpToNewest, isBlocked, deletedPartner]);
+  }, [input, photoUri, sending, pickingPhoto, userId, jumpToNewest, isBlocked, deletedPartner, queueOutgoingMessage]);
+
+  const retryMessage = useCallback((messageId: string) => {
+    if (isBlocked || deletedPartner) {
+      showToastGlobal(isBlocked ? 'Unblock this person before retrying.' : 'This account is no longer available.', 'warning');
+      return;
+    }
+    const item = outboxRef.current.find(entry => entry.clientMessageId === messageId);
+    if (!item) return;
+    const retry = { ...item, retryAt: Date.now() };
+    outboxRef.current = outboxRef.current.map(entry => entry.clientMessageId === messageId ? retry : entry);
+    void saveDmOutbox(myUserId, userId, outboxRef.current).then(() =>
+      deliverQueuedMessage(retry, { manual: true, notify: true }),
+    ).catch(() => showToastGlobal('Could not save retry. Please try again.', 'warning'));
+  }, [myUserId, userId, isBlocked, deletedPartner, deliverQueuedMessage]);
+
+  const retryDueMessages = useCallback(() => {
+    if (AppState.currentState !== 'active' || isBlocked || deletedPartner) return;
+    const now = Date.now();
+    for (const item of outboxRef.current) {
+      if (item.retryAt <= now) void deliverQueuedMessage(item);
+    }
+  }, [isBlocked, deletedPartner, deliverQueuedMessage]);
+
+  useFocusEffect(useCallback(() => {
+    retryDueMessages();
+    const timer = setInterval(retryDueMessages, 1800);
+    return () => clearInterval(timer);
+  }, [retryDueMessages]));
+
+  useEffect(() => {
+    if ((!isBlocked && !deletedPartner) || !outboxRef.current.length || !myUserId || !userId) return;
+    const paused = outboxRef.current.map(item => ({ ...item, retryAt: Number.MAX_SAFE_INTEGER }));
+    outboxRef.current = paused;
+    void saveDmOutbox(myUserId, userId, paused).catch(() => undefined);
+    setMessages(previous => upsertChatMessages(
+      previous,
+      paused.map(item => outboxMessage(myUserId, userId, item, 'failed')),
+    ));
+  }, [isBlocked, deletedPartner, myUserId, userId]);
 
   const handleSendLumiReaction = useCallback(async (id: ChatEmoteId): Promise<boolean> => {
-    if (!myUserId || !userId || !getChatEmote(id) || isBlocked || deletedPartner || sending || loading || pickingPhoto
-      || reactionSendRef.current || !chatActiveRef.current
-      || photoIdentity !== photoIdentityRef.current) return false;
-    const controller = new AbortController();
-    reactionSendRef.current = controller;
+    if (!myUserId || !userId || !getChatEmote(id) || isBlocked || deletedPartner || sending || pickingPhoto
+      || !chatActiveRef.current || photoIdentity !== photoIdentityRef.current) return false;
     setSending(true);
     try {
-      const sent = await apiFetch<Message>(`/messages/${userId}`, {
-        method: 'POST', signal: controller.signal,
-        body: JSON.stringify({ content: sharedReactionContent(id) } satisfies ChatMessageInput),
+      return await queueOutgoingMessage({
+        clientMessageId: Crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        content: sharedReactionContent(id),
+        imageUri: null,
+        expression: null,
+        attempts: 0,
+        retryAt: Date.now(),
       });
-      if (controller.signal.aborted || photoIdentity !== photoIdentityRef.current) return false;
-      if (!sent?.id || sent.fromUserId !== myUserId || sent.toUserId !== userId
-        || parseSharedReaction(sent.content) !== id) throw new Error('Reaction was not confirmed');
-      // No optimistic performance: both clients animate the persisted message.
-      // SSE can arrive before this response; both paths deduplicate by message ID.
-      recordSharedReaction(sent);
-      setMessages(previous => mergeConfirmedChatMessage(previous, { ...sent, isOwn: true }));
-      lastMsgIdRef.current = sent.id;
-      return true;
-    } catch (err) {
-      if (controller.signal.aborted || photoIdentity !== photoIdentityRef.current) return false;
-      const retry = err instanceof ApiError && err.status === 429;
-      const suffix = retry && err.retryAfter ? ` Try again in ${err.retryAfter}s.` : '';
-      showToastGlobal(retry ? `${t('social.slowDown')}${suffix}` : 'Could not send the Lumi reaction. Please try again.', 'warning');
-      return false;
     } finally {
-      if (reactionSendRef.current === controller) {
-        reactionSendRef.current = null;
-        if (photoIdentity === photoIdentityRef.current) setSending(false);
-      }
+      if (photoIdentity === photoIdentityRef.current) setSending(false);
     }
-  }, [myUserId, userId, isBlocked, deletedPartner, sending, loading, pickingPhoto, photoIdentity, recordSharedReaction, t]);
+  }, [myUserId, userId, isBlocked, deletedPartner, sending, pickingPhoto, photoIdentity, queueOutgoingMessage]);
+
+  const removeQueuedMessage = useCallback(async (messageId: string) => {
+    const next = outboxRef.current.filter(item => item.clientMessageId !== messageId);
+    outboxRef.current = next;
+    await saveDmOutbox(myUserId, userId, next);
+  }, [myUserId, userId]);
 
   const handleDeleteMsg = useCallback(async (msg: Message) => {
     if (!msg.isOwn) return;
+    if (retryingMessageIdsRef.current.has(msg.id)) {
+      showToastGlobal('This message is still sending. Try again when it finishes.', 'warning');
+      return;
+    }
+    const deleteMessage = async (forEveryone: boolean) => {
+      try {
+        // Pause a queued item before the network operation so an offline delete
+        // cannot race an automatic resend.
+        const paused = outboxRef.current.map(item =>
+          item.clientMessageId === msg.id ? { ...item, retryAt: Number.MAX_SAFE_INTEGER } : item);
+        outboxRef.current = paused;
+        await saveDmOutbox(myUserId, userId, paused);
+        try {
+          await apiFetch(`/messages/${msg.id}?forEveryone=${forEveryone}`, { method: 'DELETE' });
+        } catch (err) {
+          if (!(msg.deliveryState && err instanceof ApiError && err.status === 404)) throw err;
+        }
+        await removeQueuedMessage(msg.id);
+        setMessages(previous => previous.filter(message => message.id !== msg.id));
+      } catch {
+        if (msg.deliveryState) setMessages(previous => upsertChatMessages(previous, [{ ...msg, deliveryState: 'failed' }]));
+        showToastGlobal('Could not delete this message. Please try again.', 'warning');
+      }
+    };
     Alert.alert(
       t('social.deleteMessage'),
       t('social.deleteMessagePrompt'),
       [
         {
           text: t('social.deleteForMe'),
-          onPress: async () => {
-            setMessages(prev => prev.filter(m => m.id !== msg.id));
-            apiFetch(`/messages/${msg.id}?forEveryone=false`, { method: 'DELETE' }).catch(() => null);
-          },
+          onPress: () => void deleteMessage(false),
         },
         {
           text: t('social.deleteForEveryone'),
           style: 'destructive',
-          onPress: async () => {
-            setMessages(prev => prev.filter(m => m.id !== msg.id));
-            apiFetch(`/messages/${msg.id}?forEveryone=true`, { method: 'DELETE' }).catch(() => null);
-          },
+          onPress: () => void deleteMessage(true),
         },
         { text: t('social.cancel'), style: 'cancel' },
       ],
     );
-  }, []);
+  }, [myUserId, userId, t, removeQueuedMessage]);
 
   const handleSticker = useCallback(async (def: StickerDef) => {
-    if (sending || loading || !userId) return;
+    if (sending || !userId || isBlocked || deletedPartner) return;
     setShowPicker(false);
     setSending(true);
     playSticker(def);
-    const optimistic: Message = {
-      id: `temp-${Date.now()}`, fromUserId: 'me', toUserId: userId,
-      content: null, expression: def.id, isRead: false, createdAt: new Date().toISOString(), isOwn: true,
-    };
-    setMessages(prev => [...prev, optimistic]);
     try {
-      const sent = await apiFetch<Message>(`/messages/${userId}`, {
-        method: 'POST', body: JSON.stringify({ expression: def.id }),
+      await queueOutgoingMessage({
+        clientMessageId: Crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+        content: null,
+        imageUri: null,
+        expression: def.id,
+        attempts: 0,
+        retryAt: Date.now(),
       });
-      setMessages(prev => prev.map(m => m.id === optimistic.id ? (sent ?? optimistic) : m));
-      if (sent?.id) lastMsgIdRef.current = sent.id;
-    } catch (err) {
-      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
-      if (err instanceof ApiError && err.status === 429) {
-        const suffix = (err.retryAfter != null && err.retryAfter >= 5)
-          ? ` Try again in ${err.retryAfter}s.`
-          : '';
-        showToastGlobal(`${t('social.slowDown')}${suffix}`, 'warning');
-      }
     } finally {
       setSending(false);
     }
-  }, [sending, loading, userId, playSticker]);
+  }, [sending, userId, isBlocked, deletedPartner, playSticker, queueOutgoingMessage]);
 
   // Build flat list with date separators
   const listData = useMemo(() => {
@@ -1040,9 +1320,10 @@ function MessagesScreenContent() {
         colors={th}
         onDelete={handleDeleteMsg}
         onOpenPhoto={handleOpenPhoto}
+        onRetry={retryMessage}
       />
     );
-  }, [partnerDisplayAvatar, contentWidth, handleDeleteMsg, handleOpenPhoto, partnerDisplayName, partnerInitial, th]);
+  }, [partnerDisplayAvatar, contentWidth, handleDeleteMsg, handleOpenPhoto, retryMessage, partnerDisplayName, partnerInitial, th]);
   const handleOpenLumiPalette = useCallback(() => setShowPicker(false), []);
 
   const stickerCellWidth = Math.max(52, Math.min(72, Math.floor((contentWidth - 44) / 5)));
@@ -1111,11 +1392,11 @@ function MessagesScreenContent() {
       </LinearGradient>
 
       {/* ── Messages ─────────────────────────────────────────── */}
-      {error && messages.length === 0 ? (
-        <View style={styles.centerWrap}>
+      {error && messages.length === 0 && (
+        <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
           <Text style={{ color: MUTED, fontFamily: 'Satoshi-Regular' }}>{error}</Text>
         </View>
-      ) : (
+      )}
         <KeyboardAvoidingViewCompat
           style={{ flex: 1 }}
           behavior="padding"
@@ -1339,7 +1620,6 @@ function MessagesScreenContent() {
           )}
           </View>
         </KeyboardAvoidingViewCompat>
-      )}
 
       {viewingPhoto && <ChatPhotoViewer uri={viewingPhoto} onClose={() => setViewingPhoto(null)} background={NIGHT} color="rgba(220,210,255,0.90)" />}
 
@@ -1431,6 +1711,7 @@ const styles = StyleSheet.create({
   bubbleOther: { borderBottomLeftRadius: 5, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: BORDER },
   bubbleText:  { fontSize: 16, fontFamily: 'Satoshi-Medium', lineHeight: 24, letterSpacing: 0.05 },
   bubbleTime:  { fontSize: 11, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end' },
+  deliveryStatus: { fontSize: 10, fontFamily: 'Satoshi-Regular', alignSelf: 'flex-end', marginTop: 3 },
 
   // ── Sticker row + card
   exprRowOwn:   { flexDirection: 'row', justifyContent: 'flex-end',   marginBottom: 8, marginRight: 4 },

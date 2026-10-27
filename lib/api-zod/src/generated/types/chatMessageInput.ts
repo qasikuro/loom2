@@ -8,6 +8,8 @@
 import type { ChatMessageInputExpression } from "./chatMessageInputExpression";
 
 export interface ChatMessageInput {
+  /** Stable client-generated UUID used to make safe retries idempotent. */
+  clientMessageId?: string;
   /**
    * @minLength 1
    * @maxLength 2000

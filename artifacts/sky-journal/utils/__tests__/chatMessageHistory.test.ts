@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeChatMessages } from '../chatMessageHistory';
+import { mergeChatMessages, upsertChatMessages, type MergeableChatMessage } from '../chatMessageHistory';
 import type { ChatMessage } from '@workspace/api-client-react';
 
 function message(id: string, createdAt: string, content = id): ChatMessage {
@@ -45,5 +45,22 @@ describe('chat message history merging', () => {
     const result = mergeChatMessages([recent], [older, recent]);
     expect(result.map(item => item.id)).toEqual(['older', 'recent']);
     expect(result[1]).toBe(recent);
+  });
+
+  it('updates an older pending row without losing newer incoming messages', () => {
+    const pending: MergeableChatMessage = { ...message('pending', '2026-10-10T09:00:00Z'), deliveryState: 'queued' };
+    const newer = message('newer', '2026-10-10T10:00:00Z');
+    const updated = upsertChatMessages([pending, newer], [{ ...pending, deliveryState: 'sending' }]);
+    expect(updated.map(row => row.id)).toEqual(['pending', 'newer']);
+    expect(updated[1]).toBe(newer);
+    expect(updated[0].deliveryState).toBe('sending');
+  });
+
+  it('confirms a queued ID once and prevents late hydration from making it pending again', () => {
+    const confirmed = message('same-id', '2026-10-10T10:00:00Z');
+    const pending: MergeableChatMessage = { ...confirmed, deliveryState: 'queued' };
+    expect(upsertChatMessages([pending], [confirmed])).toEqual([confirmed]);
+    expect(upsertChatMessages([confirmed], [pending])[0]).toBe(confirmed);
+    expect(mergeChatMessages([], [confirmed, pending])).toEqual([confirmed]);
   });
 });

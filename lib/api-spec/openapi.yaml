@@ -1819,10 +1819,19 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ChatMessage" }
+        "200":
+          description: The same client message was already accepted; returns its original row
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ChatMessage" }
         "400":
           description: Invalid message or photo reference
         "403":
           description: Blocked conversation or photo not owned by sender
+        "409":
+          description: Client message ID was reused for a different message
+        "410":
+          description: The original message was deleted or hidden for this sender and cannot be replayed
 
   /messages/conversation/{partnerId}:
     delete:
@@ -2069,6 +2078,10 @@ components:
     ChatMessageInput:
       type: object
       properties:
+        clientMessageId:
+          type: string
+          format: uuid
+          description: Stable client-generated UUID used to make safe retries idempotent.
         content: { type: string, minLength: 1, maxLength: 2000 }
         expression:
           type: string

@@ -27,6 +27,7 @@ function MessagePhoto({ uri, width, maxHeight, onOpen, onLongPress, scope }: Pho
   const retrying = useRef(false);
   const generation = useRef(0);
   const autoRetried = useRef(false);
+  const ready = useRef(false);
   const load = useCallback(async (force: boolean) => {
     const current = ++generation.current;
     setStatus('loading');
@@ -44,7 +45,7 @@ function MessagePhoto({ uri, width, maxHeight, onOpen, onLongPress, scope }: Pho
     mounted.current = true;
     void load(false);
     const subscription = AppState.addEventListener('change', state => {
-      if (state === 'active') {
+      if (state === 'active' && !ready.current) {
         autoRetried.current = false;
         void load(true);
       }
@@ -66,26 +67,31 @@ function MessagePhoto({ uri, width, maxHeight, onOpen, onLongPress, scope }: Pho
     }
   };
   return (
-    <View style={[styles.messagePhoto, { width, height: Math.min(width / aspect, maxHeight ?? Infinity), backgroundColor: colors.muted }]}>
+    <View style={[styles.messagePhoto, { width, height: maxHeight ? Math.min(width / aspect, maxHeight) : width, backgroundColor: colors.muted }]}>
       {readUri && <ExpoImage
         key={attempt}
-        source={{ uri: readUri, cacheKey: uri }}
+        source={{ uri: readUri, cacheKey: JSON.stringify([scope, uri]) }}
         recyclingKey={JSON.stringify([scope, uri])}
         style={StyleSheet.absoluteFill}
         contentFit="contain"
         cachePolicy="memory-disk"
         priority="high"
-        transition={120}
+        transition={0}
         accessibilityLabel="Shared photo"
         accessible={!onOpen}
         onLoadStart={() => setStatus('loading')}
         onLoad={event => {
           const { width: w, height: h } = event.source;
-          if (w > 0 && h > 0) setAspect(Math.max(0.65, Math.min(1.7, w / h)));
+          // Inline thumbnails reserve a stable footprint before decoding, so
+          // images appearing above the viewport cannot move the scroll anchor.
+          // The full-screen viewer can still use the image's natural aspect.
+          if (maxHeight && w > 0 && h > 0) setAspect(Math.max(0.65, Math.min(1.7, w / h)));
           autoRetried.current = false;
+          ready.current = true;
           setStatus('ready');
         }}
         onError={() => {
+          ready.current = false;
           if (!autoRetried.current) {
             autoRetried.current = true;
             void load(true);

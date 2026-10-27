@@ -234,6 +234,8 @@ export const ChatMessageInputExpression = {
 } as const;
 
 export interface ChatMessageInput {
+  /** Stable client-generated UUID used to make safe retries idempotent. */
+  clientMessageId?: string;
   /**
    * @minLength 1
    * @maxLength 2000
