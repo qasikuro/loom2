@@ -503,9 +503,10 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
   const aura   = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const { isDark } = useTheme();
   const colors = useColors();
+  // Quiet navy/charcoal base; mood only tints faintly. Equipped effects still render above.
   const heroColors: React.ComponentProps<typeof LinearGradient>['colors'] = isDark
-    ? aura.gradient
-    : [colors.background, colors.card, `${aura.accent}25`];
+    ? [colors.background, `${aura.gradient[1]}`, colors.background]
+    : [colors.background, colors.background, `${aura.accent}14`];
   const { width: screenW } = useWindowDimensions();
   const { reduceMotion, animate } = useDecorativeMotion();
   const breatheAnim   = useRef(new Animated.Value(0)).current;
@@ -534,8 +535,8 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
         Animated.parallel([
           Animated.timing(p.y,  { toValue: -H - 20, duration: aura.speed * 1.5, easing: Easing.linear, useNativeDriver: true }),
           Animated.sequence([
-            Animated.timing(p.op, { toValue: 0.70, duration: aura.speed * 0.18, useNativeDriver: true }),
-            Animated.timing(p.op, { toValue: 0.70, duration: aura.speed * 0.64, useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0.22, duration: aura.speed * 0.18, useNativeDriver: true }),
+            Animated.timing(p.op, { toValue: 0.22, duration: aura.speed * 0.64, useNativeDriver: true }),
             Animated.timing(p.op, { toValue: 0,    duration: aura.speed * 0.18, useNativeDriver: true }),
           ]),
         ]),
@@ -551,11 +552,11 @@ export function CharacterAuraHeader({ mood, paddingTop, activeEffect, coverImage
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mood, animate]);
 
-  const glowOpacity    = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.06, 0.18, 0.06] });
-  const glowScale      = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0.80, 1.18] });
-  const glow2Opacity   = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.03, 0.12, 0.03] });
-  const cornerOpacity  = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.08, 0.22, 0.08] });
-  const corner2Opacity = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.05, 0.15, 0.05] });
+  const glowOpacity    = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.02, 0.05, 0.02] });
+  const glowScale      = breatheAnim.interpolate({ inputRange: [0, 1], outputRange: [0.92, 1.08] });
+  const glow2Opacity   = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.015, 0.05, 0.015] });
+  const cornerOpacity  = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.03, 0.08, 0.03] });
+  const corner2Opacity = breatheAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.02, 0.06, 0.02] });
 
   return (
     <View style={[s.header, { paddingTop, overflow: 'hidden', backgroundColor: colors.background }]}>

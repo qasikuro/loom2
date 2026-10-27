@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
-import { Animated, Easing, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiFetch } from '@/context/AppContext';
 import { useTranslation } from 'react-i18next';
@@ -22,10 +22,12 @@ import { MoodPickerModal } from '@/components/profile/MoodPickerModal';
 import { OutfitDetailModal } from '@/components/profile/OutfitDetailModal';
 import { ProfileAboutSection } from '@/components/profile/ProfileAboutSection';
 import { ProfileVibeSection } from '@/components/profile/ProfileVibeSection';
-import { ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection';
+import { OWN_AVATAR_BOX, OWN_AVATAR_SIZE, OwnProfileAvatar, ProfileHeaderSection } from '@/components/profile/ProfileHeaderSection';
+import { AvatarFlightOverlay, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
 import { ProfileStyleSection } from '@/components/profile/ProfileStyleSection';
 import { ProfileSettingsDrawer } from '@/components/profile/ProfileSettingsDrawer';
 import { TitlePickerModal } from '@/components/profile/TitlePickerModal';
+import { ProfileCollapseBar, useProfileCollapse } from '@/components/profile/ProfileCollapseBar';
 import { getAvailableProfileTitles } from '@/components/profile/profileTitles';
 import { useGalleryState } from '@/hooks/useGalleryState';
 import { loadOnboardingProgress, saveOnboardingProgress, type OnboardingProgress, type OnboardingStep } from '@/utils/onboardingProgress';
@@ -73,6 +75,15 @@ export default function CharacterScreen() {
   const activeOutfit = activeOutfitId ? outfits.find(o => o.id === activeOutfitId) ?? null : null;
   const topPad       = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad    = Platform.OS === 'web' ? 100 : insets.bottom + 120;
+  const [profileCollapseAt, setProfileCollapseAt] = useState(150);
+  // Travel completes exactly when the bio panel reaches the sticky bar's bottom edge.
+  const handleBioLayout = useCallback((y: number) => {
+    const next = Math.max(90, Math.round(y - (topPad + 56) - 8));
+    setProfileCollapseAt(prev => (Math.abs(prev - next) > 1 ? next : prev));
+  }, [topPad]);
+  const compactBarAt = Math.max(0, profileCollapseAt - 36);
+  const { scrollY, compactVisible, onScroll, offsetRef } = useProfileCollapse(compactBarAt);
+  const { rootRef, slotRef, anchor, measure } = useAvatarAnchor(offsetRef);
 
   const xpBase          = rewardBalance?.stars ?? 0;
   const profileLevel    = Math.max(1, Math.floor(xpBase / XP_PER_LEVEL) + 1);
@@ -187,7 +198,7 @@ export default function CharacterScreen() {
   }
 
   return (
-    <View style={[s.container, { backgroundColor: colors.background }]}>
+    <View ref={rootRef} collapsable={false} onLayout={measure} style={[s.container, { backgroundColor: colors.background }]}>
       {((hasCheckedApi && !apiOnline) || storiesLoadError || outfitsLoadError) && !isLoading && (
         <View style={[offlineS.row, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={offlineS.dot} />
@@ -202,12 +213,19 @@ export default function CharacterScreen() {
         <CorruptionBanner onRefresh={reloadData} />
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad }} scrollEventThrottle={16}>
+      <Animated.ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: bottomPad }}
+        scrollEventThrottle={16}
+        onScroll={onScroll}
+        onLayout={measure}
+        testID="own-profile-scroll"
+      >
         <CharacterAuraHeader
           mood={character.mood || 'Dreamy'}
           paddingTop={topPad + 4}
           activeEffect={activeEffect}
-          coverImageUri={activeOutfit?.imageUri ?? character.avatarUri ?? null}
+          coverImageUri={null}
         >
           <ProfileHeaderSection
             character={character} setCharacter={setCharacter}
@@ -216,6 +234,10 @@ export default function CharacterScreen() {
             activeFrame={activeFrame} activeOutfit={activeOutfit}
             openDrawer={openDrawer} toggleVisibility={toggleVisibility}
             profileLevel={profileLevel} profileXpPct={profileXpPct}
+            collapseScrollY={scrollY} collapseAt={profileCollapseAt}
+            avatarSlotRef={slotRef} onAvatarSlotLayout={measure}
+            avatarInOverlay={!!anchor}
+            onBioLayout={handleBioLayout}
           />
         </CharacterAuraHeader>
 
@@ -260,7 +282,67 @@ export default function CharacterScreen() {
           )}
 
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
+
+      <ProfileCollapseBar
+        scrollY={scrollY}
+        collapseAt={compactBarAt}
+        compactVisible={compactVisible}
+        topInset={topPad}
+        name={character.name}
+        avatarSlotOnly={!!anchor}
+        levelLabel={`${t('publicProfile.levelShort')} ${profileLevel}`}
+        goldColor={colors.gold}
+        subtitle={character.username ? `@${character.username}` : null}
+        avatarUri={character.avatarUri ?? activeOutfit?.imageUri}
+        backgroundColor={colors.background}
+        foregroundColor={colors.foreground}
+        mutedColor={colors.mutedForeground}
+        borderColor={colors.border}
+        rightActions={
+          <>
+            <TouchableOpacity
+              style={[s.compactAction, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={openDrawer}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Settings"
+              testID="profile-compact-settings"
+              hitSlop={6}
+            >
+              <Icon name="settings" size={17} color={colors.foreground} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.compactAction, { borderColor: colors.border, backgroundColor: colors.card }]}
+              onPress={() => router.push('/messages' as never)}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel="Messages"
+              testID="profile-compact-messages"
+              hitSlop={6}
+            >
+              <Icon name="message-circle" size={17} color={colors.foreground} />
+            </TouchableOpacity>
+          </>
+        }
+      />
+
+      <AvatarFlightOverlay
+        anchor={anchor}
+        scrollY={scrollY}
+        range={profileCollapseAt}
+        topInset={topPad}
+        boxSize={OWN_AVATAR_BOX}
+        avatarSize={OWN_AVATAR_SIZE}
+        hidden={drawerOpen || moonlitMuseIntroVisible}
+      >
+        <OwnProfileAvatar
+          avatarSource={avatarSource}
+          contain={Boolean(character.avatarUri)}
+          activeFrame={activeFrame}
+          mood={character.mood || 'Dreamy'}
+        />
+      </AvatarFlightOverlay>
 
       {/* ── Modals & overlays ──────────────────────────────────────────── */}
       <OutfitDetailModal
@@ -307,6 +389,7 @@ export default function CharacterScreen() {
 
 const s = StyleSheet.create({
   container:    { flex: 1 },
+  compactAction: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   setupCard: { minHeight: 52, borderRadius: 18, borderWidth: 1, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 },
   setupIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(181,140,255,0.14)' },
   setupTitle: { fontFamily: 'Satoshi-Bold', fontSize: 13.5 },

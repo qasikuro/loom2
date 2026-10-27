@@ -8,7 +8,7 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { safeBack } from '@/utils/navigation';
 import { prepareNativeOutfitAudio } from '@/utils/prepareNativeOutfitAudio';
 import { useTranslation } from 'react-i18next';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DiscoverVideoPlayerModal } from '@/components/DiscoverVideoPlayerModal';
 import type { DiscoverPost, StoryMusic } from '@/context/mappers';
 import { SecureImage as Image } from '@/components/SecureImage';
@@ -41,6 +41,8 @@ import { ProfileEffect } from '@/components/ProfileEffect';
 import FounderAuroraCardFrame from '@/components/profile/FounderAuroraCardFrame';
 import { FounderProfileIntro } from '@/components/profile/FounderProfileIntro';
 import { MoonlitMuseIntro } from '@/components/profile/MoonlitMuseIntro';
+import { ProfileCollapseBar, useProfileCollapse } from '@/components/profile/ProfileCollapseBar';
+import { AvatarFlightOverlay, useAvatarAnchor } from '@/components/profile/ProfileAvatarFlight';
 
 // ── Mood aura data ────────────────────────────────────────────────────────────
 type AuraData = {
@@ -88,184 +90,6 @@ const ROLES = [
   { key: 'Uber',      emoji: '👑', color: '#9B78E8' },
   { key: 'Solo',      emoji: '🌙', color: '#6080C0' },
 ];
-
-const PARTICLE_XS    = [0.08, 0.19, 0.33, 0.47, 0.60, 0.72, 0.85, 0.93, 0.15, 0.55];
-const PARTICLE_SIZES = [14,   10,   18,   12,   16,   9,    20,   11,   13,   15];
-
-// ── Animated banner effects ───────────────────────────────────────────────────
-function AuraBanner({
-  mood,
-  bannerH,
-  isFounder,
-  isBeta,
-  activeEffect,
-  children,
-}: {
-  mood: string;
-  bannerH: number;
-  isFounder?: boolean;
-  isBeta?: boolean;
-  activeEffect?: string | null;
-  children: React.ReactNode;
-}) {
-  const aura = MOOD_AURA[mood] ?? DEFAULT_AURA;
-  const { width: W } = useWindowDimensions();
-
-  // Orb breath animation
-  const breathe = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(breathe, { toValue: 1, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(breathe, { toValue: 0, duration: 4000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [breathe]);
-
-  // Secondary drift
-  const drift = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    const loop = Animated.loop(Animated.sequence([
-      Animated.timing(drift, { toValue: 1, duration: 6000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      Animated.timing(drift, { toValue: 0, duration: 6000, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-    ]));
-    loop.start();
-    return () => loop.stop();
-  }, [drift]);
-
-  // Particles
-  const particleAnims = useRef(
-    PARTICLE_XS.map(() => ({ y: new Animated.Value(0), op: new Animated.Value(0) }))
-  ).current;
-
-  useEffect(() => {
-    const H = bannerH + 40;
-    const loops = particleAnims.slice(0, aura.count).map((p, i) => {
-      p.y.setValue(-(i * (H / aura.count)));
-      p.op.setValue(0);
-      const loop = Animated.loop(Animated.sequence([
-        Animated.delay(i * (aura.speed / aura.count)),
-        Animated.parallel([
-          Animated.timing(p.y,  { toValue: -H - 20, duration: aura.speed * 1.6, easing: Easing.linear, useNativeDriver: true }),
-          Animated.sequence([
-            Animated.timing(p.op, { toValue: 0.65, duration: aura.speed * 0.18, useNativeDriver: true }),
-            Animated.timing(p.op, { toValue: 0.65, duration: aura.speed * 0.64, useNativeDriver: true }),
-            Animated.timing(p.op, { toValue: 0,    duration: aura.speed * 0.18, useNativeDriver: true }),
-          ]),
-        ]),
-        Animated.parallel([
-          Animated.timing(p.y,  { toValue: 0, duration: 0, useNativeDriver: true }),
-          Animated.timing(p.op, { toValue: 0, duration: 0, useNativeDriver: true }),
-        ]),
-      ]));
-      loop.start();
-      return loop;
-    });
-    return () => loops.forEach(l => l.stop());
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mood, bannerH]);
-
-  const orbAScale   = breathe.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] });
-  const orbAOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.18, 0.42, 0.18] });
-  const orbBScale   = drift.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1.18] });
-  const orbBOpacity = drift.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.10, 0.28, 0.10] });
-  const orbBX       = drift.interpolate({ inputRange: [0, 1], outputRange: [0, 20] });
-  const orbCOpacity = breathe.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0.12, 0.30, 0.12] });
-  const orbCX       = drift.interpolate({ inputRange: [0, 1], outputRange: [0, -16] });
-
-  return (
-    <View style={[styles.banner, { height: bannerH, overflow: 'hidden' }]}>
-      {/* Mood gradient base */}
-      <LinearGradient
-        colors={aura.gradient}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0.1, y: 0 }}
-        end={{ x: 0.9, y: 1 }}
-      />
-      {activeEffect === 'effect_aurora_clouds' && <AuroraCloudBackdrop />}
-      {activeEffect && activeEffect !== 'effect_aurora_clouds' && activeEffect !== 'effect_moonlit_muse' && (
-        <ProfileEffect effectId={activeEffect} />
-      )}
-      {/* Founder golden tint overlay */}
-      {isFounder && (
-        <LinearGradient
-          colors={['#C8A84B33', '#8A682018', 'transparent']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          pointerEvents="none"
-        />
-      )}
-      {/* Beta purple tint overlay */}
-      {isBeta && !isFounder && (
-        <LinearGradient
-          colors={['#9B78E833', '#3A187820', 'transparent']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          pointerEvents="none"
-        />
-      )}
-
-      {/* Animated orb A — large, left, breathes */}
-      <Animated.View
-        pointerEvents="none"
-        style={{
-          position: 'absolute', top: 10, left: -60,
-          width: W * 0.70, height: W * 0.70, borderRadius: W * 0.35,
-          backgroundColor: aura.orbs[0],
-          transform: [{ scale: orbAScale }],
-          opacity: orbAOpacity,
-        }}
-      />
-
-      {/* Animated orb B — mid, right, drifts */}
-      <Animated.View
-        pointerEvents="none"
-        style={{
-          position: 'absolute', bottom: 20, right: -30,
-          width: W * 0.55, height: W * 0.55, borderRadius: W * 0.275,
-          backgroundColor: aura.orbs[1] + '30',
-          transform: [{ scale: orbBScale }, { translateX: orbBX }],
-          opacity: orbBOpacity,
-        }}
-      />
-
-      {/* Animated orb C — small, top right, drifts opposite */}
-      <Animated.View
-        pointerEvents="none"
-        style={{
-          position: 'absolute', top: 40, right: 30,
-          width: 110, height: 110, borderRadius: 55,
-          backgroundColor: aura.orbs[2],
-          transform: [{ translateX: orbCX }],
-          opacity: orbCOpacity,
-        }}
-      />
-
-      {/* Floating particles */}
-      {particleAnims.slice(0, aura.count).map((p, i) => (
-        <Animated.Text
-          key={i}
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            bottom: 20,
-            left: PARTICLE_XS[i % PARTICLE_XS.length] * W,
-            fontSize: PARTICLE_SIZES[i % PARTICLE_SIZES.length],
-            color: aura.accent,
-            opacity: p.op,
-            transform: [{ translateY: p.y }],
-          }}
-        >
-          {aura.particle}
-        </Animated.Text>
-      ))}
-
-      {children}
-    </View>
-  );
-}
 
 // ── Crown spark dots for founder ring ────────────────────────────────────────
 const SPARK_ANGLES = [0, 45, 90, 135, 180, 225, 270, 315];
@@ -352,7 +176,6 @@ function AnimatedAvatarRing({
   const spin        = rotate.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
   const pulseScale  = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.06] });
   const pulseOp     = pulse.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 0.55, 0] });
-
   const avatarSource = profile.avatarUri ? { uri: profile.avatarUri } : null;
   const initial = (profile.name ?? '?').charAt(0).toUpperCase();
 
@@ -365,7 +188,7 @@ function AnimatedAvatarRing({
 
   if (isFounder) {
     return (
-      <View style={styles.avatarInBanner}>
+      <Animated.View style={[styles.avatarInBanner, null]}>
         {/* Outer shimmer halo */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
@@ -424,13 +247,13 @@ function AnimatedAvatarRing({
           )}
         </View>
         {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
-      </View>
+      </Animated.View>
     );
   }
 
   if (isBeta) {
     return (
-      <View style={styles.avatarInBanner}>
+      <Animated.View style={[styles.avatarInBanner, null]}>
         {/* Outer halo */}
         <Animated.View pointerEvents="none" style={{
           position: 'absolute',
@@ -483,13 +306,13 @@ function AnimatedAvatarRing({
           )}
         </View>
         {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
-      </View>
+      </Animated.View>
     );
   }
 
   // ── Normal user ring
   return (
-    <View style={styles.avatarInBanner}>
+    <Animated.View style={[styles.avatarInBanner, null]}>
       {/* Outer halo pulse */}
       <Animated.View
         pointerEvents="none"
@@ -540,7 +363,7 @@ function AnimatedAvatarRing({
         )}
       </View>
       {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -574,18 +397,6 @@ function fmtBirthday(bd: string, locale: string): string {
     if (isNaN(d.getTime())) return bd;
     return d.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
   } catch { return bd; }
-}
-
-function platformEmoji(p?: string): string {
-  const lc = p?.toLowerCase() ?? '';
-  if (lc.includes('discord'))                            return '🎮';
-  if (lc.includes('instagram'))                          return '📷';
-  if (lc.includes('twitter') || lc.includes('x.com'))   return '𝕏';
-  if (lc.includes('youtube'))                            return '📺';
-  if (lc.includes('tiktok'))                             return '🎵';
-  if (lc.includes('twitch'))                             return '💜';
-  if (lc.includes('github'))                             return '🐙';
-  return '🔗';
 }
 
 interface ActiveOutfit {
@@ -705,7 +516,19 @@ export default function UserProfileScreen() {
 
   const topPad    = Platform.OS === 'web' ? 67 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 80  : insets.bottom + 40;
-  const bannerH   = topPad + 230;
+  const [profileCollapseAt, setProfileCollapseAt] = useState(160);
+  // Travel completes when the info card reaches the sticky bar's bottom edge (layout-time only).
+  const handlePanelsLayout = useCallback((y: number) => {
+    const next = Math.max(90, Math.round(y - (topPad + 56) - 8));
+    setProfileCollapseAt(prev => (Math.abs(prev - next) > 1 ? next : prev));
+  }, [topPad]);
+  const compactBarAt = Math.max(0, profileCollapseAt - 36);
+  const { scrollY, compactVisible, onScroll, offsetRef } = useProfileCollapse(compactBarAt);
+  const { rootRef, slotRef, anchor, measure } = useAvatarAnchor(offsetRef);
+  const infoOpacity = useMemo(() => scrollY.interpolate({ inputRange: [0, profileCollapseAt * 0.75], outputRange: [1, 0], extrapolate: 'clamp' }), [scrollY, profileCollapseAt]);
+  const infoTy = useMemo(() => scrollY.interpolate({ inputRange: [0, profileCollapseAt], outputRange: [0, -14], extrapolate: 'clamp' }), [scrollY, profileCollapseAt]);
+  type GalleryFilter = 'all' | 'videos' | 'outfits' | 'stories' | 'books';
+  const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>('all');
 
   function runEnterAnimation() {
     Animated.parallel([
@@ -948,6 +771,92 @@ export default function UserProfileScreen() {
       };
   const regaliaAccent = hasRegalia && !isDark ? colors.tint : aura.accent;
 
+  const xpTotal = profile?.stars ?? 0;
+  const level = Math.max(1, Math.floor(xpTotal / XP_PER_LEVEL) + 1);
+  const xpInLevel = xpTotal % XP_PER_LEVEL;
+  const xpPct = xpInLevel / XP_PER_LEVEL;
+  const intentionToday = (() => {
+    if (!profile?.intentionDate) return false;
+    const d = new Date();
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return profile.intentionDate === today;
+  })();
+  const galleryTabs: { key: GalleryFilter; label: string }[] = [
+    { key: 'all', label: t('reels.filterAll') },
+    ...(videos.length ? [{ key: 'videos' as const, label: t('reels.filterVideos') }] : []),
+    ...(outfits.length || profile?.activeOutfit ? [{ key: 'outfits' as const, label: t('components.profile.stats.outfits') }] : []),
+    ...(stories.length ? [{ key: 'stories' as const, label: t('reels.filterStories') }] : []),
+    ...(books.length ? [{ key: 'books' as const, label: t('publicProfile.books') }] : []),
+  ];
+  const showKind = (k: GalleryFilter) => galleryFilter === 'all' || galleryFilter === k;
+  const contentW = Math.min(windowWidth, 720);
+  const GRID_GAP = 6;
+  const tileW = Math.floor((contentW - 32 - GRID_GAP * 2) / 3);
+  const outfitList = [
+    ...(profile?.activeOutfit ? [{ ...profile.activeOutfit, date: '' }] : []),
+    ...outfits.filter(outfit => outfit.id !== profile?.activeOutfit?.id),
+  ];
+  function openOutfitAt(index: number) {
+    if (!profile) return;
+    const outfit = outfitList[index];
+    if (!outfit) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({
+      pathname: '/user-outfit',
+      params: {
+        outfitName: outfit.name, outfitId: outfit.id,
+        outfitDesc: outfit.description ?? '', outfitStory: outfit.story ?? '',
+        outfitImage: outfit.imageUri ?? '', outfitTags: JSON.stringify(outfit.tags ?? []),
+        outfitMusic: outfit.music ? JSON.stringify(outfit.music) : '', outfitDate: outfit.date ?? '',
+        authorUserId: profile.userId, authorName: profile.name, authorHandle: profile.username ?? '',
+        authorBio: profile.bio ?? '', authorAvatarUri: profile.avatarUri ?? '', authorIsSelf: String(isSelf),
+        authorMood: profile.mood ?? '', authorTraits: JSON.stringify(profile.traits),
+        allOutfitsJson: JSON.stringify(outfitList.map(o => ({ id: o.id, name: o.name, description: o.description ?? '', story: o.story ?? '', imageUri: o.imageUri ?? '', tags: o.tags ?? [], music: o.music ?? null, date: o.date ?? '' }))),
+        initialIndex: String(index),
+      },
+    } as never);
+  }
+  type GalleryItem = { key: string; kind: GalleryFilter; title: string; image: string | null; icon: string; current?: boolean; disabled?: boolean; testID?: string; onPress: () => void };
+  const galleryItems: GalleryItem[] = !profile ? [] : [
+    ...(showKind('videos') ? videos.map(v => ({
+      key: `v-${v.id}`, kind: 'videos' as const, title: v.chapterTitle, image: v.thumbnailUri ?? null, icon: 'play',
+      disabled: !v.videoUri, testID: `profile-video-${v.id}`,
+      onPress: () => setVideoPost({
+        id: v.id, authorUserId: profile.userId, authorName: profile.name,
+        authorHandle: profile.username ?? '', authorAvatarUri: profile.avatarUri,
+        chapterTitle: v.chapterTitle, storySnippet: '', mood: v.mood,
+        witnessedCount: v.witnessedCount, likeCount: v.likeCount ?? 0, liked: false,
+        savedCount: v.savedCount, stickerCount: 0, timeAgo: '', date: v.date,
+        chapterNumber: 0, vibe: '', saved: false, isFollowing,
+        contentType: 'video', videoUri: v.videoUri, thumbnailUri: v.thumbnailUri, music: v.music,
+      }),
+    })) : []),
+    ...(showKind('outfits') ? outfitList.map((o, i) => ({
+      key: `o-${o.id}-${i}`, kind: 'outfits' as const, title: o.name, image: o.imageUri ?? null, icon: 'layers',
+      current: Boolean(profile.activeOutfit) && i === 0, testID: `public-gallery-outfit-${o.id}`,
+      onPress: () => openOutfitAt(i),
+    })) : []),
+    ...(showKind('stories') && !storiesError ? stories.map(st => ({
+      key: `s-${st.id}`, kind: 'stories' as const, title: st.chapterTitle, image: st.panels[0]?.imageUri ?? null, icon: 'book-open',
+      testID: `public-gallery-story-${st.id}`,
+      onPress: () => router.push({ pathname: '/story/[id]', params: { id: st.id, source: 'discover' } } as never),
+    })) : []),
+    ...(showKind('books') && !booksError ? books.map(bk => ({
+      key: `b-${bk.id}`, kind: 'books' as const, title: bk.title, image: bk.coverImageUri, icon: 'book',
+      testID: `public-gallery-book-${bk.id}`,
+      onPress: () => router.push({ pathname: '/book-public', params: { bookId: bk.id } } as never),
+    })) : []),
+  ];
+  function openSocials() {
+    const links = profile?.links ?? [];
+    const open = (url: string) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); Linking.openURL(url).catch(() => null); };
+    if (links.length === 1) { open(links[0].url); return; }
+    Alert.alert(t('components.about.socials'), undefined, [
+      ...links.slice(0, 8).map(l => ({ text: l.label, onPress: () => open(l.url) })),
+      { text: t('common.cancel'), style: 'cancel' as const },
+    ]);
+  }
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
@@ -974,9 +883,13 @@ export default function UserProfileScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
-      <ScrollView
+    <View ref={rootRef} collapsable={false} onLayout={measure} style={[styles.root, { backgroundColor: colors.background }]}>
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        onLayout={measure}
+        scrollEventThrottle={16}
+        testID="public-profile-scroll"
         contentContainerStyle={{
           width: Math.min(windowWidth, 720),
           alignSelf: 'center',
@@ -984,551 +897,350 @@ export default function UserProfileScreen() {
         }}
       >
 
-        {/* ── ANIMATED AURA BANNER ────────────────────────────────── */}
-        <AuraBanner
-          mood={mood}
-          bannerH={bannerH}
-          isFounder={isFounder}
-          isBeta={isBeta}
-          activeEffect={profile.activeEffect}
-        >
-          {/* Back button */}
-          <TouchableOpacity
-            style={[styles.topBtn, { top: topPad + 10, left: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}
-            onPress={() => safeBack()}
-            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          >
-            <Icon name="arrow-left" size={17} color="rgba(220,210,255,0.92)" />
-          </TouchableOpacity>
-
-          {/* More / report / block button */}
-          <TouchableOpacity
-            style={[styles.topBtn, { top: topPad + 10, right: 16, backgroundColor: 'rgba(0,0,0,0.45)' }]}
-            onPress={handleMore}
-            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          >
-            <Icon name="more-horizontal" size={17} color="rgba(220,210,255,0.92)" />
-          </TouchableOpacity>
-
-          {/* Top Explorer badge */}
-          {isTopExplorer && (
-            <View style={[styles.explorerBadge, {
-              top: topPad + 10,
-              right: isSelf ? 60 : 62,
-              backgroundColor: 'rgba(232,184,48,0.18)',
-              borderColor: 'rgba(232,184,48,0.40)',
-            }]}>
-              <Text style={{ fontSize: 12 }}>🏆</Text>
-              <Text style={[styles.explorerBadgeText, { color: '#E8B830' }]}>{t('publicProfile.topExplorer')}</Text>
-            </View>
-          )}
-
-          {/* Mood label floating in banner */}
-          <View style={[styles.moodFloat, { top: topPad + 14 }]}>
-            <MoodChip mood={mood} />
+        {/* ── QUIET IDENTITY HEADER ───────────────────────────────── */}
+        <View style={[styles.quietHeader, { paddingTop: topPad + 8 }]}>
+          <View pointerEvents="none" style={styles.quietBackdrop}>
+            <LinearGradient
+              colors={isDark ? [colors.background, `${aura.gradient[1]}`, colors.background] : [colors.background, `${aura.accent}10`, colors.background]}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+            />
+            {/* Equipped effects remain visible, just restrained. */}
+            {profile.activeEffect === 'effect_aurora_clouds' && <View style={[StyleSheet.absoluteFill, { opacity: 0.55 }]}><AuroraCloudBackdrop /></View>}
+            {profile.activeEffect && profile.activeEffect !== 'effect_aurora_clouds' && profile.activeEffect !== 'effect_moonlit_muse' && (
+              <View style={[StyleSheet.absoluteFill, { opacity: 0.6 }]}><ProfileEffect effectId={profile.activeEffect} /></View>
+            )}
           </View>
 
-          {/* Avatar with animated aura rings */}
-          <AnimatedAvatarRing
-            mood={mood}
-            profile={profile}
-            isFounder={isFounder}
-            isBeta={isBeta}
-            activeFrame={profile.activeFrame}
-          />
-        </AuraBanner>
+          <View style={styles.quietTopRow}>
+            <TouchableOpacity
+              style={[styles.quietTopBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => safeBack()}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.goBack')}
+              testID="public-profile-back"
+            >
+              <Icon name="arrow-left" size={17} color={colors.foreground} />
+            </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+            {isTopExplorer && (
+              <View style={[styles.explorerPill, { borderColor: `${colors.gold}55`, backgroundColor: `${colors.gold}12` }]}>
+                <Icon name="award" size={11} color={colors.gold} />
+                <Text style={[styles.explorerBadgeText, { color: colors.gold }]} numberOfLines={1}>{t('publicProfile.topExplorer')}</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.quietTopBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={handleMore}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={t('publicProfile.report')}
+              testID="public-profile-more"
+            >
+              <Icon name="more-horizontal" size={17} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
 
-        {/* ── FLOATING PROFILE CARD ───────────────────────────────── */}
-        <Animated.View
-          style={[
-            styles.profileCard,
-            {
-              width: Math.min(Math.max(windowWidth - 28, 0), 720),
-              alignSelf: 'center',
-              backgroundColor: hasRegalia ? regaliaTheme.panel : colors.card,
-              paddingHorizontal: hasRegalia ? 24 : 16,
-              paddingBottom: hasRegalia ? 18 : 0,
-              borderColor: hasRegalia ? regaliaTheme.border : isFounder ? '#C8A84B55' : isBeta ? '#9B78E855' : colors.border,
-              borderWidth: hasRegalia ? 1.25 : 1,
-            },
-            hasRegalia
-              ? {
-                  shadowColor: isDark ? '#000000' : '#71582F',
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: isDark ? 0.58 : 0.14,
-                  shadowRadius: 22,
-                  elevation: 8,
-                }
-              : SHADOW.md,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
-          ]}
-        >
-          {hasRegalia && (
-            <LinearGradient
-              pointerEvents="none"
-              colors={isDark ? ['rgba(205,165,88,0.075)', 'transparent', 'rgba(130,98,180,0.045)'] : ['rgba(183,132,47,0.055)', 'transparent', 'rgba(95,59,186,0.025)']}
-              locations={[0, 0.38, 1]}
-              style={[StyleSheet.absoluteFill, { borderRadius: 22 }]}
-            />
-          )}
-          {/* Name + badge */}
-          <View style={[styles.nameRow, hasRegalia && styles.regaliaNameRow]}>
-            <Text style={[styles.name, hasRegalia && styles.regaliaName, { color: colors.foreground }]}>{profile.name}</Text>
-            {isFounder && (
-              <View style={[styles.verifiedBadge, { backgroundColor: hasRegalia ? regaliaAccent + '22' : '#C8A84B22', borderColor: hasRegalia ? regaliaAccent + '55' : '#C8A84B55' }]}>
-                <Text style={{ fontSize: 11, color: hasRegalia ? regaliaTheme.gold : '#C8A84B' }}>✦</Text>
-              </View>
+          {/* Measured slot — the real avatar flies from here into the compact bar. */}
+          <View
+            ref={slotRef}
+            onLayout={measure}
+            collapsable={false}
+            style={styles.avatarSlot}
+            testID="public-profile-avatar-slot"
+          >
+            {!anchor && (
+              <AnimatedAvatarRing mood={mood} profile={profile} isFounder={isFounder} isBeta={isBeta} activeFrame={profile.activeFrame} />
             )}
-            {isBeta && !isFounder && (
-              <View style={[styles.verifiedBadge, { backgroundColor: '#9B78E822', borderColor: '#9B78E855' }]}>
-                <Text style={{ fontSize: 11 }}>⚗️</Text>
-              </View>
-            )}
-            <View style={[styles.nameBadge, { backgroundColor: regaliaAccent + '20', borderColor: regaliaAccent + '40' }]}>
-              <Text style={{ fontSize: 12, color: regaliaAccent }}>{aura.particle}</Text>
+          </View>
+
+          <Animated.View style={[styles.identityBlock, { opacity: infoOpacity, transform: [{ translateY: infoTy }] }]}>
+            <View style={styles.nameRow}>
+              <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>
+                {profile.name}
+              </Text>
+              {isFounder && <Icon name="award" size={15} color={colors.gold} accessibilityLabel={t('publicProfile.founderTitle')} />}
+              {isBeta && !isFounder && <Icon name="zap" size={14} color={colors.primary} accessibilityLabel={t('publicProfile.betaPioneerTitle')} />}
             </View>
+            <View style={styles.publicIdentityRow}>
+              {profile.username ? (
+                <Text style={[styles.handle, { color: colors.mutedForeground }]} numberOfLines={1}>@{profile.username}</Text>
+              ) : null}
+              {profile.showOnlineStatus && (
+                <View style={[styles.onlinePill, { borderColor: profile.isOnline ? 'rgba(80,200,120,0.40)' : colors.border }]}>
+                  <View style={[styles.onlineDot, { backgroundColor: profile.isOnline ? (isDark ? '#4EC87A' : '#24804A') : colors.mutedForeground }]} />
+                  <Text style={[styles.onlineText, { color: profile.isOnline ? (isDark ? '#4EC87A' : '#24804A') : colors.mutedForeground }]}>
+                    {profile.isOnline ? t('publicProfile.online') : t('publicProfile.offline')}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.levelRow}>
+              <View style={[styles.levelPill, { borderColor: `${colors.gold}66`, backgroundColor: `${colors.gold}12` }]}>
+                <Icon name="moon" size={11} color={colors.gold} />
+                <Text style={[styles.levelPillText, { color: colors.gold }]}>{t('publicProfile.levelShort')} {level}</Text>
+              </View>
+              {profile.activeTitle ? (
+                <View style={[styles.levelPill, { borderColor: `${colors.gold}40`, backgroundColor: 'transparent', maxWidth: 190 }]}>
+                  <Text style={[styles.levelPillText, { color: colors.gold }]} numberOfLines={1}>{profile.activeTitle}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            <View style={styles.xpRow} accessibilityLabel={`${xpInLevel} of ${XP_PER_LEVEL} XP`}>
+              <View style={[styles.xpTrack, { backgroundColor: colors.muted }]}>
+                <View style={[styles.xpFill, { width: `${Math.round(xpPct * 100)}%` as `${number}%`, backgroundColor: colors.primary }]} />
+              </View>
+              <Text style={[styles.xpText, { color: colors.mutedForeground }]}>{xpInLevel} / {XP_PER_LEVEL} XP</Text>
+            </View>
+
+            {profileBadges.length > 0 && (
+              <View style={styles.publicBadgeRow}>
+                <BadgeTray badges={profileBadges} />
+              </View>
+            )}
+            {(showLegacyFounderBadge || showLegacyBetaBadge) && (
+              <View style={styles.publicBadgeRow}>
+                <ProfileBadges isFounder={showLegacyFounderBadge} isBetaTester={showLegacyBetaBadge} size={30} showLabel />
+              </View>
+            )}
+          </Animated.View>
+
+          {/* Actions: follow / like / message */}
+          <View style={styles.actionRow}>
             {!isSelf && (
               <TouchableOpacity
-                style={[
-                  styles.followPill,
-                  isFollowing
-                    ? { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}40` }
-                    : { backgroundColor: colors.primary, borderColor: colors.primary },
-                ]}
+                style={[styles.actionBtn, isFollowing
+                  ? { backgroundColor: colors.card, borderColor: colors.border }
+                  : { backgroundColor: colors.primary, borderColor: colors.primary }]}
                 onPress={handleFollow}
                 activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isFollowing }}
+                testID="public-profile-follow"
               >
-                <Text style={[styles.followPillText, { color: isFollowing ? colors.primary : '#fff' }]}>
+                <Icon name={isFollowing ? 'user-check' : 'user-plus'} size={14} color={isFollowing ? colors.foreground : colors.primaryForeground} />
+                <Text style={[styles.actionText, { color: isFollowing ? colors.foreground : colors.primaryForeground }]} numberOfLines={1}>
                   {isFollowing ? t('publicProfile.following') : t('publicProfile.follow')}
                 </Text>
               </TouchableOpacity>
             )}
-          </View>
-
-          <View style={styles.profileLikesRow}>
             {!isSelf && (
               <TouchableOpacity
-                style={[
-                  styles.profileLikeButton,
-                  profile.profileLiked && styles.profileLikeButtonActive,
-                  hasRegalia && { borderColor: regaliaAccent + '55', backgroundColor: regaliaAccent + '12' },
-                  hasRegalia && profile.profileLiked && { borderColor: '#A83F7380', backgroundColor: '#A83F7318' },
-                ]}
+                style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: profile.profileLiked ? '#D878B080' : colors.border }]}
                 onPress={() => { void handleLikeProfile(); }}
                 disabled={likingProfile}
                 accessibilityRole="button"
                 accessibilityLabel={t(profile.profileLiked ? 'likes.unlikeProfile' : 'likes.likeProfile')}
                 accessibilityState={{ selected: profile.profileLiked, disabled: likingProfile }}
+                testID="public-profile-like"
               >
-                <Icon name="heart" size={16} color={profile.profileLiked ? (hasRegalia && !isDark ? '#A83F73' : '#F4B1D5') : colors.primary} />
-                <Text style={[styles.profileLikeText, { color: profile.profileLiked ? (hasRegalia && !isDark ? '#A83F73' : '#F4B1D5') : colors.primary }]}>
-                  {t(profile.profileLiked ? 'likes.liked' : 'likes.like')}
+                <Icon name="heart" size={14} color={profile.profileLiked ? (isDark ? '#F4B1D5' : '#A83F73') : colors.foreground} />
+                <Text style={[styles.actionText, { color: profile.profileLiked ? (isDark ? '#F4B1D5' : '#A83F73') : colors.foreground }]} numberOfLines={1}>
+                  {profile.profileLikeCount ?? 0}
                 </Text>
               </TouchableOpacity>
             )}
-            <Text style={[styles.profileLikeCount, { color: colors.mutedForeground }]}>
-              {t('likes.profileCount', { count: profile.profileLikeCount ?? 0 })}
-            </Text>
-          </View>
-
-          {/* @handle + online status */}
-          <View style={[{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }, hasRegalia && styles.regaliaIdentityRow]}>
-            {profile.username ? (
-              <Text style={[styles.handle, { color: regaliaAccent }]}>@{profile.username}</Text>
-            ) : null}
-            {profile.showOnlineStatus && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: profile.isOnline ? 'rgba(80,200,120,0.12)' : (hasRegalia && !isDark ? 'rgba(25,23,39,0.045)' : 'rgba(200,184,232,0.08)'), borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1, borderColor: profile.isOnline ? 'rgba(80,200,120,0.30)' : (hasRegalia && !isDark ? 'rgba(25,23,39,0.14)' : 'rgba(200,184,232,0.15)') }}>
-                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: profile.isOnline ? (hasRegalia && !isDark ? '#24804A' : '#4EC87A') : (hasRegalia && !isDark ? '#8B8490' : 'rgba(200,184,232,0.40)') }} />
-                <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Medium', color: profile.isOnline ? (hasRegalia && !isDark ? '#24804A' : '#4EC87A') : (hasRegalia && !isDark ? '#655D69' : 'rgba(200,184,232,0.50)') }}>
-                  {profile.isOnline ? t('publicProfile.online') : t('publicProfile.offline')}
-                </Text>
-              </View>
+            {!isSelf && (
+              <TouchableOpacity
+                style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push({ pathname: '/messages/[userId]', params: { userId: profile.userId, name: profile.name } } as never);
+                }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={t('publicProfile.sendMessage')}
+                testID="public-profile-message"
+              >
+                <Icon name="message-circle" size={14} color={colors.foreground} />
+              </TouchableOpacity>
+            )}
+            {isSelf && (
+              <Text style={[styles.profileLikeCount, { color: colors.mutedForeground }]}>
+                {t('likes.profileCount', { count: profile.profileLikeCount ?? 0 })}
+              </Text>
             )}
           </View>
+        </View>
 
-          {/* Active title */}
-          {profile.activeTitle ? (
-            <Text style={{ fontSize: 11, color: hasRegalia ? regaliaTheme.gold : '#C8A84B', fontFamily: 'Satoshi-Bold', letterSpacing: 0.3, marginTop: 3 }}>
-              ✦ {profile.activeTitle}
-            </Text>
+        <Animated.View
+          onLayout={e => handlePanelsLayout(e.nativeEvent.layout.y)}
+          style={[
+            styles.panelStack,
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] },
+          ]}
+        >
+          {/* Info card. The equipped Founder regalia frame wraps this whole group. */}
+          <View
+            testID="public-profile-info-card"
+            style={hasRegalia
+              ? [styles.regaliaCard, { backgroundColor: regaliaTheme.panel, borderColor: regaliaTheme.border }]
+              : styles.infoGroup}
+          >
+          {(profile.bio || (profile.intention && intentionToday)) ? (
+            <View style={[styles.panel, { backgroundColor: hasRegalia ? regaliaTheme.inset : colors.card, borderColor: hasRegalia ? regaliaTheme.divider : colors.border }]}>
+              {profile.bio ? (
+                <Text style={[styles.bio, { color: colors.foreground }]} numberOfLines={6}>{profile.bio}</Text>
+              ) : null}
+              {profile.intention && intentionToday ? (
+                <Text style={[styles.intention, { color: colors.mutedForeground }]} numberOfLines={2}>{profile.intention}</Text>
+              ) : null}
+            </View>
           ) : null}
 
-          {/* Dynamic badges */}
-          {profileBadges.length > 0 && (
-            <View style={{ marginTop: 6 }}>
-              <BadgeTray badges={profileBadges} />
-            </View>
-          )}
-          {(showLegacyFounderBadge || showLegacyBetaBadge) && (
-            <View style={{ marginTop: 6 }}>
-              <ProfileBadges
-                isFounder={showLegacyFounderBadge}
-                isBetaTester={showLegacyBetaBadge}
-                size={32}
-                showLabel
-              />
-            </View>
-          )}
-
-          {/* Level + XP progress */}
-          {(() => {
-            const xp        = profile.stars ?? 0;
-            const level     = Math.max(1, Math.floor(xp / XP_PER_LEVEL) + 1);
-            const xpPct     = (xp % XP_PER_LEVEL) / XP_PER_LEVEL;
-            return (
-              <View style={[{ marginTop: 6, gap: 4 }, hasRegalia && styles.regaliaXpPanel, hasRegalia && { backgroundColor: regaliaTheme.inset, borderColor: regaliaTheme.divider }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: (hasRegalia ? regaliaTheme.xpFill : aura.accent) + '22', borderWidth: 1, borderColor: (hasRegalia ? regaliaTheme.xpFill : aura.accent) + '44' }}>
-                    <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Bold', color: hasRegalia ? regaliaTheme.xpFill : aura.accent, letterSpacing: 0.4 }}>{t('publicProfile.levelShort')} {level}</Text>
-                  </View>
-                  <Text style={{ fontSize: 10, fontFamily: 'Satoshi-Regular', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.45)' }}>
-                    {xp % XP_PER_LEVEL} / {XP_PER_LEVEL} XP
-                  </Text>
+          {/* Country / Role / Socials */}
+          <View style={styles.infoRow}>
+            {([
+              { key: 'country', icon: 'map-pin', label: t('components.about.country'), value: profile.country || '-', accent: colors.lavender, onPress: undefined as undefined | (() => void) },
+              { key: 'role', icon: 'user', label: t('components.about.role'), value: userRole ? t(`publicProfile.roles.${userRole.key.toLowerCase()}`) : '-', accent: colors.blush, onPress: undefined as undefined | (() => void) },
+              {
+                key: 'socials', icon: 'link', label: t('components.about.socials'),
+                value: profile.links?.length ? (profile.links.length === 1 ? profile.links[0].label : t('components.about.socialLinks', { count: profile.links.length })) : '-',
+                accent: colors.skyBlue,
+                onPress: profile.links?.length ? openSocials : undefined,
+              },
+            ]).map(item => (
+              <TouchableOpacity
+                key={item.key}
+                disabled={!item.onPress}
+                onPress={item.onPress}
+                activeOpacity={0.76}
+                style={[styles.infoTile, { backgroundColor: hasRegalia ? regaliaTheme.inset : colors.card, borderColor: hasRegalia ? regaliaTheme.divider : colors.border }]}
+                accessibilityRole={item.onPress ? 'button' : 'text'}
+                accessibilityLabel={`${item.label}: ${item.value}`}
+                testID={`public-profile-${item.key}`}
+              >
+                <View style={[styles.infoIcon, { backgroundColor: `${item.accent}22` }]}>
+                  <Icon name={item.icon} size={14} color={item.accent} />
                 </View>
-                <View style={{ height: 5, borderRadius: 3, backgroundColor: hasRegalia ? regaliaTheme.xpTrack : aura.accent + '22', overflow: 'hidden' }}>
-                  <View style={{ height: '100%', width: `${Math.round(xpPct * 100)}%` as `${number}%`, borderRadius: 3, backgroundColor: hasRegalia ? regaliaTheme.xpFill : aura.accent + 'AA' }} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.infoLabel, { color: colors.mutedForeground }]} numberOfLines={1}>{item.label}</Text>
+                  <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={1}>{item.value}</Text>
                 </View>
-              </View>
-            );
-          })()}
-
-          {/* Today's intention (only shown if set today) */}
-          {profile.intention && profile.intentionDate && (() => {
-            const d = new Date();
-            const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            return profile.intentionDate === today;
-          })() ? (
-            <Text style={{ fontSize: 11, fontFamily: 'Satoshi-Regular', fontStyle: 'italic', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.60)', marginTop: 4 }} numberOfLines={2}>
-              ◌ {profile.intention}
-            </Text>
-          ) : null}
-
-          {/* Vibe chip — mood shown in the card */}
-          <View style={[{ marginTop: 2 }, hasRegalia && styles.regaliaMoodRow]}>
-            <MoodChip mood={mood} accentOverride={hasRegalia && !isDark ? colors.tint : undefined} />
+                {item.onPress ? <Icon name="chevron-right" size={12} color={colors.mutedForeground} /> : null}
+              </TouchableOpacity>
+            ))}
           </View>
-
-          {/* ── Meta row: role + weather/time ─────────────────── */}
-          {(userRole || profile.timezone || weatherQuery) ? (
+          {(profile.timezone || weatherQuery || profile.birthday) ? (
             <View style={styles.metaRow}>
-              {userRole ? (
-                <View style={[styles.roleBadge, { backgroundColor: userRole.color + '20', borderColor: userRole.color + '45' }]}>
-                  <Text style={{ fontSize: 13 }}>{userRole.emoji}</Text>
-                  <Text style={[styles.roleBadgeText, { color: hasRegalia && !isDark ? colors.tint : userRole.color }]}>{t(`publicProfile.roles.${userRole.key.toLowerCase()}`)}</Text>
+              <WeatherWidget query={weatherQuery} timezone={profile.timezone} accentColor={colors.primary} compact />
+              {profile.birthday ? (
+                <View style={[styles.metaPill, { borderColor: colors.border }]}>
+                  <Icon name="gift" size={11} color={colors.mutedForeground} />
+                  <Text style={[styles.metaPillText, { color: colors.mutedForeground }]}>{fmtBirthday(profile.birthday, i18n.language)}</Text>
                 </View>
               ) : null}
-              <WeatherWidget
-                query={weatherQuery}
-                timezone={profile.timezone}
-                accentColor={regaliaAccent}
-                compact
-              />
             </View>
           ) : null}
 
-          {/* Trait chips horizontal scroll */}
-          {profile.traits.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.traitsScroll}
-              contentContainerStyle={styles.traitsRow}
-            >
+          {/* Vibe */}
+          <View style={[styles.panel, { backgroundColor: hasRegalia ? regaliaTheme.inset : colors.card, borderColor: hasRegalia ? regaliaTheme.divider : colors.border }]}>
+            <View style={styles.panelHeader}>
+              <Icon name="star" size={15} color={colors.primary} />
+              <Text style={[styles.panelTitle, { color: colors.foreground }]}>{t('profile.mood')}</Text>
+            </View>
+            <View style={styles.vibeChips}>
+              <MoodChip mood={mood} accentOverride={colors.primary} />
               {profile.traits.map(tr => (
-                <View
-                  key={tr}
-                  style={[styles.traitChip, { backgroundColor: regaliaAccent + '14', borderColor: regaliaAccent + '30' }]}
-                >
-                  <Text style={[styles.traitText, { color: regaliaAccent }]}>{tr}</Text>
+                <View key={tr} style={[styles.traitChip, { backgroundColor: `${colors.primary}10`, borderColor: `${colors.primary}30` }]}>
+                  <Text style={[styles.traitText, { color: colors.foreground }]} numberOfLines={1}>{tr}</Text>
                 </View>
               ))}
-            </ScrollView>
-          )}
-
-          {/* Birthday inline */}
-          {profile.birthday ? (
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.60)', marginTop: 1 }}>
-              🎂 {fmtBirthday(profile.birthday, i18n.language)}
-            </Text>
-          ) : null}
-
-          {/* Country */}
-          {profile.country ? (
-            <Text style={{ fontSize: 12, fontFamily: 'Satoshi-Regular', color: hasRegalia ? colors.mutedForeground : 'rgba(200,184,232,0.55)', marginTop: 1 }}>
-              📍 {profile.country}
-            </Text>
-          ) : null}
-
-          {/* Bio */}
-          {profile.bio ? (
-            <Text style={[styles.bio, { color: colors.mutedForeground }]} numberOfLines={5}>
-              {profile.bio}
-            </Text>
-          ) : null}
-
-          {/* ── Social links ───────────────────────────────────── */}
-          {profile.links && profile.links.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.linksRow}
-            >
-              {profile.links.map((link, i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={[styles.linkPill, { backgroundColor: regaliaAccent + '10', borderColor: regaliaAccent + '35' }]}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    Linking.openURL(link.url).catch(() => null);
-                  }}
-                  activeOpacity={0.75}
-                >
-                  <Text style={{ fontSize: 12 }}>{platformEmoji(link.platform)}</Text>
-                  <Text style={[styles.linkPillText, { color: regaliaAccent }]} numberOfLines={1}>
-                    {link.label}
-                  </Text>
-                  <Icon name="external-link" size={9} color={regaliaAccent + 'B0'} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          ) : null}
-
-          {hasRegalia && (
-            <View pointerEvents="none" style={[styles.regaliaDivider, { backgroundColor: regaliaTheme.divider }]}>
-              <View style={[styles.regaliaDividerGem, { backgroundColor: regaliaTheme.gold }]} />
-            </View>
-          )}
-
-          {/* Stats row — icon + colored number + label */}
-          <View style={[styles.statsRow, hasRegalia && styles.regaliaStatsRow, { borderTopColor: hasRegalia ? regaliaTheme.divider : colors.border, backgroundColor: hasRegalia ? regaliaTheme.inset : 'transparent', borderColor: hasRegalia ? regaliaTheme.divider : 'transparent' }]}>
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>📖</Text>
-              <Text style={[styles.statNum, { color: hasRegalia && !isDark ? '#426E92' : '#78A8D4' }]}>{stories.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.stories')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>🧥</Text>
-              <Text style={[styles.statNum, { color: hasRegalia && !isDark ? '#895B16' : '#C8A84B' }]}>{outfits.length}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.outfits')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>💗</Text>
-              <Text style={[styles.statNum, { color: hasRegalia && !isDark ? '#A83F73' : '#D878B0' }]}>{totalLikes}</Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.likes')}</Text>
-            </View>
-            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.statItem}>
-              <Text style={styles.statIcon}>{isFounder ? '👑' : isBeta ? '⚗️' : '✦'}</Text>
-              <Text style={[styles.statNum, { color: isFounder ? (hasRegalia ? regaliaTheme.gold : '#C8A84B') : isBeta ? '#9B78E8' : colors.foreground }]}>
-                {Math.floor((profile.stars ?? 0) / XP_PER_LEVEL) + 1}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>{t('publicProfile.stats.level')}</Text>
             </View>
           </View>
 
-          {/* ── Founder / Beta spotlight card ──────────────────── */}
-          {(isFounder || isBeta) && (() => {
-            const badge       = isFounder ? founderBadge : betaBadge;
-            const cardColor   = isFounder ? (hasRegalia ? regaliaTheme.gold : '#C8A84B') : '#9B78E8';
-            const cardDark    = isFounder ? '#6B4A14' : '#3A1878';
-            const icon        = isFounder ? '👑'       : '⚗️';
-            const title       = isFounder ? t('publicProfile.founderTitle') : t('publicProfile.betaPioneerTitle');
-            const description = isFounder
-              ? t('publicProfile.founderDescription')
-              : t('publicProfile.betaPioneerDescription');
-            return (
-              <View style={[styles.spotlightBadgeCard, hasRegalia && styles.regaliaSpotlightCard, {
-                backgroundColor: hasRegalia ? regaliaTheme.insetAlt : cardDark + '33',
-                borderColor: hasRegalia ? regaliaTheme.divider : cardColor + '55',
-              }]}>
-                <LinearGradient
-                  colors={hasRegalia ? (isDark ? ['rgba(214,176,94,0.12)', 'rgba(125,92,50,0.035)'] : ['rgba(213,185,130,0.24)', 'rgba(255,255,255,0.15)']) : [cardColor + '22', 'transparent']}
-                  style={StyleSheet.absoluteFill}
-                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                />
-                {/* Icon or badge image */}
-                <View style={[styles.spotlightBadgeIcon, hasRegalia && styles.regaliaBadgeIcon, { backgroundColor: hasRegalia ? (isDark ? 'rgba(220,178,84,0.12)' : 'rgba(183,132,47,0.12)') : cardColor + '22', borderColor: hasRegalia ? cardColor + '88' : cardColor + '55' }]}>
-                  {badge?.imageUrl ? (
-                    <Image source={{ uri: badge.imageUrl }} style={{ width: 44, height: 44 }} contentFit="contain" />
-                  ) : (
-                    <Text style={{ fontSize: 26 }}>{icon}</Text>
-                  )}
+          {/* Stats */}
+          <View style={[styles.statsRow, { borderColor: hasRegalia ? regaliaTheme.divider : colors.border, backgroundColor: hasRegalia ? regaliaTheme.inset : colors.card }]}>
+            {([
+              { icon: 'book-open', n: stories.length, label: t('publicProfile.stats.stories') },
+              { icon: 'layers', n: outfits.length, label: t('components.profile.stats.outfits') },
+              { icon: 'heart', n: totalLikes, label: t('publicProfile.stats.likes') },
+              { icon: 'moon', n: level, label: t('publicProfile.stats.level') },
+            ]).map((st, i) => (
+              <React.Fragment key={st.label}>
+                {i > 0 && <View style={[styles.statDivider, { backgroundColor: colors.border }]} />}
+                <View style={styles.statItem}>
+                  <Icon name={st.icon} size={13} color={i === 3 ? colors.gold : colors.mutedForeground} />
+                  <Text style={[styles.statNum, { color: colors.foreground }]}>{st.n}</Text>
+                  <Text style={[styles.statLabel, { color: colors.mutedForeground }]} numberOfLines={1}>{st.label}</Text>
                 </View>
-                {/* Text */}
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.spotlightBadgeTitle, { color: cardColor }]}>{title}</Text>
-                  <Text style={[styles.spotlightBadgeDesc, { color: hasRegalia && !isDark ? '#66563D' : cardColor + (hasRegalia ? 'DD' : 'BB') }]}>{description}</Text>
+              </React.Fragment>
+            ))}
+          </View>
+
+          {/* Founder / Beta spotlight (earned) */}
+          {(isFounder || isBeta) && (() => {
+            const badge = isFounder ? founderBadge : betaBadge;
+            const cardColor = isFounder ? (hasRegalia ? regaliaTheme.gold : colors.gold) : colors.primary;
+            return (
+              <View style={[styles.panel, styles.spotlightRowPanel, { backgroundColor: hasRegalia ? regaliaTheme.insetAlt : colors.card, borderColor: `${cardColor}45` }]}>
+                <View style={[styles.spotlightBadgeIcon, { backgroundColor: `${cardColor}16`, borderColor: `${cardColor}40` }]}>
+                  {badge?.imageUrl
+                    ? <Image source={{ uri: badge.imageUrl }} style={{ width: 40, height: 40 }} contentFit="contain" />
+                    : <Icon name={isFounder ? 'award' : 'zap'} size={22} color={cardColor} />}
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={[styles.spotlightBadgeTitle, { color: cardColor }]}>{isFounder ? t('publicProfile.founderTitle') : t('publicProfile.betaPioneerTitle')}</Text>
+                  <Text style={[styles.spotlightBadgeDesc, { color: colors.mutedForeground }]}>{isFounder ? t('publicProfile.founderDescription') : t('publicProfile.betaPioneerDescription')}</Text>
                 </View>
               </View>
             );
           })()}
 
-          {/* Message button — only visible when viewing someone else's profile */}
-          {!isSelf && (
-            <TouchableOpacity
-              style={[styles.messageBtn, hasRegalia && styles.regaliaActionBtn, { borderColor: hasRegalia ? regaliaTheme.divider : aura.accent + '55', backgroundColor: hasRegalia ? regaliaTheme.inset : aura.accent + '10' }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                router.push({ pathname: '/messages/[userId]', params: { userId: profile.userId, name: profile.name } } as any);
-              }}
-              activeOpacity={0.8}
-            >
-              <Icon name="message-circle" size={15} color={regaliaAccent} />
-              <Text style={[styles.messageBtnText, { color: hasRegalia && !isDark ? colors.tint : aura.accent }]}>{t('publicProfile.sendMessage')}</Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Notification toggle — shown when following someone else */}
           {!isSelf && isFollowing && (
-            <View style={[styles.notifyRow, hasRegalia && styles.regaliaNotifyRow, { borderTopColor: hasRegalia ? regaliaTheme.divider : colors.border, backgroundColor: hasRegalia ? regaliaTheme.inset : 'transparent' }]}>
-              <Icon name="bell" size={14} color={regaliaAccent} />
+            <View style={[styles.panel, styles.notifyPanel, { backgroundColor: hasRegalia ? regaliaTheme.inset : colors.card, borderColor: hasRegalia ? regaliaTheme.divider : colors.border }]}>
+              <Icon name="bell" size={14} color={colors.primary} />
               <Text style={[styles.notifyRowText, { color: colors.mutedForeground }]} numberOfLines={2}>
                 {t('publicProfile.newPostsNotice', { name: profile.name })}
               </Text>
               <Switch
                 value
                 onValueChange={() => {}}
-                trackColor={{ false: colors.border, true: regaliaAccent + '90' }}
-                thumbColor={regaliaAccent}
+                trackColor={{ false: colors.border, true: `${colors.primary}90` }}
+                thumbColor={colors.primary}
                 style={{ transform: [{ scaleX: 0.82 }, { scaleY: 0.82 }] }}
               />
             </View>
           )}
+
           {hasRegalia && <FounderAuroraCardFrame />}
+          </View>
+
+          {/* Gallery filter */}
+          <View style={styles.galleryHead}>
+            <Icon name="image" size={16} color={colors.primary} />
+            <Text style={[styles.panelTitle, { color: colors.foreground, flex: 1 }]}>{t('profile.galleryUsage')}</Text>
+          </View>
+          <View style={[styles.galleryTabs, { backgroundColor: colors.muted }]}>
+            {galleryTabs.map(tab => {
+              const sel = galleryFilter === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  onPress={() => setGalleryFilter(tab.key)}
+                  style={[styles.galleryTab, sel && { backgroundColor: colors.primary }]}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: sel }}
+                  testID={`public-gallery-tab-${tab.key}`}
+                >
+                  <Text style={[styles.galleryTabText, { color: sel ? colors.primaryForeground : colors.mutedForeground }]} numberOfLines={1}>{tab.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </Animated.View>
 
         {/* ── BODY ─────────────────────────────────────────────────── */}
         <Animated.View
           style={[
             styles.body,
-            hasRegalia && { paddingTop: 36 },
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          {/* (notification toggle moved into profile card) */}
-
-          {/* ── CURRENT OUTFIT spotlight ─────────────────────────── */}
-          {profile.activeOutfit && (
-            <TouchableOpacity
-              style={[styles.spotlightCard, { backgroundColor: colors.card, borderColor: colors.border }, SHADOW.sm]}
-              onPress={() => {
-                router.push({
-                  pathname: '/user-outfit',
-                  params: {
-                    outfitName:     profile.activeOutfit!.name,
-                    outfitId:       profile.activeOutfit!.id,
-                    outfitDesc:     profile.activeOutfit!.description ?? '',
-                    outfitStory:    profile.activeOutfit!.story ?? '',
-                    outfitImage:    profile.activeOutfit!.imageUri ?? '',
-                    outfitTags:     JSON.stringify(profile.activeOutfit!.tags),
-                    outfitMusic:    profile.activeOutfit!.music ? JSON.stringify(profile.activeOutfit!.music) : '',
-                    outfitDate:     '',
-                    authorUserId:   profile.userId,
-                    authorName:     profile.name,
-                    authorHandle:   profile.username ?? '',
-                    authorBio:      profile.bio ?? '',
-                    authorAvatarUri: profile.avatarUri ?? '',
-                    authorIsSelf:   String(isSelf),
-                    authorMood:     profile.mood ?? '',
-                    authorTraits:   JSON.stringify(profile.traits),
-                    allOutfitsJson: JSON.stringify([
-                      { id: profile.activeOutfit!.id, name: profile.activeOutfit!.name, description: profile.activeOutfit!.description ?? '', story: profile.activeOutfit!.story ?? '', imageUri: profile.activeOutfit!.imageUri ?? '', tags: profile.activeOutfit!.tags, music: profile.activeOutfit!.music ?? null, date: '' },
-                      ...outfits.map(o => ({ id: o.id, name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
-                    ]),
-                    initialIndex:   '0',
-                  },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                } as any);
-              }}
-              activeOpacity={0.86}
-            >
-              <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>{t('publicProfile.currentOutfit')}</Text>
-              <View style={styles.spotlightRow}>
-                {/* Left: outfit image */}
-                <View style={[styles.spotlightImgWrap, { backgroundColor: aura.accent + '18' }]}>
-                  {profile.activeOutfit.imageUri ? (
-                    <Image
-                      source={{ uri: profile.activeOutfit.imageUri }}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="contain"
-                      cachePolicy="memory-disk"
-                    />
-                  ) : (
-                    <LinearGradient
-                      colors={[aura.accent + '50', aura.accent + '18']}
-                      style={StyleSheet.absoluteFill}
-                    />
-                  )}
-                  <LinearGradient
-                    colors={['transparent', 'rgba(8,6,22,0.85)']}
-                    style={[StyleSheet.absoluteFill, styles.spotlightImgGrad]}
-                  >
-                    <Text style={styles.spotlightImgName} numberOfLines={2}>{profile.activeOutfit.name}</Text>
-                  </LinearGradient>
-                </View>
-                {/* Right: info */}
-                <View style={styles.spotlightInfo}>
-                  <Text style={[styles.spotlightAboutLabel, { color: colors.mutedForeground + '88' }]}>{t('publicProfile.aboutLook')}</Text>
-                  <Text style={[styles.spotlightDesc, { color: colors.mutedForeground }]} numberOfLines={3}>
-                    {profile.activeOutfit.description || profile.activeOutfit.name}
-                  </Text>
-                  <View style={styles.spotlightTags}>
-                    {(profile.activeOutfit.tags ?? []).slice(0, 3).map(tag => (
-                      <View key={tag} style={[styles.spotlightTag, { backgroundColor: aura.accent + '14', borderColor: aura.accent + '28' }]}>
-                        <Text style={[styles.spotlightTagText, { color: aura.accent }]}>{tag}</Text>
-                      </View>
-                    ))}
-                    {(profile.activeOutfit.tags ?? []).length === 0 && (
-                      <View style={[styles.spotlightTag, { backgroundColor: colors.gold + '14', borderColor: colors.gold + '28' }]}>
-                        <Text style={[styles.spotlightTagText, { color: colors.gold }]}>{t('publicProfile.outfit')}</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          )}
-
-          {videos.length > 0 && (
-            <View style={styles.hSection}>
-              <View style={styles.hSectionHeader}>
-                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>Videos</Text>
-                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{videos.length}</Text>
-              </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hScrollContent}>
-                {videos.map(video => (
-                  <TouchableOpacity
-                    key={video.id}
-                    testID={`profile-video-${video.id}`}
-                    disabled={!video.videoUri}
-                    accessibilityLabel={`Play ${video.chapterTitle}`}
-                    style={{ width: 146, height: 210, borderRadius: 18, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}
-                    onPress={() => setVideoPost({
-                      id: video.id, authorUserId: profile.userId, authorName: profile.name,
-                      authorHandle: profile.username ?? '', authorAvatarUri: profile.avatarUri,
-                      chapterTitle: video.chapterTitle, storySnippet: '', mood: video.mood,
-                      witnessedCount: video.witnessedCount, likeCount: video.likeCount ?? 0, liked: false,
-                      savedCount: video.savedCount, stickerCount: 0, timeAgo: '', date: video.date,
-                      chapterNumber: 0, vibe: '', saved: false, isFollowing,
-                      contentType: 'video', videoUri: video.videoUri, thumbnailUri: video.thumbnailUri, music: video.music,
-                    })}
-                  >
-                    {!!video.thumbnailUri && <Image source={{ uri: video.thumbnailUri }} style={StyleSheet.absoluteFill} contentFit="cover" />}
-                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 12 }]}>
-                      <Icon name="play" size={28} color="#FFFFFF" />
-                      <Text numberOfLines={2} style={{ color: '#FFFFFF', fontFamily: 'Satoshi-Bold', marginTop: 8 }}>{video.chapterTitle}</Text>
-                      {!video.videoUri && <Text style={{ color: '#FFFFFF', fontSize: 11 }}>Video unavailable</Text>}
-                    </LinearGradient>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ── OTHER OUTFITS horizontal row ──────────────────────── */}
           {outfitsError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={{ flex: 1, gap: 2 }}>
@@ -1545,85 +1257,6 @@ export default function UserProfileScreen() {
               </TouchableOpacity>
             </View>
           )}
-          {!outfitsError && outfits.length > 0 && (
-            <View style={styles.hSection}>
-              <View style={styles.hSectionHeader}>
-                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('publicProfile.otherOutfits')}</Text>
-                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{outfits.length}</Text>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.hScrollContent}
-              >
-                {outfits.map((outfit, oIdx) => (
-                  <TouchableOpacity
-                    key={outfit.id}
-                    style={[styles.hOutfitCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      const _allList = [
-                          ...(profile.activeOutfit ? [{ id: profile.activeOutfit.id, name: profile.activeOutfit.name, description: profile.activeOutfit.description ?? '', story: profile.activeOutfit.story ?? '', imageUri: profile.activeOutfit.imageUri ?? '', tags: profile.activeOutfit.tags, music: profile.activeOutfit.music ?? null, date: '' }] : []),
-                          ...outfits.map(o => ({ id: o.id, name: o.name, description: o.description, story: o.story, imageUri: o.imageUri ?? '', tags: o.tags, music: o.music ?? null, date: o.date })),
-                      ];
-                      router.push({
-                        pathname: '/user-outfit',
-                        params: {
-                          outfitName:     outfit.name,
-                           outfitId:       outfit.id,
-                          outfitDesc:     outfit.description ?? '',
-                          outfitStory:    outfit.story ?? '',
-                          outfitImage:    outfit.imageUri ?? '',
-                          outfitTags:     JSON.stringify(outfit.tags),
-                           outfitMusic:    outfit.music ? JSON.stringify(outfit.music) : '',
-                          outfitDate:     outfit.date,
-                          authorUserId:   profile.userId,
-                          authorName:     profile.name,
-                          authorHandle:   profile.username ?? '',
-                          authorBio:      profile.bio ?? '',
-                           authorAvatarUri: profile.avatarUri ?? '',
-                           authorIsSelf:   String(isSelf),
-                          authorMood:     profile.mood ?? '',
-                          authorTraits:   JSON.stringify(profile.traits),
-                          allOutfitsJson: JSON.stringify(_allList),
-                          initialIndex:   String(profile.activeOutfit ? oIdx + 1 : oIdx),
-                        },
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      } as any);
-                    }}
-                    activeOpacity={0.85}
-                  >
-                    {outfit.imageUri ? (
-                      <Image
-                        source={{ uri: outfit.imageUri }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="contain"
-                        cachePolicy="memory-disk"
-                      />
-                    ) : (
-                      <LinearGradient
-                        colors={[aura.accent + '50', aura.accent + '18']}
-                        style={StyleSheet.absoluteFill}
-                      />
-                    )}
-                    <LinearGradient
-                      colors={['transparent', 'rgba(8,6,22,0.90)']}
-                      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}
-                    >
-                      <Text style={styles.hOutfitName} numberOfLines={2}>{outfit.name}</Text>
-                    </LinearGradient>
-                    {outfit.tags.length > 0 && (
-                      <View style={[styles.hTagPill, { backgroundColor: 'rgba(8,6,22,0.72)' }]}>
-                        <Text style={styles.hTagPillText}>{outfit.tags[0]}</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ── BOOKS horizontal row ──────────────────────────────── */}
           {booksError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={{ flex: 1, gap: 2 }}>
@@ -1640,62 +1273,6 @@ export default function UserProfileScreen() {
               </TouchableOpacity>
             </View>
           )}
-          {!booksError && books.length > 0 && (
-            <View style={styles.hSection}>
-              <View style={styles.hSectionHeader}>
-                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('publicProfile.books')}</Text>
-                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{books.length}</Text>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.hScrollContent}
-              >
-                {books.map(book => (
-                  <TouchableOpacity
-                    key={book.id}
-                    style={[styles.hBookCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    onPress={() => router.push({ pathname: '/book-public', params: { bookId: book.id } } as any)}
-                    activeOpacity={0.86}
-                  >
-                    {book.coverImageUri ? (
-                      <Image
-                        source={{ uri: book.coverImageUri }}
-                        style={StyleSheet.absoluteFill}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                      />
-                    ) : (
-                      <LinearGradient
-                        colors={[aura.accent + '60', aura.accent + '20']}
-                        style={StyleSheet.absoluteFill}
-                      />
-                    )}
-                    <LinearGradient
-                      colors={['transparent', 'rgba(8,6,22,0.92)']}
-                      style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}
-                    >
-                      <Text style={styles.hBookTitle} numberOfLines={2}>{book.title}</Text>
-                      <View style={styles.hBookMeta}>
-                        <Icon name="book-open" size={9} color="rgba(200,184,232,0.75)" />
-                        <Text style={styles.hBookChapters}>
-                          {t('publicProfile.chapterCount', { count: book.chapterCount })}
-                        </Text>
-                      </View>
-                    </LinearGradient>
-                    {book.genre ? (
-                      <View style={[styles.hTagPill, { backgroundColor: 'rgba(8,6,22,0.72)' }]}>
-                        <Text style={styles.hTagPillText}>{book.genre}</Text>
-                      </View>
-                    ) : null}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ── STORIES horizontal row ─────────────────────────────── */}
           {storiesError && (
             <View style={[styles.inlineError, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={{ flex: 1, gap: 2 }}>
@@ -1712,69 +1289,43 @@ export default function UserProfileScreen() {
               </TouchableOpacity>
             </View>
           )}
-          {!storiesError && stories.length > 0 && (
-            <View style={styles.hSection}>
-              <View style={styles.hSectionHeader}>
-                <Text style={[styles.hSectionTitle, { color: colors.foreground }]}>{t('publicProfile.stories')}</Text>
-                <Text style={[styles.hSectionCount, { color: colors.mutedForeground }]}>{stories.length}</Text>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.hScrollContent}
-              >
-                {stories.map(story => {
-                  const mc         = MOOD_COLORS[story.mood] ?? aura.accent;
-                  const firstPanel = story.panels[0];
-                  return (
-                    <TouchableOpacity
-                      key={story.id}
-                      style={[styles.hStoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}
-                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                      onPress={() => router.push({ pathname: '/story/[id]', params: { id: story.id, source: 'discover' } } as any)}
-                      activeOpacity={0.86}
-                    >
-                      {firstPanel?.imageUri ? (
-                        <Image
-                          source={{ uri: firstPanel.imageUri }}
-                          style={StyleSheet.absoluteFill}
-                          contentFit="cover"
-                          cachePolicy="memory-disk"
-                        />
-                      ) : (
-                        <LinearGradient
-                          colors={[mc + '55', mc + '18']}
-                          style={StyleSheet.absoluteFill}
-                        />
-                      )}
-                      <LinearGradient
-                        colors={['transparent', 'rgba(8,6,22,0.88)']}
-                        style={[StyleSheet.absoluteFill, { justifyContent: 'flex-end', padding: 8 }]}
-                      >
-                        <Text style={styles.hStoryTitle} numberOfLines={2}>{story.chapterTitle}</Text>
-                        <View style={styles.hStoryMeta}>
-                          <View style={styles.hStoryWitness}>
-                            <Icon name="eye" size={10} color="rgba(200,184,232,0.75)" />
-                            <Text style={styles.hStoryWitnessText}>{story.witnessedCount}</Text>
-                          </View>
-                          <View style={[styles.hMoodPill, { backgroundColor: mc + '28' }]}>
-                            <Text style={[styles.hMoodPillText, { color: mc }]}>
-                              {t(`publicProfile.moods.${story.mood}`, { defaultValue: story.mood })}
-                            </Text>
-                          </View>
-                        </View>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+
+          {/* ── Single organized gallery ───────────────────────────── */}
+          {galleryItems.length > 0 && (
+            <View style={[styles.galleryGrid, { gap: GRID_GAP }]} testID="public-gallery-grid">
+              {galleryItems.map(item => (
+                <TouchableOpacity
+                  key={item.key}
+                  testID={item.testID}
+                  disabled={item.disabled}
+                  onPress={item.onPress}
+                  activeOpacity={0.86}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.title}
+                  style={[styles.galleryTile, { width: tileW, height: tileW * 1.3, backgroundColor: colors.card, borderColor: item.current ? `${colors.gold}80` : colors.border }]}
+                >
+                  {item.image ? (
+                    <Image source={{ uri: item.image }} style={StyleSheet.absoluteFill} contentFit={item.kind === 'outfits' ? 'contain' : 'cover'} cachePolicy="memory-disk" />
+                  ) : (
+                    <View style={[StyleSheet.absoluteFill, styles.galleryTileEmpty, { backgroundColor: `${colors.primary}14` }]}>
+                      <Icon name={item.icon} size={20} color={colors.mutedForeground} />
+                    </View>
+                  )}
+                  <LinearGradient colors={['transparent', 'rgba(8,8,20,0.82)']} style={styles.galleryTileShade}>
+                    <Text style={styles.galleryTileTitle} numberOfLines={2}>{item.title}</Text>
+                  </LinearGradient>
+                  <View style={styles.galleryTileKind}>
+                    <Icon name={item.current ? 'star' : item.icon} size={10} color={item.current ? '#E4C16F' : '#FFFFFF'} />
+                  </View>
+                </TouchableOpacity>
+              ))}
             </View>
           )}
 
           {/* Empty state when everything is empty (and no errors showing) */}
           {stories.length === 0 && videos.length === 0 && outfits.length === 0 && books.length === 0 && !profile.activeOutfit && !storiesError && !outfitsError && !booksError && (
             <View style={[styles.emptyState, { borderColor: aura.accent + '18' }]}>
-              <Text style={{ fontSize: 24 }}>{aura.particle}</Text>
+              <Icon name="image" size={22} color={colors.mutedForeground} />
               <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
                 {t('publicProfile.emptyContent', { name: profile.name })}
               </Text>
@@ -1794,7 +1345,77 @@ export default function UserProfileScreen() {
           )}
         </Animated.View>
 
-      </ScrollView>
+      </Animated.ScrollView>
+
+      {profile && (
+        <ProfileCollapseBar
+          scrollY={scrollY}
+          collapseAt={compactBarAt}
+          compactVisible={compactVisible}
+          topInset={topPad}
+          name={profile.name}
+          avatarSlotOnly={!!anchor}
+          levelLabel={`${t('publicProfile.levelShort')} ${level}`}
+          goldColor={colors.gold}
+          subtitle={profile.username ? `@${profile.username}` : null}
+          avatarUri={profile.avatarUri ?? profile.activeOutfit?.imageUri}
+          backgroundColor={colors.background}
+          foregroundColor={colors.foreground}
+          mutedColor={colors.mutedForeground}
+          borderColor={colors.border}
+          leftAction={
+            <TouchableOpacity
+              style={styles.compactAction}
+              onPress={() => safeBack()}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.goBack')}
+              hitSlop={8}
+            >
+              <Icon name="arrow-left" size={18} color={colors.foreground} />
+            </TouchableOpacity>
+          }
+          rightActions={
+            <>
+              {!isSelf && (
+                <TouchableOpacity
+                  style={styles.compactAction}
+                  onPress={() => router.push({ pathname: '/messages/[userId]', params: { userId: profile.userId, name: profile.name } } as never)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('publicProfile.sendMessage')}
+                  hitSlop={8}
+                >
+                  <Icon name="message-circle" size={18} color={colors.foreground} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.compactAction}
+                onPress={handleMore}
+                activeOpacity={0.75}
+                accessibilityRole="button"
+                accessibilityLabel={t('publicProfile.report')}
+                hitSlop={8}
+              >
+                <Icon name="more-horizontal" size={18} color={colors.foreground} />
+              </TouchableOpacity>
+            </>
+          }
+        />
+      )}
+
+      <AvatarFlightOverlay
+        anchor={anchor}
+        scrollY={scrollY}
+        range={profileCollapseAt}
+        topInset={topPad}
+        hasLeftAction
+        boxSize={PUBLIC_PROFILE_HALO_SIZE}
+        avatarSize={PUBLIC_PROFILE_AVATAR_SIZE}
+        hidden={founderIntroVisible || moonlitMuseIntroVisible}
+      >
+        <AnimatedAvatarRing mood={mood} profile={profile} isFounder={isFounder} isBeta={isBeta} activeFrame={profile.activeFrame} />
+      </AvatarFlightOverlay>
 
       <DiscoverVideoPlayerModal post={videoPost} onClose={() => setVideoPost(null)} />
       <ReportSheet
@@ -1823,6 +1444,7 @@ export default function UserProfileScreen() {
 
 const styles = StyleSheet.create({
   root:   { flex: 1 },
+  compactAction: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 },
   errorText: { fontSize: 14, fontFamily: 'Satoshi-Regular', textAlign: 'center' },
   backBtnErr: {
@@ -1872,11 +1494,57 @@ const styles = StyleSheet.create({
 
   // Avatar inside banner
   avatarInBanner: {
-    position: 'absolute',
-    bottom: 32, left: 0, right: 0,
+    width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  quietHeader: { paddingHorizontal: 16, paddingBottom: 6, alignItems: 'center' },
+  quietBackdrop: { position: 'absolute', top: 0, left: 0, right: 0, height: 300, overflow: 'hidden' },
+  quietTopRow: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 },
+  quietTopBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  explorerPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 14, paddingHorizontal: 9, minHeight: 28, maxWidth: 170 },
+  avatarSlot: { width: PUBLIC_PROFILE_HALO_SIZE, height: PUBLIC_PROFILE_HALO_SIZE, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
+  identityBlock: { width: '100%', alignItems: 'center', gap: 5, marginTop: 4 },
+  onlinePill: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 2, borderWidth: 1 },
+  onlineDot: { width: 6, height: 6, borderRadius: 3 },
+  onlineText: { fontSize: 10.5, fontFamily: 'Satoshi-Medium' },
+  levelRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 2 },
+  levelPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 14, paddingHorizontal: 10, minHeight: 28 },
+  levelPillText: { fontSize: 12, fontFamily: 'Satoshi-Bold', letterSpacing: 0.1 },
+  xpRow: { width: '100%', maxWidth: 300, flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 3 },
+  xpTrack: { flex: 1, height: 4, borderRadius: 2, overflow: 'hidden' },
+  xpFill: { height: 4, borderRadius: 2 },
+  xpText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  actionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 40, minWidth: 44, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1 },
+  actionText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
+  panelStack: { paddingHorizontal: 14, paddingTop: 10, gap: 10 },
+  infoGroup: { gap: 10 },
+  regaliaCard: { gap: 10, borderRadius: 22, borderWidth: 1.25, paddingHorizontal: 22, paddingVertical: 22, marginTop: 30, marginBottom: 34, marginHorizontal: 6 },
+  galleryGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  galleryTile: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
+  galleryTileEmpty: { alignItems: 'center', justifyContent: 'center' },
+  galleryTileShade: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: 7, paddingTop: 18, paddingBottom: 6 },
+  galleryTileTitle: { color: '#F4F1FA', fontSize: 11, lineHeight: 14, fontFamily: 'Satoshi-Bold' },
+  galleryTileKind: { position: 'absolute', top: 6, left: 6, width: 20, height: 20, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(8,8,20,0.55)' },
+  panel: { borderRadius: 16, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 12, gap: 8, overflow: 'hidden' },
+  panelHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  panelTitle: { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
+  intention: { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
+  infoRow: { flexDirection: 'row', gap: 8 },
+  infoTile: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, borderWidth: 1, paddingHorizontal: 9, minHeight: 54 },
+  infoIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  infoLabel: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.6, textTransform: 'uppercase' },
+  infoValue: { fontSize: 12, fontFamily: 'Satoshi-Bold', marginTop: 1 },
+  metaPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9, minHeight: 26 },
+  metaPillText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
+  vibeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  spotlightRowPanel: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  notifyPanel: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  galleryHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 },
+  galleryTabs: { flexDirection: 'row', borderRadius: 14, padding: 4, gap: 4 },
+  galleryTab: { flex: 1, minHeight: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
+  galleryTabText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
   avatarCircle: {
     width: PUBLIC_PROFILE_AVATAR_SIZE,
     height: PUBLIC_PROFILE_AVATAR_SIZE,
@@ -1889,12 +1557,12 @@ const styles = StyleSheet.create({
 
   // ── Floating profile card
   profileCard: {
-    marginTop: -44,
+    marginTop: -40,
     marginHorizontal: 14,
-    borderRadius: 22,
+    borderRadius: 20,
     borderWidth: 1,
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 16,
     paddingBottom: 0,
     gap: 3,
   },
@@ -1909,6 +1577,10 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
   },
+  publicIdentityRow: { width: '100%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8, marginTop: 4 },
+  publicBadgeRow: { alignSelf: 'center', marginTop: 5, alignItems: 'center' },
+  publicXpPanel: { width: '100%', maxWidth: 340, alignSelf: 'center', marginTop: 6, gap: 5 },
+  publicMoodRow: { alignSelf: 'center', marginTop: 3 },
   regaliaMoodRow: { marginTop: 7 },
   regaliaDivider: {
     height: 1,
@@ -1958,10 +1630,13 @@ const styles = StyleSheet.create({
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    flexWrap: 'wrap',
     gap: 6,
   },
-  name: { flexShrink: 1, minWidth: 0, fontSize: 19, fontFamily: 'Satoshi-Bold', letterSpacing: -0.3 },
-  profileLikesRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, marginBottom: 3 },
+  name: { flexShrink: 1, minWidth: 0, maxWidth: '88%', fontSize: 24, lineHeight: 29, fontFamily: 'Satoshi-Bold', letterSpacing: -0.5, textAlign: 'center' },
+  profileLikesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 6, marginBottom: 3 },
   profileLikeButton: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
     paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16,
@@ -1982,29 +1657,25 @@ const styles = StyleSheet.create({
     marginLeft: 5,
   },
   followPill: {
-    marginLeft: 'auto',
+    marginLeft: 4,
     paddingHorizontal: 14, paddingVertical: 5,
     borderRadius: 18, borderWidth: 1,
   },
   followPillText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
 
-  handle: { fontSize: 13, fontFamily: 'Satoshi-Medium', marginTop: 1 },
-  bio: {
-    fontSize: 12, fontFamily: 'Satoshi-Regular',
-    fontStyle: 'italic', lineHeight: 17,
-    marginTop: 2,
-  },
+  handle: { fontSize: 13, fontFamily: 'Satoshi-Medium', marginTop: 1, textAlign: 'center' },
+  bio: { fontSize: 14, lineHeight: 20, fontFamily: 'Satoshi-Medium' },
 
   traitsScroll: { marginTop: 8, marginHorizontal: -16 },
-  traitsRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 2 },
+  traitsRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 16, paddingBottom: 2 },
   traitChip: {
-    paddingHorizontal: 10, paddingVertical: 3,
+    paddingHorizontal: 11, paddingVertical: 5, maxWidth: 180,
     borderRadius: 16, borderWidth: 1,
   },
   traitText: { fontSize: 11, fontFamily: 'Satoshi-Bold' },
 
   metaRow: {
-    flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 7, marginTop: 5,
+    alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 7, marginTop: 5,
   },
   detailsRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6,
@@ -2017,7 +1688,7 @@ const styles = StyleSheet.create({
   detailPillEmoji: { fontSize: 12 },
   detailPillText:  { fontSize: 11, fontFamily: 'Satoshi-Medium' },
   linksRow: {
-    flexDirection: 'row', gap: 7, paddingRight: 4, marginTop: 4,
+    flexDirection: 'row', justifyContent: 'center', gap: 7, paddingRight: 4, marginTop: 4,
   },
   linkPill: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -2028,10 +1699,9 @@ const styles = StyleSheet.create({
 
   statsRow: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    marginHorizontal: -16,
-    marginTop: 10,
-    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 10,
   },
   statItem:    { flex: 1, alignItems: 'center', gap: 2 },
   statIcon:    { fontSize: 22, lineHeight: 26 },
