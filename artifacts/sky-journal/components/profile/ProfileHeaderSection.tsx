@@ -51,23 +51,32 @@ export const OWN_AVATAR_BOX = 124;
 export const OWN_AVATAR_SIZE = 96;
 
 /** The real avatar visual with equipped frame + mood ring; shared by inline and flight overlay. */
-export function OwnProfileAvatar({ avatarSource, contain, activeFrame, mood }: {
+export function OwnProfileAvatar({ avatarSource, contain, activeFrame, mood, decorationOpacity }: {
   avatarSource: React.ComponentProps<typeof Image>['source'];
   contain?: boolean;
   activeFrame?: string;
   mood: string;
+  decorationOpacity?: Animated.AnimatedInterpolation<number>;
 }) {
   const moodData = MOOD_ORBS.find(m => m.key === mood) || MOOD_ORBS[2];
   return (
     <View pointerEvents="none" style={s.avatarVisual}>
-      {activeFrame && <FrameRing frameId={activeFrame} size={112} layer="wings" />}
+      {activeFrame && (
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}>
+          <FrameRing frameId={activeFrame} size={112} layer="wings" />
+        </Animated.View>
+      )}
       <View style={[s.avatarCircle, {
         borderColor: (activeFrame && FRAME_CONFIGS[activeFrame]) ? FRAME_CONFIGS[activeFrame].color : `${moodData.accent}70`,
       }]}>
         <Image source={avatarSource} style={StyleSheet.absoluteFill} contentFit={contain ? 'contain' : 'cover'} />
       </View>
       <BreathingAvatarRing mood={mood} />
-      {activeFrame && <FrameRing frameId={activeFrame} size={112} layer="ornament" />}
+      {activeFrame && (
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}>
+          <FrameRing frameId={activeFrame} size={112} layer="ornament" />
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -117,9 +126,9 @@ export function ProfileHeaderSection({
   const heroGlass = heroHasArtwork ? `${heroForeground}20` : colors.card;
   const heroGlassBorder = heroHasArtwork ? `${heroForeground}45` : colors.border;
   const R = Math.max(1, collapseAt);
-  const infoOpacity = useMemo(() => collapseScrollY?.interpolate({ inputRange: [0, R * 0.75], outputRange: [1, 0], extrapolate: 'clamp' }), [R, collapseScrollY]);
+  const infoOpacity = useMemo(() => collapseScrollY?.interpolate({ inputRange: [0, Math.max(1, R - 20)], outputRange: [1, 0], extrapolate: 'clamp' }), [R, collapseScrollY]);
   const infoTy = useMemo(() => collapseScrollY?.interpolate({ inputRange: [0, R], outputRange: [0, -14], extrapolate: 'clamp' }), [R, collapseScrollY]);
-  const editOpacity = useMemo(() => collapseScrollY?.interpolate({ inputRange: [0, R * 0.35], outputRange: [1, 0], extrapolate: 'clamp' }), [R, collapseScrollY]);
+  const editOpacity = useMemo(() => collapseScrollY?.interpolate({ inputRange: [0, Math.max(1, R - 20)], outputRange: [1, 0], extrapolate: 'clamp' }), [R, collapseScrollY]);
 
   function saveName() {
     if (nameVal.trim()) setCharacter({ ...character, name: nameVal.trim() });
@@ -316,7 +325,7 @@ export function ProfileHeaderSection({
           <View style={s.titleRow}>
             {hasTitle ? (
               <TouchableOpacity onPress={() => setShowTitlePicker(true)} activeOpacity={0.75} style={s.currentTitle}>
-                <Icon name="award" size={11} color={colors.gold} />
+                <Icon name="star" size={11} color={colors.gold} />
                 <Text style={[s.titleText, { color: colors.gold }]} numberOfLines={1}>{currentTitle}</Text>
               </TouchableOpacity>
             ) : (

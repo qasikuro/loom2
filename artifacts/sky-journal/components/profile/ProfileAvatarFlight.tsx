@@ -44,7 +44,7 @@ type OverlayProps = {
   /** Visible avatar circle diameter. */
   avatarSize: number;
   hidden?: boolean;
-  children: React.ReactNode;
+  children: React.ReactNode | ((decorOpacity: Animated.AnimatedInterpolation<number>) => React.ReactNode);
   /** Decorations that only belong to the expanded state. */
   expandedDecor?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -59,7 +59,7 @@ export function AvatarFlightOverlay({
 }: OverlayProps) {
   const anim = useMemo(() => {
     if (!anchor) return null;
-    const f = getAvatarFlight({ ...anchor, avatarSize, range, topInset, hasLeftAction });
+    const f = getAvatarFlight({ ...anchor, avatarSize, avatarBoxSize: boxSize, range, topInset, hasLeftAction });
     return {
       scale: scrollY.interpolate({ ...f.scale, extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }),
       tx: scrollY.interpolate({ ...f.translateX, extrapolate: 'clamp' }),
@@ -69,6 +69,7 @@ export function AvatarFlightOverlay({
   }, [anchor, avatarSize, range, topInset, hasLeftAction, scrollY]);
 
   if (!anchor || !anim || hidden) return null;
+  const avatar = typeof children === 'function' ? children(anim.decor) : children;
   return (
     <Animated.View
       testID="profile-avatar-flight"
@@ -90,12 +91,13 @@ export function AvatarFlightOverlay({
           {expandedDecor}
         </Animated.View>
       ) : null}
-      {children}
+      {avatar}
     </Animated.View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { position: 'absolute', zIndex: 60, alignItems: 'center', justifyContent: 'center' },
+  // Keep the compact bar's name and actions above the flying avatar.
+  root: { position: 'absolute', zIndex: 48, alignItems: 'center', justifyContent: 'center' },
   center: { alignItems: 'center', justifyContent: 'center' },
 });

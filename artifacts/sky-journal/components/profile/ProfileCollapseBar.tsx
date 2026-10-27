@@ -87,7 +87,7 @@ export function ProfileCollapseBar({
     extrapolate: 'clamp',
   });
   const backgroundFade = scrollY.interpolate({
-    inputRange: [collapseAt + 4, collapseAt + 46],
+    inputRange: [collapseAt, collapseAt + 32],
     outputRange: [0, 0.98],
     extrapolate: 'clamp',
   });
@@ -120,6 +120,7 @@ export function ProfileCollapseBar({
           style={[s.identity, { opacity: fadeIn }]}
         >
           {avatarSlotOnly ? <View style={s.avatarSlot} /> : (
+          <View style={s.avatarSlot}>
           <View style={[s.avatar, { borderColor }]}>
             {avatarUri ? (
               <Image
@@ -133,6 +134,7 @@ export function ProfileCollapseBar({
                 {name.trim().charAt(0).toUpperCase()}
               </Text>
             )}
+          </View>
           </View>
           )}
           <View style={s.copy}>
@@ -185,16 +187,16 @@ const s = StyleSheet.create({
     gap: 9,
   },
   avatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     borderWidth: 1,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  avatarSlot: { width: 38, height: 38 },
+  avatarSlot: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
   levelPill: { borderWidth: 1, borderRadius: 9, paddingHorizontal: 7, minHeight: 18, justifyContent: 'center' },
   levelText: { fontSize: 10.5, lineHeight: 13, fontFamily: 'Satoshi-Bold', letterSpacing: 0.2 },

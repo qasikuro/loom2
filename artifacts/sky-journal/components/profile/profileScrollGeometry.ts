@@ -5,7 +5,7 @@
  * the very same avatar into the compact sticky bar slot.
  */
 export const COMPACT_BAR_HEIGHT = 56;
-export const COMPACT_AVATAR_SIZE = 38;
+export const COMPACT_AVATAR_SIZE = 44;
 export const COMPACT_PADDING_X = 14;
 export const COMPACT_ACTION_WIDTH = 42;
 export const COMPACT_GAP = 10;
@@ -22,6 +22,8 @@ export type AvatarAnchor = {
 export type AvatarFlightInput = AvatarAnchor & {
   /** Visible avatar circle diameter in the expanded state. */
   avatarSize: number;
+  /** Full bounds of the expanded avatar artwork, including wings and frame. */
+  avatarBoxSize?: number;
   /** Scroll distance after which the avatar sits in the bar. */
   range: number;
   /** Safe top inset (compact bar content starts below it). */
@@ -45,7 +47,10 @@ const finite = (n: number, fallback = 0) => (Number.isFinite(n) ? n : fallback);
 export function getAvatarFlight(input: AvatarFlightInput) {
   const R = Math.max(1, finite(input.range, 1));
   const size = Math.max(1, finite(input.avatarSize, 1));
-  const endScale = Math.min(1, COMPACT_AVATAR_SIZE / size);
+  const boxSize = Math.max(size, finite(input.avatarBoxSize ?? size, size));
+  // Fit the whole cosmetic frame into the sticky avatar slot, not just the
+  // portrait circle. This prevents wings and ornaments from covering the name.
+  const endScale = Math.min(1, COMPACT_AVATAR_SIZE / boxSize);
   const targetX = compactAvatarCenterX(input.hasLeftAction);
   const targetY = compactAvatarCenterY(finite(input.topInset));
   const endTx = targetX - finite(input.centerX);
@@ -58,8 +63,8 @@ export function getAvatarFlight(input: AvatarFlightInput) {
     scale: { inputRange: [-PULL_RANGE, 0, R], outputRange: [PULL_MAX_SCALE, 1, endScale] },
     translateX: { inputRange: [0, R], outputRange: [0, endTx] },
     translateY: { inputRange: [-PULL_RANGE, 0, R], outputRange: [PULL_RANGE, 0, endTy] },
-    /** Expanded-only decorations (halo, badges) fade out over the first half. */
-    decor: { inputRange: [0, R * 0.5], outputRange: [1, 0] },
+    /** Fade secondary decoration near the end of the move into the compact slot. */
+    decor: { inputRange: [R * 0.65, R], outputRange: [1, 0] },
     /** Identity text below the avatar fades while it scrolls under the bar. */
     info: { inputRange: [0, R * 0.75], outputRange: [1, 0] },
     /** Compact bar background/name fades in as the avatar arrives. */

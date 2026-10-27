@@ -130,12 +130,14 @@ function AnimatedAvatarRing({
   isFounder,
   isBeta,
   activeFrame,
+  decorationOpacity,
 }: {
   mood: string;
   profile: PublicProfile;
   isFounder: boolean;
   isBeta:    boolean;
   activeFrame?: string | null;
+  decorationOpacity?: Animated.AnimatedInterpolation<number>;
 }) {
   const aura    = MOOD_AURA[mood] ?? DEFAULT_AURA;
   const breathe = useRef(new Animated.Value(0)).current;
@@ -237,7 +239,7 @@ function AnimatedAvatarRing({
           transform: [{ scale: pulseScale }],
           opacity: pulseOp,
         }} />
-        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" />}
+        {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" /></Animated.View>}
         {/* Avatar circle */}
         <View style={[styles.avatarCircle, { borderColor: founderGold, borderWidth: 3, backgroundColor: '#1A1408' }]}>
           {avatarSource ? (
@@ -246,7 +248,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: founderGold }]}>{initial}</Text>
           )}
         </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
+        {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" /></Animated.View>}
       </Animated.View>
     );
   }
@@ -296,7 +298,7 @@ function AnimatedAvatarRing({
           transform: [{ scale: pulseScale }],
           opacity: pulseOp,
         }} />
-        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" />}
+        {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" /></Animated.View>}
         {/* Avatar circle */}
         <View style={[styles.avatarCircle, { borderColor: betaPurple, borderWidth: 3, backgroundColor: '#120A20' }]}>
           {avatarSource ? (
@@ -305,7 +307,7 @@ function AnimatedAvatarRing({
             <Text style={[styles.avatarInitial, { color: betaPurple }]}>{initial}</Text>
           )}
         </View>
-        {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
+        {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" /></Animated.View>}
       </Animated.View>
     );
   }
@@ -348,7 +350,7 @@ function AnimatedAvatarRing({
           opacity: ringOpacity,
         }}
       />
-      {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" />}
+      {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="wings" /></Animated.View>}
       {/* Avatar circle */}
       <View style={[styles.avatarCircle, { borderColor: aura.accent + '80' }]}>
         {avatarSource ? (
@@ -362,7 +364,7 @@ function AnimatedAvatarRing({
           <Text style={[styles.avatarInitial, { color: aura.accent }]}>{initial}</Text>
         )}
       </View>
-      {activeFrame && <FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" />}
+      {activeFrame && <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, decorationOpacity != null && { opacity: decorationOpacity }]}><FrameRing frameId={activeFrame} size={PUBLIC_PROFILE_FRAME_SIZE} layer="ornament" /></Animated.View>}
     </Animated.View>
   );
 }
@@ -525,7 +527,8 @@ export default function UserProfileScreen() {
   const compactBarAt = Math.max(0, profileCollapseAt - 36);
   const { scrollY, compactVisible, onScroll, offsetRef } = useProfileCollapse(compactBarAt);
   const { rootRef, slotRef, anchor, measure } = useAvatarAnchor(offsetRef);
-  const infoOpacity = useMemo(() => scrollY.interpolate({ inputRange: [0, profileCollapseAt * 0.75], outputRange: [1, 0], extrapolate: 'clamp' }), [scrollY, profileCollapseAt]);
+  // Keep the expanded identity visible until the sticky identity starts fading in.
+  const infoOpacity = useMemo(() => scrollY.interpolate({ inputRange: [0, Math.max(1, profileCollapseAt - 20)], outputRange: [1, 0], extrapolate: 'clamp' }), [scrollY, profileCollapseAt]);
   const infoTy = useMemo(() => scrollY.interpolate({ inputRange: [0, profileCollapseAt], outputRange: [0, -14], extrapolate: 'clamp' }), [scrollY, profileCollapseAt]);
   type GalleryFilter = 'all' | 'videos' | 'outfits' | 'stories' | 'books';
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>('all');
@@ -927,7 +930,7 @@ export default function UserProfileScreen() {
             <View style={{ flex: 1 }} />
             {isTopExplorer && (
               <View style={[styles.explorerPill, { borderColor: `${colors.gold}55`, backgroundColor: `${colors.gold}12` }]}>
-                <Icon name="award" size={11} color={colors.gold} />
+                <Icon name="star" size={11} color={colors.gold} />
                 <Text style={[styles.explorerBadgeText, { color: colors.gold }]} numberOfLines={1}>{t('publicProfile.topExplorer')}</Text>
               </View>
             )}
@@ -961,7 +964,7 @@ export default function UserProfileScreen() {
               <Text style={[styles.name, { color: colors.foreground }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.78}>
                 {profile.name}
               </Text>
-              {isFounder && <Icon name="award" size={15} color={colors.gold} accessibilityLabel={t('publicProfile.founderTitle')} />}
+              {isFounder && <Icon name="star" size={15} color={colors.gold} accessibilityLabel={t('publicProfile.founderTitle')} />}
               {isBeta && !isFounder && <Icon name="zap" size={14} color={colors.primary} accessibilityLabel={t('publicProfile.betaPioneerTitle')} />}
             </View>
             <View style={styles.publicIdentityRow}>
@@ -1093,7 +1096,7 @@ export default function UserProfileScreen() {
           ) : null}
 
           {/* Country / Role / Socials */}
-          <View style={styles.infoRow}>
+          <View style={[styles.infoRow, windowWidth < 390 && styles.infoRowNarrow]}>
             {([
               { key: 'country', icon: 'map-pin', label: t('components.about.country'), value: profile.country || '-', accent: colors.lavender, onPress: undefined as undefined | (() => void) },
               { key: 'role', icon: 'user', label: t('components.about.role'), value: userRole ? t(`publicProfile.roles.${userRole.key.toLowerCase()}`) : '-', accent: colors.blush, onPress: undefined as undefined | (() => void) },
@@ -1109,7 +1112,11 @@ export default function UserProfileScreen() {
                 disabled={!item.onPress}
                 onPress={item.onPress}
                 activeOpacity={0.76}
-                style={[styles.infoTile, { backgroundColor: hasRegalia ? regaliaTheme.inset : colors.card, borderColor: hasRegalia ? regaliaTheme.divider : colors.border }]}
+                style={[
+                  styles.infoTile,
+                  windowWidth < 390 && (item.key === 'socials' ? styles.infoTileFull : styles.infoTileNarrow),
+                  { backgroundColor: hasRegalia ? regaliaTheme.inset : colors.card, borderColor: hasRegalia ? regaliaTheme.divider : colors.border },
+                ]}
                 accessibilityRole={item.onPress ? 'button' : 'text'}
                 accessibilityLabel={`${item.label}: ${item.value}`}
                 testID={`public-profile-${item.key}`}
@@ -1119,7 +1126,7 @@ export default function UserProfileScreen() {
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.infoLabel, { color: colors.mutedForeground }]} numberOfLines={1}>{item.label}</Text>
-                  <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={1}>{item.value}</Text>
+                  <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={windowWidth < 390 ? 2 : 1}>{item.value}</Text>
                 </View>
                 {item.onPress ? <Icon name="chevron-right" size={12} color={colors.mutedForeground} /> : null}
               </TouchableOpacity>
@@ -1179,9 +1186,7 @@ export default function UserProfileScreen() {
             return (
               <View style={[styles.panel, styles.spotlightRowPanel, { backgroundColor: hasRegalia ? regaliaTheme.insetAlt : colors.card, borderColor: `${cardColor}45` }]}>
                 <View style={[styles.spotlightBadgeIcon, { backgroundColor: `${cardColor}16`, borderColor: `${cardColor}40` }]}>
-                  {badge?.imageUrl
-                    ? <Image source={{ uri: badge.imageUrl }} style={{ width: 40, height: 40 }} contentFit="contain" />
-                    : <Icon name={isFounder ? 'award' : 'zap'} size={22} color={cardColor} />}
+                  <SpotlightBadgeMark imageUrl={badge?.imageUrl} isFounder={isFounder} color={cardColor} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <Text style={[styles.spotlightBadgeTitle, { color: cardColor }]}>{isFounder ? t('publicProfile.founderTitle') : t('publicProfile.betaPioneerTitle')}</Text>
@@ -1414,7 +1419,16 @@ export default function UserProfileScreen() {
         avatarSize={PUBLIC_PROFILE_AVATAR_SIZE}
         hidden={founderIntroVisible || moonlitMuseIntroVisible}
       >
-        <AnimatedAvatarRing mood={mood} profile={profile} isFounder={isFounder} isBeta={isBeta} activeFrame={profile.activeFrame} />
+        {decorationOpacity => (
+          <AnimatedAvatarRing
+            mood={mood}
+            profile={profile}
+            isFounder={isFounder}
+            isBeta={isBeta}
+            activeFrame={profile.activeFrame}
+            decorationOpacity={decorationOpacity}
+          />
+        )}
       </AvatarFlightOverlay>
 
       <DiscoverVideoPlayerModal post={videoPost} onClose={() => setVideoPost(null)} />
@@ -1438,6 +1452,29 @@ export default function UserProfileScreen() {
           onComplete={() => setMoonlitMuseIntroVisible(false)}
         />
       )}
+    </View>
+  );
+}
+
+function SpotlightBadgeMark({ imageUrl, isFounder, color }: {
+  imageUrl?: string | null;
+  isFounder: boolean;
+  color: string;
+}) {
+  const [failedUri, setFailedUri] = useState<string | null>(null);
+  const showBadgeImage = Boolean(imageUrl && failedUri !== imageUrl);
+  return (
+    <View style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+      <Icon name={isFounder ? 'star' : 'zap'} size={22} color={color} />
+      {showBadgeImage && imageUrl ? (
+        <Image
+          source={{ uri: imageUrl }}
+          style={StyleSheet.absoluteFill}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+          onError={() => setFailedUri(imageUrl)}
+        />
+      ) : null}
     </View>
   );
 }
@@ -1520,7 +1557,7 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 13, fontFamily: 'Satoshi-Bold' },
   panelStack: { paddingHorizontal: 14, paddingTop: 10, gap: 10 },
   infoGroup: { gap: 10 },
-  regaliaCard: { gap: 10, borderRadius: 22, borderWidth: 1.25, paddingHorizontal: 22, paddingVertical: 22, marginTop: 30, marginBottom: 34, marginHorizontal: 6 },
+  regaliaCard: { gap: 10, borderRadius: 22, borderWidth: 1.25, paddingHorizontal: 16, paddingVertical: 18, marginTop: 30, marginBottom: 34, marginHorizontal: 6 },
   galleryGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   galleryTile: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
   galleryTileEmpty: { alignItems: 'center', justifyContent: 'center' },
@@ -1532,10 +1569,13 @@ const styles = StyleSheet.create({
   panelTitle: { fontSize: 16, fontFamily: 'Satoshi-Bold', letterSpacing: -0.2 },
   intention: { fontSize: 12, fontFamily: 'Satoshi-Regular', fontStyle: 'italic' },
   infoRow: { flexDirection: 'row', gap: 8 },
-  infoTile: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 14, borderWidth: 1, paddingHorizontal: 9, minHeight: 54 },
-  infoIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  infoLabel: { fontSize: 9.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.6, textTransform: 'uppercase' },
-  infoValue: { fontSize: 12, fontFamily: 'Satoshi-Bold', marginTop: 1 },
+  infoRowNarrow: { flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8 },
+  infoTile: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 14, borderWidth: 1, paddingHorizontal: 6, minHeight: 54 },
+  infoTileNarrow: { flex: 0, flexBasis: '48%', maxWidth: '48%' },
+  infoTileFull: { flex: 0, flexBasis: '100%', maxWidth: '100%' },
+  infoIcon: { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  infoLabel: { fontSize: 8.5, fontFamily: 'Satoshi-Bold', letterSpacing: 0.35, textTransform: 'uppercase' },
+  infoValue: { fontSize: 11, fontFamily: 'Satoshi-Bold', marginTop: 1 },
   metaPill: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 12, paddingHorizontal: 9, minHeight: 26 },
   metaPillText: { fontSize: 11, fontFamily: 'Satoshi-Medium' },
   vibeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },

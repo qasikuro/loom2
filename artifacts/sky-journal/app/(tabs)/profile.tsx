@@ -336,12 +336,13 @@ export default function CharacterScreen() {
         avatarSize={OWN_AVATAR_SIZE}
         hidden={drawerOpen || moonlitMuseIntroVisible}
       >
-        <OwnProfileAvatar
+        {decorationOpacity => <OwnProfileAvatar
           avatarSource={avatarSource}
           contain={Boolean(character.avatarUri)}
           activeFrame={activeFrame}
           mood={character.mood || 'Dreamy'}
-        />
+          decorationOpacity={decorationOpacity}
+        />}
       </AvatarFlightOverlay>
 
       {/* ── Modals & overlays ──────────────────────────────────────────── */}
