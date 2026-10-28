@@ -2,7 +2,7 @@ import { Icon } from '@/components/Icon';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { useColors } from '@/hooks/useColors';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   FlatList,
@@ -83,6 +83,8 @@ export function TeyvatMemoryGalleryOverlay({
   const wasVisible = useRef(false);
   const [selected, setSelected] = useState<TeyvatMemoryGalleryItem | null>(null);
   const [contentWidth, setContentWidth] = useState(width);
+  const openingMemory = useRef(false);
+  const closingMemory = useRef(false);
   const dragY = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(1)).current;
   const boxReveal = useRef(new Animated.Value(0)).current;
@@ -104,9 +106,13 @@ export function TeyvatMemoryGalleryOverlay({
   useEffect(() => {
     if (!visible) {
       wasVisible.current = false;
+      openingMemory.current = false;
+      closingMemory.current = false;
       return;
     }
     wasVisible.current = true;
+    openingMemory.current = false;
+    closingMemory.current = false;
     setFilter(initialFilter);
     setSelected(null);
     dragY.setValue(0);
@@ -157,17 +163,24 @@ export function TeyvatMemoryGalleryOverlay({
     if (nextFilter === activeFilter) return;
     setFilter(nextFilter);
   };
-  const closeSelected = () => {
+  const closeSelected = useCallback(() => {
+    if (!openingMemory.current || closingMemory.current) return;
+    closingMemory.current = true;
     Animated.parallel([
       Animated.timing(memoryReveal, { toValue: 0, duration: 150, useNativeDriver: true }),
       Animated.timing(backdropOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
     ]).start(({ finished }) => {
-      if (!finished) return;
+      if (!finished) {
+        closingMemory.current = false;
+        return;
+      }
       setSelected(null);
+      openingMemory.current = false;
+      closingMemory.current = false;
       dragY.setValue(0);
       backdropOpacity.setValue(1);
     });
-  };
+  }, [backdropOpacity, dragY, memoryReveal]);
   const panResponder = useMemo(
     () =>
       PanResponder.create({
@@ -182,12 +195,20 @@ export function TeyvatMemoryGalleryOverlay({
         },
         onPanResponderRelease: (_event, gesture) => {
           if (gesture.dy > Math.min(72, height * 0.1) || gesture.vy > 0.55) {
+            if (closingMemory.current) return;
+            closingMemory.current = true;
             Animated.timing(dragY, {
               toValue: height,
               duration: 180,
               useNativeDriver: true,
-            }).start(() => {
+            }).start(({ finished }) => {
+              if (!finished) {
+                closingMemory.current = false;
+                return;
+              }
               setSelected(null);
+              openingMemory.current = false;
+              closingMemory.current = false;
               dragY.setValue(0);
               memoryReveal.setValue(0);
               backdropOpacity.setValue(1);
@@ -209,14 +230,18 @@ export function TeyvatMemoryGalleryOverlay({
     [backdropOpacity, dragY, height, memoryReveal, selected],
   );
 
-  const selectItem = (item: TeyvatMemoryGalleryItem) => {
+  const selectItem = useCallback((item: TeyvatMemoryGalleryItem) => {
+    // A slow image fetch can invite a second tap before the lightbox paints.
+    // Lock synchronously so a repeated tap cannot reset the reveal animation.
+    if (openingMemory.current || closingMemory.current) return;
+    openingMemory.current = true;
     item.onSelect?.();
     memoryReveal.setValue(0);
     backdropOpacity.setValue(0);
     setSelected(item);
-  };
+  }, [backdropOpacity, memoryReveal]);
 
-  const renderItem: ListRenderItem<TeyvatMemoryGalleryItem> = ({ item }) => (
+  const renderItem = useCallback<ListRenderItem<TeyvatMemoryGalleryItem>>(({ item }) => (
     <TouchableOpacity
       style={[
         styles.tile,
@@ -256,7 +281,7 @@ export function TeyvatMemoryGalleryOverlay({
         pointerEvents="none"
       />
     </TouchableOpacity>
-  );
+  ), [colors.muted, selectItem, tileWidth]);
 
   return (
     <Modal
@@ -441,6 +466,8 @@ export function TeyvatMemoryGalleryOverlay({
                   style={[styles.lightboxImage, { maxHeight: height * 0.68 }]}
                   contentFit="contain"
                   cachePolicy="memory-disk"
+                  priority="high"
+                  recyclingKey={`teyvat-lightbox-${selected.id}`}
                   transition={140}
                   accessibilityLabel={selected.title}
                 />

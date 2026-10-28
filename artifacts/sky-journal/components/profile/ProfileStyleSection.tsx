@@ -480,12 +480,15 @@ export function ProfileStyleSection({
     if (userId) void refetchTutorials();
   }, [userId, refetchTutorials]));
 
-  const allEntries: GalleryEntry[] = [
-    ...gallery.map(photo => ({ kind: 'photo' as const, photo })),
-    ...stories.map(story => ({ kind: 'story' as const, story })),
-    ...outfits.map(outfit => ({ kind: 'outfit' as const, outfit })),
-    ...(myTutorialsQuery.data ?? []).map(tutorial => ({ kind: 'tutorial' as const, tutorial })),
-  ].sort((a, b) => (Date.parse(getEntryDate(b)) || 0) - (Date.parse(getEntryDate(a)) || 0));
+  const allEntries = useMemo<GalleryEntry[]>(
+    () => [
+      ...gallery.map(photo => ({ kind: 'photo' as const, photo })),
+      ...stories.map(story => ({ kind: 'story' as const, story })),
+      ...outfits.map(outfit => ({ kind: 'outfit' as const, outfit })),
+      ...(myTutorialsQuery.data ?? []).map(tutorial => ({ kind: 'tutorial' as const, tutorial })),
+    ].sort((a, b) => (Date.parse(getEntryDate(b)) || 0) - (Date.parse(getEntryDate(a)) || 0)),
+    [gallery, stories, outfits, myTutorialsQuery.data],
+  );
   const teyvatMemoryItems = useMemo<TeyvatMemoryGalleryItem[]>(
     () => allEntries.flatMap((entry): TeyvatMemoryGalleryItem[] => {
       if (entry.kind === 'tutorial') return [];
@@ -528,9 +531,10 @@ export function ProfileStyleSection({
     [activeOutfitId, allEntries, t],
   );
   const selectedKind = galleryFilter === 'stories' ? 'story' : galleryFilter === 'outfits' ? 'outfit' : galleryFilter === 'tutorials' ? 'tutorial' : null;
-  const filteredEntries = selectedKind
-    ? allEntries.filter(entry => entry.kind === selectedKind)
-    : allEntries;
+  const filteredEntries = useMemo(
+    () => selectedKind ? allEntries.filter(entry => entry.kind === selectedKind) : allEntries,
+    [allEntries, selectedKind],
+  );
   const [galleryWidth, setGalleryWidth] = useState(0);
   // Content width: measured container, else screen minus the profile column padding (14*2).
   const contentWidth = Math.max(0, (galleryWidth || Math.min(screenWidth, 800) - 28) - 4);
