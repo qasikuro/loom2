@@ -2,9 +2,11 @@ import { Icon } from '@/components/Icon';
 import { SecureImage as Image } from '@/components/SecureImage';
 import { useColors } from '@/hooks/useColors';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createTeyvatViewerSession } from './teyvatViewerSession';
 import {
   Animated,
+  Easing,
   FlatList,
   Modal,
   PanResponder,
@@ -81,10 +83,11 @@ export function TeyvatMemoryGalleryOverlay({
   const { width, height } = useWindowDimensions();
   const [filter, setFilter] = useState<FilterId>(initialFilter);
   const wasVisible = useRef(false);
-  const [selected, setSelected] = useState<TeyvatMemoryGalleryItem | null>(null);
+  const [selection, setSelection] = useState<{ item: TeyvatMemoryGalleryItem; session: number } | null>(null);
+  const selected = selection?.item;
   const [contentWidth, setContentWidth] = useState(width);
-  const openingMemory = useRef(false);
-  const closingMemory = useRef(false);
+  const viewerSession = useRef(createTeyvatViewerSession()).current;
+  const entranceAnimation = useRef<Animated.CompositeAnimation | null>(null);
   const dragY = useRef(new Animated.Value(0)).current;
   const backdropOpacity = useRef(new Animated.Value(1)).current;
   const boxReveal = useRef(new Animated.Value(0)).current;
@@ -102,19 +105,22 @@ export function TeyvatMemoryGalleryOverlay({
     () => items.filter(item => matchesFilter(item, activeFilter)),
     [items, activeFilter],
   );
-  const selectedItemId = selected?.id;
+  const selectedSession = selection?.session;
+  useLayoutEffect(() => {
+    // Do not accept another grid press until the previous native layer is gone.
+    if (!selection) viewerSession.commitClosed();
+  }, [selection, viewerSession]);
   useEffect(() => {
     if (!visible) {
       wasVisible.current = false;
-      openingMemory.current = false;
-      closingMemory.current = false;
+      viewerSession.reset();
+      setSelection(null);
       return;
     }
     wasVisible.current = true;
-    openingMemory.current = false;
-    closingMemory.current = false;
+    viewerSession.reset();
     setFilter(initialFilter);
-    setSelected(null);
+    setSelection(null);
     dragY.setValue(0);
     boxReveal.setValue(0);
     galleryReveal.setValue(0);
@@ -126,120 +132,113 @@ export function TeyvatMemoryGalleryOverlay({
         damping: 17,
         mass: 0.82,
         useNativeDriver: true,
+        isInteraction: false,
       }),
       Animated.timing(galleryReveal, {
         toValue: 1,
         duration: 300,
         delay: 45,
         useNativeDriver: true,
+        isInteraction: false,
       }),
     ]);
     reveal.start();
     return () => reveal.stop();
-  }, [boxReveal, dragY, galleryReveal, initialFilter, memoryReveal, visible]);
-  useEffect(() => {
-    if (!selectedItemId) return;
+  }, [boxReveal, dragY, galleryReveal, initialFilter, memoryReveal, viewerSession, visible]);
+  useLayoutEffect(() => {
+    if (selectedSession === undefined) return;
+    dragY.setValue(0);
     memoryReveal.setValue(0);
     backdropOpacity.setValue(0);
     const reveal = Animated.parallel([
-      Animated.spring(memoryReveal, {
+      Animated.timing(memoryReveal, {
         toValue: 1,
-        stiffness: 185,
-        damping: 22,
-        mass: 0.72,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
+        isInteraction: false,
       }),
       Animated.timing(backdropOpacity, {
         toValue: 1,
-        duration: 210,
+        duration: 180,
         useNativeDriver: true,
+        isInteraction: false,
       }),
     ]);
+    entranceAnimation.current = reveal;
     reveal.start();
-    return () => reveal.stop();
-  }, [backdropOpacity, memoryReveal, selectedItemId]);
+    return () => {
+      reveal.stop();
+      if (entranceAnimation.current === reveal) entranceAnimation.current = null;
+    };
+  }, [backdropOpacity, dragY, memoryReveal, selectedSession]);
 
   const changeFilter = (nextFilter: FilterId) => {
     if (nextFilter === activeFilter) return;
     setFilter(nextFilter);
   };
-  const closeSelected = useCallback(() => {
-    if (!openingMemory.current || closingMemory.current) return;
-    closingMemory.current = true;
+  const closeSelected = useCallback((swipe = false) => {
+    if (selectedSession === undefined || !viewerSession.beginClose(selectedSession)) return;
+    // The entrance and exit must never compete for the same native values.
+    entranceAnimation.current?.stop();
+    dragY.stopAnimation();
     Animated.parallel([
       Animated.timing(memoryReveal, { toValue: 0, duration: 150, useNativeDriver: true }),
       Animated.timing(backdropOpacity, { toValue: 0, duration: 150, useNativeDriver: true }),
-    ]).start(({ finished }) => {
-      if (!finished) {
-        closingMemory.current = false;
-        return;
-      }
-      setSelected(null);
-      openingMemory.current = false;
-      closingMemory.current = false;
-      dragY.setValue(0);
-      backdropOpacity.setValue(1);
+      Animated.timing(dragY, { toValue: swipe ? height : 18, duration: 150, useNativeDriver: true }),
+    ]).start(() => {
+      // Even an interrupted exit must remove its layer, not strand an invisible
+      // touch shield. A stale callback cannot dismiss a newer viewing session.
+      if (viewerSession.finishClose(selectedSession)) setSelection(null);
     });
-  }, [backdropOpacity, dragY, memoryReveal]);
+  }, [backdropOpacity, dragY, height, memoryReveal, selectedSession, viewerSession]);
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponderCapture: (_event, gesture) =>
-          !!selected && gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.15,
+          viewerSession.isOpen() && gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.15,
         onPanResponderTerminationRequest: () => false,
+        onPanResponderGrant: () => {
+          entranceAnimation.current?.stop();
+          memoryReveal.setValue(1);
+          backdropOpacity.setValue(1);
+        },
         onPanResponderMove: (_event, gesture) => {
-          if (gesture.dy > 0) {
+          if (viewerSession.isOpen() && gesture.dy > 0) {
             dragY.setValue(gesture.dy);
             backdropOpacity.setValue(Math.max(0.3, 1 - gesture.dy / Math.max(height * 0.75, 1)));
           }
         },
         onPanResponderRelease: (_event, gesture) => {
+          if (!viewerSession.isOpen()) return;
           if (gesture.dy > Math.min(72, height * 0.1) || gesture.vy > 0.55) {
-            if (closingMemory.current) return;
-            closingMemory.current = true;
-            Animated.timing(dragY, {
-              toValue: height,
-              duration: 180,
-              useNativeDriver: true,
-            }).start(({ finished }) => {
-              if (!finished) {
-                closingMemory.current = false;
-                return;
-              }
-              setSelected(null);
-              openingMemory.current = false;
-              closingMemory.current = false;
-              dragY.setValue(0);
-              memoryReveal.setValue(0);
-              backdropOpacity.setValue(1);
-            });
+            closeSelected(true);
           } else {
             Animated.parallel([
+              Animated.timing(memoryReveal, { toValue: 1, duration: 150, useNativeDriver: true }),
               Animated.spring(dragY, { toValue: 0, useNativeDriver: true, bounciness: 3 }),
               Animated.timing(backdropOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
             ]).start();
           }
         },
         onPanResponderTerminate: () => {
+          if (!viewerSession.isOpen()) return;
           Animated.parallel([
+            Animated.timing(memoryReveal, { toValue: 1, duration: 150, useNativeDriver: true }),
             Animated.spring(dragY, { toValue: 0, useNativeDriver: true, bounciness: 3 }),
             Animated.timing(backdropOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
           ]).start();
         },
       }),
-    [backdropOpacity, dragY, height, memoryReveal, selected],
+    [backdropOpacity, closeSelected, dragY, height, memoryReveal, viewerSession],
   );
 
   const selectItem = useCallback((item: TeyvatMemoryGalleryItem) => {
-    // A slow image fetch can invite a second tap before the lightbox paints.
-    // Lock synchronously so a repeated tap cannot reset the reveal animation.
-    if (openingMemory.current || closingMemory.current) return;
-    openingMemory.current = true;
+    const session = viewerSession.open();
+    if (session === null) return;
     item.onSelect?.();
-    memoryReveal.setValue(0);
-    backdropOpacity.setValue(0);
-    setSelected(item);
-  }, [backdropOpacity, memoryReveal]);
+    setSelection({ item, session });
+  }, [viewerSession]);
 
   const renderItem = useCallback<ListRenderItem<TeyvatMemoryGalleryItem>>(({ item }) => (
     <TouchableOpacity
@@ -324,6 +323,9 @@ export function TeyvatMemoryGalleryOverlay({
         </View>
 
         <Animated.View
+          pointerEvents={selected ? 'none' : 'auto'}
+          accessibilityElementsHidden={!!selected}
+          importantForAccessibility={selected ? 'no-hide-descendants' : 'auto'}
           style={[
             styles.listWrap,
             {
@@ -434,7 +436,7 @@ export function TeyvatMemoryGalleryOverlay({
           >
             <TouchableOpacity
               style={[styles.lightboxBack, { top: insets.top + 12 }]}
-              onPress={closeSelected}
+              onPress={() => closeSelected()}
               activeOpacity={0.8}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
@@ -468,7 +470,7 @@ export function TeyvatMemoryGalleryOverlay({
                   cachePolicy="memory-disk"
                   priority="high"
                   recyclingKey={`teyvat-lightbox-${selected.id}`}
-                  transition={140}
+                  transition={0}
                   accessibilityLabel={selected.title}
                 />
               ) : (
