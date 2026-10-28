@@ -8,7 +8,6 @@ import {
   FlatList,
   Modal,
   PanResponder,
-  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -135,35 +134,28 @@ export function TeyvatMemoryGalleryOverlay({
   useEffect(() => {
     if (!selectedItemId) return;
     memoryReveal.setValue(0);
-    const reveal = Animated.spring(memoryReveal, {
-      toValue: 1,
-      stiffness: 210,
-      damping: 22,
-      mass: 0.68,
-      useNativeDriver: true,
-    });
-    reveal.start();
-    return () => reveal.stop();
-  }, [memoryReveal, selectedItemId]);
-
-  const changeFilter = (nextFilter: FilterId) => {
-    if (nextFilter === activeFilter) return;
-    galleryReveal.stopAnimation();
-    Animated.timing(galleryReveal, {
-      toValue: 0,
-      duration: 100,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (!finished) return;
-      setFilter(nextFilter);
-      Animated.spring(galleryReveal, {
+    backdropOpacity.setValue(0);
+    const reveal = Animated.parallel([
+      Animated.spring(memoryReveal, {
         toValue: 1,
         stiffness: 185,
         damping: 22,
-        mass: 0.75,
+        mass: 0.72,
         useNativeDriver: true,
-      }).start();
-    });
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: 1,
+        duration: 210,
+        useNativeDriver: true,
+      }),
+    ]);
+    reveal.start();
+    return () => reveal.stop();
+  }, [backdropOpacity, memoryReveal, selectedItemId]);
+
+  const changeFilter = (nextFilter: FilterId) => {
+    if (nextFilter === activeFilter) return;
+    setFilter(nextFilter);
   };
   const closeSelected = () => {
     Animated.parallel([
@@ -179,8 +171,8 @@ export function TeyvatMemoryGalleryOverlay({
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_event, gesture) =>
-          !!selected && gesture.dy > 8 && Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.2,
+        onMoveShouldSetPanResponderCapture: (_event, gesture) =>
+          !!selected && gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.15,
         onPanResponderTerminationRequest: () => false,
         onPanResponderMove: (_event, gesture) => {
           if (gesture.dy > 0) {
@@ -189,7 +181,7 @@ export function TeyvatMemoryGalleryOverlay({
           }
         },
         onPanResponderRelease: (_event, gesture) => {
-          if (gesture.dy > Math.min(84, height * 0.12) || gesture.vy > 0.72) {
+          if (gesture.dy > Math.min(72, height * 0.1) || gesture.vy > 0.55) {
             Animated.timing(dragY, {
               toValue: height,
               duration: 180,
@@ -220,6 +212,7 @@ export function TeyvatMemoryGalleryOverlay({
   const selectItem = (item: TeyvatMemoryGalleryItem) => {
     item.onSelect?.();
     memoryReveal.setValue(0);
+    backdropOpacity.setValue(0);
     setSelected(item);
   };
 
@@ -269,7 +262,7 @@ export function TeyvatMemoryGalleryOverlay({
     <Modal
       visible={visible}
       transparent={false}
-      animationType="fade"
+      animationType="none"
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={() => (selected ? closeSelected() : onClose())}
@@ -414,12 +407,6 @@ export function TeyvatMemoryGalleryOverlay({
             {...panResponder.panHandlers}
             testID="teyvat-memory-lightbox"
           >
-            <Pressable
-              style={StyleSheet.absoluteFill}
-              onPress={closeSelected}
-              accessibilityRole="button"
-              accessibilityLabel="Return to memory gallery"
-            />
             <TouchableOpacity
               style={[styles.lightboxBack, { top: insets.top + 12 }]}
               onPress={closeSelected}
@@ -441,7 +428,10 @@ export function TeyvatMemoryGalleryOverlay({
                 styles.lightboxMedia,
                 {
                   opacity: memoryReveal,
-                  transform: [{ scale: memoryReveal.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }],
+                  transform: [
+                    { translateY: memoryReveal.interpolate({ inputRange: [0, 1], outputRange: [26, 0] }) },
+                    { scale: memoryReveal.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) },
+                  ],
                 },
               ]}
             >
@@ -637,7 +627,15 @@ const styles = StyleSheet.create({
   lightboxCategory: { color: '#CBA5ED', fontSize: 9, letterSpacing: 1.5, fontFamily: 'Satoshi-Bold', textTransform: 'uppercase' },
   lightboxTitle: { color: '#FFF8FF', fontSize: 18, lineHeight: 23, fontFamily: 'Satoshi-Bold', marginTop: 3 },
   lightboxSubtitle: { color: 'rgba(235,219,247,0.63)', fontSize: 11, fontFamily: 'Satoshi-Regular', marginTop: 3 },
-  lightboxImage: { width: '100%', height: '68%', marginTop: 44 },
+  lightboxImage: {
+    width: '100%',
+    height: '68%',
+    marginTop: 44,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(238,219,255,0.18)',
+    backgroundColor: 'rgba(33,23,53,0.92)',
+  },
   lightboxMedia: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' },
   lightboxFallback: {
     width: 126,
