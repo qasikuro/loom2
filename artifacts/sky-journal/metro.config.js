@@ -5,6 +5,7 @@ const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
 
 const config = getDefaultConfig(projectRoot);
+config.resolver.assetExts.push("riv");
 
 // Watch the monorepo so Metro sees packages in the pnpm store
 config.watchFolders = [workspaceRoot];

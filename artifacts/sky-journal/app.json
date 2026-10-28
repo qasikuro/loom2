@@ -2,7 +2,7 @@
   "expo": {
     "name": "Storigam",
     "slug": "sky-journal",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/storigam-icon.png",
     "scheme": ["storigam", "sky-journal"],
@@ -20,7 +20,7 @@
     },
     "android": {
       "package": "com.storigam.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/storigam-adaptive-icon.png",
         "backgroundColor": "#030014"
@@ -72,6 +72,8 @@
         "expo-build-properties",
         {
           "android": {
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
             "packagingOptions": {
               "exclude": [
                 "META-INF/versions/9/OSGI-INF/MANIFEST.MF"

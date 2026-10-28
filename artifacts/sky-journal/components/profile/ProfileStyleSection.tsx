@@ -11,7 +11,12 @@ import { getListGuideTutorialsQueryKey, useListGuideTutorials, type GuideTutoria
 import { Images } from '@/assets/images/index';
 import { Video, ResizeMode } from 'expo-av';
 import { StorigamActivityIndicator as ActivityIndicator } from '@/components/SkyLoading';
-import React, { useCallback, useRef, useState } from 'react';
+import { TeyvatMemoryBoxArt } from '@/components/profile/TeyvatMemoryBoxArt';
+import {
+  TeyvatMemoryGalleryOverlay,
+  type TeyvatMemoryGalleryItem,
+} from '@/components/profile/TeyvatMemoryGalleryOverlay';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Modal,
@@ -460,6 +465,7 @@ export function ProfileStyleSection({
   const { width: screenWidth } = useWindowDimensions();
   const [activeStory,  setActiveStory]  = useState<Story | null>(null);
   const [playingVideo, setPlayingVideo] = useState<Story | null>(null);
+  const [teyvatGalleryVisible, setTeyvatGalleryVisible] = useState(false);
   const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>('all');
   const [galleryExpanded, setGalleryExpanded] = useState(false);
   const myTutorialsQuery = useListGuideTutorials({ mine: true }, {
@@ -480,22 +486,64 @@ export function ProfileStyleSection({
     ...outfits.map(outfit => ({ kind: 'outfit' as const, outfit })),
     ...(myTutorialsQuery.data ?? []).map(tutorial => ({ kind: 'tutorial' as const, tutorial })),
   ].sort((a, b) => (Date.parse(getEntryDate(b)) || 0) - (Date.parse(getEntryDate(a)) || 0));
+  const teyvatMemoryItems = useMemo<TeyvatMemoryGalleryItem[]>(
+    () => allEntries.flatMap((entry): TeyvatMemoryGalleryItem[] => {
+      if (entry.kind === 'tutorial') return [];
+        const id = getEntryKey(entry);
+        if (entry.kind === 'photo') {
+          return [{
+            id,
+            category: 'photo',
+            title: entry.photo.caption || t('profile.galleryUsage'),
+            subtitle: new Date(entry.photo.createdAt).toLocaleDateString(),
+            imageUri: entry.photo.imageUri,
+            fallbackIcon: 'image',
+          }];
+        }
+        if (entry.kind === 'story') {
+          const firstPanel = entry.story.panels[0];
+          return [{
+            id,
+            category: 'story',
+            title: entry.story.chapterTitle,
+            subtitle: entry.story.mood,
+            imageUri: entry.story.contentType === 'video'
+              ? entry.story.thumbnailUri || null
+              : firstPanel?.imageUri || null,
+            fallbackIcon: 'book-open',
+          }];
+        }
+        if (entry.kind === 'outfit') {
+          return [{
+            id,
+            category: 'outfit',
+            title: entry.outfit.name,
+            subtitle: entry.outfit.id === activeOutfitId ? t('components.profileSection.worn') : undefined,
+            imageUri: entry.outfit.imageUri || null,
+            fallbackIcon: 'grid',
+          }];
+        }
+        return [];
+    }),
+    [activeOutfitId, allEntries, t],
+  );
   const selectedKind = galleryFilter === 'stories' ? 'story' : galleryFilter === 'outfits' ? 'outfit' : galleryFilter === 'tutorials' ? 'tutorial' : null;
   const filteredEntries = selectedKind
     ? allEntries.filter(entry => entry.kind === selectedKind)
     : allEntries;
-  const previewEntries = galleryExpanded ? filteredEntries : filteredEntries.slice(0, 3);
   const [galleryWidth, setGalleryWidth] = useState(0);
   // Content width: measured container, else screen minus the profile column padding (14*2).
   const contentWidth = Math.max(0, (galleryWidth || Math.min(screenWidth, 800) - 28) - 4);
   const PREVIEW_GAP = 8;
   const GRID_GAP = 8;
-  const previewCardWidth = Math.floor(Math.min(124, (contentWidth - PREVIEW_GAP * 3) / 4));
-  const previewCardHeight = Math.round(previewCardWidth * 1.78);
+  const teyvatCardWidth = Math.floor(Math.min(220, (contentWidth - PREVIEW_GAP) / 2));
+  const teyvatCardHeight = Math.round(teyvatCardWidth * 1.25);
+  const teyvatHaloSize = Math.min(106, teyvatCardWidth * 0.62);
   const gridColumns = contentWidth >= 620 ? 5 : contentWidth >= 460 ? 4 : 3;
   const gridCardWidth = Math.floor((contentWidth - GRID_GAP * (gridColumns - 1)) / gridColumns);
   const gridCardHeight = Math.round(gridCardWidth * 1.5);
   const totalCount = allEntries.length;
+  const teyvatInitialFilter = galleryFilter === 'stories' || galleryFilter === 'outfits' ? galleryFilter : 'all';
 
   return (
     <>
@@ -617,28 +665,73 @@ export function ProfileStyleSection({
           </View>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.galleryRow}>
-            {previewEntries.map(entry => (
-              <GalleryMediaCard
-                key={getEntryKey(entry)}
-                entry={entry}
-                width={previewCardWidth}
-                height={previewCardHeight}
-                isActiveOutfit={entry.kind === 'outfit' && entry.outfit.id === activeOutfitId}
-                onOpenPhoto={openPhoto}
-                onOpenStory={story => {
-                  if (story.contentType === 'video' && story.videoUri) setPlayingVideo(story);
-                  else router.push(`/story/${story.id}` as never);
-                }}
-                onOpenOutfit={openOutfit}
-                onStoryMenu={setActiveStory}
+            <TouchableOpacity
+              style={[
+                s.teyvatCard,
+                {
+                  width: teyvatCardWidth,
+                  height: teyvatCardHeight,
+                  borderColor: `${colors.tint}45`,
+                  backgroundColor: colors.card,
+                },
+              ]}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setTeyvatGalleryVisible(true);
+              }}
+              activeOpacity={0.88}
+              accessibilityRole="button"
+              accessibilityLabel={`Open Memories in Teyvat, ${teyvatMemoryItems.length} ${teyvatMemoryItems.length === 1 ? 'memory' : 'memories'}`}
+              testID="teyvat-memory-box-open"
+            >
+              <LinearGradient
+                colors={[`${colors.tint}18`, `${colors.tint}08`, colors.card]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
               />
-            ))}
+              <View
+                style={[
+                  s.teyvatCardArt,
+                  { height: Math.round(teyvatCardHeight * 0.6) },
+                ]}
+              >
+                <View
+                  style={[
+                    s.teyvatCardHalo,
+                    {
+                      width: teyvatHaloSize,
+                      height: teyvatHaloSize,
+                      borderRadius: teyvatHaloSize / 2,
+                      backgroundColor: `${colors.tint}12`,
+                      borderColor: `${colors.tint}28`,
+                    },
+                  ]}
+                />
+                <TeyvatMemoryBoxArt
+                  mode="closed"
+                  style={StyleSheet.absoluteFill}
+                  testID="teyvat-memory-box-art"
+                />
+              </View>
+              <View style={s.teyvatCardCopy} pointerEvents="none">
+                <Text style={[s.teyvatCardTitle, { color: colors.foreground }]} numberOfLines={1}>
+                  Memories in Teyvat
+                </Text>
+                <Text style={[s.teyvatCardCount, { color: colors.mutedForeground }]} numberOfLines={1}>
+                  {teyvatMemoryItems.length} {teyvatMemoryItems.length === 1 ? 'moment' : 'moments'}
+                </Text>
+              </View>
+            </TouchableOpacity>
             <GalleryAddCard
               filter={galleryFilter}
-              width={previewCardWidth}
-              height={previewCardHeight}
+              width={teyvatCardWidth}
+              height={teyvatCardHeight}
               uploading={galleryUploading}
               colors={colors}
+              subtitle={galleryFilter === 'all' ? t('common.addPhoto') : undefined}
+              featured
               onAddPhoto={handleAddGalleryPhoto}
             />
           </ScrollView>
@@ -659,6 +752,19 @@ export function ProfileStyleSection({
 
       {/* ── Video player modal ─── */}
       <VideoPlayerModal story={playingVideo} onClose={() => setPlayingVideo(null)} onDelete={deleteStory} />
+      <TeyvatMemoryGalleryOverlay
+        visible={teyvatGalleryVisible}
+        items={teyvatMemoryItems}
+        initialFilter={teyvatInitialFilter}
+        onClose={() => setTeyvatGalleryVisible(false)}
+        renderBox={mode => (
+          <TeyvatMemoryBoxArt
+            mode={mode}
+            style={{ width: '100%', height: '100%' }}
+            testID={`teyvat-memory-box-${mode}`}
+          />
+        )}
+      />
     </>
   );
 }
@@ -669,6 +775,8 @@ function GalleryAddCard({
   height,
   uploading,
   colors,
+  subtitle,
+  featured = false,
   onAddPhoto,
 }: {
   filter: GalleryFilter;
@@ -676,6 +784,8 @@ function GalleryAddCard({
   height: number;
   uploading: boolean;
   colors: ReturnType<typeof useColors>;
+  subtitle?: string;
+  featured?: boolean;
   onAddPhoto: () => Promise<void>;
 }) {
   const { t } = useTranslation();
@@ -688,7 +798,11 @@ function GalleryAddCard({
   return (
     <TouchableOpacity
       key={`add-${filter}`}
-      style={[s.galleryAddCard, { width, height, backgroundColor: `${colors.tint}0B`, borderColor: `${colors.tint}50` }]}
+      style={[
+        s.galleryAddCard,
+        featured && s.galleryAddCardFeatured,
+        { width, height, backgroundColor: `${colors.tint}0B`, borderColor: `${colors.tint}50` },
+      ]}
       onPress={() => {
         Haptics.selectionAsync();
         if (filter === 'all') void onAddPhoto();
@@ -700,16 +814,21 @@ function GalleryAddCard({
       accessibilityRole="button"
       accessibilityLabel={filter === 'all' ? `${label}. ${t('common.addPhoto')}` : label}
     >
-      <View style={[s.galleryAddIcon, { backgroundColor: `${colors.tint}16` }]}>
+      <View style={[s.galleryAddIcon, featured && s.galleryAddIconFeatured, { backgroundColor: `${colors.tint}16` }]}>
         {filter === 'all' && uploading ? (
           <ActivityIndicator size="small" color={colors.tint} />
         ) : (
-          <Icon name="plus" size={20} color={colors.tint} />
+          <Icon name="plus" size={featured ? 26 : 20} color={colors.tint} />
         )}
       </View>
-      <Text style={[s.galleryAddText, { color: colors.foreground }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
+      <Text style={[s.galleryAddText, featured && s.galleryAddTextFeatured, { color: colors.foreground }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.8}>
         {label}
       </Text>
+      {subtitle ? (
+        <Text style={[s.galleryAddSubtitle, { color: colors.mutedForeground }]} numberOfLines={1}>
+          {subtitle}
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -721,19 +840,19 @@ const s = StyleSheet.create({
   sectionTitle:      { fontSize: 18, fontFamily: 'Satoshi-Bold', letterSpacing: -0.35 },
   countPill:         { borderRadius: 11, paddingHorizontal: 7, paddingVertical: 3 },
   countPillText:     { fontSize: 11, fontFamily: 'Satoshi-Bold' },
-  galleryPanel:      { borderWidth: 1, borderRadius: 20, marginBottom: 10 },
-  galleryHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10, minHeight: 54 },
-  galleryHeadingIcon:{ width: 34, height: 34, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  galleryPanel:      { borderWidth: 1, borderRadius: 16, marginBottom: 10 },
+  galleryHeader:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 12, paddingTop: 10, paddingBottom: 8, minHeight: 50 },
+  galleryHeadingIcon:{ width: 32, height: 32, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   gallerySeeAll:     { flexDirection: 'row', alignItems: 'center', gap: 3, minHeight: 34, borderWidth: 1, borderRadius: 17, paddingHorizontal: 12 },
   gallerySeeAllText: { fontSize: 12, fontFamily: 'Satoshi-Bold' },
-  galleryTabs:       { flexDirection: 'row', alignItems: 'center', gap: 3, marginHorizontal: 10, marginBottom: 10, padding: 4, borderRadius: 16 },
-  galleryTab:        { flex: 1, minWidth: 0, minHeight: 36, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingHorizontal: 5 },
+  galleryTabs:       { flexDirection: 'row', alignItems: 'center', gap: 3, marginHorizontal: 10, marginBottom: 9, padding: 4, borderRadius: 13 },
+  galleryTab:        { flex: 1, minWidth: 0, minHeight: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 10, paddingHorizontal: 5 },
   galleryTabText:    { fontSize: 12.5, fontFamily: 'Satoshi-Bold' },
   tutorialHeading:  { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4, marginBottom: 10 },
   tutorialState:    { minHeight: 100, borderRadius: 16, borderWidth: 1, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  galleryRow:        { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
+  galleryRow:        { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'center', flexGrow: 1, gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
   galleryGrid:       { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: 8, paddingHorizontal: 2, paddingBottom: 6 },
-  galleryMediaCard:  { borderWidth: 1, borderRadius: 16, overflow: 'hidden', position: 'relative' },
+  galleryMediaCard:  { borderWidth: 1, borderRadius: 13, overflow: 'hidden', position: 'relative' },
   galleryFallbackIcon:{ position: 'absolute', top: '42%', alignSelf: 'center' },
   galleryKindBadge:  { position: 'absolute', top: 7, left: 7, width: 23, height: 23, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.62)', alignItems: 'center', justifyContent: 'center' },
   galleryWornBadge:  { position: 'absolute', top: 7, left: 34, minHeight: 23, paddingHorizontal: 7, borderRadius: 12, backgroundColor: 'rgba(8,6,22,0.68)', alignItems: 'center', justifyContent: 'center' },
@@ -741,9 +860,19 @@ const s = StyleSheet.create({
   galleryMenuButton: { position: 'absolute', top: 5, right: 5, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(8,6,22,0.62)', alignItems: 'center', justifyContent: 'center' },
   galleryMediaFooter:{ position: 'absolute', bottom: 0, left: 0, right: 0, minHeight: 42, justifyContent: 'flex-end', paddingHorizontal: 7, paddingBottom: 7 },
   galleryMediaTitle: { color: '#fff', fontSize: 12, lineHeight: 15, fontFamily: 'Satoshi-Bold' },
-  galleryAddCard:    { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 16, paddingHorizontal: 6, gap: 9 },
+  galleryAddCard:    { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderStyle: 'dashed', borderRadius: 13, paddingHorizontal: 6, gap: 9 },
+  galleryAddCardFeatured: { borderRadius: 22, paddingHorizontal: 12, gap: 6 },
   galleryAddIcon:    { width: 36, height: 36, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  galleryAddIconFeatured: { width: 56, height: 56, borderRadius: 20 },
   galleryAddText:    { maxWidth: '94%', fontSize: 12, lineHeight: 15, textAlign: 'center', fontFamily: 'Satoshi-Bold' },
+  galleryAddTextFeatured: { fontSize: 14, lineHeight: 18 },
+  galleryAddSubtitle:{ maxWidth: '94%', fontSize: 11, lineHeight: 14, textAlign: 'center', fontFamily: 'Satoshi-Medium', marginTop: -3 },
+  teyvatCard:        { borderWidth: 1, borderRadius: 22, overflow: 'hidden', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 9, paddingTop: 8, paddingBottom: 10, gap: 4 },
+  teyvatCardArt:     { width: '100%', position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  teyvatCardHalo:    { position: 'absolute', borderWidth: 1 },
+  teyvatCardCopy:    { width: '100%', alignItems: 'center', gap: 2, paddingTop: 1 },
+  teyvatCardTitle:   { fontSize: 13, lineHeight: 17, fontFamily: 'Satoshi-Bold', textAlign: 'center' },
+  teyvatCardCount:   { color: '#847C93', fontSize: 11, fontFamily: 'Satoshi-Medium', textAlign: 'center' },
   galError:          { fontSize: 12, fontFamily: 'Satoshi-Regular' },
 });
 
