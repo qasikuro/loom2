@@ -169,7 +169,7 @@ patchedDependencies:
     hash: 3f08f78dd24d42d9c76699c4bd38f9eefea4a5b8e55846463ac5b29704eb30eb
     path: patches/braces@3.0.3.patch
   expo-av:
-    hash: 1c65cd566258515b23617d520ef46a85492225cd8b3d94b124156f97ac2fdab3
+    hash: 247d72448086f63797edd37905f20ba757b3c717023b31d28c92e688a0b296bf
     path: patches/expo-av.patch
   metro@0.83.3:
     hash: 6e2085544ea73f2afc881accc547fd47de6a73c4508feb84ea7e62c79d0f2302
