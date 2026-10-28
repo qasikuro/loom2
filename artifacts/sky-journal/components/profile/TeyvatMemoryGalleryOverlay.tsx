@@ -124,8 +124,8 @@ export function TeyvatMemoryGalleryOverlay({
       }),
       Animated.timing(galleryReveal, {
         toValue: 1,
-        duration: 440,
-        delay: 130,
+        duration: 300,
+        delay: 45,
         useNativeDriver: true,
       }),
     ]);
@@ -137,9 +137,9 @@ export function TeyvatMemoryGalleryOverlay({
     memoryReveal.setValue(0);
     const reveal = Animated.spring(memoryReveal, {
       toValue: 1,
-      stiffness: 145,
-      damping: 19,
-      mass: 0.74,
+      stiffness: 210,
+      damping: 22,
+      mass: 0.68,
       useNativeDriver: true,
     });
     reveal.start();
@@ -181,6 +181,7 @@ export function TeyvatMemoryGalleryOverlay({
       PanResponder.create({
         onMoveShouldSetPanResponder: (_event, gesture) =>
           !!selected && gesture.dy > 8 && Math.abs(gesture.dy) > Math.abs(gesture.dx) * 1.2,
+        onPanResponderTerminationRequest: () => false,
         onPanResponderMove: (_event, gesture) => {
           if (gesture.dy > 0) {
             dragY.setValue(gesture.dy);
@@ -188,7 +189,7 @@ export function TeyvatMemoryGalleryOverlay({
           }
         },
         onPanResponderRelease: (_event, gesture) => {
-          if (gesture.dy > Math.min(130, height * 0.18) || gesture.vy > 1.15) {
+          if (gesture.dy > Math.min(84, height * 0.12) || gesture.vy > 0.72) {
             Animated.timing(dragY, {
               toValue: height,
               duration: 180,
@@ -245,7 +246,8 @@ export function TeyvatMemoryGalleryOverlay({
           source={{ uri: item.imageUri }}
           style={StyleSheet.absoluteFill}
           contentFit="cover"
-          transition={180}
+          cachePolicy="memory-disk"
+          transition={140}
         />
       ) : (
         <LinearGradient
@@ -294,6 +296,7 @@ export function TeyvatMemoryGalleryOverlay({
             style={styles.closeButton}
             onPress={onClose}
             activeOpacity={0.78}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
             accessibilityLabel="Close memory gallery and return to profile"
             testID="teyvat-memory-gallery-close"
@@ -421,6 +424,7 @@ export function TeyvatMemoryGalleryOverlay({
               style={[styles.lightboxBack, { top: insets.top + 12 }]}
               onPress={closeSelected}
               activeOpacity={0.8}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityRole="button"
               accessibilityLabel="Return to memory gallery"
               testID="teyvat-memory-lightbox-back"
@@ -446,7 +450,8 @@ export function TeyvatMemoryGalleryOverlay({
                   source={{ uri: selected.imageUri }}
                   style={[styles.lightboxImage, { maxHeight: height * 0.68 }]}
                   contentFit="contain"
-                  transition={220}
+                  cachePolicy="memory-disk"
+                  transition={140}
                   accessibilityLabel={selected.title}
                 />
               ) : (
